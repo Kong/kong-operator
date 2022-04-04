@@ -1,0 +1,46 @@
+run:
+  timeout: 5m
+  skip-dirs:
+  - pkg/client
+  - pkg/apis
+linters:
+  enable:
+  - asciicheck
+  - bodyclose
+  - deadcode
+  - depguard
+  - dogsled
+  - durationcheck
+  - errcheck
+  - errorlint
+  - exhaustive
+  - exportloopref
+  - gci
+  - gofmt
+  - goimports
+  - gosec
+  - gosimple
+  - govet
+  - importas
+  - ineffassign
+  - megacheck
+  - misspell
+  - nilerr
+  - nolintlint
+  - predeclared
+  - revive
+  - staticcheck
+  - structcheck
+  - typecheck
+  - unconvert
+  - unparam
+  - varcheck
+  - wastedassign
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/kong/gateway-operator)
+issues:
+  fix: true

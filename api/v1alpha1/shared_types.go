@@ -1,0 +1,38 @@
+package v1alpha1
+
+import (
+	corev1 "k8s.io/api/core/v1"
+)
+
+// DeploymentOptions is a shared type used on objects to indicate that their
+// configuration results in a Deployment which is managed by the Operator and
+// includes options for managing Deployments such as the container image and
+// version, as well as Env variable overrides.
+type DeploymentOptions struct {
+	// ContainerImage indicates the image that will be used for the Deployment.
+	//
+	// If omitted a default image will be automatically chosen.
+	//
+	// +optional
+	ContainerImage *string `json:"containerImage,omitempty"`
+
+	// Version indicates the desired version of the ContainerImage.
+	//
+	// Not available when AutomaticUpgrades is in use.
+	//
+	// If omitted a default version will be chosen.
+	//
+	// +optional
+	Version *string `json:"version,omitempty"`
+
+	// Env indicates the environment variables to set for the Deployment.
+	//
+	// +optional
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	// EnvFrom indicates the environment variables to be set for the Deployment
+	// with the values set from specific sources (such as Secrets).
+	//
+	// +optional
+	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
+}

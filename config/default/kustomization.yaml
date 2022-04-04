@@ -1,0 +1,8 @@
+namespace: kong-system
+namePrefix: gateway-operator-
+bases:
+- ../crd
+- ../rbac
+- ../manager
+patchesStrategicMerge:
+- manager_auth_proxy_patch.yaml

@@ -1,0 +1,7 @@
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: ControlPlane
+metadata:
+  name: controlplane-example
+spec:
+  dataplane: dataplane-example
+  gatewayClass: "kong"
