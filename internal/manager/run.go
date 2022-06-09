@@ -31,6 +31,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
+	"github.com/kong/gateway-operator/pkg/vars"
 )
 
 var (
@@ -53,6 +54,7 @@ type Config struct {
 	DevelopmentMode bool
 	Out             *os.File
 	NewClientFunc   cluster.NewClientFunc
+	ControllerName  string
 }
 
 var DefaultConfig = Config{
@@ -64,6 +66,11 @@ var DefaultConfig = Config{
 }
 
 func Run(cfg Config) error {
+	if cfg.ControllerName != "" {
+		setupLog.Info(fmt.Sprintf("custom controller name provided: %s", cfg.ControllerName))
+		vars.ControllerName = cfg.ControllerName
+	}
+
 	opts := zap.Options{
 		Development: cfg.DevelopmentMode,
 	}

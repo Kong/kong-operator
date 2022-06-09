@@ -31,10 +31,12 @@ func main() {
 	var metricsAddr string
 	var probeAddr string
 	var enableLeaderElection bool
+	var controllerName string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", manager.DefaultConfig.LeaderElection,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(&controllerName, "controller-name", "", "a controller name to use if other than the default, only needed for multi-tenancy")
 
 	developmentModeEnabled := manager.DefaultConfig.DevelopmentMode
 	if v := os.Getenv("CONTROLLER_DEVELOPMENT_MODE"); v == "true" { // TODO: clean env handling https://github.com/Kong/gateway-operator/issues/19
@@ -55,6 +57,7 @@ func main() {
 		MetricsAddr:    metricsAddr,
 		ProbeAddr:      probeAddr,
 		LeaderElection: enableLeaderElection,
+		ControllerName: controllerName,
 	}
 
 	if err := manager.Run(cfg); err != nil {
