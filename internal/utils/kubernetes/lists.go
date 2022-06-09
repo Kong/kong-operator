@@ -9,11 +9,99 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 )
 
 // -----------------------------------------------------------------------------
 // Public Functions - Owner References
 // -----------------------------------------------------------------------------
+
+// ListDataPlanesForGateway is a helper function to map a list of DataPlanes
+// that are owned and managed by a Gateway.
+func ListDataPlanesForGateway(
+	ctx context.Context,
+	c client.Client,
+	gateway *gatewayv1alpha2.Gateway,
+) ([]operatorv1alpha1.DataPlane, error) {
+	requirement, err := labels.NewRequirement(
+		consts.GatewayOperatorControlledLabel,
+		selection.Equals,
+		[]string{consts.GatewayManagedLabelValue},
+	)
+	if err != nil {
+		return nil, err
+	}
+	selector := labels.NewSelector().Add(*requirement)
+
+	listOptions := &client.ListOptions{
+		LabelSelector: selector,
+	}
+	if gateway.Namespace != "" {
+		listOptions.Namespace = gateway.Namespace
+	}
+
+	dataplaneList := &operatorv1alpha1.DataPlaneList{}
+	if err := c.List(ctx, dataplaneList, listOptions); err != nil {
+		return nil, err
+	}
+
+	dataplanes := make([]operatorv1alpha1.DataPlane, 0)
+	for _, dataplane := range dataplaneList.Items {
+		for _, ownerRef := range dataplane.ObjectMeta.OwnerReferences {
+			if ownerRef.UID == gateway.UID {
+				dataplanes = append(dataplanes, dataplane)
+				break
+			}
+		}
+	}
+
+	return dataplanes, nil
+}
+
+// ListControlPlanesForGateway is a helper function to map a list of ControlPlanes
+// that are owned and managed by a Gateway.
+func ListControlPlanesForGateway(
+	ctx context.Context,
+	c client.Client,
+	gateway *gatewayv1alpha2.Gateway,
+) ([]operatorv1alpha1.ControlPlane, error) {
+	requirement, err := labels.NewRequirement(
+		consts.GatewayOperatorControlledLabel,
+		selection.Equals,
+		[]string{consts.GatewayManagedLabelValue},
+	)
+	if err != nil {
+		return nil, err
+	}
+	selector := labels.NewSelector().Add(*requirement)
+
+	listOptions := &client.ListOptions{
+		LabelSelector: selector,
+	}
+	if gateway.Namespace != "" {
+		listOptions.Namespace = gateway.Namespace
+	}
+
+	controlplaneList := &operatorv1alpha1.ControlPlaneList{}
+	if err := c.List(ctx, controlplaneList, listOptions); err != nil {
+		return nil, err
+	}
+
+	controlplanes := make([]operatorv1alpha1.ControlPlane, 0)
+	for _, controlplane := range controlplaneList.Items {
+		for _, ownerRef := range controlplane.ObjectMeta.OwnerReferences {
+			if ownerRef.UID == gateway.UID {
+				controlplanes = append(controlplanes, controlplane)
+				break
+			}
+		}
+	}
+
+	return controlplanes, nil
+}
 
 // ListDeploymentsForOwner is a helper function to map a list of Deployments
 // by label and reduce by OwnerReference UID and namespace to efficiently list
