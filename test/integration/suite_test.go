@@ -22,7 +22,10 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/internal/manager"
 	"github.com/kong/gateway-operator/pkg/clientset"
 )
@@ -52,6 +55,7 @@ var (
 
 	k8sClient      *kubernetes.Clientset
 	operatorClient *clientset.Clientset
+	gatewayClient  *gatewayclient.Clientset
 	mgrClient      client.Client
 
 	httpc = http.Client{
@@ -99,8 +103,14 @@ func TestMain(m *testing.M) {
 	k8sClient = env.Cluster().Client()
 	operatorClient, err = clientset.NewForConfig(env.Cluster().Config())
 	exitOnErr(err)
+	gatewayClient, err = gatewayclient.NewForConfig(env.Cluster().Config())
+	exitOnErr(err)
+
+	fmt.Println("INFO: intializing manager client")
 	mgrClient, err = client.New(env.Cluster().Config(), client.Options{})
 	exitOnErr(err)
+	exitOnErr(gatewayv1alpha2.AddToScheme(mgrClient.Scheme()))
+	exitOnErr(operatorv1alpha1.AddToScheme(mgrClient.Scheme()))
 
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")
 	exitOnErr(clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
@@ -143,6 +153,7 @@ func startControllerManager() {
 	cfg := manager.DefaultConfig
 	cfg.LeaderElection = false
 	cfg.DevelopmentMode = true
+	cfg.ControllerName = "konghq.com/gateway-operator-integration-tests"
 
 	cfg.NewClientFunc = func(cache cache.Cache, config *rest.Config, options client.Options, uncachedObjects ...client.Object) (client.Client, error) {
 		// always hijack and impersonate the system service account here so that the manager
