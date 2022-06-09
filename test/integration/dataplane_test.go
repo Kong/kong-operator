@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -23,18 +22,8 @@ import (
 )
 
 func TestDataplaneEssentials(t *testing.T) {
-	t.Log("setting up cleanup")
-	cleaner := clusters.NewCleaner(env.Cluster())
+	namespace, cleaner := setup(t)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
-
-	t.Log("creating a testing namespace")
-	namespace, err := k8sClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
-	}, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.AddNamespace(namespace)
 
 	t.Log("deploying dataplane resource")
 	dataplane := &v1alpha1.DataPlane{
@@ -43,7 +32,7 @@ func TestDataplaneEssentials(t *testing.T) {
 			Name:      uuid.NewString(),
 		},
 	}
-	dataplane, err = operatorClient.V1alpha1().DataPlanes(namespace.Name).Create(ctx, dataplane, metav1.CreateOptions{})
+	dataplane, err := operatorClient.V1alpha1().DataPlanes(namespace.Name).Create(ctx, dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
