@@ -27,7 +27,7 @@ func info(log logr.Logger, msg string, rawOBJ interface{}, keysAndValues ...inte
 	}
 }
 
-func debug(log logr.Logger, msg string, rawOBJ interface{}, keysAndValues ...interface{}) { //nolint:unparam //FIXME
+func debug(log logr.Logger, msg string, rawOBJ interface{}, keysAndValues ...interface{}) {
 	if obj, ok := rawOBJ.(client.Object); ok {
 		kvs := append([]interface{}{"namespace", obj.GetNamespace(), "name", obj.GetName()}, keysAndValues...)
 		log.V(logging.DebugLevel).Info(msg, kvs...)

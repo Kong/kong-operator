@@ -16,6 +16,10 @@ const (
 	// ControlPlaneManagedLabelValue indicates that an object's lifecycle is managed
 	// by the controlplane controller.
 	ControlPlaneManagedLabelValue = "controlplane"
+
+	// GatewayManagedLabelValue indicates that the object's lifecycle is managed by
+	// the gateway controller.
+	GatewayManagedLabelValue = "gateway"
 )
 
 // -----------------------------------------------------------------------------
