@@ -19,7 +19,6 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -99,7 +98,7 @@ func TestGatewayEssentials(t *testing.T) {
 	t.Log("verifying that the DataPlane becomes provisioned")
 	var dataplane *operatorv1alpha1.DataPlane
 	require.Eventually(t, func() bool {
-		dataplanes, err := k8sutils.ListDataPlanesForGateway(ctx, mgrClient, gateway)
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, mgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -118,7 +117,7 @@ func TestGatewayEssentials(t *testing.T) {
 	t.Log("verifying that the ControlPlane becomes provisioned")
 	var controlplane *operatorv1alpha1.ControlPlane
 	require.Eventually(t, func() bool {
-		controlplanes, err := k8sutils.ListControlPlanesForGateway(ctx, mgrClient, gateway)
+		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, mgrClient, gateway)
 		if err != nil {
 			return false
 		}
