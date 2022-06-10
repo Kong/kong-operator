@@ -33,7 +33,7 @@ import (
 // Testing Consts
 // -----------------------------------------------------------------------------
 
-const gatewayAPIsCRDs = "https://github.com/kubernetes-sigs/gateway-api.git/config/crd?ref=master"
+const gatewayAPIsCRDs = "https://github.com/kubernetes-sigs/gateway-api.git/config/crd?ref=bcfe3da78648b4206a627fe7f3b2d0db7e755ba8"
 
 // -----------------------------------------------------------------------------
 // Testing Vars - Environment Overrideable
