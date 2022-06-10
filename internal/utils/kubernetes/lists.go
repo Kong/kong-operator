@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +27,10 @@ func ListDataPlanesForGateway(
 	c client.Client,
 	gateway *gatewayv1alpha2.Gateway,
 ) ([]operatorv1alpha1.DataPlane, error) {
+	if gateway.Namespace == "" {
+		return nil, fmt.Errorf("can't list dataplanes for gateway: gateway resource was missing namespace")
+	}
+
 	requirement, err := labels.NewRequirement(
 		consts.GatewayOperatorControlledLabel,
 		selection.Equals,
@@ -37,10 +42,8 @@ func ListDataPlanesForGateway(
 	selector := labels.NewSelector().Add(*requirement)
 
 	listOptions := &client.ListOptions{
+		Namespace:     gateway.Namespace,
 		LabelSelector: selector,
-	}
-	if gateway.Namespace != "" {
-		listOptions.Namespace = gateway.Namespace
 	}
 
 	dataplaneList := &operatorv1alpha1.DataPlaneList{}
@@ -68,6 +71,10 @@ func ListControlPlanesForGateway(
 	c client.Client,
 	gateway *gatewayv1alpha2.Gateway,
 ) ([]operatorv1alpha1.ControlPlane, error) {
+	if gateway.Namespace == "" {
+		return nil, fmt.Errorf("can't list dataplanes for gateway: gateway resource was missing namespace")
+	}
+
 	requirement, err := labels.NewRequirement(
 		consts.GatewayOperatorControlledLabel,
 		selection.Equals,
@@ -79,10 +86,8 @@ func ListControlPlanesForGateway(
 	selector := labels.NewSelector().Add(*requirement)
 
 	listOptions := &client.ListOptions{
+		Namespace:     gateway.Namespace,
 		LabelSelector: selector,
-	}
-	if gateway.Namespace != "" {
-		listOptions.Namespace = gateway.Namespace
 	}
 
 	controlplaneList := &operatorv1alpha1.ControlPlaneList{}
