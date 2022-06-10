@@ -22,8 +22,8 @@ func IsGatewayScheduled(gateway *gatewayv1alpha2.Gateway) bool {
 	return false
 }
 
-// IsGatewayScheduled indicates whether or not the provided Gateway object was
-// marked as scheduled by the controller.
+// IsGatewayReady indicates whether or not the provided Gateway object was
+// marked as ready by the controller.
 func IsGatewayReady(gateway *gatewayv1alpha2.Gateway) bool {
 	for _, cond := range gateway.Status.Conditions {
 		if cond.Type == string(gatewayv1alpha2.GatewayConditionReady) &&
