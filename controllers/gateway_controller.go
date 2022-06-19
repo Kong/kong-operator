@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -267,7 +266,7 @@ func (r *GatewayReconciler) createControlPlane(ctx context.Context, gatewayClass
 		},
 		Spec: operatorv1alpha1.ControlPlaneSpec{
 			GatewayClass: (*gatewayv1alpha2.ObjectName)(&gatewayClass.Name),
-			DataPlane:    kong.String(dataplaneName), // TODO: ctrl runtime swap https://github.com/Kong/gateway-operator/issues/23
+			DataPlane:    &dataplaneName,
 		},
 	}
 	setObjectOwner(gateway, controlplane)
