@@ -1,0 +1,24 @@
+# permissions for end users to edit gatewayconfigurations.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gatewayconfiguration-editor-role
+rules:
+- apiGroups:
+  - gateway-operator.gateway-operator.konghq.com
+  resources:
+  - gatewayconfigurations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - gateway-operator.gateway-operator.konghq.com
+  resources:
+  - gatewayconfigurations/status
+  verbs:
+  - get

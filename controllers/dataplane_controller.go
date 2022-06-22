@@ -3,11 +3,10 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -51,76 +50,84 @@ func (r *DataPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
+	log := log.FromContext(ctx).WithName("DataPlane")
 
-	debug(log, "reconciling dataplane resource", req)
+	debug(log, "reconciling DataPlane resource", req)
 	dataplane := new(operatorv1alpha1.DataPlane)
 	if err := r.Client.Get(ctx, req.NamespacedName, dataplane); err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
 
-	debug(log, "validating dataplane resource conditions", dataplane)
+	debug(log, "validating DataPlane resource conditions", dataplane)
 	changed, err := r.ensureDataPlaneIsMarkedScheduled(ctx, dataplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if changed {
-		debug(log, "dataplane resource now marked as scheduled", dataplane)
+		debug(log, "DataPlane resource now marked as scheduled", dataplane)
 		return ctrl.Result{}, nil // no need to requeue, status update will requeue
 	}
 
-	debug(log, "validating dataplane configuration", dataplane)
+	debug(log, "validating DataPlane configuration", dataplane)
 	if len(dataplane.Spec.Env) == 0 && len(dataplane.Spec.EnvFrom) == 0 {
-		debug(log, "no ENV config found for dataplane resource, setting defaults", dataplane)
-		setDataPlaneDefaults(dataplane)
+		debug(log, "no ENV config found for DataPlane resource, setting defaults", dataplane)
+		setDataPlaneDefaults(&dataplane.Spec.DataPlaneDeploymentOptions, nil)
 		if err := r.Client.Update(ctx, dataplane); err != nil {
-			if errors.IsConflict(err) {
-				debug(log, "conflict found when updating dataplane resource, retrying", dataplane)
-				return ctrl.Result{Requeue: true, RequeueAfter: time.Millisecond * 200}, nil
+			if k8serrors.IsConflict(err) {
+				debug(log, "conflict found when updating DataPlane resource, retrying", dataplane)
+				return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 			}
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	debug(log, "looking for existing deployments for dataplane resource", dataplane)
+	debug(log, "looking for existing deployments for DataPlane resource", dataplane)
 	created, dataplaneDeployment, err := r.ensureDeploymentForDataPlane(ctx, dataplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if created {
-		return ctrl.Result{Requeue: true, RequeueAfter: time.Millisecond * 200}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
 	}
 
 	// TODO: updates need to update owned deployment https://github.com/Kong/gateway-operator/issues/27
 
-	debug(log, "checking readiness of dataplane deployments", dataplane)
+	debug(log, "checking readiness of DataPlane deployments", dataplane)
 	if dataplaneDeployment.Status.Replicas == 0 || dataplaneDeployment.Status.AvailableReplicas < dataplaneDeployment.Status.Replicas {
-		debug(log, "deployment for dataplane not yet ready, waiting", dataplane)
-		return ctrl.Result{Requeue: true, RequeueAfter: time.Millisecond * 200}, nil
+		debug(log, "deployment for DataPlane not yet ready, waiting", dataplane)
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 	}
 
-	debug(log, "exposing dataplane deployment via service", dataplane)
+	debug(log, "exposing DataPlane deployment via service", dataplane)
 	created, dataplaneService, err := r.ensureServiceForDataPlane(ctx, dataplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if created {
-		return ctrl.Result{Requeue: true, RequeueAfter: time.Millisecond * 200}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
 	}
 
 	// TODO: updates need to update owned service https://github.com/Kong/gateway-operator/issues/27
 
-	debug(log, "checking readiness of dataplane service", dataplaneService)
+	debug(log, "checking readiness of DataPlane service", dataplaneService)
 	if dataplaneService.Spec.ClusterIP == "" {
-		return ctrl.Result{Requeue: true, RequeueAfter: time.Millisecond * 200}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 	}
 
-	debug(log, "reconciliation complete for dataplane resource", dataplane)
-	return ctrl.Result{}, r.ensureDataPlaneIsMarkedProvisioned(ctx, dataplane)
+	debug(log, "reconciliation complete for DataPlane resource", dataplane)
+	if err := r.ensureDataPlaneIsMarkedProvisioned(ctx, dataplane); err != nil {
+		if k8serrors.IsConflict(err) {
+			// no need to throw an error for 409's, just requeue to get a fresh copy
+			return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+		}
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -143,7 +150,7 @@ func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedScheduled(
 			Type:               string(DataPlaneConditionTypeProvisioned),
 			Reason:             DataPlaneConditionReasonPodsNotReady,
 			Status:             metav1.ConditionFalse,
-			Message:            "dataplane resource is scheduled for provisioning",
+			Message:            "DataPlane resource is scheduled for provisioning",
 			ObservedGeneration: dataplane.Generation,
 			LastTransitionTime: metav1.Now(),
 		})
@@ -195,7 +202,7 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 
 	count := len(deployments)
 	if count > 1 {
-		return false, nil, fmt.Errorf("found %d deployments for dataplane currently unsupported: expected 1 or less", count)
+		return false, nil, fmt.Errorf("found %d deployments for DataPlane currently unsupported: expected 1 or less", count)
 	}
 
 	if count == 1 {
@@ -226,7 +233,7 @@ func (r *DataPlaneReconciler) ensureServiceForDataPlane(
 
 	count := len(services)
 	if count > 1 {
-		return false, nil, fmt.Errorf("found %d services for dataplane currently unsupported: expected 1 or less", count)
+		return false, nil, fmt.Errorf("found %d services for DataPlane currently unsupported: expected 1 or less", count)
 	}
 
 	if count == 1 {

@@ -36,3 +36,17 @@ type DeploymentOptions struct {
 	// +optional
 	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
 }
+
+// GatewayConfigurationTargetKind is an object kind that can be targeted for
+// GatewayConfiguration attachment.
+type GatewayConfigurationTargetKind string
+
+const (
+	// GatewayConfigurationTargetKindGateway is a target kind which indicates
+	// that a Gateway resource is the target.
+	GatewayConfigurationTargetKindGateway GatewayConfigurationTargetKind = "Gateway"
+
+	// GatewayConfigurationTargetKindGatewayClass is a target kind which indicates
+	// that a GatewayClass resource is the target.
+	GatewayConfigurationTargetKindGatewayClass GatewayConfigurationTargetKind = "GatewayClass"
+)

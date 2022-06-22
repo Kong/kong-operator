@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"sort"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -14,7 +15,7 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Private Functions - Generators
+// DataPlane - Private Functions - Defaulters
 // -----------------------------------------------------------------------------
 
 const (
@@ -27,25 +28,39 @@ const (
 	defaultKongStatusPort = 8100
 )
 
-func setDataPlaneDefaults(dataplane *operatorv1alpha1.DataPlane) {
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_ADMIN_ACCESS_LOG", Value: "/dev/stdout"})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_ADMIN_ERROR_LOG", Value: "/dev/stderr"})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_ADMIN_GUI_ACCESS_LOG", Value: "/dev/stdout"})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_ADMIN_GUI_ERROR_LOG", Value: "/dev/stderr"})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_ADMIN_LISTEN", Value: fmt.Sprintf("0.0.0.0:%d ssl", defaultKongAdminPort)})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_CLUSTER_LISTEN", Value: "off"})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_DATABASE", Value: "off"})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_LUA_PACKAGE_PATH", Value: "/opt/?.lua;/opt/?/init.lua;;"})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_NGINX_WORKER_PROCESSES", Value: "2"})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_PLUGINS", Value: "bundled"})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_PORTAL_API_ACCESS_LOG", Value: "/dev/stdout"})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_PORTAL_API_ERROR_LOG", Value: "/dev/stderr"})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_PORT_MAPS", Value: "80:8000, 443:8443"})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_PROXY_ACCESS_LOG", Value: "/dev/stdout"})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_PROXY_ERROR_LOG", Value: "/dev/stderr"})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_PROXY_LISTEN", Value: fmt.Sprintf("0.0.0.0:%d, 0.0.0.0:%d http2 ssl", defaultKongHTTPPort, defaultKongHTTPSPort)})
-	dataplane.Spec.Env = append(dataplane.Spec.Env, corev1.EnvVar{Name: "KONG_STATUS_LISTEN", Value: fmt.Sprintf("0.0.0.0:%d", defaultKongStatusPort)})
+var dataplaneDefaults = map[string]string{
+	"KONG_ADMIN_ACCESS_LOG":       "/dev/stdout",
+	"KONG_ADMIN_ERROR_LOG":        "/dev/stderr",
+	"KONG_ADMIN_GUI_ACCESS_LOG":   "/dev/stdout",
+	"KONG_ADMIN_GUI_ERROR_LOG":    "/dev/stderr",
+	"KONG_CLUSTER_LISTEN":         "off",
+	"KONG_DATABASE":               "off",
+	"KONG_NGINX_WORKER_PROCESSES": "2",
+	"KONG_PLUGINS":                "bundled",
+	"KONG_PORTAL_API_ACCESS_LOG":  "/dev/stdout",
+	"KONG_PORTAL_API_ERROR_LOG":   "/dev/stderr",
+	"KONG_PORT_MAPS":              "80:8000, 443:8443",
+	"KONG_PROXY_ACCESS_LOG":       "/dev/stdout",
+	"KONG_PROXY_ERROR_LOG":        "/dev/stderr",
+	"KONG_PROXY_LISTEN":           fmt.Sprintf("0.0.0.0:%d reuseport backlog=16384, 0.0.0.0:%d http2 ssl reuseport backlog=16384", defaultKongHTTPPort, defaultKongHTTPSPort),
+	"KONG_STATUS_LISTEN":          fmt.Sprintf("0.0.0.0:%d", defaultKongStatusPort),
+
+	// TODO: reconfigure following https://github.com/Kong/gateway-operator/issues/7
+	"KONG_ADMIN_LISTEN": fmt.Sprintf("0.0.0.0:%d http2 ssl reuseport backlog=16384", defaultKongAdminPort),
 }
+
+func setDataPlaneDefaults(spec *operatorv1alpha1.DataPlaneDeploymentOptions, dontOverride map[string]struct{}) {
+	for k, v := range dataplaneDefaults {
+		if _, isOverrideDisabled := dontOverride[k]; !isOverrideDisabled {
+			spec.Env = append(spec.Env, corev1.EnvVar{Name: k, Value: v})
+		}
+	}
+	sort.Sort(envWrapper(spec.Env))
+}
+
+// -----------------------------------------------------------------------------
+// DataPlane - Private Functions - Generators
+// -----------------------------------------------------------------------------
 
 func generateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane) *appsv1.Deployment {
 	var dataplaneImage string
@@ -174,7 +189,7 @@ func generateNewServiceForDataplane(dataplane *operatorv1alpha1.DataPlane) *core
 }
 
 // -----------------------------------------------------------------------------
-// Private Functions - Kubernetes Object Labels
+// DataPlane - Private Functions - Kubernetes Object Labels
 // -----------------------------------------------------------------------------
 
 func labelObjForDataplane(obj client.Object) {
@@ -184,4 +199,12 @@ func labelObjForDataplane(obj client.Object) {
 	}
 	labels[consts.GatewayOperatorControlledLabel] = consts.DataPlaneManagedLabelValue
 	obj.SetLabels(labels)
+}
+
+// -----------------------------------------------------------------------------
+// DataPlane - Private Functions - Equality Checks
+// -----------------------------------------------------------------------------
+
+func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1alpha1.DataPlaneDeploymentOptions) bool {
+	return deploymentOptionsDeepEqual(&spec1.DeploymentOptions, &spec2.DeploymentOptions)
 }

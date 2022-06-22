@@ -21,3 +21,5 @@ package internalversion
 type ControlPlaneExpansion interface{}
 
 type DataPlaneExpansion interface{}
+
+type GatewayConfigurationExpansion interface{}

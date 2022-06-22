@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -50,9 +49,9 @@ func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
+	log := log.FromContext(ctx).WithName("ControlPlane")
 
-	debug(log, "reconciling controlplane resource", req)
+	debug(log, "reconciling ControlPlane resource", req)
 	controlplane := new(operatorv1alpha1.ControlPlane)
 	if err := r.Client.Get(ctx, req.NamespacedName, controlplane); err != nil {
 		if errors.IsNotFound(err) {
@@ -61,48 +60,48 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	debug(log, "validating controlplane resource conditions", controlplane)
+	debug(log, "validating ControlPlane resource conditions", controlplane)
 	changed, err := r.ensureControlPlaneIsMarkedScheduled(ctx, controlplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if changed {
-		debug(log, "controlplane resource now marked as scheduled", controlplane)
+		debug(log, "ControlPlane resource now marked as scheduled", controlplane)
 		return ctrl.Result{}, nil // no need to requeue, status update will requeue
 	}
 
-	debug(log, "validating controlplane configuration", controlplane)
+	debug(log, "validating ControlPlane configuration", controlplane)
 	if len(controlplane.Spec.Env) == 0 && len(controlplane.Spec.EnvFrom) == 0 {
-		debug(log, "no ENV config found for controlplane resource, setting defaults", controlplane)
-		setControlPlaneDefaults(controlplane)
+		debug(log, "no ENV config found for ControlPlane resource, setting defaults", controlplane)
+		setControlPlaneDefaults(&controlplane.Spec.ControlPlaneDeploymentOptions, controlplane.Name, nil)
 		if err := r.Client.Update(ctx, controlplane); err != nil {
 			if errors.IsConflict(err) {
-				debug(log, "conflict found when updating controlplane resource, retrying", controlplane)
-				return ctrl.Result{Requeue: true, RequeueAfter: time.Millisecond * 200}, nil
+				debug(log, "conflict found when updating ControlPlane resource, retrying", controlplane)
+				return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 			}
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	debug(log, "looking for existing deployments for controlplane resource", controlplane)
+	debug(log, "looking for existing deployments for ControlPlane resource", controlplane)
 	created, controlplaneDeployment, err := r.ensureDeploymentForControlPlane(ctx, controlplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if created {
-		return ctrl.Result{Requeue: true, RequeueAfter: time.Millisecond * 200}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
 	}
 
 	// TODO: updates need to update sub-resources https://github.com/Kong/gateway-operator/issues/27
 
-	debug(log, "checking readiness of controlplane deployments", controlplane)
+	debug(log, "checking readiness of ControlPlane deployments", controlplane)
 	if controlplaneDeployment.Status.Replicas == 0 || controlplaneDeployment.Status.AvailableReplicas < controlplaneDeployment.Status.Replicas {
-		debug(log, "deployment for controlplane not yet ready, waiting", controlplane)
-		return ctrl.Result{Requeue: true, RequeueAfter: time.Millisecond * 200}, nil
+		debug(log, "deployment for ControlPlane not yet ready, waiting", controlplane)
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 	}
 
-	debug(log, "reconciliation complete for controlplane resource", controlplane)
+	debug(log, "reconciliation complete for ControlPlane resource", controlplane)
 	return ctrl.Result{}, r.ensureControlPlaneIsMarkedProvisioned(ctx, controlplane)
 }
 
@@ -126,7 +125,7 @@ func (r *ControlPlaneReconciler) ensureControlPlaneIsMarkedScheduled(
 			Type:               string(ControlPlaneConditionTypeProvisioned),
 			Reason:             ControlPlaneConditionReasonPodsNotReady,
 			Status:             metav1.ConditionFalse,
-			Message:            "controlplane resource is scheduled for provisioning",
+			Message:            "ControlPlane resource is scheduled for provisioning",
 			ObservedGeneration: controlplane.Generation,
 			LastTransitionTime: metav1.Now(),
 		})
@@ -171,7 +170,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 
 	count := len(deployments)
 	if count > 1 {
-		return false, nil, fmt.Errorf("found %d deployments for controlplane currently unsupported: expected 1 or less", count)
+		return false, nil, fmt.Errorf("found %d deployments for ControlPlane currently unsupported: expected 1 or less", count)
 	}
 
 	if count == 1 {

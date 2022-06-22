@@ -90,6 +90,14 @@ rules:
   - patch
   - update
 - apiGroups:
+  - gateway-operator.konghq.com
+  resources:
+  - gatewayconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - gateway.networking.k8s.io
   resources:
   - gatewayclasses

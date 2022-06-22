@@ -187,7 +187,6 @@ spec:
                   type: object
                 type: array
               gatewayClass:
-                default: DefaultGatewayClass
                 description: "GatewayClass indicates the Gateway resources which this
                   ControlPlane should be responsible for configuring routes for (e.g.
                   HTTPRoute, TCPRoute, UDPRoute, TLSRoute, e.t.c.). \n Required for
@@ -198,7 +197,6 @@ spec:
                 minLength: 1
                 type: string
               ingressClass:
-                default: DefaultIngressClass
                 description: "IngressClass enables support for the older Ingress resource
                   and indicates which Ingress resources this ControlPlane should be
                   responsible for. \n Routing configured this way will be applied
@@ -210,8 +208,6 @@ spec:
                   \n Not available when AutomaticUpgrades is in use. \n If omitted
                   a default version will be chosen."
                 type: string
-            required:
-            - gatewayClass
             type: object
           status:
             description: ControlPlaneStatus defines the observed state of ControlPlane

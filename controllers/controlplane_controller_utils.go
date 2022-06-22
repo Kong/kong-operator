@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"reflect"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -17,9 +18,9 @@ import (
 // ControlPlane - Private Functions
 // -----------------------------------------------------------------------------
 
-func setControlPlaneDefaults(controlplane *operatorv1alpha1.ControlPlane) {
-	controlplane.Spec.Env = append(controlplane.Spec.Env, corev1.EnvVar{Name: "CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY", Value: "true"}) // TODO: for poc only, don't release with this https://github.com/Kong/gateway-operator/issues/7
-	controlplane.Spec.Env = append(controlplane.Spec.Env, corev1.EnvVar{
+func setControlPlaneDefaults(spec *operatorv1alpha1.ControlPlaneDeploymentOptions, namespace string, dontOverride map[string]struct{}) {
+	spec.Env = append(spec.Env, corev1.EnvVar{Name: "CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY", Value: "true"}) // TODO: for poc only, don't release with this https://github.com/Kong/gateway-operator/issues/7
+	spec.Env = append(spec.Env, corev1.EnvVar{
 		Name: "POD_NAMESPACE",
 		ValueFrom: &corev1.EnvVarSource{
 			FieldRef: &corev1.ObjectFieldSelector{
@@ -28,7 +29,7 @@ func setControlPlaneDefaults(controlplane *operatorv1alpha1.ControlPlane) {
 			},
 		},
 	})
-	controlplane.Spec.Env = append(controlplane.Spec.Env, corev1.EnvVar{
+	spec.Env = append(spec.Env, corev1.EnvVar{
 		Name: "POD_NAME",
 		ValueFrom: &corev1.EnvVarSource{
 			FieldRef: &corev1.ObjectFieldSelector{
@@ -38,9 +39,13 @@ func setControlPlaneDefaults(controlplane *operatorv1alpha1.ControlPlane) {
 		},
 	})
 
-	if controlplane.Spec.DataPlane != nil && *controlplane.Spec.DataPlane != "" {
-		controlplane.Spec.Env = updateEnv(controlplane.Spec.Env, "CONTROLLER_PUBLISH_SERVICE", fmt.Sprintf("%s/svc-%s", controlplane.Namespace, *controlplane.Spec.DataPlane))
-		controlplane.Spec.Env = updateEnv(controlplane.Spec.Env, "CONTROLLER_KONG_ADMIN_URL", fmt.Sprintf("https://svc-%s.%s.svc:%d", *controlplane.Spec.DataPlane, controlplane.Namespace, defaultKongAdminPort))
+	if spec.DataPlane != nil && *spec.DataPlane != "" {
+		if _, isOverrideDisabled := dontOverride["CONTROLLER_PUBLISH_SERVICE"]; !isOverrideDisabled {
+			spec.Env = updateEnv(spec.Env, "CONTROLLER_PUBLISH_SERVICE", fmt.Sprintf("%s/svc-%s", namespace, *spec.DataPlane))
+		}
+		if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_URL"]; !isOverrideDisabled {
+			spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_URL", fmt.Sprintf("https://svc-%s.%s.svc:%d", *spec.DataPlane, namespace, defaultKongAdminPort))
+		}
 	}
 }
 
@@ -154,7 +159,7 @@ func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 }
 
 // -----------------------------------------------------------------------------
-// Private Functions - Kubernetes Object Labels
+// ControlPlane - Private Functions - Kubernetes Object Labels
 // -----------------------------------------------------------------------------
 
 func labelObjForControlPlane(obj client.Object) {
@@ -164,4 +169,20 @@ func labelObjForControlPlane(obj client.Object) {
 	}
 	labels[consts.GatewayOperatorControlledLabel] = consts.ControlPlaneManagedLabelValue
 	obj.SetLabels(labels)
+}
+
+// -----------------------------------------------------------------------------
+// ControlPlane - Private Functions - Equality Checks
+// -----------------------------------------------------------------------------
+
+func controlplaneSpecDeepEqual(spec1, spec2 *operatorv1alpha1.ControlPlaneDeploymentOptions) bool {
+	if !deploymentOptionsDeepEqual(&spec1.DeploymentOptions, &spec2.DeploymentOptions) {
+		return false
+	}
+
+	if !reflect.DeepEqual(spec1.DataPlane, spec2.DataPlane) {
+		return false
+	}
+
+	return true
 }

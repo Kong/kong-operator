@@ -49,6 +49,12 @@ type DataPlaneList struct {
 
 // DataPlaneSpec defines the desired state of DataPlane
 type DataPlaneSpec struct {
+	DataPlaneDeploymentOptions `json:",inline"`
+}
+
+// DataPlaneDeploymentOptions defines the information specifically needed to
+// deploy the DataPlane.
+type DataPlaneDeploymentOptions struct {
 	DeploymentOptions `json:",inline"`
 }
 

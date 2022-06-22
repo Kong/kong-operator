@@ -29,6 +29,7 @@ type V1alpha1Interface interface {
 	RESTClient() rest.Interface
 	ControlPlanesGetter
 	DataPlanesGetter
+	GatewayConfigurationsGetter
 }
 
 // V1alpha1Client is used to interact with features provided by the v1alpha1 group.
@@ -42,6 +43,10 @@ func (c *V1alpha1Client) ControlPlanes(namespace string) ControlPlaneInterface {
 
 func (c *V1alpha1Client) DataPlanes(namespace string) DataPlaneInterface {
 	return newDataPlanes(c, namespace)
+}
+
+func (c *V1alpha1Client) GatewayConfigurations(namespace string) GatewayConfigurationInterface {
+	return newGatewayConfigurations(c, namespace)
 }
 
 // NewForConfig creates a new V1alpha1Client for the given config.

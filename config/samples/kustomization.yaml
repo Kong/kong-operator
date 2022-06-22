@@ -1,5 +1,4 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
-- controlplane.yaml
-- dataplane.yaml
+- gateway.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

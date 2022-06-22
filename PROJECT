@@ -34,4 +34,12 @@ resources:
   kind: DataPlane
   path: github.com/kubernetes-sigs/gateway-api/apis/v1alpha2
   version: v1alpha2
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: gateway-operator.konghq.com
+  group: gateway-operator
+  kind: GatewayConfiguration
+  path: github.com/kong/gateway-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"

@@ -36,6 +36,10 @@ func (c *FakeV1alpha1) DataPlanes(namespace string) internalversion.DataPlaneInt
 	return &FakeDataPlanes{c, namespace}
 }
 
+func (c *FakeV1alpha1) GatewayConfigurations(namespace string) internalversion.GatewayConfigurationInterface {
+	return &FakeGatewayConfigurations{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeV1alpha1) RESTClient() rest.Interface {
