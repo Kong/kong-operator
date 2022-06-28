@@ -12,6 +12,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
+	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
 )
 
 // -----------------------------------------------------------------------------
@@ -44,7 +45,7 @@ func setControlPlaneDefaults(spec *operatorv1alpha1.ControlPlaneDeploymentOption
 			spec.Env = updateEnv(spec.Env, "CONTROLLER_PUBLISH_SERVICE", fmt.Sprintf("%s/svc-%s", namespace, *spec.DataPlane))
 		}
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_URL"]; !isOverrideDisabled {
-			spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_URL", fmt.Sprintf("https://svc-%s.%s.svc:%d", *spec.DataPlane, namespace, defaultKongAdminPort))
+			spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_URL", fmt.Sprintf("https://svc-%s.%s.svc:%d", *spec.DataPlane, namespace, dataplaneutils.DefaultKongAdminPort))
 		}
 	}
 }

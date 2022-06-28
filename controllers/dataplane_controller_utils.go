@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"fmt"
-	"sort"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -12,51 +11,9 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
+	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
-
-// -----------------------------------------------------------------------------
-// DataPlane - Private Functions - Defaulters
-// -----------------------------------------------------------------------------
-
-const (
-	defaultHTTPPort  = 80
-	defaultHTTPSPort = 443
-
-	defaultKongHTTPPort   = 8000
-	defaultKongHTTPSPort  = 8443
-	defaultKongAdminPort  = 8444
-	defaultKongStatusPort = 8100
-)
-
-var dataplaneDefaults = map[string]string{
-	"KONG_ADMIN_ACCESS_LOG":       "/dev/stdout",
-	"KONG_ADMIN_ERROR_LOG":        "/dev/stderr",
-	"KONG_ADMIN_GUI_ACCESS_LOG":   "/dev/stdout",
-	"KONG_ADMIN_GUI_ERROR_LOG":    "/dev/stderr",
-	"KONG_CLUSTER_LISTEN":         "off",
-	"KONG_DATABASE":               "off",
-	"KONG_NGINX_WORKER_PROCESSES": "2",
-	"KONG_PLUGINS":                "bundled",
-	"KONG_PORTAL_API_ACCESS_LOG":  "/dev/stdout",
-	"KONG_PORTAL_API_ERROR_LOG":   "/dev/stderr",
-	"KONG_PORT_MAPS":              "80:8000, 443:8443",
-	"KONG_PROXY_ACCESS_LOG":       "/dev/stdout",
-	"KONG_PROXY_ERROR_LOG":        "/dev/stderr",
-	"KONG_PROXY_LISTEN":           fmt.Sprintf("0.0.0.0:%d reuseport backlog=16384, 0.0.0.0:%d http2 ssl reuseport backlog=16384", defaultKongHTTPPort, defaultKongHTTPSPort),
-	"KONG_STATUS_LISTEN":          fmt.Sprintf("0.0.0.0:%d", defaultKongStatusPort),
-
-	// TODO: reconfigure following https://github.com/Kong/gateway-operator/issues/7
-	"KONG_ADMIN_LISTEN": fmt.Sprintf("0.0.0.0:%d http2 ssl reuseport backlog=16384", defaultKongAdminPort),
-}
-
-func setDataPlaneDefaults(spec *operatorv1alpha1.DataPlaneDeploymentOptions, dontOverride map[string]struct{}) {
-	for k, v := range dataplaneDefaults {
-		if _, isOverrideDisabled := dontOverride[k]; !isOverrideDisabled {
-			spec.Env = append(spec.Env, corev1.EnvVar{Name: k, Value: v})
-		}
-	}
-	sort.Sort(envWrapper(spec.Env))
-}
 
 // -----------------------------------------------------------------------------
 // DataPlane - Private Functions - Generators
@@ -160,7 +117,7 @@ func generateNewServiceForDataplane(dataplane *operatorv1alpha1.DataPlane) *core
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       dataplane.Namespace,
 			Name:            "svc-" + dataplane.Name, // TODO: generated names https://github.com/Kong/gateway-operator/issues/21
-			OwnerReferences: []metav1.OwnerReference{createObjectOwnerRef(dataplane)},
+			OwnerReferences: []metav1.OwnerReference{k8sutils.GenerateOwnerReferenceForObject(dataplane)},
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeLoadBalancer,
@@ -169,19 +126,19 @@ func generateNewServiceForDataplane(dataplane *operatorv1alpha1.DataPlane) *core
 				{
 					Name:       "http",
 					Protocol:   corev1.ProtocolTCP,
-					Port:       defaultHTTPPort,
-					TargetPort: intstr.FromInt(defaultKongHTTPPort),
+					Port:       dataplaneutils.DefaultHTTPPort,
+					TargetPort: intstr.FromInt(dataplaneutils.DefaultKongHTTPPort),
 				},
 				{
 					Name:       "https",
 					Protocol:   corev1.ProtocolTCP,
-					Port:       defaultHTTPSPort,
-					TargetPort: intstr.FromInt(defaultKongHTTPSPort),
+					Port:       dataplaneutils.DefaultHTTPSPort,
+					TargetPort: intstr.FromInt(dataplaneutils.DefaultKongHTTPSPort),
 				},
 				{
 					Name:     "admin",
 					Protocol: corev1.ProtocolTCP,
-					Port:     defaultKongAdminPort,
+					Port:     dataplaneutils.DefaultKongAdminPort,
 				},
 			},
 		},

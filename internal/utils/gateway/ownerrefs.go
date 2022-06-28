@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -13,36 +12,6 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 )
-
-// -----------------------------------------------------------------------------
-// Gateway Utils - Public Functions - Status Updates
-// -----------------------------------------------------------------------------
-
-// IsGatewayScheduled indicates whether or not the provided Gateway object was
-// marked as scheduled by the controller.
-func IsGatewayScheduled(gateway *gatewayv1alpha2.Gateway) bool {
-	for _, cond := range gateway.Status.Conditions {
-		if cond.Type == string(gatewayv1alpha2.GatewayConditionScheduled) &&
-			cond.Reason == string(gatewayv1alpha2.GatewayReasonScheduled) &&
-			cond.Status == metav1.ConditionTrue {
-			return true
-		}
-	}
-	return false
-}
-
-// IsGatewayReady indicates whether or not the provided Gateway object was
-// marked as ready by the controller.
-func IsGatewayReady(gateway *gatewayv1alpha2.Gateway) bool {
-	for _, cond := range gateway.Status.Conditions {
-		if cond.Type == string(gatewayv1alpha2.GatewayConditionReady) &&
-			cond.Reason == string(gatewayv1alpha2.GatewayReasonReady) &&
-			cond.Status == metav1.ConditionTrue {
-			return true
-		}
-	}
-	return false
-}
 
 // -----------------------------------------------------------------------------
 // Gateway Utils - Public Functions - Owner References
