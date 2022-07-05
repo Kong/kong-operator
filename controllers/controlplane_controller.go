@@ -56,7 +56,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	debug(log, "validating ControlPlane configuration", controlplane)
 	if len(controlplane.Spec.Env) == 0 && len(controlplane.Spec.EnvFrom) == 0 {
 		debug(log, "no ENV config found for ControlPlane resource, setting defaults", controlplane)
-		setControlPlaneDefaults(&controlplane.Spec.ControlPlaneDeploymentOptions, controlplane.Name, nil)
+		setControlPlaneDefaults(&controlplane.Spec.ControlPlaneDeploymentOptions, controlplane.Namespace, nil)
 		if err := r.Client.Update(ctx, controlplane); err != nil {
 			if errors.IsConflict(err) {
 				debug(log, "conflict found when updating ControlPlane resource, retrying", controlplane)

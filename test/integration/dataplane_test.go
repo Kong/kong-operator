@@ -17,8 +17,6 @@ import (
 
 	"github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
-	"github.com/kong/gateway-operator/internal/consts"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
 func TestDataplaneEssentials(t *testing.T) {
@@ -37,59 +35,37 @@ func TestDataplaneEssentials(t *testing.T) {
 	cleaner.Add(dataplane)
 
 	t.Log("verifying dataplane gets marked scheduled")
-	require.Eventually(t, func() bool {
-		dataplane, err = operatorClient.V1alpha1().DataPlanes(namespace.Name).Get(ctx, dataplane.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		isScheduled := false
+	isScheduled := func(dataplane *v1alpha1.DataPlane) bool {
 		for _, condition := range dataplane.Status.Conditions {
 			if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) {
-				isScheduled = true
+				return true
 			}
 		}
-		return isScheduled
-	}, time.Minute, time.Second)
+		return false
+	}
+	require.Eventually(t, dataPlanePredicate(t, dataplane.Namespace, dataplane.Name, isScheduled), time.Minute, time.Second)
 
 	t.Log("verifying that the dataplane gets marked as provisioned")
-	require.Eventually(t, func() bool {
-		dataplane, err = operatorClient.V1alpha1().DataPlanes(namespace.Name).Get(ctx, dataplane.Name, metav1.GetOptions{})
-		if err != nil {
-			return false
-		}
-		isProvisioned := false
+	isProvisioned := func(dataplane *v1alpha1.DataPlane) bool {
 		for _, condition := range dataplane.Status.Conditions {
 			if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) && condition.Status == metav1.ConditionTrue {
-				isProvisioned = true
+				return true
 			}
 		}
-		return isProvisioned
-	}, time.Minute*2, time.Second)
+		return false
+	}
+	require.Eventually(t, dataPlanePredicate(t, dataplane.Namespace, dataplane.Name, isProvisioned), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
 	require.Eventually(t, func() bool {
-		deployments, err := k8sutils.ListDeploymentsForOwner(
-			ctx,
-			mgrClient,
-			consts.GatewayOperatorControlledLabel,
-			consts.DataPlaneManagedLabelValue,
-			dataplane.Namespace,
-			dataplane.UID,
-		)
-		require.NoError(t, err)
+		deployments := mustListDataPlaneDeployments(t, dataplane)
 		return len(deployments) == 1 && deployments[0].Status.AvailableReplicas >= deployments[0].Status.ReadyReplicas
 	}, time.Minute, time.Second)
 
 	t.Log("verifying services managed by the dataplane")
 	var dataplaneService *corev1.Service
 	require.Eventually(t, func() bool {
-		services, err := k8sutils.ListServicesForOwner(
-			ctx,
-			mgrClient,
-			consts.GatewayOperatorControlledLabel,
-			consts.DataPlaneManagedLabelValue,
-			dataplane.Namespace,
-			dataplane.UID,
-		)
-		require.NoError(t, err)
+		services := mustListDataPlaneServices(t, dataplane)
 		if len(services) == 1 {
 			dataplaneService = &services[0]
 			return true
