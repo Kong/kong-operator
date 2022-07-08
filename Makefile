@@ -246,11 +246,11 @@ endif
 .PHONY: run
 run: manifests generate fmt vet install ## Run a controller from your host.
 	kubectl kustomize https://github.com/kubernetes-sigs/gateway-api.git/config/crd?ref=master | kubectl apply -f -
-	CONTROLLER_DEVELOPMENT_MODE=true go run ./main.go --leader-elect=false
+	CONTROLLER_DEVELOPMENT_MODE=true go run ./main.go --no-leader-election
 
 .PHONY: debug
 debug: manifests generate fmt vet install
-	CONTROLLER_DEVELOPMENT_MODE=true dlv debug ./main.go -- --leader-elect=false
+	CONTROLLER_DEVELOPMENT_MODE=true dlv debug ./main.go -- --no-leader-election
 
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
