@@ -60,9 +60,9 @@ type Config struct {
 var DefaultConfig = Config{
 	MetricsAddr:     ":8080",
 	ProbeAddr:       ":8081",
-	LeaderElection:  true,
 	WebhookPort:     9443,
 	DevelopmentMode: false,
+	LeaderElection:  true,
 }
 
 func Run(cfg Config) error {

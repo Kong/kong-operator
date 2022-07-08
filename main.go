@@ -30,18 +30,25 @@ import (
 func main() {
 	var metricsAddr string
 	var probeAddr string
-	var enableLeaderElection bool
+	var disableLeaderElection bool
 	var controllerName string
+
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", manager.DefaultConfig.LeaderElection,
-		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&disableLeaderElection, "no-leader-election", false,
+		"Disable leader election for controller manager. Disabling this will not ensure there is only one active controller manager.")
 	flag.StringVar(&controllerName, "controller-name", "", "a controller name to use if other than the default, only needed for multi-tenancy")
 
 	developmentModeEnabled := manager.DefaultConfig.DevelopmentMode
 	if v := os.Getenv("CONTROLLER_DEVELOPMENT_MODE"); v == "true" { // TODO: clean env handling https://github.com/Kong/gateway-operator/issues/19
 		fmt.Println("INFO: development mode has been enabled")
 		developmentModeEnabled = true
+	}
+
+	leaderElection := manager.DefaultConfig.LeaderElection
+	if disableLeaderElection {
+		fmt.Println("INFO: leader election has been disabled")
+		leaderElection = false
 	}
 
 	opts := zap.Options{
@@ -56,7 +63,7 @@ func main() {
 	cfg := manager.Config{
 		MetricsAddr:    metricsAddr,
 		ProbeAddr:      probeAddr,
-		LeaderElection: enableLeaderElection,
+		LeaderElection: leaderElection,
 		ControllerName: controllerName,
 	}
 
