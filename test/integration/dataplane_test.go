@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
@@ -24,10 +25,14 @@ func TestDataplaneEssentials(t *testing.T) {
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	t.Log("deploying dataplane resource")
+	dataplaneName := types.NamespacedName{
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
+	}
 	dataplane := &v1alpha1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      uuid.NewString(),
+			Namespace: dataplaneName.Namespace,
+			Name:      dataplaneName.Name,
 		},
 	}
 	dataplane, err := operatorClient.V1alpha1().DataPlanes(namespace.Name).Create(ctx, dataplane, metav1.CreateOptions{})
@@ -43,7 +48,7 @@ func TestDataplaneEssentials(t *testing.T) {
 		}
 		return false
 	}
-	require.Eventually(t, dataPlanePredicate(t, dataplane.Namespace, dataplane.Name, isScheduled), time.Minute, time.Second)
+	require.Eventually(t, dataPlanePredicate(t, dataplaneName, isScheduled), time.Minute, time.Second)
 
 	t.Log("verifying that the dataplane gets marked as provisioned")
 	isProvisioned := func(dataplane *v1alpha1.DataPlane) bool {
@@ -54,24 +59,14 @@ func TestDataplaneEssentials(t *testing.T) {
 		}
 		return false
 	}
-	require.Eventually(t, dataPlanePredicate(t, dataplane.Namespace, dataplane.Name, isProvisioned), time.Minute, time.Second)
+	require.Eventually(t, dataPlanePredicate(t, dataplaneName, isProvisioned), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
-	require.Eventually(t, func() bool {
-		deployments := mustListDataPlaneDeployments(t, dataplane)
-		return len(deployments) == 1 && deployments[0].Status.AvailableReplicas >= deployments[0].Status.ReadyReplicas
-	}, time.Minute, time.Second)
+	require.Eventually(t, dataPlaneHasActiveDeployment(t, dataplaneName), time.Minute, time.Second)
 
 	t.Log("verifying services managed by the dataplane")
-	var dataplaneService *corev1.Service
-	require.Eventually(t, func() bool {
-		services := mustListDataPlaneServices(t, dataplane)
-		if len(services) == 1 {
-			dataplaneService = &services[0]
-			return true
-		}
-		return false
-	}, time.Minute, time.Second)
+	var dataplaneService corev1.Service
+	require.Eventually(t, dataPlaneHasActiveService(t, dataplaneName, &dataplaneService), time.Minute, time.Second)
 
 	t.Log("verifying dataplane services receive IP addresses")
 	var dataplaneIP string
