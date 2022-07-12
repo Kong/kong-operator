@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"testing"
@@ -20,8 +21,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -75,6 +78,9 @@ var (
 func TestMain(m *testing.M) {
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
+
+	closeControllerLogFile := setupControllerLogger()
+	defer closeControllerLogFile()
 
 	var skipClusterCleanup bool
 	var existingCluster clusters.Cluster
@@ -149,6 +155,39 @@ func exitOnErr(err error) {
 	}
 }
 
+// setupControllerLogger sets up the controller logger.
+// This functions needs to be called before 30sec after the controller packages
+// is loaded, otherwise the logger will not be initialized.
+// Returns the close function, that will close the log file if one was created.
+func setupControllerLogger() (closeLogFile func() error) {
+	var destFile *os.File
+	var destWriter io.Writer = os.Stdout
+
+	if controllerManagerOut != "stdout" {
+		out, err := os.CreateTemp("", "gateway-operator-controller-logs")
+		exitOnErr(err)
+		fmt.Printf("INFO: controller output is being logged to %s\n", out.Name())
+		destWriter = out
+		destFile = out
+	}
+
+	opts := zap.Options{
+		Development: true,
+		DestWriter:  destWriter,
+	}
+
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	closeLogFile = func() error {
+		if destFile != nil {
+			return destFile.Close()
+		}
+		return nil
+	}
+
+	return closeLogFile
+}
+
 func startControllerManager() {
 	cfg := manager.DefaultConfig
 	cfg.LeaderElection = false
@@ -171,14 +210,6 @@ func startControllerManager() {
 			Client:          c,
 			UncachedObjects: uncachedObjects,
 		})
-	}
-
-	if controllerManagerOut != "stdout" {
-		out, err := os.CreateTemp(os.TempDir(), "gateway-operator-controller-logs")
-		exitOnErr(err)
-		cfg.Out = out
-		fmt.Printf("INFO: controller output is being logged to %s\n", out.Name())
-		defer out.Close()
 	}
 
 	exitOnErr(manager.Run(cfg))
