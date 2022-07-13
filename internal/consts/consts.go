@@ -23,6 +23,18 @@ const (
 )
 
 // -----------------------------------------------------------------------------
+// Consts - Kubernetes GenerateName prefixes
+// -----------------------------------------------------------------------------
+
+const (
+	// DataPlanePrefix is used as a name prefix to generate dataplane-owned objects' name
+	DataPlanePrefix = "dataplane"
+
+	// ControlPlanePrefix is used as a name prefix to generate controlplane-owned objects' name
+	ControlPlanePrefix = "controlplane"
+)
+
+// -----------------------------------------------------------------------------
 // Consts - Container Images
 // -----------------------------------------------------------------------------
 

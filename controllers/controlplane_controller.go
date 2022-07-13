@@ -10,6 +10,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	gatewayerrors "github.com/kong/gateway-operator/internal/errors"
+	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 )
 
 // -----------------------------------------------------------------------------
@@ -53,10 +55,20 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil // no need to requeue, status update will requeue
 	}
 
+	debug(log, "retrieving dataplane service info", controlplane)
+	dataplaneServiceName, err := gatewayutils.GetDataplaneServiceNameForControlplane(ctx, r.Client, controlplane)
+	if err != nil {
+		if !gatewayerrors.IsDataPlaneNotSet(err) {
+			return ctrl.Result{}, err
+		}
+
+		debug(log, "no existing dataplane for controlplane", controlplane, "error", err)
+	}
+
 	debug(log, "validating ControlPlane configuration", controlplane)
 	if len(controlplane.Spec.Env) == 0 && len(controlplane.Spec.EnvFrom) == 0 {
 		debug(log, "no ENV config found for ControlPlane resource, setting defaults", controlplane)
-		setControlPlaneDefaults(&controlplane.Spec.ControlPlaneDeploymentOptions, controlplane.Namespace, nil)
+		setControlPlaneDefaults(&controlplane.Spec.ControlPlaneDeploymentOptions, controlplane.Namespace, dataplaneServiceName, nil)
 		if err := r.Client.Update(ctx, controlplane); err != nil {
 			if errors.IsConflict(err) {
 				debug(log, "conflict found when updating ControlPlane resource, retrying", controlplane)
@@ -68,7 +80,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	debug(log, "validating that the ControlPlane's DataPlane configuration is up to date", controlplane)
-	if err = r.ensureDataPlaneConfiguration(ctx, controlplane); err != nil {
+	if err = r.ensureDataPlaneConfiguration(ctx, controlplane, dataplaneServiceName); err != nil {
 		if errors.IsConflict(err) {
 			debug(
 				log,

@@ -58,7 +58,6 @@ func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedProvisioned(
 		}
 		updatedConditions = append(updatedConditions, condition)
 	}
-
 	dataplane.Status.Conditions = updatedConditions
 	return r.Status().Update(ctx, dataplane)
 }
@@ -125,6 +124,5 @@ func (r *DataPlaneReconciler) ensureServiceForDataPlane(
 
 	service := generateNewServiceForDataplane(dataplane)
 	labelObjForDataplane(service)
-
 	return true, service, r.Client.Create(ctx, service)
 }

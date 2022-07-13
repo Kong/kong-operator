@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"net/http"
 
-	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	operatorerrors "github.com/kong/gateway-operator/pkg/errors"
@@ -23,11 +22,14 @@ import (
 // GatewayReconciler - Reconciler Helpers
 // -----------------------------------------------------------------------------
 
-func (r *GatewayReconciler) createDataPlane(ctx context.Context, gateway *gatewayv1alpha2.Gateway, gatewayConfig *operatorv1alpha1.GatewayConfiguration) error {
+func (r *GatewayReconciler) createDataPlane(ctx context.Context,
+	gateway *gatewayv1alpha2.Gateway,
+	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
+) error {
 	dataplane := &operatorv1alpha1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: gateway.Namespace,
-			Name:      "dataplane-" + gateway.Name,
+			Namespace:    gateway.Namespace,
+			GenerateName: fmt.Sprintf("%s-", gateway.Name),
 		},
 	}
 	if gatewayConfig.Spec.DataPlaneDeploymentOptions != nil {
@@ -47,31 +49,47 @@ func (r *GatewayReconciler) createControlPlane(
 ) error {
 	controlplane := &operatorv1alpha1.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: gateway.Namespace,
-			Name:      "controlplane-" + gateway.Name, // TODO: generated names https://github.com/Kong/gateway-operator/issues/21
+			Namespace:    gateway.Namespace,
+			GenerateName: fmt.Sprintf("%s-", gateway.Name),
 		},
 		Spec: operatorv1alpha1.ControlPlaneSpec{
-			ControlPlaneDeploymentOptions: operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DataPlane: &dataplaneName,
-			},
 			GatewayClass: (*gatewayv1alpha2.ObjectName)(&gatewayClass.Name),
 		},
 	}
 	if gatewayConfig.Spec.ControlPlaneDeploymentOptions != nil {
 		controlplane.Spec.ControlPlaneDeploymentOptions = *gatewayConfig.Spec.ControlPlaneDeploymentOptions
 	}
+	if controlplane.Spec.DataPlane == nil {
+		controlplane.Spec.DataPlane = &dataplaneName
+	}
 	k8sutils.SetOwnerForObject(controlplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(controlplane)
 	return r.Client.Create(ctx, controlplane)
 }
 
-func (r *GatewayReconciler) ensureGatewayMarkedReady(ctx context.Context, gateway *gatewayv1alpha2.Gateway) error {
+func (r *GatewayReconciler) ensureGatewayMarkedReady(ctx context.Context, gateway *gatewayv1alpha2.Gateway, dataplane *operatorv1alpha1.DataPlane) error {
 	if !gatewayutils.IsGatewayReady(gateway) {
-		svc := new(corev1.Service)
-		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: gateway.Namespace, Name: fmt.Sprintf("svc-dataplane-%s", gateway.Name)}, svc); err != nil {
+		services, err := k8sutils.ListServicesForOwner(
+			ctx,
+			r.Client,
+			consts.GatewayOperatorControlledLabel,
+			consts.DataPlaneManagedLabelValue,
+			dataplane.Namespace,
+			dataplane.UID,
+		)
+		if err != nil {
 			return err
 		}
 
+		count := len(services)
+		if count > 1 {
+			return fmt.Errorf("found %d services for DataPlane currently unsupported: expected 1 or less", count)
+		}
+
+		if count == 0 {
+			return fmt.Errorf("no services found for dataplane %s/%s", dataplane.Namespace, dataplane.Name)
+		}
+		svc := services[0]
 		if svc.Spec.ClusterIP == "" {
 			return fmt.Errorf("service %s doesn't have a ClusterIP yet, not ready", svc.Name)
 		}

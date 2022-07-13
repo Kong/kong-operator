@@ -123,10 +123,12 @@ func (r *ControlPlaneReconciler) ensureDataPlaneStatus(
 func (r *ControlPlaneReconciler) ensureDataPlaneConfiguration(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
+	dataplaneServiceName string,
 ) error {
 	changed := setControlPlaneEnvOnDataPlaneChange(
 		&controlplane.Spec.ControlPlaneDeploymentOptions,
 		controlplane.Namespace,
+		dataplaneServiceName,
 	)
 	if changed {
 		return r.Client.Update(ctx, controlplane)
@@ -147,8 +149,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 ) (bool, *appsv1.Deployment, error) {
 	dataplaneIsSet := controlplane.Spec.DataPlane != nil && *controlplane.Spec.DataPlane != ""
 
-	deployments, err := k8sutils.ListDeploymentsForOwner(
-		ctx,
+	deployments, err := k8sutils.ListDeploymentsForOwner(ctx,
 		r.Client,
 		consts.GatewayOperatorControlledLabel,
 		consts.ControlPlaneManagedLabelValue,

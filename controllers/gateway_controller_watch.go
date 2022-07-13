@@ -178,26 +178,25 @@ func (r *GatewayReconciler) listGatewaysForGatewayConfig(obj client.Object) (rec
 	return
 }
 
-func (r *GatewayReconciler) setGatewayConfigDefaults(gateway *gatewayv1alpha2.Gateway, gatewayConfig *operatorv1alpha1.GatewayConfiguration) {
+func (r *GatewayReconciler) setDataplaneGatewayConfigDefaults(gatewayConfig *operatorv1alpha1.GatewayConfiguration) {
 	if gatewayConfig.Spec.DataPlaneDeploymentOptions == nil {
 		gatewayConfig.Spec.DataPlaneDeploymentOptions = new(operatorv1alpha1.DataPlaneDeploymentOptions)
 	}
 	dataplaneutils.SetDataPlaneDefaults(gatewayConfig.Spec.DataPlaneDeploymentOptions)
+}
 
+func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gatewayv1alpha2.Gateway, gatewayConfig *operatorv1alpha1.GatewayConfiguration, dataplaneName, dataplaneServiceName string) {
 	dontOverride := make(map[string]struct{})
 	if gatewayConfig.Spec.ControlPlaneDeploymentOptions == nil {
 		gatewayConfig.Spec.ControlPlaneDeploymentOptions = new(operatorv1alpha1.ControlPlaneDeploymentOptions)
+	}
+	if gatewayConfig.Spec.ControlPlaneDeploymentOptions.DataPlane == nil ||
+		*gatewayConfig.Spec.ControlPlaneDeploymentOptions.DataPlane == "" {
+		gatewayConfig.Spec.ControlPlaneDeploymentOptions.DataPlane = &dataplaneName
 	}
 	for _, env := range gatewayConfig.Spec.ControlPlaneDeploymentOptions.Env {
 		dontOverride[env.Name] = struct{}{}
 	}
 
-	if gatewayConfig.Spec.ControlPlaneDeploymentOptions.DataPlane == nil ||
-		*gatewayConfig.Spec.ControlPlaneDeploymentOptions.DataPlane == "" {
-		// TODO: generated names https://github.com/Kong/gateway-operator/issues/21
-		dataplaneName := fmt.Sprintf("dataplane-%s", gateway.Name)
-		gatewayConfig.Spec.ControlPlaneDeploymentOptions.DataPlane = &dataplaneName
-	}
-
-	setControlPlaneDefaults(gatewayConfig.Spec.ControlPlaneDeploymentOptions, gateway.Namespace, dontOverride)
+	setControlPlaneDefaults(gatewayConfig.Spec.ControlPlaneDeploymentOptions, gateway.Namespace, dataplaneServiceName, dontOverride)
 }

@@ -45,6 +45,7 @@ const gatewayAPIsCRDs = "https://github.com/kubernetes-sigs/gateway-api.git/conf
 var (
 	existingClusterName  = os.Getenv("KONG_TEST_CLUSTER")
 	controllerManagerOut = os.Getenv("KONG_CONTROLLER_OUT")
+	skipClusterCleanup   bool
 )
 
 // -----------------------------------------------------------------------------
@@ -146,7 +147,7 @@ func TestMain(m *testing.M) {
 // -----------------------------------------------------------------------------
 
 func exitOnErr(err error) {
-	if err != nil {
+	if !skipClusterCleanup && err != nil {
 		if env != nil {
 			env.Cleanup(ctx) //nolint:errcheck
 		}

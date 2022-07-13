@@ -32,8 +32,8 @@ func generateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane) *a
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: dataplane.Namespace,
-			Name:      dataplane.Name, // TODO: generated names https://github.com/Kong/gateway-operator/issues/21
+			Namespace:    dataplane.Namespace,
+			GenerateName: fmt.Sprintf("%s-%s-", consts.DataPlanePrefix, dataplane.Name),
 			Labels: map[string]string{
 				"app": dataplane.Name,
 			},
@@ -116,7 +116,7 @@ func generateNewServiceForDataplane(dataplane *operatorv1alpha1.DataPlane) *core
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       dataplane.Namespace,
-			Name:            "svc-" + dataplane.Name, // TODO: generated names https://github.com/Kong/gateway-operator/issues/21
+			GenerateName:    fmt.Sprintf("%s-%s-", consts.DataPlanePrefix, dataplane.Name),
 			OwnerReferences: []metav1.OwnerReference{k8sutils.GenerateOwnerReferenceForObject(dataplane)},
 		},
 		Spec: corev1.ServiceSpec{

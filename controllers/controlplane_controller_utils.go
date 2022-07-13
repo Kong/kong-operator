@@ -13,13 +13,14 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------
 // ControlPlane - Private Functions
 // -----------------------------------------------------------------------------
 
-func setControlPlaneDefaults(spec *operatorv1alpha1.ControlPlaneDeploymentOptions, namespace string, dontOverride map[string]struct{}) {
+func setControlPlaneDefaults(spec *operatorv1alpha1.ControlPlaneDeploymentOptions, namespace string, dataplaneServiceName string, dontOverride map[string]struct{}) {
 	spec.Env = append(spec.Env, corev1.EnvVar{Name: "CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY", Value: "true"}) // TODO: for poc only, don't release with this https://github.com/Kong/gateway-operator/issues/7
 	spec.Env = append(spec.Env, corev1.EnvVar{
 		Name: "POD_NAMESPACE",
@@ -40,31 +41,31 @@ func setControlPlaneDefaults(spec *operatorv1alpha1.ControlPlaneDeploymentOption
 		},
 	})
 
-	if spec.DataPlane != nil && *spec.DataPlane != "" {
+	if namespace != "" && dataplaneServiceName != "" {
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_PUBLISH_SERVICE"]; !isOverrideDisabled {
-			spec.Env = updateEnv(spec.Env, "CONTROLLER_PUBLISH_SERVICE", controllerPublishService(*spec.DataPlane, namespace))
+			spec.Env = updateEnv(spec.Env, "CONTROLLER_PUBLISH_SERVICE", controllerPublishService(dataplaneServiceName, namespace))
 		}
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_URL"]; !isOverrideDisabled {
-			spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_URL", controllerKongAdminURL(*spec.DataPlane, namespace))
+			spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_URL", controllerKongAdminURL(dataplaneServiceName, namespace))
 		}
 	}
-
 }
 
 func setControlPlaneEnvOnDataPlaneChange(
 	spec *operatorv1alpha1.ControlPlaneDeploymentOptions,
 	namespace string,
+	dataplaneServiceName string,
 ) bool {
 	var changed bool
 
 	dataplaneIsSet := spec.DataPlane != nil && *spec.DataPlane != ""
 	if dataplaneIsSet {
-		newPublishServiceValue := controllerPublishService(*spec.DataPlane, namespace)
+		newPublishServiceValue := controllerPublishService(dataplaneServiceName, namespace)
 		if envValueByName(spec.Env, "CONTROLLER_PUBLISH_SERVICE") != newPublishServiceValue {
 			spec.Env = updateEnv(spec.Env, "CONTROLLER_PUBLISH_SERVICE", newPublishServiceValue)
 			changed = true
 		}
-		newKongAdminURL := controllerKongAdminURL(*spec.DataPlane, namespace)
+		newKongAdminURL := controllerKongAdminURL(dataplaneServiceName, namespace)
 		if envValueByName(spec.Env, "CONTROLLER_KONG_ADMIN_URL") != newKongAdminURL {
 			spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_URL", newKongAdminURL)
 			changed = true
@@ -84,12 +85,12 @@ func setControlPlaneEnvOnDataPlaneChange(
 }
 
 func controllerKongAdminURL(dataplaneName, dataplaneNamespace string) string {
-	return fmt.Sprintf("https://svc-%s.%s.svc:%d",
+	return fmt.Sprintf("https://%s.%s.svc:%d",
 		dataplaneName, dataplaneNamespace, dataplaneutils.DefaultKongAdminPort)
 }
 
 func controllerPublishService(dataplaneName, dataplaneNamespace string) string {
-	return fmt.Sprintf("%s/svc-%s", dataplaneNamespace, dataplaneName)
+	return fmt.Sprintf("%s/%s", dataplaneNamespace, dataplaneName)
 }
 
 // envValueByName returns the value of the first env var with the given name.
@@ -144,11 +145,12 @@ func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: controlplane.Namespace,
-			Name:      controlplane.Name, // TODO: https://github.com/Kong/gateway-operator/issues/21
+			Namespace:    controlplane.Namespace,
+			GenerateName: fmt.Sprintf("%s-%s-", consts.ControlPlanePrefix, controlplane.Name),
 			Labels: map[string]string{
 				"app": controlplane.Name,
 			},
+			OwnerReferences: []metav1.OwnerReference{k8sutils.GenerateOwnerReferenceForObject(controlplane)},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{

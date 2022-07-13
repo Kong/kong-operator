@@ -8,7 +8,6 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -19,7 +18,9 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	operatorerrors "github.com/kong/gateway-operator/pkg/errors"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -111,17 +112,26 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	r.setGatewayConfigDefaults(gateway, gatewayConfig)
+	r.setDataplaneGatewayConfigDefaults(gatewayConfig)
 
 	debug(log, "looking for associated dataplanes", gateway)
-	dataplane := new(operatorv1alpha1.DataPlane)
-	dataplaneNSN := types.NamespacedName{Namespace: req.Namespace, Name: "dataplane-" + req.Name} // TODO: generated names https://github.com/Kong/gateway-operator/issues/21
-	if err := r.Client.Get(ctx, dataplaneNSN, dataplane); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, r.createDataPlane(ctx, gateway, gatewayConfig)
-		}
+	dataplanes, err := gatewayutils.ListDataPlanesForGateway(
+		ctx,
+		r.Client,
+		gateway,
+	)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	count := len(dataplanes)
+	if count > 1 {
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, fmt.Errorf("data plane deployments found: %d, expected: 1, requeing", count)
+	}
+	if count == 0 {
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, r.createDataPlane(ctx, gateway, gatewayConfig)
+	}
+	dataplane := dataplanes[0].DeepCopy()
 
 	debug(log, "ensuring dataplane config is up to date", gateway)
 	if gatewayConfig.Spec.DataPlaneDeploymentOptions != nil {
@@ -144,15 +154,43 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 	}
 
-	debug(log, "looking for associated controlplanes", gateway)
-	controlplane := new(operatorv1alpha1.ControlPlane)
-	controlplaneNSN := types.NamespacedName{Namespace: req.Namespace, Name: "controlplane-" + req.Name} // TODO: generated names https://github.com/Kong/gateway-operator/issues/21
-	if err := r.Client.Get(ctx, controlplaneNSN, controlplane); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, r.createControlPlane(ctx, gatewayClass, gateway, gatewayConfig, dataplane.Name)
-		}
+	services, err := k8sutils.ListServicesForOwner(
+		ctx,
+		r.Client,
+		consts.GatewayOperatorControlledLabel,
+		consts.DataPlaneManagedLabelValue,
+		dataplane.Namespace,
+		dataplane.UID,
+	)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	count = len(services)
+	if count > 1 {
+		return ctrl.Result{}, fmt.Errorf("found %d services for DataPlane currently unsupported: expected 1 or less", count)
+	}
+
+	if count == 0 {
+		return ctrl.Result{}, fmt.Errorf("no services found for dataplane %s/%s", dataplane.Namespace, dataplane.Name)
+	}
+
+	r.setControlplaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, services[0].Name)
+
+	debug(log, "looking for associated controlplanes", gateway)
+	controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, r.Client, gateway)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	count = len(controlplanes)
+	if count > 1 {
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, fmt.Errorf("control plane deployments found: %d, expected: 1, requeing", count)
+	}
+	if count == 0 {
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, r.createControlPlane(ctx, gatewayClass, gateway, gatewayConfig, dataplane.Name)
+	}
+	controlplane := controlplanes[0].DeepCopy()
 
 	debug(log, "ensuring controlplane config is up to date", gateway)
 	if gatewayConfig.Spec.ControlPlaneDeploymentOptions != nil {
@@ -176,7 +214,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	debug(log, "marking the gateway as ready", gateway)
-	if err := r.ensureGatewayMarkedReady(ctx, gateway); err != nil {
+	if err := r.ensureGatewayMarkedReady(ctx, gateway, dataplane); err != nil {
 		return ctrl.Result{}, err
 	}
 
