@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -33,4 +34,15 @@ func SetOwnerForObject(obj, owner client.Object) {
 	if !foundOwnerRef {
 		obj.SetOwnerReferences(append(obj.GetOwnerReferences(), GenerateOwnerReferenceForObject(owner)))
 	}
+}
+
+// IsOwnedBy is a helper function to check if the provided object is owned by
+// the provided ref UID.
+func IsOwnedByRefUID(obj metav1.Object, uid types.UID) bool {
+	for _, ref := range obj.GetOwnerReferences() {
+		if ref.UID == uid {
+			return true
+		}
+	}
+	return false
 }

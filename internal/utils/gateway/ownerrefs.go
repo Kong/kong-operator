@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -31,33 +29,23 @@ func ListDataPlanesForGateway(
 		return nil, fmt.Errorf("can't list dataplanes for gateway: gateway resource was missing namespace")
 	}
 
-	requirement, err := labels.NewRequirement(
-		consts.GatewayOperatorControlledLabel,
-		selection.Equals,
-		[]string{consts.GatewayManagedLabelValue},
-	)
-	if err != nil {
-		return nil, err
-	}
-	selector := labels.NewSelector().Add(*requirement)
-
-	listOptions := &client.ListOptions{
-		Namespace:     gateway.Namespace,
-		LabelSelector: selector,
-	}
-
 	dataplaneList := &operatorv1alpha1.DataPlaneList{}
-	if err := c.List(ctx, dataplaneList, listOptions); err != nil {
+
+	err := c.List(
+		ctx,
+		dataplaneList,
+		client.InNamespace(gateway.Namespace),
+		client.MatchingLabels{consts.GatewayOperatorControlledLabel: consts.GatewayManagedLabelValue},
+	)
+
+	if err != nil {
 		return nil, err
 	}
 
 	dataplanes := make([]operatorv1alpha1.DataPlane, 0)
 	for _, dataplane := range dataplaneList.Items {
-		for _, ownerRef := range dataplane.ObjectMeta.OwnerReferences {
-			if ownerRef.UID == gateway.UID {
-				dataplanes = append(dataplanes, dataplane)
-				break
-			}
+		if k8sutils.IsOwnedByRefUID(&dataplane.ObjectMeta, gateway.UID) {
+			dataplanes = append(dataplanes, dataplane)
 		}
 	}
 
@@ -75,33 +63,22 @@ func ListControlPlanesForGateway(
 		return nil, fmt.Errorf("can't list dataplanes for gateway: gateway resource was missing namespace")
 	}
 
-	requirement, err := labels.NewRequirement(
-		consts.GatewayOperatorControlledLabel,
-		selection.Equals,
-		[]string{consts.GatewayManagedLabelValue},
+	controlplaneList := &operatorv1alpha1.ControlPlaneList{}
+
+	err := c.List(
+		ctx,
+		controlplaneList,
+		client.InNamespace(gateway.Namespace),
+		client.MatchingLabels{consts.GatewayOperatorControlledLabel: consts.GatewayManagedLabelValue},
 	)
 	if err != nil {
-		return nil, err
-	}
-	selector := labels.NewSelector().Add(*requirement)
-
-	listOptions := &client.ListOptions{
-		Namespace:     gateway.Namespace,
-		LabelSelector: selector,
-	}
-
-	controlplaneList := &operatorv1alpha1.ControlPlaneList{}
-	if err := c.List(ctx, controlplaneList, listOptions); err != nil {
 		return nil, err
 	}
 
 	controlplanes := make([]operatorv1alpha1.ControlPlane, 0)
 	for _, controlplane := range controlplaneList.Items {
-		for _, ownerRef := range controlplane.ObjectMeta.OwnerReferences {
-			if ownerRef.UID == gateway.UID {
-				controlplanes = append(controlplanes, controlplane)
-				break
-			}
+		if k8sutils.IsOwnedByRefUID(&controlplane.ObjectMeta, gateway.UID) {
+			controlplanes = append(controlplanes, controlplane)
 		}
 	}
 
