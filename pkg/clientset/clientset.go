@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"net/http"
 
-	v1alpha1internalversion "github.com/kong/gateway-operator/pkg/clientset/typed/v1alpha1/internalversion"
+	apisv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -30,19 +30,19 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	V1alpha1() v1alpha1internalversion.V1alpha1Interface
+	ApisV1alpha1() apisv1alpha1.ApisV1alpha1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	v1alpha1 *v1alpha1internalversion.V1alpha1Client
+	apisV1alpha1 *apisv1alpha1.ApisV1alpha1Client
 }
 
-// V1alpha1 retrieves the V1alpha1Client
-func (c *Clientset) V1alpha1() v1alpha1internalversion.V1alpha1Interface {
-	return c.v1alpha1
+// ApisV1alpha1 retrieves the ApisV1alpha1Client
+func (c *Clientset) ApisV1alpha1() apisv1alpha1.ApisV1alpha1Interface {
+	return c.apisV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -89,7 +89,7 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 
 	var cs Clientset
 	var err error
-	cs.v1alpha1, err = v1alpha1internalversion.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.apisV1alpha1, err = apisv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.v1alpha1 = v1alpha1internalversion.New(c)
+	cs.apisV1alpha1 = apisv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

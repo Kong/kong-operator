@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
 )
 
@@ -22,7 +22,7 @@ func controlPlanePredicate(
 	controlplaneName types.NamespacedName,
 	predicate func(controlplane *operatorv1alpha1.ControlPlane) bool,
 ) func() bool {
-	controlplaneClient := operatorClient.V1alpha1().ControlPlanes(controlplaneName.Namespace)
+	controlplaneClient := operatorClient.ApisV1alpha1().ControlPlanes(controlplaneName.Namespace)
 	return func() bool {
 		controlplane, err := controlplaneClient.Get(ctx, controlplaneName.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -37,7 +37,7 @@ func dataPlanePredicate(
 	dataplaneName types.NamespacedName,
 	predicate func(dataplane *operatorv1alpha1.DataPlane) bool,
 ) func() bool {
-	dataPlaneClient := operatorClient.V1alpha1().DataPlanes(dataplaneName.Namespace)
+	dataPlaneClient := operatorClient.ApisV1alpha1().DataPlanes(dataplaneName.Namespace)
 	return func() bool {
 		dataplane, err := dataPlaneClient.Get(ctx, dataplaneName.Name, metav1.GetOptions{})
 		require.NoError(t, err)

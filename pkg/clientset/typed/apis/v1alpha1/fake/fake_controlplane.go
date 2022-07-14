@@ -21,7 +21,7 @@ package fake
 import (
 	"context"
 
-	v1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	v1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,13 +32,13 @@ import (
 
 // FakeControlPlanes implements ControlPlaneInterface
 type FakeControlPlanes struct {
-	Fake *FakeV1alpha1
+	Fake *FakeApisV1alpha1
 	ns   string
 }
 
-var controlplanesResource = schema.GroupVersionResource{Group: "v1alpha1", Version: "", Resource: "controlplanes"}
+var controlplanesResource = schema.GroupVersionResource{Group: "apis", Version: "v1alpha1", Resource: "controlplanes"}
 
-var controlplanesKind = schema.GroupVersionKind{Group: "v1alpha1", Version: "", Kind: "ControlPlane"}
+var controlplanesKind = schema.GroupVersionKind{Group: "apis", Version: "v1alpha1", Kind: "ControlPlane"}
 
 // Get takes name of the controlPlane, and returns the corresponding controlPlane object, and an error if there is any.
 func (c *FakeControlPlanes) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ControlPlane, err error) {

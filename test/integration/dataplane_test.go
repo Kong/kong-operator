@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/gateway-operator/api/v1alpha1"
+	"github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
 )
 
@@ -35,7 +35,7 @@ func TestDataplaneEssentials(t *testing.T) {
 			Name:      dataplaneName.Name,
 		},
 	}
-	dataplane, err := operatorClient.V1alpha1().DataPlanes(namespace.Name).Create(ctx, dataplane, metav1.CreateOptions{})
+	dataplane, err := operatorClient.ApisV1alpha1().DataPlanes(namespace.Name).Create(ctx, dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 

@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -151,7 +151,7 @@ func (r *GatewayReconciler) getOrCreateGatewayConfiguration(ctx context.Context,
 }
 
 func (r *GatewayReconciler) getGatewayConfigForGatewayClass(ctx context.Context, gatewayClass *gatewayv1alpha2.GatewayClass) (*operatorv1alpha1.GatewayConfiguration, error) {
-	if string(gatewayClass.Spec.ParametersRef.Group) != operatorv1alpha1.GroupVersion.Group ||
+	if string(gatewayClass.Spec.ParametersRef.Group) != operatorv1alpha1.SchemeGroupVersion.Group ||
 		string(gatewayClass.Spec.ParametersRef.Kind) != "GatewayConfiguration" {
 		return nil, &k8serrors.StatusError{
 			ErrStatus: metav1.Status{
@@ -163,7 +163,7 @@ func (r *GatewayReconciler) getGatewayConfigForGatewayClass(ctx context.Context,
 					Causes: []metav1.StatusCause{{
 						Type: metav1.CauseTypeFieldValueNotSupported,
 						Message: fmt.Sprintf("controller only supports %s %s resources for GatewayClass parametersRef",
-							operatorv1alpha1.GroupVersion.Group, "GatewayConfiguration"),
+							operatorv1alpha1.SchemeGroupVersion.Group, "GatewayConfiguration"),
 					}},
 				},
 			}}

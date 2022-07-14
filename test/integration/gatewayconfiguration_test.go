@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -58,7 +58,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			},
 		},
 	}
-	gatewayConfig, err := operatorClient.V1alpha1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err := operatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -69,8 +69,8 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		},
 		Spec: gatewayv1alpha2.GatewayClassSpec{
 			ParametersRef: &gatewayv1alpha2.ParametersReference{
-				Group:     gatewayv1alpha2.Group(gatewayConfig.GroupVersionKind().Group),
-				Kind:      gatewayv1alpha2.Kind(gatewayConfig.Kind),
+				Group:     gatewayv1alpha2.Group(operatorv1alpha1.SchemeGroupVersion.Group),
+				Kind:      gatewayv1alpha2.Kind("GatewayConfiguration"),
 				Namespace: (*gatewayv1alpha2.Namespace)(&gatewayConfig.Namespace),
 				Name:      gatewayConfig.Name,
 			},

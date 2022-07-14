@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	"github.com/kong/gateway-operator/pkg/vars"
@@ -150,13 +150,13 @@ func TestGatewayEssentials(t *testing.T) {
 
 	t.Log("verifying that DataPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
-		_, err := operatorClient.V1alpha1().DataPlanes(namespace.Name).Get(ctx, dataplane.Name, metav1.GetOptions{})
+		_, err := operatorClient.ApisV1alpha1().DataPlanes(namespace.Name).Get(ctx, dataplane.Name, metav1.GetOptions{})
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that ControlPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
-		_, err := operatorClient.V1alpha1().ControlPlanes(namespace.Name).Get(ctx, controlplane.Name, metav1.GetOptions{})
+		_, err := operatorClient.ApisV1alpha1().ControlPlanes(namespace.Name).Get(ctx, controlplane.Name, metav1.GetOptions{})
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 }

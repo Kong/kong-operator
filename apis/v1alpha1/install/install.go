@@ -3,7 +3,7 @@ package install
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/kong/gateway-operator/api/v1alpha1"
+	"github.com/kong/gateway-operator/apis/v1alpha1"
 )
 
 // Install is a callback from client-gen to add the scheme to the client

@@ -60,7 +60,7 @@ envtest: ## Download envtest-setup locally if necessary.
 
 CLIENT_GEN = $(shell pwd)/bin/client-gen
 client-gen: ## Download client-gen locally if necessary.
-	$(call go-get-tool,$(CLIENT_GEN),k8s.io/code-generator/cmd/client-gen@v0.24.0)
+	$(call go-get-tool,$(CLIENT_GEN),k8s.io/code-generator/cmd/client-gen@v0.24.2)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -125,16 +125,15 @@ generate.apis:
 generate.clientsets: client-gen
 	@$(CLIENT_GEN) --go-header-file ./hack/boilerplate.go.txt \
 		--clientset-name clientset \
-		--input-base github.com/kong/gateway-operator/api/  \
-		--input v1alpha1 \
-		--input-dirs github.com/kong/gateway-operator/api/v1alpha1/ \
+		--input-base ''  \
+		--input github.com/kong/gateway-operator/apis/v1alpha1 \
 		--output-base client-gen-tmp/ \
 		--output-package github.com/kong/gateway-operator/pkg/
 	@rm -rf pkg/clientset/
 	@mkdir -p pkg/clientset
 	@mv client-gen-tmp/github.com/kong/gateway-operator/pkg/clientset/* pkg/clientset/
 	@rm -rf client-gen-tmp/
-	@sed -i 's/"v1alpha1"/"gateway-operator.konghq.com"/g' pkg/clientset/typed/v1alpha1/internalversion/v1alpha1_client.go # FIXME - I'm not sure what I did wrong with the client-gen args, but they're emitting the wrong value here.
+
 
 # ------------------------------------------------------------------------------
 # Build - Manifests

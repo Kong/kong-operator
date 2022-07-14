@@ -19,30 +19,30 @@ limitations under the License.
 package fake
 
 import (
-	internalversion "github.com/kong/gateway-operator/pkg/clientset/typed/v1alpha1/internalversion"
+	v1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeV1alpha1 struct {
+type FakeApisV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeV1alpha1) ControlPlanes(namespace string) internalversion.ControlPlaneInterface {
+func (c *FakeApisV1alpha1) ControlPlanes(namespace string) v1alpha1.ControlPlaneInterface {
 	return &FakeControlPlanes{c, namespace}
 }
 
-func (c *FakeV1alpha1) DataPlanes(namespace string) internalversion.DataPlaneInterface {
+func (c *FakeApisV1alpha1) DataPlanes(namespace string) v1alpha1.DataPlaneInterface {
 	return &FakeDataPlanes{c, namespace}
 }
 
-func (c *FakeV1alpha1) GatewayConfigurations(namespace string) internalversion.GatewayConfigurationInterface {
+func (c *FakeApisV1alpha1) GatewayConfigurations(namespace string) v1alpha1.GatewayConfigurationInterface {
 	return &FakeGatewayConfigurations{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeV1alpha1) RESTClient() rest.Interface {
+func (c *FakeApisV1alpha1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

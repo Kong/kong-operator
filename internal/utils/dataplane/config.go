@@ -6,7 +6,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 

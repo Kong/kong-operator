@@ -21,7 +21,7 @@ package fake
 import (
 	"context"
 
-	v1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	v1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,13 +32,13 @@ import (
 
 // FakeDataPlanes implements DataPlaneInterface
 type FakeDataPlanes struct {
-	Fake *FakeV1alpha1
+	Fake *FakeApisV1alpha1
 	ns   string
 }
 
-var dataplanesResource = schema.GroupVersionResource{Group: "v1alpha1", Version: "", Resource: "dataplanes"}
+var dataplanesResource = schema.GroupVersionResource{Group: "apis", Version: "v1alpha1", Resource: "dataplanes"}
 
-var dataplanesKind = schema.GroupVersionKind{Group: "v1alpha1", Version: "", Kind: "DataPlane"}
+var dataplanesKind = schema.GroupVersionKind{Group: "apis", Version: "v1alpha1", Kind: "DataPlane"}
 
 // Get takes name of the dataPlane, and returns the corresponding dataPlane object, and an error if there is any.
 func (c *FakeDataPlanes) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.DataPlane, err error) {

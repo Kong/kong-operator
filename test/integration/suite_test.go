@@ -28,7 +28,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/manager"
 	"github.com/kong/gateway-operator/pkg/clientset"
 )
@@ -223,7 +223,7 @@ func waitForCRDs(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			_, err := operatorClient.V1alpha1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{})
+			_, err := operatorClient.ApisV1alpha1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{})
 			if err == nil {
 				ready = true
 			}

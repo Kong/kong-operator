@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	operatorerrors "github.com/kong/gateway-operator/pkg/errors"
 	"github.com/kong/gateway-operator/pkg/vars"
@@ -147,7 +147,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayConfig(obj client.Object) (rec
 	matchingGatewayClasses := make(map[string]struct{})
 	for _, gatewayClass := range gatewayClassList.Items {
 		if gatewayClass.Spec.ParametersRef != nil &&
-			string(gatewayClass.Spec.ParametersRef.Group) == operatorv1alpha1.GroupVersion.Group &&
+			string(gatewayClass.Spec.ParametersRef.Group) == operatorv1alpha1.SchemeGroupVersion.Group &&
 			string(gatewayClass.Spec.ParametersRef.Kind) == "GatewayConfiguration" &&
 			gatewayClass.Spec.ParametersRef.Name == gatewayConfig.Name {
 			matchingGatewayClasses[gatewayClass.Name] = struct{}{}

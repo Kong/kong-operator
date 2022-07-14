@@ -14,7 +14,7 @@ resources:
   domain: konghq.com
   group: gateway-operator
   kind: ControlPlane
-  path: github.com/kong/gateway-operator/api/v1alpha1
+  path: github.com/kong/gateway-operator/apis/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -23,7 +23,7 @@ resources:
   domain: konghq.com
   group: gateway-operator
   kind: DataPlane
-  path: github.com/kong/gateway-operator/api/v1alpha1
+  path: github.com/kong/gateway-operator/apis/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -40,6 +40,6 @@ resources:
   domain: gateway-operator.konghq.com
   group: gateway-operator
   kind: GatewayConfiguration
-  path: github.com/kong/gateway-operator/api/v1alpha1
+  path: github.com/kong/gateway-operator/apis/v1alpha1
   version: v1alpha1
 version: "3"
