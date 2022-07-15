@@ -62,6 +62,10 @@ CLIENT_GEN = $(shell pwd)/bin/client-gen
 client-gen: ## Download client-gen locally if necessary.
 	$(call go-get-tool,$(CLIENT_GEN),k8s.io/code-generator/cmd/client-gen@v0.24.2)
 
+KIC_ROLE_GENERATOR = $(shell pwd)/bin/kic-role-generator
+kic-role-generator:
+	go build -o $(KIC_ROLE_GENERATOR) ./hack/generators/kic-role-generator 
+
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
@@ -115,7 +119,7 @@ lint: golangci-lint
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: controller-gen generate.apis generate.clientsets
+generate: controller-gen generate.apis generate.clientsets generate.rbacs
 
 .PHONY: generate.apis
 generate.apis:
@@ -134,6 +138,18 @@ generate.clientsets: client-gen
 	@mv client-gen-tmp/github.com/kong/gateway-operator/pkg/clientset/* pkg/clientset/
 	@rm -rf client-gen-tmp/
 
+
+.PHONY: generate.rbacs
+generate.rbacs: kic-role-generator
+	$(KIC_ROLE_GENERATOR) --force
+
+# ------------------------------------------------------------------------------
+# Files generation checks
+# ------------------------------------------------------------------------------
+
+.PHONY: check.rbacs
+check.rbacs: kic-role-generator
+	$(KIC_ROLE_GENERATOR) --fail-on-error
 
 # ------------------------------------------------------------------------------
 # Build - Manifests

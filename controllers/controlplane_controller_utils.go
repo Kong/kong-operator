@@ -132,7 +132,7 @@ func rejectEnvByName(envVars []corev1.EnvVar, name string) []corev1.EnvVar {
 	return newEnvVars
 }
 
-func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.ControlPlane) *appsv1.Deployment {
+func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.ControlPlane, serviceAccountName string) *appsv1.Deployment {
 	var controlplaneImage string
 	if controlplane.Spec.ContainerImage != nil {
 		controlplaneImage = *controlplane.Spec.ContainerImage
@@ -165,7 +165,7 @@ func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 					},
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: "default", // TODO: https://github.com/Kong/gateway-operator/issues/28
+					ServiceAccountName: serviceAccountName,
 					Containers: []corev1.Container{{
 						Name:            "controller",
 						Env:             controlplane.Spec.Env,

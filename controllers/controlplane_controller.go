@@ -106,8 +106,35 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil // no need to requeue, status update will requeue
 	}
 
-	debug(log, "looking for existing deployments for ControlPlane resource", controlplane)
-	mutated, controlplaneDeployment, err := r.ensureDeploymentForControlPlane(ctx, controlplane)
+	debug(log, "ensuring ServiceAccount for ControlPlane deployment exists", controlplane)
+	created, controlplaneServiceAccount, err := r.ensureServiceAccountForControlPlane(ctx, controlplane)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if created {
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
+	}
+
+	debug(log, "ensuring ClusterRoles for ControlPlane deployment exist", controlplane)
+	created, controlplaneClusterRole, err := r.ensureClusterRoleForControlPlane(ctx, controlplane)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if created {
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
+	}
+
+	debug(log, "ensuring that ClusterRoleBindings for ControlPlane Deployment exist", controlplane)
+	created, _, err = r.ensureClusterRoleBindingForControlPlane(ctx, controlplane, controlplaneServiceAccount.Name, controlplaneClusterRole.Name)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if created {
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
+	}
+
+	debug(log, "looking for existing Deployments for ControlPlane resource", controlplane)
+	mutated, controlplaneDeployment, err := r.ensureDeploymentForControlPlane(ctx, controlplane, controlplaneServiceAccount.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

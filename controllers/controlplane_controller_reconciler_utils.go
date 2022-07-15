@@ -5,12 +5,15 @@ import (
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
 // numReplicasWhenNoDataplane represents the desired number of replicas
@@ -146,6 +149,7 @@ func (r *ControlPlaneReconciler) ensureDataPlaneConfiguration(
 func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
+	serviceAccountName string,
 ) (bool, *appsv1.Deployment, error) {
 	dataplaneIsSet := controlplane.Spec.DataPlane != nil && *controlplane.Spec.DataPlane != ""
 
@@ -191,7 +195,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		}
 	}
 
-	deployment := generateNewDeploymentForControlPlane(controlplane)
+	deployment := generateNewDeploymentForControlPlane(controlplane, serviceAccountName)
 	k8sutils.SetOwnerForObject(deployment, controlplane)
 	labelObjForControlPlane(deployment)
 
@@ -200,4 +204,81 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	}
 
 	return true, deployment, r.Client.Create(ctx, deployment)
+}
+
+func (r *ControlPlaneReconciler) ensureServiceAccountForControlPlane(
+	ctx context.Context,
+	controlplane *operatorv1alpha1.ControlPlane,
+) (created bool, sa *corev1.ServiceAccount, err error) {
+	serviceAccounts, err := k8sutils.ListServiceAccountsForOwner(ctx, r.Client, consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.Namespace, controlplane.UID)
+	if err != nil {
+		return false, nil, err
+	}
+
+	count := len(serviceAccounts)
+	if count > 1 {
+		return false, nil, fmt.Errorf("found %d serviceAccounts for ControlPlane currently unsupported: expected 1 or less", count)
+	}
+
+	if count == 1 {
+		return false, &serviceAccounts[0], nil
+	}
+
+	serviceAccount := k8sresources.GenerateNewServiceAccountForControlPlane(controlplane.Namespace, controlplane.Name)
+	k8sutils.SetOwnerForObject(serviceAccount, controlplane)
+	labelObjForControlPlane(serviceAccount)
+	return true, serviceAccount, r.Client.Create(ctx, serviceAccount)
+}
+
+func (r *ControlPlaneReconciler) ensureClusterRoleForControlPlane(
+	ctx context.Context,
+	controlplane *operatorv1alpha1.ControlPlane,
+) (created bool, cr *rbacv1.ClusterRole, err error) {
+	clusterRoles, err := k8sutils.ListClusterRolesForOwner(ctx, r.Client, consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.Namespace, controlplane.UID)
+	if err != nil {
+		return false, nil, err
+	}
+
+	count := len(clusterRoles)
+	if count > 1 {
+		return false, nil, fmt.Errorf("found %d deployments for ControlPlane currently unsupported: expected 1 or less", count)
+	}
+
+	if count == 1 {
+		return false, &clusterRoles[0], nil
+	}
+
+	clusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane(controlplane.Name, controlplane.Spec.ContainerImage)
+	if err != nil {
+		return false, nil, err
+	}
+	k8sutils.SetOwnerForObject(clusterRole, controlplane)
+	labelObjForControlPlane(clusterRole)
+	return true, clusterRole, r.Client.Create(ctx, clusterRole)
+}
+
+func (r *ControlPlaneReconciler) ensureClusterRoleBindingForControlPlane(
+	ctx context.Context,
+	controlplane *operatorv1alpha1.ControlPlane,
+	serviceAccountName string,
+	clusterRoleName string,
+) (created bool, crb *rbacv1.ClusterRoleBinding, err error) {
+	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(ctx, r.Client, consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.Namespace, controlplane.UID)
+	if err != nil {
+		return false, nil, err
+	}
+
+	count := len(clusterRoleBindings)
+	if count > 1 {
+		return false, nil, fmt.Errorf("found %d deployments for ControlPlane currently unsupported: expected 1 or less", count)
+	}
+
+	if count == 1 {
+		return false, &clusterRoleBindings[0], nil
+	}
+
+	clusterRoleBinding := k8sresources.GenerateNewClusterRoleBindingForControlPlane(controlplane.Namespace, controlplane.Name, serviceAccountName, clusterRoleName)
+	k8sutils.SetOwnerForObject(clusterRoleBinding, controlplane)
+	labelObjForControlPlane(clusterRoleBinding)
+	return true, clusterRoleBinding, r.Client.Create(ctx, clusterRoleBinding)
 }

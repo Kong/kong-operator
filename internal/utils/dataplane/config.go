@@ -56,7 +56,7 @@ var KongDefaults = map[string]string{
 	"KONG_STATUS_LISTEN":          fmt.Sprintf("0.0.0.0:%d", DefaultKongStatusPort),
 
 	// TODO: reconfigure following https://github.com/Kong/gateway-operator/issues/7
-	"KONG_ADMIN_LISTEN": fmt.Sprintf("0.0.0.0:%d http2 ssl reuseport backlog=16384", DefaultKongAdminPort),
+	"KONG_ADMIN_LISTEN": fmt.Sprintf("0.0.0.0:%d ssl reuseport backlog=16384", DefaultKongAdminPort),
 }
 
 // -----------------------------------------------------------------------------
