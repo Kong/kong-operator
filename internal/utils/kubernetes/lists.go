@@ -6,8 +6,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -89,25 +87,15 @@ func ListServiceAccountsForOwner(
 	namespace string,
 	uid types.UID,
 ) ([]corev1.ServiceAccount, error) {
-	requirement, err := labels.NewRequirement(
-		requiredLabel,
-		selection.Equals,
-		[]string{requiredValue},
+	serviceAccountList := &corev1.ServiceAccountList{}
+
+	err := c.List(
+		ctx,
+		serviceAccountList,
+		client.InNamespace(namespace),
+		client.MatchingLabels{requiredLabel: requiredValue},
 	)
 	if err != nil {
-		return nil, err
-	}
-	selector := labels.NewSelector().Add(*requirement)
-
-	listOptions := &client.ListOptions{
-		LabelSelector: selector,
-	}
-	if namespace != "" {
-		listOptions.Namespace = namespace
-	}
-
-	serviceAccountList := &corev1.ServiceAccountList{}
-	if err := c.List(ctx, serviceAccountList, listOptions); err != nil {
 		return nil, err
 	}
 
@@ -125,32 +113,23 @@ func ListServiceAccountsForOwner(
 }
 
 // ListClusterRolesForOwner is a helper function to map a list of ClusterRoles
-// by label and reduce by OwnerReference UID and namespace to efficiently list
+// by label and reduce by OwnerReference UID to efficiently list
 // only the objects owned by the provided UID.
 func ListClusterRolesForOwner(
 	ctx context.Context,
 	c client.Client,
 	requiredLabel string,
 	requiredValue string,
-	namespace string,
 	uid types.UID,
 ) ([]rbacv1.ClusterRole, error) {
-	requirement, err := labels.NewRequirement(
-		requiredLabel,
-		selection.Equals,
-		[]string{requiredValue},
+	clusterRoleList := &rbacv1.ClusterRoleList{}
+
+	err := c.List(
+		ctx,
+		clusterRoleList,
+		client.MatchingLabels{requiredLabel: requiredValue},
 	)
 	if err != nil {
-		return nil, err
-	}
-	selector := labels.NewSelector().Add(*requirement)
-
-	listOptions := &client.ListOptions{
-		LabelSelector: selector,
-	}
-
-	clusterRoleList := &rbacv1.ClusterRoleList{}
-	if err := c.List(ctx, clusterRoleList, listOptions); err != nil {
 		return nil, err
 	}
 
@@ -168,32 +147,23 @@ func ListClusterRolesForOwner(
 }
 
 // ListClusterRoleBindingsForOwner is a helper function to map a list of ClusterRoleBindings
-// by label and reduce by OwnerReference UID and namespace to efficiently list
+// by label and reduce by OwnerReference UID to efficiently list
 // only the objects owned by the provided UID.
 func ListClusterRoleBindingsForOwner(
 	ctx context.Context,
 	c client.Client,
 	requiredLabel string,
 	requiredValue string,
-	namespace string,
 	uid types.UID,
 ) ([]rbacv1.ClusterRoleBinding, error) {
-	requirement, err := labels.NewRequirement(
-		requiredLabel,
-		selection.Equals,
-		[]string{requiredValue},
+	clusterRoleBindingList := &rbacv1.ClusterRoleBindingList{}
+
+	err := c.List(
+		ctx,
+		clusterRoleBindingList,
+		client.MatchingLabels{requiredLabel: requiredValue},
 	)
 	if err != nil {
-		return nil, err
-	}
-	selector := labels.NewSelector().Add(*requirement)
-
-	listOptions := &client.ListOptions{
-		LabelSelector: selector,
-	}
-
-	clusterRoleBindingList := &rbacv1.ClusterRoleBindingList{}
-	if err := c.List(ctx, clusterRoleBindingList, listOptions); err != nil {
 		return nil, err
 	}
 

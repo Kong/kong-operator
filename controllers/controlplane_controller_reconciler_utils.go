@@ -234,7 +234,7 @@ func (r *ControlPlaneReconciler) ensureClusterRoleForControlPlane(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (created bool, cr *rbacv1.ClusterRole, err error) {
-	clusterRoles, err := k8sutils.ListClusterRolesForOwner(ctx, r.Client, consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.Namespace, controlplane.UID)
+	clusterRoles, err := k8sutils.ListClusterRolesForOwner(ctx, r.Client, consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.UID)
 	if err != nil {
 		return false, nil, err
 	}
@@ -263,7 +263,7 @@ func (r *ControlPlaneReconciler) ensureClusterRoleBindingForControlPlane(
 	serviceAccountName string,
 	clusterRoleName string,
 ) (created bool, crb *rbacv1.ClusterRoleBinding, err error) {
-	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(ctx, r.Client, consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.Namespace, controlplane.UID)
+	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(ctx, r.Client, consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.UID)
 	if err != nil {
 		return false, nil, err
 	}
