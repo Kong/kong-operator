@@ -10,7 +10,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
-	gatewayerrors "github.com/kong/gateway-operator/internal/errors"
+	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
@@ -93,7 +93,7 @@ func GetDataplaneServiceNameForControlplane(
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (string, error) {
 	if controlplane.Spec.DataPlane == nil || *controlplane.Spec.DataPlane == "" {
-		return "", gatewayerrors.NewDataPlaneNotSetError(controlplane)
+		return "", fmt.Errorf("%w, controlplane = %s/%s", operatorerrors.ErrDataPlaneNotSet, controlplane.Namespace, controlplane.Name)
 	}
 
 	dataplane := operatorv1alpha1.DataPlane{}

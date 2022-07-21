@@ -2,15 +2,16 @@ package controllers
 
 import (
 	"context"
+	"errors"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	gatewayerrors "github.com/kong/gateway-operator/internal/errors"
+	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 )
 
@@ -39,7 +40,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	debug(log, "reconciling ControlPlane resource", req)
 	controlplane := new(operatorv1alpha1.ControlPlane)
 	if err := r.Client.Get(ctx, req.NamespacedName, controlplane); err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -58,7 +59,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	debug(log, "retrieving dataplane service info", controlplane)
 	dataplaneServiceName, err := gatewayutils.GetDataplaneServiceNameForControlplane(ctx, r.Client, controlplane)
 	if err != nil {
-		if !gatewayerrors.IsDataPlaneNotSet(err) {
+		if !errors.Is(err, operatorerrors.ErrDataPlaneNotSet) {
 			return ctrl.Result{}, err
 		}
 
@@ -70,7 +71,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		debug(log, "no ENV config found for ControlPlane resource, setting defaults", controlplane)
 		setControlPlaneDefaults(&controlplane.Spec.ControlPlaneDeploymentOptions, controlplane.Namespace, dataplaneServiceName, nil)
 		if err := r.Client.Update(ctx, controlplane); err != nil {
-			if errors.IsConflict(err) {
+			if k8serrors.IsConflict(err) {
 				debug(log, "conflict found when updating ControlPlane resource, retrying", controlplane)
 				return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 			}
@@ -81,7 +82,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	debug(log, "validating that the ControlPlane's DataPlane configuration is up to date", controlplane)
 	if err = r.ensureDataPlaneConfiguration(ctx, controlplane, dataplaneServiceName); err != nil {
-		if errors.IsConflict(err) {
+		if k8serrors.IsConflict(err) {
 			debug(
 				log,
 				"conflict found when trying to ensure ControlPlane's DataPlane configuration was up to date, retrying",

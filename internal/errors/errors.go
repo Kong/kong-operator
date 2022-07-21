@@ -2,31 +2,29 @@ package errors
 
 import (
 	"errors"
-	"fmt"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DataPlaneNotSetError is a custom object that must be raised when a specific OwnerReference
+// -----------------------------------------------------------------------------
+// Gateway - Errors
+// -----------------------------------------------------------------------------
+
+// ErrUnsupportedGateway is an error which indicates that a provided Gateway
+// is not supported because it's GatewayClass was not associated with this
+// controller.
+var ErrUnsupportedGateway = errors.New("gateway not supported")
+
+// -----------------------------------------------------------------------------
+// GatewayClass - Errors
+// -----------------------------------------------------------------------------
+
+// ErrObjectMissingParametersRef is a custom error that must be used when the
+// .spec.ParametersRef field of the given object is nil
+var ErrObjectMissingParametersRef = errors.New("no reference to related objects")
+
+// -----------------------------------------------------------------------------
+// Controlplane - Errors
+// -----------------------------------------------------------------------------
+
+// ErrDataPlaneNotSet is a custom error that must be used when a specific OwnerReference
 // is expected to be on an object, but it is not found.
-type DataPlaneNotSetError struct {
-	object metav1.Object
-
-	message string
-}
-
-func (err *DataPlaneNotSetError) Error() string {
-	return err.message
-}
-
-func NewDataPlaneNotSetError(obj metav1.Object) error {
-	return &DataPlaneNotSetError{
-		object:  obj,
-		message: fmt.Sprintf("no dataplane name set on controlplan %s/%s spec", obj.GetNamespace(), obj.GetName()),
-	}
-}
-
-func IsDataPlaneNotSet(err error) bool {
-	var onwRefErr *DataPlaneNotSetError
-	return errors.As(err, &onwRefErr)
-}
+var ErrDataPlaneNotSet = errors.New("no dataplane name set")

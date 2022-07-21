@@ -13,8 +13,8 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
-	operatorerrors "github.com/kong/gateway-operator/pkg/errors"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 

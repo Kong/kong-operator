@@ -19,9 +19,9 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
+	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
-	operatorerrors "github.com/kong/gateway-operator/pkg/errors"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
