@@ -7,6 +7,7 @@ SHELL = /usr/bin/env bash -o pipefail
 
 IMG ?= ghcr.io/kong/gateway-operator
 TAG ?= latest
+RHTAG ?= latest-redhat
 
 # ------------------------------------------------------------------------------
 # Configuration - OperatorHub
@@ -163,11 +164,15 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 
 .PHONY: docker.build
 docker.build:
-	docker build -t ${IMG}:${TAG} .
+	docker build -t ${IMG}:${TAG} --target distroless --build-arg TAG=${TAG} . 
 
 .PHONY: docker.push
 docker.push:
 	docker push ${IMG}:${TAG}
+
+.PHONY: docker.build.redhat
+docker.build.redhat:
+	docker build -t ${IMG}:${RHTAG} --target redhat --build-arg TAG=${RHTAG} . 
 
 # ------------------------------------------------------------------------------
 # Build - OperatorHub Bundles
