@@ -29,4 +29,8 @@ const (
 	// DataPlaneConditionReasonPodsReady is a reason which indicates how a DataPlane
 	// reached fully Provisioned status.
 	DataPlaneConditionReasonPodsReady = "PodsReady"
+
+	// DataPlaneConditionValidationFailed is a reason which indicates validation of
+	// a dataplane is failed.
+	DataPlaneConditionValidationFailed = "ValidationFailed"
 )

@@ -1,0 +1,4 @@
+resources:
+- certificate_config.yaml
+- service_validating_webhook.yaml
+- validating_webhook.yaml

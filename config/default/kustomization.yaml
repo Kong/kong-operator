@@ -4,5 +4,7 @@ bases:
 - ../crd
 - ../rbac
 - ../manager
+- ../admission_webhook
 patchesStrategicMerge:
 - manager_auth_proxy_patch.yaml
+- manager_webhook_certificates_patch.yaml

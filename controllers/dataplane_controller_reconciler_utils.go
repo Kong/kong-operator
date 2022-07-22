@@ -62,6 +62,55 @@ func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedProvisioned(
 	return r.Status().Update(ctx, dataplane)
 }
 
+// isSameDataPlaneCondition returns true if two `metav1.Condition`s
+// indicates the same condition of a `DataPlane` resource.
+func isSameDataPlaneCondition(condition1, condition2 metav1.Condition) bool {
+	return condition1.Type == condition2.Type &&
+		condition1.Status == condition2.Status &&
+		condition1.Reason == condition2.Reason &&
+		condition1.Message == condition2.Message
+}
+
+func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
+	ctx context.Context,
+	dataplane *operatorv1alpha1.DataPlane,
+	reason string, message string,
+) error {
+	notProvisionedCondition := metav1.Condition{
+		Type:               string(DataPlaneConditionTypeProvisioned),
+		Status:             metav1.ConditionFalse,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: dataplane.Generation,
+		LastTransitionTime: metav1.Now(),
+	}
+
+	conditionFound := false
+	shouldUpdate := false
+	for i, condition := range dataplane.Status.Conditions {
+		// update the condition if condition has type `provisioned`, and the condition is not the same.
+		if condition.Type == string(DataPlaneConditionTypeProvisioned) {
+			conditionFound = true
+			// update the slice if the condition is not the same as we expected.
+			if !isSameDataPlaneCondition(notProvisionedCondition, condition) {
+				dataplane.Status.Conditions[i] = notProvisionedCondition
+				shouldUpdate = true
+			}
+		}
+	}
+
+	if !conditionFound {
+		// append a new condition if provisioned condition is not found.
+		dataplane.Status.Conditions = append(dataplane.Status.Conditions, notProvisionedCondition)
+		shouldUpdate = true
+	}
+
+	if shouldUpdate {
+		return r.Status().Update(ctx, dataplane)
+	}
+	return nil
+}
+
 // -----------------------------------------------------------------------------
 // DataPlaneReconciler - Owned Resource Management
 // -----------------------------------------------------------------------------

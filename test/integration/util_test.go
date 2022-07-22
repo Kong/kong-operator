@@ -8,16 +8,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/require"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -83,4 +88,79 @@ func urlForService(ctx context.Context, cluster clusters.Cluster, nsn types.Name
 	}
 
 	return nil, fmt.Errorf("service %s has not yet been provisoned", service.Name)
+}
+
+// createValidatingWebhook creates validating webhook for gateway operator.
+func createValidatingWebhook(ctx context.Context, k8sClient *kubernetes.Clientset, webhookURL string, caPath string) error {
+	sideEffect := admissionregistrationv1.SideEffectClassNone
+	caFile, err := os.Open(caPath)
+	if err != nil {
+		return err
+	}
+	caContent, err := io.ReadAll(caFile)
+	if err != nil {
+		return err
+	}
+
+	_, err = k8sClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(ctx,
+		&admissionregistrationv1.ValidatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gateway-operator-validating-webhook",
+			},
+			Webhooks: []admissionregistrationv1.ValidatingWebhook{
+				{
+					Name: "gateway-operator-validation.konghq.com",
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						URL:      &webhookURL,
+						CABundle: caContent,
+					},
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Operations: []admissionregistrationv1.OperationType{
+								"CREATE",
+								"UPDATE",
+							},
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"gateway-operator.konghq.com"},
+								APIVersions: []string{"v1alpha1"},
+								Resources:   []string{"controlplanes", "dataplanes"},
+							},
+						},
+					},
+					SideEffects:             &sideEffect,
+					AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				},
+			},
+		},
+		metav1.CreateOptions{})
+	return err
+}
+
+// getFirstNonLoopbackIP returns the first found non-loopback IPv4 ip of local interfaces.
+func getFirstNonLoopbackIP() (string, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return "", err
+	}
+
+	for _, iface := range ifaces {
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+			if ip.To4() != nil && !ip.IsLoopback() {
+				return ip.String(), nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no available IPs")
 }

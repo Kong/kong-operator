@@ -1,0 +1,144 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admission
+  labels:
+    name: gateway-operator-webhook
+  namespace: kong-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: admission
+  labels:
+    name: gateway-operator-webhook
+rules:
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - validatingwebhookconfigurations
+    verbs:
+      - get
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: admission
+  annotations:
+  labels:
+    name: gateway-operator-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gateway-operator-admission
+subjects:
+  - kind: ServiceAccount
+    name: gateway-operator-admission
+    namespace: kong-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: admission
+  annotations:
+  labels:
+    name: gateway-operator-webhook
+  namespace: kong-system
+rules:
+  - apiGroups:
+      - ''
+    resources:
+      - secrets
+    verbs:
+      - get
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: admission
+  annotations:
+  labels:
+    name: gateway-operator-webhook
+  namespace: kong-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gateway-operator-admission
+subjects:
+  - kind: ServiceAccount
+    name: gateway-operator-admission
+    namespace: kong-system
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: kong-system
+  name: admission
+  annotations:
+  labels:
+    name: gateway-operator-webhook
+spec:
+  template:
+    metadata:
+      name: admission-create
+      labels:
+        name: gateway-operator-webhook
+    spec:
+      containers:
+        - name: create
+          image: k8s.gcr.io/ingress-nginx/kube-webhook-certgen:v1.1.1
+          imagePullPolicy: IfNotPresent
+          args:
+            - create
+            - --host=gateway-operator-validating-webhook,gateway-operator-validating-webhook.kong-system.svc
+            - --namespace=kong-system
+            - --secret-name=gateway-operator-webhook-certs
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+      restartPolicy: OnFailure
+      serviceAccountName: gateway-operator-admission
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2000
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: kong-system
+  name: admission-patch
+  labels:
+    name: gateway-operator-webhook
+spec:
+  template:
+    metadata:
+      name: admission-patch
+      labels:
+        name: gateway-operator-webhook
+    spec:
+      containers:
+        - name: patch
+          image: k8s.gcr.io/ingress-nginx/kube-webhook-certgen:v1.1.1
+          imagePullPolicy: IfNotPresent
+          args:
+            - patch
+            - --webhook-name=gateway-operator-validation.konghq.com
+            - --namespace=kong-system
+            - --patch-mutating=false
+            - --patch-validating=true
+            - --secret-name=gateway-operator-webhook-certs
+            - --patch-failure-policy=Fail
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+      restartPolicy: OnFailure
+      serviceAccountName: gateway-operator-admission
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2000

@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      volumes:
+      - name: webhook-certificates
+        secret:
+          secretName: gateway-operator-webhook-certs
+          items:
+          - key: ca
+            path: ca.crt
+          - key: cert
+            path: tls.crt
+          - key: key
+            path: tls.key
+      containers:
+      - name: manager
+        volumeMounts:
+        - name: webhook-certificates
+          mountPath: /tmp/k8s-webhook-server/serving-certs
+          readOnly: true

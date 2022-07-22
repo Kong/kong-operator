@@ -23,7 +23,7 @@ const requeueWithoutBackoff = time.Millisecond * 200
 // Private Functions - Logging
 // -----------------------------------------------------------------------------
 
-func info(log logr.Logger, msg string, rawOBJ interface{}, keysAndValues ...interface{}) { //nolint:deadcode,unused //FIXME
+func info(log logr.Logger, msg string, rawOBJ interface{}, keysAndValues ...interface{}) {
 	if obj, ok := rawOBJ.(client.Object); ok {
 		kvs := append([]interface{}{"namespace", obj.GetNamespace(), "name", obj.GetName()}, keysAndValues...)
 		log.V(logging.InfoLevel).Info(msg, kvs...)

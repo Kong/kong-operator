@@ -29,6 +29,8 @@ spec:
       containers:
       - command:
         - /manager
+        args:
+        - --leader-elect
         image: ghcr.io/kong/gateway-operator:main
         name: manager
         securityContext:

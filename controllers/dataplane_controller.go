@@ -5,12 +5,14 @@ import (
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
+	dataplanevalidation "github.com/kong/gateway-operator/internal/validation/dataplane"
 )
 
 // -----------------------------------------------------------------------------
@@ -20,16 +22,23 @@ import (
 // DataPlaneReconciler reconciles a DataPlane object
 type DataPlaneReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme        *runtime.Scheme
+	eventRecorder record.EventRecorder
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *DataPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	r.eventRecorder = mgr.GetEventRecorderFor("dataplane")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&operatorv1alpha1.DataPlane{}).
 		Named("DataPlane").
 		Complete(r)
 }
+
+// -----------------------------------------------------------------------------
+// DataPlaneReconciler - Reconciliation
+// -----------------------------------------------------------------------------
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -66,6 +75,16 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
+	}
+
+	// validate dataplane
+	err = dataplanevalidation.NewValidator(r.Client).Validate(dataplane)
+	if err != nil {
+		info(log, "failed to validate dataplane: "+err.Error(), dataplane)
+		r.eventRecorder.Event(dataplane, "Warning", "ValidationFailed", err.Error())
+		markErr := r.ensureDataPlaneIsMarkedNotProvisioned(ctx, dataplane,
+			DataPlaneConditionValidationFailed, err.Error())
+		return ctrl.Result{}, markErr
 	}
 
 	debug(log, "looking for existing deployments for DataPlane resource", dataplane)

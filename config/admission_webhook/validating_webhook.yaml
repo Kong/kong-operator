@@ -1,0 +1,20 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validation.konghq.com
+webhooks:
+- name: "gateway-operator-validation.konghq.com"
+  rules:
+  - apiGroups:   ["gateway-operator.konghq.com"]
+    apiVersions: ["v1alpha1"]
+    operations:  ["CREATE","UPDATE"]
+    resources:   ["dataplanes"]
+    scope:       "Namespaced"
+  clientConfig:
+    service:
+      namespace: "kong-system"
+      name: "gateway-operator-validating-webhook"
+      path: "/validate"
+  admissionReviewVersions: ["v1", "v1beta1"]
+  sideEffects: None
+  timeoutSeconds: 5
