@@ -67,3 +67,13 @@ type DataPlaneStatus struct {
 	// +kubebuilder:validation:MaxItems=8
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
+
+// GetConditions retrieves the DataPlane Status Conditions
+func (d *DataPlane) GetConditions() []metav1.Condition {
+	return d.Status.Conditions
+}
+
+// SetConditions sets the DataPlane Status Conditions
+func (d *DataPlane) SetConditions(conditions []metav1.Condition) {
+	d.Status.Conditions = conditions
+}

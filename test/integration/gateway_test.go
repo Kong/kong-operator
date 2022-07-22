@@ -73,14 +73,14 @@ func TestGatewayEssentials(t *testing.T) {
 	require.Eventually(t, func() bool {
 		gateway, err = gatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		return gatewayutils.IsGatewayScheduled(gateway)
+		return gatewayutils.IsScheduled(gateway)
 	}, gatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets marked as Ready")
 	require.Eventually(t, func() bool {
 		gateway, err = gatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		return gatewayutils.IsGatewayReady(gateway)
+		return gatewayutils.IsReady(gateway)
 	}, gatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets an IP address")

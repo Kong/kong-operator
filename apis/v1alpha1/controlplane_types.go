@@ -99,3 +99,13 @@ type ControlPlaneStatus struct {
 	// +kubebuilder:default={{type: "Scheduled", status: "Unknown", reason:"NotReconciled", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
+
+// GetConditions returns the ControlPlane Status Conditions
+func (c *ControlPlane) GetConditions() []metav1.Condition {
+	return c.Status.Conditions
+}
+
+// SetConditions sets the ControlPlane Status Conditions
+func (c *ControlPlane) SetConditions(conditions []metav1.Condition) {
+	c.Status.Conditions = conditions
+}

@@ -24,99 +24,65 @@ const numReplicasWhenNoDataplane = 0
 // ControlPlaneReconciler - Status Management
 // -----------------------------------------------------------------------------
 
-func (r *ControlPlaneReconciler) ensureControlPlaneIsMarkedScheduled(
-	ctx context.Context,
+func (r *ControlPlaneReconciler) ensureIsMarkedScheduled(
 	controlplane *operatorv1alpha1.ControlPlane,
-) (bool, error) {
-	isScheduled := false
-	for _, condition := range controlplane.Status.Conditions {
-		if condition.Type == string(ControlPlaneConditionTypeProvisioned) {
-			isScheduled = true
-		}
+) bool {
+	_, present := k8sutils.GetCondition(ControlPlaneConditionTypeProvisioned, controlplane)
+	if !present {
+		condition := k8sutils.NewCondition(
+			ControlPlaneConditionTypeProvisioned,
+			metav1.ConditionFalse,
+			ControlPlaneConditionReasonPodsNotReady,
+			"ControlPlane resource is scheduled for provisioning",
+		)
+
+		k8sutils.SetCondition(condition, controlplane)
+		return true
 	}
 
-	if !isScheduled {
-		controlplane.Status.Conditions = append(controlplane.Status.Conditions, metav1.Condition{
-			Type:               string(ControlPlaneConditionTypeProvisioned),
-			Reason:             ControlPlaneConditionReasonPodsNotReady,
-			Status:             metav1.ConditionFalse,
-			Message:            "ControlPlane resource is scheduled for provisioning",
-			ObservedGeneration: controlplane.Generation,
-			LastTransitionTime: metav1.Now(),
-		})
-		return true, r.Client.Status().Update(ctx, controlplane)
-	}
-
-	return false, nil
+	return false
 }
 
-func (r *ControlPlaneReconciler) ensureControlPlaneIsMarkedProvisioned(
-	ctx context.Context,
+func (r *ControlPlaneReconciler) ensureIsMarkedProvisioned(
 	controlplane *operatorv1alpha1.ControlPlane,
-) error {
-	updatedConditions := make([]metav1.Condition, 0)
-	for _, condition := range controlplane.Status.Conditions {
-		if condition.Type == string(ControlPlaneConditionTypeProvisioned) {
-			condition.Status = metav1.ConditionTrue
-			condition.Reason = ControlPlaneConditionReasonPodsReady
-			condition.Message = "pods for all Deployments are ready"
-			condition.ObservedGeneration = controlplane.Generation
-			condition.LastTransitionTime = metav1.Now()
-		}
-		updatedConditions = append(updatedConditions, condition)
-	}
-
-	controlplane.Status.Conditions = updatedConditions
-	return r.Status().Update(ctx, controlplane)
+) {
+	condition := k8sutils.NewCondition(
+		ControlPlaneConditionTypeProvisioned,
+		metav1.ConditionTrue,
+		ControlPlaneConditionReasonPodsReady,
+		"pods for all Deployments are ready",
+	)
+	k8sutils.SetCondition(condition, controlplane)
+	k8sutils.SetReady(controlplane)
 }
 
 // ensureDataPlaneStatus ensures that the dataplane is in the correct state
 // to carry on with the controlplane deployments reconciliation.
 // Information about the missing dataplane is stored in the controlplane status.
 func (r *ControlPlaneReconciler) ensureDataPlaneStatus(
-	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
-) (controlPlaneChanged, dataplaneIsSet bool, err error) {
-	updatedConditions := make([]metav1.Condition, 0)
+) (dataplaneIsSet bool) {
 	dataplaneIsSet = controlplane.Spec.DataPlane != nil && *controlplane.Spec.DataPlane != ""
+	condition, present := k8sutils.GetCondition(ControlPlaneConditionTypeProvisioned, controlplane)
 
-	for _, condition := range controlplane.Status.Conditions {
-		if condition.Type == string(ControlPlaneConditionTypeProvisioned) {
-			switch {
-
-			// Change state to NoDataplane if dataplane is not set.
-			case !dataplaneIsSet && condition.Reason != ControlPlaneConditionReasonNoDataplane:
-				condition = metav1.Condition{
-					Type:               string(ControlPlaneConditionTypeProvisioned),
-					Reason:             ControlPlaneConditionReasonNoDataplane,
-					Status:             metav1.ConditionFalse,
-					Message:            "DataPlane is not set",
-					ObservedGeneration: controlplane.Generation,
-					LastTransitionTime: metav1.Now(),
-				}
-				updatedConditions = append(updatedConditions, condition)
-
-			// Change state from NoDataplane to PodsNotReady to start provisioning.
-			case dataplaneIsSet && condition.Reason == ControlPlaneConditionReasonNoDataplane:
-				condition = metav1.Condition{
-					Type:               string(ControlPlaneConditionTypeProvisioned),
-					Reason:             ControlPlaneConditionReasonPodsNotReady,
-					Status:             metav1.ConditionFalse,
-					Message:            "DataPlane was set, ControlPlane resource is scheduled for provisioning",
-					ObservedGeneration: controlplane.Generation,
-					LastTransitionTime: metav1.Now(),
-				}
-				updatedConditions = append(updatedConditions, condition)
-			}
-		}
+	newCondition := k8sutils.NewCondition(
+		ControlPlaneConditionTypeProvisioned,
+		metav1.ConditionFalse,
+		ControlPlaneConditionReasonNoDataplane,
+		"DataPlane is not set",
+	)
+	if dataplaneIsSet {
+		newCondition = k8sutils.NewCondition(
+			ControlPlaneConditionTypeProvisioned,
+			metav1.ConditionFalse,
+			ControlPlaneConditionReasonPodsNotReady,
+			"DataPlane was set, ControlPlane resource is scheduled for provisioning",
+		)
 	}
-
-	if len(updatedConditions) > 0 {
-		controlplane.Status.Conditions = updatedConditions
-		return true, dataplaneIsSet, r.Status().Update(ctx, controlplane)
+	if !present || condition.Status != newCondition.Status || condition.Reason != newCondition.Reason {
+		k8sutils.SetCondition(newCondition, controlplane)
 	}
-
-	return false, dataplaneIsSet, nil
+	return dataplaneIsSet
 }
 
 // -----------------------------------------------------------------------------

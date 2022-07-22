@@ -24,7 +24,7 @@ import (
 // -----------------------------------------------------------------------------
 
 func (r *GatewayReconciler) createDataPlane(ctx context.Context,
-	gateway *gatewayv1alpha2.Gateway,
+	gateway *gatewayDecorator,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 ) error {
 	dataplane := &operatorv1alpha1.DataPlane{
@@ -44,7 +44,7 @@ func (r *GatewayReconciler) createDataPlane(ctx context.Context,
 func (r *GatewayReconciler) createControlPlane(
 	ctx context.Context,
 	gatewayClass *gatewayv1alpha2.GatewayClass,
-	gateway *gatewayv1alpha2.Gateway,
+	gateway *gatewayDecorator,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 	dataplaneName string,
 ) error {
@@ -68,8 +68,8 @@ func (r *GatewayReconciler) createControlPlane(
 	return r.Client.Create(ctx, controlplane)
 }
 
-func (r *GatewayReconciler) ensureGatewayMarkedReady(ctx context.Context, gateway *gatewayv1alpha2.Gateway, dataplane *operatorv1alpha1.DataPlane) error {
-	if !gatewayutils.IsGatewayReady(gateway) {
+func (r *GatewayReconciler) ensureGatewayMarkedReady(ctx context.Context, gateway *gatewayDecorator, dataplane *operatorv1alpha1.DataPlane) error {
+	if !k8sutils.IsReady(gateway) {
 		services, err := k8sutils.ListServicesForOwner(
 			ctx,
 			r.Client,
@@ -97,7 +97,11 @@ func (r *GatewayReconciler) ensureGatewayMarkedReady(ctx context.Context, gatewa
 
 		gatewayIPs := make([]string, 0)
 		if len(svc.Status.LoadBalancer.Ingress) > 0 {
-			gatewayIPs = append(gatewayIPs, svc.Status.LoadBalancer.Ingress[0].IP) // TODO: handle hostnames https://github.com/Kong/gateway-operator/issues/24
+			ip := svc.Status.LoadBalancer.Ingress[0].IP
+			if ip == "" {
+				return errors.New("missing loadbalancer.ingress[0].ip")
+			}
+			gatewayIPs = append(gatewayIPs, ip) // TODO: handle hostnames https://github.com/Kong/gateway-operator/issues/24
 		}
 
 		newAddresses := make([]gatewayv1alpha2.GatewayAddress, 0, len(gatewayIPs))
@@ -111,17 +115,8 @@ func (r *GatewayReconciler) ensureGatewayMarkedReady(ctx context.Context, gatewa
 
 		gateway.Status.Addresses = newAddresses
 
-		gateway = gatewayutils.PruneGatewayStatusConds(gateway)
-		newConditions := make([]metav1.Condition, 0, len(gateway.Status.Conditions))
-		newConditions = append(newConditions, metav1.Condition{
-			Type:               string(gatewayv1alpha2.GatewayConditionReady),
-			Status:             metav1.ConditionTrue,
-			ObservedGeneration: gateway.Generation,
-			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayv1alpha2.GatewayReasonReady),
-		})
-		gateway.Status.Conditions = newConditions
-		return r.Client.Status().Update(ctx, gateway)
+		k8sutils.SetReady(gateway)
+		return r.Client.Status().Update(ctx, gateway.Gateway)
 	}
 
 	return nil

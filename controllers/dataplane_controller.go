@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -12,6 +13,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	dataplanevalidation "github.com/kong/gateway-operator/internal/validation/dataplane"
 )
 
@@ -53,14 +55,16 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
+	k8sutils.InitReady(dataplane)
+
 	debug(log, "validating DataPlane resource conditions", dataplane)
-	changed, err := r.ensureDataPlaneIsMarkedScheduled(ctx, dataplane)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if changed {
-		debug(log, "DataPlane resource now marked as scheduled", dataplane)
-		return ctrl.Result{}, nil // no need to requeue, status update will requeue
+
+	if r.ensureIsMarkedScheduled(dataplane) {
+		err := r.updateStatus(ctx, dataplane)
+		if err != nil {
+			debug(log, "unable to update DataPlane resource", dataplane)
+		}
+		return ctrl.Result{}, err // no need to requeue, status update will requeue
 	}
 
 	debug(log, "validating DataPlane configuration", dataplane)
@@ -78,7 +82,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// validate dataplane
-	err = dataplanevalidation.NewValidator(r.Client).Validate(dataplane)
+	err := dataplanevalidation.NewValidator(r.Client).Validate(dataplane)
 	if err != nil {
 		info(log, "failed to validate dataplane: "+err.Error(), dataplane)
 		r.eventRecorder.Event(dataplane, "Warning", "ValidationFailed", err.Error())
@@ -121,13 +125,36 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	debug(log, "reconciliation complete for DataPlane resource", dataplane)
-	if err := r.ensureDataPlaneIsMarkedProvisioned(ctx, dataplane); err != nil {
+
+	r.ensureIsMarkedProvisioned(dataplane)
+
+	err = r.updateStatus(ctx, dataplane)
+	if err != nil {
 		if k8serrors.IsConflict(err) {
 			// no need to throw an error for 409's, just requeue to get a fresh copy
+			debug(log, "conflict during DataPlane reconciliation", dataplane)
 			return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 		}
-		return ctrl.Result{}, err
+		debug(log, "unable to reconcile the DataPlane resource", dataplane)
+	} else {
+		debug(log, "reconciliation complete for DataPlane resource", dataplane)
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, err
+}
+
+// updateStatus Updates the resource status only when there are changes in the Conditions
+func (r *DataPlaneReconciler) updateStatus(ctx context.Context, updated *operatorv1alpha1.DataPlane) error {
+	current := &operatorv1alpha1.DataPlane{}
+
+	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+
+	if k8sutils.NeedsUpdate(current, updated) {
+		return r.Client.Status().Update(ctx, updated)
+	}
+
+	return nil
 }

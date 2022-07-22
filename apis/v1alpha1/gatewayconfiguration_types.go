@@ -71,3 +71,13 @@ type GatewayConfigurationList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []GatewayConfiguration `json:"items"`
 }
+
+// GetConditions retrieves the GatewayConfiguration Status Condition
+func (g *GatewayConfiguration) GetConditions() []metav1.Condition {
+	return g.Status.Conditions
+}
+
+// SetConditions sets the GatewayConfiguration Status Condition
+func (g *GatewayConfiguration) SetConditions(conditions []metav1.Condition) {
+	g.Status.Conditions = conditions
+}

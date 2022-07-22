@@ -17,49 +17,35 @@ import (
 // DataPlaneReconciler - Status Management
 // -----------------------------------------------------------------------------
 
-func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedScheduled(
-	ctx context.Context,
+func (r *DataPlaneReconciler) ensureIsMarkedScheduled(
 	dataplane *operatorv1alpha1.DataPlane,
-) (bool, error) {
-	isScheduled := false
-	for _, condition := range dataplane.Status.Conditions {
-		if condition.Type == string(DataPlaneConditionTypeProvisioned) {
-			isScheduled = true
-		}
-	}
+) bool {
+	_, present := k8sutils.GetCondition(DataPlaneConditionTypeProvisioned, dataplane)
+	if !present {
+		condition := k8sutils.NewCondition(
+			DataPlaneConditionTypeProvisioned,
+			metav1.ConditionFalse,
+			DataPlaneConditionReasonPodsNotReady,
+			"DataPlane resource is scheduled for provisioning",
+		)
 
-	if !isScheduled {
-		dataplane.Status.Conditions = append(dataplane.Status.Conditions, metav1.Condition{
-			Type:               string(DataPlaneConditionTypeProvisioned),
-			Reason:             DataPlaneConditionReasonPodsNotReady,
-			Status:             metav1.ConditionFalse,
-			Message:            "DataPlane resource is scheduled for provisioning",
-			ObservedGeneration: dataplane.Generation,
-			LastTransitionTime: metav1.Now(),
-		})
-		return true, r.Client.Status().Update(ctx, dataplane)
+		k8sutils.SetCondition(condition, dataplane)
+		return true
 	}
-
-	return false, nil
+	return false
 }
 
-func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedProvisioned(
-	ctx context.Context,
+func (r *DataPlaneReconciler) ensureIsMarkedProvisioned(
 	dataplane *operatorv1alpha1.DataPlane,
-) error {
-	updatedConditions := make([]metav1.Condition, 0)
-	for _, condition := range dataplane.Status.Conditions {
-		if condition.Type == string(DataPlaneConditionTypeProvisioned) {
-			condition.Status = metav1.ConditionTrue
-			condition.Reason = DataPlaneConditionReasonPodsReady
-			condition.Message = "pods for all Deployments are ready"
-			condition.ObservedGeneration = dataplane.Generation
-			condition.LastTransitionTime = metav1.Now()
-		}
-		updatedConditions = append(updatedConditions, condition)
-	}
-	dataplane.Status.Conditions = updatedConditions
-	return r.Status().Update(ctx, dataplane)
+) {
+	condition := k8sutils.NewCondition(
+		DataPlaneConditionTypeProvisioned,
+		metav1.ConditionTrue,
+		DataPlaneConditionReasonPodsReady,
+		"pods for all Deployments are ready",
+	)
+	k8sutils.SetCondition(condition, dataplane)
+	k8sutils.SetReady(dataplane)
 }
 
 // isSameDataPlaneCondition returns true if two `metav1.Condition`s
@@ -74,12 +60,12 @@ func isSameDataPlaneCondition(condition1, condition2 metav1.Condition) bool {
 func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
 	ctx context.Context,
 	dataplane *operatorv1alpha1.DataPlane,
-	reason string, message string,
+	reason k8sutils.ConditionReason, message string,
 ) error {
 	notProvisionedCondition := metav1.Condition{
 		Type:               string(DataPlaneConditionTypeProvisioned),
 		Status:             metav1.ConditionFalse,
-		Reason:             reason,
+		Reason:             string(reason),
 		Message:            message,
 		ObservedGeneration: dataplane.Generation,
 		LastTransitionTime: metav1.Now(),

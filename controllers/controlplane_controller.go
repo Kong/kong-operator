@@ -13,6 +13,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------
@@ -46,12 +47,16 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
+	k8sutils.InitReady(controlplane)
+
 	debug(log, "validating ControlPlane resource conditions", controlplane)
-	changed, err := r.ensureControlPlaneIsMarkedScheduled(ctx, controlplane)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if changed {
+	if r.ensureIsMarkedScheduled(controlplane) {
+		err := r.updateStatus(ctx, controlplane)
+		if err != nil {
+			debug(log, "unable to update ControlPlane resource", controlplane)
+			return ctrl.Result{}, err
+		}
+
 		debug(log, "ControlPlane resource now marked as scheduled", controlplane)
 		return ctrl.Result{}, nil // no need to requeue, status update will requeue
 	}
@@ -70,14 +75,14 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if len(controlplane.Spec.Env) == 0 && len(controlplane.Spec.EnvFrom) == 0 {
 		debug(log, "no ENV config found for ControlPlane resource, setting defaults", controlplane)
 		setControlPlaneDefaults(&controlplane.Spec.ControlPlaneDeploymentOptions, controlplane.Namespace, dataplaneServiceName, nil)
-		if err := r.Client.Update(ctx, controlplane); err != nil {
+		err := r.Client.Update(ctx, controlplane)
+		if err != nil {
 			if k8serrors.IsConflict(err) {
 				debug(log, "conflict found when updating ControlPlane resource, retrying", controlplane)
 				return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 			}
-			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
+		return ctrl.Result{}, err // no need to requeue, the update will trigger.
 	}
 
 	debug(log, "validating that the ControlPlane's DataPlane configuration is up to date", controlplane)
@@ -94,17 +99,11 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	debug(log, "validating ControlPlane's DataPlane status", controlplane)
-	changed, dataplaneIsSet, err := r.ensureDataPlaneStatus(ctx, controlplane)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if changed {
-		if dataplaneIsSet {
-			debug(log, "DataPlane was set, deployment for ControlPlane will be provisioned", controlplane)
-		} else {
-			debug(log, "DataPlane not set, deployment for ControlPlane will remain dormant", controlplane)
-		}
-		return ctrl.Result{}, nil // no need to requeue, status update will requeue
+	dataplaneIsSet := r.ensureDataPlaneStatus(controlplane)
+	if dataplaneIsSet {
+		debug(log, "DataPlane was set, deployment for ControlPlane will be provisioned", controlplane)
+	} else {
+		debug(log, "DataPlane not set, deployment for ControlPlane will remain dormant", controlplane)
 	}
 
 	debug(log, "ensuring ServiceAccount for ControlPlane deployment exists", controlplane)
@@ -142,7 +141,11 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if mutated {
 		if !dataplaneIsSet {
 			debug(log, "DataPlane not set, deployment for ControlPlane has been scaled down to 0 replicas", controlplane)
-			return ctrl.Result{}, nil // no need to requeue until dataplane is set
+			err := r.updateStatus(ctx, controlplane)
+			if err != nil {
+				debug(log, "unable to reconcile ControlPlane status", controlplane)
+			}
+			return ctrl.Result{}, err // no need to requeue, status update will requeue
 		}
 		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
 	}
@@ -150,11 +153,40 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// TODO: updates need to update sub-resources https://github.com/Kong/gateway-operator/issues/27
 
 	debug(log, "checking readiness of ControlPlane deployments", controlplane)
+
 	if controlplaneDeployment.Status.Replicas == 0 || controlplaneDeployment.Status.AvailableReplicas < controlplaneDeployment.Status.Replicas {
 		debug(log, "deployment for ControlPlane not yet ready, waiting", controlplane)
 		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 	}
 
 	debug(log, "reconciliation complete for ControlPlane resource", controlplane)
-	return ctrl.Result{}, r.ensureControlPlaneIsMarkedProvisioned(ctx, controlplane)
+
+	r.ensureIsMarkedProvisioned(controlplane)
+	err = r.updateStatus(ctx, controlplane)
+
+	if err != nil {
+		if k8serrors.IsConflict(err) {
+			// no need to throw an error for 409's, just requeue to get a fresh copy
+			debug(log, "conflict during ControlPlane reconciliation", controlplane)
+			return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+		}
+		debug(log, "unable to reconcile the ControlPlane resource", controlplane)
+	} else {
+		debug(log, "reconciliation complete for ControlPlane resource", controlplane)
+	}
+	return ctrl.Result{}, err
+}
+
+// updateStatus Updates the resource status only when there are changes in the Conditions
+func (r *ControlPlaneReconciler) updateStatus(ctx context.Context, updated *operatorv1alpha1.ControlPlane) error {
+	current := &operatorv1alpha1.ControlPlane{}
+	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)
+
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return err
+	}
+	if k8sutils.NeedsUpdate(current, updated) {
+		return r.Client.Status().Update(ctx, updated)
+	}
+	return nil
 }
