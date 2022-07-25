@@ -13,6 +13,11 @@ spec:
     listKind: GatewayConfigurationList
     plural: gatewayconfigurations
     singular: gatewayconfiguration
+    shortNames:
+      - kgc
+    categories:
+      - kong
+      - all
   scope: Namespaced
   versions:
   - name: v1alpha1

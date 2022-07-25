@@ -13,6 +13,11 @@ spec:
     listKind: DataPlaneList
     plural: dataplanes
     singular: dataplane
+    shortNames:
+      - kdp
+    categories:
+      - kong
+      - all
   scope: Namespaced
   versions:
   - name: v1alpha1
@@ -270,6 +275,15 @@ spec:
     storage: true
     subresources:
       status: {}
+    additionalPrinterColumns:
+      - name: Ready
+        type: string
+        description: The Resource is ready
+        jsonPath: .status.conditions[?(@.type=='Ready')].status
+      - name: Provisioned
+        type: string
+        description: The Resource is provisioned
+        jsonPath: .status.conditions[?(@.type=='Provisioned')].status
 status:
   acceptedNames:
     kind: ""

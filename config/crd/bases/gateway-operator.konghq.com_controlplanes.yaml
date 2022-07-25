@@ -13,6 +13,11 @@ spec:
     listKind: ControlPlaneList
     plural: controlplanes
     singular: controlplane
+    shortNames:
+      - kcp
+    categories:
+      - kong
+      - all
   scope: Namespaced
   versions:
   - name: v1alpha1
@@ -297,6 +302,15 @@ spec:
     storage: true
     subresources:
       status: {}
+    additionalPrinterColumns:
+      - name: Ready
+        type: string
+        description: The Resource is ready
+        jsonPath: .status.conditions[?(@.type=='Ready')].status
+      - name: Provisioned
+        type: string
+        description: The Resource is provisioned
+        jsonPath: .status.conditions[?(@.type=='Provisioned')].status
 status:
   acceptedNames:
     kind: ""
