@@ -1,5 +1,15 @@
 FROM golang:1.18 as builder
 
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
+    && printf ", TARGETARCH=${TARGETARCH}" \
+    && printf ", TARGETOS=${TARGETOS}" \
+    && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
+    && printf "With 'uname -s': $(uname -s) and 'uname -m': $(uname -m)"
+
 WORKDIR /workspace
 
 COPY go.mod go.mod
@@ -13,7 +23,11 @@ COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY internal/ internal/
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
+### Distroless/default
+# Use distroless as minimal base image to package the operator binary
+# Refer to https://github.com/GoogleContainerTools/distroless for more details
+RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" go build -a -o manager main.go
+
 
 ### Distroless/default
 # Use distroless as minimal base image to package the operator binary
@@ -39,7 +53,6 @@ COPY --from=builder /workspace/manager .
 USER 65532:65532
 
 
-
 ENTRYPOINT ["/manager"]
 
 ### RHEL
@@ -60,7 +73,6 @@ LABEL name="$NAME" \
       summary="A Kubernetes Operator for the Kong Gateway." \
       description="$DESCRIPTION" \
       io.k8s.description="$DESCRIPTION"
-
 
 # Create the user (ID 1000) and group that will be used in the
 # running container to run the process as an unprivileged user.
