@@ -9,11 +9,13 @@ spec:
     group: gateway-operator.konghq.com
     kind: GatewayConfiguration
     name: kong
+    namespace: default
 ---
 kind: Gateway
 apiVersion: gateway.networking.k8s.io/v1alpha2
 metadata:
   name: kong
+  namespace: default
 spec:
   gatewayClassName: kong
   listeners:
@@ -25,6 +27,7 @@ kind: GatewayConfiguration
 apiVersion: gateway-operator.konghq.com/v1alpha1
 metadata:
   name: kong
+  namespace: default
 spec:
   dataPlaneDeploymentOptions:
     env:
