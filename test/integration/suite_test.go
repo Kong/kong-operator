@@ -233,14 +233,6 @@ func startControllerManager() {
 		})
 	}
 
-	if controllerManagerOut != "stdout" {
-		out, err := os.CreateTemp(os.TempDir(), "gateway-operator-controller-logs")
-		exitOnErr(err)
-		cfg.Out = out
-		fmt.Printf("INFO: controller output is being logged to %s\n", out.Name())
-		defer out.Close()
-	}
-
 	exitOnErr(manager.Run(cfg))
 }
 
