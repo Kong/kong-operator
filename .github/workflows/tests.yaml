@@ -93,6 +93,14 @@ jobs:
       env:
         KONG_CONTROLLER_OUT: stdout
 
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-tests-enterprise-postgres
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
   e2e-tests:
     runs-on: ubuntu-latest
     steps:
@@ -125,3 +133,11 @@ jobs:
       run: make test.e2e
       env:
         KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD: gateway-operator:e2e-${{ github.sha }}
+
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration-tests-enterprise-postgres
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore

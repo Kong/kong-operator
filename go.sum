@@ -367,6 +367,8 @@ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/kong/kubernetes-testing-framework v0.17.0 h1:aIUbv4ZHBIOkxm32nwdWprSR8ZoxVtt7KajrbMVRokE=
 github.com/kong/kubernetes-testing-framework v0.17.0/go.mod h1:PINr9exqi9BDxsCpGgRHGZhnwbu2MdFl1YQzRI3Azxg=
+github.com/kong/kubernetes-testing-framework v0.18.0 h1:fWevY5sG1x4nfdf5kjfmpeJGcn1PG7qnqo1TOZEiOiE=
+github.com/kong/kubernetes-testing-framework v0.18.0/go.mod h1:ZVzmZsd8Nc5hxkwrgnzvW7vKzSxUh19lZsKm8rnEMI8=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.3/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/kr/fs v0.1.0/go.mod h1:FFnZGqtBN9Gxj7eW1uZ42v5BccTP0vu6NEaFoC2HwRg=

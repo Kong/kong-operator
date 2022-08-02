@@ -29,6 +29,10 @@ const (
 	defaultHTTPPort = 80
 )
 
+// TODO https://github.com/Kong/kubernetes-testing-framework/issues/302
+// we have this in both integration and e2e pkgs, and also in the controller integration pkg
+// they should be standardized
+
 // setup is a helper function for tests which conveniently creates a cluster
 // cleaner (to clean up test resources automatically after the test finishes)
 // and creates a new namespace for the test to use. It also enables parallel

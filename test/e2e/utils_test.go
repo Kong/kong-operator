@@ -10,20 +10,29 @@ import (
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 )
 
-// createNamespaceForTest creates a namespace for a test case and cleans it up after the test finishes.
-func createNamespaceForTest(t *testing.T) (*corev1.Namespace, func()) {
-	namespaceForTestCase, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
-	exitOnErr(err)
+// TODO https://github.com/Kong/kubernetes-testing-framework/issues/302
+// we have this in both integration and e2e pkgs, and also in the controller integration pkg
+// they should be standardized
 
-	cleanup := func() {
-		assert.NoError(t, clusters.CleanupGeneratedResources(ctx, env.Cluster(), t.Name()))
-	}
+// setup is a helper function for tests which conveniently creates a cluster
+// cleaner (to clean up test resources automatically after the test finishes)
+// and creates a new namespace for the test to use. It also enables parallel
+// testing.
+func setup(t *testing.T) (*corev1.Namespace, *clusters.Cleaner) {
+	t.Log("performing test setup")
+	t.Parallel()
+	cleaner := clusters.NewCleaner(env.Cluster())
 
-	return namespaceForTestCase, cleanup
+	t.Log("creating a testing namespace")
+	namespace, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
+	require.NoError(t, err)
+	cleaner.AddNamespace(namespace)
+
+	return namespace, cleaner
 }
 
 const gatewayOperatorImageKustomizationContents = `
