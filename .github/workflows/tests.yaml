@@ -97,7 +97,7 @@ jobs:
       if: ${{ always() }}
       uses: actions/upload-artifact@v3
       with:
-        name: diagnostics-integration-tests-enterprise-postgres
+        name: diagnostics-integration
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
@@ -138,6 +138,6 @@ jobs:
       if: ${{ always() }}
       uses: actions/upload-artifact@v3
       with:
-        name: diagnostics-integration-tests-enterprise-postgres
+        name: diagnostics-e2e
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
