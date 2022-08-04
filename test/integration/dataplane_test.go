@@ -48,7 +48,7 @@ func TestDataplaneEssentials(t *testing.T) {
 		}
 		return false
 	}
-	require.Eventually(t, dataPlanePredicate(t, dataplaneName, isScheduled), time.Minute, time.Second)
+	require.Eventually(t, dataPlanePredicate(t, ctx, dataplaneName, isScheduled), time.Minute, time.Second)
 
 	t.Log("verifying that the dataplane gets marked as provisioned")
 	isProvisioned := func(dataplane *v1alpha1.DataPlane) bool {
@@ -59,14 +59,14 @@ func TestDataplaneEssentials(t *testing.T) {
 		}
 		return false
 	}
-	require.Eventually(t, dataPlanePredicate(t, dataplaneName, isProvisioned), time.Minute, time.Second)
+	require.Eventually(t, dataPlanePredicate(t, ctx, dataplaneName, isProvisioned), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
-	require.Eventually(t, dataPlaneHasActiveDeployment(t, dataplaneName), time.Minute, time.Second)
+	require.Eventually(t, dataPlaneHasActiveDeployment(t, ctx, dataplaneName), time.Minute, time.Second)
 
 	t.Log("verifying services managed by the dataplane")
 	var dataplaneService corev1.Service
-	require.Eventually(t, dataPlaneHasActiveService(t, dataplaneName, &dataplaneService), time.Minute, time.Second)
+	require.Eventually(t, dataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService), time.Minute, time.Second)
 
 	t.Log("verifying dataplane services receive IP addresses")
 	var dataplaneIP string

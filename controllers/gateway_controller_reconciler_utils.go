@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"net/http"
 
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -185,4 +188,101 @@ func (r *GatewayReconciler) getGatewayConfigForGatewayClass(ctx context.Context,
 		Namespace: string(*gatewayClass.Spec.ParametersRef.Namespace),
 		Name:      gatewayClass.Spec.ParametersRef.Name,
 	}, gatewayConfig)
+}
+
+func (r *GatewayReconciler) ensureDataPlaneHasNetworkPolicy(
+	ctx context.Context,
+	gateway *gatewayDecorator,
+	dataplane *operatorv1alpha1.DataPlane,
+	controlplane *operatorv1alpha1.ControlPlane,
+) error {
+	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway.Gateway)
+	if err != nil {
+		if !k8serrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	numNetworkPolicies := len(networkPolicies)
+	if numNetworkPolicies > 1 {
+		return fmt.Errorf("%w, got: %d, expected 1", operatorerrors.ErrTooManyDataPlaneNetworkPolicies, numNetworkPolicies)
+	}
+
+	if numNetworkPolicies == 0 {
+		policy := generateDataPlaneNetworkPolicy(gateway.Namespace, dataplane, controlplane)
+		k8sutils.SetOwnerForObject(policy, gateway)
+		gatewayutils.LabelObjectAsGatewayManaged(policy)
+
+		return r.Client.Create(ctx, policy)
+	}
+
+	return nil
+}
+
+func generateDataPlaneNetworkPolicy(
+	namespace string,
+	dataplane *operatorv1alpha1.DataPlane,
+	controlplane *operatorv1alpha1.ControlPlane,
+) *networkingv1.NetworkPolicy {
+	var (
+		protocolTCP  = corev1.ProtocolTCP
+		adminAPIPort = intstr.FromInt(consts.DataPlaneAdminAPIPort)
+		proxyPort    = intstr.FromInt(consts.DataPlaneProxyPort)
+		proxySSLPort = intstr.FromInt(consts.DataPlaneProxySSLPort)
+		metricsPort  = intstr.FromInt(consts.DataPlaneMetricsPort)
+	)
+
+	limitAdminAPIIngress := networkingv1.NetworkPolicyIngressRule{
+		Ports: []networkingv1.NetworkPolicyPort{
+			{Protocol: &protocolTCP, Port: &adminAPIPort},
+		},
+		From: []networkingv1.NetworkPolicyPeer{{
+			PodSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": controlplane.Name,
+				},
+			},
+			// NamespaceDefaultLabelName feature gate must be enabled for this to work
+			NamespaceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"kubernetes.io/metadata.name": dataplane.Namespace,
+				},
+			},
+		}},
+	}
+
+	allowProxyIngress := networkingv1.NetworkPolicyIngressRule{
+		Ports: []networkingv1.NetworkPolicyPort{
+			{Protocol: &protocolTCP, Port: &proxyPort},
+			{Protocol: &protocolTCP, Port: &proxySSLPort},
+		},
+	}
+
+	allowMetricsIngress := networkingv1.NetworkPolicyIngressRule{
+		Ports: []networkingv1.NetworkPolicyPort{
+			{Protocol: &protocolTCP, Port: &metricsPort},
+		},
+	}
+
+	return &networkingv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    namespace,
+			GenerateName: fmt.Sprintf("%s-limit-admin-api-", dataplane.Name),
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": dataplane.Name,
+				},
+			},
+			PolicyTypes: []networkingv1.PolicyType{
+				networkingv1.PolicyTypeIngress,
+			},
+			Ingress: []networkingv1.NetworkPolicyIngressRule{
+				limitAdminAPIIngress,
+				allowProxyIngress,
+				allowMetricsIngress,
+			},
+		},
+	}
 }

@@ -13,6 +13,10 @@ import (
 // controller.
 var ErrUnsupportedGateway = errors.New("gateway not supported")
 
+// ErrTooManyDataPlaneNetworkPolicies is an error which indicates that a DataPlane
+// has too many NetworkPolicies configured.
+var ErrTooManyDataPlaneNetworkPolicies = errors.New("too many data plane network policies")
+
 // -----------------------------------------------------------------------------
 // GatewayClass - Errors
 // -----------------------------------------------------------------------------

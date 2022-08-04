@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -123,4 +124,37 @@ func GetDataplaneServiceNameForControlplane(
 	}
 
 	return services[0].Name, nil
+}
+
+// ListNetworkPoliciesForGateway is a helper function that returns a list of NetworkPolicies
+// that are owned and managed by a Gateway.
+func ListNetworkPoliciesForGateway(
+	ctx context.Context,
+	c client.Client,
+	gateway *gatewayv1alpha2.Gateway,
+) ([]networkingv1.NetworkPolicy, error) {
+	if gateway.Namespace == "" {
+		return nil, fmt.Errorf("can't list networkpolicies for gateway: gateway resource was missing namespace")
+	}
+
+	networkPolicyList := &networkingv1.NetworkPolicyList{}
+
+	err := c.List(
+		ctx,
+		networkPolicyList,
+		client.InNamespace(gateway.Namespace),
+		client.MatchingLabels{consts.GatewayOperatorControlledLabel: consts.GatewayManagedLabelValue},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	networkPolicies := make([]networkingv1.NetworkPolicy, 0)
+	for _, networkPolicy := range networkPolicyList.Items {
+		if k8sutils.IsOwnedByRefUID(&networkPolicy.ObjectMeta, gateway.UID) {
+			networkPolicies = append(networkPolicies, networkPolicy)
+		}
+	}
+
+	return networkPolicies, nil
 }

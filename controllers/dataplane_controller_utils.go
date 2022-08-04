@@ -71,22 +71,22 @@ func generateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane) *a
 						Ports: []corev1.ContainerPort{
 							{
 								Name:          "proxy",
-								ContainerPort: 8000,
+								ContainerPort: consts.DataPlaneProxyPort,
 								Protocol:      corev1.ProtocolTCP,
 							},
 							{
 								Name:          "proxy-ssl",
-								ContainerPort: 8443,
+								ContainerPort: consts.DataPlaneProxySSLPort,
 								Protocol:      corev1.ProtocolTCP,
 							},
 							{
 								Name:          "metrics",
-								ContainerPort: 8100,
+								ContainerPort: consts.DataPlaneMetricsPort,
 								Protocol:      corev1.ProtocolTCP,
 							},
 							{
 								Name:          "admin-ssl",
-								ContainerPort: 8444,
+								ContainerPort: consts.DataPlaneAdminAPIPort,
 								Protocol:      corev1.ProtocolTCP,
 							},
 						},
