@@ -20,35 +20,62 @@ import (
 // ControlPlane - Private Functions
 // -----------------------------------------------------------------------------
 
-func setControlPlaneDefaults(spec *operatorv1alpha1.ControlPlaneDeploymentOptions, namespace string, dataplaneServiceName string, dontOverride map[string]struct{}) {
-	spec.Env = append(spec.Env, corev1.EnvVar{Name: "CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY", Value: "true"}) // TODO: for poc only, don't release with this https://github.com/Kong/gateway-operator/issues/7
-	spec.Env = append(spec.Env, corev1.EnvVar{
-		Name: "POD_NAMESPACE",
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				APIVersion: "v1",
-				FieldPath:  "metadata.namespace",
-			},
+// setControlPlaneDefaults updates the environment variables of control plane
+// and returns true if env field is changed.
+func setControlPlaneDefaults(
+	spec *operatorv1alpha1.ControlPlaneDeploymentOptions,
+	namespace string, dataplaneServiceName string,
+	dontOverride map[string]struct{},
+) bool {
+	changed := false
+
+	if envValueByName(spec.Env, "CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY") != "true" {
+		// TODO: for poc only, don't release with this https://github.com/Kong/gateway-operator/issues/7
+		spec.Env = append(spec.Env, corev1.EnvVar{Name: "CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY", Value: "true"})
+		changed = true
+	}
+
+	// set env POD_NAMESPACE. should be always from `metadata.namespace` of pod.
+	envSourceMetadataNamespace := &corev1.EnvVarSource{
+		FieldRef: &corev1.ObjectFieldSelector{
+			APIVersion: "v1",
+			FieldPath:  "metadata.namespace",
 		},
-	})
-	spec.Env = append(spec.Env, corev1.EnvVar{
-		Name: "POD_NAME",
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				APIVersion: "v1",
-				FieldPath:  "metadata.name",
-			},
+	}
+	if !reflect.DeepEqual(envSourceMetadataNamespace, envVarSourceByName(spec.Env, "POD_NAMESPACE")) {
+		spec.Env = updateEnvSource(spec.Env, "POD_NAMESPACE", envSourceMetadataNamespace)
+		changed = true
+	}
+
+	// set env POD_NAME. should be always from `metadata.name` of pod.
+	envSourceMetadataName := &corev1.EnvVarSource{
+		FieldRef: &corev1.ObjectFieldSelector{
+			APIVersion: "v1",
+			FieldPath:  "metadata.name",
 		},
-	})
+	}
+	if !reflect.DeepEqual(envSourceMetadataName, envVarSourceByName(spec.Env, "POD_NAME")) {
+		spec.Env = updateEnvSource(spec.Env, "POD_NAME", envSourceMetadataName)
+		changed = true
+	}
 
 	if namespace != "" && dataplaneServiceName != "" {
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_PUBLISH_SERVICE"]; !isOverrideDisabled {
-			spec.Env = updateEnv(spec.Env, "CONTROLLER_PUBLISH_SERVICE", controllerPublishService(dataplaneServiceName, namespace))
+			publishService := controllerPublishService(dataplaneServiceName, namespace)
+			if envValueByName(spec.Env, "CONTROLLER_PUBLISH_SERVICE") != publishService {
+				spec.Env = updateEnv(spec.Env, "CONTROLLER_PUBLISH_SERVICE", controllerPublishService(dataplaneServiceName, namespace))
+				changed = true
+			}
 		}
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_URL"]; !isOverrideDisabled {
-			spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_URL", controllerKongAdminURL(dataplaneServiceName, namespace))
+			kongAdminURL := controllerKongAdminURL(dataplaneServiceName, namespace)
+			if envValueByName(spec.Env, "CONTROLLER_KONG_ADMIN_URL") != kongAdminURL {
+				spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_URL", kongAdminURL)
+				changed = true
+			}
 		}
 	}
+	return changed
 }
 
 func setControlPlaneEnvOnDataPlaneChange(
@@ -104,6 +131,17 @@ func envValueByName(env []corev1.EnvVar, name string) string {
 	return ""
 }
 
+// envVarSourceByName returns the ValueFrom of the first env var with the given name.
+// returns nil if env var is not found, or does not have a ValueFrom field.
+func envVarSourceByName(env []corev1.EnvVar, name string) *corev1.EnvVarSource {
+	for _, envVar := range env {
+		if envVar.Name == name {
+			return envVar.ValueFrom
+		}
+	}
+	return nil
+}
+
 func updateEnv(envVars []corev1.EnvVar, name, val string) []corev1.EnvVar {
 	newEnvVars := make([]corev1.EnvVar, 0, len(envVars))
 	for _, envVar := range envVars {
@@ -115,6 +153,23 @@ func updateEnv(envVars []corev1.EnvVar, name, val string) []corev1.EnvVar {
 	newEnvVars = append(newEnvVars, corev1.EnvVar{
 		Name:  name,
 		Value: val,
+	})
+
+	return newEnvVars
+}
+
+// updateEnvSource updates env var with `name` to come from `envSource`.
+func updateEnvSource(envVars []corev1.EnvVar, name string, envSource *corev1.EnvVarSource) []corev1.EnvVar {
+	newEnvVars := make([]corev1.EnvVar, 0, len(envVars))
+	for _, envVar := range envVars {
+		if envVar.Name != name {
+			newEnvVars = append(newEnvVars, envVar)
+		}
+	}
+
+	newEnvVars = append(newEnvVars, corev1.EnvVar{
+		Name:      name,
+		ValueFrom: envSource,
 	})
 
 	return newEnvVars

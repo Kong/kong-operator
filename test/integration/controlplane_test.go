@@ -4,12 +4,15 @@
 package integration
 
 import (
+	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -75,7 +78,15 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	require.Eventually(t, dataPlaneHasActiveDeployment(t, dataplaneName), controlPlanetCondDeadline, controlPlanetCondTick)
 
 	t.Log("verifying services managed by the dataplane")
-	require.Eventually(t, dataPlaneHasService(t, dataplaneName), controlPlanetCondDeadline, controlPlanetCondTick)
+	require.Eventually(t, dataPlaneHasService(t, dataplaneName), controlPlanetCondDeadline, controlPlanetCondTick,
+		func() string {
+			controlplane, err := controlplaneClient.Get(ctx, controlplaneName.Name, metav1.GetOptions{})
+			if err != nil {
+				return err.Error()
+			}
+			return fmt.Sprintf("current status of control plane: %#v", controlplane)
+		}(),
+	)
 
 	t.Log("attaching dataplane to controlplane")
 	controlplane, err = controlplaneClient.Get(ctx, controlplane.Name, metav1.GetOptions{})
@@ -131,6 +142,11 @@ func TestControlPlaneEssentials(t *testing.T) {
 		},
 		Spec: operatorv1alpha1.ControlPlaneSpec{
 			ControlPlaneDeploymentOptions: operatorv1alpha1.ControlPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					Env: []corev1.EnvVar{
+						{Name: "TEST_ENV", Value: "test"},
+					},
+				},
 				DataPlane: &dataplane.Name,
 			},
 		},
@@ -156,8 +172,40 @@ func TestControlPlaneEssentials(t *testing.T) {
 	require.Eventually(t, controlPlaneIsScheduled(t, controlplaneName), controlPlanetCondDeadline, controlPlanetCondTick)
 
 	t.Log("verifying that the controlplane gets marked as provisioned")
-	require.Eventually(t, controlPlaneIsProvisioned(t, controlplaneName), controlPlanetCondDeadline, controlPlanetCondTick)
+	require.Eventually(t, controlPlaneIsProvisioned(t, controlplaneName), controlPlanetCondDeadline, controlPlanetCondTick,
+		func() string {
+			controlplane, err := controlplaneClient.Get(ctx, controlplaneName.Name, metav1.GetOptions{})
+			if err != nil {
+				return err.Error()
+			}
+			return fmt.Sprintf("current status of control plane: %#v", controlplane)
+		}(),
+	)
 
 	t.Log("verifying controlplane deployment has active replicas")
 	require.Eventually(t, controlPlaneHasActiveDeployment(t, controlplaneName), controlPlanetCondDeadline, controlPlanetCondTick)
+
+	// check environment variables of deployments and pods.
+	deployments := mustListControlPlaneDeployments(t, controlplane)
+	require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
+	deployment := deployments[0]
+	controllerContainer := getContainerWithNameInPod(&deployment.Spec.Template.Spec, "controller")
+	require.NotNil(t, controllerContainer)
+
+	envs := controllerContainer.Env
+	t.Log("verifying env POD_NAME comes from metadata.name")
+	podNameValueFrom := getEnvValueFromByName(envs, "POD_NAME")
+	fieldRefMetadataName := &corev1.EnvVarSource{
+		FieldRef: &corev1.ObjectFieldSelector{
+			APIVersion: "v1",
+			FieldPath:  "metadata.name",
+		},
+	}
+	require.Truef(t, reflect.DeepEqual(fieldRefMetadataName, podNameValueFrom),
+		"ValueFrom of POD_NAME should be the same as expected: expected %#v,actual %#v",
+		fieldRefMetadataName, podNameValueFrom,
+	)
+	t.Log("verifying custom env TEST_ENV has value configured in controlplane")
+	testEnvValue := getEnvValueByName(envs, "TEST_ENV")
+	require.Equal(t, "test", testEnvValue)
 }

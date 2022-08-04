@@ -168,3 +168,37 @@ func getFirstNonLoopbackIP() (string, error) {
 
 	return "", fmt.Errorf("no available IPs")
 }
+
+func getContainerWithNameInPod(podSpec *corev1.PodSpec, name string) *corev1.Container {
+	for i, container := range podSpec.Containers {
+		if container.Name == name {
+			return &podSpec.Containers[i]
+		}
+	}
+	return nil
+}
+
+// getEnvValueByName returns the corresponding value of LAST item with given name.
+// returns empty string if the name not appeared.
+func getEnvValueByName(envs []corev1.EnvVar, name string) string {
+	value := ""
+	for _, env := range envs {
+		if env.Name == name {
+			value = env.Value
+		}
+	}
+	return value
+}
+
+// getEnvValueFromByName returns the corresponding ValueFrom pointer of LAST item with given name.
+// returns nil if the name not appeared.
+func getEnvValueFromByName(envs []corev1.EnvVar, name string) *corev1.EnvVarSource {
+	var valueFrom *corev1.EnvVarSource
+	for _, env := range envs {
+		if env.Name == name {
+			valueFrom = env.ValueFrom
+		}
+	}
+
+	return valueFrom
+}

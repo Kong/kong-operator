@@ -72,9 +72,12 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	debug(log, "validating ControlPlane configuration", controlplane)
-	if len(controlplane.Spec.Env) == 0 && len(controlplane.Spec.EnvFrom) == 0 {
-		debug(log, "no ENV config found for ControlPlane resource, setting defaults", controlplane)
-		setControlPlaneDefaults(&controlplane.Spec.ControlPlaneDeploymentOptions, controlplane.Namespace, dataplaneServiceName, nil)
+	// TODO: add validating here: https://github.com/Kong/gateway-operator/issues/109
+
+	debug(log, "configuring ControlPlane resource", controlplane)
+	changed := setControlPlaneDefaults(&controlplane.Spec.ControlPlaneDeploymentOptions, controlplane.Namespace, dataplaneServiceName, nil)
+	if changed {
+		debug(log, "updating ControlPlane resource after defaults are set since resource has changed", controlplane)
 		err := r.Client.Update(ctx, controlplane)
 		if err != nil {
 			if k8serrors.IsConflict(err) {
