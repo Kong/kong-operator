@@ -4,8 +4,10 @@
 package integration
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
+	"net/http"
 	"testing"
 	"time"
 
@@ -80,8 +82,21 @@ func TestDataplaneEssentials(t *testing.T) {
 		return false
 	}, time.Minute, time.Second)
 
+	t.Log("verifying un-authenticated requests fail")
+	badhttpc := http.Client{
+		Timeout: time.Second * 10,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, //nolint:gosec
+			},
+		},
+	}
+	resp, err := badhttpc.Get(fmt.Sprintf("https://%s:8444/status", dataplaneIP))
+	require.NoError(t, err)
+	require.Equal(t, resp.StatusCode, http.StatusBadRequest)
+
 	t.Log("verifying connectivity to the dataplane")
-	resp, err := httpc.Get(fmt.Sprintf("https://%s:8444/status", dataplaneIP))
+	resp, err = httpc.Get(fmt.Sprintf("https://%s:8444/status", dataplaneIP))
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)

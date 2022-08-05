@@ -19,7 +19,7 @@ import (
 // DataPlane - Private Functions - Generators
 // -----------------------------------------------------------------------------
 
-func generateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane) *appsv1.Deployment {
+func generateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, certSecretName string) *appsv1.Deployment {
 	var dataplaneImage string
 	if dataplane.Spec.ContainerImage != nil {
 		dataplaneImage = *dataplane.Spec.ContainerImage
@@ -51,8 +51,39 @@ func generateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane) *a
 					},
 				},
 				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{
+						{
+							Name: "cluster-certificate",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: certSecretName,
+									Items: []corev1.KeyToPath{
+										{
+											Key:  "tls.crt",
+											Path: "tls.crt",
+										},
+										{
+											Key:  "tls.key",
+											Path: "tls.key",
+										},
+										{
+											Key:  "ca.crt",
+											Path: "ca.crt",
+										},
+									},
+								},
+							},
+						},
+					},
 					Containers: []corev1.Container{{
-						Name:            "proxy",
+						Name: "proxy",
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "cluster-certificate",
+								ReadOnly:  true,
+								MountPath: "/var/cluster-certificate",
+							},
+						},
 						Env:             dataplane.Spec.Env,
 						EnvFrom:         dataplane.Spec.EnvFrom,
 						Image:           dataplaneImage,

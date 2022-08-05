@@ -57,6 +57,13 @@ var KongDefaults = map[string]string{
 
 	// TODO: reconfigure following https://github.com/Kong/gateway-operator/issues/7
 	"KONG_ADMIN_LISTEN": fmt.Sprintf("0.0.0.0:%d ssl reuseport backlog=16384", DefaultKongAdminPort),
+
+	// MTLS
+	"KONG_ADMIN_SSL_CERT":                     "/var/cluster-certificate/tls.crt",
+	"KONG_ADMIN_SSL_CERT_KEY":                 "/var/cluster-certificate/tls.key",
+	"KONG_NGINX_ADMIN_SSL_CLIENT_CERTIFICATE": "/var/cluster-certificate/ca.crt",
+	"KONG_NGINX_ADMIN_SSL_VERIFY_CLIENT":      "on",
+	"KONG_NGINX_ADMIN_SSL_VERIFY_DEPTH":       "3",
 }
 
 // -----------------------------------------------------------------------------

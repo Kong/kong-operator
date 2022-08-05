@@ -29,12 +29,6 @@ func setControlPlaneDefaults(
 ) bool {
 	changed := false
 
-	if envValueByName(spec.Env, "CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY") != "true" {
-		// TODO: for poc only, don't release with this https://github.com/Kong/gateway-operator/issues/7
-		spec.Env = append(spec.Env, corev1.EnvVar{Name: "CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY", Value: "true"})
-		changed = true
-	}
-
 	// set env POD_NAMESPACE. should be always from `metadata.namespace` of pod.
 	envSourceMetadataNamespace := &corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{
@@ -75,6 +69,17 @@ func setControlPlaneDefaults(
 			}
 		}
 	}
+
+	if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE"]; !isOverrideDisabled {
+		spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE", "/var/cluster-certificate/tls.crt")
+	}
+	if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE"]; !isOverrideDisabled {
+		spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE", "/var/cluster-certificate/tls.key")
+	}
+	if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_CA_CERT_FILE"]; !isOverrideDisabled {
+		spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_CA_CERT_FILE", "/var/cluster-certificate/ca.crt")
+	}
+
 	return changed
 }
 
@@ -187,7 +192,8 @@ func rejectEnvByName(envVars []corev1.EnvVar, name string) []corev1.EnvVar {
 	return newEnvVars
 }
 
-func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.ControlPlane, serviceAccountName string) *appsv1.Deployment {
+func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.ControlPlane, serviceAccountName,
+	certSecretName string) *appsv1.Deployment {
 	var controlplaneImage string
 	if controlplane.Spec.ContainerImage != nil {
 		controlplaneImage = *controlplane.Spec.ContainerImage
@@ -221,12 +227,43 @@ func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: serviceAccountName,
+					Volumes: []corev1.Volume{
+						{
+							Name: "cluster-certificate",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: certSecretName,
+									Items: []corev1.KeyToPath{
+										{
+											Key:  "tls.crt",
+											Path: "tls.crt",
+										},
+										{
+											Key:  "tls.key",
+											Path: "tls.key",
+										},
+										{
+											Key:  "ca.crt",
+											Path: "ca.crt",
+										},
+									},
+								},
+							},
+						},
+					},
 					Containers: []corev1.Container{{
 						Name:            "controller",
 						Env:             controlplane.Spec.Env,
 						EnvFrom:         controlplane.Spec.EnvFrom,
 						Image:           controlplaneImage,
 						ImagePullPolicy: corev1.PullIfNotPresent,
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "cluster-certificate",
+								ReadOnly:  true,
+								MountPath: "/var/cluster-certificate",
+							},
+						},
 						Lifecycle: &corev1.Lifecycle{
 							PreStop: &corev1.LifecycleHandler{
 								Exec: &corev1.ExecAction{

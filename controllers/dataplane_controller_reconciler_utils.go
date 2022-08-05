@@ -11,6 +11,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 )
 
 // -----------------------------------------------------------------------------
@@ -101,9 +102,24 @@ func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
 // DataPlaneReconciler - Owned Resource Management
 // -----------------------------------------------------------------------------
 
+func (r *DataPlaneReconciler) ensureCertificate(
+	ctx context.Context,
+	dataplane *operatorv1alpha1.DataPlane,
+	serviceName string,
+) (bool, string, error) {
+	secretName := dataplane.Name + "-data-mtls-cert"
+	usages := []certificatesv1beta1.KeyUsage{certificatesv1beta1.UsageKeyEncipherment,
+		certificatesv1beta1.UsageDigitalSignature, certificatesv1beta1.UsageServerAuth}
+	created, err := maybeCreateCertificateSecret(ctx, fmt.Sprintf("%s.%s.svc", serviceName, dataplane.Namespace),
+		dataplane.Namespace, secretName, r.ClusterCASecret, usages, r.Client)
+
+	return created, secretName, err
+}
+
 func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 	ctx context.Context,
 	dataplane *operatorv1alpha1.DataPlane,
+	certSecretName string,
 ) (bool, *appsv1.Deployment, error) {
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
@@ -126,7 +142,7 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 		return false, &deployments[0], nil
 	}
 
-	deployment := generateNewDeploymentForDataPlane(dataplane)
+	deployment := generateNewDeploymentForDataPlane(dataplane, certSecretName)
 	k8sutils.SetOwnerForObject(deployment, dataplane)
 	labelObjForDataplane(deployment)
 	return true, deployment, r.Client.Create(ctx, deployment)

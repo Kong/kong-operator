@@ -207,20 +207,31 @@ func TestIngressEssentials(t *testing.T) {
 	}, defaultWait, waitTick)
 
 	t.Logf("removing the ingress.class annotation %q from ingress", ingressClass)
-	switch obj := ingress.(type) {
-	case *netv1.Ingress:
-		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Get(ctx, obj.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		delete(ingress.ObjectMeta.Annotations, annotations.IngressClassKey)
-		_, err = env.Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(ctx, ingress, metav1.UpdateOptions{})
-		require.NoError(t, err)
-	case *netv1beta1.Ingress:
-		ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(namespace.Name).Get(ctx, obj.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		delete(ingress.ObjectMeta.Annotations, annotations.IngressClassKey)
-		_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(namespace.Name).Update(ctx, ingress, metav1.UpdateOptions{})
-		require.NoError(t, err)
-	}
+	require.Eventually(t, func() bool {
+		switch obj := ingress.(type) {
+		case *netv1.Ingress:
+			ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Get(ctx, obj.Name, metav1.GetOptions{})
+			if err != nil {
+				return false
+			}
+			delete(ingress.ObjectMeta.Annotations, annotations.IngressClassKey)
+			_, err = env.Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(ctx, ingress, metav1.UpdateOptions{})
+			if err != nil {
+				return false
+			}
+		case *netv1beta1.Ingress:
+			ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(namespace.Name).Get(ctx, obj.Name, metav1.GetOptions{})
+			if err != nil {
+				return false
+			}
+			delete(ingress.ObjectMeta.Annotations, annotations.IngressClassKey)
+			_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(namespace.Name).Update(ctx, ingress, metav1.UpdateOptions{})
+			if err != nil {
+				return false
+			}
+		}
+		return true
+	}, defaultWait, waitTick)
 
 	t.Logf("verifying that removing the ingress.class annotation %q from ingress causes routes to disconnect", ingressClass)
 	require.Eventually(t, func() bool {
@@ -234,20 +245,31 @@ func TestIngressEssentials(t *testing.T) {
 	}, defaultWait, waitTick)
 
 	t.Logf("putting the ingress.class annotation %q back on ingress", ingressClass)
-	switch obj := ingress.(type) {
-	case *netv1.Ingress:
-		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Get(ctx, obj.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = ingressClass
-		_, err = env.Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(ctx, ingress, metav1.UpdateOptions{})
-		require.NoError(t, err)
-	case *netv1beta1.Ingress:
-		ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(namespace.Name).Get(ctx, obj.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = ingressClass
-		_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(namespace.Name).Update(ctx, ingress, metav1.UpdateOptions{})
-		require.NoError(t, err)
-	}
+	require.Eventually(t, func() bool {
+		switch obj := ingress.(type) {
+		case *netv1.Ingress:
+			ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Get(ctx, obj.Name, metav1.GetOptions{})
+			if err != nil {
+				return false
+			}
+			ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = ingressClass
+			_, err = env.Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(ctx, ingress, metav1.UpdateOptions{})
+			if err != nil {
+				return false
+			}
+		case *netv1beta1.Ingress:
+			ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(namespace.Name).Get(ctx, obj.Name, metav1.GetOptions{})
+			if err != nil {
+				return false
+			}
+			ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = ingressClass
+			_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(namespace.Name).Update(ctx, ingress, metav1.UpdateOptions{})
+			if err != nil {
+				return false
+			}
+		}
+		return true
+	}, defaultWait, waitTick)
 
 	t.Log("waiting for routes from Ingress to be operational after reintroducing ingress class annotation")
 	require.Eventually(t, func() bool {

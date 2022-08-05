@@ -70,11 +70,6 @@ var (
 
 	httpc = http.Client{
 		Timeout: time.Second * 10,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true, //nolint:gosec
-			},
-		},
 	}
 )
 
@@ -129,6 +124,10 @@ func TestMain(m *testing.M) {
 	exitOnErr(clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
 	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "../../config/rbac"))
 
+	// normally this is obtained from the downward API. the tests fake it.
+	err = os.Setenv("POD_NAMESPACE", "kong-system")
+	exitOnErr(err)
+
 	fmt.Println("INFO: deploying CRDs to test cluster")
 	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "../../config/crd"))
 	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), gatewayAPIsCRDs))
@@ -141,6 +140,33 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: starting the operator's controller manager")
 	go startControllerManager()
+
+	timeout := time.Now().Add(time.Minute)
+	for timeout.After(time.Now()) {
+		err = func() error {
+			ca, err := k8sClient.CoreV1().Secrets("kong-system").Get(ctx, manager.DefaultConfig.ClusterCASecret, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			cert, err := tls.X509KeyPair(ca.Data["tls.crt"], ca.Data["tls.key"])
+			if err != nil {
+				return err
+			}
+
+			transport := &http.Transport{
+				TLSClientConfig: &tls.Config{
+					Certificates:       []tls.Certificate{cert},
+					InsecureSkipVerify: true, //nolint:gosec
+				},
+			}
+			httpc.Transport = transport
+			return nil
+		}()
+		if err != nil {
+			time.Sleep(time.Second)
+		}
+	}
+	exitOnErr(err)
 
 	// wait for webhook server in controller to be ready after controller started.
 	if runWebhookTests {

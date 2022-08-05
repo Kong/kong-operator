@@ -23,7 +23,8 @@ import (
 // ControlPlaneReconciler reconciles a ControlPlane object
 type ControlPlaneReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme          *runtime.Scheme
+	ClusterCASecret string
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -69,6 +70,15 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 
 		debug(log, "no existing dataplane for controlplane", controlplane, "error", err)
+	}
+
+	debug(log, "creating MTLS certificate", controlplane)
+	created, certSecretName, err := r.ensureCertificate(ctx, controlplane)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if created {
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
 	}
 
 	debug(log, "validating ControlPlane configuration", controlplane)
@@ -137,7 +147,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	debug(log, "looking for existing Deployments for ControlPlane resource", controlplane)
-	mutated, controlplaneDeployment, err := r.ensureDeploymentForControlPlane(ctx, controlplane, controlplaneServiceAccount.Name)
+	mutated, controlplaneDeployment, err := r.ensureDeploymentForControlPlane(ctx, controlplane, controlplaneServiceAccount.Name, certSecretName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

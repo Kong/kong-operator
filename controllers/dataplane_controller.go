@@ -24,8 +24,9 @@ import (
 // DataPlaneReconciler reconciles a DataPlane object
 type DataPlaneReconciler struct {
 	client.Client
-	Scheme        *runtime.Scheme
-	eventRecorder record.EventRecorder
+	Scheme          *runtime.Scheme
+	eventRecorder   record.EventRecorder
+	ClusterCASecret string
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -67,6 +68,31 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err // no need to requeue, status update will requeue
 	}
 
+	debug(log, "exposing DataPlane deployment via service", dataplane)
+	created, dataplaneService, err := r.ensureServiceForDataPlane(ctx, dataplane)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if created {
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
+	}
+
+	// TODO: updates need to update owned service https://github.com/Kong/gateway-operator/issues/27
+
+	debug(log, "checking readiness of DataPlane service", dataplaneService)
+	if dataplaneService.Spec.ClusterIP == "" {
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+	}
+
+	debug(log, "creating MTLS certificate", dataplane)
+	created, certSecretName, err := r.ensureCertificate(ctx, dataplane, dataplaneService.Name)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if created {
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
+	}
+
 	debug(log, "validating DataPlane configuration", dataplane)
 	if len(dataplane.Spec.Env) == 0 && len(dataplane.Spec.EnvFrom) == 0 {
 		debug(log, "no ENV config found for DataPlane resource, setting defaults", dataplane)
@@ -82,7 +108,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// validate dataplane
-	err := dataplanevalidation.NewValidator(r.Client).Validate(dataplane)
+	err = dataplanevalidation.NewValidator(r.Client).Validate(dataplane)
 	if err != nil {
 		info(log, "failed to validate dataplane: "+err.Error(), dataplane)
 		r.eventRecorder.Event(dataplane, "Warning", "ValidationFailed", err.Error())
@@ -92,7 +118,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	debug(log, "looking for existing deployments for DataPlane resource", dataplane)
-	created, dataplaneDeployment, err := r.ensureDeploymentForDataPlane(ctx, dataplane)
+	created, dataplaneDeployment, err := r.ensureDeploymentForDataPlane(ctx, dataplane, certSecretName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -105,22 +131,6 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	debug(log, "checking readiness of DataPlane deployments", dataplane)
 	if dataplaneDeployment.Status.Replicas == 0 || dataplaneDeployment.Status.AvailableReplicas < dataplaneDeployment.Status.Replicas {
 		debug(log, "deployment for DataPlane not yet ready, waiting", dataplane)
-		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
-	}
-
-	debug(log, "exposing DataPlane deployment via service", dataplane)
-	created, dataplaneService, err := r.ensureServiceForDataPlane(ctx, dataplane)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if created {
-		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
-	}
-
-	// TODO: updates need to update owned service https://github.com/Kong/gateway-operator/issues/27
-
-	debug(log, "checking readiness of DataPlane service", dataplaneService)
-	if dataplaneService.Spec.ClusterIP == "" {
 		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 	}
 

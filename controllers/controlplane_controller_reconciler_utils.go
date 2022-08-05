@@ -14,6 +14,7 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 )
 
 // numReplicasWhenNoDataplane represents the desired number of replicas
@@ -115,7 +116,7 @@ func (r *ControlPlaneReconciler) ensureDataPlaneConfiguration(
 func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
-	serviceAccountName string,
+	serviceAccountName, certSecretName string,
 ) (bool, *appsv1.Deployment, error) {
 	dataplaneIsSet := controlplane.Spec.DataPlane != nil && *controlplane.Spec.DataPlane != ""
 
@@ -161,7 +162,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		}
 	}
 
-	deployment := generateNewDeploymentForControlPlane(controlplane, serviceAccountName)
+	deployment := generateNewDeploymentForControlPlane(controlplane, serviceAccountName, certSecretName)
 	k8sutils.SetOwnerForObject(deployment, controlplane)
 	labelObjForControlPlane(deployment)
 
@@ -247,4 +248,19 @@ func (r *ControlPlaneReconciler) ensureClusterRoleBindingForControlPlane(
 	k8sutils.SetOwnerForObject(clusterRoleBinding, controlplane)
 	labelObjForControlPlane(clusterRoleBinding)
 	return true, clusterRoleBinding, r.Client.Create(ctx, clusterRoleBinding)
+}
+
+func (r *ControlPlaneReconciler) ensureCertificate(
+	ctx context.Context,
+	controlplane *operatorv1alpha1.ControlPlane,
+) (bool, string, error) {
+	secretName := controlplane.Name + "-control-mtls-cert"
+	usages := []certificatesv1beta1.KeyUsage{certificatesv1beta1.UsageKeyEncipherment,
+		certificatesv1beta1.UsageDigitalSignature, certificatesv1beta1.UsageClientAuth}
+	// this subject is arbitrary. data planes only care that client certificates are signed by the trusted CA, and will
+	// accept a certificate with any subject
+	created, err := maybeCreateCertificateSecret(ctx, fmt.Sprintf("%s.%s", controlplane.Name, controlplane.Namespace),
+		controlplane.Namespace, secretName, r.ClusterCASecret, usages, r.Client)
+
+	return created, secretName, err
 }
