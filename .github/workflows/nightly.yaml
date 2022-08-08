@@ -81,7 +81,7 @@ jobs:
 
       - name: Build binary
         id: docker_build_binary
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v3.1.1
         with:
           push: false
           file: Dockerfile
@@ -96,7 +96,7 @@ jobs:
           
       - name: Build and push
         id: docker_build
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v3.1.1
         with:
           push: true
           file: Dockerfile
@@ -113,7 +113,7 @@ jobs:
         id: docker_build_redhat
         env:
           TAG: ${{ steps.meta_redhat.outputs.version }}
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v3.1.1
         with:
           push: true
           file: Dockerfile
