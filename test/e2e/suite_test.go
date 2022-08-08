@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/pkg/clientset"
+	"github.com/kong/gateway-operator/test/consts"
 )
 
 // -----------------------------------------------------------------------------
@@ -109,6 +110,9 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 	mgrClient, err = client.New(env.Cluster().Config(), client.Options{})
 	exitOnErr(err)
+
+	fmt.Println(fmt.Sprintf("deploying Gateway APIs CRDs from %s", consts.GatewayCRDsKustomizeURL))
+	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayCRDsKustomizeURL))
 
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")
 	exitOnErr(clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))

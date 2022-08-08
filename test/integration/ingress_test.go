@@ -31,7 +31,7 @@ import (
 	"github.com/kong/gateway-operator/internal/annotations"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	"github.com/kong/gateway-operator/pkg/vars"
-	"github.com/kong/gateway-operator/test"
+	"github.com/kong/gateway-operator/test/consts"
 )
 
 const (
@@ -153,7 +153,7 @@ func TestIngressEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", consts.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

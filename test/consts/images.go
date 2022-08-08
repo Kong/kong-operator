@@ -1,4 +1,4 @@
-package test
+package consts
 
 const (
 	// httpBinImage is the container image name we use for deploying the "httpbin" HTTP testing tool.

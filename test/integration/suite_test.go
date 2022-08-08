@@ -33,12 +33,8 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/manager"
 	"github.com/kong/gateway-operator/pkg/clientset"
+	"github.com/kong/gateway-operator/test/consts"
 )
-
-// Testing Consts
-// -----------------------------------------------------------------------------
-
-const gatewayAPIsCRDs = "https://github.com/kubernetes-sigs/gateway-api.git/config/crd?ref=bcfe3da78648b4206a627fe7f3b2d0db7e755ba8"
 
 // -----------------------------------------------------------------------------
 // Testing Vars - Environment Overrideable
@@ -130,7 +126,7 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: deploying CRDs to test cluster")
 	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "../../config/crd"))
-	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), gatewayAPIsCRDs))
+	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayCRDsKustomizeURL))
 	exitOnErr(waitForCRDs(ctx))
 
 	runWebhookTests = (os.Getenv("RUN_WEBHOOK_TESTS") == "true")
