@@ -8,12 +8,14 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/networking"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -119,6 +121,9 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: waiting for operator deployment to complete")
 	exitOnErr(waitForOperatorDeployment())
 
+	fmt.Println("INFO: waiting for operator webhook service to be connective")
+	exitOnErr(waitForOperatorWebhook())
+
 	fmt.Println("INFO: environment is ready, starting tests")
 	code := m.Run()
 
@@ -166,4 +171,11 @@ func waitForOperatorDeployment() error {
 		}
 	}
 	return nil
+}
+
+func waitForOperatorWebhook() error {
+	webhookServiceNamespace := "kong-system"
+	webhookServiceName := "gateway-operator-validating-webhook"
+	webhookServicePort := 443
+	return networking.WaitForConnectionOnServicePort(ctx, k8sClient, webhookServiceNamespace, webhookServiceName, webhookServicePort, 10*time.Second)
 }
