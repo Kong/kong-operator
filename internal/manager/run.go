@@ -71,25 +71,29 @@ func init() {
 }
 
 type Config struct {
-	MetricsAddr     string
-	ProbeAddr       string
-	WebhookCertDir  string
-	WebhookPort     int
-	LeaderElection  bool
-	DevelopmentMode bool
-	Out             *os.File
-	NewClientFunc   cluster.NewClientFunc
-	ControllerName  string
-	ClusterCASecret string
+	MetricsAddr              string
+	ProbeAddr                string
+	WebhookCertDir           string
+	WebhookPort              int
+	LeaderElection           bool
+	DevelopmentMode          bool
+	Out                      *os.File
+	NewClientFunc            cluster.NewClientFunc
+	ControllerName           string
+	ClusterCASecretName      string
+	ClusterCASecretNamespace string
 }
 
 var DefaultConfig = Config{
-	MetricsAddr:     ":8080",
-	ProbeAddr:       ":8081",
-	WebhookPort:     9443,
-	DevelopmentMode: false,
-	LeaderElection:  true,
-	ClusterCASecret: "kong-operator-ca",
+	MetricsAddr:         ":8080",
+	ProbeAddr:           ":8081",
+	WebhookPort:         9443,
+	DevelopmentMode:     false,
+	LeaderElection:      true,
+	ClusterCASecretName: "kong-operator-ca",
+	// TODO: Extract this into a named const and use it in all the placed where
+	// "kong-system" is used verbatim: https://github.com/Kong/gateway-operator/pull/149.
+	ClusterCASecretNamespace: "kong-system",
 }
 
 func Run(cfg Config) error {
@@ -123,8 +127,8 @@ func Run(cfg Config) error {
 
 	caMgr := &caManager{
 		client:          mgr.GetClient(),
-		secretName:      cfg.ClusterCASecret,
-		secretNamespace: os.Getenv("POD_NAMESPACE"),
+		secretName:      cfg.ClusterCASecretName,
+		secretNamespace: cfg.ClusterCASecretNamespace,
 	}
 	err = mgr.Add(caMgr)
 	if err != nil {
@@ -134,14 +138,14 @@ func Run(cfg Config) error {
 	if err = (&controllers.DataPlaneReconciler{
 		Client:          mgr.GetClient(),
 		Scheme:          mgr.GetScheme(),
-		ClusterCASecret: cfg.ClusterCASecret,
+		ClusterCASecret: cfg.ClusterCASecretName,
 	}).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller DataPlane: %w", err)
 	}
 	if err = (&controllers.ControlPlaneReconciler{
 		Client:          mgr.GetClient(),
 		Scheme:          mgr.GetScheme(),
-		ClusterCASecret: cfg.ClusterCASecret,
+		ClusterCASecret: cfg.ClusterCASecretName,
 	}).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller ControlPlane: %w", err)
 	}
@@ -205,7 +209,6 @@ func runWebhookServer(mgr manager.Manager, cfg Config) {
 
 		setupLog.Info("start webhook server", "listen_address", fmt.Sprintf("%s:%d", hookServer.Host, hookServer.Port))
 	}
-
 }
 
 type caManager struct {
@@ -215,14 +218,20 @@ type caManager struct {
 }
 
 func (m *caManager) Start(ctx context.Context) error {
-	return m.maybeCreateCACertificate()
+	if m.secretName == "" {
+		return fmt.Errorf("cannot use an empty secret name when creating a CA secret")
+	}
+	if m.secretNamespace == "" {
+		return fmt.Errorf("cannot use an empty secret namespace when creating a CA secret")
+	}
+	return m.maybeCreateCACertificate(ctx)
 }
 
-func (m *caManager) maybeCreateCACertificate() error {
+func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
 	// TODO https://github.com/Kong/gateway-operator/issues/108 this also needs to check if the CA is expired and
 	// managed, and needs to reissue it (and all issued certificates) if so
 	ca := &corev1.Secret{}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()
 	err := m.client.Get(ctx, client.ObjectKey{Namespace: m.secretNamespace, Name: m.secretName}, ca)
 	if errors.IsNotFound(err) {

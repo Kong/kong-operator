@@ -140,7 +140,7 @@ func TestMain(m *testing.M) {
 	timeout := time.Now().Add(time.Minute)
 	for timeout.After(time.Now()) {
 		err = func() error {
-			ca, err := k8sClient.CoreV1().Secrets("kong-system").Get(ctx, manager.DefaultConfig.ClusterCASecret, metav1.GetOptions{})
+			ca, err := k8sClient.CoreV1().Secrets("kong-system").Get(ctx, manager.DefaultConfig.ClusterCASecretName, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
