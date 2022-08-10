@@ -1,6 +1,6 @@
 module github.com/kong/gateway-operator/third_party
 
-go 1.18
+go 1.19
 
 require (
 	github.com/golangci/golangci-lint v1.47.1

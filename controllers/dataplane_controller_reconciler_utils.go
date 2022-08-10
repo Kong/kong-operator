@@ -5,13 +5,13 @@ import (
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 )
 
 // -----------------------------------------------------------------------------
