@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -108,8 +108,10 @@ func (r *DataPlaneReconciler) ensureCertificate(
 	serviceName string,
 ) (bool, string, error) {
 	secretName := dataplane.Name + "-data-mtls-cert"
-	usages := []certificatesv1beta1.KeyUsage{certificatesv1beta1.UsageKeyEncipherment,
-		certificatesv1beta1.UsageDigitalSignature, certificatesv1beta1.UsageServerAuth}
+	usages := []certificatesv1.KeyUsage{
+		certificatesv1.UsageKeyEncipherment,
+		certificatesv1.UsageDigitalSignature, certificatesv1.UsageServerAuth,
+	}
 	created, err := maybeCreateCertificateSecret(ctx, fmt.Sprintf("%s.%s.svc", serviceName, dataplane.Namespace),
 		dataplane.Namespace, secretName, r.ClusterCASecret, usages, r.Client)
 

@@ -18,7 +18,7 @@ import (
 	"github.com/cloudflare/cfssl/signer"
 	"github.com/cloudflare/cfssl/signer/local"
 	"github.com/go-logr/logr"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,7 +72,7 @@ limitations under the License.
 
 // signCertificate takes a CertificateSigningRequest and a TLS Secret and returns a PEM x.509 certificate
 // signed by the certificate in the Secret.
-func signCertificate(csr certificatesv1beta1.CertificateSigningRequest, ca *corev1.Secret, logger logr.Logger) ([]byte, error) {
+func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Secret, logger logr.Logger) ([]byte, error) {
 	caKeyBlock, _ := pem.Decode(ca.Data["tls.key"])
 	caCertBlock, _ := pem.Decode(ca.Data["tls.crt"])
 	priv, err := x509.ParseECPrivateKey(caKeyBlock.Bytes)
@@ -122,7 +122,8 @@ func signCertificate(csr certificatesv1beta1.CertificateSigningRequest, ca *core
 // Secret, or does nothing if a namespace/name Secret is already present. It returns a boolean indicating if it
 // created a Secret and an error indicating any failures it encountered.
 func maybeCreateCertificateSecret(ctx context.Context, subject, namespace, name, mtlsCASecretName string,
-	usages []certificatesv1beta1.KeyUsage, k8sClient client.Client) (bool, error) {
+	usages []certificatesv1.KeyUsage, k8sClient client.Client,
+) (bool, error) {
 	logger := log.FromContext(ctx).WithName("MTLSCertificateCreation")
 	// check for existing
 	cert := &corev1.Secret{}
@@ -161,17 +162,17 @@ func maybeCreateCertificateSecret(ctx context.Context, subject, namespace, name,
 	// of updated files on disk.
 	expiration := int32(315400000)
 
-	csr := certificatesv1beta1.CertificateSigningRequest{
+	csr := certificatesv1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
 		},
-		Spec: certificatesv1beta1.CertificateSigningRequestSpec{
+		Spec: certificatesv1.CertificateSigningRequestSpec{
 			Request: pem.EncodeToMemory(&pem.Block{
 				Type:  "CERTIFICATE REQUEST",
 				Bytes: der,
 			}),
-			SignerName:        &signerName,
+			SignerName:        signerName,
 			ExpirationSeconds: &expiration,
 			Usages:            usages,
 		},

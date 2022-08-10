@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -255,8 +255,11 @@ func (r *ControlPlaneReconciler) ensureCertificate(
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (bool, string, error) {
 	secretName := controlplane.Name + "-control-mtls-cert"
-	usages := []certificatesv1beta1.KeyUsage{certificatesv1beta1.UsageKeyEncipherment,
-		certificatesv1beta1.UsageDigitalSignature, certificatesv1beta1.UsageClientAuth}
+
+	usages := []certificatesv1.KeyUsage{
+		certificatesv1.UsageKeyEncipherment,
+		certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth,
+	}
 	// this subject is arbitrary. data planes only care that client certificates are signed by the trusted CA, and will
 	// accept a certificate with any subject
 	created, err := maybeCreateCertificateSecret(ctx, fmt.Sprintf("%s.%s", controlplane.Name, controlplane.Namespace),
