@@ -1,4 +1,16 @@
 # ------------------------------------------------------------------------------
+# Configuration - Repository
+# ------------------------------------------------------------------------------
+
+REPO ?= github.com/kong/gateway-operator
+REPO_INFO ?= $(shell git config --get remote.origin.url)
+TAG ?= $(shell git describe --tags)
+
+ifndef COMMIT
+  COMMIT := $(shell git rev-parse --short HEAD)
+endif
+
+# ------------------------------------------------------------------------------
 # Configuration - Build
 # ------------------------------------------------------------------------------
 
@@ -6,7 +18,6 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 IMG ?= ghcr.io/kong/gateway-operator
-TAG ?= latest
 RHTAG ?= latest-redhat
 
 # ------------------------------------------------------------------------------
@@ -99,7 +110,11 @@ tidy:
 
 .PHONY: build
 build: generate fmt vet lint
-	go build -o bin/manager main.go
+	go build -o bin/manager -ldflags "-s -w \
+		-X $(REPO)/internal/manager/metadata.Release=$(TAG) \
+		-X $(REPO)/internal/manager/metadata.Commit=$(COMMIT) \
+		-X $(REPO)/internal/manager/metadata.Repo=$(REPO_INFO)" \
+		main.go
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -129,12 +144,12 @@ generate.clientsets: client-gen
 	@$(CLIENT_GEN) --go-header-file ./hack/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base ''  \
-		--input github.com/kong/gateway-operator/apis/v1alpha1 \
+		--input $(REPO)/apis/v1alpha1 \
 		--output-base client-gen-tmp/ \
-		--output-package github.com/kong/gateway-operator/pkg/
+		--output-package $(REPO)/pkg/
 	@rm -rf pkg/clientset/
 	@mkdir -p pkg/clientset
-	@mv client-gen-tmp/github.com/kong/gateway-operator/pkg/clientset/* pkg/clientset/
+	@mv client-gen-tmp/$(REPO)/pkg/clientset/* pkg/clientset/
 	@rm -rf client-gen-tmp/
 
 

@@ -28,22 +28,35 @@ import (
 )
 
 func main() {
-	var metricsAddr string
-	var probeAddr string
-	var disableLeaderElection bool
-	var controllerName string
-	var clusterCASecret string
-	var clusterCASecretNamespace string
+	var (
+		metricsAddr              string
+		probeAddr                string
+		disableLeaderElection    bool
+		controllerName           string
+		anonymousReports         bool
+		apiServerHost            string
+		kubeconfigPath           string
+		clusterCASecret          string
+		clusterCASecretNamespace string
+	)
 
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&disableLeaderElection, "no-leader-election", false,
+	flagSet := flag.NewFlagSet("", flag.ExitOnError)
+
+	flagSet.BoolVar(&anonymousReports, "anonymous-reports", true, "Send anonymized usage data to help improve Kong")
+	flagSet.StringVar(&apiServerHost, "apiserver-host", "", "The Kubernetes API server URL. If not set, the operator will use cluster config discovery.")
+	flagSet.StringVar(&kubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
+
+	flagSet.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	flagSet.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flagSet.BoolVar(&disableLeaderElection, "no-leader-election", false,
 		"Disable leader election for controller manager. Disabling this will not ensure there is only one active controller manager.")
-	flag.StringVar(&controllerName, "controller-name", "", "a controller name to use if other than the default, only needed for multi-tenancy")
-	flag.StringVar(&clusterCASecret, "cluster-ca-secret", "kong-operator-ca", "name of the Secret containing the cluster CA certificate")
-	flag.StringVar(&clusterCASecretNamespace, "cluster-ca-secret-namespace", "", "name of the namespace for Secret containing the cluster CA certificate")
-	flag.Parse()
-
+	flagSet.StringVar(&controllerName, "controller-name", "", "a controller name to use if other than the default, only needed for multi-tenancy")
+	flagSet.StringVar(&clusterCASecret, "cluster-ca-secret", "kong-operator-ca", "name of the Secret containing the cluster CA certificate")
+	flagSet.StringVar(&clusterCASecretNamespace, "cluster-ca-secret-namespace", "", "name of the namespace for Secret containing the cluster CA certificate")
+	if err := flagSet.Parse(os.Args[1:]); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 	developmentModeEnabled := manager.DefaultConfig.DevelopmentMode
 	if v := os.Getenv("CONTROLLER_DEVELOPMENT_MODE"); v == "true" { // TODO: clean env handling https://github.com/Kong/gateway-operator/issues/19
 		fmt.Println("INFO: development mode has been enabled")
@@ -72,8 +85,11 @@ func main() {
 		Development: developmentModeEnabled,
 	}
 
-	opts.BindFlags(flag.CommandLine)
-	flag.Parse()
+	opts.BindFlags(flagSet)
+	if err := flagSet.Parse(os.Args[1:]); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
@@ -82,6 +98,9 @@ func main() {
 		ProbeAddr:                probeAddr,
 		LeaderElection:           leaderElection,
 		ControllerName:           controllerName,
+		AnonymousReports:         anonymousReports,
+		APIServerPath:            apiServerHost,
+		KubeconfigPath:           kubeconfigPath,
 		ClusterCASecretName:      clusterCASecret,
 		ClusterCASecretNamespace: clusterCASecretNamespace,
 	}
