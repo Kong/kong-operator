@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kong/gateway-operator/internal/manager"
@@ -91,9 +90,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
 	cfg := manager.Config{
+		DevelopmentMode:          developmentModeEnabled,
 		MetricsAddr:              metricsAddr,
 		ProbeAddr:                probeAddr,
 		LeaderElection:           leaderElection,

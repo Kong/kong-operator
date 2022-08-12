@@ -174,7 +174,9 @@ func Run(cfg Config) error {
 
 	runWebhookServer(mgr, cfg)
 
-	if cfg.AnonymousReports {
+	// Enable anonnymous reporting when configured but not for development builds
+	// to reduce the noise.
+	if cfg.AnonymousReports && !cfg.DevelopmentMode {
 		stopAnonymousReports, err := setupAnonymousReports(cfg)
 		if err != nil {
 			setupLog.Error(err, "failed setting up anonymous reports")
