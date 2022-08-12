@@ -190,7 +190,7 @@ type networkPolicyIngressRuleDecorator struct {
 	Rule networkingv1.NetworkPolicyIngressRule
 }
 
-func (d *networkPolicyIngressRuleDecorator) withProtocolPort(protocol corev1.Protocol, port int) {
+func (d *networkPolicyIngressRuleDecorator) withProtocolPort(protocol corev1.Protocol, port int) { //nolint:unparam
 	portIntStr := intstr.FromInt(port)
 	d.Rule.Ports = append(d.Rule.Ports, networkingv1.NetworkPolicyPort{
 		Protocol: &protocol,

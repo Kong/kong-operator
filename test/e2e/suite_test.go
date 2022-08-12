@@ -119,7 +119,7 @@ func TestMain(m *testing.M) {
 	mgrClient, err = client.New(env.Cluster().Config(), client.Options{})
 	exitOnErr(err)
 
-	fmt.Println(fmt.Sprintf("deploying Gateway APIs CRDs from %s", consts.GatewayCRDsKustomizeURL))
+	fmt.Printf("deploying Gateway APIs CRDs from %s\n", consts.GatewayCRDsKustomizeURL)
 	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayCRDsKustomizeURL))
 
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")

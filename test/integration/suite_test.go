@@ -44,7 +44,6 @@ import (
 
 var (
 	existingCluster      = os.Getenv("KONG_TEST_CLUSTER")
-	existingClusterName  = os.Getenv("KONG_TEST_CLUSTER")
 	controllerManagerOut = os.Getenv("KONG_CONTROLLER_OUT")
 	skipClusterCleanup   bool
 	runWebhookTests      = false
@@ -81,7 +80,7 @@ func TestMain(m *testing.M) {
 	defer cancel()
 
 	closeControllerLogFile := setupControllerLogger()
-	defer closeControllerLogFile()
+	defer closeControllerLogFile() //nolint:errcheck
 
 	var skipClusterCleanup bool
 	fmt.Println("INFO: configuring cluster for testing environment")
@@ -357,10 +356,10 @@ func waitForWebhook(ctx context.Context, ip string, port int) error {
 
 	// Setup HTTPS client
 	tlsConfig := &tls.Config{
+		MinVersion:   tls.VersionTLS12,
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      caCertPool,
 	}
-	tlsConfig.BuildNameToCertificate()
 	transport := &http.Transport{TLSClientConfig: tlsConfig}
 	client := &http.Client{Transport: transport}
 
@@ -370,8 +369,9 @@ func waitForWebhook(ctx context.Context, ip string, port int) error {
 			return ctx.Err()
 		default:
 			// any kind of response from /validate path is considered OK
-			_, err := client.Get(fmt.Sprintf("https://%s:%d/validate", ip, port))
+			resp, err := client.Get(fmt.Sprintf("https://%s:%d/validate", ip, port))
 			if err == nil {
+				_ = resp.Body.Close()
 				ready = true
 			}
 		}

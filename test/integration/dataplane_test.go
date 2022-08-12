@@ -93,6 +93,7 @@ func TestDataplaneEssentials(t *testing.T) {
 	}
 	resp, err := badhttpc.Get(fmt.Sprintf("https://%s:8444/status", dataplaneIP))
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	require.Equal(t, resp.StatusCode, http.StatusBadRequest)
 
 	t.Log("verifying connectivity to the dataplane")

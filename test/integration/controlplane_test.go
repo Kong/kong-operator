@@ -18,8 +18,10 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 )
 
-const controlPlanetCondDeadline = time.Minute
-const controlPlanetCondTick = time.Second
+const (
+	controlPlanetCondDeadline = time.Minute
+	controlPlanetCondTick     = time.Second
+)
 
 func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	namespace, cleaner := setup(t)
@@ -96,7 +98,7 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	controlplane, err = controlplaneClient.Get(ctx, controlplane.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	controlplane.Spec.DataPlane = nil
-	controlplane, err = controlplaneClient.Update(ctx, controlplane, metav1.UpdateOptions{})
+	_, err = controlplaneClient.Update(ctx, controlplane, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("verifying controlplane deployment has no active replicas")

@@ -4,6 +4,9 @@ run:
   - pkg/clientset
   - config/
   - third_party/
+  build-tags:
+  - integration_tests
+  - e2e_tests
 linters:
   enable:
   - asciicheck
@@ -59,5 +62,10 @@ linters-settings:
         alias: metav1
       - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
         alias: gateway${1}
+  revive:
+    rules:
+      - name: context-as-argument
+        arguments:
+          - "allowTypesBefore": "*testing.T"
 issues:
   fix: true

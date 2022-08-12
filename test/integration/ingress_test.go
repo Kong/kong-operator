@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -41,11 +40,6 @@ const (
 	waitTick = time.Second * 1
 	// defaultWait is the default timeout for checking test conditions
 	defaultWait = time.Minute * 3
-)
-
-var (
-	// proxyURL provides access to the dataplane's proxy endpoint.
-	proxyURL *url.URL
 )
 
 func TestIngressEssentials(t *testing.T) {
