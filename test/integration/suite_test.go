@@ -12,11 +12,13 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	corev1 "k8s.io/api/core/v1"
@@ -41,6 +43,7 @@ import (
 // -----------------------------------------------------------------------------
 
 var (
+	existingCluster      = os.Getenv("KONG_TEST_CLUSTER")
 	existingClusterName  = os.Getenv("KONG_TEST_CLUSTER")
 	controllerManagerOut = os.Getenv("KONG_CONTROLLER_OUT")
 	skipClusterCleanup   bool
@@ -81,23 +84,35 @@ func TestMain(m *testing.M) {
 	defer closeControllerLogFile()
 
 	var skipClusterCleanup bool
-	var existingCluster clusters.Cluster
+	fmt.Println("INFO: configuring cluster for testing environment")
+	builder := environments.NewBuilder()
+	if existingCluster != "" {
+		clusterParts := strings.Split(existingCluster, ":")
+		if len(clusterParts) != 2 {
+			exitOnErr(fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster))
+		}
+		clusterType, clusterName := clusterParts[0], clusterParts[1]
+
+		fmt.Printf("INFO: using existing %s cluster %s\n", clusterType, clusterName)
+		switch clusterType {
+		case string(kind.KindClusterType):
+			cluster, err := kind.NewFromExisting(clusterName)
+			exitOnErr(err)
+			builder.WithExistingCluster(cluster)
+			builder.WithAddons(metallb.New())
+		case string(gke.GKEClusterType):
+			cluster, err := gke.NewFromExistingWithEnv(ctx, clusterName)
+			exitOnErr(err)
+			builder.WithExistingCluster(cluster)
+		default:
+			exitOnErr(fmt.Errorf("unknown cluster type: %s", clusterType))
+		}
+	} else {
+		fmt.Println("INFO: no existing cluster found, deploying using Kubernetes In Docker (KIND)")
+		builder.WithAddons(metallb.New())
+	}
 	var err error
-
-	fmt.Println("INFO: setting up test cluster")
-	if existingClusterName != "" {
-		existingCluster, err = kind.NewFromExisting(existingClusterName)
-		exitOnErr(err)
-		skipClusterCleanup = true
-		fmt.Printf("INFO: using existing kind cluster (name: %s)\n", existingCluster.Name())
-	}
-
-	fmt.Println("INFO: setting up test environment")
-	envBuilder := environments.NewBuilder()
-	if existingCluster != nil {
-		envBuilder.WithExistingCluster(existingCluster)
-	}
-	env, err = envBuilder.WithAddons(metallb.New()).Build(ctx)
+	env, err = builder.Build(ctx)
 	exitOnErr(err)
 
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
@@ -172,7 +187,7 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: environment is ready, starting tests")
 	code := m.Run()
 
-	if !skipClusterCleanup {
+	if !skipClusterCleanup && existingCluster == "" {
 		fmt.Println("INFO: cleaning up testing cluster and environment")
 		exitOnErr(env.Cleanup(ctx))
 	}

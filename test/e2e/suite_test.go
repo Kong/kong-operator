@@ -7,12 +7,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/networking"
@@ -29,9 +31,9 @@ import (
 // -----------------------------------------------------------------------------
 
 var (
-	existingClusterName = os.Getenv("KONG_TEST_CLUSTER")
-	imageOverride       = os.Getenv("KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE")
-	imageLoad           = os.Getenv("KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD")
+	existingCluster = os.Getenv("KONG_TEST_CLUSTER")
+	imageOverride   = os.Getenv("KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE")
+	imageLoad       = os.Getenv("KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD")
 )
 
 // -----------------------------------------------------------------------------
@@ -70,35 +72,41 @@ func TestMain(m *testing.M) {
 	defer cancel()
 
 	var skipClusterCleanup bool
-	var existingCluster clusters.Cluster
-	var err error
+	fmt.Println("INFO: configuring cluster for testing environment")
+	builder := environments.NewBuilder()
+	if existingCluster != "" {
+		clusterParts := strings.Split(existingCluster, ":")
+		if len(clusterParts) != 2 {
+			exitOnErr(fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster))
+		}
+		clusterType, clusterName := clusterParts[0], clusterParts[1]
 
-	fmt.Println("INFO: setting up test cluster")
-	if existingClusterName != "" {
-		existingCluster, err = kind.NewFromExisting(existingClusterName)
-		exitOnErr(err)
-		skipClusterCleanup = true
-		fmt.Printf("INFO: using existing kind cluster (name: %s)\n", existingCluster.Name())
+		fmt.Printf("INFO: using existing %s cluster %s\n", clusterType, clusterName)
+		switch clusterType {
+		case string(kind.KindClusterType):
+			cluster, err := kind.NewFromExisting(clusterName)
+			exitOnErr(err)
+			builder.WithExistingCluster(cluster)
+			builder.WithAddons(metallb.New())
+		case string(gke.GKEClusterType):
+			cluster, err := gke.NewFromExistingWithEnv(ctx, clusterName)
+			exitOnErr(err)
+			builder.WithExistingCluster(cluster)
+		default:
+			exitOnErr(fmt.Errorf("unknown cluster type: %s", clusterType))
+		}
+	} else {
+		fmt.Println("INFO: no existing cluster found, deploying using Kubernetes In Docker (KIND)")
+		builder.WithAddons(metallb.New())
 	}
-
-	fmt.Println("INFO: setting up test environment")
-	envBuilder := environments.NewBuilder()
-	if existingCluster != nil {
-		envBuilder.WithExistingCluster(existingCluster)
-	}
-
-	addons := []clusters.Addon{
-		metallb.New(),
-	}
-
 	if imageLoad != "" {
 		imageLoader, err := loadimage.NewBuilder().WithImage(imageLoad)
 		exitOnErr(err)
 		fmt.Println("INFO: load image", imageLoad)
-		addons = append(addons, imageLoader.Build())
+		builder.WithAddons(imageLoader.Build())
 	}
-
-	env, err = envBuilder.WithAddons(addons...).Build(ctx)
+	var err error
+	env, err = builder.Build(ctx)
 	exitOnErr(err)
 
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
@@ -131,7 +139,7 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: environment is ready, starting tests")
 	code := m.Run()
 
-	if skipClusterCleanup {
+	if skipClusterCleanup || !(existingCluster == "") {
 		fmt.Println("INFO: cleaning up operator manifests")
 		exitOnErr(clusters.KustomizeDeleteForCluster(ctx, env.Cluster(), kustomizationDir))
 	} else {
