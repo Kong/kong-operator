@@ -7,6 +7,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.1
 	github.com/go-logr/logr v1.2.3
 	github.com/google/uuid v1.3.0
+	github.com/hashicorp/go-multierror v1.0.0
 	github.com/kong/kubernetes-telemetry v0.0.0-20220809220307-7c03ed4b923a
 	github.com/kong/kubernetes-testing-framework v0.19.0
 	github.com/stretchr/testify v1.8.0
@@ -53,6 +54,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect

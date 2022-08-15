@@ -3,8 +3,10 @@ package controllers
 import (
 	"context"
 	"errors"
+	"time"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,6 +48,57 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
+	}
+
+	// controlplane is deleted, just run garbage collection for cluster wide resources.
+	if !controlplane.DeletionTimestamp.IsZero() {
+		// wait for termination grace period before cleaning up roles and bindings
+		if controlplane.DeletionTimestamp.After(metav1.Now().Time) {
+			debug(log, "control plane deletion still under grace period", controlplane)
+			return ctrl.Result{
+				Requeue: true,
+				// Requeue when grace period expires.
+				// If deletion timestamp is changed,
+				// the update will trigger another round of reconcilation.
+				// so we do not consider updates of deletion timestamp here.
+				RequeueAfter: time.Until(controlplane.DeletionTimestamp.Time),
+			}, nil
+		}
+
+		debug(log, "removing owned cluster roles and cluster role bindings", controlplane)
+
+		// ensure that the clusterrolebindings which were created for the ControlPlane are deleted
+		if err := r.ensureOwnedClusterRoleBindingsDeleted(ctx, controlplane); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// now that ClusterRoleBindings are cleaned up, remove the relevant finalizer
+		if k8sutils.RemoveFinalizerInMetadata(&controlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRoleBinding)) {
+			// requeue until clusterrolebinding finalizer is removed
+			return ctrl.Result{}, r.Client.Update(ctx, controlplane)
+		}
+
+		// ensure that the clusterroles created for the controlplane are deleted
+		if err := r.ensureOwnedClusterRolesDeleted(ctx, controlplane); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// now that ClusterRoles are cleaned up, remove the relevant finalizer
+		if k8sutils.RemoveFinalizerInMetadata(&controlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRole)) {
+			// requeue until clusterrole finalizer is removed
+			return ctrl.Result{}, r.Client.Update(ctx, controlplane)
+		}
+
+		// cleanup completed
+		return ctrl.Result{}, nil
+	}
+
+	// ensure the controlplane has a finalizer to delete owned cluster wide resources on delete.
+	finalizersChanged := k8sutils.EnsureFinalizerInMetadata(&controlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRole))
+	finalizersChanged = finalizersChanged || k8sutils.EnsureFinalizerInMetadata(&controlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRoleBinding))
+	if finalizersChanged {
+		info(log, "update metadata of control plane to set finalizer", controlplane.ObjectMeta)
+		return ctrl.Result{}, r.Client.Update(ctx, controlplane)
 	}
 
 	k8sutils.InitReady(controlplane)

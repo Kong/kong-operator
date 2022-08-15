@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
@@ -266,4 +268,57 @@ func (r *ControlPlaneReconciler) ensureCertificate(
 		controlplane.Namespace, secretName, r.ClusterCASecret, usages, r.Client)
 
 	return created, secretName, err
+}
+
+// ensureOwnedClusterRolesDeleted removes all the owned ClusterRoles of the controlplane.
+// it is called on cleanup of owned cluster resources on controlplane deletion.
+// returns nil if all of owned ClusterRoles successfully deleted (ok if no owned CRs or NotFound on deleting CRs).
+func (r *ControlPlaneReconciler) ensureOwnedClusterRolesDeleted(
+	ctx context.Context,
+	controlplane *operatorv1alpha1.ControlPlane,
+) error {
+	clusterRoles, err := k8sutils.ListClusterRolesForOwner(
+		ctx, r.Client,
+		consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.UID,
+	)
+	if err != nil {
+		return err
+	}
+
+	var deletionErr *multierror.Error
+	for i := range clusterRoles {
+		err = r.Client.Delete(ctx, &clusterRoles[i])
+		if err != nil && !k8serrors.IsNotFound(err) {
+			deletionErr = multierror.Append(deletionErr, err)
+		}
+	}
+
+	return deletionErr.ErrorOrNil()
+
+}
+
+// ensureOwnedClusterRoleBindingsDeleted removes all the owned ClusterRoleBindings of the controlplane
+// it is called on cleanup of owned cluster resources on controlplane deletion.
+// returns nil if all of owned ClusterRoleBindings successfully deleted (ok if no owned CRBs or NotFound on deleting CRBs).
+func (r *ControlPlaneReconciler) ensureOwnedClusterRoleBindingsDeleted(
+	ctx context.Context,
+	controlplane *operatorv1alpha1.ControlPlane,
+) error {
+	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(
+		ctx, r.Client,
+		consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.UID,
+	)
+	if err != nil {
+		return err
+	}
+
+	var deletionErr *multierror.Error
+	for i := range clusterRoleBindings {
+		err = r.Client.Delete(ctx, &clusterRoleBindings[i])
+		if err != nil && !k8serrors.IsNotFound(err) {
+			deletionErr = multierror.Append(deletionErr, err)
+		}
+	}
+
+	return deletionErr.ErrorOrNil()
 }

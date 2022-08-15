@@ -11,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -49,6 +50,34 @@ func mustListControlPlaneDeployments(t *testing.T, controlplane *operatorv1alpha
 	)
 	require.NoError(t, err)
 	return deployments
+}
+
+// mustListControlPlaneClusterRoles is a helper function for tests that
+// conveniently lists all clusterroles owned by a given controlplane.
+func mustListControlPlaneClusterRoles(t *testing.T, ctx context.Context, controlplane *operatorv1alpha1.ControlPlane) []rbacv1.ClusterRole {
+	clusterRoles, err := k8sutils.ListClusterRolesForOwner(
+		ctx,
+		mgrClient,
+		consts.GatewayOperatorControlledLabel,
+		consts.ControlPlaneManagedLabelValue,
+		controlplane.UID,
+	)
+	require.NoError(t, err)
+	return clusterRoles
+}
+
+// mustListControlPlaneClusterRoleBindings is a helper function for tests that
+// conveniently lists all clusterrolebindings owned by a given controlplane.
+func mustListControlPlaneClusterRoleBindings(t *testing.T, ctx context.Context, controlplane *operatorv1alpha1.ControlPlane) []rbacv1.ClusterRoleBinding {
+	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(
+		ctx,
+		mgrClient,
+		consts.GatewayOperatorControlledLabel,
+		consts.ControlPlaneManagedLabelValue,
+		controlplane.UID,
+	)
+	require.NoError(t, err)
+	return clusterRoleBindings
 }
 
 func mustListControlPlanesForGateway(t *testing.T, gateway *gatewayv1alpha2.Gateway) []operatorv1alpha1.ControlPlane {

@@ -110,6 +110,28 @@ func controlPlaneHasActiveDeployment(t *testing.T, ctx context.Context, controlp
 	})
 }
 
+// controlPlaneHasClusterRole is a helper function for tests that returns a function
+// that can be used to check if a ControlPlane has a ClusterRole.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func controlPlaneHasClusterRole(t *testing.T, ctx context.Context, controlplane *operatorv1alpha1.ControlPlane) func() bool {
+	return func() bool {
+		clusterRoles := mustListControlPlaneClusterRoles(t, ctx, controlplane)
+		t.Logf("%d clusterroles", len(clusterRoles))
+		return len(clusterRoles) > 0
+	}
+}
+
+// controlPlaneHasClusterRoleBinding is a helper function for tests that returns a function
+// that can be used to check if a ControlPlane has a ClusterRoleBinding.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func controlPlaneHasClusterRoleBinding(t *testing.T, ctx context.Context, controlplane *operatorv1alpha1.ControlPlane) func() bool {
+	return func() bool {
+		clusterRoleBindings := mustListControlPlaneClusterRoleBindings(t, ctx, controlplane)
+		t.Logf("%d clusterrolebindings", len(clusterRoleBindings))
+		return len(clusterRoleBindings) > 0
+	}
+}
+
 // dataPlaneHasActiveDeployment is a helper function for tests that returns a function
 // that can be used to check if a DataPlane has an active deployment.
 // Should be used in conjunction with require.Eventually or assert.Eventually.

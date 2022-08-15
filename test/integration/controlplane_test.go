@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -19,8 +21,8 @@ import (
 )
 
 const (
-	controlPlanetCondDeadline = time.Minute
-	controlPlanetCondTick     = time.Second
+	controlPlaneCondDeadline = time.Minute
+	controlPlaneCondTick     = time.Second
 )
 
 func TestControlPlaneWhenNoDataPlane(t *testing.T) {
@@ -65,10 +67,10 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	cleaner.Add(controlplane)
 
 	t.Log("verifying controlplane state reflects lack of dataplane")
-	require.Eventually(t, controlPlaneDetectedNoDataplane(t, ctx, controlplaneName), controlPlanetCondDeadline, controlPlanetCondTick)
+	require.Eventually(t, controlPlaneDetectedNoDataplane(t, ctx, controlplaneName), controlPlaneCondDeadline, controlPlaneCondTick)
 
 	t.Log("verifying controlplane deployment has no active replicas")
-	require.Eventually(t, Not(controlPlaneHasActiveDeployment(t, ctx, controlplaneName)), controlPlanetCondDeadline, controlPlanetCondTick)
+	require.Eventually(t, Not(controlPlaneHasActiveDeployment(t, ctx, controlplaneName)), controlPlaneCondDeadline, controlPlaneCondTick)
 
 	t.Log("deploying dataplane resource")
 	dataplane, err = dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
@@ -76,10 +78,10 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	cleaner.Add(dataplane)
 
 	t.Log("verifying deployments managed by the dataplane are ready")
-	require.Eventually(t, dataPlaneHasActiveDeployment(t, ctx, dataplaneName), controlPlanetCondDeadline, controlPlanetCondTick)
+	require.Eventually(t, dataPlaneHasActiveDeployment(t, ctx, dataplaneName), controlPlaneCondDeadline, controlPlaneCondTick)
 
 	t.Log("verifying services managed by the dataplane")
-	require.Eventually(t, dataPlaneHasService(t, ctx, dataplaneName), controlPlanetCondDeadline, controlPlanetCondTick)
+	require.Eventually(t, dataPlaneHasService(t, ctx, dataplaneName), controlPlaneCondDeadline, controlPlaneCondTick)
 
 	t.Log("attaching dataplane to controlplane")
 	controlplane, err = controlplaneClient.Get(ctx, controlplane.Name, metav1.GetOptions{})
@@ -89,10 +91,10 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying controlplane is now provisioned")
-	require.Eventually(t, controlPlaneIsProvisioned(t, ctx, controlplaneName), controlPlanetCondDeadline, controlPlanetCondTick)
+	require.Eventually(t, controlPlaneIsProvisioned(t, ctx, controlplaneName), controlPlaneCondDeadline, controlPlaneCondTick)
 
 	t.Log("verifying controlplane deployment has active replicas")
-	require.Eventually(t, controlPlaneHasActiveDeployment(t, ctx, controlplaneName), controlPlanetCondDeadline, controlPlanetCondTick)
+	require.Eventually(t, controlPlaneHasActiveDeployment(t, ctx, controlplaneName), controlPlaneCondDeadline, controlPlaneCondTick)
 
 	t.Log("removing dataplane from controlplane")
 	controlplane, err = controlplaneClient.Get(ctx, controlplane.Name, metav1.GetOptions{})
@@ -102,7 +104,7 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying controlplane deployment has no active replicas")
-	require.Eventually(t, Not(controlPlaneHasActiveDeployment(t, ctx, controlplaneName)), controlPlanetCondDeadline, controlPlanetCondTick)
+	require.Eventually(t, Not(controlPlaneHasActiveDeployment(t, ctx, controlplaneName)), controlPlaneCondDeadline, controlPlaneCondTick)
 }
 
 func TestControlPlaneEssentials(t *testing.T) {
@@ -151,10 +153,10 @@ func TestControlPlaneEssentials(t *testing.T) {
 	cleaner.Add(dataplane)
 
 	t.Log("verifying deployments managed by the dataplane are ready")
-	require.Eventually(t, dataPlaneHasActiveDeployment(t, ctx, dataplaneName), controlPlanetCondDeadline, controlPlanetCondTick)
+	require.Eventually(t, dataPlaneHasActiveDeployment(t, ctx, dataplaneName), controlPlaneCondDeadline, controlPlaneCondTick)
 
 	t.Log("verifying services managed by the dataplane")
-	require.Eventually(t, dataPlaneHasActiveService(t, ctx, dataplaneName, nil), controlPlanetCondDeadline, controlPlanetCondTick)
+	require.Eventually(t, dataPlaneHasActiveService(t, ctx, dataplaneName, nil), controlPlaneCondDeadline, controlPlaneCondTick)
 
 	t.Log("deploying controlplane resource")
 	controlplane, err = controlplaneClient.Create(ctx, controlplane, metav1.CreateOptions{})
@@ -162,13 +164,17 @@ func TestControlPlaneEssentials(t *testing.T) {
 	cleaner.Add(controlplane)
 
 	t.Log("verifying controlplane gets marked scheduled")
-	require.Eventually(t, controlPlaneIsScheduled(t, ctx, controlplaneName), controlPlanetCondDeadline, controlPlanetCondTick)
+	require.Eventually(t, controlPlaneIsScheduled(t, ctx, controlplaneName), controlPlaneCondDeadline, controlPlaneCondTick)
+
+	t.Log("verifying controlplane owns clusterrole and clusterrolebinding")
+	require.Eventually(t, controlPlaneHasClusterRole(t, ctx, controlplane), controlPlaneCondDeadline, controlPlaneCondTick)
+	require.Eventually(t, controlPlaneHasClusterRoleBinding(t, ctx, controlplane), controlPlaneCondDeadline, controlPlaneCondTick)
 
 	t.Log("verifying that the controlplane gets marked as provisioned")
-	require.Eventually(t, controlPlaneIsProvisioned(t, ctx, controlplaneName), controlPlanetCondDeadline, controlPlanetCondTick)
+	require.Eventually(t, controlPlaneIsProvisioned(t, ctx, controlplaneName), controlPlaneCondDeadline, controlPlaneCondTick)
 
 	t.Log("verifying controlplane deployment has active replicas")
-	require.Eventually(t, controlPlaneHasActiveDeployment(t, ctx, controlplaneName), controlPlanetCondDeadline, controlPlanetCondTick)
+	require.Eventually(t, controlPlaneHasActiveDeployment(t, ctx, controlplaneName), controlPlaneCondDeadline, controlPlaneCondTick)
 
 	// check environment variables of deployments and pods.
 	deployments := mustListControlPlaneDeployments(t, controlplane)
@@ -193,4 +199,24 @@ func TestControlPlaneEssentials(t *testing.T) {
 	t.Log("verifying custom env TEST_ENV has value configured in controlplane")
 	testEnvValue := getEnvValueByName(envs, "TEST_ENV")
 	require.Equal(t, "test", testEnvValue)
+
+	// delete controlplane and verify that cluster wide resources removed.
+	t.Log("verifying cluster wide resources removed after controlplane deleted")
+	err = controlplaneClient.Delete(ctx, controlplane.Name, metav1.DeleteOptions{})
+	require.NoError(t, err)
+	require.Eventually(t, Not(controlPlaneHasClusterRole(t, ctx, controlplane)), controlPlaneCondDeadline, controlPlaneCondTick)
+	require.Eventually(t, Not(controlPlaneHasClusterRoleBinding(t, ctx, controlplane)), controlPlaneCondDeadline, controlPlaneCondTick)
+	t.Log("verifying controlplane disappears after cluster resources are deleted")
+	require.Eventually(t, func() bool {
+		_, err := operatorClient.ApisV1alpha1().ControlPlanes(controlplaneName.Namespace).Get(ctx, controlplaneName.Name, metav1.GetOptions{})
+		return k8serrors.IsNotFound(err)
+	}, controlPlaneCondDeadline, controlPlaneCondTick,
+		func() string {
+			controlplane, err := operatorClient.ApisV1alpha1().ControlPlanes(controlplaneName.Namespace).Get(ctx, controlplaneName.Name, metav1.GetOptions{})
+			if err != nil {
+				return fmt.Sprintf("failed to get controlplane %s, error %v", controlplaneName.Name, err)
+			}
+			return fmt.Sprintf("last state of control plane: %#v", controlplane)
+		},
+	)
 }

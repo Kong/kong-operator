@@ -62,6 +62,7 @@ func TestGetCondition(t *testing.T) {
 			true,
 		},
 	} {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			resource := &TestResource{
 				Conditions: tt.conditions,
@@ -270,6 +271,7 @@ func TestSetCondition(t *testing.T) {
 			},
 		},
 	} {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			resource := &TestResource{
 				Conditions: tt.conditions,
@@ -324,6 +326,7 @@ func TestIsValidCondition(t *testing.T) {
 			false,
 		},
 	} {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 
 			current := IsValidCondition(ConditionType(tt.input), resource)
@@ -378,6 +381,7 @@ func TestIsReady(t *testing.T) {
 			false,
 		},
 	} {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			resource := &TestResource{
 				tt.conditions,
@@ -482,6 +486,7 @@ func TestSetReady(t *testing.T) {
 			false,
 		},
 	} {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			resource := &TestResource{
 				tt.conditions,
@@ -625,6 +630,7 @@ func TestNeedsUpdate(t *testing.T) {
 			false,
 		},
 	} {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			current := &TestResource{tt.current}
 			updated := &TestResource{tt.updated}
