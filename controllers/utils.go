@@ -9,7 +9,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"os"
 	"reflect"
 	"time"
 
@@ -118,11 +117,14 @@ func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Se
 	return certBytes, nil
 }
 
-// maybeCreateCertificateSecret creates a namespace/name Secret for suject signed by the CA in the mtlsCASecretName
-// Secret, or does nothing if a namespace/name Secret is already present. It returns a boolean indicating if it
-// created a Secret and an error indicating any failures it encountered.
-func maybeCreateCertificateSecret(ctx context.Context, subject, namespace, name, mtlsCASecretName string,
-	usages []certificatesv1.KeyUsage, k8sClient client.Client,
+// maybeCreateCertificateSecret creates a namespace/name Secret for subject signed by the CA in the
+// mtlsCASecretNamespace/mtlsCASecretName Secret, or does nothing if a namespace/name Secret is
+// already present. It returns a boolean indicating if it created a Secret and an error indicating
+// any failures it encountered.
+func maybeCreateCertificateSecret(ctx context.Context,
+	subject, namespace, name, mtlsCASecretName, mtlsCASecretNamespace string,
+	usages []certificatesv1.KeyUsage,
+	k8sClient client.Client,
 ) (bool, error) {
 	logger := log.FromContext(ctx).WithName("MTLSCertificateCreation")
 	// check for existing
@@ -179,7 +181,7 @@ func maybeCreateCertificateSecret(ctx context.Context, subject, namespace, name,
 	}
 
 	ca := &corev1.Secret{}
-	err = k8sClient.Get(ctx, client.ObjectKey{Namespace: os.Getenv("POD_NAMESPACE"), Name: mtlsCASecretName}, ca)
+	err = k8sClient.Get(ctx, client.ObjectKey{Namespace: mtlsCASecretNamespace, Name: mtlsCASecretName}, ca)
 	if err != nil {
 		return false, err
 	}

@@ -265,7 +265,7 @@ func (r *ControlPlaneReconciler) ensureCertificate(
 	// this subject is arbitrary. data planes only care that client certificates are signed by the trusted CA, and will
 	// accept a certificate with any subject
 	created, err := maybeCreateCertificateSecret(ctx, fmt.Sprintf("%s.%s", controlplane.Name, controlplane.Namespace),
-		controlplane.Namespace, secretName, r.ClusterCASecret, usages, r.Client)
+		controlplane.Namespace, secretName, r.ClusterCASecretName, r.ClusterCASecretNamespace, usages, r.Client)
 
 	return created, secretName, err
 }

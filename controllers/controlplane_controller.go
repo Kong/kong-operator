@@ -25,8 +25,9 @@ import (
 // ControlPlaneReconciler reconciles a ControlPlane object
 type ControlPlaneReconciler struct {
 	client.Client
-	Scheme          *runtime.Scheme
-	ClusterCASecret string
+	Scheme                   *runtime.Scheme
+	ClusterCASecretName      string
+	ClusterCASecretNamespace string
 }
 
 // SetupWithManager sets up the controller with the Manager.

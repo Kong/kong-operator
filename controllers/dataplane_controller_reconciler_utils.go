@@ -113,7 +113,7 @@ func (r *DataPlaneReconciler) ensureCertificate(
 		certificatesv1.UsageDigitalSignature, certificatesv1.UsageServerAuth,
 	}
 	created, err := maybeCreateCertificateSecret(ctx, fmt.Sprintf("%s.%s.svc", serviceName, dataplane.Namespace),
-		dataplane.Namespace, secretName, r.ClusterCASecret, usages, r.Client)
+		dataplane.Namespace, secretName, r.ClusterCASecretName, r.ClusterCASecretNamespace, usages, r.Client)
 
 	return created, secretName, err
 }

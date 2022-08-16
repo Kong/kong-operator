@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -24,9 +23,10 @@ import (
 // DataPlaneReconciler reconciles a DataPlane object
 type DataPlaneReconciler struct {
 	client.Client
-	Scheme          *runtime.Scheme
-	eventRecorder   record.EventRecorder
-	ClusterCASecret string
+	Scheme                   *runtime.Scheme
+	eventRecorder            record.EventRecorder
+	ClusterCASecretName      string
+	ClusterCASecretNamespace string
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -158,7 +158,7 @@ func (r *DataPlaneReconciler) updateStatus(ctx context.Context, updated *operato
 	current := &operatorv1alpha1.DataPlane{}
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
 	}
 

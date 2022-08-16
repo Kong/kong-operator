@@ -144,16 +144,18 @@ func Run(cfg Config) error {
 	}
 
 	if err = (&controllers.DataPlaneReconciler{
-		Client:          mgr.GetClient(),
-		Scheme:          mgr.GetScheme(),
-		ClusterCASecret: cfg.ClusterCASecretName,
+		Client:                   mgr.GetClient(),
+		Scheme:                   mgr.GetScheme(),
+		ClusterCASecretName:      cfg.ClusterCASecretName,
+		ClusterCASecretNamespace: cfg.ClusterCASecretNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller DataPlane: %w", err)
 	}
 	if err = (&controllers.ControlPlaneReconciler{
-		Client:          mgr.GetClient(),
-		Scheme:          mgr.GetScheme(),
-		ClusterCASecret: cfg.ClusterCASecretName,
+		Client:                   mgr.GetClient(),
+		Scheme:                   mgr.GetScheme(),
+		ClusterCASecretName:      cfg.ClusterCASecretName,
+		ClusterCASecretNamespace: cfg.ClusterCASecretNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller ControlPlane: %w", err)
 	}
