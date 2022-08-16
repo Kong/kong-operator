@@ -189,10 +189,11 @@ jobs:
         uses: ./.github/actions/redhat-certification-action
         with:
           image: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_IMAGE_NAME }}:${{ steps.meta_redhat.outputs.version }}
+          submit: true
           username: ${{ secrets.RH_USERNAME }}
           password: ${{ secrets.RH_TOKEN }}
           apitoken: ${{ secrets.RH_PYXIS_TOKEN }}
-          projectid: ${{ secrets.RH_PROJECT_ID }}
+          certificationid: ${{ secrets.RH_PROJECT_ID }}
 
   test-integration-current-kubernetes:
     runs-on: ubuntu-latest
