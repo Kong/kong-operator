@@ -7,7 +7,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.1
 	github.com/go-logr/logr v1.2.3
 	github.com/google/uuid v1.3.0
-	github.com/hashicorp/go-multierror v1.0.0
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kong/kubernetes-telemetry v0.0.0-20220809220307-7c03ed4b923a
 	github.com/kong/kubernetes-testing-framework v0.19.0
 	github.com/stretchr/testify v1.8.0
