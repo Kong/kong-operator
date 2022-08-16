@@ -49,7 +49,6 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	"github.com/kong/gateway-operator/controllers"
 	"github.com/kong/gateway-operator/internal/admission"
 	"github.com/kong/gateway-operator/internal/manager/metadata"
 	"github.com/kong/gateway-operator/internal/telemetry"
@@ -90,18 +89,27 @@ type Config struct {
 	KubeconfigPath           string
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
+
+	GatewayControllerEnabled      bool
+	ControlPlaneControllerEnabled bool
+	DataPlaneControllerEnabled    bool
 }
 
-var DefaultConfig = Config{
-	MetricsAddr:         ":8080",
-	ProbeAddr:           ":8081",
-	WebhookPort:         9443,
-	DevelopmentMode:     false,
-	LeaderElection:      true,
-	ClusterCASecretName: "kong-operator-ca",
-	// TODO: Extract this into a named const and use it in all the placed where
-	// "kong-system" is used verbatim: https://github.com/Kong/gateway-operator/pull/149.
-	ClusterCASecretNamespace: "kong-system",
+func DefaultConfig() Config {
+	return Config{
+		MetricsAddr:         ":8080",
+		ProbeAddr:           ":8081",
+		WebhookPort:         9443,
+		DevelopmentMode:     false,
+		LeaderElection:      true,
+		ClusterCASecretName: "kong-operator-ca",
+		// TODO: Extract this into a named const and use it in all the placed where
+		// "kong-system" is used verbatim: https://github.com/Kong/gateway-operator/pull/149.
+		ClusterCASecretNamespace:      "kong-system",
+		GatewayControllerEnabled:      true,
+		ControlPlaneControllerEnabled: true,
+		DataPlaneControllerEnabled:    true,
+	}
 }
 
 func Run(cfg Config) error {
@@ -143,28 +151,14 @@ func Run(cfg Config) error {
 		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
-	if err = (&controllers.DataPlaneReconciler{
-		Client:                   mgr.GetClient(),
-		Scheme:                   mgr.GetScheme(),
-		ClusterCASecretName:      cfg.ClusterCASecretName,
-		ClusterCASecretNamespace: cfg.ClusterCASecretNamespace,
-	}).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller DataPlane: %w", err)
+	// load controllers
+	controllers := setupControllers(mgr, &cfg)
+	for _, c := range controllers {
+		if err := c.MaybeSetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
+		}
 	}
-	if err = (&controllers.ControlPlaneReconciler{
-		Client:                   mgr.GetClient(),
-		Scheme:                   mgr.GetScheme(),
-		ClusterCASecretName:      cfg.ClusterCASecretName,
-		ClusterCASecretNamespace: cfg.ClusterCASecretNamespace,
-	}).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller ControlPlane: %w", err)
-	}
-	if err = (&controllers.GatewayReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller Gateway: %w", err)
-	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

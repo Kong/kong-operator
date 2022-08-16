@@ -28,15 +28,18 @@ import (
 
 func main() {
 	var (
-		metricsAddr              string
-		probeAddr                string
-		disableLeaderElection    bool
-		controllerName           string
-		anonymousReports         bool
-		apiServerHost            string
-		kubeconfigPath           string
-		clusterCASecret          string
-		clusterCASecretNamespace string
+		metricsAddr                  string
+		probeAddr                    string
+		disableLeaderElection        bool
+		controllerName               string
+		anonymousReports             bool
+		apiServerHost                string
+		kubeconfigPath               string
+		clusterCASecret              string
+		clusterCASecretNamespace     string
+		enableControllerGateway      bool
+		enableControllerControlPlane bool
+		enableControllerDataPlane    bool
 	)
 
 	flagSet := flag.NewFlagSet("", flag.ExitOnError)
@@ -52,17 +55,22 @@ func main() {
 	flagSet.StringVar(&controllerName, "controller-name", "", "a controller name to use if other than the default, only needed for multi-tenancy")
 	flagSet.StringVar(&clusterCASecret, "cluster-ca-secret", "kong-operator-ca", "name of the Secret containing the cluster CA certificate")
 	flagSet.StringVar(&clusterCASecretNamespace, "cluster-ca-secret-namespace", "", "name of the namespace for Secret containing the cluster CA certificate")
+
+	flagSet.BoolVar(&enableControllerGateway, "enable-controller-gateway", true, "Enable the Gateway controller.")
+	flagSet.BoolVar(&enableControllerControlPlane, "enable-controller-controlplane", true, "Enable the ControlPlane controller.")
+	flagSet.BoolVar(&enableControllerDataPlane, "enable-controller-dataplane", true, "Enable the DataPlane controller.")
+
 	if err := flagSet.Parse(os.Args[1:]); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	developmentModeEnabled := manager.DefaultConfig.DevelopmentMode
+	developmentModeEnabled := manager.DefaultConfig().DevelopmentMode
 	if v := os.Getenv("CONTROLLER_DEVELOPMENT_MODE"); v == "true" { // TODO: clean env handling https://github.com/Kong/gateway-operator/issues/19
 		fmt.Println("INFO: development mode has been enabled")
 		developmentModeEnabled = true
 	}
 
-	leaderElection := manager.DefaultConfig.LeaderElection
+	leaderElection := manager.DefaultConfig().LeaderElection
 	if disableLeaderElection {
 		fmt.Println("INFO: leader election has been disabled")
 		leaderElection = false
@@ -91,16 +99,19 @@ func main() {
 	}
 
 	cfg := manager.Config{
-		DevelopmentMode:          developmentModeEnabled,
-		MetricsAddr:              metricsAddr,
-		ProbeAddr:                probeAddr,
-		LeaderElection:           leaderElection,
-		ControllerName:           controllerName,
-		AnonymousReports:         anonymousReports,
-		APIServerPath:            apiServerHost,
-		KubeconfigPath:           kubeconfigPath,
-		ClusterCASecretName:      clusterCASecret,
-		ClusterCASecretNamespace: clusterCASecretNamespace,
+		DevelopmentMode:               developmentModeEnabled,
+		MetricsAddr:                   metricsAddr,
+		ProbeAddr:                     probeAddr,
+		LeaderElection:                leaderElection,
+		ControllerName:                controllerName,
+		AnonymousReports:              anonymousReports,
+		APIServerPath:                 apiServerHost,
+		KubeconfigPath:                kubeconfigPath,
+		ClusterCASecretName:           clusterCASecret,
+		ClusterCASecretNamespace:      clusterCASecretNamespace,
+		GatewayControllerEnabled:      enableControllerGateway,
+		ControlPlaneControllerEnabled: enableControllerControlPlane,
+		DataPlaneControllerEnabled:    enableControllerDataPlane,
 	}
 
 	if err := manager.Run(cfg); err != nil {

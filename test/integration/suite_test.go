@@ -154,7 +154,7 @@ func TestMain(m *testing.M) {
 	timeout := time.Now().Add(time.Minute)
 	for timeout.After(time.Now()) {
 		err = func() error {
-			ca, err := k8sClient.CoreV1().Secrets("kong-system").Get(ctx, manager.DefaultConfig.ClusterCASecretName, metav1.GetOptions{})
+			ca, err := k8sClient.CoreV1().Secrets("kong-system").Get(ctx, manager.DefaultConfig().ClusterCASecretName, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
@@ -242,10 +242,13 @@ func setupControllerLogger() (closeLogFile func() error) {
 }
 
 func startControllerManager() {
-	cfg := manager.DefaultConfig
+	cfg := manager.DefaultConfig()
 	cfg.LeaderElection = false
 	cfg.DevelopmentMode = true
 	cfg.ControllerName = "konghq.com/gateway-operator-integration-tests"
+	cfg.GatewayControllerEnabled = true
+	cfg.ControlPlaneControllerEnabled = true
+	cfg.DataPlaneControllerEnabled = true
 
 	if runWebhookTests {
 		cfg.WebhookCertDir = webhookCertDir
