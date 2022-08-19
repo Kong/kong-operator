@@ -344,5 +344,12 @@ func setupAnonymousReports(cfg Config) (func(), error) {
 		return nil, errors.Wrapf(err, "anonymous reports failed to start")
 	}
 
+	if err := tMgr.TriggerExecute(context.Background(), telemetry.SignalStart); err != nil {
+		// We failed to send initial start signal with telemetry data.
+		// Don't abort and return an error, just log an error and continue.
+		setupLog.WithValues("error", err).
+			Info("failed to send an initial telemetry start signal")
+	}
+
 	return tMgr.Stop, nil
 }

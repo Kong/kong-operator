@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -27,6 +28,7 @@ type Payload = provider.Report
 // CreateManager creates telemetry manager using the provider rest.Config.
 func CreateManager(signal string, restConfig *rest.Config, log logr.Logger, payload Payload) (telemetry.Manager, error) {
 	m, err := telemetry.NewManager(
+		SignalPing,
 		telemetry.OptManagerPeriod(telemetryPeriod),
 		telemetry.OptManagerLogger(log),
 	)
@@ -54,7 +56,12 @@ func CreateManager(signal string, restConfig *rest.Config, log logr.Logger, payl
 			return nil, fmt.Errorf("failed to create dynamic kubernetes client: %w", err)
 		}
 
-		w, err := telemetry.NewClusterStateWorkflow(dyn)
+		cl, err := client.New(restConfig, client.Options{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create controller-runtime's client: %w", err)
+		}
+
+		w, err := telemetry.NewClusterStateWorkflow(dyn, cl.RESTMapper())
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cluster state workflow: %w", err)
 		}
@@ -78,7 +85,7 @@ func CreateManager(signal string, restConfig *rest.Config, log logr.Logger, payl
 	}
 
 	tf := forwarders.NewTLSForwarder(splunkEndpoint, log)
-	serializer := serializers.NewSemicolonDelimited(signal)
+	serializer := serializers.NewSemicolonDelimited()
 	consumer := telemetry.NewConsumer(serializer, tf)
 	if err := m.AddConsumer(consumer); err != nil {
 		return nil, fmt.Errorf("failed to add TLSforwarder: %w", err)
