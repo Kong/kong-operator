@@ -106,7 +106,7 @@ func controlPlaneHasActiveDeployment(t *testing.T, ctx context.Context, controlp
 		deployments := mustListControlPlaneDeployments(t, controlplane)
 		return len(deployments) == 1 &&
 			*deployments[0].Spec.Replicas > 0 &&
-			deployments[0].Status.AvailableReplicas >= deployments[0].Status.ReadyReplicas
+			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
 	})
 }
 
@@ -140,7 +140,7 @@ func dataPlaneHasActiveDeployment(t *testing.T, ctx context.Context, dataplaneNa
 		deployments := mustListDataPlaneDeployments(t, dataplane)
 		return len(deployments) == 1 &&
 			*deployments[0].Spec.Replicas > 0 &&
-			deployments[0].Status.AvailableReplicas >= deployments[0].Status.ReadyReplicas
+			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
 	})
 }
 
