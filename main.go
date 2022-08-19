@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"os"
 
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
 	"github.com/kong/gateway-operator/internal/manager"
 )
 
@@ -60,14 +58,18 @@ func main() {
 	flagSet.BoolVar(&enableControllerControlPlane, "enable-controller-controlplane", true, "Enable the ControlPlane controller.")
 	flagSet.BoolVar(&enableControllerDataPlane, "enable-controller-dataplane", true, "Enable the DataPlane controller.")
 
-	if err := flagSet.Parse(os.Args[1:]); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
 	developmentModeEnabled := manager.DefaultConfig().DevelopmentMode
 	if v := os.Getenv("CONTROLLER_DEVELOPMENT_MODE"); v == "true" { // TODO: clean env handling https://github.com/Kong/gateway-operator/issues/19
 		fmt.Println("INFO: development mode has been enabled")
 		developmentModeEnabled = true
+	}
+
+	loggerOpts := manager.DefaultConfig().LoggerOpts
+	loggerOpts.Development = developmentModeEnabled
+	loggerOpts.BindFlags(flagSet)
+	if err := flagSet.Parse(os.Args[1:]); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 
 	leaderElection := manager.DefaultConfig().LeaderElection
@@ -88,16 +90,6 @@ func main() {
 		}
 	}
 
-	opts := zap.Options{
-		Development: developmentModeEnabled,
-	}
-
-	opts.BindFlags(flagSet)
-	if err := flagSet.Parse(os.Args[1:]); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-
 	cfg := manager.Config{
 		DevelopmentMode:               developmentModeEnabled,
 		MetricsAddr:                   metricsAddr,
@@ -112,6 +104,7 @@ func main() {
 		GatewayControllerEnabled:      enableControllerGateway,
 		ControlPlaneControllerEnabled: enableControllerControlPlane,
 		DataPlaneControllerEnabled:    enableControllerDataPlane,
+		LoggerOpts:                    loggerOpts,
 	}
 
 	if err := manager.Run(cfg); err != nil {

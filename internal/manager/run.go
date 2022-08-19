@@ -89,6 +89,7 @@ type Config struct {
 	KubeconfigPath           string
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
+	LoggerOpts               zap.Options
 
 	GatewayControllerEnabled      bool
 	ControlPlaneControllerEnabled bool
@@ -105,7 +106,9 @@ func DefaultConfig() Config {
 		ClusterCASecretName: "kong-operator-ca",
 		// TODO: Extract this into a named const and use it in all the placed where
 		// "kong-system" is used verbatim: https://github.com/Kong/gateway-operator/pull/149.
-		ClusterCASecretNamespace:      "kong-system",
+		ClusterCASecretNamespace: "kong-system",
+		LoggerOpts:               zap.Options{},
+
 		GatewayControllerEnabled:      true,
 		ControlPlaneControllerEnabled: true,
 		DataPlaneControllerEnabled:    true,
@@ -118,15 +121,7 @@ func Run(cfg Config) error {
 		vars.ControllerName = cfg.ControllerName
 	}
 
-	opts := zap.Options{
-		Development: cfg.DevelopmentMode,
-	}
-
-	if cfg.Out != nil {
-		opts.DestWriter = cfg.Out
-	}
-
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&cfg.LoggerOpts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
