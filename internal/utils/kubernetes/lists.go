@@ -179,3 +179,36 @@ func ListClusterRoleBindingsForOwner(
 
 	return clusterRoleBindings, nil
 }
+
+// ListSecretsForOwner is a helper function to map a list of Secrets
+// by label and reduce by OwnerReference UID to efficiently list
+// only the objects owned by the provided UID.
+func ListSecretsForOwner(ctx context.Context,
+	c client.Client,
+	requiredLabel string,
+	requiredValue string,
+	uid types.UID,
+) ([]corev1.Secret, error) {
+	secretList := &corev1.SecretList{}
+
+	err := c.List(
+		ctx,
+		secretList,
+		client.MatchingLabels{requiredLabel: requiredValue},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	secrets := make([]corev1.Secret, 0)
+	for _, secret := range secretList.Items {
+		for _, ownerRef := range secret.ObjectMeta.OwnerReferences {
+			if ownerRef.UID == uid {
+				secrets = append(secrets, secret)
+				break
+			}
+		}
+	}
+
+	return secrets, nil
+}

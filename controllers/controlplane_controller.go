@@ -5,12 +5,20 @@ import (
 	"errors"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -32,9 +40,43 @@ type ControlPlaneReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	// for owned objects we need to check if updates to the objects resulted in the
+	// removal of an OwnerReference to the parent object, and if so we need to
+	// enqueue the parent object so that reconcilation can create a replacement.
+	clusterRolePredicate := predicate.NewPredicateFuncs(r.clusterRoleHasControlplaneOwner)
+	clusterRolePredicate.UpdateFunc = func(e event.UpdateEvent) bool {
+		return r.clusterRoleHasControlplaneOwner(e.ObjectOld)
+	}
+	clusterRoleBindingPredicate := predicate.NewPredicateFuncs(r.clusterRoleBindingHasControlplaneOwner)
+	clusterRoleBindingPredicate.UpdateFunc = func(e event.UpdateEvent) bool {
+		return r.clusterRoleBindingHasControlplaneOwner(e.ObjectOld)
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
+		// watch Controlplane objects
 		For(&operatorv1alpha1.ControlPlane{}).
-		Named("ControlPlane").
+		// watch for changes in Secrets created by the controlplane controller
+		Owns(&corev1.Secret{}).
+		// watch for changes in ServiceAccounts created by the controlplane controller
+		Owns(&corev1.ServiceAccount{}).
+		// watch for changes in Deployments created by the controlplane controller
+		Owns(&appsv1.Deployment{}).
+		// watch for changes in ClusterRoles created by the controlplane controller.
+		// Since the ClusterRoles are cluster-wide but controlplanes are namespaced,
+		// we need to manually detect the owner by means of the UID
+		// (Owns cannot be used in this case)
+		Watches(&source.Kind{Type: &rbacv1.ClusterRole{}},
+			handler.EnqueueRequestsFromMapFunc(r.getControlplaneForClusterRole),
+			builder.WithPredicates(clusterRolePredicate)).
+		// watch for changes in ClusterRoleBindings created by the controlplane controller.
+		// Since the ClusterRoleBindings are cluster-wide but controlplanes are namespaced,
+		// we need to manually detect the owner by means of the UID
+		// (Owns cannot be used in this case)
+		Watches(
+			&source.Kind{Type: &rbacv1.ClusterRoleBinding{}},
+			handler.EnqueueRequestsFromMapFunc(r.getControlplaneForClusterRoleBinding),
+			builder.WithPredicates(clusterRoleBindingPredicate)).
 		Complete(r)
 }
 
@@ -70,24 +112,22 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 		// ensure that the clusterrolebindings which were created for the ControlPlane are deleted
 		if err := r.ensureOwnedClusterRoleBindingsDeleted(ctx, controlplane); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, err // ClusterRoleBinding deletion will requeue
 		}
 
 		// now that ClusterRoleBindings are cleaned up, remove the relevant finalizer
 		if k8sutils.RemoveFinalizerInMetadata(&controlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRoleBinding)) {
-			// requeue until clusterrolebinding finalizer is removed
-			return ctrl.Result{}, r.Client.Update(ctx, controlplane)
+			return ctrl.Result{}, r.Client.Update(ctx, controlplane) // Controlplane update will requeue
 		}
 
 		// ensure that the clusterroles created for the controlplane are deleted
 		if err := r.ensureOwnedClusterRolesDeleted(ctx, controlplane); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, err // ClusterRole deletion will requeue
 		}
 
 		// now that ClusterRoles are cleaned up, remove the relevant finalizer
 		if k8sutils.RemoveFinalizerInMetadata(&controlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRole)) {
-			// requeue until clusterrole finalizer is removed
-			return ctrl.Result{}, r.Client.Update(ctx, controlplane)
+			return ctrl.Result{}, r.Client.Update(ctx, controlplane) // Controlplane update will requeue
 		}
 
 		// cleanup completed
@@ -122,17 +162,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if !errors.Is(err, operatorerrors.ErrDataPlaneNotSet) {
 			return ctrl.Result{}, err
 		}
-
 		debug(log, "no existing dataplane for controlplane", controlplane, "error", err)
-	}
-
-	debug(log, "creating MTLS certificate", controlplane)
-	created, certSecretName, err := r.ensureCertificate(ctx, controlplane)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if created {
-		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
 	}
 
 	debug(log, "validating ControlPlane configuration", controlplane)
@@ -174,47 +204,56 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	debug(log, "ensuring ServiceAccount for ControlPlane deployment exists", controlplane)
-	created, controlplaneServiceAccount, err := r.ensureServiceAccountForControlPlane(ctx, controlplane)
+	createdOrUpdated, controlplaneServiceAccount, err := r.ensureServiceAccountForControlPlane(ctx, controlplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if created {
-		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
+	if createdOrUpdated {
+		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
 	debug(log, "ensuring ClusterRoles for ControlPlane deployment exist", controlplane)
-	created, controlplaneClusterRole, err := r.ensureClusterRoleForControlPlane(ctx, controlplane)
+	createdOrUpdated, controlplaneClusterRole, err := r.ensureClusterRoleForControlPlane(ctx, controlplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if created {
-		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
+	if createdOrUpdated {
+		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
 	debug(log, "ensuring that ClusterRoleBindings for ControlPlane Deployment exist", controlplane)
-	created, _, err = r.ensureClusterRoleBindingForControlPlane(ctx, controlplane, controlplaneServiceAccount.Name, controlplaneClusterRole.Name)
+	createdOrUpdated, _, err = r.ensureClusterRoleBindingForControlPlane(ctx, controlplane, controlplaneServiceAccount.Name, controlplaneClusterRole.Name)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if createdOrUpdated {
+		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+	}
+
+	debug(log, "creating mTLS certificate", controlplane)
+	created, certSecret, err := r.ensureCertificate(ctx, controlplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if created {
-		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
+		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
 	debug(log, "looking for existing Deployments for ControlPlane resource", controlplane)
-	mutated, controlplaneDeployment, err := r.ensureDeploymentForControlPlane(ctx, controlplane, controlplaneServiceAccount.Name, certSecretName)
+	createdOrUpdated, controlplaneDeployment, err := r.ensureDeploymentForControlPlane(ctx, controlplane, controlplaneServiceAccount.Name, certSecret.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if mutated {
+	if createdOrUpdated {
 		if !dataplaneIsSet {
 			debug(log, "DataPlane not set, deployment for ControlPlane has been scaled down to 0 replicas", controlplane)
 			err := r.updateStatus(ctx, controlplane)
 			if err != nil {
 				debug(log, "unable to reconcile ControlPlane status", controlplane)
 			}
-			return ctrl.Result{}, err // no need to requeue, status update will requeue
+			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil // TODO: remove after https://github.com/Kong/gateway-operator/issues/26
+		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
 	// TODO: updates need to update sub-resources https://github.com/Kong/gateway-operator/issues/27
@@ -223,10 +262,8 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	if controlplaneDeployment.Status.Replicas == 0 || controlplaneDeployment.Status.AvailableReplicas < controlplaneDeployment.Status.Replicas {
 		debug(log, "deployment for ControlPlane not yet ready, waiting", controlplane)
-		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+		return ctrl.Result{}, nil // requeue will be triggered by the status update
 	}
-
-	debug(log, "reconciliation complete for ControlPlane resource", controlplane)
 
 	r.ensureIsMarkedProvisioned(controlplane)
 	err = r.updateStatus(ctx, controlplane)

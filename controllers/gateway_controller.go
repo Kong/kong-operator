@@ -11,8 +11,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -39,46 +39,31 @@ type GatewayReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("gateway", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
-	}
 
-	// watch for changes in the networkpolicies created by the gateway operator
-	if err := c.Watch(
-		&source.Kind{Type: &networkingv1.NetworkPolicy{}},
-		&handler.EnqueueRequestForOwner{OwnerType: &gatewayv1alpha2.Gateway{}},
-	); err != nil {
-		return err
-	}
-
-	// watch Gateway objects, filtering out any Gateways which are not configured with
-	// a supported GatewayClass controller name.
-	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1alpha2.Gateway{}},
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.gatewayHasMatchingGatewayClass),
-	); err != nil {
-		return err
-	}
-
-	// watch for updates to GatewayClasses, if any GatewayClasses change, enqueue
-	// reconciliation for all supported gateway objects which reference it.
-	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1alpha2.GatewayClass{}},
-		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
-		predicate.NewPredicateFuncs(r.gatewayClassMatchesController),
-	); err != nil {
-		return err
-	}
-
-	// watch for updates to GatewayConfigurations, if any configuration targets a
-	// Gateway that is supported, enqueue that Gateway.
-	return c.Watch(
-		&source.Kind{Type: &operatorv1alpha1.GatewayConfiguration{}},
-		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayConfig),
-		predicate.NewPredicateFuncs(r.gatewayConfigurationMatchesController),
-	)
+	return ctrl.NewControllerManagedBy(mgr).
+		// watch Gateway objects, filtering out any Gateways which are not configured with
+		// a supported GatewayClass controller name.
+		For(&gatewayv1alpha2.Gateway{},
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayHasMatchingGatewayClass))).
+		// watch for changes in dataplanes created by the gateway controller
+		Owns(&operatorv1alpha1.DataPlane{}).
+		// watch for changes in controlplanes created by the gateway controller
+		Owns(&operatorv1alpha1.ControlPlane{}).
+		// watch for changes in networkpolicies created by the gateway controller
+		Owns(&networkingv1.NetworkPolicy{}).
+		// watch for updates to GatewayConfigurations, if any configuration targets a
+		// Gateway that is supported, enqueue that Gateway.
+		Watches(
+			&source.Kind{Type: &operatorv1alpha1.GatewayConfiguration{}},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayConfig),
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayConfigurationMatchesController))).
+		// watch for updates to GatewayClasses, if any GatewayClasses change, enqueue
+		// reconciliation for all supported gateway objects which reference it.
+		Watches(
+			&source.Kind{Type: &gatewayv1alpha2.GatewayClass{}},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatchesController))).
+		Complete(r)
 }
 
 // Reconcile moves the current state of an object to the intended state.
@@ -126,8 +111,8 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	dataplane := r.provisionDataPlane(ctx, gateway, gatewayConfig)
 
 	if !k8sutils.IsValidCondition(DataPlaneReadyType, gateway) {
-		err := r.updateStatus(ctx, gateway)
-		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, err
+		err := r.updateStatus(ctx, gateway) // requeue will be triggered by the update of the dataplane status
+		return ctrl.Result{}, err
 	}
 
 	// List Services
@@ -157,17 +142,20 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	if !k8sutils.IsValidCondition(ControlPlaneReadyType, gateway) {
 		err := r.updateStatus(ctx, gateway)
-		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, err
+		return ctrl.Result{}, err // requeue will be triggered by the update of the controlplane status
 	}
 
 	// DataPlane NetworkPolicies
 	debug(log, "ensuring DataPlane's NetworkPolicy is created", gateway)
-	if err := r.ensureDataPlaneHasNetworkPolicy(ctx, gateway, dataplane, controlplane); err != nil {
+	createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, gateway, dataplane, controlplane)
+	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if createdOrUpdated {
+		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
 	// Mark Gateway Ready
-	debug(log, "marking the gateway as ready", gateway)
 	err = r.ensureGatewayMarkedReady(ctx, gateway, dataplane)
 	if err != nil {
 		debug(log, "marking the gateway as not ready", gateway)
@@ -304,7 +292,6 @@ func (r *GatewayReconciler) provisionControlPlane(
 
 	k8sutils.SetCondition(createControlPlaneCondition(metav1.ConditionTrue, k8sutils.ResourceReadyReason, ""), gateway)
 	return controlplane
-
 }
 
 func createDataPlaneCondition(status metav1.ConditionStatus, reason k8sutils.ConditionReason, message string) metav1.Condition {

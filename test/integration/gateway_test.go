@@ -43,6 +43,9 @@ func TestGatewayEssentials(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
+	dataplaneClient := operatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
+	controlplaneClient := operatorClient.ApisV1alpha1().ControlPlanes(namespace.Name)
+
 	t.Log("deploying Gateway resource")
 	gatewayNSN := types.NamespacedName{
 		Name:      uuid.NewString(),
@@ -76,7 +79,23 @@ func TestGatewayEssentials(t *testing.T) {
 	require.Eventually(t, gatewayNetworkPoliciesExist(t, ctx, gateway), subresourceReadinessWait, time.Second)
 
 	t.Log("verifying connectivity to the Gateway")
+	require.Eventually(t, getResponseBodyContains(t, ctx, "http://"+gatewayIPAddress, defaultKongResponseBody), subresourceReadinessWait, time.Second)
 
+	t.Log("deleting controlplane")
+	require.NoError(t, controlplaneClient.Delete(ctx, controlplane.Name, metav1.DeleteOptions{}))
+
+	t.Log("verifying that the ControlPlane becomes provisioned again")
+	require.Eventually(t, gatewayControlPlaneIsProvisioned(t, gateway), resourceReadinessWaitAfterDeletion, time.Second)
+	controlplane = mustListControlPlanesForGateway(t, gateway)[0]
+
+	t.Log("deleting dataplane")
+	require.NoError(t, dataplaneClient.Delete(ctx, dataplane.Name, metav1.DeleteOptions{}))
+
+	t.Log("verifying that the DataPlane becomes provisioned again")
+	require.Eventually(t, gatewayDataPlaneIsProvisioned(t, gateway), resourceReadinessWaitAfterDeletion, time.Second)
+	dataplane = mustListDataPlanesForGateway(t, ctx, gateway)[0]
+
+	t.Log("verifying connectivity to the Gateway")
 	require.Eventually(t, getResponseBodyContains(t, ctx, "http://"+gatewayIPAddress, defaultKongResponseBody), subresourceReadinessWait, time.Second)
 
 	t.Log("deleting Gateway resource")

@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -179,26 +180,31 @@ func TestControlPlaneEssentials(t *testing.T) {
 	// check environment variables of deployments and pods.
 	deployments := mustListControlPlaneDeployments(t, controlplane)
 	require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
-	deployment := deployments[0]
-	controllerContainer := getContainerWithNameInPod(&deployment.Spec.Template.Spec, "controller")
-	require.NotNil(t, controllerContainer)
+	deployment := &deployments[0]
 
-	envs := controllerContainer.Env
-	t.Log("verifying env POD_NAME comes from metadata.name")
-	podNameValueFrom := getEnvValueFromByName(envs, "POD_NAME")
-	fieldRefMetadataName := &corev1.EnvVarSource{
-		FieldRef: &corev1.ObjectFieldSelector{
-			APIVersion: "v1",
-			FieldPath:  "metadata.name",
-		},
-	}
-	require.Truef(t, reflect.DeepEqual(fieldRefMetadataName, podNameValueFrom),
-		"ValueFrom of POD_NAME should be the same as expected: expected %#v,actual %#v",
-		fieldRefMetadataName, podNameValueFrom,
-	)
-	t.Log("verifying custom env TEST_ENV has value configured in controlplane")
-	testEnvValue := getEnvValueByName(envs, "TEST_ENV")
-	require.Equal(t, "test", testEnvValue)
+	t.Log("verifying controlplane deployment env vars")
+	checkControlPlaneDeploymentEnvVars(t, deployment)
+
+	t.Log("deleting the  controlplane ClusterRole and ClusterRoleBinding")
+	clusterRoles := mustListControlPlaneClusterRoles(t, ctx, controlplane)
+	require.Len(t, clusterRoles, 1, "There must be only one ControlPlane ClusterRole")
+	require.NoError(t, mgrClient.Delete(ctx, &clusterRoles[0]))
+	clusterRoleBindings := mustListControlPlaneClusterRoleBindings(t, ctx, controlplane)
+	require.Len(t, clusterRoleBindings, 1, "There must be only one ControlPlane ClusterRoleBinding")
+	require.NoError(t, mgrClient.Delete(ctx, &clusterRoleBindings[0]))
+
+	t.Log("verifying controlplane ClusterRole and ClusterRoleBinding have been re-created")
+	require.Eventually(t, controlPlaneHasClusterRole(t, ctx, controlplane), controlPlaneCondDeadline, controlPlaneCondTick)
+	require.Eventually(t, controlPlaneHasClusterRoleBinding(t, ctx, controlplane), controlPlaneCondDeadline, controlPlaneCondTick)
+
+	t.Log("deleting the controlplane Deployment")
+	require.NoError(t, mgrClient.Delete(ctx, deployment))
+
+	t.Log("verifying deployments managed by the dataplane after deletion")
+	require.Eventually(t, controlPlaneHasActiveDeployment(t, ctx, controlplaneName), time.Minute, time.Second)
+
+	t.Log("verifying controlplane deployment env vars")
+	checkControlPlaneDeploymentEnvVars(t, deployment)
 
 	// delete controlplane and verify that cluster wide resources removed.
 	t.Log("verifying cluster wide resources removed after controlplane deleted")
@@ -219,4 +225,26 @@ func TestControlPlaneEssentials(t *testing.T) {
 			return fmt.Sprintf("last state of control plane: %#v", controlplane)
 		},
 	)
+}
+
+func checkControlPlaneDeploymentEnvVars(t *testing.T, deployment *appsv1.Deployment) {
+	controllerContainer := getContainerWithNameInPod(&deployment.Spec.Template.Spec, "controller")
+	require.NotNil(t, controllerContainer)
+
+	envs := controllerContainer.Env
+	t.Log("verifying env POD_NAME comes from metadata.name")
+	podNameValueFrom := getEnvValueFromByName(envs, "POD_NAME")
+	fieldRefMetadataName := &corev1.EnvVarSource{
+		FieldRef: &corev1.ObjectFieldSelector{
+			APIVersion: "v1",
+			FieldPath:  "metadata.name",
+		},
+	}
+	require.Truef(t, reflect.DeepEqual(fieldRefMetadataName, podNameValueFrom),
+		"ValueFrom of POD_NAME should be the same as expected: expected %#v,actual %#v",
+		fieldRefMetadataName, podNameValueFrom,
+	)
+	t.Log("verifying custom env TEST_ENV has value configured in controlplane")
+	testEnvValue := getEnvValueByName(envs, "TEST_ENV")
+	require.Equal(t, "test", testEnvValue)
 }

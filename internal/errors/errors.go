@@ -5,6 +5,14 @@ import (
 )
 
 // -----------------------------------------------------------------------------
+// Objects conversion - Errors
+// -----------------------------------------------------------------------------
+
+// ErrUnexpectedObject is a custom error that must be used when the cast of a object to an expected
+// type fails.
+var ErrUnexpectedObject = errors.New("unexpected object type provided")
+
+// -----------------------------------------------------------------------------
 // Gateway - Errors
 // -----------------------------------------------------------------------------
 

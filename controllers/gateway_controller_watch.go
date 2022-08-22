@@ -26,7 +26,7 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 	gateway, ok := obj.(*gatewayv1alpha2.Gateway)
 	if !ok {
 		log.FromContext(context.Background()).Error(
-			fmt.Errorf("unexpected object type provided"),
+			operatorerrors.ErrUnexpectedObject,
 			"failed to run predicate function",
 			"expected", "Gateway", "found", reflect.TypeOf(obj),
 		)
@@ -49,7 +49,7 @@ func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) boo
 	gatewayClass, ok := obj.(*gatewayv1alpha2.GatewayClass)
 	if !ok {
 		log.FromContext(context.Background()).Error(
-			fmt.Errorf("unexpected object type provided"),
+			operatorerrors.ErrUnexpectedObject,
 			"failed to run predicate function",
 			"expected", "GatewayClass", "found", reflect.TypeOf(obj),
 		)
@@ -65,7 +65,7 @@ func (r *GatewayReconciler) gatewayConfigurationMatchesController(obj client.Obj
 	gatewayClassList := new(gatewayv1alpha2.GatewayClassList)
 	if err := r.Client.List(ctx, gatewayClassList); err != nil {
 		log.FromContext(ctx).Error(
-			fmt.Errorf("unexpected object type provided"),
+			operatorerrors.ErrUnexpectedObject,
 			"failed to run predicate function",
 			"expected", "GatewayClass", "found", reflect.TypeOf(obj),
 		)
@@ -93,7 +93,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(obj client.Object) (recs
 	gatewayClass, ok := obj.(*gatewayv1alpha2.GatewayClass)
 	if !ok {
 		log.FromContext(context.Background()).Error(
-			fmt.Errorf("unexpected object type provided"),
+			operatorerrors.ErrUnexpectedObject,
 			"failed to run map funcs",
 			"expected", "GatewayClass", "found", reflect.TypeOf(obj),
 		)
@@ -127,7 +127,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayConfig(obj client.Object) (rec
 	gatewayConfig, ok := obj.(*operatorv1alpha1.GatewayConfiguration)
 	if !ok {
 		logger.Error(
-			fmt.Errorf("unexpected object type provided"),
+			operatorerrors.ErrUnexpectedObject,
 			"failed to run map funcs",
 			"expected", "GatewayConfiguration", "found", reflect.TypeOf(obj),
 		)

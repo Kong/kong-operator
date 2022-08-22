@@ -25,7 +25,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 	"github.com/kong/gateway-operator/internal/manager/logging"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
 // -----------------------------------------------------------------------------
@@ -122,16 +125,43 @@ func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Se
 // already present. It returns a boolean indicating if it created a Secret and an error indicating
 // any failures it encountered.
 func maybeCreateCertificateSecret(ctx context.Context,
-	subject, namespace, name, mtlsCASecretName, mtlsCASecretNamespace string,
+	owner client.Object,
+	subject, mtlsCASecretName, mtlsCASecretNamespace string,
 	usages []certificatesv1.KeyUsage,
 	k8sClient client.Client,
-) (bool, error) {
+) (bool, *corev1.Secret, error) {
 	logger := log.FromContext(ctx).WithName("MTLSCertificateCreation")
-	// check for existing
-	cert := &corev1.Secret{}
-	err := k8sClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, cert)
-	if err == nil {
-		return false, nil
+
+	selectorKey, selectorValue := getManagedLabelForOwner(owner)
+	secrets, err := k8sutils.ListSecretsForOwner(
+		ctx,
+		k8sClient,
+		selectorKey,
+		selectorValue,
+		owner.GetUID(),
+	)
+	if err != nil {
+		return false, nil, err
+	}
+
+	count := len(secrets)
+	if count > 1 {
+		return false, nil, fmt.Errorf("found %d mTLS secrets for DataPlane currently unsupported: expected 1 or less", count)
+	}
+
+	ownerPrefix := getPrefixForOwner(owner)
+	generatedSecret := k8sresources.GenerateNewTLSSecret(owner.GetNamespace(), owner.GetName(), ownerPrefix)
+	k8sutils.SetOwnerForObject(generatedSecret, owner)
+	addLabelForOwner(generatedSecret, owner)
+
+	if count == 1 {
+		var updated bool
+		existingSecret := &secrets[0]
+		updated, existingSecret.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingSecret.ObjectMeta, generatedSecret.ObjectMeta)
+		if updated {
+			return true, existingSecret, k8sClient.Update(ctx, existingSecret)
+		}
+		return false, existingSecret, nil
 	}
 
 	template := x509.CertificateRequest{
@@ -146,12 +176,12 @@ func maybeCreateCertificateSecret(ctx context.Context,
 
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	der, err := x509.CreateCertificateRequest(rand.Reader, &template, priv)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	// This is effectively a placeholder so long as we handle signing internally. When actually creating CSR resources,
@@ -166,8 +196,8 @@ func maybeCreateCertificateSecret(ctx context.Context,
 
 	csr := certificatesv1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
+			Namespace: owner.GetNamespace(),
+			Name:      owner.GetName(),
 		},
 		Spec: certificatesv1.CertificateSigningRequestSpec{
 			Request: pem.EncodeToMemory(&pem.Block{
@@ -183,39 +213,33 @@ func maybeCreateCertificateSecret(ctx context.Context,
 	ca := &corev1.Secret{}
 	err = k8sClient.Get(ctx, client.ObjectKey{Namespace: mtlsCASecretNamespace, Name: mtlsCASecretName}, ca)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	signed, err := signCertificate(csr, ca, logger)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	privDer, err := x509.MarshalECPrivateKey(priv)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
-	signedSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-		},
-		Type: corev1.SecretTypeTLS,
-		StringData: map[string]string{
-			"ca.crt":  string(ca.Data["tls.crt"]),
-			"tls.crt": string(signed),
-			"tls.key": string(pem.EncodeToMemory(&pem.Block{
-				Type:  "EC PRIVATE KEY",
-				Bytes: privDer,
-			})),
-		},
+	generatedSecret.StringData = map[string]string{
+		"ca.crt":  string(ca.Data["tls.crt"]),
+		"tls.crt": string(signed),
+		"tls.key": string(pem.EncodeToMemory(&pem.Block{
+			Type:  "EC PRIVATE KEY",
+			Bytes: privDer,
+		})),
 	}
-	err = k8sClient.Create(ctx, signedSecret)
+
+	err = k8sClient.Create(ctx, generatedSecret)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
-	return true, nil
+	return true, generatedSecret, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -268,4 +292,41 @@ func deploymentOptionsDeepEqual(opts1, opts2 *operatorv1alpha1.DeploymentOptions
 	}
 
 	return true
+}
+
+// -----------------------------------------------------------------------------
+// Owner based metadata getters - Private Functions
+// -----------------------------------------------------------------------------
+
+func getPrefixForOwner(owner client.Object) string {
+	switch owner.(type) {
+	case *operatorv1alpha1.ControlPlane:
+		return consts.ControlPlanePrefix
+	case *operatorv1alpha1.DataPlane:
+		return consts.DataPlanePrefix
+	}
+	return ""
+}
+
+func getManagedLabelForOwner(owner client.Object) (key string, value string) {
+	switch owner.(type) {
+	case *operatorv1alpha1.ControlPlane:
+		return consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue
+	case *operatorv1alpha1.DataPlane:
+		return consts.GatewayOperatorControlledLabel, consts.DataPlaneManagedLabelValue
+	}
+	return "", ""
+}
+
+// -----------------------------------------------------------------------------
+// Owner based objects mutators - Private Functions
+// -----------------------------------------------------------------------------
+
+func addLabelForOwner(obj client.Object, owner client.Object) {
+	switch owner.(type) {
+	case *operatorv1alpha1.ControlPlane:
+		addLabelForControlPlane(obj)
+	case *operatorv1alpha1.DataPlane:
+		addLabelForDataplane(obj)
+	}
 }

@@ -322,7 +322,7 @@ func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 // ControlPlane - Private Functions - Kubernetes Object Labels
 // -----------------------------------------------------------------------------
 
-func labelObjForControlPlane(obj client.Object) {
+func addLabelForControlPlane(obj client.Object) {
 	labels := obj.GetLabels()
 	if labels == nil {
 		labels = make(map[string]string)

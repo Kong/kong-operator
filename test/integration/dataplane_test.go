@@ -82,6 +82,37 @@ func TestDataplaneEssentials(t *testing.T) {
 		return false
 	}, time.Minute, time.Second)
 
+	verifyConnectivity(t, dataplaneIP)
+
+	t.Log("deleting the dataplane deployment")
+	dataplaneDeployments := mustListDataPlaneDeployments(t, dataplane)
+	require.Len(t, dataplaneDeployments, 1, "there must be only one dataplane deployment")
+	require.NoError(t, mgrClient.Delete(ctx, &dataplaneDeployments[0]))
+
+	t.Log("verifying deployments managed by the dataplane after deletion")
+	require.Eventually(t, dataPlaneHasActiveDeployment(t, ctx, dataplaneName), time.Minute, time.Second)
+
+	t.Log("deleting the dataplane service")
+	require.NoError(t, mgrClient.Delete(ctx, &dataplaneService))
+
+	t.Log("verifying services managed by the dataplane after deletion")
+	require.Eventually(t, dataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService), time.Minute, time.Second)
+
+	t.Log("verifying dataplane services receive IP addresses after deletion")
+	require.Eventually(t, func() bool {
+		dataplaneService, err := k8sClient.CoreV1().Services(dataplane.Namespace).Get(ctx, dataplaneService.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		if len(dataplaneService.Status.LoadBalancer.Ingress) > 0 {
+			dataplaneIP = dataplaneService.Status.LoadBalancer.Ingress[0].IP
+			return true
+		}
+		return false
+	}, time.Minute, time.Second)
+
+	verifyConnectivity(t, dataplaneIP)
+}
+
+func verifyConnectivity(t *testing.T, dataplaneIP string) {
 	t.Log("verifying un-authenticated requests fail")
 	badhttpc := http.Client{
 		Timeout: time.Second * 10,

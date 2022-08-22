@@ -195,28 +195,32 @@ func (r *GatewayReconciler) ensureDataPlaneHasNetworkPolicy(
 	gateway *gatewayDecorator,
 	dataplane *operatorv1alpha1.DataPlane,
 	controlplane *operatorv1alpha1.ControlPlane,
-) error {
+) (createdOrUpdate bool, err error) {
 	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway.Gateway)
 	if err != nil {
-		if !k8serrors.IsNotFound(err) {
-			return err
+		return false, err
+	}
+
+	count := len(networkPolicies)
+	if count > 1 {
+		return false, fmt.Errorf("%w, got: %d, expected 1", operatorerrors.ErrTooManyDataPlaneNetworkPolicies, count)
+	}
+
+	generatedPolicy := generateDataPlaneNetworkPolicy(gateway.Namespace, dataplane, controlplane)
+	k8sutils.SetOwnerForObject(generatedPolicy, gateway)
+	gatewayutils.LabelObjectAsGatewayManaged(generatedPolicy)
+
+	if count == 1 {
+		var updated bool
+		existingPolicy := &networkPolicies[0]
+		updated, existingPolicy.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingPolicy.ObjectMeta, generatedPolicy.ObjectMeta)
+		if updated {
+			return true, r.Client.Update(ctx, existingPolicy)
 		}
+		return false, nil
 	}
 
-	numNetworkPolicies := len(networkPolicies)
-	if numNetworkPolicies > 1 {
-		return fmt.Errorf("%w, got: %d, expected 1", operatorerrors.ErrTooManyDataPlaneNetworkPolicies, numNetworkPolicies)
-	}
-
-	if numNetworkPolicies == 0 {
-		policy := generateDataPlaneNetworkPolicy(gateway.Namespace, dataplane, controlplane)
-		k8sutils.SetOwnerForObject(policy, gateway)
-		gatewayutils.LabelObjectAsGatewayManaged(policy)
-
-		return r.Client.Create(ctx, policy)
-	}
-
-	return nil
+	return true, r.Client.Create(ctx, generatedPolicy)
 }
 
 func generateDataPlaneNetworkPolicy(

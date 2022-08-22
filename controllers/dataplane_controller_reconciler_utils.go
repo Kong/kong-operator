@@ -106,23 +106,25 @@ func (r *DataPlaneReconciler) ensureCertificate(
 	ctx context.Context,
 	dataplane *operatorv1alpha1.DataPlane,
 	serviceName string,
-) (bool, string, error) {
-	secretName := dataplane.Name + "-data-mtls-cert"
+) (bool, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
 		certificatesv1.UsageDigitalSignature, certificatesv1.UsageServerAuth,
 	}
-	created, err := maybeCreateCertificateSecret(ctx, fmt.Sprintf("%s.%s.svc", serviceName, dataplane.Namespace),
-		dataplane.Namespace, secretName, r.ClusterCASecretName, r.ClusterCASecretNamespace, usages, r.Client)
-
-	return created, secretName, err
+	return maybeCreateCertificateSecret(ctx,
+		dataplane,
+		fmt.Sprintf("%s.%s.svc", serviceName, dataplane.Namespace),
+		r.ClusterCASecretName,
+		r.ClusterCASecretNamespace,
+		usages,
+		r.Client)
 }
 
 func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 	ctx context.Context,
 	dataplane *operatorv1alpha1.DataPlane,
 	certSecretName string,
-) (bool, *appsv1.Deployment, error) {
+) (createdOrUpdate bool, deploy *appsv1.Deployment, err error) {
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
 		r.Client,
@@ -140,20 +142,27 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 		return false, nil, fmt.Errorf("found %d deployments for DataPlane currently unsupported: expected 1 or less", count)
 	}
 
+	generatedDeployment := generateNewDeploymentForDataPlane(dataplane, certSecretName)
+	k8sutils.SetOwnerForObject(generatedDeployment, dataplane)
+	addLabelForDataplane(generatedDeployment)
+
 	if count == 1 {
-		return false, &deployments[0], nil
+		var updated bool
+		existingDeployment := &deployments[0]
+		updated, existingDeployment.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingDeployment.ObjectMeta, generatedDeployment.ObjectMeta)
+		if updated {
+			return true, existingDeployment, r.Client.Update(ctx, existingDeployment)
+		}
+		return false, existingDeployment, nil
 	}
 
-	deployment := generateNewDeploymentForDataPlane(dataplane, certSecretName)
-	k8sutils.SetOwnerForObject(deployment, dataplane)
-	labelObjForDataplane(deployment)
-	return true, deployment, r.Client.Create(ctx, deployment)
+	return true, generatedDeployment, r.Client.Create(ctx, generatedDeployment)
 }
 
 func (r *DataPlaneReconciler) ensureServiceForDataPlane(
 	ctx context.Context,
 	dataplane *operatorv1alpha1.DataPlane,
-) (bool, *corev1.Service, error) {
+) (createdOrUpdated bool, svc *corev1.Service, err error) {
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
 		r.Client,
@@ -171,11 +180,19 @@ func (r *DataPlaneReconciler) ensureServiceForDataPlane(
 		return false, nil, fmt.Errorf("found %d services for DataPlane currently unsupported: expected 1 or less", count)
 	}
 
+	generatedService := generateNewServiceForDataplane(dataplane)
+	addLabelForDataplane(generatedService)
+	k8sutils.SetOwnerForObject(generatedService, dataplane)
+
 	if count == 1 {
-		return false, &services[0], nil
+		var updated bool
+		existingService := &services[0]
+		updated, existingService.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingService.ObjectMeta, generatedService.ObjectMeta)
+		if updated {
+			return true, existingService, r.Client.Update(ctx, existingService)
+		}
+		return false, existingService, nil
 	}
 
-	service := generateNewServiceForDataplane(dataplane)
-	labelObjForDataplane(service)
-	return true, service, r.Client.Create(ctx, service)
+	return true, generatedService, r.Client.Create(ctx, generatedService)
 }

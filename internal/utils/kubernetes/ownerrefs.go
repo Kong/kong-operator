@@ -3,6 +3,7 @@ package kubernetes
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -19,6 +20,7 @@ func GenerateOwnerReferenceForObject(obj client.Object) metav1.OwnerReference {
 		Kind:       obj.GetObjectKind().GroupVersionKind().Kind,
 		Name:       obj.GetName(),
 		UID:        obj.GetUID(),
+		Controller: pointer.BoolPtr(true),
 	}
 }
 
