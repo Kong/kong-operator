@@ -84,7 +84,11 @@ func CreateManager(signal string, restConfig *rest.Config, log logr.Logger, payl
 		m.AddWorkflow(w)
 	}
 
-	tf := forwarders.NewTLSForwarder(splunkEndpoint, log)
+	tf, err := forwarders.NewTLSForwarder(splunkEndpoint, log)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create telemetry TLSForwarder: %w", err)
+	}
+
 	serializer := serializers.NewSemicolonDelimited()
 	consumer := telemetry.NewConsumer(serializer, tf)
 	if err := m.AddConsumer(consumer); err != nil {
