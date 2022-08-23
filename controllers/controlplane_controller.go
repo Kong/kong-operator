@@ -43,7 +43,7 @@ func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// for owned objects we need to check if updates to the objects resulted in the
 	// removal of an OwnerReference to the parent object, and if so we need to
-	// enqueue the parent object so that reconcilation can create a replacement.
+	// enqueue the parent object so that reconciliation can create a replacement.
 	clusterRolePredicate := predicate.NewPredicateFuncs(r.clusterRoleHasControlplaneOwner)
 	clusterRolePredicate.UpdateFunc = func(e event.UpdateEvent) bool {
 		return r.clusterRoleHasControlplaneOwner(e.ObjectOld)
@@ -102,7 +102,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				Requeue: true,
 				// Requeue when grace period expires.
 				// If deletion timestamp is changed,
-				// the update will trigger another round of reconcilation.
+				// the update will trigger another round of reconciliation.
 				// so we do not consider updates of deletion timestamp here.
 				RequeueAfter: time.Until(controlplane.DeletionTimestamp.Time),
 			}, nil
