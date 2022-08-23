@@ -39,10 +39,10 @@ body:
     required: false
 - type: textarea
   attributes:
-    label: Kong Ingress Controller version
+    label: Kong Gateway Operator version
     description: |
-      example: v1.3.1
-    placeholder: 'Please put the KIC version here.'
+      example: v0.1.0
+    placeholder: 'Please put the KGO version here.'
     render: shell
   validations:
     required: false
