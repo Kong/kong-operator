@@ -6,6 +6,12 @@ updates:
     interval: daily
   labels:
   - dependencies
+- package-ecosystem: gomod
+  directory: /third_party/
+  schedule:
+    interval: daily
+  labels:
+  - dependencies
 - package-ecosystem: github-actions
   directory: /
   schedule:
