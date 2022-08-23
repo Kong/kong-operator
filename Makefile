@@ -113,13 +113,17 @@ tidy:
 	go mod tidy
 	go mod verify
 
-.PHONY: build
-build: generate fmt vet lint
+.PHONY: build.operator
+build.operator:
 	go build -o bin/manager -ldflags "-s -w \
 		-X $(REPO)/internal/manager/metadata.Release=$(TAG) \
 		-X $(REPO)/internal/manager/metadata.Commit=$(COMMIT) \
 		-X $(REPO)/internal/manager/metadata.Repo=$(REPO_INFO)" \
 		main.go
+
+.PHONY: build
+build: generate fmt vet lint
+	$(MAKE) build.operator
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -182,17 +186,26 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 # Build - Container Images
 # ------------------------------------------------------------------------------
 
+.PHONY: _docker.build
+_docker.build:
+	docker build -t $(IMG):$(TAG) \
+		--target $(TARGET) \
+		--build-arg TAG=$(TAG) \
+		--build-arg COMMIT=$(COMMIT) \
+		--build-arg REPO_INFO=$(REPO_INFO) \
+		.
+
 .PHONY: docker.build
 docker.build:
-	docker build -t ${IMG}:${TAG} --target distroless --build-arg TAG=${TAG} . 
-
-.PHONY: docker.push
-docker.push:
-	docker push ${IMG}:${TAG}
+	TAG=$(TAG) TARGET=distroless $(MAKE) _docker.build
 
 .PHONY: docker.build.redhat
 docker.build.redhat:
-	docker build -t ${IMG}:${RHTAG} --target redhat --build-arg TAG=${RHTAG} . 
+	TAG=$(RHTAG) TARGET=redhat $(MAKE) _docker.build
+
+.PHONY: docker.push
+docker.push:
+	docker push $(IMG):$(TAG)
 
 # ------------------------------------------------------------------------------
 # Build - OperatorHub Bundles

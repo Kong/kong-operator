@@ -3,6 +3,9 @@ FROM golang:1.19.0 as builder
 ARG TARGETPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
+ARG TAG
+ARG COMMIT
+ARG REPO_INFO
 
 RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
     && printf ", TARGETARCH=${TARGETARCH}" \
@@ -22,11 +25,15 @@ COPY apis/ apis/
 COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY internal/ internal/
+COPY Makefile Makefile
+COPY .git/ .git/
 
 ### Distroless/default
 # Use distroless as minimal base image to package the operator binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" go build -a -o manager main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
+    TAG="${TAG}" COMMIT="${COMMIT}" REPO_INFO="${REPO_INFO}" \
+    make build.operator
 
 
 ### Distroless/default
@@ -45,11 +52,11 @@ LABEL name="Kong Ingress Controller" \
       description="Kong Gateway Operator drives deployment via the Gateway resource. You can deploy a Gateway resource to the cluster which will result in the underlying control-plane (the Kong Kubernetes Ingress Controller) and the data-plane (the Kong Gateway)."
 
 WORKDIR /
-COPY --from=builder /workspace/manager .
+COPY --from=builder /workspace/bin/manager .
 USER 65532:65532
 
 WORKDIR /
-COPY --from=builder /workspace/manager .
+COPY --from=builder /workspace/bin/manager .
 USER 65532:65532
 
 
@@ -79,7 +86,7 @@ LABEL name="$NAME" \
 RUN groupadd --system gateway-operator && \
     adduser --system gateway-operator -g gateway-operator -u 1000
 
-COPY --from=builder /workspace/manager .
+COPY --from=builder /workspace/bin/manager .
 COPY LICENSE /licenses/
 
 # Perform any further action as an unprivileged user.

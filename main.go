@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/kong/gateway-operator/internal/manager"
+	"github.com/kong/gateway-operator/internal/manager/metadata"
 )
 
 func main() {
@@ -38,6 +39,7 @@ func main() {
 		enableControllerGateway      bool
 		enableControllerControlPlane bool
 		enableControllerDataPlane    bool
+		version                      bool
 	)
 
 	flagSet := flag.NewFlagSet("", flag.ExitOnError)
@@ -58,6 +60,8 @@ func main() {
 	flagSet.BoolVar(&enableControllerControlPlane, "enable-controller-controlplane", true, "Enable the ControlPlane controller.")
 	flagSet.BoolVar(&enableControllerDataPlane, "enable-controller-dataplane", true, "Enable the DataPlane controller.")
 
+	flagSet.BoolVar(&version, "v", false, "Print version information")
+
 	developmentModeEnabled := manager.DefaultConfig().DevelopmentMode
 	if v := os.Getenv("CONTROLLER_DEVELOPMENT_MODE"); v == "true" { // TODO: clean env handling https://github.com/Kong/gateway-operator/issues/19
 		fmt.Println("INFO: development mode has been enabled")
@@ -70,6 +74,11 @@ func main() {
 	if err := flagSet.Parse(os.Args[1:]); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
+	}
+
+	if version {
+		fmt.Printf("%v\n", metadata.Release)
+		os.Exit(0)
 	}
 
 	leaderElection := manager.DefaultConfig().LeaderElection
