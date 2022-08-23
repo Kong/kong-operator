@@ -19,10 +19,10 @@ const (
 	// conflicts to be resolved before an object update will be considered failed.
 	objectUpdateTimeout = time.Second * 30
 
-	// subresourceReadinessWait is the maximum amount of time allowed after a
-	// parent resource considers itself "Ready" to wait for sub-resources to
-	// be marked as ready or provisioned themselves.
-	subresourceReadinessWait = time.Second * 10
+	// subresourceReadinessWait is the maximum amount of time allowed for
+	// sub-resources to become "Ready" after being created on behalf of a
+	// parent resource.
+	subresourceReadinessWait = time.Second * 30
 
 	// subresourceReadinessWaitAfterDeletion is the maximum amount of time allowed
 	// after a resource is deleted to be re-created and ready again.
