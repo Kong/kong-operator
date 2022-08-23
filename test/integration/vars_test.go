@@ -23,8 +23,4 @@ const (
 	// sub-resources to become "Ready" after being created on behalf of a
 	// parent resource.
 	subresourceReadinessWait = time.Second * 30
-
-	// subresourceReadinessWaitAfterDeletion is the maximum amount of time allowed
-	// after a resource is deleted to be re-created and ready again.
-	resourceReadinessWaitAfterDeletion = time.Second * 45
 )
