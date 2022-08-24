@@ -1829,8 +1829,8 @@ k8s.io/cli-runtime v0.24.0/go.mod h1:9XxoZDsEkRFUThnwqNviqzljtT/LdHtNWvcNFrAXl0A
 k8s.io/client-go v0.24.0 h1:lbE4aB1gTHvYFSwm6eD3OF14NhFDKCejlnsGYlSJe5U=
 k8s.io/client-go v0.24.0/go.mod h1:VFPQET+cAFpYxh6Bq6f4xyMY80G6jKKktU6G0m00VDw=
 k8s.io/code-generator v0.24.0/go.mod h1:dpVhs00hTuTdTY6jvVxvTFCk6gSMrtfRydbhZwHI15w=
-k8s.io/code-generator v0.24.4 h1:HLnoAabkTFKy1Ex4cMvffz6KkWFJ7oFN2yX37Icbbyg=
-k8s.io/code-generator v0.24.4/go.mod h1:dpVhs00hTuTdTY6jvVxvTFCk6gSMrtfRydbhZwHI15w=
+k8s.io/code-generator v0.25.0 h1:QP8fJuXu882ztf6dsqJsso/Btm94pMd68TAZC1rE6KI=
+k8s.io/code-generator v0.25.0/go.mod h1:B6jZgI3DvDFAualltPitbYMQ74NjaCFxum3YeKZZ+3w=
 k8s.io/component-base v0.24.0 h1:h5jieHZQoHrY/lHG+HyrSbJeyfuitheBvqvKwKHVC0g=
 k8s.io/component-base v0.24.0/go.mod h1:Dgazgon0i7KYUsS8krG8muGiMVtUZxG037l1MKyXgrA=
 k8s.io/component-helpers v0.24.0/go.mod h1:Q2SlLm4h6g6lPTC9GMMfzdywfLSvJT2f1hOnnjaWD8c=
