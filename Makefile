@@ -148,19 +148,17 @@ generate: controller-gen generate.apis generate.clientsets generate.rbacs
 generate.apis:
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
+# this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 .PHONY: generate.clientsets
 generate.clientsets: client-gen
-	@$(CLIENT_GEN) --go-header-file ./hack/boilerplate.go.txt \
+	$(CLIENT_GEN) \
+		--go-header-file ./hack/boilerplate.go.txt \
 		--clientset-name clientset \
-		--input-base ''  \
+		--input-base '' \
 		--input $(REPO)/apis/v1alpha1 \
-		--output-base client-gen-tmp/ \
-		--output-package $(REPO)/pkg/
-	@rm -rf pkg/clientset/
-	@mkdir -p pkg/clientset
-	@mv client-gen-tmp/$(REPO)/pkg/clientset/* pkg/clientset/
-	@rm -rf client-gen-tmp/
-
+		--output-base pkg/ \
+		--output-package $(REPO)/pkg/ \
+		--trim-path-prefix pkg/$(REPO)/
 
 .PHONY: generate.rbacs
 generate.rbacs: kic-role-generator
