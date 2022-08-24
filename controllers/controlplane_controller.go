@@ -135,8 +135,9 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// ensure the controlplane has a finalizer to delete owned cluster wide resources on delete.
-	finalizersChanged := k8sutils.EnsureFinalizerInMetadata(&controlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRole))
-	finalizersChanged = finalizersChanged || k8sutils.EnsureFinalizerInMetadata(&controlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRoleBinding))
+	finalizersChanged := k8sutils.EnsureFinalizersInMetadata(&controlplane.ObjectMeta,
+		string(ControlPlaneFinalizerCleanupClusterRole),
+		string(ControlPlaneFinalizerCleanupClusterRoleBinding))
 	if finalizersChanged {
 		info(log, "update metadata of control plane to set finalizer", controlplane.ObjectMeta)
 		return ctrl.Result{}, r.Client.Update(ctx, controlplane)

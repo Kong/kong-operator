@@ -18,18 +18,26 @@ func GetAPIVersionForObject(obj client.Object) string {
 	return fmt.Sprintf("%s/%s", obj.GetObjectKind().GroupVersionKind().Group, obj.GetObjectKind().GroupVersionKind().Version)
 }
 
-// EnsureFinalizerInMetadata ensures the expected finalizer exist in ObjectMeta.
-// If the finalizer does not exist, append it to finalizers.
+// EnsureFinalizersInMetadata ensures the expected finalizers exist in ObjectMeta.
+// If the finalizers do not exist, append them to finalizers.
 // Returns true if the ObjectMeta has been changed.
-func EnsureFinalizerInMetadata(metadata *metav1.ObjectMeta, finalizer string) bool {
-	for _, f := range metadata.Finalizers {
-		if f == finalizer {
-			return false
+func EnsureFinalizersInMetadata(metadata *metav1.ObjectMeta, finalizers ...string) bool {
+	var added bool
+	for _, finalizer := range finalizers {
+		var finalizerExists bool
+		for _, f := range metadata.Finalizers {
+			if f == finalizer {
+				finalizerExists = true
+				break
+			}
+		}
+		if !finalizerExists {
+			metadata.Finalizers = append(metadata.Finalizers, finalizer)
+			added = true
 		}
 	}
 
-	metadata.Finalizers = append(metadata.Finalizers, finalizer)
-	return true
+	return added
 }
 
 // RemoveFinalizerInMetadata removes the finalizer from the finalizers in ObjectMeta.
