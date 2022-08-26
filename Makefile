@@ -95,6 +95,51 @@ OPM = $(PROJECT_DIR)/bin/opm
 opm:
 	@$(MAKE) _download_tool TOOL=opm
 
+# It seems that there's problem with operator-sdk dependencies when imported from a different project.
+# After spending some time on it, decided to just use a 'thing that works' which is to download
+# its repo and build the binary separately, not via third_party/go.mod as it's done for other tools.
+#
+# github.com/kong/gateway-operator/third_party imports
+#         github.com/operator-framework/operator-registry/cmd/opm imports
+#         github.com/operator-framework/operator-registry/pkg/registry tested by
+#         github.com/operator-framework/operator-registry/pkg/registry.test imports
+#         github.com/operator-framework/operator-registry/pkg/lib/bundle imports
+#         github.com/operator-framework/api/pkg/validation imports
+#         github.com/operator-framework/api/pkg/validation/internal imports
+#         k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation imports
+#         k8s.io/apiserver/pkg/util/webhook imports
+#         k8s.io/component-base/traces imports
+#         go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp imports
+#         go.opentelemetry.io/otel/semconv: module go.opentelemetry.io/otel@latest found (v1.9.0), but does not contain package go.opentelemetry.io/otel/semconv
+# github.com/kong/gateway-operator/third_party imports
+#         github.com/operator-framework/operator-registry/cmd/opm imports
+#         github.com/operator-framework/operator-registry/pkg/registry tested by
+#         github.com/operator-framework/operator-registry/pkg/registry.test imports
+#         github.com/operator-framework/operator-registry/pkg/lib/bundle imports
+#         github.com/operator-framework/api/pkg/validation imports
+#         github.com/operator-framework/api/pkg/validation/internal imports
+#         k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation imports
+#         k8s.io/apiserver/pkg/util/webhook imports
+#         k8s.io/component-base/traces imports
+#         go.opentelemetry.io/otel/exporters/otlp imports
+#         go.opentelemetry.io/otel/sdk/metric/controller/basic imports
+#         go.opentelemetry.io/otel/metric/registry: module go.opentelemetry.io/otel/metric@latest found (v0.31.0), but does not contain package go.opentelemetry.io/otel/metric/registry
+OPERATOR_SDK = $(PROJECT_DIR)/bin/operator-sdk
+OPERATOR_SDK_VERSION ?= v1.23.0
+.PHONY: operator-sdk
+operator-sdk:
+	@[ -f $(OPERATOR_SDK) ] || { \
+	set -e ;\
+	TMP_DIR=$$(mktemp -d) ;\
+	cd $$TMP_DIR ;\
+	git clone https://github.com/operator-framework/operator-sdk ;\
+	cd operator-sdk ;\
+	git checkout -q $(OPERATOR_SDK_VERSION) ;\
+	echo "Checked out operator-sdk at $(OPERATOR_SDK_VERSION)" ;\
+	make build/operator-sdk BUILD_DIR=$(PROJECT_DIR)/bin ;\
+	rm -rf $$TMP_DIR ;\
+	}
+
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
@@ -211,10 +256,10 @@ docker.push:
 
 .PHONY: bundle
 bundle: manifests kustomize
-	operator-sdk generate kustomize manifests -q
+	$(OPERATOR_SDK) generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle $(BUNDLE_GEN_FLAGS)
-	operator-sdk bundle validate ./bundle
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
+	$(OPERATOR_SDK) bundle validate ./bundle
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
