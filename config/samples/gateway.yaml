@@ -1,3 +1,17 @@
+kind: GatewayConfiguration
+apiVersion: gateway-operator.konghq.com/v1alpha1
+metadata:
+  name: kong
+  namespace: default
+spec:
+  dataPlaneDeploymentOptions:
+    env:
+    - name: TEST_VAR
+      value: TEST_VAL
+  controlPlaneDeploymentOptions:
+    env:
+    - name: TEST_VAR
+      value: TEST_VAL
 ---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -22,18 +36,3 @@ spec:
   - name: http
     protocol: HTTP
     port: 80
----
-kind: GatewayConfiguration
-apiVersion: gateway-operator.konghq.com/v1alpha1
-metadata:
-  name: kong
-  namespace: default
-spec:
-  dataPlaneDeploymentOptions:
-    env:
-    - name: TEST_VAR
-      value: TEST_VAL
-  controlPlaneDeploymentOptions:
-    env:
-    - name: TEST_VAR
-      value: TEST_VAL
