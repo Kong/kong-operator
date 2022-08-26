@@ -75,7 +75,7 @@ func generateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, ce
 						},
 					},
 					Containers: []corev1.Container{{
-						Name: "proxy",
+						Name: consts.DataPlaneProxyContainerName,
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      "cluster-certificate",

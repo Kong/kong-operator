@@ -66,6 +66,9 @@ type DataPlaneStatus struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=8
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// Service indicates the Service that exposes the DataPlane's configured routes
+	Service string `json:"service,omitempty"`
 }
 
 // GetConditions retrieves the DataPlane Status Conditions

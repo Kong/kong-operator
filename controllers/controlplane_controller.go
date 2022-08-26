@@ -14,6 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -77,6 +78,9 @@ func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&source.Kind{Type: &rbacv1.ClusterRoleBinding{}},
 			handler.EnqueueRequestsFromMapFunc(r.getControlplaneForClusterRoleBinding),
 			builder.WithPredicates(clusterRoleBindingPredicate)).
+		Watches(
+			&source.Kind{Type: &operatorv1alpha1.DataPlane{}},
+			&handler.EnqueueRequestForOwner{OwnerType: &operatorv1alpha1.ControlPlane{}, IsController: true}).
 		Complete(r)
 }
 
@@ -157,13 +161,23 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil // no need to requeue, status update will requeue
 	}
 
-	debug(log, "retrieving dataplane service info", controlplane)
-	dataplaneServiceName, err := gatewayutils.GetDataplaneServiceNameForControlplane(ctx, r.Client, controlplane)
+	debug(log, "retrieving connected dataplane", controlplane)
+	dataplane, err := gatewayutils.GetDataPlaneForControlPlane(ctx, r.Client, controlplane)
+	var dataplaneServiceName string
 	if err != nil {
 		if !errors.Is(err, operatorerrors.ErrDataPlaneNotSet) {
 			return ctrl.Result{}, err
 		}
 		debug(log, "no existing dataplane for controlplane", controlplane, "error", err)
+	} else {
+		if err := controllerutil.SetOwnerReference(controlplane, dataplane, r.Scheme); err != nil {
+			return ctrl.Result{}, err
+		}
+		dataplaneServiceName, err = gatewayutils.GetDataplaneServiceName(ctx, r.Client, dataplane)
+		if err != nil {
+			debug(log, "no existing dataplane service for controlplane", controlplane, "error", err)
+			return ctrl.Result{}, err
+		}
 	}
 
 	debug(log, "validating ControlPlane configuration", controlplane)

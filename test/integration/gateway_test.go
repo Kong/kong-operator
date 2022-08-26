@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/gateway-operator/internal/consts"
+	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -103,6 +105,36 @@ func TestGatewayEssentials(t *testing.T) {
 		require.Eventually(t, getResponseBodyContains(t, ctx, "http://"+gatewayIPAddress, defaultKongResponseBody), subresourceReadinessWait, time.Second)
 
 	*/
+
+	t.Log("verifying services managed by the dataplane")
+	var dataplaneService corev1.Service
+	dataplaneName := types.NamespacedName{
+		Namespace: dataplane.Namespace,
+		Name:      dataplane.Name,
+	}
+	require.Eventually(t, dataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService), time.Minute, time.Second)
+
+	t.Log("deleting the dataplane service")
+	require.NoError(t, mgrClient.Delete(ctx, &dataplaneService))
+
+	t.Log("verifying services managed by the dataplane after deletion")
+	require.Eventually(t, dataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService), time.Minute, time.Second)
+	service := mustListDataPlaneServices(t, &dataplane)[0]
+
+	t.Log("verifying controlplane deployment updated with new dataplane service")
+	require.Eventually(t, func() bool {
+		controlDeployment := mustListControlPlaneDeployments(t, &controlplane)[0]
+		container := k8sresources.GetPodContainerByName(&controlDeployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
+		if container == nil {
+			return false
+		}
+		for _, envvar := range container.Env {
+			if envvar.Name == "CONTROLLER_PUBLISH_SERVICE" {
+				return envvar.Value == fmt.Sprintf("%s/%s", service.Namespace, service.Name)
+			}
+		}
+		return false
+	}, time.Minute*2, time.Second)
 
 	t.Log("deleting Gateway resource")
 	require.NoError(t, gatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))

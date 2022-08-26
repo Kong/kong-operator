@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/cloudflare/cfssl/config"
@@ -53,6 +54,14 @@ func (l loggerShim) Err(msg string)     { l.logger.V(logging.InfoLevel).Info(msg
 func (l loggerShim) Crit(msg string)    { l.logger.V(logging.InfoLevel).Info(msg) }
 func (l loggerShim) Emerg(msg string)   { l.logger.V(logging.InfoLevel).Info(msg) }
 
+var caLoggerInit sync.Once
+
+func setCALogger(logger logr.Logger) {
+	caLoggerInit.Do(func() {
+		cflog.SetLogger(loggerShim{logger: logger})
+	})
+}
+
 /*
 Adapted from the Kubernetes CFSSL signer:
 https://github.com/kubernetes/kubernetes/blob/v1.16.15/pkg/controller/certificates/signer/cfssl_signer.go
@@ -74,7 +83,7 @@ limitations under the License.
 
 // signCertificate takes a CertificateSigningRequest and a TLS Secret and returns a PEM x.509 certificate
 // signed by the certificate in the Secret.
-func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Secret, logger logr.Logger) ([]byte, error) {
+func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Secret) ([]byte, error) {
 	caKeyBlock, _ := pem.Decode(ca.Data["tls.key"])
 	caCertBlock, _ := pem.Decode(ca.Data["tls.crt"])
 	priv, err := x509.ParseECPrivateKey(caKeyBlock.Bytes)
@@ -107,7 +116,6 @@ func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Se
 			ExpiryString: certExpiryDuration.String(),
 		},
 	}
-	cflog.SetLogger(loggerShim{logger: logger})
 	cfs, err := local.NewSigner(priv, caCert, x509.ECDSAWithSHA256, policy)
 	if err != nil {
 		return nil, err
@@ -131,6 +139,7 @@ func maybeCreateCertificateSecret(ctx context.Context,
 	k8sClient client.Client,
 ) (bool, *corev1.Secret, error) {
 	logger := log.FromContext(ctx).WithName("MTLSCertificateCreation")
+	setCALogger(logger)
 
 	selectorKey, selectorValue := getManagedLabelForOwner(owner)
 	secrets, err := k8sutils.ListSecretsForOwner(
@@ -216,7 +225,7 @@ func maybeCreateCertificateSecret(ctx context.Context,
 		return false, nil, err
 	}
 
-	signed, err := signCertificate(csr, ca, logger)
+	signed, err := signCertificate(csr, ca)
 	if err != nil {
 		return false, nil, err
 	}

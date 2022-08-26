@@ -86,23 +86,29 @@ func ListControlPlanesForGateway(
 	return controlplanes, nil
 }
 
-// GetDataplaneServiceNameForControlplane is a helper functions that retrieves
-// the name of the service owned by dataplane associated to the controlplane
-func GetDataplaneServiceNameForControlplane(
+// GetDataPlaneForControlPlane retrieves the DataPlane object referenced by a ControlPlane
+func GetDataPlaneForControlPlane(
 	ctx context.Context,
 	c client.Client,
 	controlplane *operatorv1alpha1.ControlPlane,
-) (string, error) {
+) (*operatorv1alpha1.DataPlane, error) {
 	if controlplane.Spec.DataPlane == nil || *controlplane.Spec.DataPlane == "" {
-		return "", fmt.Errorf("%w, controlplane = %s/%s", operatorerrors.ErrDataPlaneNotSet, controlplane.Namespace, controlplane.Name)
+		return nil, fmt.Errorf("%w, controlplane = %s/%s", operatorerrors.ErrDataPlaneNotSet, controlplane.Namespace, controlplane.Name)
 	}
 
 	dataplane := operatorv1alpha1.DataPlane{}
-	dataplaneName := *controlplane.Spec.DataPlane
-	if err := c.Get(ctx, types.NamespacedName{Namespace: controlplane.Namespace, Name: dataplaneName}, &dataplane); err != nil {
-		return "", err
+	if err := c.Get(ctx, types.NamespacedName{Namespace: controlplane.Namespace, Name: *controlplane.Spec.DataPlane}, &dataplane); err != nil {
+		return nil, err
 	}
+	return &dataplane, nil
+}
 
+// GetDataplaneServiceName is a helper functions that retrieves the name of the service owned by dataplane
+func GetDataplaneServiceName(
+	ctx context.Context,
+	c client.Client,
+	dataplane *operatorv1alpha1.DataPlane,
+) (string, error) {
 	services, err := k8sutils.ListServicesForOwner(ctx,
 		c,
 		consts.GatewayOperatorControlledLabel,

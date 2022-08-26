@@ -82,7 +82,8 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 	if createdOrUpdated {
-		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+		// requeue will be triggered by the creation or update of the owned object
+		return ctrl.Result{}, r.ensureDataPlaneServiceStatus(ctx, dataplane, dataplaneService.Name)
 	}
 
 	// TODO: updates need to update owned service https://github.com/Kong/gateway-operator/issues/27

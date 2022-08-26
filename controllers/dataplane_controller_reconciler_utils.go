@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -12,6 +13,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
 // -----------------------------------------------------------------------------
@@ -47,6 +49,15 @@ func (r *DataPlaneReconciler) ensureIsMarkedProvisioned(
 	)
 	k8sutils.SetCondition(condition, dataplane)
 	k8sutils.SetReady(dataplane)
+}
+
+func (r *DataPlaneReconciler) ensureDataPlaneServiceStatus(
+	ctx context.Context,
+	dataplane *operatorv1alpha1.DataPlane,
+	serviceName string,
+) error {
+	dataplane.Status.Service = serviceName
+	return r.Status().Update(ctx, dataplane)
 }
 
 // isSameDataPlaneCondition returns true if two `metav1.Condition`s
@@ -150,6 +161,28 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 		var updated bool
 		existingDeployment := &deployments[0]
 		updated, existingDeployment.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingDeployment.ObjectMeta, generatedDeployment.ObjectMeta)
+
+		// We do not want to permit direct edits of the Deployment environment. Any user-supplied values should be set
+		// in the DataPlane. If the actual Deployment environment does not match the generated environment, either
+		// something requires an update or there was a manual edit we want to purge.
+		container := k8sresources.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+		if container == nil {
+			// someone has deleted the main container from the Deployment for ??? reasons. we can't fathom why they
+			// would do this, but don't allow it and replace the container set entirely
+			existingDeployment.Spec.Template.Spec.Containers = generatedDeployment.Spec.Template.Spec.Containers
+			updated = true
+			container = k8sresources.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+		}
+		if !reflect.DeepEqual(container.Env, dataplane.Spec.Env) {
+			container.Env = dataplane.Spec.Env
+			updated = true
+		}
+
+		if !reflect.DeepEqual(container.EnvFrom, dataplane.Spec.EnvFrom) {
+			container.EnvFrom = dataplane.Spec.EnvFrom
+			updated = true
+		}
+
 		if updated {
 			return true, existingDeployment, r.Client.Update(ctx, existingDeployment)
 		}

@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
@@ -146,6 +147,14 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		var updated bool
 		existingDeployment := &deployments[0]
 		updated, existingDeployment.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingDeployment.ObjectMeta, generatedDeployment.ObjectMeta)
+		container := k8sresources.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
+		if container == nil {
+			// someone has deleted the main container from the Deployment for ??? reasons. we can't fathom why they
+			// would do this, but don't allow it and replace the container set entirely
+			existingDeployment.Spec.Template.Spec.Containers = generatedDeployment.Spec.Template.Spec.Containers
+			updated = true
+			container = k8sresources.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
+		}
 
 		replicas := existingDeployment.Spec.Replicas
 		switch {
@@ -160,9 +169,23 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		// deployment are updated.
 		case dataplaneIsSet && (replicas != nil && *replicas == numReplicasWhenNoDataplane):
 			existingDeployment.Spec.Replicas = nil
-			if len(existingDeployment.Spec.Template.Spec.Containers[0].Env) > 0 {
-				existingDeployment.Spec.Template.Spec.Containers[0].Env = controlplane.Spec.Env
+			if len(container.Env) > 0 {
+				container.Env = controlplane.Spec.Env
 			}
+			updated = true
+		}
+
+		// We do not want to permit direct edits of the Deployment environment. Any user-supplied values should be set
+		// in the ControlPlane. If the actual Deployment environment does not match the generated environment, either
+		// something requires an update (e.g. the associated DataPlane Service changed and value generation changed the
+		// publish service configuration) or there was a manual edit we want to purge.
+		if !reflect.DeepEqual(container.Env, controlplane.Spec.Env) {
+			container.Env = controlplane.Spec.Env
+			updated = true
+		}
+
+		if !reflect.DeepEqual(container.EnvFrom, controlplane.Spec.EnvFrom) {
+			container.EnvFrom = controlplane.Spec.EnvFrom
 			updated = true
 		}
 

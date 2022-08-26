@@ -19,6 +19,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
+	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
 const (
@@ -234,7 +236,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 }
 
 func checkControlPlaneDeploymentEnvVars(t *testing.T, deployment *appsv1.Deployment) {
-	controllerContainer := getContainerWithNameInPod(&deployment.Spec.Template.Spec, "controller")
+	controllerContainer := k8sresources.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
 	require.NotNil(t, controllerContainer)
 
 	envs := controllerContainer.Env

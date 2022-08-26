@@ -35,7 +35,7 @@ const (
 )
 
 // -----------------------------------------------------------------------------
-// Consts - Container Images
+// Consts - Container Parameters
 // -----------------------------------------------------------------------------
 
 const (
@@ -66,6 +66,12 @@ const (
 	// DefaultControlPlaneImage is the default container image that can be used if
 	// all other attempts to dynamically decide the default image fail.
 	DefaultControlPlaneImage = DefaultControlPlaneBaseImage + ":" + DefaultControlPlaneTag
+
+	// ControlPlaneControllerContainerName is the name of the ingress controller container in a ControlPlane Deployment
+	ControlPlaneControllerContainerName = "controller"
+
+	// DataPlaneProxyContainerName is the name of the Kong proxy container
+	DataPlaneProxyContainerName = "proxy"
 )
 
 // -----------------------------------------------------------------------------

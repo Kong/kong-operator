@@ -252,7 +252,7 @@ func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 						},
 					},
 					Containers: []corev1.Container{{
-						Name:            "controller",
+						Name:            consts.ControlPlaneControllerContainerName,
 						Env:             controlplane.Spec.Env,
 						EnvFrom:         controlplane.Spec.EnvFrom,
 						Image:           controlplaneImage,
