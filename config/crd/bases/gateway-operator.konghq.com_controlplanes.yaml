@@ -3,24 +3,33 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.8.0
+    controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
   name: controlplanes.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
   names:
+    categories:
+    - kong
+    - all
     kind: ControlPlane
     listKind: ControlPlaneList
     plural: controlplanes
-    singular: controlplane
     shortNames:
-      - kcp
-    categories:
-      - kong
-      - all
+    - kcp
+    singular: controlplane
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: The Resource is ready
+      jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Ready
+      type: string
+    - description: The Resource is provisioned
+      jsonPath: .status.conditions[?(@.type=='Provisioned')].status
+      name: Provisioned
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: ControlPlane is the Schema for the controlplanes API
@@ -92,6 +101,7 @@ spec:
                           required:
                           - key
                           type: object
+                          x-kubernetes-map-type: atomic
                         fieldRef:
                           description: 'Selects a field of the pod: supports metadata.name,
                             metadata.namespace, `metadata.labels[''<KEY>'']`, `metadata.annotations[''<KEY>'']`,
@@ -109,6 +119,7 @@ spec:
                           required:
                           - fieldPath
                           type: object
+                          x-kubernetes-map-type: atomic
                         resourceFieldRef:
                           description: 'Selects a resource of the container: only
                             resources limits and requests (limits.cpu, limits.memory,
@@ -133,6 +144,7 @@ spec:
                           required:
                           - resource
                           type: object
+                          x-kubernetes-map-type: atomic
                         secretKeyRef:
                           description: Selects a key of a secret in the pod's namespace
                           properties:
@@ -151,6 +163,7 @@ spec:
                           required:
                           - key
                           type: object
+                          x-kubernetes-map-type: atomic
                       type: object
                   required:
                   - name
@@ -174,6 +187,7 @@ spec:
                           description: Specify whether the ConfigMap must be defined
                           type: boolean
                       type: object
+                      x-kubernetes-map-type: atomic
                     prefix:
                       description: An optional identifier to prepend to each key in
                         the ConfigMap. Must be a C_IDENTIFIER.
@@ -189,6 +203,7 @@ spec:
                           description: Specify whether the Secret must be defined
                           type: boolean
                       type: object
+                      x-kubernetes-map-type: atomic
                   type: object
                 type: array
               gatewayClass:
@@ -229,8 +244,8 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{ // Represents the observations of a foo's
-                    current state. // Known .status.conditions.type are: \"Available\",
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
                     \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
                     // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
@@ -302,18 +317,3 @@ spec:
     storage: true
     subresources:
       status: {}
-    additionalPrinterColumns:
-      - name: Ready
-        type: string
-        description: The Resource is ready
-        jsonPath: .status.conditions[?(@.type=='Ready')].status
-      - name: Provisioned
-        type: string
-        description: The Resource is provisioned
-        jsonPath: .status.conditions[?(@.type=='Provisioned')].status
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
