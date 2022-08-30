@@ -141,18 +141,8 @@ func updateFile(path string, buffer []byte) error {
 
 func exitOnErr(err error) {
 	if err != nil {
-		cleanup()
-		fmt.Printf("ERROR: %s\n", err.Error())
+		fmt.Printf("ERROR: %v\n", err)
 		os.Exit(1)
-	}
-}
-
-func cleanup() {
-	err := os.RemoveAll(gitClonePath)
-	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			fmt.Printf("ERROR: %s\n", err.Error())
-		}
 	}
 }
 

@@ -1,14 +1,15 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
-	"os"
 	"path"
 	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	rbacv1 "k8s.io/api/rbac/v1"
 
 	kicversions "github.com/kong/gateway-operator/internal/versions"
@@ -41,21 +42,40 @@ func init() {
 }
 
 func main() {
-	defer cleanup()
-
-	// clone KIC Github repository and extract worktree
-	repo, err := git.PlainClone(gitClonePath, false, &git.CloneOptions{
-		URL:      "https://github.com/kong/kubernetes-ingress-controller",
-		Progress: os.Stdout,
-	})
+	gatewayRepo, err := git.PlainOpen(".")
 	exitOnErr(err)
-	workTree, err := repo.Worktree()
+
+	gatewayWorktree, err := gatewayRepo.Worktree()
+	exitOnErr(err)
+
+	kicSubmodule, err := gatewayWorktree.Submodule("kubernetes-ingress-controller")
+	exitOnErr(err)
+	kicStatus, err := kicSubmodule.Status()
+	exitOnErr(err)
+	prevHead := kicStatus.Current
+	if !kicStatus.IsClean() {
+		exitOnErr(
+			fmt.Errorf("status of kubernetes-ingress-controller submodule is not clean: %s", kicStatus))
+	}
+
+	err = kicSubmodule.UpdateContext(context.Background(),
+		&git.SubmoduleUpdateOptions{
+			Init: true,
+		},
+	)
+	exitOnErr(err)
+	kicRepo, err := kicSubmodule.Repository()
+	exitOnErr(err)
+
+	kicWorktree, err := kicRepo.Worktree()
 	exitOnErr(err)
 
 	if force {
 		exitOnErr(rmDirs(controllerRBACPath, kicRBACPath))
 	}
 
+	// defer reverting KIC's submodule back to status from before.
+	defer checkout(kicWorktree, prevHead)
 	for c, v := range kicversions.RoleVersionsForKICVersions {
 		fmt.Printf("INFO: checking and generating code for constraint %s with version %s\n", c, v)
 		// ensure the version has the "v" prefix
@@ -64,7 +84,7 @@ func main() {
 			version = fmt.Sprintf("v%s", version)
 		}
 		fmt.Printf("INFO: checking out tag %s\n", version)
-		exitOnErr(gitCheckoutTag(repo, workTree, version))
+		exitOnErr(gitCheckoutTag(kicRepo, kicWorktree, version))
 
 		fmt.Printf("INFO: parsing clusterRole for KIC version %s\n", version)
 		rolePath := path.Join(gitClonePath, clusterRoleRelativePath)
@@ -110,6 +130,20 @@ func main() {
 	if failOnError {
 		fmt.Println("SUCCESS: files are up to date")
 	}
+}
+
+func checkout(workTree *git.Worktree, hash plumbing.Hash) {
+	err := workTree.Checkout(&git.CheckoutOptions{
+		Hash: hash,
+		Keep: false,
+	})
+	if err != nil {
+		fmt.Printf(
+			"ERROR: failed to revert back kubernetes-ingress-controller submodule to %v: %v\n",
+			hash, err,
+		)
+	}
+	fmt.Printf("INFO: restored kubernetes-ingress-controller submodule back to %s\n", hash)
 }
 
 func generatefile(role *rbacv1.ClusterRole,
