@@ -325,13 +325,14 @@ func (r *ControlPlaneReconciler) ensureCertificate(
 func (r *ControlPlaneReconciler) ensureOwnedClusterRolesDeleted(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
-) error {
+) (deletions bool, err error) {
+	var deleted bool
 	clusterRoles, err := k8sutils.ListClusterRolesForOwner(
 		ctx, r.Client,
 		consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.UID,
 	)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	var deletionErr *multierror.Error
@@ -340,9 +341,10 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRolesDeleted(
 		if err != nil && !k8serrors.IsNotFound(err) {
 			deletionErr = multierror.Append(deletionErr, err)
 		}
+		deleted = true
 	}
 
-	return deletionErr.ErrorOrNil()
+	return deleted, deletionErr.ErrorOrNil()
 
 }
 
@@ -352,13 +354,14 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRolesDeleted(
 func (r *ControlPlaneReconciler) ensureOwnedClusterRoleBindingsDeleted(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
-) error {
+) (deletions bool, err error) {
+	var deleted bool
 	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(
 		ctx, r.Client,
 		consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.UID,
 	)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	var deletionErr *multierror.Error
@@ -367,7 +370,8 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRoleBindingsDeleted(
 		if err != nil && !k8serrors.IsNotFound(err) {
 			deletionErr = multierror.Append(deletionErr, err)
 		}
+		deleted = true
 	}
 
-	return deletionErr.ErrorOrNil()
+	return deleted, deletionErr.ErrorOrNil()
 }

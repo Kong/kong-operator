@@ -71,56 +71,52 @@ func (r *GatewayReconciler) createControlPlane(
 	return r.Client.Create(ctx, controlplane)
 }
 
-func (r *GatewayReconciler) ensureGatewayMarkedReady(ctx context.Context, gateway *gatewayDecorator, dataplane *operatorv1alpha1.DataPlane) error {
-	if !k8sutils.IsReady(gateway) {
-		services, err := k8sutils.ListServicesForOwner(
-			ctx,
-			r.Client,
-			consts.GatewayOperatorControlledLabel,
-			consts.DataPlaneManagedLabelValue,
-			dataplane.Namespace,
-			dataplane.UID,
-		)
-		if err != nil {
-			return err
-		}
-
-		count := len(services)
-		if count > 1 {
-			return fmt.Errorf("found %d services for DataPlane currently unsupported: expected 1 or less", count)
-		}
-
-		if count == 0 {
-			return fmt.Errorf("no services found for dataplane %s/%s", dataplane.Namespace, dataplane.Name)
-		}
-		svc := services[0]
-		if svc.Spec.ClusterIP == "" {
-			return fmt.Errorf("service %s doesn't have a ClusterIP yet, not ready", svc.Name)
-		}
-
-		gatewayIPs := make([]string, 0)
-		if len(svc.Status.LoadBalancer.Ingress) > 0 {
-			ip := svc.Status.LoadBalancer.Ingress[0].IP
-			if ip == "" {
-				return errors.New("missing loadbalancer.ingress[0].ip")
-			}
-			gatewayIPs = append(gatewayIPs, ip) // TODO: handle hostnames https://github.com/Kong/gateway-operator/issues/24
-		}
-
-		newAddresses := make([]gatewayv1alpha2.GatewayAddress, 0, len(gatewayIPs))
-		ipaddrT := gatewayv1alpha2.IPAddressType
-		for _, ip := range append(gatewayIPs, svc.Spec.ClusterIP) {
-			newAddresses = append(newAddresses, gatewayv1alpha2.GatewayAddress{
-				Type:  &ipaddrT,
-				Value: ip,
-			})
-		}
-
-		gateway.Status.Addresses = newAddresses
-
-		k8sutils.SetReady(gateway)
-		return r.Client.Status().Update(ctx, gateway.Gateway)
+func (r *GatewayReconciler) ensureGatewayConnectivityStatus(ctx context.Context, gateway *gatewayDecorator, dataplane *operatorv1alpha1.DataPlane) (err error) {
+	services, err := k8sutils.ListServicesForOwner(
+		ctx,
+		r.Client,
+		consts.GatewayOperatorControlledLabel,
+		consts.DataPlaneManagedLabelValue,
+		dataplane.Namespace,
+		dataplane.UID,
+	)
+	if err != nil {
+		return err
 	}
+
+	count := len(services)
+	if count > 1 {
+		return fmt.Errorf("found %d services for DataPlane currently unsupported: expected 1 or less", count)
+	}
+
+	if count == 0 {
+		return fmt.Errorf("no services found for dataplane %s/%s", dataplane.Namespace, dataplane.Name)
+	}
+	svc := services[0]
+	if svc.Spec.ClusterIP == "" {
+		return fmt.Errorf("service %s doesn't have a ClusterIP yet, not ready", svc.Name)
+	}
+
+	gatewayIPs := make([]string, 0)
+	if len(svc.Status.LoadBalancer.Ingress) > 0 {
+		ip := svc.Status.LoadBalancer.Ingress[0].IP
+		if ip == "" {
+			return fmt.Errorf("missing loadbalancer.ingress[0].ip in service %s/%s", svc.Namespace, svc.Name)
+		}
+		gatewayIPs = append(gatewayIPs, ip) // TODO: handle hostnames https://github.com/Kong/gateway-operator/issues/24
+	}
+
+	newAddresses := make([]gatewayv1alpha2.GatewayAddress, 0, len(gatewayIPs))
+	ipaddrT := gatewayv1alpha2.IPAddressType
+	allIPs := append(gatewayIPs, svc.Spec.ClusterIP)
+	for _, ip := range allIPs {
+		newAddresses = append(newAddresses, gatewayv1alpha2.GatewayAddress{
+			Type:  &ipaddrT,
+			Value: ip,
+		})
+	}
+
+	gateway.Status.Addresses = newAddresses
 
 	return nil
 }

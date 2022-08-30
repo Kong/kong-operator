@@ -71,14 +71,14 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	log := log.FromContext(ctx).WithName("gateway")
 
 	debug(log, "reconciling gateway resource", req)
-	gateway := newGateway()
+	gateway, oldGateway := newGateway(), newGateway()
 	if err := r.Client.Get(ctx, req.NamespacedName, gateway.Gateway); err != nil {
 		if k8serrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
-
+	oldGateway.Gateway = gateway.DeepCopy()
 	k8sutils.InitReady(gateway)
 
 	debug(log, "checking gatewayclass", gateway)
@@ -107,12 +107,22 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	// Dataplane
+	// Provision dataplane creates a dataplane and adds the DataPlaneReady condition to the Gateway status
+	// if the dataplane is ready, the DataplaneReady status is set to true, otherwise false
 	dataplane := r.provisionDataPlane(ctx, gateway, gatewayConfig)
 
+	// Set the DataPlaneReady Condition to False. This happens only if:
+	// * the new status is false and there was no DataPlaneReady condition in the old gateway, or
+	// * the new status is false and the previous status was true
 	if !k8sutils.IsValidCondition(DataPlaneReadyType, gateway) {
-		err := r.updateStatus(ctx, gateway) // requeue will be triggered by the update of the dataplane status
-		return ctrl.Result{}, err
+		condition, found := k8sutils.GetCondition(DataPlaneReadyType, oldGateway)
+		if !found || condition.Status == metav1.ConditionTrue {
+			err := r.patchStatus(ctx, gateway, oldGateway) // requeue will be triggered by the update of the dataplane status
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// List Services
@@ -137,12 +147,22 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, fmt.Errorf("no services found for dataplane %s/%s", dataplane.Namespace, dataplane.Name)
 	}
 
-	// ControlPlane
+	// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
+	// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false
 	controlplane := r.provisionControlPlane(ctx, gatewayClass, gateway, gatewayConfig, dataplane, services)
 
+	// Set the ControlPlaneReady Condition to False. This happens only if:
+	// * the new status is false and there was no ControlPlaneReady condition in the old gateway, or
+	// * the new status is false and the previous status was true
 	if !k8sutils.IsValidCondition(ControlPlaneReadyType, gateway) {
-		err := r.updateStatus(ctx, gateway)
-		return ctrl.Result{}, err // requeue will be triggered by the update of the controlplane status
+		condition, found := k8sutils.GetCondition(ControlPlaneReadyType, oldGateway)
+		if !found || condition.Status == metav1.ConditionTrue {
+			err := r.patchStatus(ctx, gateway, oldGateway)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		return ctrl.Result{}, nil // requeue will be triggered by the update of the controlplane status
 	}
 
 	// DataPlane NetworkPolicies
@@ -155,27 +175,25 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
-	// Mark Gateway Ready
-	err = r.ensureGatewayMarkedReady(ctx, gateway, dataplane)
-	if err != nil {
-		debug(log, "marking the gateway as not ready", gateway)
-		k8sutils.SetCondition(k8sutils.NewCondition(GatewayServiceType, metav1.ConditionFalse, GatewayServiceErrorReason, err.Error()), gateway)
-	} else {
-		debug(log, "marking the gateway as ready", gateway)
+	connectivityStatusError := r.ensureGatewayConnectivityStatus(ctx, gateway, dataplane)
+	if connectivityStatusError == nil {
 		k8sutils.SetCondition(k8sutils.NewCondition(GatewayServiceType, metav1.ConditionTrue, k8sutils.ResourceReadyReason, ""), gateway)
+	} else {
+		k8sutils.SetCondition(k8sutils.NewCondition(GatewayServiceType, metav1.ConditionFalse, GatewayServiceErrorReason, connectivityStatusError.Error()), gateway)
 	}
 
 	if !k8sutils.IsReady(gateway) {
-		k8sutils.SetReady(gateway)
+		if !k8sutils.IsReady(oldGateway) {
+			k8sutils.SetReady(gateway)
+			if err = r.patchStatus(ctx, gateway, oldGateway); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, nil
+		}
 	}
 
-	err = r.updateStatus(ctx, gateway)
-	if err == nil {
-		debug(log, "successfully reconciled", gateway)
-	} else {
-		debug(log, "error trying to persist status", gateway)
-	}
-	return ctrl.Result{}, err
+	debug(log, "gateway reconciled", gateway)
+	return ctrl.Result{}, nil
 }
 
 func (r *GatewayReconciler) provisionDataPlane(ctx context.Context, gateway *gatewayDecorator, gatewayConfig *operatorv1alpha1.GatewayConfiguration) *operatorv1alpha1.DataPlane {
@@ -302,16 +320,7 @@ func createControlPlaneCondition(status metav1.ConditionStatus, reason k8sutils.
 	return k8sutils.NewCondition(ControlPlaneReadyType, status, reason, message)
 }
 
-// updateStatus Updates the resource status only when there are changes in the Conditions
-func (r *GatewayReconciler) updateStatus(ctx context.Context, updated *gatewayDecorator) error {
-	current := newGateway()
-	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated.Gateway), current.Gateway)
-
-	if err != nil && !k8serrors.IsNotFound(err) {
-		return err
-	}
-	if k8sutils.NeedsUpdate(current, updated) {
-		return r.Client.Status().Update(ctx, updated.Gateway)
-	}
-	return nil
+// patchStatus patches the resource status with the Merge strategy
+func (r *GatewayReconciler) patchStatus(ctx context.Context, gateway, oldGateway *gatewayDecorator) error {
+	return r.Client.Status().Patch(ctx, gateway.Gateway, client.MergeFrom(oldGateway.Gateway))
 }

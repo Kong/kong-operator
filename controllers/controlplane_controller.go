@@ -114,24 +114,33 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 		debug(log, "removing owned cluster roles and cluster role bindings", controlplane)
 
+		newControlplane := controlplane.DeepCopy()
 		// ensure that the clusterrolebindings which were created for the ControlPlane are deleted
-		if err := r.ensureOwnedClusterRoleBindingsDeleted(ctx, controlplane); err != nil {
-			return ctrl.Result{}, err // ClusterRoleBinding deletion will requeue
+		deletions, err := r.ensureOwnedClusterRoleBindingsDeleted(ctx, controlplane)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if deletions {
+			return ctrl.Result{}, nil // ClusterRoleBinding deletion will requeue
 		}
 
 		// now that ClusterRoleBindings are cleaned up, remove the relevant finalizer
-		if k8sutils.RemoveFinalizerInMetadata(&controlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRoleBinding)) {
-			return ctrl.Result{}, r.Client.Update(ctx, controlplane) // Controlplane update will requeue
+		if k8sutils.RemoveFinalizerInMetadata(&newControlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRoleBinding)) {
+			return ctrl.Result{}, r.Client.Patch(ctx, newControlplane, client.MergeFrom(controlplane)) // Controlplane update will requeue
 		}
 
 		// ensure that the clusterroles created for the controlplane are deleted
-		if err := r.ensureOwnedClusterRolesDeleted(ctx, controlplane); err != nil {
-			return ctrl.Result{}, err // ClusterRole deletion will requeue
+		deletions, err = r.ensureOwnedClusterRolesDeleted(ctx, controlplane)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if deletions {
+			return ctrl.Result{}, nil // ClusterRole deletion will requeue
 		}
 
 		// now that ClusterRoles are cleaned up, remove the relevant finalizer
-		if k8sutils.RemoveFinalizerInMetadata(&controlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRole)) {
-			return ctrl.Result{}, r.Client.Update(ctx, controlplane) // Controlplane update will requeue
+		if k8sutils.RemoveFinalizerInMetadata(&newControlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRole)) {
+			return ctrl.Result{}, r.Client.Patch(ctx, newControlplane, client.MergeFrom(controlplane)) // Controlplane update will requeue
 		}
 
 		// cleanup completed
