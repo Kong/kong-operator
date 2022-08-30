@@ -255,8 +255,8 @@ docker.push:
 # ------------------------------------------------------------------------------
 
 .PHONY: bundle
-bundle: manifests kustomize
-	$(OPERATOR_SDK) generate kustomize manifests -q
+bundle: manifests kustomize operator-sdk
+	$(OPERATOR_SDK) generate kustomize manifests --apis-dir=apis/
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 	$(OPERATOR_SDK) bundle validate ./bundle

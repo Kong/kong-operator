@@ -13,23 +13,18 @@ spec:
     - description: ControlPlane is the Schema for the controlplanes API
       displayName: Control Plane
       kind: ControlPlane
-      name: controlplanes.operator.konghq.com
-      version: v1alpha1
-    - description: GatewayConfiguration is the Schema for the gatewayconfigurations
-        API
-      displayName: Gateway Configuration
-      kind: GatewayConfiguration
-      name: gatewayconfigurations.operator.konghq.com
-      version: v1alpha1
-    - description: ControlPlane is the Schema for the controlplanes API
-      displayName: Control Plane
-      kind: ControlPlane
       name: controlplanes.gateway-operator.konghq.com
       version: v1alpha1
     - description: DataPlane is the Schema for the dataplanes API
       displayName: Data Plane
       kind: DataPlane
       name: dataplanes.gateway-operator.konghq.com
+      version: v1alpha1
+    - description: GatewayConfiguration is the Schema for the gatewayconfigurations
+        API
+      displayName: Gateway Configuration
+      kind: GatewayConfiguration
+      name: gatewayconfigurations.gateway-operator.konghq.com
       version: v1alpha1
   description: Kong Operator for Kubernetes
   displayName: Kong
