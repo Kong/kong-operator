@@ -4,4 +4,4 @@ metadata:
   name: controlplane-example
 spec:
   dataplane: dataplane-example
-  gatewayClass: "kong"
+  gatewayClass: kong

@@ -5,13 +5,12 @@ metadata:
   namespace: default
 spec:
   dataPlaneDeploymentOptions:
-    env:
-    - name: TEST_VAR
-      value: TEST_VAL
+    containerImage: kong
+    version: "2.8"
   controlPlaneDeploymentOptions:
     env:
-    - name: TEST_VAR
-      value: TEST_VAL
+    - name: CONTROLLER_LOG_LEVEL
+      value: debug
 ---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1alpha2

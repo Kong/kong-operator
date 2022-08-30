@@ -6,6 +6,32 @@ metadata:
       [
         {
           "apiVersion": "gateway-operator.konghq.com/v1alpha1",
+          "kind": "ControlPlane",
+          "metadata": {
+            "name": "controlplane-example"
+          },
+          "spec": {
+            "dataplane": "dataplane-example",
+            "gatewayClass": "kong"
+          }
+        },
+        {
+          "apiVersion": "gateway-operator.konghq.com/v1alpha1",
+          "kind": "DataPlane",
+          "metadata": {
+            "name": "dataplane-example"
+          },
+          "spec": {
+            "env": [
+              {
+                "name": "KONG_LOG_LEVEL",
+                "value": "debug"
+              }
+            ]
+          }
+        },
+        {
+          "apiVersion": "gateway-operator.konghq.com/v1alpha1",
           "kind": "GatewayConfiguration",
           "metadata": {
             "name": "kong",
@@ -15,18 +41,14 @@ metadata:
             "controlPlaneDeploymentOptions": {
               "env": [
                 {
-                  "name": "TEST_VAR",
-                  "value": "TEST_VAL"
+                  "name": "CONTROLLER_LOG_LEVEL",
+                  "value": "debug"
                 }
               ]
             },
             "dataPlaneDeploymentOptions": {
-              "env": [
-                {
-                  "name": "TEST_VAR",
-                  "value": "TEST_VAL"
-                }
-              ]
+              "containerImage": "kong",
+              "version": "2.8"
             }
           }
         }
