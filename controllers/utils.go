@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -338,4 +339,61 @@ func addLabelForOwner(obj client.Object, owner client.Object) {
 	case *operatorv1alpha1.DataPlane:
 		addLabelForDataplane(obj)
 	}
+}
+
+// -----------------------------------------------------------------------------
+// Private Functions - Container Images
+// -----------------------------------------------------------------------------
+
+// ensureContainerImageUpdated ensures that the provided container is
+// configured with a container image consistent with the image and
+// image version provided. The image and version can be provided as
+// nil when not wanted.
+func ensureContainerImageUpdated(container *corev1.Container, image *string, version *string) (updated bool, err error) {
+	imageParts := strings.Split(container.Image, ":")
+	if len(imageParts) > 2 {
+		err = fmt.Errorf("invalid container image found: %s", container.Image)
+		return
+	}
+
+	switch {
+	// if both the image and the version were provided, we expect the
+	// container's image to match exactly.
+	case image != nil && *image != "" && version != nil && *version != "":
+		expectedImageAndVersion := fmt.Sprintf("%s:%s", *image, *version)
+		if container.Image != expectedImageAndVersion {
+			container.Image = expectedImageAndVersion
+			updated = true
+		}
+	// if only the image was provided we expect the image to match but we don't
+	// worry about what the version is.
+	case image != nil && *image != "":
+		expectedImage := *image
+		if len(imageParts) == 2 {
+			if imageParts[0] != expectedImage {
+				container.Image = fmt.Sprintf("%s:%s", expectedImage, imageParts[1])
+				updated = true
+			}
+		} else {
+			if container.Image != expectedImage {
+				container.Image = expectedImage
+				updated = true
+			}
+		}
+	// if only the image version was provided we expect the tag to match but we
+	// don't worry about what the base image is.
+	case version != nil && *version != "":
+		expectedVersion := *version
+		if len(imageParts) == 2 {
+			if imageParts[1] != expectedVersion {
+				container.Image = fmt.Sprintf("%s:%s", imageParts[0], expectedVersion)
+				updated = true
+			}
+		} else {
+			container.Image = fmt.Sprintf("%s:%s", imageParts[0], expectedVersion)
+			updated = true
+		}
+	}
+
+	return
 }

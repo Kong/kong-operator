@@ -183,6 +183,15 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 			updated = true
 		}
 
+		// update the container image or image version if needed
+		imageUpdated, err := ensureContainerImageUpdated(container, dataplane.Spec.ContainerImage, dataplane.Spec.Version)
+		if err != nil {
+			return false, nil, err
+		}
+		if imageUpdated {
+			updated = true
+		}
+
 		if updated {
 			return true, existingDeployment, r.Client.Update(ctx, existingDeployment)
 		}

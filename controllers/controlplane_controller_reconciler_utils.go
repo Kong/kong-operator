@@ -189,6 +189,15 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 			updated = true
 		}
 
+		// update the container image or image version if needed
+		imageUpdated, err := ensureContainerImageUpdated(container, controlplane.Spec.ContainerImage, controlplane.Spec.Version)
+		if err != nil {
+			return false, nil, err
+		}
+		if imageUpdated {
+			updated = true
+		}
+
 		if updated {
 			return true, existingDeployment, r.Client.Update(ctx, existingDeployment)
 		}
