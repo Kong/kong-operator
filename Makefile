@@ -189,12 +189,14 @@ lint: golangci-lint
 # Build - Generators
 # ------------------------------------------------------------------------------
 
+APIS_DIR ?= apis
+
 .PHONY: generate
 generate: controller-gen generate.apis generate.clientsets generate.rbacs
 
 .PHONY: generate.apis
 generate.apis:
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./$(APIS_DIR)/..."
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 .PHONY: generate.clientsets
@@ -203,7 +205,7 @@ generate.clientsets: client-gen
 		--go-header-file ./hack/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base '' \
-		--input $(REPO)/apis/v1alpha1 \
+		--input $(REPO)/$(APIS_DIR)/v1alpha1 \
 		--output-base pkg/ \
 		--output-package $(REPO)/pkg/ \
 		--trim-path-prefix pkg/$(REPO)/
@@ -226,7 +228,7 @@ check.rbacs: kic-role-generator
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./$(APIS_DIR)/..." output:crd:artifacts:config=config/crd/bases
 
 # ------------------------------------------------------------------------------
 # Build - Container Images
@@ -258,7 +260,7 @@ docker.push:
 # ------------------------------------------------------------------------------
 .PHONY: _bundle
 _bundle: manifests kustomize operator-sdk
-	$(OPERATOR_SDK) generate kustomize manifests --apis-dir=apis/
+	$(OPERATOR_SDK) generate kustomize manifests --apis-dir=$(APIS_DIR)/
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build $(KUSTOMIZE_DIR) | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 	$(OPERATOR_SDK) bundle validate ./bundle
