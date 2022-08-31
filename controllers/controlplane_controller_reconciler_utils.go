@@ -254,7 +254,7 @@ func (r *ControlPlaneReconciler) ensureClusterRoleForControlPlane(
 
 	count := len(clusterRoles)
 	if count > 1 {
-		return false, nil, fmt.Errorf("found %d deployments for ControlPlane currently unsupported: expected 1 or less", count)
+		return false, nil, fmt.Errorf("found %d ClusterRoles for ControlPlane currently unsupported: expected 1 or less", count)
 	}
 
 	generatedClusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane(controlplane.Name, controlplane.Spec.ContainerImage)
@@ -290,7 +290,7 @@ func (r *ControlPlaneReconciler) ensureClusterRoleBindingForControlPlane(
 
 	count := len(clusterRoleBindings)
 	if count > 1 {
-		return false, nil, fmt.Errorf("found %d deployments for ControlPlane currently unsupported: expected 1 or less", count)
+		return false, nil, fmt.Errorf("found %d ClusterRoleBindings for ControlPlane currently unsupported: expected 1 or less", count)
 	}
 
 	generatedClusterRoleBinding := k8sresources.GenerateNewClusterRoleBindingForControlPlane(controlplane.Namespace, controlplane.Name, serviceAccountName, clusterRoleName)
