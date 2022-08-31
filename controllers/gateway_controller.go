@@ -107,8 +107,9 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	// Provision dataplane creates a dataplane and adds the DataPlaneReady condition to the Gateway status
-	// if the dataplane is ready, the DataplaneReady status is set to true, otherwise false
+	// Provision dataplane creates a dataplane and adds the DataPlaneReady=True
+	// condition to the Gateway status if the dataplane is ready. If not ready
+	// the status DataPlaneReady=False will be set instead.
 	dataplane := r.provisionDataPlane(ctx, log, gateway, gatewayConfig)
 
 	// Set the DataPlaneReady Condition to False. This happens only if:
@@ -175,6 +176,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
+	debug(log, "ensuring DataPlane connectivity for Gateway", gateway)
 	connectivityStatusError := r.ensureGatewayConnectivityStatus(ctx, gateway, dataplane)
 	if connectivityStatusError == nil {
 		k8sutils.SetCondition(k8sutils.NewCondition(GatewayServiceType, metav1.ConditionTrue, k8sutils.ResourceReadyReason, ""), gateway)
