@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -97,22 +98,42 @@ func (r *GatewayReconciler) ensureGatewayConnectivityStatus(ctx context.Context,
 		return fmt.Errorf("service %s doesn't have a ClusterIP yet, not ready", svc.Name)
 	}
 
-	gatewayIPs := make([]string, 0)
+	// start collecting network addresses where the gateway is reachable
+	// at for ingress traffic.
+	gatewayAddrs := make(gwaddrs, 0)
 	if len(svc.Status.LoadBalancer.Ingress) > 0 {
-		ip := svc.Status.LoadBalancer.Ingress[0].IP
-		if ip == "" {
-			return fmt.Errorf("missing loadbalancer.ingress[0].ip in service %s/%s", svc.Namespace, svc.Name)
+		switch {
+		case svc.Status.LoadBalancer.Ingress[0].IP != "":
+			gatewayAddrs = append(gatewayAddrs, gwaddr{
+				addr:     svc.Status.LoadBalancer.Ingress[0].IP,
+				addrType: ipaddrT,
+				isLB:     true,
+			})
+		case svc.Status.LoadBalancer.Ingress[0].Hostname != "":
+			gatewayAddrs = append(gatewayAddrs, gwaddr{
+				addr:     svc.Status.LoadBalancer.Ingress[0].Hostname,
+				addrType: hostAddrT,
+				isLB:     true,
+			})
+		default:
+			return fmt.Errorf("missing loadbalancer address in service %s/%s", svc.Namespace, svc.Name)
 		}
-		gatewayIPs = append(gatewayIPs, ip) // TODO: handle hostnames https://github.com/Kong/gateway-operator/issues/24
 	}
 
-	newAddresses := make([]gatewayv1alpha2.GatewayAddress, 0, len(gatewayIPs))
-	ipaddrT := gatewayv1alpha2.IPAddressType
-	allIPs := append(gatewayIPs, svc.Spec.ClusterIP)
-	for _, ip := range allIPs {
+	// combine all addresses, including the ClusterIP and sort them
+	// according to priority (LoadBalancer addresses have the highest
+	// priority).
+	newAddresses := make([]gatewayv1alpha2.GatewayAddress, 0, len(gatewayAddrs))
+	allAddrs := append(gatewayAddrs, gwaddr{
+		addr:     svc.Spec.ClusterIP,
+		addrType: ipaddrT,
+	})
+	sort.Sort(allAddrs)
+
+	for _, addr := range allAddrs {
 		newAddresses = append(newAddresses, gatewayv1alpha2.GatewayAddress{
-			Type:  &ipaddrT,
-			Value: ip,
+			Type:  &(addr.addrType),
+			Value: addr.addr,
 		})
 	}
 
@@ -286,3 +307,24 @@ func generateDataPlaneNetworkPolicy(
 		},
 	}
 }
+
+// -----------------------------------------------------------------------------
+// GatewayReconciler - Private Network Address Utilities
+// -----------------------------------------------------------------------------
+
+var (
+	ipaddrT   = gatewayv1alpha2.IPAddressType
+	hostAddrT = gatewayv1alpha2.HostnameAddressType
+)
+
+type gwaddr struct {
+	addr     string
+	addrType gatewayv1alpha2.AddressType
+	isLB     bool
+}
+
+type gwaddrs []gwaddr
+
+func (g gwaddrs) Len() int           { return len(g) }
+func (g gwaddrs) Swap(i, j int)      { g[i], g[j] = g[j], g[i] }
+func (g gwaddrs) Less(i, j int) bool { return g[i].isLB && !g[j].isLB }
