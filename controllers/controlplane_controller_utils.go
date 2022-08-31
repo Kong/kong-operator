@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -200,6 +201,10 @@ func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 		if controlplane.Spec.Version != nil {
 			controlplaneImage = fmt.Sprintf("%s:%s", controlplaneImage, *controlplane.Spec.Version)
 		}
+	} else if relatedKongControllerImage := os.Getenv("RELATED_IMAGE_KONG_CONTROLLER"); relatedKongControllerImage != "" {
+		// RELATED_IMAGE_KONG_CONTROLLER is set by the operator-sdk when building the operator bundle.
+		// https://github.com/Kong/gateway-operator/issues/261
+		controlplaneImage = relatedKongControllerImage
 	} else {
 		controlplaneImage = consts.DefaultControlPlaneImage // TODO: https://github.com/Kong/gateway-operator/issues/20
 	}

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"os"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +26,10 @@ func generateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, ce
 		if dataplane.Spec.Version != nil {
 			dataplaneImage = fmt.Sprintf("%s:%s", dataplaneImage, *dataplane.Spec.Version)
 		}
+	} else if relatedKongImage := os.Getenv("RELATED_IMAGE_KONG"); relatedKongImage != "" {
+		// RELATED_IMAGE_KONG is set by the operator-sdk when building the operator bundle.
+		// https://github.com/Kong/gateway-operator/issues/261
+		dataplaneImage = relatedKongImage
 	} else {
 		dataplaneImage = consts.DefaultDataPlaneImage // TODO: https://github.com/Kong/gateway-operator/issues/20
 	}

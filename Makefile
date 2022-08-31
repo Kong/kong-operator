@@ -40,6 +40,9 @@ ifeq ($(USE_IMAGE_DIGESTS), true)
 	BUNDLE_GEN_FLAGS += --use-image-digests
 endif
 
+KUSTOMIZE_DEFAULT_MANIFESTS ?= config/manifests
+KUSTOMIZE_RED_HAT_MANIFESTS ?= config/redhat-certified
+
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
 # ------------------------------------------------------------------------------
@@ -253,13 +256,20 @@ docker.push:
 # ------------------------------------------------------------------------------
 # Build - OperatorHub Bundles
 # ------------------------------------------------------------------------------
-
-.PHONY: bundle
-bundle: manifests kustomize operator-sdk
+.PHONY: _bundle
+_bundle: manifests kustomize operator-sdk
 	$(OPERATOR_SDK) generate kustomize manifests --apis-dir=apis/
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
+	$(KUSTOMIZE) build $(KUSTOMIZE_DIR) | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 	$(OPERATOR_SDK) bundle validate ./bundle
+
+.PHONY: bundle
+bundle:
+	KUSTOMIZE_DIR=$(KUSTOMIZE_DEFAULT_MANIFESTS) $(MAKE) _bundle
+
+.PHONY: bundle-redhat-certified
+bundle-redhat-certified:
+	KUSTOMIZE_DIR=$(KUSTOMIZE_RED_HAT_MANIFESTS) $(MAKE) _bundle
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.

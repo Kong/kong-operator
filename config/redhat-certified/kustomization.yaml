@@ -1,0 +1,5 @@
+bases:
+- ../manifests
+
+patchesStrategicMerge:
+- manager_config_patch.yaml
