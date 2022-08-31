@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -63,6 +64,11 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&source.Kind{Type: &gatewayv1alpha2.GatewayClass{}},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatchesController))).
+		// watch for updates to Services which are owned by DataPlanes that
+		// are owned by a Gateway.
+		Watches(
+			&source.Kind{Type: &corev1.Service{}},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForService)).
 		Complete(r)
 }
 
