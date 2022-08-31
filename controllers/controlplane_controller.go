@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -37,6 +36,7 @@ type ControlPlaneReconciler struct {
 	Scheme                   *runtime.Scheme
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
+	DevelopmentMode          bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -86,7 +86,7 @@ func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx).WithName("ControlPlane")
+	log := getLogger(ctx, "controlplane", r.DevelopmentMode)
 
 	debug(log, "reconciling ControlPlane resource", req)
 	controlplane := new(operatorv1alpha1.ControlPlane)
@@ -152,7 +152,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		string(ControlPlaneFinalizerCleanupClusterRole),
 		string(ControlPlaneFinalizerCleanupClusterRoleBinding))
 	if finalizersChanged {
-		info(log, "update metadata of control plane to set finalizer", controlplane.ObjectMeta)
+		info(log, "update metadata of control plane to set finalizer", controlplane)
 		return ctrl.Result{}, r.Client.Update(ctx, controlplane)
 	}
 
@@ -255,7 +255,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	debug(log, "creating mTLS certificate", controlplane)
-	created, certSecret, err := r.ensureCertificate(ctx, controlplane)
+	created, certSecret, err := r.ensureCertificate(ctx, log, controlplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

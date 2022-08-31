@@ -51,6 +51,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/admission"
+	"github.com/kong/gateway-operator/internal/manager/logging"
 	"github.com/kong/gateway-operator/internal/manager/metadata"
 	"github.com/kong/gateway-operator/internal/telemetry"
 	"github.com/kong/gateway-operator/pkg/vars"
@@ -107,9 +108,8 @@ func DefaultConfig() Config {
 		ClusterCASecretName: "kong-operator-ca",
 		// TODO: Extract this into a named const and use it in all the placed where
 		// "kong-system" is used verbatim: https://github.com/Kong/gateway-operator/pull/149.
-		ClusterCASecretNamespace: "kong-system",
-		LoggerOpts:               zap.Options{},
-
+		ClusterCASecretNamespace:      "kong-system",
+		LoggerOpts:                    zap.Options{},
 		GatewayControllerEnabled:      true,
 		ControlPlaneControllerEnabled: true,
 		DataPlaneControllerEnabled:    true,
@@ -122,6 +122,7 @@ func Run(cfg Config) error {
 		vars.ControllerName = cfg.ControllerName
 	}
 
+	cfg.LoggerOpts = logging.SetupLogEncoder(cfg.DevelopmentMode, cfg.LoggerOpts)
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&cfg.LoggerOpts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

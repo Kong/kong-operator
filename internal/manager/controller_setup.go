@@ -65,8 +65,9 @@ func setupControllers(mgr manager.Manager, c *Config) []ControllerDef {
 				},
 			}.CRDExists,
 			Controller: &controllers.GatewayReconciler{
-				Client: mgr.GetClient(),
-				Scheme: mgr.GetScheme(),
+				Client:          mgr.GetClient(),
+				Scheme:          mgr.GetScheme(),
+				DevelopmentMode: c.DevelopmentMode,
 			},
 		},
 		// ControlPlane controller
@@ -77,6 +78,7 @@ func setupControllers(mgr manager.Manager, c *Config) []ControllerDef {
 				Scheme:                   mgr.GetScheme(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				DevelopmentMode:          c.DevelopmentMode,
 			},
 		},
 		// DataPlane controller
@@ -87,6 +89,7 @@ func setupControllers(mgr manager.Manager, c *Config) []ControllerDef {
 				Scheme:                   mgr.GetScheme(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				DevelopmentMode:          c.DevelopmentMode,
 			},
 		},
 	}

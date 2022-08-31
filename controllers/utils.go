@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
@@ -34,7 +34,7 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Private Vars
+// Private Consts
 // -----------------------------------------------------------------------------
 
 const requeueWithoutBackoff = time.Millisecond * 200
@@ -134,13 +134,14 @@ func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Se
 // already present. It returns a boolean indicating if it created a Secret and an error indicating
 // any failures it encountered.
 func maybeCreateCertificateSecret(ctx context.Context,
+	log logr.Logger,
 	owner client.Object,
 	subject, mtlsCASecretName, mtlsCASecretNamespace string,
 	usages []certificatesv1.KeyUsage,
 	k8sClient client.Client,
 ) (bool, *corev1.Secret, error) {
-	logger := log.FromContext(ctx).WithName("MTLSCertificateCreation")
-	setCALogger(logger)
+	log = log.WithName("MTLSCertificateCreation")
+	setCALogger(log)
 
 	selectorKey, selectorValue := getManagedLabelForOwner(owner)
 	secrets, err := k8sutils.ListSecretsForOwner(
@@ -278,6 +279,15 @@ func debug(log logr.Logger, msg string, rawOBJ interface{}, keysAndValues ...int
 	} else {
 		log.V(logging.DebugLevel).Info(fmt.Sprintf("unexpected type processed for debug logging: %T, this is a bug!", rawOBJ))
 	}
+}
+
+func getLogger(ctx context.Context, controllerName string, developmentMode bool) logr.Logger {
+	// if development mode is active, do not add the context to the log line, as we want
+	// to have a lighter logging structure
+	if developmentMode {
+		return ctrlruntimelog.Log.WithName(controllerName)
+	}
+	return ctrlruntimelog.FromContext(ctx).WithName("controlplane")
 }
 
 // -----------------------------------------------------------------------------

@@ -14,11 +14,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"github.com/go-logr/logr"
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -34,12 +34,12 @@ import (
 // GatewayReconciler reconciles a Gateway object
 type GatewayReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme          *runtime.Scheme
+	DevelopmentMode bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
 	return ctrl.NewControllerManagedBy(mgr).
 		// watch Gateway objects, filtering out any Gateways which are not configured with
 		// a supported GatewayClass controller name.
@@ -68,7 +68,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx).WithName("gateway")
+	log := getLogger(ctx, "gateway", r.DevelopmentMode)
 
 	debug(log, "reconciling gateway resource", req)
 	gateway, oldGateway := newGateway(), newGateway()
@@ -109,7 +109,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Provision dataplane creates a dataplane and adds the DataPlaneReady condition to the Gateway status
 	// if the dataplane is ready, the DataplaneReady status is set to true, otherwise false
-	dataplane := r.provisionDataPlane(ctx, gateway, gatewayConfig)
+	dataplane := r.provisionDataPlane(ctx, log, gateway, gatewayConfig)
 
 	// Set the DataPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no DataPlaneReady condition in the old gateway, or
@@ -149,7 +149,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
 	// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false
-	controlplane := r.provisionControlPlane(ctx, gatewayClass, gateway, gatewayConfig, dataplane, services)
+	controlplane := r.provisionControlPlane(ctx, log, gatewayClass, gateway, gatewayConfig, dataplane, services)
 
 	// Set the ControlPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no ControlPlaneReady condition in the old gateway, or
@@ -196,9 +196,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	return ctrl.Result{}, nil
 }
 
-func (r *GatewayReconciler) provisionDataPlane(ctx context.Context, gateway *gatewayDecorator, gatewayConfig *operatorv1alpha1.GatewayConfiguration) *operatorv1alpha1.DataPlane {
-	log := log.FromContext(ctx).WithName("gateway")
-
+func (r *GatewayReconciler) provisionDataPlane(ctx context.Context, log logr.Logger, gateway *gatewayDecorator, gatewayConfig *operatorv1alpha1.GatewayConfiguration) *operatorv1alpha1.DataPlane {
 	r.setDataplaneGatewayConfigDefaults(gatewayConfig)
 	debug(log, "looking for associated dataplanes", gateway)
 	dataplanes, err := gatewayutils.ListDataPlanesForGateway(
@@ -254,14 +252,13 @@ func (r *GatewayReconciler) provisionDataPlane(ctx context.Context, gateway *gat
 
 func (r *GatewayReconciler) provisionControlPlane(
 	ctx context.Context,
+	log logr.Logger,
 	gatewayClass *gatewayv1alpha2.GatewayClass,
 	gateway *gatewayDecorator,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 	dataplane *operatorv1alpha1.DataPlane,
 	services []corev1.Service,
 ) *operatorv1alpha1.ControlPlane {
-	log := log.FromContext(ctx).WithName("gateway")
-
 	r.setControlplaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, services[0].Name)
 
 	debug(log, "looking for associated controlplanes", gateway)

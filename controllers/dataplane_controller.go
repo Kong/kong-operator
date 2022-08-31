@@ -10,7 +10,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
@@ -29,6 +28,7 @@ type DataPlaneReconciler struct {
 	eventRecorder            record.EventRecorder
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
+	DevelopmentMode          bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -53,7 +53,7 @@ func (r *DataPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx).WithName("DataPlane")
+	log := getLogger(ctx, "dataplane", r.DevelopmentMode)
 
 	debug(log, "reconciling DataPlane resource", req)
 	dataplane := new(operatorv1alpha1.DataPlane)
@@ -118,7 +118,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	debug(log, "ensuring mTLS certificate", dataplane)
-	createdOrUpdated, certSecret, err := r.ensureCertificate(ctx, dataplane, dataplaneService.Name)
+	createdOrUpdated, certSecret, err := r.ensureCertificate(ctx, log, dataplane, dataplaneService.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

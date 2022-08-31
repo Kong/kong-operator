@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/go-logr/logr"
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -115,6 +116,7 @@ func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
 
 func (r *DataPlaneReconciler) ensureCertificate(
 	ctx context.Context,
+	log logr.Logger,
 	dataplane *operatorv1alpha1.DataPlane,
 	serviceName string,
 ) (bool, *corev1.Secret, error) {
@@ -123,6 +125,7 @@ func (r *DataPlaneReconciler) ensureCertificate(
 		certificatesv1.UsageDigitalSignature, certificatesv1.UsageServerAuth,
 	}
 	return maybeCreateCertificateSecret(ctx,
+		log,
 		dataplane,
 		fmt.Sprintf("%s.%s.svc", serviceName, dataplane.Namespace),
 		r.ClusterCASecretName,
