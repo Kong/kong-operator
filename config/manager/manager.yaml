@@ -38,10 +38,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: RELATED_IMAGE_KONG
-          value: registry.connect.redhat.com/kong/kong:2.8.1
-        - name: RELATED_IMAGE_KONG_CONTROLLER
-          value: registry.connect.redhat.com/kong/kong-ingress-controller:2.5.0-redhat
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:
