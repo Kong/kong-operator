@@ -61,6 +61,8 @@ var (
 	k8sClient      *kubernetes.Clientset
 	operatorClient *clientset.Clientset
 	mgrClient      client.Client
+
+	skipClusterCleanup bool
 )
 
 // -----------------------------------------------------------------------------
@@ -71,7 +73,8 @@ func TestMain(m *testing.M) {
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 
-	var skipClusterCleanup bool
+	skipClusterCleanup = existingCluster != ""
+
 	fmt.Println("INFO: configuring cluster for testing environment")
 	builder := environments.NewBuilder()
 	if existingCluster != "" {
@@ -139,7 +142,7 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: environment is ready, starting tests")
 	code := m.Run()
 
-	if skipClusterCleanup || !(existingCluster == "") {
+	if skipClusterCleanup {
 		fmt.Println("INFO: cleaning up operator manifests")
 		exitOnErr(clusters.KustomizeDeleteForCluster(ctx, env.Cluster(), kustomizationDir))
 	} else {
@@ -158,7 +161,7 @@ func TestMain(m *testing.M) {
 
 func exitOnErr(err error) {
 	if err != nil {
-		if env != nil {
+		if env != nil && !skipClusterCleanup {
 			env.Cleanup(ctx) //nolint:errcheck
 		}
 		fmt.Printf("ERROR: %s\n", err.Error())
