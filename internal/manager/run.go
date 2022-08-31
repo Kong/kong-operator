@@ -117,13 +117,19 @@ func DefaultConfig() Config {
 }
 
 func Run(cfg Config) error {
+	cfg.LoggerOpts = logging.SetupLogEncoder(cfg.DevelopmentMode, cfg.LoggerOpts)
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&cfg.LoggerOpts)))
+
+	setupLog.Info("starting controller manager",
+		"release", metadata.Release,
+		"repo", metadata.Repo,
+		"commit", metadata.Commit,
+	)
+
 	if cfg.ControllerName != "" {
 		setupLog.Info(fmt.Sprintf("custom controller name provided: %s", cfg.ControllerName))
 		vars.ControllerName = cfg.ControllerName
 	}
-
-	cfg.LoggerOpts = logging.SetupLogEncoder(cfg.DevelopmentMode, cfg.LoggerOpts)
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&cfg.LoggerOpts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
