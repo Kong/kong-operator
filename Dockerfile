@@ -1,3 +1,7 @@
+# ------------------------------------------------------------------------------
+# Builder
+# ------------------------------------------------------------------------------
+
 FROM golang:1.19.0 as builder
 
 ARG TARGETPLATFORM
@@ -28,15 +32,14 @@ COPY internal/ internal/
 COPY Makefile Makefile
 COPY .git/ .git/
 
-### Distroless/default
-# Use distroless as minimal base image to package the operator binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
 RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
     TAG="${TAG}" COMMIT="${COMMIT}" REPO_INFO="${REPO_INFO}" \
     make build.operator
 
+# ------------------------------------------------------------------------------
+# Distroless (default)
+# ------------------------------------------------------------------------------
 
-### Distroless/default
 # Use distroless as minimal base image to package the operator binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot as distroless
@@ -55,21 +58,17 @@ WORKDIR /
 COPY --from=builder /workspace/bin/manager .
 USER 65532:65532
 
-WORKDIR /
-COPY --from=builder /workspace/bin/manager .
-USER 65532:65532
-
-
 ENTRYPOINT ["/manager"]
 
-### RHEL
-# Build UBI image
+# ------------------------------------------------------------------------------
+# RedHat UBI
+# ------------------------------------------------------------------------------
+
 FROM registry.access.redhat.com/ubi8/ubi AS redhat
 
 ARG TAG
 ARG NAME="Kong Gateway Operator"
 ARG DESCRIPTION="Kong Gateway Operator drives deployment via the Gateway resource. You can deploy a Gateway resource to the cluster which will result in the underlying control-plane (the Kong Kubernetes Ingress Controller) and the data-plane (the Kong Gateway)."
-
 
 LABEL name="$NAME" \
       io.k8s.display-name="$NAME" \ 
