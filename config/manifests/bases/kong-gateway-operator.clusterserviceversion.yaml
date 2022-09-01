@@ -4,7 +4,7 @@ metadata:
   annotations:
     alm-examples: '[]'
     capabilities: Basic Install
-  name: operator.v0.0.0
+  name: kong-gateway-operator.v0.0.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
