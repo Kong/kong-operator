@@ -55,7 +55,7 @@ func (r *DataPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := getLogger(ctx, "dataplane", r.DevelopmentMode)
 
-	debug(log, "reconciling DataPlane resource", req)
+	trace(log, "reconciling DataPlane resource", req)
 	dataplane := new(operatorv1alpha1.DataPlane)
 	if err := r.Client.Get(ctx, req.NamespacedName, dataplane); err != nil {
 		if k8serrors.IsNotFound(err) {
@@ -66,7 +66,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	k8sutils.InitReady(dataplane)
 
-	debug(log, "validating DataPlane resource conditions", dataplane)
+	trace(log, "validating DataPlane resource conditions", dataplane)
 
 	if r.ensureIsMarkedScheduled(dataplane) {
 		err := r.updateStatus(ctx, dataplane)
@@ -76,24 +76,24 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err // requeue will be triggered by the creation or update of the owned object
 	}
 
-	debug(log, "exposing DataPlane deployment via service", dataplane)
+	trace(log, "exposing DataPlane deployment via service", dataplane)
 	createdOrUpdated, dataplaneService, err := r.ensureServiceForDataPlane(ctx, dataplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if createdOrUpdated {
-		// requeue will be triggered by the creation or update of the owned object
+		debug(log, "service updated", dataplane)
 		return ctrl.Result{}, r.ensureDataPlaneServiceStatus(ctx, dataplane, dataplaneService.Name)
 	}
 
 	// TODO: updates need to update owned service https://github.com/Kong/gateway-operator/issues/27
 
-	debug(log, "checking readiness of DataPlane service", dataplaneService)
+	trace(log, "checking readiness of DataPlane service", dataplaneService)
 	if dataplaneService.Spec.ClusterIP == "" {
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	debug(log, "validating DataPlane configuration", dataplane)
+	trace(log, "validating DataPlane configuration", dataplane)
 	if len(dataplane.Spec.Env) == 0 && len(dataplane.Spec.EnvFrom) == 0 {
 		debug(log, "no ENV config found for DataPlane resource, setting defaults", dataplane)
 		dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneDeploymentOptions)
@@ -117,29 +117,31 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, markErr
 	}
 
-	debug(log, "ensuring mTLS certificate", dataplane)
-	createdOrUpdated, certSecret, err := r.ensureCertificate(ctx, log, dataplane, dataplaneService.Name)
+	trace(log, "ensuring mTLS certificate", dataplane)
+	createdOrUpdated, certSecret, err := r.ensureCertificate(ctx, dataplane, dataplaneService.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if createdOrUpdated {
+		debug(log, "mTLS certificate created", dataplane)
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
-	debug(log, "looking for existing deployments for DataPlane resource", dataplane)
+	trace(log, "looking for existing deployments for DataPlane resource", dataplane)
 	createdOrUpdated, dataplaneDeployment, err := r.ensureDeploymentForDataPlane(ctx, dataplane, certSecret.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if createdOrUpdated {
+		debug(log, "deployment updated", dataplane)
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
 	// TODO: updates need to update owned deployment https://github.com/Kong/gateway-operator/issues/27
 
-	debug(log, "checking readiness of DataPlane deployments", dataplane)
+	trace(log, "checking readiness of DataPlane deployments", dataplane)
 	if dataplaneDeployment.Status.Replicas == 0 || dataplaneDeployment.Status.AvailableReplicas < dataplaneDeployment.Status.Replicas {
-		debug(log, "deployment for DataPlane not yet ready, waiting", dataplane)
+		trace(log, "deployment for DataPlane not yet ready, waiting", dataplane)
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
@@ -153,10 +155,11 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 		}
 		debug(log, "unable to reconcile the DataPlane resource", dataplane)
+		return ctrl.Result{}, err
 	}
 
 	debug(log, "reconciliation complete for DataPlane resource", dataplane)
-	return ctrl.Result{}, err
+	return ctrl.Result{}, nil
 }
 
 // updateStatus Updates the resource status only when there are changes in the Conditions

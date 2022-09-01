@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -312,7 +311,6 @@ func (r *ControlPlaneReconciler) ensureClusterRoleBindingForControlPlane(
 
 func (r *ControlPlaneReconciler) ensureCertificate(
 	ctx context.Context,
-	log logr.Logger,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (bool, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
@@ -322,7 +320,6 @@ func (r *ControlPlaneReconciler) ensureCertificate(
 	// this subject is arbitrary. data planes only care that client certificates are signed by the trusted CA, and will
 	// accept a certificate with any subject
 	return maybeCreateCertificateSecret(ctx,
-		log,
 		controlplane,
 		fmt.Sprintf("%s.%s", controlplane.Name, controlplane.Namespace),
 		r.ClusterCASecretName,

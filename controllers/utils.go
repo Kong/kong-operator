@@ -48,8 +48,8 @@ type loggerShim struct {
 	logger logr.Logger
 }
 
-func (l loggerShim) Debug(msg string)   { l.logger.V(logging.InfoLevel).Info(msg) }
-func (l loggerShim) Info(msg string)    { l.logger.V(logging.InfoLevel).Info(msg) }
+func (l loggerShim) Debug(msg string)   { l.logger.V(logging.DebugLevel).Info(msg) }
+func (l loggerShim) Info(msg string)    { l.logger.V(logging.DebugLevel).Info(msg) }
 func (l loggerShim) Warning(msg string) { l.logger.V(logging.InfoLevel).Info(msg) }
 func (l loggerShim) Err(msg string)     { l.logger.V(logging.InfoLevel).Info(msg) }
 func (l loggerShim) Crit(msg string)    { l.logger.V(logging.InfoLevel).Info(msg) }
@@ -134,14 +134,12 @@ func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Se
 // already present. It returns a boolean indicating if it created a Secret and an error indicating
 // any failures it encountered.
 func maybeCreateCertificateSecret(ctx context.Context,
-	log logr.Logger,
 	owner client.Object,
 	subject, mtlsCASecretName, mtlsCASecretNamespace string,
 	usages []certificatesv1.KeyUsage,
 	k8sClient client.Client,
 ) (bool, *corev1.Secret, error) {
-	log = log.WithName("MTLSCertificateCreation")
-	setCALogger(log)
+	setCALogger(ctrlruntimelog.Log)
 
 	selectorKey, selectorValue := getManagedLabelForOwner(owner)
 	secrets, err := k8sutils.ListSecretsForOwner(
@@ -157,7 +155,7 @@ func maybeCreateCertificateSecret(ctx context.Context,
 
 	count := len(secrets)
 	if count > 1 {
-		return false, nil, fmt.Errorf("found %d mTLS secrets for DataPlane currently unsupported: expected 1 or less", count)
+		return false, nil, fmt.Errorf("found %d mTLS secrets for %s currently unsupported: expected 1 or less", count, owner.GetObjectKind().GroupVersionKind().Kind)
 	}
 
 	ownerPrefix := getPrefixForOwner(owner)
@@ -270,6 +268,18 @@ func info(log logr.Logger, msg string, rawOBJ interface{}, keysAndValues ...inte
 }
 
 func debug(log logr.Logger, msg string, rawOBJ interface{}, keysAndValues ...interface{}) {
+	if obj, ok := rawOBJ.(client.Object); ok {
+		kvs := append([]interface{}{"namespace", obj.GetNamespace(), "name", obj.GetName()}, keysAndValues...)
+		log.V(logging.DebugLevel).Info(msg, kvs...)
+	} else if req, ok := rawOBJ.(reconcile.Request); ok {
+		kvs := append([]interface{}{"namespace", req.Namespace, "name", req.Name}, keysAndValues...)
+		log.V(logging.DebugLevel).Info(msg, kvs...)
+	} else {
+		log.V(logging.DebugLevel).Info(fmt.Sprintf("unexpected type processed for debug logging: %T, this is a bug!", rawOBJ))
+	}
+}
+
+func trace(log logr.Logger, msg string, rawOBJ interface{}, keysAndValues ...interface{}) { //nolint:unparam
 	if obj, ok := rawOBJ.(client.Object); ok {
 		kvs := append([]interface{}{"namespace", obj.GetNamespace(), "name", obj.GetName()}, keysAndValues...)
 		log.V(logging.DebugLevel).Info(msg, kvs...)

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -116,7 +115,6 @@ func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
 
 func (r *DataPlaneReconciler) ensureCertificate(
 	ctx context.Context,
-	log logr.Logger,
 	dataplane *operatorv1alpha1.DataPlane,
 	serviceName string,
 ) (bool, *corev1.Secret, error) {
@@ -125,7 +123,6 @@ func (r *DataPlaneReconciler) ensureCertificate(
 		certificatesv1.UsageDigitalSignature, certificatesv1.UsageServerAuth,
 	}
 	return maybeCreateCertificateSecret(ctx,
-		log,
 		dataplane,
 		fmt.Sprintf("%s.%s.svc", serviceName, dataplane.Namespace),
 		r.ClusterCASecretName,
