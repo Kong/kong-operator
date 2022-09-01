@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/networking"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,25 +55,24 @@ var (
 // -----------------------------------------------------------------------------
 
 var (
-	ctx    context.Context
-	cancel context.CancelFunc
-	env    environments.Environment
+	skipClusterCleanup bool
+)
 
+// -----------------------------------------------------------------------------
+// Testing Structs - Testing Environment
+// -----------------------------------------------------------------------------
+
+type k8sClients struct {
 	k8sClient      *kubernetes.Clientset
 	operatorClient *clientset.Clientset
 	mgrClient      client.Client
-
-	skipClusterCleanup bool
-)
+}
 
 // -----------------------------------------------------------------------------
 // Testing Main
 // -----------------------------------------------------------------------------
 
-func TestMain(m *testing.M) {
-	ctx, cancel = context.WithCancel(context.Background())
-	defer cancel()
-
+func createEnvironment(t *testing.T, ctx context.Context) (environments.Environment, *k8sClients) {
 	skipClusterCleanup = existingCluster != ""
 
 	fmt.Println("INFO: configuring cluster for testing environment")
@@ -80,7 +80,7 @@ func TestMain(m *testing.M) {
 	if existingCluster != "" {
 		clusterParts := strings.Split(existingCluster, ":")
 		if len(clusterParts) != 2 {
-			exitOnErr(fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster))
+			t.Fatal(fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster))
 		}
 		clusterType, clusterName := clusterParts[0], clusterParts[1]
 
@@ -88,15 +88,15 @@ func TestMain(m *testing.M) {
 		switch clusterType {
 		case string(kind.KindClusterType):
 			cluster, err := kind.NewFromExisting(clusterName)
-			exitOnErr(err)
+			require.NoError(t, err)
 			builder.WithExistingCluster(cluster)
 			builder.WithAddons(metallb.New())
 		case string(gke.GKEClusterType):
 			cluster, err := gke.NewFromExistingWithEnv(ctx, clusterName)
-			exitOnErr(err)
+			require.NoError(t, err)
 			builder.WithExistingCluster(cluster)
 		default:
-			exitOnErr(fmt.Errorf("unknown cluster type: %s", clusterType))
+			t.Fatal(fmt.Errorf("unknown cluster type: %s", clusterType))
 		}
 	} else {
 		fmt.Println("INFO: no existing cluster found, deploying using Kubernetes In Docker (KIND)")
@@ -104,72 +104,67 @@ func TestMain(m *testing.M) {
 	}
 	if imageLoad != "" {
 		imageLoader, err := loadimage.NewBuilder().WithImage(imageLoad)
-		exitOnErr(err)
+		require.NoError(t, err)
 		fmt.Println("INFO: load image", imageLoad)
 		builder.WithAddons(imageLoader.Build())
 	}
 	var err error
-	env, err = builder.Build(ctx)
-	exitOnErr(err)
+	env, err := builder.Build(ctx)
+	require.NoError(t, err)
 
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
-	exitOnErr(<-env.WaitForReady(ctx))
+	require.NoError(t, <-env.WaitForReady(ctx))
 
 	fmt.Println("INFO: initializing Kubernetes API clients")
-	k8sClient = env.Cluster().Client()
-	operatorClient, err = clientset.NewForConfig(env.Cluster().Config())
-	exitOnErr(err)
-	mgrClient, err = client.New(env.Cluster().Config(), client.Options{})
-	exitOnErr(err)
+	clients := &k8sClients{}
+	clients.k8sClient = env.Cluster().Client()
+	clients.operatorClient, err = clientset.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+	clients.mgrClient, err = client.New(env.Cluster().Config(), client.Options{})
+	require.NoError(t, err)
 
 	fmt.Printf("deploying Gateway APIs CRDs from %s\n", consts.GatewayCRDsKustomizeURL)
-	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayCRDsKustomizeURL))
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayCRDsKustomizeURL))
 
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")
-	exitOnErr(clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
+	require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
 
-	exitOnErr(setOperatorImage())
+	require.NoError(t, setOperatorImage())
 
 	fmt.Println("INFO: deploying operator to test cluster via kustomize")
-	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizationDir))
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizationDir))
 
 	fmt.Println("INFO: waiting for operator deployment to complete")
-	exitOnErr(waitForOperatorDeployment())
+	require.NoError(t, waitForOperatorDeployment(ctx, clients.k8sClient))
 
 	fmt.Println("INFO: waiting for operator webhook service to be connective")
-	exitOnErr(waitForOperatorWebhook())
+	require.NoError(t, waitForOperatorWebhook(ctx, clients.k8sClient))
 
 	fmt.Println("INFO: environment is ready, starting tests")
-	code := m.Run()
 
+	require.NoError(t, restoreKustomizationFile())
+
+	return env, clients
+}
+
+func cleanupEnvironment(ctx context.Context, env environments.Environment) error {
+	if env == nil {
+		return nil
+	}
 	if skipClusterCleanup {
 		fmt.Println("INFO: cleaning up operator manifests")
-		exitOnErr(clusters.KustomizeDeleteForCluster(ctx, env.Cluster(), kustomizationDir))
-	} else {
-		fmt.Println("INFO: cleaning up testing cluster and environment")
-		exitOnErr(env.Cleanup(ctx))
+		return clusters.KustomizeDeleteForCluster(ctx, env.Cluster(), kustomizationDir)
 	}
 
-	exitOnErr(restoreKustomizationFile())
-
-	os.Exit(code)
+	fmt.Println("INFO: cleaning up testing cluster and environment")
+	return env.Cleanup(ctx)
 }
 
 // -----------------------------------------------------------------------------
 // Testing Main - Helper Functions
 // -----------------------------------------------------------------------------
 
-func exitOnErr(err error) {
-	if err != nil {
-		if env != nil && !skipClusterCleanup {
-			env.Cleanup(ctx) //nolint:errcheck
-		}
-		fmt.Printf("ERROR: %s\n", err.Error())
-		os.Exit(1)
-	}
-}
-
-func waitForOperatorDeployment() error {
+func waitForOperatorDeployment(ctx context.Context, k8sClient *kubernetes.Clientset) error {
 	ready := false
 	for !ready {
 		select {
@@ -188,7 +183,7 @@ func waitForOperatorDeployment() error {
 	return nil
 }
 
-func waitForOperatorWebhook() error {
+func waitForOperatorWebhook(ctx context.Context, k8sClient *kubernetes.Clientset) error {
 	webhookServiceNamespace := "kong-system"
 	webhookServiceName := "gateway-operator-validating-webhook"
 	webhookServicePort := 443

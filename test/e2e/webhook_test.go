@@ -4,6 +4,7 @@
 package e2e
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -13,11 +14,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 )
 
 func TestDataplaneValidatingWebhook(t *testing.T) {
-	t.Log("start tests")
-	testNamespace, cleaner := setup(t)
+	var env environments.Environment
+	ctx, cancel := context.WithCancel(context.Background())
+	defer func() {
+		require.NoError(t, cleanupEnvironment(ctx, env))
+		cancel()
+	}()
+
+	var clients *k8sClients
+	env, clients = createEnvironment(t, ctx)
+
+	testNamespace, cleaner := setup(t, ctx, env)
 	defer func() {
 		if t.Failed() {
 			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
@@ -67,7 +78,7 @@ func TestDataplaneValidatingWebhook(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			dataplaneClient := operatorClient.ApisV1alpha1().DataPlanes(testNamespace.Name)
+			dataplaneClient := clients.operatorClient.ApisV1alpha1().DataPlanes(testNamespace.Name)
 			_, err := dataplaneClient.Create(ctx, tc.dataplane, metav1.CreateOptions{})
 			if tc.errMsg == "" {
 				require.NoErrorf(t, err, "test case %s: should not return error when creating dataplane", tc.name)

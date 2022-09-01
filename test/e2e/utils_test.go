@@ -4,12 +4,14 @@
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -22,7 +24,7 @@ import (
 // cleaner (to clean up test resources automatically after the test finishes)
 // and creates a new namespace for the test to use. It also enables parallel
 // testing.
-func setup(t *testing.T) (*corev1.Namespace, *clusters.Cleaner) {
+func setup(t *testing.T, ctx context.Context, env environments.Environment) (*corev1.Namespace, *clusters.Cleaner) {
 	t.Log("performing test setup")
 	t.Parallel()
 	cleaner := clusters.NewCleaner(env.Cluster())
