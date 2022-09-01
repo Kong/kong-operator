@@ -42,6 +42,22 @@ jobs:
           VERSION_JSON=$(docker run ghcr.io/${{ github.repository }}:${{ needs.build.outputs.version }} -version)
           echo "::set-output name=json::${VERSION_JSON}"
 
+      # When using ghcr.io and github context's fields like ${{ github.repository }}
+      # we were getting Kong's org name starting with capital letter (unfortunate
+      # naming ¯\_(ツ)_/¯) and this tripped docker push because:
+      # docker: invalid reference format: repository name must be lowercase.
+      #
+      # Below 2 steps take care of that by adding an env called REPO, all lowercased,
+      # using bash parameter expansion.
+      #
+      # Related github discussion: https://github.com/orgs/community/discussions/27086
+      - name: Set repo to env
+        run: |
+          echo "REPO=${{ github.repository }}" >>${GITHUB_ENV}
+      - name: Lowercase the repo
+        run: |
+          echo "REPO=${REPO,,}" >>${GITHUB_ENV}
+
       - name: Test operator version
         run: |
-          echo '${{ steps.version.outputs.json }}' | ./scripts/verify-version.sh ${{ github.repository }}
+          echo '${{ steps.version.outputs.json }}' | ./scripts/verify-version.sh ${REPO}
