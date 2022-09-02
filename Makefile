@@ -34,14 +34,19 @@ endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 IMAGE_TAG_BASE ?= ghcr.io/kong/gateway-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
-BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+BUNDLE_GEN_FLAGS ?= --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 USE_IMAGE_DIGESTS ?= false
 ifeq ($(USE_IMAGE_DIGESTS), true)
 	BUNDLE_GEN_FLAGS += --use-image-digests
 endif
 
-KUSTOMIZE_DEFAULT_MANIFESTS ?= config/manifests
-KUSTOMIZE_RED_HAT_MANIFESTS ?= config/redhat-certified
+BUNDLE_DEFAULT_KUSTOMIZE_MANIFESTS ?= config/manifests
+BUNDLE_DEFAULT_DIR ?= bundle/regular
+BUNDLE_DEFAULT_DOCKERFILE ?= bundle_regular.Dockerfile
+
+BUNDLE_RED_HAT_KUSTOMIZE_MANIFESTS ?= config/redhat-certified
+BUNDLE_RED_HAT_DIR ?= bundle/redhat-certified
+BUNDLE_RED_HAT_DOCKERFILE ?= bundle_redhat_certified.Dockerfile
 
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
@@ -262,20 +267,29 @@ docker.push:
 _bundle: manifests kustomize operator-sdk
 	$(OPERATOR_SDK) generate kustomize manifests --apis-dir=$(APIS_DIR)/
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	$(KUSTOMIZE) build $(KUSTOMIZE_DIR) | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
-	$(OPERATOR_SDK) bundle validate ./bundle
+	$(KUSTOMIZE) build $(KUSTOMIZE_DIR) | $(OPERATOR_SDK) generate bundle --output-dir=$(BUNDLE_DIR) $(BUNDLE_GEN_FLAGS)
+	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
+	mv bundle.Dockerfile $(BUNDLE_DIR)
 
-.PHONY: bundle
-bundle:
-	KUSTOMIZE_DIR=$(KUSTOMIZE_DEFAULT_MANIFESTS) $(MAKE) _bundle
+.PHONY: bundle.regular
+bundle.regular:
+	KUSTOMIZE_DIR=$(BUNDLE_DEFAULT_KUSTOMIZE_MANIFESTS) \
+	BUNDLE_DIR=$(BUNDLE_DEFAULT_DIR) \
+		$(MAKE) _bundle
 
-.PHONY: bundle-redhat-certified
-bundle-redhat-certified:
-	KUSTOMIZE_DIR=$(KUSTOMIZE_RED_HAT_MANIFESTS) $(MAKE) _bundle
+.PHONY: bundle.redhat-certified
+bundle.redhat-certified:
+	KUSTOMIZE_DIR=$(BUNDLE_RED_HAT_KUSTOMIZE_MANIFESTS) \
+	BUNDLE_DIR=$(BUNDLE_RED_HAT_DIR) \
+		$(MAKE) _bundle
 
-.PHONY: bundle-build
-bundle-build: ## Build the bundle image.
-	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+.PHONY: bundle.regular.build
+bundle.regular.build: ## Build the bundle image.
+	docker build -f $(BUNDLE_DEFAULT_DIR)/bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+.PHONY: bundle.redhat-certified.build
+bundle.redhat-certified.build: ## Build the bundle image.
+	docker build -f $(BUNDLE_RED_HAT_DIR)/bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
