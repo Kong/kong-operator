@@ -41,6 +41,41 @@ jobs:
     - name: run lint
       run: make lint
 
+    - name: Verify diff
+      run: make verify.diff
+
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Setup go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '^1.19'
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+        fetch-depth: 0
+
+    - name: Verify operator-sdk bundle consistency
+      run: make verify.bundle
+
+    - name: Verify manifests consistency
+      run: make verify.manifests
+
+    - name: Verify generators consistency
+      run: make verify.generators
+
   unit-tests:
     runs-on: ubuntu-latest
     steps:

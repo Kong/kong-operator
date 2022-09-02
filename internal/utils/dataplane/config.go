@@ -73,7 +73,7 @@ var KongDefaults = map[string]string{
 // SetDataPlaneDefaults sets any unset default configuration options on the
 // DataPlane. No configuration is overridden. EnvVars are sorted
 // lexographically as a side effect.
-// returns true if new envs are acutally appended.
+// returns true if new envs are actually appended.
 func SetDataPlaneDefaults(spec *operatorv1alpha1.DataPlaneDeploymentOptions) bool {
 	updated := false
 	for k, v := range KongDefaults {

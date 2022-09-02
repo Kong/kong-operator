@@ -190,6 +190,23 @@ vet: ## Run go vet against code.
 lint: golangci-lint
 	$(GOLANGCI_LINT) run -v
 
+.PHONY: verify.bundle
+verify.bundle: verify.repo bundle.regular bundle.redhat-certified verify.diff
+
+.PHONY: verify.diff
+verify.diff:
+	@./scripts/verify-diff.sh
+
+.PHONY: verify.repo
+verify.repo:
+	@./scripts/verify-repo.sh
+
+.PHONY: verify.manifests
+verify.manifests: verify.repo manifests verify.diff
+
+.PHONY: verify.generators
+verify.generators: verify.repo generate verify.diff
+
 # ------------------------------------------------------------------------------
 # Build - Generators
 # ------------------------------------------------------------------------------

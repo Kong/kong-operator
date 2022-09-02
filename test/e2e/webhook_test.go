@@ -8,13 +8,13 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 )
 
 func TestDataplaneValidatingWebhook(t *testing.T) {
