@@ -35,13 +35,6 @@ jobs:
           name: image
           path: /tmp
 
-      - name: Run operator -version
-        id: version
-        run: |
-          docker load --input ${{ needs.build.outputs.artifact }}
-          VERSION_JSON=$(docker run ghcr.io/${{ github.repository }}:${{ needs.build.outputs.version }} -version)
-          echo "::set-output name=json::${VERSION_JSON}"
-
       # When using ghcr.io and github context's fields like ${{ github.repository }}
       # we were getting Kong's org name starting with capital letter (unfortunate
       # naming ¯\_(ツ)_/¯) and this tripped docker push because:
@@ -53,10 +46,17 @@ jobs:
       # Related github discussion: https://github.com/orgs/community/discussions/27086
       - name: Set repo to env
         run: |
-          echo "REPO=${{ github.repository }}" >>${GITHUB_ENV}
+          echo "REPO=ghcr.io/${{ github.repository }}" >>${GITHUB_ENV}
       - name: Lowercase the repo
         run: |
           echo "REPO=${REPO,,}" >>${GITHUB_ENV}
+
+      - name: Run operator -version
+        id: version
+        run: |
+          docker load --input ${{ needs.build.outputs.artifact }}
+          VERSION_JSON=$(docker run ${REPO}:${{ needs.build.outputs.version }} -version)
+          echo "::set-output name=json::${VERSION_JSON}"
 
       - name: Test operator version
         run: |
