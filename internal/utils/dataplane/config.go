@@ -73,12 +73,16 @@ var KongDefaults = map[string]string{
 // SetDataPlaneDefaults sets any unset default configuration options on the
 // DataPlane. No configuration is overridden. EnvVars are sorted
 // lexographically as a side effect.
-func SetDataPlaneDefaults(spec *operatorv1alpha1.DataPlaneDeploymentOptions) {
+// returns true if new envs are acutally appended.
+func SetDataPlaneDefaults(spec *operatorv1alpha1.DataPlaneDeploymentOptions) bool {
+	updated := false
 	for k, v := range KongDefaults {
 		envVar := corev1.EnvVar{Name: k, Value: v}
 		if !k8sutils.IsEnvVarPresent(envVar, spec.Env) {
 			spec.Env = append(spec.Env, envVar)
+			updated = true
 		}
 	}
 	sort.Sort(k8sutils.SortableEnvVars(spec.Env))
+	return updated
 }

@@ -20,6 +20,8 @@ import (
 
 	"github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
+	"github.com/kong/gateway-operator/internal/consts"
+	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
 func TestDataplaneEssentials(t *testing.T) {
@@ -35,6 +37,15 @@ func TestDataplaneEssentials(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dataplaneName.Namespace,
 			Name:      dataplaneName.Name,
+		},
+		Spec: v1alpha1.DataPlaneSpec{
+			DataPlaneDeploymentOptions: v1alpha1.DataPlaneDeploymentOptions{
+				DeploymentOptions: v1alpha1.DeploymentOptions{
+					Env: []corev1.EnvVar{
+						{Name: "TEST_ENV", Value: "test"},
+					},
+				},
+			},
 		},
 	}
 	dataplane, err := operatorClient.ApisV1alpha1().DataPlanes(namespace.Name).Create(ctx, dataplane, metav1.CreateOptions{})
@@ -65,6 +76,24 @@ func TestDataplaneEssentials(t *testing.T) {
 
 	t.Log("verifying deployments managed by the dataplane")
 	require.Eventually(t, dataPlaneHasActiveDeployment(t, ctx, dataplaneName), time.Minute, time.Second)
+
+	// check environment variables of deployments and pods.
+
+	t.Log("verifying dataplane deployment env vars")
+	deployments := mustListDataPlaneDeployments(t, dataplane)
+	require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
+	deployment := &deployments[0]
+
+	controllerContainer := k8sresources.GetPodContainerByName(
+		&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+	require.NotNil(t, controllerContainer)
+	envs := controllerContainer.Env
+	// check specified custom envs
+	testEnvValue := getEnvValueByName(envs, "TEST_ENV")
+	require.Equal(t, "test", testEnvValue)
+	// check default envs added by operator
+	kongDatabaseEnvValue := getEnvValueByName(envs, consts.EnvVarKongDatabase)
+	require.Equal(t, "off", kongDatabaseEnvValue)
 
 	t.Log("verifying services managed by the dataplane")
 	var dataplaneService corev1.Service

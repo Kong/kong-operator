@@ -94,9 +94,10 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	trace(log, "validating DataPlane configuration", dataplane)
-	if len(dataplane.Spec.Env) == 0 && len(dataplane.Spec.EnvFrom) == 0 {
-		debug(log, "no ENV config found for DataPlane resource, setting defaults", dataplane)
-		dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneDeploymentOptions)
+
+	updated := dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneDeploymentOptions)
+	if updated {
+		trace(log, "setting default ENVs", dataplane)
 		if err := r.Client.Update(ctx, dataplane); err != nil {
 			if k8serrors.IsConflict(err) {
 				debug(log, "conflict found when updating DataPlane resource, retrying", dataplane)
