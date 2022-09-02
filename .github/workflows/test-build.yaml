@@ -37,7 +37,7 @@ jobs:
 
       # When using ghcr.io and github context's fields like ${{ github.repository }}
       # we were getting Kong's org name starting with capital letter (unfortunate
-      # naming ¯\_(ツ)_/¯) and this tripped docker push because:
+      # naming ¯\_(ツ)_/¯) and this tripped docker run because:
       # docker: invalid reference format: repository name must be lowercase.
       #
       # Below 2 steps take care of that by adding an env called REPO, all lowercased,
@@ -46,7 +46,7 @@ jobs:
       # Related github discussion: https://github.com/orgs/community/discussions/27086
       - name: Set repo to env
         run: |
-          echo "REPO=ghcr.io/${{ github.repository }}" >>${GITHUB_ENV}
+          echo "REPO=${{ github.repository }}" >>${GITHUB_ENV}
       - name: Lowercase the repo
         run: |
           echo "REPO=${REPO,,}" >>${GITHUB_ENV}
@@ -55,9 +55,9 @@ jobs:
         id: version
         run: |
           docker load --input ${{ needs.build.outputs.artifact }}
-          VERSION_JSON=$(docker run ${REPO}:${{ needs.build.outputs.version }} -version)
+          VERSION_JSON=$(docker run ghcr.io/${REPO}:${{ needs.build.outputs.version }} -version)
           echo "::set-output name=json::${VERSION_JSON}"
 
       - name: Test operator version
         run: |
-          echo '${{ steps.version.outputs.json }}' | ./scripts/verify-version.sh ${REPO}
+          echo '${{ steps.version.outputs.json }}' | ./scripts/verify-version.sh ${{ github.repository }}
