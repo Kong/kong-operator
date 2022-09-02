@@ -20,11 +20,11 @@ import (
 )
 
 func TestDataplaneValidation(t *testing.T) {
-
-	namespace, cleaner := setup(t)
+	namespace, cleaner := setup(t, ctx, env, clients)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+
 	// create a configmap containing "KONG_DATABASE" key for envFroms
-	_, err := k8sClient.CoreV1().ConfigMaps(namespace.Name).Create(ctx, &corev1.ConfigMap{
+	_, err := clients.K8sClient.CoreV1().ConfigMaps(namespace.Name).Create(ctx, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "dataplane-configs",
 			Namespace: namespace.Name,
@@ -136,14 +136,14 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 		},
 	}
 
-	dataplaneClient := operatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
+	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			dataplane, err := dataplaneClient.Create(ctx, tc.dataplane, metav1.CreateOptions{})
 			require.NoErrorf(t, err, "should not return error when create dataplane for case %s", tc.name)
 			require.Eventually(t, func() bool {
-				dataplane, err = operatorClient.ApisV1alpha1().DataPlanes(namespace.Name).Get(ctx, dataplane.Name, metav1.GetOptions{})
+				dataplane, err = clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name).Get(ctx, dataplane.Name, metav1.GetOptions{})
 				require.NoError(t, err)
 				isScheduled := false
 				for _, condition := range dataplane.Status.Conditions {
@@ -167,7 +167,7 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				require.Eventually(t, func() bool {
 					deployments, err := k8sutils.ListDeploymentsForOwner(
 						ctx,
-						mgrClient,
+						clients.MgrClient,
 						consts.GatewayOperatorControlledLabel,
 						consts.DataPlaneManagedLabelValue,
 						dataplane.Namespace,
@@ -276,7 +276,7 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 		},
 	}
 
-	dataplaneClient := operatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
+	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {

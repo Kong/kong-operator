@@ -29,21 +29,17 @@ import (
 	"github.com/kong/gateway-operator/controllers"
 	"github.com/kong/gateway-operator/internal/annotations"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
+	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
-	"github.com/kong/gateway-operator/test/consts"
 )
 
 const (
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation
 	ingressClass = "kong"
-	// waitTick is the default timeout tick interval for checking on ingress resources.
-	waitTick = time.Second * 1
-	// defaultWait is the default timeout for checking test conditions
-	defaultWait = time.Minute * 3
 )
 
 func TestIngressEssentials(t *testing.T) {
-	namespace, cleaner := setup(t)
+	namespace, cleaner := setup(t, ctx, env, clients)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	t.Log("deploying a GatewayClass resource")
@@ -55,7 +51,7 @@ func TestIngressEssentials(t *testing.T) {
 			ControllerName: gatewayv1alpha2.GatewayController(vars.ControllerName),
 		},
 	}
-	gatewayClass, err := gatewayClient.GatewayV1alpha2().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err := clients.GatewayClient.GatewayV1alpha2().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -74,26 +70,26 @@ func TestIngressEssentials(t *testing.T) {
 			}},
 		},
 	}
-	gateway, err = gatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	gateway, err = clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying Gateway gets an IP address")
 	var gatewayIP string
 	require.Eventually(t, func() bool {
-		gateway, err = gatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+		gateway, err = clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		if len(gateway.Status.Addresses) > 0 && *gateway.Status.Addresses[0].Type == gatewayv1alpha2.IPAddressType {
 			gatewayIP = gateway.Status.Addresses[0].Value
 			return true
 		}
 		return false
-	}, defaultWait, time.Second)
+	}, testutils.DefaultIngressWait, time.Second)
 
 	t.Log("verifying that the DataPlane becomes provisioned")
 	var dataplane *operatorv1alpha1.DataPlane
 	require.Eventually(t, func() bool {
-		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, mgrClient, gateway)
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, clients.MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -106,13 +102,13 @@ func TestIngressEssentials(t *testing.T) {
 			}
 		}
 		return false
-	}, subresourceReadinessWait, time.Second)
+	}, testutils.SubresourceReadinessWait, time.Second)
 	require.NotNil(t, dataplane)
 
 	t.Log("verifying that the ControlPlane becomes provisioned")
 	var controlplane *operatorv1alpha1.ControlPlane
 	require.Eventually(t, func() bool {
-		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, mgrClient, gateway)
+		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, clients.MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -125,7 +121,7 @@ func TestIngressEssentials(t *testing.T) {
 			}
 		}
 		return false
-	}, subresourceReadinessWait, time.Second)
+	}, testutils.SubresourceReadinessWait, time.Second)
 	require.NotNil(t, controlplane)
 
 	t.Log("verifying connectivity to the Gateway")
@@ -137,17 +133,17 @@ func TestIngressEssentials(t *testing.T) {
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
-		return strings.Contains(string(body), defaultKongResponseBody)
-	}, defaultWait, time.Second)
+		return strings.Contains(string(body), testutils.DefaultKongResponseBody)
+	}, testutils.DefaultIngressWait, time.Second)
 
 	t.Log("retrieving the kong-proxy url")
-	services := mustListDataPlaneServices(t, dataplane)
+	services := testutils.MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient)
 	require.Len(t, services, 1)
-	proxyURL, err := urlForService(ctx, env.Cluster(), types.NamespacedName{Namespace: services[0].Namespace, Name: services[0].Name}, defaultHTTPPort)
+	proxyURL, err := urlForService(ctx, env.Cluster(), types.NamespacedName{Namespace: services[0].Namespace, Name: services[0].Name}, testutils.DefaultHTTPPort)
 	require.NoError(t, err)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", consts.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -178,7 +174,7 @@ func TestIngressEssentials(t *testing.T) {
 			return false
 		}
 		return len(lbstatus.Ingress) > 0
-	}, defaultWait, waitTick)
+	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
@@ -198,7 +194,7 @@ func TestIngressEssentials(t *testing.T) {
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
-	}, defaultWait, waitTick)
+	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
 	t.Logf("removing the ingress.class annotation %q from ingress", ingressClass)
 	require.Eventually(t, func() bool {
@@ -225,7 +221,7 @@ func TestIngressEssentials(t *testing.T) {
 			}
 		}
 		return true
-	}, defaultWait, waitTick)
+	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
 	t.Logf("verifying that removing the ingress.class annotation %q from ingress causes routes to disconnect", ingressClass)
 	require.Eventually(t, func() bool {
@@ -236,7 +232,7 @@ func TestIngressEssentials(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		return expect404WithNoRoute(t, proxyURL.String(), resp)
-	}, defaultWait, waitTick)
+	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
 	t.Logf("putting the ingress.class annotation %q back on ingress", ingressClass)
 	require.Eventually(t, func() bool {
@@ -263,7 +259,7 @@ func TestIngressEssentials(t *testing.T) {
 			}
 		}
 		return true
-	}, defaultWait, waitTick)
+	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
 	t.Log("waiting for routes from Ingress to be operational after reintroducing ingress class annotation")
 	require.Eventually(t, func() bool {
@@ -283,7 +279,7 @@ func TestIngressEssentials(t *testing.T) {
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
-	}, defaultWait, waitTick)
+	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), namespace.Name, ingress))
@@ -295,5 +291,5 @@ func TestIngressEssentials(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		return expect404WithNoRoute(t, proxyURL.String(), resp)
-	}, defaultWait, waitTick)
+	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
 }

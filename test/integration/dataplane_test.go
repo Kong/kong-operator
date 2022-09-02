@@ -22,10 +22,11 @@ import (
 	"github.com/kong/gateway-operator/controllers"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	testutils "github.com/kong/gateway-operator/internal/utils/test"
 )
 
 func TestDataplaneEssentials(t *testing.T) {
-	namespace, cleaner := setup(t)
+	namespace, cleaner := setup(t, ctx, env, clients)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	t.Log("deploying dataplane resource")
@@ -48,7 +49,7 @@ func TestDataplaneEssentials(t *testing.T) {
 			},
 		},
 	}
-	dataplane, err := operatorClient.ApisV1alpha1().DataPlanes(namespace.Name).Create(ctx, dataplane, metav1.CreateOptions{})
+	dataplane, err := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name).Create(ctx, dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
@@ -61,7 +62,7 @@ func TestDataplaneEssentials(t *testing.T) {
 		}
 		return false
 	}
-	require.Eventually(t, dataPlanePredicate(t, ctx, dataplaneName, isScheduled), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlanePredicate(t, ctx, dataplaneName, isScheduled, clients.OperatorClient), time.Minute, time.Second)
 
 	t.Log("verifying that the dataplane gets marked as provisioned")
 	isProvisioned := func(dataplane *v1alpha1.DataPlane) bool {
@@ -72,15 +73,15 @@ func TestDataplaneEssentials(t *testing.T) {
 		}
 		return false
 	}
-	require.Eventually(t, dataPlanePredicate(t, ctx, dataplaneName, isProvisioned), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlanePredicate(t, ctx, dataplaneName, isProvisioned, clients.OperatorClient), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
-	require.Eventually(t, dataPlaneHasActiveDeployment(t, ctx, dataplaneName), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients), time.Minute, time.Second)
 
 	// check environment variables of deployments and pods.
 
 	t.Log("verifying dataplane deployment env vars")
-	deployments := mustListDataPlaneDeployments(t, dataplane)
+	deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients)
 	require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
 	deployment := &deployments[0]
 
@@ -97,12 +98,12 @@ func TestDataplaneEssentials(t *testing.T) {
 
 	t.Log("verifying services managed by the dataplane")
 	var dataplaneService corev1.Service
-	require.Eventually(t, dataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService, clients), time.Minute, time.Second)
 
 	t.Log("verifying dataplane services receive IP addresses")
 	var dataplaneIP string
 	require.Eventually(t, func() bool {
-		dataplaneService, err := k8sClient.CoreV1().Services(dataplane.Namespace).Get(ctx, dataplaneService.Name, metav1.GetOptions{})
+		dataplaneService, err := clients.K8sClient.CoreV1().Services(dataplane.Namespace).Get(ctx, dataplaneService.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		if len(dataplaneService.Status.LoadBalancer.Ingress) > 0 {
 			dataplaneIP = dataplaneService.Status.LoadBalancer.Ingress[0].IP
@@ -114,22 +115,22 @@ func TestDataplaneEssentials(t *testing.T) {
 	verifyConnectivity(t, dataplaneIP)
 
 	t.Log("deleting the dataplane deployment")
-	dataplaneDeployments := mustListDataPlaneDeployments(t, dataplane)
+	dataplaneDeployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients)
 	require.Len(t, dataplaneDeployments, 1, "there must be only one dataplane deployment")
-	require.NoError(t, mgrClient.Delete(ctx, &dataplaneDeployments[0]))
+	require.NoError(t, clients.MgrClient.Delete(ctx, &dataplaneDeployments[0]))
 
 	t.Log("verifying deployments managed by the dataplane after deletion")
-	require.Eventually(t, dataPlaneHasActiveDeployment(t, ctx, dataplaneName), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients), time.Minute, time.Second)
 
 	t.Log("deleting the dataplane service")
-	require.NoError(t, mgrClient.Delete(ctx, &dataplaneService))
+	require.NoError(t, clients.MgrClient.Delete(ctx, &dataplaneService))
 
 	t.Log("verifying services managed by the dataplane after deletion")
-	require.Eventually(t, dataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService, clients), time.Minute, time.Second)
 
 	t.Log("verifying dataplane services receive IP addresses after deletion")
 	require.Eventually(t, func() bool {
-		dataplaneService, err := k8sClient.CoreV1().Services(dataplane.Namespace).Get(ctx, dataplaneService.Name, metav1.GetOptions{})
+		dataplaneService, err := clients.K8sClient.CoreV1().Services(dataplane.Namespace).Get(ctx, dataplaneService.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		if len(dataplaneService.Status.LoadBalancer.Ingress) > 0 {
 			dataplaneIP = dataplaneService.Status.LoadBalancer.Ingress[0].IP

@@ -16,6 +16,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
+	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -24,15 +25,10 @@ const (
 	testEnvVal         = "TEST_VALUE"
 	testEnvVarFromName = "KONG_INTEGRATION_TESTS_FROM"
 	testEnvVarFromKV   = "dzhambul"
-
-	// gatewaySchedulingTimeLimit is the maximum amount of time to wait for
-	// a supported ControlPlane to be created after a Gateway resource is
-	// created for it.
-	controlPlaneSchedulingTimeLimit = time.Minute * 3
 )
 
 func TestGatewayConfigurationEssentials(t *testing.T) {
-	namespace, cleaner := setup(t)
+	namespace, cleaner := setup(t, ctx, env, clients)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	configMap := &corev1.ConfigMap{
@@ -99,7 +95,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			},
 		},
 	}
-	gatewayConfig, err = operatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err = clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -118,7 +114,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			ControllerName: gatewayv1alpha2.GatewayController(vars.ControllerName),
 		},
 	}
-	gatewayClass, err = gatewayClient.GatewayV1alpha2().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = clients.GatewayClient.GatewayV1alpha2().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -137,13 +133,13 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			}},
 		},
 	}
-	gateway, err = gatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	gateway, err = clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying that the DataPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, mgrClient, gateway)
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, clients.MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -156,11 +152,11 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			}
 		}
 		return false
-	}, gatewayReadyTimeLimit, time.Second)
+	}, testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying that the ControlPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, mgrClient, gateway)
+		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, clients.MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -173,11 +169,11 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			}
 		}
 		return false
-	}, controlPlaneSchedulingTimeLimit, time.Second)
+	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
 
 	t.Log("verifying that the DataPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, mgrClient, gateway)
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, clients.MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -190,11 +186,11 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			}
 		}
 		return false
-	}, gatewayReadyTimeLimit, time.Second)
+	}, testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying that the ControlPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, mgrClient, gateway)
+		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, clients.MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -207,23 +203,23 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			}
 		}
 		return false
-	}, controlPlaneSchedulingTimeLimit, time.Second)
+	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
 
 	t.Log("removing the GatewayConfiguration attachment")
 	require.Eventually(t, func() bool {
-		gatewayClass, err = gatewayClient.GatewayV1alpha2().GatewayClasses().Get(ctx, gatewayClass.Name, metav1.GetOptions{})
+		gatewayClass, err = clients.GatewayClient.GatewayV1alpha2().GatewayClasses().Get(ctx, gatewayClass.Name, metav1.GetOptions{})
 		if err != nil {
 			return false
 		}
 
 		gatewayClass.Spec.ParametersRef = nil
-		gatewayClass, err = gatewayClient.GatewayV1alpha2().GatewayClasses().Update(ctx, gatewayClass, metav1.UpdateOptions{})
+		gatewayClass, err = clients.GatewayClient.GatewayV1alpha2().GatewayClasses().Update(ctx, gatewayClass, metav1.UpdateOptions{})
 		return err == nil
-	}, gatewaySchedulingTimeLimit, time.Second)
+	}, testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying that the DataPlane loses the configuration override")
 	require.Eventually(t, func() bool {
-		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, mgrClient, gateway)
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, clients.MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -239,11 +235,11 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			}
 		}
 		return true
-	}, gatewayReadyTimeLimit, time.Second)
+	}, testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying that the ControlPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, mgrClient, gateway)
+		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, clients.MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -259,5 +255,5 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			}
 		}
 		return true
-	}, controlPlaneSchedulingTimeLimit, time.Second)
+	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
 }

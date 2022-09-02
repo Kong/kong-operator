@@ -23,8 +23,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/clientset"
-	"github.com/kong/gateway-operator/test/consts"
 )
 
 // -----------------------------------------------------------------------------
@@ -59,20 +59,10 @@ var (
 )
 
 // -----------------------------------------------------------------------------
-// Testing Structs - Testing Environment
-// -----------------------------------------------------------------------------
-
-type k8sClients struct {
-	k8sClient      *kubernetes.Clientset
-	operatorClient *clientset.Clientset
-	mgrClient      client.Client
-}
-
-// -----------------------------------------------------------------------------
 // Testing Main
 // -----------------------------------------------------------------------------
 
-func createEnvironment(t *testing.T, ctx context.Context) (environments.Environment, *k8sClients) {
+func createEnvironment(t *testing.T, ctx context.Context) (environments.Environment, *testutils.K8sClients) {
 	skipClusterCleanup = existingCluster != ""
 
 	fmt.Println("INFO: configuring cluster for testing environment")
@@ -116,15 +106,15 @@ func createEnvironment(t *testing.T, ctx context.Context) (environments.Environm
 	require.NoError(t, <-env.WaitForReady(ctx))
 
 	fmt.Println("INFO: initializing Kubernetes API clients")
-	clients := &k8sClients{}
-	clients.k8sClient = env.Cluster().Client()
-	clients.operatorClient, err = clientset.NewForConfig(env.Cluster().Config())
+	clients := &testutils.K8sClients{}
+	clients.K8sClient = env.Cluster().Client()
+	clients.OperatorClient, err = clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-	clients.mgrClient, err = client.New(env.Cluster().Config(), client.Options{})
+	clients.MgrClient, err = client.New(env.Cluster().Config(), client.Options{})
 	require.NoError(t, err)
 
-	fmt.Printf("deploying Gateway APIs CRDs from %s\n", consts.GatewayCRDsKustomizeURL)
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayCRDsKustomizeURL))
+	fmt.Printf("deploying Gateway APIs CRDs from %s\n", testutils.GatewayCRDsKustomizeURL)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), testutils.GatewayCRDsKustomizeURL))
 
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")
 	require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
@@ -135,10 +125,10 @@ func createEnvironment(t *testing.T, ctx context.Context) (environments.Environm
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizationDir))
 
 	fmt.Println("INFO: waiting for operator deployment to complete")
-	require.NoError(t, waitForOperatorDeployment(ctx, clients.k8sClient))
+	require.NoError(t, waitForOperatorDeployment(ctx, clients.K8sClient))
 
 	fmt.Println("INFO: waiting for operator webhook service to be connective")
-	require.NoError(t, waitForOperatorWebhook(ctx, clients.k8sClient))
+	require.NoError(t, waitForOperatorWebhook(ctx, clients.K8sClient))
 
 	fmt.Println("INFO: environment is ready, starting tests")
 

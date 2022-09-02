@@ -21,27 +21,17 @@ import (
 
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
-var (
-	// gatewaySchedulingTimeLimit is the maximum amount of time to wait for
-	// a supported Gateway to be marked as Scheduled by the gateway controller.
-	gatewaySchedulingTimeLimit = time.Second * 7
-
-	// gatewayReadyTimeLimit is the maximum amount of time to wait for a
-	// supported Gateway to be fully provisioned and marked as Ready by the
-	// gateway controller.
-	gatewayReadyTimeLimit = time.Minute * 2
-)
-
 func TestGatewayEssentials(t *testing.T) {
-	namespace, cleaner := setup(t)
+	namespace, cleaner := setup(t, ctx, env, clients)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	t.Log("deploying a GatewayClass resource")
 	gatewayClass := generateGatewayClass()
-	gatewayClass, err := gatewayClient.GatewayV1alpha2().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err := clients.GatewayClient.GatewayV1alpha2().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -51,34 +41,34 @@ func TestGatewayEssentials(t *testing.T) {
 		Namespace: namespace.Name,
 	}
 	gateway := generateGateway(gatewayNSN, gatewayClass)
-	gateway, err = gatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	gateway, err = clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying Gateway gets marked as Scheduled")
-	require.Eventually(t, gatewayIsScheduled(t, ctx, gatewayNSN), gatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsScheduled(t, ctx, gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets marked as Ready")
-	require.Eventually(t, gatewayIsReady(t, ctx, gatewayNSN), gatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsReady(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets an IP address")
-	require.Eventually(t, gatewayIpAddressExist(t, ctx, gatewayNSN), subresourceReadinessWait, time.Second)
-	gateway = mustGetGateway(t, ctx, gatewayNSN)
+	require.Eventually(t, testutils.GatewayIpAddressExist(t, ctx, gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
+	gateway = testutils.MustGetGateway(t, ctx, gatewayNSN, clients)
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Log("verifying that the DataPlane becomes provisioned")
-	require.Eventually(t, gatewayDataPlaneIsProvisioned(t, gateway), subresourceReadinessWait, time.Second)
-	dataplane := mustListDataPlanesForGateway(t, ctx, gateway)[0]
+	require.Eventually(t, testutils.GatewayDataPlaneIsProvisioned(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	dataplane := testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)[0]
 
 	t.Log("verifying that the ControlPlane becomes provisioned")
-	require.Eventually(t, gatewayControlPlaneIsProvisioned(t, gateway), subresourceReadinessWait, time.Second)
-	controlplane := mustListControlPlanesForGateway(t, gateway)[0]
+	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	controlplane := testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)[0]
 
 	t.Log("verifying networkpolicies are created")
-	require.Eventually(t, gatewayNetworkPoliciesExist(t, ctx, gateway), subresourceReadinessWait, time.Second)
+	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, getResponseBodyContains(t, ctx, "http://"+gatewayIPAddress, defaultKongResponseBody), subresourceReadinessWait, time.Second)
+	require.Eventually(t, testutils.GetResponseBodyContains(t, ctx, clients, httpc, "http://"+gatewayIPAddress, testutils.DefaultKongResponseBody), testutils.SubresourceReadinessWait, time.Second)
 
 	/*
 
@@ -112,18 +102,18 @@ func TestGatewayEssentials(t *testing.T) {
 		Namespace: dataplane.Namespace,
 		Name:      dataplane.Name,
 	}
-	require.Eventually(t, dataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService, clients), time.Minute, time.Second)
 
 	t.Log("deleting the dataplane service")
-	require.NoError(t, mgrClient.Delete(ctx, &dataplaneService))
+	require.NoError(t, clients.MgrClient.Delete(ctx, &dataplaneService))
 
 	t.Log("verifying services managed by the dataplane after deletion")
-	require.Eventually(t, dataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService), time.Minute, time.Second)
-	service := mustListDataPlaneServices(t, &dataplane)[0]
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService, clients), time.Minute, time.Second)
+	service := testutils.MustListDataPlaneServices(t, ctx, &dataplane, clients.MgrClient)[0]
 
 	t.Log("verifying controlplane deployment updated with new dataplane service")
 	require.Eventually(t, func() bool {
-		controlDeployment := mustListControlPlaneDeployments(t, &controlplane)[0]
+		controlDeployment := testutils.MustListControlPlaneDeployments(t, ctx, &controlplane, clients)[0]
 		container := k8sresources.GetPodContainerByName(&controlDeployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
 		if container == nil {
 			return false
@@ -137,31 +127,31 @@ func TestGatewayEssentials(t *testing.T) {
 	}, time.Minute*2, time.Second)
 
 	t.Log("deleting Gateway resource")
-	require.NoError(t, gatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
+	require.NoError(t, clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that DataPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
-		_, err := operatorClient.ApisV1alpha1().DataPlanes(namespace.Name).Get(ctx, dataplane.Name, metav1.GetOptions{})
+		_, err := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name).Get(ctx, dataplane.Name, metav1.GetOptions{})
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that ControlPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
-		_, err := operatorClient.ApisV1alpha1().ControlPlanes(namespace.Name).Get(ctx, controlplane.Name, metav1.GetOptions{})
+		_, err := clients.OperatorClient.ApisV1alpha1().ControlPlanes(namespace.Name).Get(ctx, controlplane.Name, metav1.GetOptions{})
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
 	t.Log("verifying networkpolicies are deleted")
-	require.Eventually(t, Not(gatewayNetworkPoliciesExist(t, ctx, gateway)), time.Minute, time.Second)
+	require.Eventually(t, testutils.Not(testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients)), time.Minute, time.Second)
 }
 
 func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
-	namespace, cleaner := setup(t)
+	namespace, cleaner := setup(t, ctx, env, clients)
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	t.Log("deploying a GatewayClass resource")
 	gatewayClass := generateGatewayClass()
-	gatewayClass, err := gatewayClient.GatewayV1alpha2().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err := clients.GatewayClient.GatewayV1alpha2().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -171,27 +161,27 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 		Namespace: namespace.Name,
 	}
 	gateway := generateGateway(gatewayNSN, gatewayClass)
-	gateway, err = gatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	gateway, err = clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying Gateway gets marked as Scheduled")
-	require.Eventually(t, gatewayIsScheduled(t, ctx, gatewayNSN), gatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsScheduled(t, ctx, gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets marked as Ready")
-	require.Eventually(t, gatewayIsReady(t, ctx, gatewayNSN), gatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsReady(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying that the DataPlane becomes provisioned")
-	require.Eventually(t, gatewayDataPlaneIsProvisioned(t, gateway), subresourceReadinessWait, time.Second)
-	dataplane := mustListDataPlanesForGateway(t, ctx, gateway)[0]
+	require.Eventually(t, testutils.GatewayDataPlaneIsProvisioned(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	dataplane := testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)[0]
 
 	t.Log("verifying that the ControlPlane becomes provisioned")
-	require.Eventually(t, gatewayControlPlaneIsProvisioned(t, gateway), subresourceReadinessWait, time.Second)
-	controlplane := mustListControlPlanesForGateway(t, gateway)[0]
+	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	controlplane := testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)[0]
 
 	t.Log("verifying DataPlane's NetworkPolicies is created")
-	require.Eventually(t, gatewayNetworkPoliciesExist(t, ctx, gateway), subresourceReadinessWait, time.Second)
-	networkpolicies := mustListGatewayNetworkPolicies(t, ctx, gateway)
+	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	networkpolicies := testutils.MustListNetworkPoliciesForGateway(t, ctx, gateway, clients)
 	require.Len(t, networkpolicies, 1)
 	networkPolicy := networkpolicies[0]
 	require.Equal(t, map[string]string{"app": dataplane.Name}, networkPolicy.Spec.PodSelector.MatchLabels)
@@ -220,14 +210,14 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 
 	t.Log("deleting DataPlane's NetworkPolicies")
 	require.NoError(t,
-		k8sClient.NetworkingV1().
+		clients.K8sClient.NetworkingV1().
 			NetworkPolicies(networkPolicy.Namespace).
 			Delete(ctx, networkPolicy.Name, metav1.DeleteOptions{}),
 	)
 
 	t.Log("verifying NetworkPolicies are recreated")
-	require.Eventually(t, gatewayNetworkPoliciesExist(t, ctx, gateway), subresourceReadinessWait, time.Second)
-	networkpolicies = mustListGatewayNetworkPolicies(t, ctx, gateway)
+	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	networkpolicies = testutils.MustListNetworkPoliciesForGateway(t, ctx, gateway, clients)
 	require.Len(t, networkpolicies, 1)
 	networkPolicy = networkpolicies[0]
 
@@ -237,10 +227,10 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowMetricsIngress.Rule)
 
 	t.Log("deleting Gateway resource")
-	require.NoError(t, gatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
+	require.NoError(t, clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying networkpolicies are deleted")
-	require.Eventually(t, Not(gatewayNetworkPoliciesExist(t, ctx, gateway)), time.Minute, time.Second)
+	require.Eventually(t, testutils.Not(testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients)), time.Minute, time.Second)
 }
 
 type networkPolicyIngressRuleDecorator struct {

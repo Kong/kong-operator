@@ -23,7 +23,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -34,8 +33,8 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/manager"
+	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/clientset"
-	"github.com/kong/gateway-operator/test/consts"
 )
 
 // -----------------------------------------------------------------------------
@@ -61,10 +60,7 @@ var (
 	cancel context.CancelFunc
 	env    environments.Environment
 
-	k8sClient      *kubernetes.Clientset
-	operatorClient *clientset.Clientset
-	gatewayClient  *gatewayclient.Clientset
-	mgrClient      client.Client
+	clients testutils.K8sClients
 
 	httpc = http.Client{
 		Timeout: time.Second * 10,
@@ -118,17 +114,18 @@ func TestMain(m *testing.M) {
 	exitOnErr(<-env.WaitForReady(ctx))
 
 	fmt.Println("INFO: initializing Kubernetes API clients")
-	k8sClient = env.Cluster().Client()
-	operatorClient, err = clientset.NewForConfig(env.Cluster().Config())
+	clients = testutils.K8sClients{}
+	clients.K8sClient = env.Cluster().Client()
+	clients.OperatorClient, err = clientset.NewForConfig(env.Cluster().Config())
 	exitOnErr(err)
-	gatewayClient, err = gatewayclient.NewForConfig(env.Cluster().Config())
+	clients.GatewayClient, err = gatewayclient.NewForConfig(env.Cluster().Config())
 	exitOnErr(err)
 
 	fmt.Println("INFO: intializing manager client")
-	mgrClient, err = client.New(env.Cluster().Config(), client.Options{})
+	clients.MgrClient, err = client.New(env.Cluster().Config(), client.Options{})
 	exitOnErr(err)
-	exitOnErr(gatewayv1alpha2.AddToScheme(mgrClient.Scheme()))
-	exitOnErr(operatorv1alpha1.AddToScheme(mgrClient.Scheme()))
+	exitOnErr(gatewayv1alpha2.AddToScheme(clients.MgrClient.Scheme()))
+	exitOnErr(operatorv1alpha1.AddToScheme(clients.MgrClient.Scheme()))
 
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")
 	exitOnErr(clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
@@ -140,7 +137,7 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: deploying CRDs to test cluster")
 	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "../../config/crd"))
-	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayCRDsKustomizeURL))
+	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), testutils.GatewayCRDsKustomizeURL))
 	exitOnErr(waitForCRDs(ctx))
 
 	runWebhookTests = (os.Getenv("RUN_WEBHOOK_TESTS") == "true")
@@ -154,7 +151,7 @@ func TestMain(m *testing.M) {
 	timeout := time.Now().Add(time.Minute)
 	for timeout.After(time.Now()) {
 		err = func() error {
-			ca, err := k8sClient.CoreV1().Secrets("kong-system").Get(ctx, manager.DefaultConfig().ClusterCASecretName, metav1.GetOptions{})
+			ca, err := clients.K8sClient.CoreV1().Secrets("kong-system").Get(ctx, manager.DefaultConfig().ClusterCASecretName, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
@@ -282,7 +279,7 @@ func waitForCRDs(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			_, err := operatorClient.ApisV1alpha1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{})
+			_, err := clients.OperatorClient.ApisV1alpha1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{})
 			if err == nil {
 				ready = true
 			}
@@ -328,7 +325,7 @@ func prepareWebhook() error {
 	// create webhook resources in k8s.
 	fmt.Println("INFO: creating a validating webhook and waiting for it to start")
 	return createValidatingWebhook(
-		ctx, k8sClient,
+		ctx, clients.K8sClient,
 		fmt.Sprintf("https://%s:%d/validate", webhookServerIP, webhookServerPort),
 		webhookCertDir+"/ca.crt",
 	)

@@ -17,33 +17,32 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/require"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
-)
+	kubernetesclient "k8s.io/client-go/kubernetes"
 
-const (
-	defaultHTTPPort = 80
+	testutils "github.com/kong/gateway-operator/internal/utils/test"
 )
 
 // TODO https://github.com/Kong/kubernetes-testing-framework/issues/302
 // we have this in both integration and e2e pkgs, and also in the controller integration pkg
 // they should be standardized
 
-// setup is a helper function for tests which conveniently creates a cluster
+// Setup is a helper function for tests which conveniently creates a cluster
 // cleaner (to clean up test resources automatically after the test finishes)
 // and creates a new namespace for the test to use. It also enables parallel
 // testing.
-func setup(t *testing.T) (*corev1.Namespace, *clusters.Cleaner) {
+func setup(t *testing.T, ctx context.Context, env environments.Environment, clients testutils.K8sClients) (*corev1.Namespace, *clusters.Cleaner) {
 	t.Log("performing test setup")
 	t.Parallel()
 	cleaner := clusters.NewCleaner(env.Cluster())
 
 	t.Log("creating a testing namespace")
-	namespace, err := k8sClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
+	namespace, err := clients.K8sClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 		},
@@ -54,7 +53,7 @@ func setup(t *testing.T) (*corev1.Namespace, *clusters.Cleaner) {
 	return namespace, cleaner
 }
 
-// expect404WithNoRoute is used to check whether a given http response is (specifically) a Kong 404.
+// Expect404WithNoRoute is used to check whether a given http response is (specifically) a Kong 404.
 func expect404WithNoRoute(t *testing.T, proxyURL string, resp *http.Response) bool {
 	if resp.StatusCode == http.StatusNotFound {
 		// once the route is torn down and returning 404's, ensure that we got the expected response body back from Kong
@@ -94,8 +93,8 @@ func urlForService(ctx context.Context, cluster clusters.Cluster, nsn types.Name
 	return nil, fmt.Errorf("service %s has not yet been provisoned", service.Name)
 }
 
-// createValidatingWebhook creates validating webhook for gateway operator.
-func createValidatingWebhook(ctx context.Context, k8sClient *kubernetes.Clientset, webhookURL string, caPath string) error {
+// CreateValidatingWebhook creates validating webhook for gateway operator.
+func createValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Clientset, webhookURL string, caPath string) error {
 	sideEffect := admissionregistrationv1.SideEffectClassNone
 	caFile, err := os.Open(caPath)
 	if err != nil {
@@ -140,7 +139,7 @@ func createValidatingWebhook(ctx context.Context, k8sClient *kubernetes.Clientse
 	return err
 }
 
-// getFirstNonLoopbackIP returns the first found non-loopback IPv4 ip of local interfaces.
+// GetFirstNonLoopbackIP returns the first found non-loopback IPv4 ip of local interfaces.
 func getFirstNonLoopbackIP() (string, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
@@ -169,7 +168,7 @@ func getFirstNonLoopbackIP() (string, error) {
 	return "", fmt.Errorf("no available IPs")
 }
 
-// getEnvValueByName returns the corresponding value of LAST item with given name.
+// GetEnvValueByName returns the corresponding value of LAST item with given name.
 // returns empty string if the name not appeared.
 func getEnvValueByName(envs []corev1.EnvVar, name string) string {
 	value := ""
@@ -181,7 +180,7 @@ func getEnvValueByName(envs []corev1.EnvVar, name string) string {
 	return value
 }
 
-// getEnvValueFromByName returns the corresponding ValueFrom pointer of LAST item with given name.
+// GetEnvValueFromByName returns the corresponding ValueFrom pointer of LAST item with given name.
 // returns nil if the name not appeared.
 func getEnvValueFromByName(envs []corev1.EnvVar, name string) *corev1.EnvVarSource {
 	var valueFrom *corev1.EnvVarSource
