@@ -282,12 +282,12 @@ func debug(log logr.Logger, msg string, rawOBJ interface{}, keysAndValues ...int
 func trace(log logr.Logger, msg string, rawOBJ interface{}, keysAndValues ...interface{}) { //nolint:unparam
 	if obj, ok := rawOBJ.(client.Object); ok {
 		kvs := append([]interface{}{"namespace", obj.GetNamespace(), "name", obj.GetName()}, keysAndValues...)
-		log.V(logging.DebugLevel).Info(msg, kvs...)
+		log.V(logging.TraceLevel).Info(msg, kvs...)
 	} else if req, ok := rawOBJ.(reconcile.Request); ok {
 		kvs := append([]interface{}{"namespace", req.Namespace, "name", req.Name}, keysAndValues...)
-		log.V(logging.DebugLevel).Info(msg, kvs...)
+		log.V(logging.TraceLevel).Info(msg, kvs...)
 	} else {
-		log.V(logging.DebugLevel).Info(fmt.Sprintf("unexpected type processed for debug logging: %T, this is a bug!", rawOBJ))
+		log.V(logging.TraceLevel).Info(fmt.Sprintf("unexpected type processed for debug logging: %T, this is a bug!", rawOBJ))
 	}
 }
 
