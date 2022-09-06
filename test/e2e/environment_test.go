@@ -22,7 +22,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/clientset"
 )
@@ -57,10 +60,6 @@ var (
 var (
 	skipClusterCleanup bool
 )
-
-// -----------------------------------------------------------------------------
-// Testing Main
-// -----------------------------------------------------------------------------
 
 func createEnvironment(t *testing.T, ctx context.Context) (environments.Environment, *testutils.K8sClients) {
 	skipClusterCleanup = existingCluster != ""
@@ -110,8 +109,14 @@ func createEnvironment(t *testing.T, ctx context.Context) (environments.Environm
 	clients.K8sClient = env.Cluster().Client()
 	clients.OperatorClient, err = clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
+	clients.GatewayClient, err = gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	fmt.Println("INFO: intializing manager client")
 	clients.MgrClient, err = client.New(env.Cluster().Config(), client.Options{})
 	require.NoError(t, err)
+	require.NoError(t, gatewayv1alpha2.AddToScheme(clients.MgrClient.Scheme()))
+	require.NoError(t, operatorv1alpha1.AddToScheme(clients.MgrClient.Scheme()))
 
 	fmt.Printf("deploying Gateway APIs CRDs from %s\n", testutils.GatewayCRDsKustomizeURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), testutils.GatewayCRDsKustomizeURL))

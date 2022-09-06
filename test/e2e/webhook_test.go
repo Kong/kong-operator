@@ -21,10 +21,8 @@ import (
 func TestDataplaneValidatingWebhook(t *testing.T) {
 	var env environments.Environment
 	ctx, cancel := context.WithCancel(context.Background())
-	defer func() {
-		require.NoError(t, cleanupEnvironment(ctx, env))
-		cancel()
-	}()
+	defer cancel()
+	defer require.NoError(t, cleanupEnvironment(ctx, env))
 
 	var clients *testutils.K8sClients
 	env, clients = createEnvironment(t, ctx)

@@ -17,12 +17,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
-	"github.com/kong/gateway-operator/pkg/vars"
 )
 
 func TestGatewayEssentials(t *testing.T) {
@@ -30,7 +28,7 @@ func TestGatewayEssentials(t *testing.T) {
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := generateGatewayClass()
+	gatewayClass := testutils.GenerateGatewayClass()
 	gatewayClass, err := clients.GatewayClient.GatewayV1alpha2().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
@@ -40,7 +38,7 @@ func TestGatewayEssentials(t *testing.T) {
 		Name:      uuid.NewString(),
 		Namespace: namespace.Name,
 	}
-	gateway := generateGateway(gatewayNSN, gatewayClass)
+	gateway := testutils.GenerateGateway(gatewayNSN, gatewayClass)
 	gateway, err = clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
@@ -150,7 +148,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := generateGatewayClass()
+	gatewayClass := testutils.GenerateGatewayClass()
 	gatewayClass, err := clients.GatewayClient.GatewayV1alpha2().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
@@ -160,7 +158,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 		Name:      uuid.NewString(),
 		Namespace: namespace.Name,
 	}
-	gateway := generateGateway(gatewayNSN, gatewayClass)
+	gateway := testutils.GenerateGateway(gatewayNSN, gatewayClass)
 	gateway, err = clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
@@ -257,34 +255,4 @@ func (d *networkPolicyIngressRuleDecorator) withPeerMatchLabels(
 			MatchLabels: namespaceSelector,
 		},
 	})
-}
-
-func generateGatewayClass() *gatewayv1alpha2.GatewayClass {
-	gatewayClass := &gatewayv1alpha2.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
-			ControllerName: gatewayv1alpha2.GatewayController(vars.ControllerName),
-		},
-	}
-	return gatewayClass
-}
-
-func generateGateway(gatewayNSN types.NamespacedName, gatewayClass *gatewayv1alpha2.GatewayClass) *gatewayv1alpha2.Gateway {
-	gateway := &gatewayv1alpha2.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: gatewayNSN.Namespace,
-			Name:      gatewayNSN.Name,
-		},
-		Spec: gatewayv1alpha2.GatewaySpec{
-			GatewayClassName: gatewayv1alpha2.ObjectName(gatewayClass.Name),
-			Listeners: []gatewayv1alpha2.Listener{{
-				Name:     "http",
-				Protocol: gatewayv1alpha2.HTTPProtocolType,
-				Port:     gatewayv1alpha2.PortNumber(80),
-			}},
-		},
-	}
-	return gateway
 }
