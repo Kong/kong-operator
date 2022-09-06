@@ -93,12 +93,20 @@ const (
 )
 
 // -----------------------------------------------------------------------------
+// Consts - Names for Shared Resources
+// -----------------------------------------------------------------------------
+
+const (
+	ClusterCertificateVolume = "cluster-certificate"
+)
+
+// -----------------------------------------------------------------------------
 // Consts - Environment Variable Names
 // -----------------------------------------------------------------------------
 
 const (
 	// EnvVarKongDatabase is the environment variable name to specify database
-	// backend used for dataplane(KOng gateway). Currently only DBLess mode
+	// backend used for dataplane(Kong gateway). Currently only DBLess mode
 	// (empty, or "off") is supported.
 	EnvVarKongDatabase = "KONG_DATABASE"
 )

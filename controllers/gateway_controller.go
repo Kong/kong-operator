@@ -252,18 +252,23 @@ func (r *GatewayReconciler) provisionDataPlane(ctx context.Context,
 	dataplane := dataplanes[0].DeepCopy()
 
 	trace(log, "ensuring dataplane config is up to date", gateway)
+	// compare deployment option of dataplane with dataplane deployment option of gatewayconfiguration.
+	// if not configured in gatewayconfiguration, compare deployment option of dataplane with an empty one.
+	expectedDataplaneDeploymentOptions := &operatorv1alpha1.DataPlaneDeploymentOptions{}
 	if gatewayConfig.Spec.DataPlaneDeploymentOptions != nil {
-		if !dataplaneSpecDeepEqual(&dataplane.Spec.DataPlaneDeploymentOptions, gatewayConfig.Spec.DataPlaneDeploymentOptions) {
-			trace(log, "dataplane config is out of date, updating", gateway)
-			dataplane.Spec.DataPlaneDeploymentOptions = *gatewayConfig.Spec.DataPlaneDeploymentOptions
-			err = r.Client.Update(ctx, dataplane)
-			if err != nil {
-				k8sutils.SetCondition(createDataPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error()), gateway)
-				return nil
-			}
-			debug(log, "controlplane config updated", gateway)
-			k8sutils.SetCondition(createDataPlaneCondition(metav1.ConditionFalse, k8sutils.ResourceCreatedOrUpdatedReason, k8sutils.ResourceUpdatedMessage), gateway)
+		expectedDataplaneDeploymentOptions = gatewayConfig.Spec.DataPlaneDeploymentOptions
+	}
+	if !dataplaneSpecDeepEqual(&dataplane.Spec.DataPlaneDeploymentOptions, expectedDataplaneDeploymentOptions) {
+		trace(log, "dataplane config is out of date, updating", gateway)
+		dataplane.Spec.DataPlaneDeploymentOptions = *expectedDataplaneDeploymentOptions
+
+		err = r.Client.Update(ctx, dataplane)
+		if err != nil {
+			k8sutils.SetCondition(createDataPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error()), gateway)
+			return nil
 		}
+		k8sutils.SetCondition(createDataPlaneCondition(metav1.ConditionFalse, k8sutils.ResourceCreatedOrUpdatedReason, k8sutils.ResourceUpdatedMessage), gateway)
+		debug(log, "dataplane config updated", gateway)
 	}
 
 	trace(log, "waiting for dataplane readiness", gateway)
@@ -328,6 +333,24 @@ func (r *GatewayReconciler) provisionControlPlane(
 			k8sutils.SetCondition(createControlPlaneCondition(metav1.ConditionFalse, k8sutils.ResourceCreatedOrUpdatedReason, k8sutils.ResourceUpdatedMessage), gateway)
 			debug(log, "controlplane config updated", gateway)
 		}
+	}
+	trace(log, "ensuring controlplane config is up to date", gateway)
+	// compare deployment option of controlplane with controlplane deployment option of gatewayconfiguration.
+	// if not configured in gatewayconfiguration, compare deployment option of controlplane with an empty one.
+	expectedControlplaneDeploymentOptions := &operatorv1alpha1.ControlPlaneDeploymentOptions{}
+	if gatewayConfig.Spec.ControlPlaneDeploymentOptions != nil {
+		expectedControlplaneDeploymentOptions = gatewayConfig.Spec.ControlPlaneDeploymentOptions
+	}
+
+	if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneDeploymentOptions, expectedControlplaneDeploymentOptions) {
+		trace(log, "controlplane config is out of date, updating", gateway)
+		controlplane.Spec.ControlPlaneDeploymentOptions = *expectedControlplaneDeploymentOptions
+		err = r.Client.Update(ctx, controlplane)
+		if err != nil {
+			k8sutils.SetCondition(createControlPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error()), gateway)
+			return nil
+		}
+		k8sutils.SetCondition(createControlPlaneCondition(metav1.ConditionFalse, k8sutils.ResourceCreatedOrUpdatedReason, k8sutils.ResourceUpdatedMessage), gateway)
 	}
 
 	trace(log, "waiting for controlplane readiness", gateway)

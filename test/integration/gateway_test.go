@@ -20,7 +20,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/gateway-operator/internal/consts"
-	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -114,7 +114,7 @@ func TestGatewayEssentials(t *testing.T) {
 	t.Log("verifying controlplane deployment updated with new dataplane service")
 	require.Eventually(t, func() bool {
 		controlDeployment := testutils.MustListControlPlaneDeployments(t, ctx, &controlplane, clients)[0]
-		container := k8sresources.GetPodContainerByName(&controlDeployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
+		container := k8sutils.GetPodContainerByName(&controlDeployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
 		if container == nil {
 			return false
 		}

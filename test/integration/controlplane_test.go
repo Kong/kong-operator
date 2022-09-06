@@ -19,7 +19,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
-	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 )
 
@@ -231,7 +231,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 }
 
 func checkControlPlaneDeploymentEnvVars(t *testing.T, deployment *appsv1.Deployment) {
-	controllerContainer := k8sresources.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
+	controllerContainer := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
 	require.NotNil(t, controllerContainer)
 
 	envs := controllerContainer.Env
@@ -250,4 +250,112 @@ func checkControlPlaneDeploymentEnvVars(t *testing.T, deployment *appsv1.Deploym
 	t.Log("verifying custom env TEST_ENV has value configured in controlplane")
 	testEnvValue := getEnvValueByName(envs, "TEST_ENV")
 	require.Equal(t, "test", testEnvValue)
+}
+
+func TestControPlaneUpdate(t *testing.T) {
+	namespace, cleaner := setup(t, ctx, env, clients)
+	defer func() {
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
+	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
+	controlplaneClient := clients.OperatorClient.ApisV1alpha1().ControlPlanes(namespace.Name)
+
+	dataplaneName := types.NamespacedName{
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
+	}
+	dataplane := &operatorv1alpha1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: dataplaneName.Namespace,
+			Name:      dataplaneName.Name,
+		},
+	}
+
+	controlplaneName := types.NamespacedName{
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
+	}
+	controlplane := &operatorv1alpha1.ControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: controlplaneName.Namespace,
+			Name:      controlplaneName.Name,
+		},
+		Spec: operatorv1alpha1.ControlPlaneSpec{
+			ControlPlaneDeploymentOptions: operatorv1alpha1.ControlPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					Env: []corev1.EnvVar{
+						{
+							Name: "TEST_ENV", Value: "before_update",
+						},
+					},
+				},
+				DataPlane: &dataplane.Name,
+			},
+		},
+	}
+
+	t.Log("deploying dataplane resource")
+	dataplane, err := dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(dataplane)
+
+	t.Log("verifying deployments managed by the dataplane are ready")
+	require.Eventually(t,
+		testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients),
+		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+	)
+
+	t.Log("deploying controlplane resource")
+	controlplane, err = controlplaneClient.Create(ctx, controlplane, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(controlplane)
+
+	t.Log("verifying that the controlplane gets marked as provisioned")
+	require.Eventually(t, testutils.ControlPlaneIsProvisioned(t, ctx, controlplaneName, clients),
+		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+	)
+
+	t.Log("verifying controlplane deployment has active replicas")
+	require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t, ctx, controlplaneName, clients),
+		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+	)
+
+	// check environment variables of deployments and pods.
+	deployments := testutils.MustListControlPlaneDeployments(t, ctx, controlplane, clients)
+	require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
+	deployment := &deployments[0]
+
+	t.Logf("verifying environment variable TEST_ENV in deployment before update")
+	container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
+	require.NotNil(t, container)
+	testEnv := getEnvValueByName(container.Env, "TEST_ENV")
+	require.Equal(t, "before_update", testEnv)
+
+	t.Logf("updating controlplane resource")
+	controlplane, err = controlplaneClient.Get(ctx, controlplaneName.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	controlplane.Spec.DeploymentOptions.Env = []corev1.EnvVar{
+		{
+			Name: "TEST_ENV", Value: "after_update",
+		},
+	}
+	_, err = controlplaneClient.Update(ctx, controlplane, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("verifying environment variable TEST_ENV in deployment after update")
+	require.Eventually(t, func() bool {
+		deployments := testutils.MustListControlPlaneDeployments(t, ctx, controlplane, clients)
+		require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
+		deployment := &deployments[0]
+
+		container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
+		require.NotNil(t, container)
+		testEnv := getEnvValueByName(container.Env, "TEST_ENV")
+		t.Logf("Tenvironment variable TEST_ENV is now %s in deployment", testEnv)
+		return testEnv == "after_update"
+	},
+		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+	)
+
 }

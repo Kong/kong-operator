@@ -20,22 +20,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
-// MustListDataPlaneDeployments is a helper function for tests that
-// conveniently lists all deployments managed by a given dataplane.
-func MustListDataPlaneDeployments(t *testing.T, ctx context.Context, dataplane *operatorv1alpha1.DataPlane, clients K8sClients) []appsv1.Deployment {
-	deployments, err := k8sutils.ListDeploymentsForOwner(
-		ctx,
-		clients.MgrClient,
-		consts.GatewayOperatorControlledLabel,
-		consts.DataPlaneManagedLabelValue,
-		dataplane.Namespace,
-		dataplane.UID,
-	)
-	require.NoError(t, err)
-	return deployments
-}
-
-// MustListControlPlaneDeployments is a helper function for tests that
+// mustListControlPlaneDeployments is a helper function for tests that
 // conveniently lists all deployments managed by a given controlplane.
 func MustListControlPlaneDeployments(t *testing.T, ctx context.Context, controlplane *operatorv1alpha1.ControlPlane, clients K8sClients) []appsv1.Deployment {
 	deployments, err := k8sutils.ListDeploymentsForOwner(
@@ -107,6 +92,21 @@ func MustListDataPlaneServices(t *testing.T, ctx context.Context, dataplane *ope
 	)
 	require.NoError(t, err)
 	return services
+}
+
+// mustListDataPlaneDeployments is a helper function for tests that
+// conveniently lists all deployments managed by a given controlplane.
+func MustListDataPlaneDeployments(t *testing.T, ctx context.Context, dataplane *operatorv1alpha1.DataPlane, clients K8sClients) []appsv1.Deployment {
+	deployments, err := k8sutils.ListDeploymentsForOwner(
+		ctx,
+		clients.MgrClient,
+		consts.GatewayOperatorControlledLabel,
+		consts.DataPlaneManagedLabelValue,
+		dataplane.Namespace,
+		dataplane.UID,
+	)
+	require.NoError(t, err)
+	return deployments
 }
 
 // MustListDataPlanesForGateway is a helper function for tests that

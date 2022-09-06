@@ -13,7 +13,6 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
-	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
 // -----------------------------------------------------------------------------
@@ -162,16 +161,22 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 		existingDeployment := &deployments[0]
 		updated, existingDeployment.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingDeployment.ObjectMeta, generatedDeployment.ObjectMeta)
 
+		// update cluster certiifcate if needed.
+		if r.deploymentSpecVolumesNeedsUpdate(&existingDeployment.Spec, &generatedDeployment.Spec) {
+			existingDeployment.Spec.Template.Spec.Volumes = generatedDeployment.Spec.Template.Spec.Volumes
+			updated = true
+		}
+
 		// We do not want to permit direct edits of the Deployment environment. Any user-supplied values should be set
 		// in the DataPlane. If the actual Deployment environment does not match the generated environment, either
 		// something requires an update or there was a manual edit we want to purge.
-		container := k8sresources.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+		container := k8sutils.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 		if container == nil {
 			// someone has deleted the main container from the Deployment for ??? reasons. we can't fathom why they
 			// would do this, but don't allow it and replace the container set entirely
 			existingDeployment.Spec.Template.Spec.Containers = generatedDeployment.Spec.Template.Spec.Containers
 			updated = true
-			container = k8sresources.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+			container = k8sutils.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 		}
 		if !reflect.DeepEqual(container.Env, dataplane.Spec.Env) {
 			container.Env = dataplane.Spec.Env
@@ -199,6 +204,29 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 	}
 
 	return true, generatedDeployment, r.Client.Create(ctx, generatedDeployment)
+}
+
+func (r *DataPlaneReconciler) deploymentSpecVolumesNeedsUpdate(
+	existingDeploymentSpec *appsv1.DeploymentSpec,
+	generatedDeploymentSpec *appsv1.DeploymentSpec,
+) bool {
+
+	generatedClusterCertVolume := k8sutils.GetPodVolumeByName(&generatedDeploymentSpec.Template.Spec, consts.ClusterCertificateVolume)
+	existingClusterCertVolume := k8sutils.GetPodVolumeByName(&existingDeploymentSpec.Template.Spec, consts.ClusterCertificateVolume)
+	// check for cluster certificate volume.
+	if generatedClusterCertVolume == nil || existingClusterCertVolume == nil {
+		return true
+	}
+
+	if generatedClusterCertVolume.Secret == nil || existingClusterCertVolume.Secret == nil {
+		return true
+	}
+
+	if generatedClusterCertVolume.Secret.SecretName != existingClusterCertVolume.Secret.SecretName {
+		return true
+	}
+
+	return false
 }
 
 func (r *DataPlaneReconciler) ensureServiceForDataPlane(

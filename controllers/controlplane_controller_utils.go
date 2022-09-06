@@ -193,21 +193,28 @@ func rejectEnvByName(envVars []corev1.EnvVar, name string) []corev1.EnvVar {
 	return newEnvVars
 }
 
-func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.ControlPlane, serviceAccountName,
-	certSecretName string) *appsv1.Deployment {
-	var controlplaneImage string
+func generateControlPlaneImage(controlplane *operatorv1alpha1.ControlPlane) string {
+
 	if controlplane.Spec.ContainerImage != nil {
-		controlplaneImage = *controlplane.Spec.ContainerImage
+		controlplaneImage := *controlplane.Spec.ContainerImage
 		if controlplane.Spec.Version != nil {
 			controlplaneImage = fmt.Sprintf("%s:%s", controlplaneImage, *controlplane.Spec.Version)
 		}
-	} else if relatedKongControllerImage := os.Getenv("RELATED_IMAGE_KONG_CONTROLLER"); relatedKongControllerImage != "" {
+		return controlplaneImage
+	}
+
+	if relatedKongControllerImage := os.Getenv("RELATED_IMAGE_KONG_CONTROLLER"); relatedKongControllerImage != "" {
 		// RELATED_IMAGE_KONG_CONTROLLER is set by the operator-sdk when building the operator bundle.
 		// https://github.com/Kong/gateway-operator/issues/261
-		controlplaneImage = relatedKongControllerImage
-	} else {
-		controlplaneImage = consts.DefaultControlPlaneImage // TODO: https://github.com/Kong/gateway-operator/issues/20
+		return relatedKongControllerImage
 	}
+
+	return consts.DefaultControlPlaneImage // TODO: https://github.com/Kong/gateway-operator/issues/20
+}
+
+func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.ControlPlane, serviceAccountName,
+	certSecretName string) *appsv1.Deployment {
+	controlplaneImage := generateControlPlaneImage(controlplane)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{

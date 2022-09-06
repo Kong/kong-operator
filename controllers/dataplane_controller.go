@@ -86,8 +86,6 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, r.ensureDataPlaneServiceStatus(ctx, dataplane, dataplaneService.Name)
 	}
 
-	// TODO: updates need to update owned service https://github.com/Kong/gateway-operator/issues/27
-
 	trace(log, "checking readiness of DataPlane service", dataplaneService)
 	if dataplaneService.Spec.ClusterIP == "" {
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
@@ -138,9 +136,8 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
-	// TODO: updates need to update owned deployment https://github.com/Kong/gateway-operator/issues/27
-
 	trace(log, "checking readiness of DataPlane deployments", dataplane)
+
 	if dataplaneDeployment.Status.Replicas == 0 || dataplaneDeployment.Status.AvailableReplicas < dataplaneDeployment.Status.Replicas {
 		trace(log, "deployment for DataPlane not yet ready, waiting", dataplane)
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.

@@ -147,13 +147,13 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		var updated bool
 		existingDeployment := &deployments[0]
 		updated, existingDeployment.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingDeployment.ObjectMeta, generatedDeployment.ObjectMeta)
-		container := k8sresources.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
+		container := k8sutils.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
 		if container == nil {
 			// someone has deleted the main container from the Deployment for ??? reasons. we can't fathom why they
 			// would do this, but don't allow it and replace the container set entirely
 			existingDeployment.Spec.Template.Spec.Containers = generatedDeployment.Spec.Template.Spec.Containers
 			updated = true
-			container = k8sresources.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
+			container = k8sutils.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
 		}
 
 		replicas := existingDeployment.Spec.Replicas
@@ -172,6 +172,19 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 			if len(container.Env) > 0 {
 				container.Env = controlplane.Spec.Env
 			}
+			updated = true
+		}
+
+		// update cluster certificate volumes if needed.
+		if r.deploymentSpecVolumesNeedsUpdate(&generatedDeployment.Spec, &existingDeployment.Spec) {
+			existingDeployment.Spec.Template.Spec.Volumes = generatedDeployment.Spec.Template.Spec.Volumes
+			updated = true
+		}
+
+		// update service account name if needed.
+		if generatedDeployment.Spec.Template.Spec.ServiceAccountName !=
+			existingDeployment.Spec.Template.Spec.ServiceAccountName {
+			existingDeployment.Spec.Template.Spec.ServiceAccountName = generatedDeployment.Spec.Template.Spec.ServiceAccountName
 			updated = true
 		}
 
@@ -383,4 +396,28 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRoleBindingsDeleted(
 	}
 
 	return deleted, deletionErr.ErrorOrNil()
+}
+
+// deploymentSpecVolumesNeedsUpdate returns true if the volumes in deployment
+// for controlplane needs to be updated.
+func (r *ControlPlaneReconciler) deploymentSpecVolumesNeedsUpdate(
+	generatedDeploymentSpec *appsv1.DeploymentSpec,
+	existingDeploymentSpec *appsv1.DeploymentSpec,
+) bool {
+	generatedClusterCertVolume := k8sutils.GetPodVolumeByName(&generatedDeploymentSpec.Template.Spec, consts.ClusterCertificateVolume)
+	existingClusterCertVolume := k8sutils.GetPodVolumeByName(&existingDeploymentSpec.Template.Spec, consts.ClusterCertificateVolume)
+	// check for cluster certificate volume.
+	if generatedClusterCertVolume == nil || existingClusterCertVolume == nil {
+		return true
+	}
+
+	if generatedClusterCertVolume.Secret == nil || existingClusterCertVolume.Secret == nil {
+		return true
+	}
+
+	if generatedClusterCertVolume.Secret.SecretName != existingClusterCertVolume.Secret.SecretName {
+		return true
+	}
+
+	return false
 }

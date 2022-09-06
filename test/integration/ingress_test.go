@@ -39,8 +39,11 @@ const (
 )
 
 func TestIngressEssentials(t *testing.T) {
+
 	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	defer func() {
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
 
 	t.Log("deploying a GatewayClass resource")
 	gatewayClass := &gatewayv1alpha2.GatewayClass{

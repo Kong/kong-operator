@@ -19,21 +19,27 @@ import (
 // DataPlane - Private Functions - Generators
 // -----------------------------------------------------------------------------
 
-func generateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, certSecretName string) *appsv1.Deployment {
-	var dataplaneImage string
+func generateDataPlaneImage(dataplane *operatorv1alpha1.DataPlane) string {
 	if dataplane.Spec.ContainerImage != nil {
-		dataplaneImage = *dataplane.Spec.ContainerImage
+		dataplaneImage := *dataplane.Spec.ContainerImage
 		if dataplane.Spec.Version != nil {
 			dataplaneImage = fmt.Sprintf("%s:%s", dataplaneImage, *dataplane.Spec.Version)
 		}
-	} else if relatedKongImage := os.Getenv("RELATED_IMAGE_KONG"); relatedKongImage != "" {
-		// RELATED_IMAGE_KONG is set by the operator-sdk when building the operator bundle.
-		// https://github.com/Kong/gateway-operator/issues/261
-		dataplaneImage = relatedKongImage
-	} else {
-		dataplaneImage = consts.DefaultDataPlaneImage // TODO: https://github.com/Kong/gateway-operator/issues/20
+		return dataplaneImage
 	}
 
+	if relatedKongImage := os.Getenv("RELATED_IMAGE_KONG"); relatedKongImage != "" {
+		// RELATED_IMAGE_KONG is set by the operator-sdk when building the operator bundle.
+		// https://github.com/Kong/gateway-operator/issues/261
+		return relatedKongImage
+	}
+
+	return consts.DefaultDataPlaneImage // TODO: https://github.com/Kong/gateway-operator/issues/20
+
+}
+
+func generateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, certSecretName string) *appsv1.Deployment {
+	dataplaneImage := generateDataPlaneImage(dataplane)
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,
@@ -134,7 +140,7 @@ func generateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, ce
 							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/status",
-									Port:   intstr.FromInt(8100),
+									Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
 									Scheme: corev1.URISchemeHTTP,
 								},
 							},

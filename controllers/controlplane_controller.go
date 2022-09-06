@@ -295,9 +295,6 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
-
-	// TODO: updates need to update sub-resources https://github.com/Kong/gateway-operator/issues/27
-
 	trace(log, "checking readiness of ControlPlane deployments", controlplane)
 
 	if controlplaneDeployment.Status.Replicas == 0 || controlplaneDeployment.Status.AvailableReplicas < controlplaneDeployment.Status.Replicas {
