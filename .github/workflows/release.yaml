@@ -10,6 +10,10 @@ on:
         description: Whether to tag this release latest
         required: true
         default: 'false'
+      prerelease:
+        description: Whether to make a created release a pre-release
+        default: 'true'
+        required: true
 
 env:
   REGISTRY: ghcr.io
@@ -280,3 +284,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.event.inputs.tag }}
           commit: ${{ github.sha }}
+          prerelease: ${{ github.event.inputs.prerelease }}
