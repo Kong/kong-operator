@@ -1,0 +1,8 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validation.konghq.com
+webhooks:
+- name: "gateway-operator-validation.konghq.com"
+  # TODO: https://github.com/Kong/gateway-operator/issues/291
+  failurePolicy: Ignore
