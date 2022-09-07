@@ -45,14 +45,17 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
 FROM gcr.io/distroless/static:nonroot as distroless
 
 ARG TAG
+ARG NAME="Kong Gateway Operator"
+ARG DESCRIPTION="Kong Gateway Operator drives deployment via the Gateway resource. You can deploy a Gateway resource to the cluster which will result in the underlying control-plane (the Kong Kubernetes Ingress Controller) and the data-plane (the Kong Gateway)."
 
-LABEL name="Kong Ingress Controller" \
+LABEL name="${NAME}" \
+      description="${DESCRIPTION}" \
+      org.opencontainers.image.description="${DESCRIPTION}" \
       vendor="Kong" \
-      version="$TAG" \
+      version="${TAG}" \
       release="1" \
       url="https://github.com/Kong/gateway-operator" \
-      summary="A Kubernetes Operator for the Kong Gateway." \
-      description="Kong Gateway Operator drives deployment via the Gateway resource. You can deploy a Gateway resource to the cluster which will result in the underlying control-plane (the Kong Kubernetes Ingress Controller) and the data-plane (the Kong Gateway)."
+      summary="A Kubernetes Operator for the Kong Gateway."
 
 WORKDIR /
 COPY --from=builder /workspace/bin/manager .
@@ -70,15 +73,16 @@ ARG TAG
 ARG NAME="Kong Gateway Operator"
 ARG DESCRIPTION="Kong Gateway Operator drives deployment via the Gateway resource. You can deploy a Gateway resource to the cluster which will result in the underlying control-plane (the Kong Kubernetes Ingress Controller) and the data-plane (the Kong Gateway)."
 
-LABEL name="$NAME" \
-      io.k8s.display-name="$NAME" \ 
+LABEL name="${NAME}" \
+      io.k8s.display-name="${NAME}" \
+      description="${DESCRIPTION}" \
+      io.k8s.description="${DESCRIPTION}" \
+      org.opencontainers.image.description="${DESCRIPTION}" \
       vendor="Kong" \
-      version="$TAG" \
+      version="${TAG}" \
       release="1" \
       url="https://github.com/Kong/gateway-operator" \
-      summary="A Kubernetes Operator for the Kong Gateway." \
-      description="$DESCRIPTION" \
-      io.k8s.description="$DESCRIPTION"
+      summary="A Kubernetes Operator for the Kong Gateway."
 
 # Create the user (ID 1000) and group that will be used in the
 # running container to run the process as an unprivileged user.
