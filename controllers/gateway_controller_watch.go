@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -26,7 +26,7 @@ import (
 // -----------------------------------------------------------------------------
 
 func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
-	gateway, ok := obj.(*gatewayv1alpha2.Gateway)
+	gateway, ok := obj.(*gatewayv1beta1.Gateway)
 	if !ok {
 		log.FromContext(context.Background()).Error(
 			operatorerrors.ErrUnexpectedObject,
@@ -49,7 +49,7 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 }
 
 func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) bool {
-	gatewayClass, ok := obj.(*gatewayv1alpha2.GatewayClass)
+	gatewayClass, ok := obj.(*gatewayv1beta1.GatewayClass)
 	if !ok {
 		log.FromContext(context.Background()).Error(
 			operatorerrors.ErrUnexpectedObject,
@@ -65,7 +65,7 @@ func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) boo
 func (r *GatewayReconciler) gatewayConfigurationMatchesController(obj client.Object) bool {
 	ctx := context.Background()
 
-	gatewayClassList := new(gatewayv1alpha2.GatewayClassList)
+	gatewayClassList := new(gatewayv1beta1.GatewayClassList)
 	if err := r.Client.List(ctx, gatewayClassList); err != nil {
 		log.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
@@ -93,7 +93,7 @@ func (r *GatewayReconciler) gatewayConfigurationMatchesController(obj client.Obj
 // -----------------------------------------------------------------------------
 
 func (r *GatewayReconciler) listGatewaysForGatewayClass(obj client.Object) (recs []reconcile.Request) {
-	gatewayClass, ok := obj.(*gatewayv1alpha2.GatewayClass)
+	gatewayClass, ok := obj.(*gatewayv1beta1.GatewayClass)
 	if !ok {
 		log.FromContext(context.Background()).Error(
 			operatorerrors.ErrUnexpectedObject,
@@ -103,14 +103,14 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(obj client.Object) (recs
 		return
 	}
 
-	gateways := new(gatewayv1alpha2.GatewayList)
+	gateways := new(gatewayv1beta1.GatewayList)
 	if err := r.Client.List(context.Background(), gateways); err != nil {
 		log.FromContext(context.Background()).Error(err, "could not list gateways in map func")
 		return
 	}
 
 	for _, gateway := range gateways.Items {
-		if gateway.Spec.GatewayClassName == gatewayv1alpha2.ObjectName(gatewayClass.Name) {
+		if gateway.Spec.GatewayClassName == gatewayv1beta1.ObjectName(gatewayClass.Name) {
 			recs = append(recs, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: gateway.Namespace,
@@ -137,7 +137,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayConfig(obj client.Object) (rec
 		return
 	}
 
-	gatewayClassList := new(gatewayv1alpha2.GatewayClassList)
+	gatewayClassList := new(gatewayv1beta1.GatewayClassList)
 	if err := r.Client.List(ctx, gatewayClassList); err != nil {
 		log.FromContext(ctx).Error(
 			fmt.Errorf("unexpected error occurred while listing GatewayClass resources"),
@@ -157,7 +157,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayConfig(obj client.Object) (rec
 		}
 	}
 
-	gatewayList := new(gatewayv1alpha2.GatewayList)
+	gatewayList := new(gatewayv1beta1.GatewayList)
 	if err := r.Client.List(ctx, gatewayList); err != nil {
 		log.FromContext(ctx).Error(
 			fmt.Errorf("unexpected error occurred while listing Gateway resources"),
@@ -218,7 +218,7 @@ func (r *GatewayReconciler) listGatewaysForService(obj client.Object) (recs []re
 			}
 
 			for _, owner := range dataPlane.OwnerReferences {
-				if strings.Contains(owner.APIVersion, gatewayv1alpha2.GroupName) && owner.Kind == "Gateway" {
+				if strings.Contains(owner.APIVersion, gatewayv1beta1.GroupName) && owner.Kind == "Gateway" {
 					recs = append(recs, reconcile.Request{
 						NamespacedName: types.NamespacedName{
 							Namespace: service.Namespace,

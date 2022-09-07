@@ -7,7 +7,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -24,7 +24,7 @@ import (
 func ListDataPlanesForGateway(
 	ctx context.Context,
 	c client.Client,
-	gateway *gatewayv1alpha2.Gateway,
+	gateway *gatewayv1beta1.Gateway,
 ) ([]operatorv1alpha1.DataPlane, error) {
 	if gateway.Namespace == "" {
 		return nil, fmt.Errorf("can't list dataplanes for gateway: gateway resource was missing namespace")
@@ -58,7 +58,7 @@ func ListDataPlanesForGateway(
 func ListControlPlanesForGateway(
 	ctx context.Context,
 	c client.Client,
-	gateway *gatewayv1alpha2.Gateway,
+	gateway *gatewayv1beta1.Gateway,
 ) ([]operatorv1alpha1.ControlPlane, error) {
 	if gateway.Namespace == "" {
 		return nil, fmt.Errorf("can't list dataplanes for gateway: gateway resource was missing namespace")
@@ -137,7 +137,7 @@ func GetDataplaneServiceName(
 func ListNetworkPoliciesForGateway(
 	ctx context.Context,
 	c client.Client,
-	gateway *gatewayv1alpha2.Gateway,
+	gateway *gatewayv1beta1.Gateway,
 ) ([]networkingv1.NetworkPolicy, error) {
 	if gateway.Namespace == "" {
 		return nil, fmt.Errorf("can't list networkpolicies for gateway: gateway resource was missing namespace")

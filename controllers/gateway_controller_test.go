@@ -17,7 +17,7 @@ import (
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
@@ -27,8 +27,8 @@ import (
 )
 
 func init() {
-	if err := gatewayv1alpha2.AddToScheme(scheme.Scheme); err != nil {
-		fmt.Println("error while adding gatewayv1alpha2 scheme")
+	if err := gatewayv1beta1.AddToScheme(scheme.Scheme); err != nil {
+		fmt.Println("error while adding gatewayv1beta1 scheme")
 		os.Exit(1)
 	}
 	if err := operatorv1alpha1.AddToScheme(scheme.Scheme); err != nil {
@@ -41,8 +41,8 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 	var testCases = []struct {
 		name                     string
 		gatewayReq               reconcile.Request
-		gatewayClass             *gatewayv1alpha2.GatewayClass
-		gateway                  *gatewayv1alpha2.Gateway
+		gatewayClass             *gatewayv1beta1.GatewayClass
+		gateway                  *gatewayv1beta1.Gateway
 		gatewaySubResources      []controllerruntimeclient.Object
 		dataplaneSubResources    []controllerruntimeclient.Object
 		controlplaneSubResources []controllerruntimeclient.Object
@@ -56,17 +56,17 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					Name:      "test-gateway",
 				},
 			},
-			gatewayClass: &gatewayv1alpha2.GatewayClass{
+			gatewayClass: &gatewayv1beta1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-gatewayclass",
 				},
-				Spec: gatewayv1alpha2.GatewayClassSpec{
-					ControllerName: gatewayv1alpha2.GatewayController(vars.ControllerName),
+				Spec: gatewayv1beta1.GatewayClassSpec{
+					ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
 				},
 			},
-			gateway: &gatewayv1alpha2.Gateway{
+			gateway: &gatewayv1beta1.Gateway{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+					APIVersion: "gateway.networking.k8s.io/v1beta1",
 					Kind:       "Gateway",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -74,7 +74,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					Namespace: "test-namespace",
 					UID:       types.UID(uuid.NewString()),
 				},
-				Spec: gatewayv1alpha2.GatewaySpec{
+				Spec: gatewayv1beta1.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 				},
 			},
@@ -131,7 +131,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				clusterIP := "10.96.1.50"
 				loadBalancerIP := "172.18.1.18"
 
-				IPAddressTypePointer := (*gatewayv1alpha2.AddressType)(pointer.StringPtr(string(gatewayv1alpha2.IPAddressType)))
+				IPAddressTypePointer := (*gatewayv1beta1.AddressType)(pointer.StringPtr(string(gatewayv1beta1.IPAddressType)))
 
 				t.Log("first reconciliation, the dataplane has no IP assigned")
 				currentGateway := newGateway()
@@ -162,7 +162,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
-				require.Equal(t, currentGateway.Status.Addresses, []gatewayv1alpha2.GatewayAddress{
+				require.Equal(t, currentGateway.Status.Addresses, []gatewayv1beta1.GatewayAddress{
 					{
 						Type:  IPAddressTypePointer,
 						Value: clusterIP,
@@ -188,7 +188,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
-				require.Equal(t, currentGateway.Status.Addresses, []gatewayv1alpha2.GatewayAddress{
+				require.Equal(t, currentGateway.Status.Addresses, []gatewayv1beta1.GatewayAddress{
 					{
 						Type:  IPAddressTypePointer,
 						Value: loadBalancerIP,

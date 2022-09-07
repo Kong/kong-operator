@@ -8,7 +8,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/gateway-operator/controllers"
 )
@@ -59,8 +59,8 @@ func setupControllers(mgr manager.Manager, c *Config) []ControllerDef {
 			Enabled: c.GatewayControllerEnabled,
 			AutoHandler: crdExistsChecker{
 				GVR: schema.GroupVersionResource{
-					Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-					Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+					Group:    gatewayv1beta1.SchemeGroupVersion.Group,
+					Version:  gatewayv1beta1.SchemeGroupVersion.Version,
 					Resource: "gateways",
 				},
 			}.CRDExists,

@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -44,7 +44,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		// watch Gateway objects, filtering out any Gateways which are not configured with
 		// a supported GatewayClass controller name.
-		For(&gatewayv1alpha2.Gateway{},
+		For(&gatewayv1beta1.Gateway{},
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayHasMatchingGatewayClass))).
 		// watch for changes in dataplanes created by the gateway controller
 		Owns(&operatorv1alpha1.DataPlane{}).
@@ -61,7 +61,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// watch for updates to GatewayClasses, if any GatewayClasses change, enqueue
 		// reconciliation for all supported gateway objects which reference it.
 		Watches(
-			&source.Kind{Type: &gatewayv1alpha2.GatewayClass{}},
+			&source.Kind{Type: &gatewayv1beta1.GatewayClass{}},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatchesController))).
 		// watch for updates to Services which are owned by DataPlanes that
@@ -100,8 +100,8 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	trace(log, "resource is supported, ensuring that it gets marked as scheduled", gateway)
 	if !k8sutils.IsValidCondition(GatewayScheduledType, gateway) {
 		condition := k8sutils.NewCondition(
-			k8sutils.ConditionType(gatewayv1alpha2.GatewayConditionScheduled),
-			metav1.ConditionTrue, k8sutils.ConditionReason(gatewayv1alpha2.GatewayReasonScheduled),
+			k8sutils.ConditionType(gatewayv1beta1.GatewayConditionScheduled),
+			metav1.ConditionTrue, k8sutils.ConditionReason(gatewayv1beta1.GatewayReasonScheduled),
 			fmt.Sprintf("this gateway has been picked up by the %s and will be processed", vars.ControllerName),
 		)
 		k8sutils.SetCondition(condition, gateway)
@@ -284,7 +284,7 @@ func (r *GatewayReconciler) provisionDataPlane(ctx context.Context,
 func (r *GatewayReconciler) provisionControlPlane(
 	ctx context.Context,
 	log logr.Logger,
-	gatewayClass *gatewayv1alpha2.GatewayClass,
+	gatewayClass *gatewayv1beta1.GatewayClass,
 	gateway *gatewayDecorator,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 	dataplane *operatorv1alpha1.DataPlane,

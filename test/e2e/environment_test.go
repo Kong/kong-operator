@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
@@ -130,7 +130,7 @@ func createEnvironment(t *testing.T, ctx context.Context) (environments.Environm
 	fmt.Println("INFO: intializing manager client")
 	clients.MgrClient, err = client.New(env.Cluster().Config(), client.Options{})
 	require.NoError(t, err)
-	require.NoError(t, gatewayv1alpha2.AddToScheme(clients.MgrClient.Scheme()))
+	require.NoError(t, gatewayv1beta1.AddToScheme(clients.MgrClient.Scheme()))
 	require.NoError(t, operatorv1alpha1.AddToScheme(clients.MgrClient.Scheme()))
 
 	fmt.Printf("deploying Gateway APIs CRDs from %s\n", testutils.GatewayCRDsKustomizeURL)

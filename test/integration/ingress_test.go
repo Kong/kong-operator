@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
@@ -46,43 +46,43 @@ func TestIngressEssentials(t *testing.T) {
 	}()
 
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := &gatewayv1alpha2.GatewayClass{
+	gatewayClass := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
-			ControllerName: gatewayv1alpha2.GatewayController(vars.ControllerName),
+		Spec: gatewayv1beta1.GatewayClassSpec{
+			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
 		},
 	}
-	gatewayClass, err := clients.GatewayClient.GatewayV1alpha2().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err := clients.GatewayClient.GatewayV1beta1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
 	t.Log("deploying Gateway resource")
-	gateway := &gatewayv1alpha2.Gateway{
+	gateway := &gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      uuid.NewString(),
 		},
-		Spec: gatewayv1alpha2.GatewaySpec{
-			GatewayClassName: gatewayv1alpha2.ObjectName(gatewayClass.Name),
-			Listeners: []gatewayv1alpha2.Listener{{
+		Spec: gatewayv1beta1.GatewaySpec{
+			GatewayClassName: gatewayv1beta1.ObjectName(gatewayClass.Name),
+			Listeners: []gatewayv1beta1.Listener{{
 				Name:     "http",
-				Protocol: gatewayv1alpha2.HTTPProtocolType,
-				Port:     gatewayv1alpha2.PortNumber(80),
+				Protocol: gatewayv1beta1.HTTPProtocolType,
+				Port:     gatewayv1beta1.PortNumber(80),
 			}},
 		},
 	}
-	gateway, err = clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	gateway, err = clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying Gateway gets an IP address")
 	var gatewayIP string
 	require.Eventually(t, func() bool {
-		gateway, err = clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+		gateway, err = clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		if len(gateway.Status.Addresses) > 0 && *gateway.Status.Addresses[0].Type == gatewayv1alpha2.IPAddressType {
+		if len(gateway.Status.Addresses) > 0 && *gateway.Status.Addresses[0].Type == gatewayv1beta1.IPAddressType {
 			gatewayIP = gateway.Status.Addresses[0].Value
 			return true
 		}

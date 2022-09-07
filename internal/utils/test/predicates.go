@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
@@ -182,7 +182,7 @@ func GatewayIsReady(t *testing.T, ctx context.Context, gatewayNSN types.Namespac
 	}
 }
 
-func GatewayDataPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *gatewayv1alpha2.Gateway, clients K8sClients) func() bool {
+func GatewayDataPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *gatewayv1beta1.Gateway, clients K8sClients) func() bool {
 	return func() bool {
 		dataplanes := MustListDataPlanesForGateway(t, ctx, gateway, clients)
 
@@ -198,7 +198,7 @@ func GatewayDataPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *g
 	}
 }
 
-func GatewayControlPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *gatewayv1alpha2.Gateway, clients K8sClients) func() bool {
+func GatewayControlPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *gatewayv1beta1.Gateway, clients K8sClients) func() bool {
 	return func() bool {
 		controlplanes := MustListControlPlanesForGateway(t, ctx, gateway, clients)
 
@@ -220,7 +220,7 @@ func GatewayControlPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway
 // Gateway object argument does need to exist in the cluster, thu, the function
 // may be used with Not after the gateway has been deleted, to verify that
 // the networkpolicy has been deleted too.
-func GatewayNetworkPoliciesExist(t *testing.T, ctx context.Context, gateway *gatewayv1alpha2.Gateway, clients K8sClients) func() bool {
+func GatewayNetworkPoliciesExist(t *testing.T, ctx context.Context, gateway *gatewayv1beta1.Gateway, clients K8sClients) func() bool {
 	return func() bool {
 		networkpolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, clients.MgrClient, gateway)
 		if err != nil {
@@ -233,7 +233,7 @@ func GatewayNetworkPoliciesExist(t *testing.T, ctx context.Context, gateway *gat
 func GatewayIpAddressExist(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
 		gateway := MustGetGateway(t, ctx, gatewayNSN, clients)
-		if len(gateway.Status.Addresses) > 0 && *gateway.Status.Addresses[0].Type == gatewayv1alpha2.IPAddressType {
+		if len(gateway.Status.Addresses) > 0 && *gateway.Status.Addresses[0].Type == gatewayv1beta1.IPAddressType {
 			return true
 		}
 		return false

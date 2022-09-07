@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -65,7 +65,7 @@ func MustListControlPlaneClusterRoleBindings(t *testing.T, ctx context.Context, 
 
 // MustListControlPlanesForGateway is a helper function for tests that
 // conveniently lists all controlplanes managed by a given gateway.
-func MustListControlPlanesForGateway(t *testing.T, ctx context.Context, gateway *gatewayv1alpha2.Gateway, clients K8sClients) []operatorv1alpha1.ControlPlane {
+func MustListControlPlanesForGateway(t *testing.T, ctx context.Context, gateway *gatewayv1beta1.Gateway, clients K8sClients) []operatorv1alpha1.ControlPlane {
 	controlPlanes, err := gatewayutils.ListControlPlanesForGateway(ctx, clients.MgrClient, gateway)
 	require.NoError(t, err)
 	return controlPlanes
@@ -73,7 +73,7 @@ func MustListControlPlanesForGateway(t *testing.T, ctx context.Context, gateway 
 
 // MustListNetworkPoliciesForGateway is a helper function for tests that
 // conveniently lists all NetworkPolicies managed by a given gateway.
-func MustListNetworkPoliciesForGateway(t *testing.T, ctx context.Context, gateway *gatewayv1alpha2.Gateway, clients K8sClients) []networkingv1.NetworkPolicy {
+func MustListNetworkPoliciesForGateway(t *testing.T, ctx context.Context, gateway *gatewayv1beta1.Gateway, clients K8sClients) []networkingv1.NetworkPolicy {
 	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, clients.MgrClient, gateway)
 	require.NoError(t, err)
 	return networkPolicies
@@ -111,7 +111,7 @@ func MustListDataPlaneDeployments(t *testing.T, ctx context.Context, dataplane *
 
 // MustListDataPlanesForGateway is a helper function for tests that
 // conveniently lists all dataplanes managed by a given gateway.
-func MustListDataPlanesForGateway(t *testing.T, ctx context.Context, gateway *gatewayv1alpha2.Gateway, clients K8sClients) []operatorv1alpha1.DataPlane {
+func MustListDataPlanesForGateway(t *testing.T, ctx context.Context, gateway *gatewayv1beta1.Gateway, clients K8sClients) []operatorv1alpha1.DataPlane {
 	dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, clients.MgrClient, gateway)
 	require.NoError(t, err)
 	return dataplanes
@@ -119,8 +119,8 @@ func MustListDataPlanesForGateway(t *testing.T, ctx context.Context, gateway *ga
 
 // MustGetGateway is a helper function for tests that conveniently gets a gateway by name.
 // It will fail the test if getting the gateway fails.
-func MustGetGateway(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) *gatewayv1alpha2.Gateway {
-	gateways := clients.GatewayClient.GatewayV1alpha2().Gateways(gatewayNSN.Namespace)
+func MustGetGateway(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) *gatewayv1beta1.Gateway {
+	gateways := clients.GatewayClient.GatewayV1beta1().Gateways(gatewayNSN.Namespace)
 	gateway, err := gateways.Get(ctx, gatewayNSN.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	return gateway

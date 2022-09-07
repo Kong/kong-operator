@@ -29,7 +29,7 @@ func TestGatewayEssentials(t *testing.T) {
 
 	t.Log("deploying a GatewayClass resource")
 	gatewayClass := testutils.GenerateGatewayClass()
-	gatewayClass, err := clients.GatewayClient.GatewayV1alpha2().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err := clients.GatewayClient.GatewayV1beta1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -39,7 +39,7 @@ func TestGatewayEssentials(t *testing.T) {
 		Namespace: namespace.Name,
 	}
 	gateway := testutils.GenerateGateway(gatewayNSN, gatewayClass)
-	gateway, err = clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	gateway, err = clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
@@ -125,7 +125,7 @@ func TestGatewayEssentials(t *testing.T) {
 	}, time.Minute*2, time.Second)
 
 	t.Log("deleting Gateway resource")
-	require.NoError(t, clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
+	require.NoError(t, clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that DataPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
@@ -149,7 +149,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 
 	t.Log("deploying a GatewayClass resource")
 	gatewayClass := testutils.GenerateGatewayClass()
-	gatewayClass, err := clients.GatewayClient.GatewayV1alpha2().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err := clients.GatewayClient.GatewayV1beta1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -159,7 +159,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 		Namespace: namespace.Name,
 	}
 	gateway := testutils.GenerateGateway(gatewayNSN, gatewayClass)
-	gateway, err = clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	gateway, err = clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
@@ -225,7 +225,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowMetricsIngress.Rule)
 
 	t.Log("deleting Gateway resource")
-	require.NoError(t, clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
+	require.NoError(t, clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying networkpolicies are deleted")
 	require.Eventually(t, testutils.Not(testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients)), time.Minute, time.Second)

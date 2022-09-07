@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -47,7 +47,7 @@ func (r *GatewayReconciler) createDataPlane(ctx context.Context,
 
 func (r *GatewayReconciler) createControlPlane(
 	ctx context.Context,
-	gatewayClass *gatewayv1alpha2.GatewayClass,
+	gatewayClass *gatewayv1beta1.GatewayClass,
 	gateway *gatewayDecorator,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 	dataplaneName string,
@@ -58,7 +58,7 @@ func (r *GatewayReconciler) createControlPlane(
 			GenerateName: fmt.Sprintf("%s-", gateway.Name),
 		},
 		Spec: operatorv1alpha1.ControlPlaneSpec{
-			GatewayClass: (*gatewayv1alpha2.ObjectName)(&gatewayClass.Name),
+			GatewayClass: (*gatewayv1beta1.ObjectName)(&gatewayClass.Name),
 		},
 	}
 	if gatewayConfig.Spec.ControlPlaneDeploymentOptions != nil {
@@ -95,7 +95,7 @@ func (r *GatewayReconciler) ensureGatewayConnectivityStatus(ctx context.Context,
 	}
 	svc := services[0]
 	if svc.Spec.ClusterIP == "" {
-		gateway.Status.Addresses = []gatewayv1alpha2.GatewayAddress{}
+		gateway.Status.Addresses = []gatewayv1beta1.GatewayAddress{}
 		return fmt.Errorf("service %s doesn't have a ClusterIP yet, not ready", svc.Name)
 	}
 
@@ -124,7 +124,7 @@ func (r *GatewayReconciler) ensureGatewayConnectivityStatus(ctx context.Context,
 	// combine all addresses, including the ClusterIP and sort them
 	// according to priority (LoadBalancer addresses have the highest
 	// priority).
-	newAddresses := make([]gatewayv1alpha2.GatewayAddress, 0, len(gatewayAddrs))
+	newAddresses := make([]gatewayv1beta1.GatewayAddress, 0, len(gatewayAddrs))
 	allAddrs := append(gatewayAddrs, gwaddr{
 		addr:     svc.Spec.ClusterIP,
 		addrType: ipaddrT,
@@ -132,7 +132,7 @@ func (r *GatewayReconciler) ensureGatewayConnectivityStatus(ctx context.Context,
 	sort.Sort(allAddrs)
 
 	for _, addr := range allAddrs {
-		newAddresses = append(newAddresses, gatewayv1alpha2.GatewayAddress{
+		newAddresses = append(newAddresses, gatewayv1beta1.GatewayAddress{
 			Type:  &(addr.addrType),
 			Value: addr.addr,
 		})
@@ -143,12 +143,12 @@ func (r *GatewayReconciler) ensureGatewayConnectivityStatus(ctx context.Context,
 	return nil
 }
 
-func (r *GatewayReconciler) verifyGatewayClassSupport(ctx context.Context, gateway *gatewayv1alpha2.Gateway) (*gatewayv1alpha2.GatewayClass, error) {
+func (r *GatewayReconciler) verifyGatewayClassSupport(ctx context.Context, gateway *gatewayv1beta1.Gateway) (*gatewayv1beta1.GatewayClass, error) {
 	if gateway.Spec.GatewayClassName == "" {
 		return nil, operatorerrors.ErrUnsupportedGateway
 	}
 
-	gwc := new(gatewayv1alpha2.GatewayClass)
+	gwc := new(gatewayv1beta1.GatewayClass)
 	if err := r.Client.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gwc); err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func (r *GatewayReconciler) verifyGatewayClassSupport(ctx context.Context, gatew
 	return gwc, nil
 }
 
-func (r *GatewayReconciler) getOrCreateGatewayConfiguration(ctx context.Context, gatewayClass *gatewayv1alpha2.GatewayClass) (*operatorv1alpha1.GatewayConfiguration, error) {
+func (r *GatewayReconciler) getOrCreateGatewayConfiguration(ctx context.Context, gatewayClass *gatewayv1beta1.GatewayClass) (*operatorv1alpha1.GatewayConfiguration, error) {
 	gatewayConfig, err := r.getGatewayConfigForGatewayClass(ctx, gatewayClass)
 	if err != nil {
 		if errors.Is(err, operatorerrors.ErrObjectMissingParametersRef) {
@@ -172,7 +172,7 @@ func (r *GatewayReconciler) getOrCreateGatewayConfiguration(ctx context.Context,
 	return gatewayConfig, nil
 }
 
-func (r *GatewayReconciler) getGatewayConfigForGatewayClass(ctx context.Context, gatewayClass *gatewayv1alpha2.GatewayClass) (*operatorv1alpha1.GatewayConfiguration, error) {
+func (r *GatewayReconciler) getGatewayConfigForGatewayClass(ctx context.Context, gatewayClass *gatewayv1beta1.GatewayClass) (*operatorv1alpha1.GatewayConfiguration, error) {
 	if gatewayClass.Spec.ParametersRef == nil {
 		return nil, fmt.Errorf("%w, gatewayClass = %s", operatorerrors.ErrObjectMissingParametersRef, gatewayClass.Name)
 	}
@@ -314,13 +314,13 @@ func generateDataPlaneNetworkPolicy(
 // -----------------------------------------------------------------------------
 
 var (
-	ipaddrT   = gatewayv1alpha2.IPAddressType
-	hostAddrT = gatewayv1alpha2.HostnameAddressType
+	ipaddrT   = gatewayv1beta1.IPAddressType
+	hostAddrT = gatewayv1beta1.HostnameAddressType
 )
 
 type gwaddr struct {
 	addr     string
-	addrType gatewayv1alpha2.AddressType
+	addrType gatewayv1beta1.AddressType
 	isLB     bool
 }
 

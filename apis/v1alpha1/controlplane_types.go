@@ -18,7 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 func init() {
@@ -64,7 +64,7 @@ type ControlPlaneSpec struct {
 	// only Gateway resources can be used to identify data-plane entities.
 	//
 	// +optional
-	GatewayClass *gatewayv1alpha2.ObjectName `json:"gatewayClass,omitempty"`
+	GatewayClass *gatewayv1beta1.ObjectName `json:"gatewayClass,omitempty"`
 
 	// IngressClass enables support for the older Ingress resource and indicates
 	// which Ingress resources this ControlPlane should be responsible for.

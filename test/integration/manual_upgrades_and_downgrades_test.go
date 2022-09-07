@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -68,40 +68,40 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	cleaner.Add(gatewayConfig)
 
 	t.Log("deploying a GatewayClass resource with the GatewayConfiguration attached via ParametersReference")
-	gatewayClass := &gatewayv1alpha2.GatewayClass{
+	gatewayClass := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 		},
-		Spec: gatewayv1alpha2.GatewayClassSpec{
-			ParametersRef: &gatewayv1alpha2.ParametersReference{
-				Group:     gatewayv1alpha2.Group(operatorv1alpha1.SchemeGroupVersion.Group),
-				Kind:      gatewayv1alpha2.Kind("GatewayConfiguration"),
-				Namespace: (*gatewayv1alpha2.Namespace)(&gatewayConfig.Namespace),
+		Spec: gatewayv1beta1.GatewayClassSpec{
+			ParametersRef: &gatewayv1beta1.ParametersReference{
+				Group:     gatewayv1beta1.Group(operatorv1alpha1.SchemeGroupVersion.Group),
+				Kind:      gatewayv1beta1.Kind("GatewayConfiguration"),
+				Namespace: (*gatewayv1beta1.Namespace)(&gatewayConfig.Namespace),
 				Name:      gatewayConfig.Name,
 			},
-			ControllerName: gatewayv1alpha2.GatewayController(vars.ControllerName),
+			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
 		},
 	}
-	gatewayClass, err = clients.GatewayClient.GatewayV1alpha2().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = clients.GatewayClient.GatewayV1beta1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
 	t.Log("deploying Gateway resource")
-	gateway := &gatewayv1alpha2.Gateway{
+	gateway := &gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      uuid.NewString(),
 		},
-		Spec: gatewayv1alpha2.GatewaySpec{
-			GatewayClassName: gatewayv1alpha2.ObjectName(gatewayClass.Name),
-			Listeners: []gatewayv1alpha2.Listener{{
+		Spec: gatewayv1beta1.GatewaySpec{
+			GatewayClassName: gatewayv1beta1.ObjectName(gatewayClass.Name),
+			Listeners: []gatewayv1beta1.Listener{{
 				Name:     "http",
-				Protocol: gatewayv1alpha2.HTTPProtocolType,
-				Port:     gatewayv1alpha2.PortNumber(80),
+				Protocol: gatewayv1beta1.HTTPProtocolType,
+				Port:     gatewayv1beta1.PortNumber(80),
 			}},
 		},
 	}
-	gateway, err = clients.GatewayClient.GatewayV1alpha2().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	gateway, err = clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
@@ -248,7 +248,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 
 // verifyContainerImageForGateway indicates whether or not the underlying
 // Pods' containers are configured with the images provided.
-func verifyContainerImageForGateway(gateway *gatewayv1alpha2.Gateway, controlPlaneImage, dataPlaneImage string) (bool, error) {
+func verifyContainerImageForGateway(gateway *gatewayv1beta1.Gateway, controlPlaneImage, dataPlaneImage string) (bool, error) {
 	controlPlanes, err := gatewayutils.ListControlPlanesForGateway(ctx, clients.MgrClient, gateway)
 	if err != nil {
 		return false, err

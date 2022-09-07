@@ -2,7 +2,7 @@ package controllers
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
@@ -36,7 +36,7 @@ const (
 
 // gatewayDecorator Decorator object to add additional functionality to the base k8s Gateway
 type gatewayDecorator struct {
-	*gatewayv1alpha2.Gateway
+	*gatewayv1beta1.Gateway
 }
 
 func (g *gatewayDecorator) GetConditions() []metav1.Condition {
@@ -49,6 +49,6 @@ func (g *gatewayDecorator) SetConditions(conditions []metav1.Condition) {
 
 func newGateway() *gatewayDecorator {
 	return &gatewayDecorator{
-		new(gatewayv1alpha2.Gateway),
+		new(gatewayv1beta1.Gateway),
 	}
 }

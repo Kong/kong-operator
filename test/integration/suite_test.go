@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
@@ -141,7 +141,7 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: intializing manager client")
 	clients.MgrClient, err = client.New(env.Cluster().Config(), client.Options{})
 	exitOnErr(err)
-	exitOnErr(gatewayv1alpha2.AddToScheme(clients.MgrClient.Scheme()))
+	exitOnErr(gatewayv1beta1.AddToScheme(clients.MgrClient.Scheme()))
 	exitOnErr(operatorv1alpha1.AddToScheme(clients.MgrClient.Scheme()))
 
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")
