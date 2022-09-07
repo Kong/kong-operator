@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
@@ -57,9 +58,7 @@ var (
 // Testing Vars - Testing Environment
 // -----------------------------------------------------------------------------
 
-var (
-	skipClusterCleanup bool
-)
+var skipClusterCleanup bool
 
 func createEnvironment(t *testing.T, ctx context.Context) (environments.Environment, *testutils.K8sClients) {
 	skipClusterCleanup = existingCluster != ""
@@ -90,6 +89,22 @@ func createEnvironment(t *testing.T, ctx context.Context) (environments.Environm
 	} else {
 		fmt.Println("INFO: no existing cluster found, deploying using Kubernetes In Docker (KIND)")
 		builder.WithAddons(metallb.New())
+		// For some reason we've ended up using kind v0.15.0 (which by default deploys k8s v1.25)
+		// even though that
+		// * our CI runners use ubuntu-latest (which at the time of writing this comment was ubuntu20.04)
+		//   which uses kind v0.14 https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2004-Readme.md
+		// * when used with ktf (which at the time of writing this comment was set to v0.19.0) we
+		//   should use kind v0.14 since that what ktf has set as dependency
+		//
+		// With all that said, we still managed to get kind v0.15 on our CI
+		// https://github.com/Kong/kubernetes-ingress-controller/runs/8211490522?check_suite_focus=true#step:5:6
+		// which causes issues down the line (metallb manifests using PSP which is not available
+		// in k8s v1.25+).
+		builder.WithKubernetesVersion(semver.Version{
+			Major: 1,
+			Minor: 24,
+			Patch: 4,
+		})
 	}
 	if imageLoad != "" {
 		imageLoader, err := loadimage.NewBuilder().WithImage(imageLoad)
