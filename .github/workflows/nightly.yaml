@@ -83,6 +83,7 @@ jobs:
         id: docker_build_binary
         uses: docker/build-push-action@v3.1.1
         with:
+          context: .
           push: false
           file: Dockerfile
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -98,6 +99,7 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v3.1.1
         with:
+          context: .
           push: true
           file: Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
@@ -115,6 +117,7 @@ jobs:
           TAG: ${{ steps.meta_redhat.outputs.version }}
         uses: docker/build-push-action@v3.1.1
         with:
+          context: .
           push: false
           file: Dockerfile
           tags: ${{ steps.meta_redhat.outputs.tags }}
