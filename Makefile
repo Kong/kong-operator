@@ -25,15 +25,16 @@ RHTAG ?= latest-redhat
 # ------------------------------------------------------------------------------
 
 VERSION ?= 0.0.1
-ifneq ($(origin CHANNELS), undefined)
+
+CHANNELS ?= alpha
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
-endif
-ifneq ($(origin DEFAULT_CHANNEL), undefined)
+
+DEFAULT_CHANNEL ?= alpha
 BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
-endif
+
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 IMAGE_TAG_BASE ?= ghcr.io/kong/gateway-operator
-BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
+BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:$(VERSION)
 BUNDLE_GEN_FLAGS ?= --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 USE_IMAGE_DIGESTS ?= false
 ifeq ($(USE_IMAGE_DIGESTS), true)
@@ -283,7 +284,7 @@ docker.push:
 .PHONY: _bundle
 _bundle: manifests kustomize operator-sdk
 	$(OPERATOR_SDK) generate kustomize manifests --apis-dir=$(APIS_DIR)/
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	cd config/manager && $(KUSTOMIZE) edit set image $(IMG)=$(IMG):$(VERSION)
 	$(KUSTOMIZE) build $(KUSTOMIZE_DIR) | $(OPERATOR_SDK) generate bundle --output-dir=$(BUNDLE_DIR) $(BUNDLE_GEN_FLAGS)
 	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
 	mv bundle.Dockerfile $(BUNDLE_DIR)
