@@ -95,6 +95,7 @@ func (r *GatewayReconciler) ensureGatewayConnectivityStatus(ctx context.Context,
 	}
 	svc := services[0]
 	if svc.Spec.ClusterIP == "" {
+		gateway.Status.Addresses = []gatewayv1alpha2.GatewayAddress{}
 		return fmt.Errorf("service %s doesn't have a ClusterIP yet, not ready", svc.Name)
 	}
 
