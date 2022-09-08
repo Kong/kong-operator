@@ -30,4 +30,13 @@ resources:
   kind: GatewayConfiguration
   path: github.com/kong/gateway-operator/apis/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: networking.k8s.io
+  group: gateway
+  kind: Gateway
+  path: github.com/kubernetes-sigs/gateway-api/apis/v1beta1
+  version: v1beta1
 version: "3"
