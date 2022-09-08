@@ -54,6 +54,7 @@ metadata:
         }
       ]
     capabilities: Basic Install
+    operatorframework.io/suggested-namespace: kong-system
     operators.operatorframework.io/builder: operator-sdk-v1.23.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
   name: kong-gateway-operator.v0.0.1
