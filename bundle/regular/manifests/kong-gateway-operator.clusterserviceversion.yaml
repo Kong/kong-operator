@@ -54,6 +54,7 @@ metadata:
         }
       ]
     capabilities: Basic Install
+    categories: Networking,Integration & Delivery
     operatorframework.io/suggested-namespace: kong-system
     operators.operatorframework.io/builder: operator-sdk-v1.23.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
