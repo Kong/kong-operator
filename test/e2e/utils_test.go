@@ -39,7 +39,7 @@ func setup(t *testing.T, ctx context.Context, env environments.Environment) (*co
 
 const gatewayOperatorImageKustomizationContents = `
 images:
-- name: ghcr.io/kong/gateway-operator:main
+- name: ghcr.io/kong/gateway-operator
   newName: %v
   newTag: '%v'
 `
