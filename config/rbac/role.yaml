@@ -13,6 +13,15 @@ rules:
   - create
   - patch
 - apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  verbs:
+  - create
+  - get
+  - patch
+  - update
+- apiGroups:
   - apps
   resources:
   - deployments
@@ -28,6 +37,13 @@ rules:
   resources:
   - deployments/status
   verbs:
+  - get
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
   - get
 - apiGroups:
   - configuration.konghq.com
@@ -175,6 +191,7 @@ rules:
   resources:
   - secrets
   verbs:
+  - create
   - get
   - list
   - watch
@@ -549,4 +566,18 @@ rules:
   resources:
   - clusterroles/status
   verbs:
+  - get
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  verbs:
+  - create
+  - get
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  verbs:
+  - create
   - get

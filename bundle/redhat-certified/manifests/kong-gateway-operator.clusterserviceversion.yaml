@@ -107,6 +107,15 @@ spec:
           - create
           - patch
         - apiGroups:
+          - admissionregistration.k8s.io
+          resources:
+          - validatingwebhookconfigurations
+          verbs:
+          - create
+          - get
+          - patch
+          - update
+        - apiGroups:
           - apps
           resources:
           - deployments
@@ -122,6 +131,13 @@ spec:
           resources:
           - deployments/status
           verbs:
+          - get
+        - apiGroups:
+          - batch
+          resources:
+          - jobs
+          verbs:
+          - create
           - get
         - apiGroups:
           - configuration.konghq.com
@@ -269,6 +285,7 @@ spec:
           resources:
           - secrets
           verbs:
+          - create
           - get
           - list
           - watch
@@ -645,6 +662,20 @@ spec:
           verbs:
           - get
         - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - rolebindings
+          verbs:
+          - create
+          - get
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - roles
+          verbs:
+          - create
+          - get
+        - apiGroups:
           - authentication.k8s.io
           resources:
           - tokenreviews
@@ -685,6 +716,8 @@ spec:
                   value: registry.connect.redhat.com/kong/kong:2.8.1
                 - name: RELATED_IMAGE_KONG_CONTROLLER
                   value: registry.connect.redhat.com/kong/kong-ingress-controller:2.5.0-redhat
+                - name: RELATED_IMAGE_CERTIFICATE_CONFIG
+                  value: registry.connect.redhat.com/ingress-nginx/kube-webhook-certgen:v1.1.1
                 - name: POD_NAMESPACE
                   valueFrom:
                     fieldRef:
@@ -715,7 +748,6 @@ spec:
                 volumeMounts:
                 - mountPath: /tmp/k8s-webhook-server/serving-certs
                   name: webhook-certificates
-                  readOnly: true
               - args:
                 - --secure-listen-address=0.0.0.0:8443
                 - --upstream=http://127.0.0.1:8080/
@@ -739,16 +771,8 @@ spec:
               serviceAccountName: gateway-operator-controller-manager
               terminationGracePeriodSeconds: 10
               volumes:
-              - name: webhook-certificates
-                secret:
-                  items:
-                  - key: ca
-                    path: ca.crt
-                  - key: cert
-                    path: tls.crt
-                  - key: key
-                    path: tls.key
-                  secretName: gateway-operator-webhook-certs
+              - emptyDir: {}
+                name: webhook-certificates
       permissions:
       - rules:
         - apiGroups:
@@ -816,28 +840,6 @@ spec:
     name: kong
   - image: registry.connect.redhat.com/kong/kong-ingress-controller:2.5.0-redhat
     name: kong-controller
+  - image: registry.connect.redhat.com/ingress-nginx/kube-webhook-certgen:v1.1.1
+    name: certificate-config
   version: 0.0.2
-  webhookdefinitions:
-  - admissionReviewVersions:
-    - v1
-    - v1beta1
-    containerPort: 443
-    deploymentName: gateway-operator-controller-manager
-    failurePolicy: Ignore
-    generateName: gateway-operator-validation.konghq.com
-    rules:
-    - apiGroups:
-      - gateway-operator.konghq.com
-      apiVersions:
-      - v1alpha1
-      operations:
-      - CREATE
-      - UPDATE
-      resources:
-      - dataplanes
-      scope: Namespaced
-    sideEffects: None
-    targetPort: 9443
-    timeoutSeconds: 5
-    type: ValidatingAdmissionWebhook
-    webhookPath: /validate

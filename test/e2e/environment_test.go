@@ -32,6 +32,15 @@ import (
 )
 
 // -----------------------------------------------------------------------------
+// Testing Consts - Timeouts
+// -----------------------------------------------------------------------------
+
+const (
+	webhookReadinessTimeout = 2 * time.Minute
+	webhookReadinessTick    = 5 * time.Second
+)
+
+// -----------------------------------------------------------------------------
 // Testing Vars - Environment Overrideable
 // -----------------------------------------------------------------------------
 
@@ -148,7 +157,12 @@ func createEnvironment(t *testing.T, ctx context.Context) (environments.Environm
 	require.NoError(t, waitForOperatorDeployment(ctx, clients.K8sClient))
 
 	fmt.Println("INFO: waiting for operator webhook service to be connective")
-	require.NoError(t, waitForOperatorWebhook(ctx, clients.K8sClient))
+	require.Eventually(t, func() bool {
+		if err := waitForOperatorWebhook(ctx, clients.K8sClient); err != nil {
+			return false
+		}
+		return true
+	}, webhookReadinessTimeout, webhookReadinessTick)
 
 	fmt.Println("INFO: environment is ready, starting tests")
 

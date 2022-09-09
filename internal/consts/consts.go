@@ -110,3 +110,23 @@ const (
 	// (empty, or "off") is supported.
 	EnvVarKongDatabase = "KONG_DATABASE"
 )
+
+// -----------------------------------------------------------------------------
+// Consts - Webhook-related parameters
+// -----------------------------------------------------------------------------
+
+const (
+	// WebhookCertificateConfigBaseImage is the image to use by the certificate config Jobs.
+	WebhookCertificateConfigBaseImage = "k8s.gcr.io/ingress-nginx/kube-webhook-certgen:v1.1.1"
+	// WebhookName is the ValidatingWebhookConfiguration name.
+	WebhookName = "gateway-operator-validation.konghq.com"
+	// WebhookCertificateConfigSecretName is the name of the secret containing the webhook certificate.
+	WebhookCertificateConfigSecretName = "gateway-operator-webhook-certs"
+	// WebhookCertificateConfigName is the name given to the resources related by the certificate config Jobs.
+	WebhookCertificateConfigName = "gateway-operator-admission"
+	// WebhookCertificateConfigLabelvalue is the default label for all the resources related
+	// to the certificate config Jobs.
+	WebhookCertificateConfigLabelvalue = "gateway-operator-certificate-config"
+	// WebhookServiceName is the name of the service that exposes the validating webhook
+	WebhookServiceName = "gateway-operator-validating-webhook"
+)

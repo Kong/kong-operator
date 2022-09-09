@@ -28,7 +28,6 @@ import (
 	"math"
 	"math/big"
 	"os"
-	"path"
 	"time"
 
 	"github.com/pkg/errors"
@@ -46,11 +45,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	"github.com/kong/gateway-operator/internal/admission"
 	"github.com/kong/gateway-operator/internal/manager/logging"
 	"github.com/kong/gateway-operator/internal/manager/metadata"
 	"github.com/kong/gateway-operator/internal/telemetry"
@@ -63,10 +60,9 @@ var (
 )
 
 const (
-	defaultWebhookCertDir = "/tmp/k8s-webhook-server/serving-certs"
-	caCertFilename        = "ca.crt"
-	tlsCertFilename       = "tls.crt"
-	tlsKeyFilename        = "tls.key"
+	caCertFilename  = "ca.crt"
+	tlsCertFilename = "tls.crt"
+	tlsKeyFilename  = "tls.key"
 )
 
 func init() {
@@ -86,6 +82,7 @@ type Config struct {
 	Out                      *os.File
 	NewClientFunc            cluster.NewClientFunc
 	ControllerName           string
+	ControllerNamespace      string
 	AnonymousReports         bool
 	APIServerPath            string
 	KubeconfigPath           string
@@ -96,12 +93,14 @@ type Config struct {
 	GatewayControllerEnabled      bool
 	ControlPlaneControllerEnabled bool
 	DataPlaneControllerEnabled    bool
+	ValidatingWebhookEnabled      bool
 }
 
 func DefaultConfig() Config {
 	return Config{
 		MetricsAddr:         ":8080",
 		ProbeAddr:           ":8081",
+		WebhookCertDir:      defaultWebhookCertDir,
 		WebhookPort:         9443,
 		DevelopmentMode:     false,
 		LeaderElection:      true,
@@ -109,6 +108,7 @@ func DefaultConfig() Config {
 		// TODO: Extract this into a named const and use it in all the placed where
 		// "kong-system" is used verbatim: https://github.com/Kong/gateway-operator/pull/149.
 		ClusterCASecretNamespace:      "kong-system",
+		ControllerNamespace:           "kong-system",
 		LoggerOpts:                    zap.Options{},
 		GatewayControllerEnabled:      true,
 		ControlPlaneControllerEnabled: true,
@@ -153,7 +153,7 @@ func Run(cfg Config) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("unable to start manager: %w", err)
+		return err
 	}
 
 	caMgr := &caManager{
@@ -164,6 +164,20 @@ func Run(cfg Config) error {
 	err = mgr.Add(caMgr)
 	if err != nil {
 		return fmt.Errorf("unable to start manager: %w", err)
+	}
+
+	if cfg.ValidatingWebhookEnabled {
+		webhookMgr := &webhookManager{
+			client:              mgr.GetClient(),
+			mgr:                 mgr,
+			controllerNamespace: cfg.ControllerNamespace,
+			webhookCertDir:      cfg.WebhookCertDir,
+			webhookPort:         cfg.WebhookPort,
+		}
+		err = mgr.Add(webhookMgr)
+		if err != nil {
+			return fmt.Errorf("unable to add webhook manager: %w", err)
+		}
 	}
 
 	// load controllers
@@ -183,8 +197,6 @@ func Run(cfg Config) error {
 		return fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
-	runWebhookServer(mgr, cfg)
-
 	// Enable anonnymous reporting when configured but not for development builds
 	// to reduce the noise.
 	if cfg.AnonymousReports && !cfg.DevelopmentMode {
@@ -202,43 +214,6 @@ func Run(cfg Config) error {
 	}
 
 	return nil
-}
-
-func runWebhookServer(mgr manager.Manager, cfg Config) {
-	webhookCertDir := cfg.WebhookCertDir
-	if webhookCertDir == "" {
-		webhookCertDir = defaultWebhookCertDir
-	}
-	tlsCertPath := path.Join(webhookCertDir, tlsCertFilename)
-	tlsKeyPath := path.Join(webhookCertDir, tlsKeyFilename)
-	caCertPath := path.Join(webhookCertDir, caCertFilename)
-
-	startWebhook := true
-	if _, err := os.Stat(caCertPath); err != nil {
-		setupLog.Info("CA certificate file does not exist, do not start webhook", "path", caCertPath)
-		return
-	}
-	if _, err := os.Stat(tlsCertPath); err != nil {
-		setupLog.Info("TLS certificate file does not exist, do not start webhook", "path", tlsCertPath)
-		return
-	}
-	if _, err := os.Stat(tlsKeyPath); err != nil {
-		setupLog.Info("TLS key file does not exist, do not start webhook", "path", tlsKeyPath)
-		return
-	}
-
-	if startWebhook {
-		hookServer := admission.NewWebhookServerFromManager(mgr, ctrl.Log)
-		hookServer.CertDir = webhookCertDir
-		// add readyz check for checking connection to webhook server
-		// to make the controller to be marked as ready after webhook started.
-		err := mgr.AddReadyzCheck("readyz", mgr.GetWebhookServer().StartedChecker())
-		if err != nil {
-			setupLog.Error(err, "failed to add readiness probe for webhook")
-		}
-
-		setupLog.Info("start webhook server", "listen_address", fmt.Sprintf("%s:%d", hookServer.Host, hookServer.Port))
-	}
 }
 
 type caManager struct {

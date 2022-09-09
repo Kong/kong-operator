@@ -40,7 +40,9 @@ func main() {
 		enableControllerGateway      bool
 		enableControllerControlPlane bool
 		enableControllerDataPlane    bool
+		enableValidatingWebhook      bool
 		version                      bool
+		controllerNamespace          string
 	)
 
 	flagSet := flag.NewFlagSet("", flag.ExitOnError)
@@ -60,6 +62,7 @@ func main() {
 	flagSet.BoolVar(&enableControllerGateway, "enable-controller-gateway", true, "Enable the Gateway controller.")
 	flagSet.BoolVar(&enableControllerControlPlane, "enable-controller-controlplane", true, "Enable the ControlPlane controller.")
 	flagSet.BoolVar(&enableControllerDataPlane, "enable-controller-dataplane", true, "Enable the DataPlane controller.")
+	flagSet.BoolVar(&enableValidatingWebhook, "enable-validating-webhook", true, "Enable the validating webhook.")
 
 	flagSet.BoolVar(&version, "version", false, "Print version information")
 
@@ -67,6 +70,11 @@ func main() {
 	if v := os.Getenv("CONTROLLER_DEVELOPMENT_MODE"); v == "true" { // TODO: clean env handling https://github.com/Kong/gateway-operator/issues/19
 		fmt.Println("INFO: development mode has been enabled")
 		developmentModeEnabled = true
+	}
+
+	webhookCertDir := manager.DefaultConfig().WebhookCertDir
+	if certDir := os.Getenv("WEBHOOK_CERT_DIR"); certDir != "" { // TODO: clean env handling https://github.com/Kong/gateway-operator/issues/19
+		webhookCertDir = certDir
 	}
 
 	loggerOpts := manager.DefaultConfig().LoggerOpts
@@ -102,15 +110,18 @@ func main() {
 		leaderElection = false
 	}
 
+	controllerNamespace = os.Getenv("POD_NAMESPACE")
+	if controllerNamespace == "" {
+		controllerNamespace = manager.DefaultConfig().ControllerNamespace
+	}
 	if clusterCASecretNamespace == "" {
-		podNamespace := os.Getenv("POD_NAMESPACE")
-		if podNamespace == "" {
+		if controllerNamespace == "" {
 			fmt.Println("WARN: -cluster-ca-secret-namespace unset and POD_NAMESPACE env is empty. Please provide namespace for cluster CA secret")
 			os.Exit(1)
 		} else {
 			// If the flag has not been provided then fall back to POD_NAMESPACE env which
 			// is normally provided in k8s environment.
-			clusterCASecretNamespace = podNamespace
+			clusterCASecretNamespace = controllerNamespace
 		}
 	}
 
@@ -120,6 +131,7 @@ func main() {
 		ProbeAddr:                     probeAddr,
 		LeaderElection:                leaderElection,
 		ControllerName:                controllerName,
+		ControllerNamespace:           controllerNamespace,
 		AnonymousReports:              anonymousReports,
 		APIServerPath:                 apiServerHost,
 		KubeconfigPath:                kubeconfigPath,
@@ -128,7 +140,10 @@ func main() {
 		GatewayControllerEnabled:      enableControllerGateway,
 		ControlPlaneControllerEnabled: enableControllerControlPlane,
 		DataPlaneControllerEnabled:    enableControllerDataPlane,
+		ValidatingWebhookEnabled:      enableValidatingWebhook,
 		LoggerOpts:                    loggerOpts,
+		WebhookCertDir:                webhookCertDir,
+		WebhookPort:                   manager.DefaultConfig().WebhookPort,
 	}
 
 	if err := manager.Run(cfg); err != nil {
