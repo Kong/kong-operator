@@ -803,6 +803,7 @@ spec:
   - email: support@konghq.com
     name: Kong Inc.
   maturity: alpha
+  minKubeVersion: 1.24.0
   provider:
     name: Kong Inc.
     url: https://konghq.com
