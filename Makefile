@@ -49,6 +49,8 @@ BUNDLE_RED_HAT_KUSTOMIZE_MANIFESTS ?= config/redhat-certified
 BUNDLE_RED_HAT_DIR ?= bundle/redhat-certified
 BUNDLE_RED_HAT_DOCKERFILE ?= bundle_redhat_certified.Dockerfile
 
+OPENSHIFT_SUPPORTED_VERSIONS ?= v4.10
+
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
 # ------------------------------------------------------------------------------
@@ -300,6 +302,13 @@ bundle.redhat-certified:
 	KUSTOMIZE_DIR=$(BUNDLE_RED_HAT_KUSTOMIZE_MANIFESTS) \
 	BUNDLE_DIR=$(BUNDLE_RED_HAT_DIR) \
 		$(MAKE) _bundle
+
+	yq -i e '.annotations."com.redhat.openshift.versions" = "$(OPENSHIFT_SUPPORTED_VERSIONS)"' \
+		$(BUNDLE_RED_HAT_DIR)/metadata/annotations.yaml
+	echo "# Annotations for OpenShift." >> $(BUNDLE_RED_HAT_DIR)/bundle.Dockerfile
+	echo "# https://redhat-connect.gitbook.io/certified-operator-guide/ocp-deployment/operator-metadata/bundle-directory" >> $(BUNDLE_RED_HAT_DIR)/bundle.Dockerfile
+	echo "LABEL com.redhat.openshift.versions=\"$(OPENSHIFT_SUPPORTED_VERSIONS)\"" >> $(BUNDLE_RED_HAT_DIR)/bundle.Dockerfile
+	echo "LABEL com.redhat.delivery.operator.bundle=true" >> $(BUNDLE_RED_HAT_DIR)/bundle.Dockerfile
 
 .PHONY: bundle.regular.build
 bundle.regular.build: ## Build the bundle image.

@@ -19,3 +19,7 @@ LABEL operators.operatorframework.io.test.config.v1=tests/scorecard/
 COPY bundle/redhat-certified/manifests /manifests/
 COPY bundle/redhat-certified/metadata /metadata/
 COPY bundle/redhat-certified/tests/scorecard /tests/scorecard/
+# Annotations for OpenShift.
+# https://redhat-connect.gitbook.io/certified-operator-guide/ocp-deployment/operator-metadata/bundle-directory
+LABEL com.redhat.openshift.versions="v4.10"
+LABEL com.redhat.delivery.operator.bundle=true
