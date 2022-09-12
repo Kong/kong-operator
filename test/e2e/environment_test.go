@@ -55,7 +55,9 @@ var (
 // -----------------------------------------------------------------------------
 
 var (
-	kustomizationDir  = "../../config/default"
+	// This adds one more layer of kustomzations in order to use main tag for e2e tests
+	// rather than last release.
+	kustomizationDir  = "./config/tests/"
 	kustomizationFile = kustomizationDir + "/kustomization.yaml"
 	// backupKustomizationFile is used to save the original kustomization file if we modified it.
 	// iIf the kustomization file is changed multiple times,

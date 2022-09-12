@@ -1,0 +1,7 @@
+bases:
+- ../../../../config/default
+
+images:
+- name: ghcr.io/kong/gateway-operator
+  newName: ghcr.io/kong/gateway-operator
+  newTag: main
