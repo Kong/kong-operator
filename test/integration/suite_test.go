@@ -263,6 +263,7 @@ func startControllerManager() {
 	cfg.GatewayControllerEnabled = true
 	cfg.ControlPlaneControllerEnabled = true
 	cfg.DataPlaneControllerEnabled = true
+	cfg.AnonymousReports = false
 
 	if runWebhookTests {
 		cfg.WebhookCertDir = webhookCertDir

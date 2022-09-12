@@ -5,3 +5,16 @@ images:
 - name: ghcr.io/kong/gateway-operator
   newName: ghcr.io/kong/gateway-operator
   newTag: main
+
+# Prevent tests sending telemetry reports.
+patches:
+- patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/args/-
+      value: -anonymous-reports=false
+  target:
+    kind: Deployment
+    group: apps
+    version: v1
+    name: controller-manager
+    labelSelector: "control-plane=controller-manager"
