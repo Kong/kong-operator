@@ -14,4 +14,4 @@ spec:
         - name: RELATED_IMAGE_KONG_CONTROLLER
           value: registry.connect.redhat.com/kong/kong-ingress-controller:2.5.0-redhat
         - name: RELATED_IMAGE_CERTIFICATE_CONFIG
-          value: registry.connect.redhat.com/ingress-nginx/kube-webhook-certgen:v1.1.1
+          value: k8s.gcr.io/ingress-nginx/kube-webhook-certgen:v1.1.1
