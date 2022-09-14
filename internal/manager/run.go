@@ -179,6 +179,12 @@ func Run(cfg Config) error {
 		if err != nil {
 			return fmt.Errorf("unable to add webhook manager: %w", err)
 		}
+		defer func() {
+			setupLog.Info("cleaning up webhook and certificateConfig resources")
+			if err := webhookMgr.cleanup(context.Background()); err != nil {
+				setupLog.Error(err, "error while performing cleanup")
+			}
+		}()
 	} else {
 		controllers := setupControllers(mgr, &cfg)
 		for _, c := range controllers {

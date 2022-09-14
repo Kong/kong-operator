@@ -131,6 +131,7 @@ spec:
           - validatingwebhookconfigurations
           verbs:
           - create
+          - delete
           - get
           - patch
           - update
@@ -157,6 +158,7 @@ spec:
           - jobs
           verbs:
           - create
+          - delete
           - get
         - apiGroups:
           - configuration.konghq.com
@@ -287,6 +289,14 @@ spec:
         - apiGroups:
           - ""
           resources:
+          - namespaces
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - ""
+          resources:
           - nodes
           verbs:
           - list
@@ -305,6 +315,7 @@ spec:
           - secrets
           verbs:
           - create
+          - delete
           - get
           - list
           - watch
@@ -322,6 +333,7 @@ spec:
           - serviceaccounts
           verbs:
           - create
+          - delete
           - get
           - list
           - patch
@@ -339,6 +351,7 @@ spec:
           - services
           verbs:
           - create
+          - delete
           - get
           - list
           - patch
@@ -686,6 +699,7 @@ spec:
           - rolebindings
           verbs:
           - create
+          - delete
           - get
         - apiGroups:
           - rbac.authorization.k8s.io
@@ -693,6 +707,7 @@ spec:
           - roles
           verbs:
           - create
+          - delete
           - get
         - apiGroups:
           - authentication.k8s.io

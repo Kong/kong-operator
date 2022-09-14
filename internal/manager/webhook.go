@@ -27,12 +27,14 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/internal/admission"
 	"github.com/kong/gateway-operator/internal/consts"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
@@ -121,6 +123,9 @@ func (m *webhookManager) createCertificateConfigResources(ctx context.Context) e
 
 	// create the certificateConfig ClusterRole
 	clusterRole := k8sresources.GenerateNewClusterRoleForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
+	if err := m.setNamespaceAsOwner(ctx, clusterRole); err != nil {
+		return err
+	}
 	if err := m.client.Create(ctx, clusterRole); err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
 			return err
@@ -129,6 +134,9 @@ func (m *webhookManager) createCertificateConfigResources(ctx context.Context) e
 
 	// create the certificateConfig ClusterRoleBinding
 	clusterRoleBinding := k8sresources.GenerateNewClusterRoleBindingForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
+	if err := m.setNamespaceAsOwner(ctx, clusterRoleBinding); err != nil {
+		return err
+	}
 	if err := m.client.Create(ctx, clusterRoleBinding); err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
 			return err
@@ -162,6 +170,9 @@ func (m *webhookManager) createCertificateConfigResources(ctx context.Context) e
 func (m *webhookManager) createWebhookResources(ctx context.Context) error {
 	// create the operator ValidatinWebhookConfiguration
 	validatingWebhookConfiguration := k8sresources.GenerateNewValidatingWebhookConfiguration(m.cfg.ControllerNamespace, consts.WebhookServiceName, consts.WebhookName)
+	if err := m.setNamespaceAsOwner(ctx, validatingWebhookConfiguration); err != nil {
+		return err
+	}
 	if err := m.client.Create(ctx, validatingWebhookConfiguration); err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
 			return err
@@ -199,6 +210,90 @@ func (m *webhookManager) createCertificateConfigJobs(ctx context.Context) error 
 	if err := m.client.Create(ctx, patchJob); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (m *webhookManager) cleanup(ctx context.Context) error {
+	if err := m.cleanupCertificateConfigResources(ctx); err != nil {
+		return err
+	}
+
+	return m.cleanupWebhookResources(ctx)
+}
+
+func (m *webhookManager) cleanupWebhookResources(ctx context.Context) error {
+	// delete the operator ValidatingWebhookConfiguration
+	validatingWebhookConfiguration := k8sresources.GenerateNewValidatingWebhookConfiguration(m.cfg.ControllerNamespace, consts.WebhookServiceName, consts.WebhookName)
+	if err := m.client.Delete(ctx, validatingWebhookConfiguration); err != nil {
+		if !k8serrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	// delete the Service needed to expose the operator Webhook
+	webhookService := k8sresources.GenerateNewServiceForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookServiceName)
+	if err := m.client.Delete(ctx, webhookService); err != nil {
+		if !k8serrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	certSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      consts.WebhookCertificateConfigSecretName,
+			Namespace: m.cfg.ControllerNamespace,
+		},
+	}
+	if err := m.client.Delete(ctx, certSecret); err != nil {
+		if !k8serrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *webhookManager) cleanupCertificateConfigResources(ctx context.Context) error {
+	// delete the certificateConfig ServiceAccount
+	serviceAccount := k8sresources.GenerateNewServiceAccountForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
+	if err := m.client.Delete(ctx, serviceAccount); err != nil {
+		if !k8serrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	// delete the certificateConfig ClusterRole
+	clusterRole := k8sresources.GenerateNewClusterRoleForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
+	if err := m.client.Delete(ctx, clusterRole); err != nil {
+		if !k8serrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	// delete the certificateConfig ClusterRoleBinding
+	clusterRoleBinding := k8sresources.GenerateNewClusterRoleBindingForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
+	if err := m.client.Delete(ctx, clusterRoleBinding); err != nil {
+		if !k8serrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	// delete the certificateConfig Role
+	role := k8sresources.GenerateNewRoleForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
+	if err := m.client.Delete(ctx, role); err != nil {
+		if !k8serrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	// delete the certificateConfig RoleBinding
+	roleBinding := k8sresources.GenerateNewRoleBindingForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
+	if err := m.client.Delete(ctx, roleBinding); err != nil {
+		if !k8serrors.IsNotFound(err) {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -243,4 +338,17 @@ func (m *webhookManager) waitForWebhookCertificate(ctx context.Context, pollTime
 	default:
 		return certificateSecret, nil
 	}
+}
+
+// setNamespaceAsOwner sets the namespace as ownerReference for the given objects.
+// This is needed by the operator-related cluster-wide resources that have to be
+// collected when the namespace in which the operator lives is deleted
+// (e.g., when 'kubectl kustomize config/default | kubectl delete -f -' is executed).
+func (m *webhookManager) setNamespaceAsOwner(ctx context.Context, object client.Object) error {
+	namespace := &corev1.Namespace{}
+	if err := m.client.Get(ctx, types.NamespacedName{Name: m.cfg.ControllerNamespace}, namespace); err != nil {
+		return err
+	}
+	k8sutils.SetOwnerForObject(object, namespace)
+	return nil
 }
