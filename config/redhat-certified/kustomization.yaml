@@ -1,5 +1,9 @@
 bases:
 - ../manifests
 
+resources:
+- scc_role.yaml
+- scc_role_binding.yaml
+
 patchesStrategicMerge:
 - manager_config_patch.yaml
