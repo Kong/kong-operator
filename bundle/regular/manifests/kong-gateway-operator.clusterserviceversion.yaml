@@ -55,9 +55,11 @@ metadata:
       ]
     capabilities: Basic Install
     categories: Networking,Integration & Delivery
+    description: A Kubernetes Operator for the Kong Gateway
     operatorframework.io/suggested-namespace: kong-system
     operators.operatorframework.io/builder: operator-sdk-v1.23.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
+    repository: https://kong.github.io/gateway-operator-docs
     support: Kong Inc.
   name: kong-gateway-operator.v0.0.2
   namespace: placeholder
