@@ -80,8 +80,10 @@ func TestWaitForWebhookCertificate(t *testing.T) {
 				Build()
 
 			webhookMgr := webhookManager{
-				client:              fakeClient,
-				controllerNamespace: tc.namespace,
+				client: fakeClient,
+				cfg: &Config{
+					ControllerNamespace: "test",
+				},
 			}
 
 			if tc.createAfter != 0 {

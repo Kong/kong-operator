@@ -44,21 +44,19 @@ const (
 )
 
 type webhookManager struct {
-	client              client.Client
-	mgr                 ctrl.Manager
-	controllerNamespace string
-	webhookCertDir      string
-	webhookPort         int
+	client client.Client
+	mgr    ctrl.Manager
+	cfg    *Config
 }
 
 func (m *webhookManager) Start(ctx context.Context) error {
-	if m.controllerNamespace == "" {
+	if m.cfg.ControllerNamespace == "" {
 		return errors.New("controllerNamespace must be set")
 	}
-	if m.webhookCertDir == "" {
+	if m.cfg.WebhookCertDir == "" {
 		return errors.New("webhookCertDir must be set")
 	}
-	if m.webhookPort == 0 {
+	if m.cfg.WebhookPort == 0 {
 		return errors.New("webhookPort must be set")
 	}
 
@@ -69,7 +67,7 @@ func (m *webhookManager) Start(ctx context.Context) error {
 
 	certSecret := &corev1.Secret{}
 	// check if the certificate secret already exists
-	if err := m.client.Get(ctx, types.NamespacedName{Namespace: m.controllerNamespace, Name: consts.WebhookCertificateConfigSecretName}, certSecret); err != nil {
+	if err := m.client.Get(ctx, types.NamespacedName{Namespace: m.cfg.ControllerNamespace, Name: consts.WebhookCertificateConfigSecretName}, certSecret); err != nil {
 		if !k8serrors.IsNotFound(err) {
 			return err
 		}
@@ -86,24 +84,35 @@ func (m *webhookManager) Start(ctx context.Context) error {
 	}
 
 	// write the webhook certificate files on the filesystem
-	if err := os.WriteFile(path.Join(m.webhookCertDir, caCertFilename), certSecret.Data["ca"], os.ModePerm); err != nil {
+	if err := os.WriteFile(path.Join(m.cfg.WebhookCertDir, caCertFilename), certSecret.Data["ca"], os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.WriteFile(path.Join(m.webhookCertDir, tlsCertFilename), certSecret.Data["cert"], os.ModePerm); err != nil {
+	if err := os.WriteFile(path.Join(m.cfg.WebhookCertDir, tlsCertFilename), certSecret.Data["cert"], os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.WriteFile(path.Join(m.webhookCertDir, tlsKeyFilename), certSecret.Data["key"], os.ModePerm); err != nil {
+	if err := os.WriteFile(path.Join(m.cfg.WebhookCertDir, tlsKeyFilename), certSecret.Data["key"], os.ModePerm); err != nil {
 		return err
 	}
 
 	// create and start a new webhook server
-	return admission.AddNewWebhookServerToManager(m.mgr, ctrl.Log, m.webhookPort, m.webhookCertDir)
+	if err := admission.AddNewWebhookServerToManager(m.mgr, ctrl.Log, m.cfg.WebhookPort, m.cfg.WebhookCertDir); err != nil {
+		return err
+	}
+
+	// load the Gateway API controllers and start them only after the webhook is in place
+	controllers := setupControllers(m.mgr, m.cfg)
+	for _, c := range controllers {
+		if err := c.MaybeSetupWithManager(m.mgr); err != nil {
+			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
+		}
+	}
+	return nil
 }
 
 // createCertificateConfigResources create all the resources needed by the CertificateConfig jobs
 func (m *webhookManager) createCertificateConfigResources(ctx context.Context) error {
 	// create the certificateConfig ServiceAccount
-	serviceAccount := k8sresources.GenerateNewServiceAccountForCertificateConfig(m.controllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
+	serviceAccount := k8sresources.GenerateNewServiceAccountForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
 	if err := m.client.Create(ctx, serviceAccount); err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
 			return err
@@ -111,7 +120,7 @@ func (m *webhookManager) createCertificateConfigResources(ctx context.Context) e
 	}
 
 	// create the certificateConfig ClusterRole
-	clusterRole := k8sresources.GenerateNewClusterRoleForCertificateConfig(m.controllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
+	clusterRole := k8sresources.GenerateNewClusterRoleForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
 	if err := m.client.Create(ctx, clusterRole); err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
 			return err
@@ -119,7 +128,7 @@ func (m *webhookManager) createCertificateConfigResources(ctx context.Context) e
 	}
 
 	// create the certificateConfig ClusterRoleBinding
-	clusterRoleBinding := k8sresources.GenerateNewClusterRoleBindingForCertificateConfig(m.controllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
+	clusterRoleBinding := k8sresources.GenerateNewClusterRoleBindingForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
 	if err := m.client.Create(ctx, clusterRoleBinding); err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
 			return err
@@ -127,7 +136,7 @@ func (m *webhookManager) createCertificateConfigResources(ctx context.Context) e
 	}
 
 	// create the certificateConfig Role
-	role := k8sresources.GenerateNewRoleForCertificateConfig(m.controllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
+	role := k8sresources.GenerateNewRoleForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
 	if err := m.client.Create(ctx, role); err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
 			return err
@@ -135,7 +144,7 @@ func (m *webhookManager) createCertificateConfigResources(ctx context.Context) e
 	}
 
 	// create the certificateConfig RoleBinding
-	roleBinding := k8sresources.GenerateNewRoleBindingForCertificateConfig(m.controllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
+	roleBinding := k8sresources.GenerateNewRoleBindingForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
 	if err := m.client.Create(ctx, roleBinding); err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
 			return err
@@ -152,7 +161,7 @@ func (m *webhookManager) createCertificateConfigResources(ctx context.Context) e
 
 func (m *webhookManager) createWebhookResources(ctx context.Context) error {
 	// create the operator ValidatinWebhookConfiguration
-	validatingWebhookConfiguration := k8sresources.GenerateNewValidatingWebhookConfiguration(m.controllerNamespace, consts.WebhookServiceName, consts.WebhookName)
+	validatingWebhookConfiguration := k8sresources.GenerateNewValidatingWebhookConfiguration(m.cfg.ControllerNamespace, consts.WebhookServiceName, consts.WebhookName)
 	if err := m.client.Create(ctx, validatingWebhookConfiguration); err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
 			return err
@@ -160,7 +169,7 @@ func (m *webhookManager) createWebhookResources(ctx context.Context) error {
 	}
 
 	// create the Service needed to expose the operator Webhook
-	webhookService := k8sresources.GenerateNewServiceForCertificateConfig(m.controllerNamespace, consts.WebhookServiceName)
+	webhookService := k8sresources.GenerateNewServiceForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookServiceName)
 	if err := m.client.Create(ctx, webhookService); err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
 			return err
@@ -177,7 +186,7 @@ func (m *webhookManager) createCertificateConfigJobs(ctx context.Context) error 
 		// https://github.com/Kong/gateway-operator/issues/261
 		jobCertificateConfigImage = relatedJobImage
 	}
-	createJob, patchJob := k8sresources.GenerateNewWebhookCertificateConfigJobs(m.controllerNamespace,
+	createJob, patchJob := k8sresources.GenerateNewWebhookCertificateConfigJobs(m.cfg.ControllerNamespace,
 		consts.WebhookCertificateConfigName,
 		jobCertificateConfigImage,
 		consts.WebhookCertificateConfigSecretName,
@@ -207,7 +216,7 @@ func (m *webhookManager) waitForWebhookCertificate(ctx context.Context, pollTime
 		for {
 			select {
 			case <-ticker.C:
-				err := m.client.Get(ctx, types.NamespacedName{Namespace: m.controllerNamespace, Name: consts.WebhookCertificateConfigSecretName}, certificateSecret)
+				err := m.client.Get(ctx, types.NamespacedName{Namespace: m.cfg.ControllerNamespace, Name: consts.WebhookCertificateConfigSecretName}, certificateSecret)
 				if err != nil {
 					if !k8serrors.IsNotFound(err) {
 						errChan <- err

@@ -167,24 +167,24 @@ func Run(cfg Config) error {
 	}
 
 	if cfg.ValidatingWebhookEnabled {
+		// if the validatingWebhook is enabled, we don't need to setup the Gateway API controllers
+		// here, as they will be set up by the webhook manager once all the webhook resources will be created
+		// and the webhook will be in place.
 		webhookMgr := &webhookManager{
-			client:              mgr.GetClient(),
-			mgr:                 mgr,
-			controllerNamespace: cfg.ControllerNamespace,
-			webhookCertDir:      cfg.WebhookCertDir,
-			webhookPort:         cfg.WebhookPort,
+			client: mgr.GetClient(),
+			mgr:    mgr,
+			cfg:    &cfg,
 		}
 		err = mgr.Add(webhookMgr)
 		if err != nil {
 			return fmt.Errorf("unable to add webhook manager: %w", err)
 		}
-	}
-
-	// load controllers
-	controllers := setupControllers(mgr, &cfg)
-	for _, c := range controllers {
-		if err := c.MaybeSetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
+	} else {
+		controllers := setupControllers(mgr, &cfg)
+		for _, c := range controllers {
+			if err := c.MaybeSetupWithManager(mgr); err != nil {
+				return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
+			}
 		}
 	}
 
