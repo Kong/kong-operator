@@ -49,7 +49,7 @@ BUNDLE_RED_HAT_KUSTOMIZE_MANIFESTS ?= config/redhat-certified
 BUNDLE_RED_HAT_DIR ?= bundle/redhat-certified
 BUNDLE_RED_HAT_DOCKERFILE ?= bundle_redhat_certified.Dockerfile
 
-OPENSHIFT_SUPPORTED_VERSIONS ?= v4.10
+OPENSHIFT_SUPPORTED_VERSIONS ?= v4.10-v4.11
 
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
