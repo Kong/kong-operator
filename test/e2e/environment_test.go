@@ -161,6 +161,7 @@ func createEnvironment(t *testing.T, ctx context.Context) (environments.Environm
 	fmt.Println("INFO: waiting for operator webhook service to be connective")
 	require.Eventually(t, func() bool {
 		if err := waitForOperatorWebhook(ctx, clients.K8sClient); err != nil {
+			t.Logf("failed to wait for operator webhook: %v", err)
 			return false
 		}
 		return true
