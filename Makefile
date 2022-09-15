@@ -373,15 +373,19 @@ ifndef ignore-not-found
   ignore-not-found = false
 endif
 
-.PHONY: run
-run: manifests generate fmt vet install ## Run a controller from your host.
+.PHONY: webhook-certs-dir
+webhook-certs-dir:
+	@mkdir -p /tmp/k8s-webhook-server/serving-certs/
+
+.PHONY: run 
+run: webhook-certs-dir manifests generate fmt vet install ## Run a controller from your host.
 	kubectl kustomize https://github.com/kubernetes-sigs/gateway-api.git/config/crd?ref=main | kubectl apply -f -
 	CONTROLLER_DEVELOPMENT_MODE=true go run ./main.go --no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		-zap-time-encoding iso8601
 
 .PHONY: debug
-debug: manifests generate fmt vet install
+debug: webhook-certs-dir manifests generate fmt vet install
 	CONTROLLER_DEVELOPMENT_MODE=true dlv debug ./main.go -- --no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		-zap-time-encoding iso8601
