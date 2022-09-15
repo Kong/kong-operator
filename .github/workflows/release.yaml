@@ -311,6 +311,7 @@ jobs:
       env:
         API_TOKEN_GITHUB: ${{ secrets.PAT_GITHUB }}
       with:
+        commit-message: operator kong-gateway-operator (${{ github.event.inputs.tag }})
         source-directory: bundle/redhat-certified
         destination-github-username: Kong
         destination-repository-name: redhat-certified-operators
@@ -377,6 +378,7 @@ jobs:
       env:
         API_TOKEN_GITHUB: ${{ secrets.PAT_GITHUB }}
       with:
+        commit-message: operator kong-gateway-operator (${{ env.VERSION }})
         source-directory: bundle/regular
         destination-github-username: Kong
         destination-repository-name: k8s-operatorhub-community-operators
