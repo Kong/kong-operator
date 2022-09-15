@@ -170,6 +170,29 @@ func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName 
 	}, clients.OperatorClient)
 }
 
+// GatewayClassIsAccepted is a helper function for tests that returns a function
+// that can be used to check if a GatewayClass is accepted.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func GatewayClassIsAccepted(t *testing.T, ctx context.Context, gatewayClassName string, clients K8sClients) func() bool {
+	gatewayClasses := clients.GatewayClient.GatewayV1beta1().GatewayClasses()
+
+	return func() bool {
+		gwc, err := gatewayClasses.Get(context.Background(), gatewayClassName, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+		for _, cond := range gwc.Status.Conditions {
+			if cond.Reason == string(gatewayv1beta1.GatewayClassConditionStatusAccepted) {
+				if cond.ObservedGeneration == gwc.Generation {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+}
+
 func GatewayIsScheduled(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
 		return gatewayutils.IsScheduled(MustGetGateway(t, ctx, gatewayNSN, clients))

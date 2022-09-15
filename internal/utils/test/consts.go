@@ -15,6 +15,10 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
+	// GatewayClassAcceptanceTimeLimit is the amount of time that the operator
+	// will wait for a GatewayClass to be accepted.
+	GatewayClassAcceptanceTimeLimit = time.Second * 7
+
 	// GatewaySchedulingTimeLimit is the maximum amount of time to wait for
 	// a supported Gateway to be marked as Scheduled by the gateway controller.
 	GatewaySchedulingTimeLimit = time.Second * 7

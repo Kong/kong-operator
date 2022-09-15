@@ -36,9 +36,10 @@ func TestGatewayClassUpdates(t *testing.T) {
 	cleaner.Add(unsupportedGatewayClass)
 
 	t.Log("deploying a supported GatewayClass resource")
+	gatewayClassName := uuid.NewString()
 	gatewayClass := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
+			Name: gatewayClassName,
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
 			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
@@ -47,6 +48,9 @@ func TestGatewayClassUpdates(t *testing.T) {
 	gatewayClass, err = clients.GatewayClient.GatewayV1beta1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
+
+	require.Eventually(t, testutils.GatewayClassIsAccepted(t, ctx, gatewayClassName, clients),
+		testutils.GatewayClassAcceptanceTimeLimit, time.Second)
 
 	t.Log("deploying a Gateway using an unsupported class")
 	gateway := &gatewayv1beta1.Gateway{
@@ -133,9 +137,13 @@ func TestGatewayClassCreation(t *testing.T) {
 			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
 		},
 	}
+
 	gatewayClass, err = clients.GatewayClient.GatewayV1beta1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
+
+	require.Eventually(t, testutils.GatewayClassIsAccepted(t, ctx, gatewayClassName, clients),
+		testutils.GatewayClassAcceptanceTimeLimit, time.Second)
 
 	t.Log("verifying that the Gateway is now considered supported and becomes scheduled")
 	require.Eventually(t, func() bool {

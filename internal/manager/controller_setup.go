@@ -54,6 +54,22 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 
 func setupControllers(mgr manager.Manager, c *Config) []ControllerDef {
 	controllers := []ControllerDef{
+		// GatewayClass controller
+		{
+			Enabled: c.GatewayControllerEnabled,
+			AutoHandler: crdExistsChecker{
+				GVR: schema.GroupVersionResource{
+					Group:    gatewayv1beta1.SchemeGroupVersion.Group,
+					Version:  gatewayv1beta1.SchemeGroupVersion.Version,
+					Resource: "gatewayclasses",
+				},
+			}.CRDExists,
+			Controller: &controllers.GatewayClassReconciler{
+				Client:          mgr.GetClient(),
+				Scheme:          mgr.GetScheme(),
+				DevelopmentMode: c.DevelopmentMode,
+			},
+		},
 		// Gateway controller
 		{
 			Enabled: c.GatewayControllerEnabled,

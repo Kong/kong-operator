@@ -96,6 +96,10 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		return ctrl.Result{}, err
 	}
+	if !gatewayClassIsAccepted(gatewayClass) {
+		debug(log, "gatewayclass not accepted , ignoring", gateway)
+		return ctrl.Result{}, nil
+	}
 
 	trace(log, "resource is supported, ensuring that it gets marked as scheduled", gateway)
 	if !k8sutils.IsValidCondition(GatewayScheduledType, gateway) {
