@@ -318,6 +318,74 @@ jobs:
         target-branch: kong-gateway-operator-${{ github.event.inputs.tag }}
         target-directory: operators/kong-gateway-operator/${{ github.event.inputs.tag }}
 
+  community-operators-create-branch:
+    runs-on: ubuntu-latest
+    needs:
+      - semver
+      - build-push-images
+      - test-integration-current-kubernetes
+      - test-e2e-current-kubernetes
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        repository: Kong/k8s-operatorhub-community-operators
+        token: ${{ secrets.PAT_GITHUB }}
+        ref: main
+
+    - name: create and push branch
+      run: |
+        git checkout -b kong-gateway-operator-${{ github.event.inputs.tag }}
+        git push origin kong-gateway-operator-${{ github.event.inputs.tag }}
+
+  community-operators-push-bundle:
+    # TODO: Since community operators do not require running external workloads
+    # like Redhat tekton certificatino pipeline, let's automate the process of
+    # creating a pull request against https://github.com/k8s-operatorhub/community-operators
+    #
+    # related issue: https://github.com/Kong/gateway-operator/issues/330
+    runs-on: ubuntu-latest
+    needs:
+      - community-operators-create-branch
+    steps:
+
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Setup go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '^1.19'
+
+    - name: strip v from tag
+      run: |
+        TAG=${{ github.event.inputs.tag }}
+        echo "VERSION=${TAG#v}" >> $GITHUB_ENV
+
+    - name: bundle
+      run: VERSION=${{ env.VERSION }} make bundle.regular
+    - name: strip v from tag
+      run: |
+        TAG=${{ github.event.inputs.tag }}
+        echo "VERSION=${TAG#v}" >> $GITHUB_ENV
+
+    - name: Pushes bundle to Kong/k8s-operatorhub-community-operators
+      uses: cpina/github-action-push-to-another-repository@main
+      env:
+        API_TOKEN_GITHUB: ${{ secrets.PAT_GITHUB }}
+      with:
+        source-directory: bundle/regular
+        destination-github-username: Kong
+        destination-repository-name: k8s-operatorhub-community-operators
+        user-email: team-k8s+github-bot@konghq.com
+        target-branch: kong-gateway-operator-${{ github.event.inputs.tag }}
+        # Operator bundles in community-operators do not have a 'v' prefix in directory
+        # names so we use the 'v' stripped tag.
+        target-directory: operators/kong-gateway-operator/${{ env.VERSION }}
+
   publish-release:
     runs-on: ubuntu-latest
     needs:
@@ -326,6 +394,7 @@ jobs:
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
       - redhat-certified-operators-push-bundle
+      - community-operators-push-bundle
     steps:
       - uses: ncipollo/release-action@v1
         with:
