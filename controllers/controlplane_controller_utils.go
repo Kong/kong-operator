@@ -15,6 +15,7 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	"github.com/kong/gateway-operator/pkg/vars"
 )
 
 // -----------------------------------------------------------------------------
@@ -51,6 +52,11 @@ func setControlPlaneDefaults(
 	}
 	if !reflect.DeepEqual(envSourceMetadataName, envVarSourceByName(spec.Env, "POD_NAME")) {
 		spec.Env = updateEnvSource(spec.Env, "POD_NAME", envSourceMetadataName)
+		changed = true
+	}
+
+	if envValueByName(spec.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME") != vars.ControllerName {
+		spec.Env = updateEnv(spec.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME", vars.ControllerName)
 		changed = true
 	}
 
