@@ -28,14 +28,14 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	originalControlPlaneImageName := "kong/kubernetes-ingress-controller"
-	originalControlPlaneImageVersion := "2.4.2"
+	originalControlPlaneImageVersion := "2.5.0"
 	originalControlPlaneImage := fmt.Sprintf("%s:%s", originalControlPlaneImageName, originalControlPlaneImageVersion)
 
 	originalDataPlaneImageName := "kong/kong"
 	originalDataPlaneImageVersion := "2.7.0"
 	originalDataPlaneImage := fmt.Sprintf("%s:%s", originalDataPlaneImageName, originalDataPlaneImageVersion)
 
-	newControlPlaneImageVersion := "2.5.0"
+	newControlPlaneImageVersion := "2.6.0"
 	newControlPlaneImage := fmt.Sprintf("%s:%s", originalControlPlaneImageName, newControlPlaneImageVersion)
 
 	newDataPlaneImageVersion := "2.8.0"
