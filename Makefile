@@ -24,7 +24,7 @@ RHTAG ?= latest-redhat
 # Configuration - OperatorHub
 # ------------------------------------------------------------------------------
 
-VERSION ?= 0.0.2
+VERSION ?= 0.1.0
 
 CHANNELS ?= alpha
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
