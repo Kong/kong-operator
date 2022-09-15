@@ -11,7 +11,7 @@ import (
 )
 
 func TestClusterroleHelpers(t *testing.T) {
-	var testCases = []struct {
+	testCases := []struct {
 		controlplane        string
 		image               string
 		expectedClusterRole *rbacv1.ClusterRole
@@ -34,17 +34,27 @@ func TestClusterroleHelpers(t *testing.T) {
 		{
 			controlplane:        "test_2.4.2",
 			image:               "kong/kubernetes-ingress-controller:2.4.2",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_4("test_2.4.2"),
+			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_4_lt2_6("test_2.4.2"),
+		},
+		{
+			controlplane:        "test_2.5",
+			image:               "kong/kubernetes-ingress-controller:2.5",
+			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_4_lt2_6("test_2.5"),
+		},
+		{
+			controlplane:        "test_2.6",
+			image:               "kong/kubernetes-ingress-controller:2.6",
+			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_6("test_2.6"),
 		},
 		{
 			controlplane:        "test_latest",
 			image:               "kong/kubernetes-ingress-controller:latest",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_4("test_latest"),
+			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_6("test_latest"),
 		},
 		{
 			controlplane:        "test_empty",
 			image:               "kong/kubernetes-ingress-controller",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_4("test_empty"),
+			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_6("test_empty"),
 		},
 	}
 

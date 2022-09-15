@@ -163,6 +163,14 @@ spec:
         - apiGroups:
           - configuration.konghq.com
           resources:
+          - ingressclassparameterses
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - configuration.konghq.com
+          resources:
           - kongclusterplugins
           verbs:
           - get
@@ -493,6 +501,20 @@ spec:
           verbs:
           - get
           - update
+        - apiGroups:
+          - gateway.networking.k8s.io
+          resources:
+          - referencegrants
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - gateway.networking.k8s.io
+          resources:
+          - referencegrants/status
+          verbs:
+          - get
         - apiGroups:
           - gateway.networking.k8s.io
           resources:

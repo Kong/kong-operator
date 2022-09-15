@@ -9,7 +9,7 @@ import (
 type templateData struct {
 	Version    string
 	Constraint string
-	Role       rbacv1.ClusterRole
+	Roles      []*rbacv1.ClusterRole
 }
 
 // helperTemplateData is the struct with data to be used to properly render
@@ -26,9 +26,11 @@ package controllers
 // -----------------------------------------------------------------------------
 // Kong Ingress Controller - RBAC
 // -----------------------------------------------------------------------------
-{{ range .Role.Rules}}
+{{ range .Roles }}
+{{ range .Rules }}
 //+kubebuilder:rbac:groups={{range .APIGroups}}{{if .}}{{. | join ";"}}{{else}}{{"core" | join ";"}}{{end}}{{end}},resources={{.Resources | join ";"}},verbs={{.Verbs | join ";"}}
-{{- end}}
+{{- end }}
+{{- end }}
 
 `
 
@@ -59,7 +61,8 @@ func GenerateNewClusterRoleForControlPlane_{{.Version}}(controlplaneName string)
 			},
 		},
 		Rules: []rbacv1.PolicyRule{
-			{{ range .Role.Rules }}
+			{{ range .Roles }}
+			{{ range .Rules }}
 			{
 				APIGroups: []string{
 					{{ range .APIGroups }}"{{.}}",{{end}}
@@ -71,6 +74,7 @@ func GenerateNewClusterRoleForControlPlane_{{.Version}}(controlplaneName string)
 					{{ range .Verbs }}"{{.}}",{{end}}
 				},
 			},
+			{{- end }}
 			{{- end }}
 		},
 	}

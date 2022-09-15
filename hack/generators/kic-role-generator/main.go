@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"os"
 	"path"
 	"strings"
 
@@ -15,10 +17,15 @@ import (
 	kicversions "github.com/kong/gateway-operator/internal/versions"
 )
 
-const (
-	gitClonePath            = "./kubernetes-ingress-controller"
-	clusterRoleRelativePath = "config/rbac/role.yaml"
+const gitClonePath = "./kubernetes-ingress-controller"
 
+var clusterRoleRelativePaths = []string{
+	"config/rbac/role.yaml",
+	"config/rbac/gateway/role.yaml",
+	"config/rbac/knative/role.yaml",
+}
+
+const (
 	controllerRBACPath       = "./controllers/versioned_clusterroles"
 	controllerRBACFilePrefix = "zz_generated_kong_ingress_controller_rbac"
 
@@ -87,12 +94,20 @@ func main() {
 		exitOnErr(gitCheckoutTag(kicRepo, kicWorktree, version))
 
 		fmt.Printf("INFO: parsing clusterRole for KIC version %s\n", version)
-		rolePath := path.Join(gitClonePath, clusterRoleRelativePath)
-		newRole, err := parseRole(rolePath)
-		exitOnErr(err)
+		clusterRoles := []*rbacv1.ClusterRole{}
+		for _, rolePath := range clusterRoleRelativePaths {
+			// Here we try to merge all the rules from all known cluster roles.
+			rolePath := path.Join(gitClonePath, rolePath)
+			if _, err = os.Stat(rolePath); errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			newRole, err := parseRole(rolePath)
+			exitOnErr(err)
+			clusterRoles = append(clusterRoles, newRole)
+		}
 
 		exitOnErr(generatefile(
-			newRole,
+			clusterRoles,
 			c,
 			"kic-rbac",
 			kicRBACTemplate,
@@ -101,7 +116,7 @@ func main() {
 		))
 
 		exitOnErr(generatefile(
-			newRole,
+			clusterRoles,
 			c,
 			"controller-annotations",
 			controlplaneControllerRBACTemplate,
@@ -146,7 +161,8 @@ func checkout(workTree *git.Worktree, hash plumbing.Hash) {
 	fmt.Printf("INFO: restored kubernetes-ingress-controller submodule back to %s\n", hash)
 }
 
-func generatefile(role *rbacv1.ClusterRole,
+func generatefile(
+	roles []*rbacv1.ClusterRole,
 	constraint string,
 	templateName string,
 	template string,
@@ -155,7 +171,7 @@ func generatefile(role *rbacv1.ClusterRole,
 ) error {
 	file := buildFileName(folderPath, fileNamePrefix, convertConstraintName(constraint))
 	fmt.Printf("INFO: rendering file %s template for semver constraint %s\n", file, constraint)
-	buffer, err := renderTemplate(role, constraint, templateName, template)
+	buffer, err := renderTemplate(roles, constraint, templateName, template)
 	if err != nil {
 		return err
 	}

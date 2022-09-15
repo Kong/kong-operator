@@ -39,7 +39,6 @@ const (
 )
 
 func TestIngressEssentials(t *testing.T) {
-
 	namespace, cleaner := setup(t, ctx, env, clients)
 	defer func() {
 		assert.NoError(t, cleaner.Cleanup(ctx))
@@ -174,6 +173,7 @@ func TestIngressEssentials(t *testing.T) {
 	require.Eventually(t, func() bool {
 		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, env.Cluster(), namespace.Name, ingress)
 		if err != nil {
+			t.Logf("failed to get ingress LoadBalancer status: %v", err)
 			return false
 		}
 		return len(lbstatus.Ingress) > 0

@@ -67,14 +67,14 @@ func renderHelperTemplate(semverVersions map[string]string, templateName, rawTem
 	return format.Source(buf.Bytes())
 }
 
-func renderTemplate(clusterRole *rbacv1.ClusterRole, constraint string, templateName string, rawTemplate string) ([]byte, error) {
+func renderTemplate(clusterRoles []*rbacv1.ClusterRole, constraint string, templateName string, rawTemplate string) ([]byte, error) {
 	tpl, err := template.New(templateName).Funcs(sprig.TxtFuncMap()).Parse(rawTemplate)
 	if err != nil {
 		return nil, err
 	}
 	buf := &bytes.Buffer{}
 	if err = tpl.Execute(buf, templateData{
-		Role:       *clusterRole,
+		Roles:      clusterRoles,
 		Version:    convertConstraintName(constraint),
 		Constraint: constraint,
 	}); err != nil {
