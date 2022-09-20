@@ -319,36 +319,14 @@ jobs:
         target-branch: kong-gateway-operator-${{ github.event.inputs.tag }}
         target-directory: operators/kong-gateway-operator/${{ github.event.inputs.tag }}
 
-  community-operators-create-branch:
+  community-operators-push-bundle:
     runs-on: ubuntu-latest
     needs:
       - semver
       - build-push-images
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-        repository: Kong/k8s-operatorhub-community-operators
-        token: ${{ secrets.PAT_GITHUB }}
-        ref: main
 
-    - name: create and push branch
-      run: |
-        git checkout -b kong-gateway-operator-${{ github.event.inputs.tag }}
-        git push origin kong-gateway-operator-${{ github.event.inputs.tag }}
-
-  community-operators-push-bundle:
-    # TODO: Since community operators do not require running external workloads
-    # like Redhat tekton certificatino pipeline, let's automate the process of
-    # creating a pull request against https://github.com/k8s-operatorhub/community-operators
-    #
-    # related issue: https://github.com/Kong/gateway-operator/issues/330
-    runs-on: ubuntu-latest
-    needs:
-      - community-operators-create-branch
     steps:
 
     - name: Checkout repository
@@ -373,20 +351,43 @@ jobs:
         TAG=${{ github.event.inputs.tag }}
         echo "VERSION=${TAG#v}" >> $GITHUB_ENV
 
-    - name: Pushes bundle to Kong/k8s-operatorhub-community-operators
-      uses: cpina/github-action-push-to-another-repository@main
-      env:
-        API_TOKEN_GITHUB: ${{ secrets.PAT_GITHUB }}
+    - name: Checkout k8s-operatorhub/k8s-operatorhub-community-operators repo
+      uses: actions/checkout@v3
       with:
+        repository: k8s-operatorhub/k8s-operatorhub-community-operators
+        path: k8s-operatorhub-community-operators
+
+    - name: Copy the bundle to the k8s-operatorhub-community-operators repo
+      # Operator bundles in community-operators do not have a 'v' prefix in directory
+      # names so we use the 'v' stripped tag.
+      run: |
+        mkdir -p k8s-operatorhub-community-operators/operators/kong-gateway-operator/${{ env.VERSION }}
+        cp -r bundle/regular/* k8s-operatorhub-community-operators/operators/kong-gateway-operator/${{ env.VERSION }}
+
+    - name: Read PR template from k8s-operatorhub-community-operators/docs/pull_request_template.md
+      id: pr-template
+      run: |
+        echo "PR_TEMPLATE<<EOF" >> $GITHUB_ENV
+        cat k8s-operatorhub-community-operators/docs/pull_request_template.md >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
+    - name: Pushes bundle to k8s-operatorhub-community-operators
+      uses: peter-evans/create-pull-request@v4
+      with:
+        token: ${{ secrets.PAT_GITHUB }}
+        path: k8s-operatorhub-community-operators
+        push-to-fork: Kong/k8s-operatorhub-community-operators
+        add-paths: operators/kong-gateway-operator/${{ env.VERSION }}
         commit-message: operator kong-gateway-operator (${{ env.VERSION }})
-        source-directory: bundle/regular
-        destination-github-username: Kong
-        destination-repository-name: k8s-operatorhub-community-operators
-        user-email: team-k8s+github-bot@konghq.com
-        target-branch: kong-gateway-operator-${{ github.event.inputs.tag }}
-        # Operator bundles in community-operators do not have a 'v' prefix in directory
-        # names so we use the 'v' stripped tag.
-        target-directory: operators/kong-gateway-operator/${{ env.VERSION }}
+        committer: Kong <team-k8s+github-bot@konghq.com>
+        author: Kong <team-k8s+github-bot@konghq.com>
+        signoff: true
+        base: main
+        branch: kong-gateway-operator-${{ github.event.inputs.tag }}
+        delete-branch: true
+        title: operator kong-gateway-operator (${{ env.VERSION }})
+        body: ${{ env.PR_TEMPLATE }}
+        draft: false
 
   publish-release:
     runs-on: ubuntu-latest
