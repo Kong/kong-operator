@@ -10,6 +10,22 @@ ifndef COMMIT
   COMMIT := $(shell git rev-parse --short HEAD)
 endif
 
+.PHONY: submodule
+submodule: ## Initialize and update git submodules if needed
+	@-if ! scripts/verify-submodules-status.sh; then \
+		make submodule.init; \
+	fi
+
+.PHONY: submodule.init
+submodule.init: ## Initialize and update git submodules
+	git submodule sync --recursive
+	git submodule update --init --recursive
+
+.PHONY: submodule.init-force
+submodule.init-force: ## Reinitialize and update git submodules
+	git submodule sync --recursive
+	git submodule update --init --recursive --force
+
 # ------------------------------------------------------------------------------
 # Configuration - Build
 # ------------------------------------------------------------------------------
@@ -78,7 +94,7 @@ envtest: ## Download envtest-setup locally if necessary.
 
 KIC_ROLE_GENERATOR = $(PROJECT_DIR)/bin/kic-role-generator
 .PHONY: kic-role-generator
-kic-role-generator:
+kic-role-generator: submodule
 	go build -o $(KIC_ROLE_GENERATOR) ./hack/generators/kic-role-generator
 
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
@@ -178,7 +194,7 @@ build.operator:
 		main.go
 
 .PHONY: build
-build: generate fmt vet lint
+build: generate fmt vet lint submodule
 	$(MAKE) build.operator
 
 .PHONY: fmt
