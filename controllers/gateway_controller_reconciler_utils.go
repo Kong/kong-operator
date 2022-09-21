@@ -143,13 +143,13 @@ func (r *GatewayReconciler) ensureGatewayConnectivityStatus(ctx context.Context,
 	return nil
 }
 
-func (r *GatewayReconciler) verifyGatewayClassSupport(ctx context.Context, gateway *gatewayv1beta1.Gateway) (*gatewayv1beta1.GatewayClass, error) {
+func (r *GatewayReconciler) verifyGatewayClassSupport(ctx context.Context, gateway *gatewayv1beta1.Gateway) (*gatewayClassDecorator, error) {
 	if gateway.Spec.GatewayClassName == "" {
 		return nil, operatorerrors.ErrUnsupportedGateway
 	}
 
-	gwc := new(gatewayv1beta1.GatewayClass)
-	if err := r.Client.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gwc); err != nil {
+	gwc := newGatewayClass()
+	if err := r.Client.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gwc.GatewayClass); err != nil {
 		return nil, err
 	}
 

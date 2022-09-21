@@ -56,10 +56,10 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 				ctx := context.Background()
 				_, err := reconciler.Reconcile(ctx, gatewayClassReq)
 				require.NoError(t, err)
-				gwc := new(gatewayv1beta1.GatewayClass)
-				err = reconciler.Client.Get(ctx, gatewayClassReq.NamespacedName, gwc)
+				gwc := newGatewayClass()
+				err = reconciler.Client.Get(ctx, gatewayClassReq.NamespacedName, gwc.GatewayClass)
 				require.NoError(t, err)
-				require.False(t, gatewayClassIsAccepted(gwc))
+				require.False(t, gwc.isAccepted())
 
 			},
 		},
@@ -82,10 +82,10 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 				ctx := context.Background()
 				_, err := reconciler.Reconcile(ctx, gatewayClassReq)
 				require.NoError(t, err)
-				gwc := new(gatewayv1beta1.GatewayClass)
-				err = reconciler.Client.Get(ctx, gatewayClassReq.NamespacedName, gwc)
+				gwc := newGatewayClass()
+				err = reconciler.Client.Get(ctx, gatewayClassReq.NamespacedName, gwc.GatewayClass)
 				require.NoError(t, err)
-				require.True(t, gatewayClassIsAccepted(gwc))
+				require.True(t, gwc.isAccepted())
 
 			},
 		},

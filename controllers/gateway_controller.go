@@ -88,7 +88,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	k8sutils.InitReady(gateway)
 
 	trace(log, "checking gatewayclass", gateway)
-	gatewayClass, err := r.verifyGatewayClassSupport(ctx, gateway.Gateway)
+	gwc, err := r.verifyGatewayClassSupport(ctx, gateway.Gateway)
 	if err != nil {
 		if errors.Is(err, operatorerrors.ErrUnsupportedGateway) {
 			debug(log, "resource not supported, ignoring", gateway, "ExpectedGatewayClass", vars.ControllerName)
@@ -96,7 +96,8 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		return ctrl.Result{}, err
 	}
-	if !gatewayClassIsAccepted(gatewayClass) {
+
+	if !gwc.isAccepted() {
 		debug(log, "gatewayclass not accepted , ignoring", gateway)
 		return ctrl.Result{}, nil
 	}
@@ -112,7 +113,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	trace(log, "determining configuration", gateway)
-	gatewayConfig, err := r.getOrCreateGatewayConfiguration(ctx, gatewayClass)
+	gatewayConfig, err := r.getOrCreateGatewayConfiguration(ctx, gwc.GatewayClass)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -164,7 +165,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
 	// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false
-	controlplane := r.provisionControlPlane(ctx, log, gatewayClass, gateway, gatewayConfig, dataplane, services)
+	controlplane := r.provisionControlPlane(ctx, log, gwc.GatewayClass, gateway, gatewayConfig, dataplane, services)
 
 	// Set the ControlPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no ControlPlaneReady condition in the old gateway, or
