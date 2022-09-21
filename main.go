@@ -77,6 +77,12 @@ func main() {
 		webhookCertDir = certDir
 	}
 
+	if developmentModeEnabled {
+		// if developmentModeEnabled is true, we are running the webhook locally,
+		// therefore enabling the validatingWebhook is ineffective and might also be problematic to handle.
+		enableValidatingWebhook = false
+	}
+
 	loggerOpts := manager.DefaultConfig().LoggerOpts
 	loggerOpts.Development = developmentModeEnabled
 	loggerOpts.BindFlags(flagSet)
