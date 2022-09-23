@@ -416,10 +416,10 @@ jobs:
     - name: bundle
       run: VERSION=${{ env.VERSION }} make bundle.regular
 
-    - name: Checkout k8s-operatorhub/k8s-operatorhub-community-operators repo
+    - name: Checkout k8s-operatorhub/community-operators repo
       uses: actions/checkout@v3
       with:
-        repository: k8s-operatorhub/k8s-operatorhub-community-operators
+        repository: k8s-operatorhub/community-operators
         path: k8s-operatorhub-community-operators
 
     - name: Copy the bundle to the k8s-operatorhub-community-operators repo
