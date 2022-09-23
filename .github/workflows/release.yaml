@@ -261,10 +261,81 @@ jobs:
       - name: Kubernetes ${{ matrix.kubernetes_version }} E2E Tests
         run: make test.e2e
 
+  create-release-branch:
+    runs-on: ubuntu-latest
+    needs: 
+      - test-integration-current-kubernetes
+      - test-e2e-current-kubernetes
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Checkout release branch if not exist
+        run: |
+          if ! git ls-remote --exit-code --heads origin release/${{ github.event.inputs.tag }}; then
+            git checkout -b release/${{ github.event.inputs.tag }}
+            git push origin release/${{ github.event.inputs.tag }}
+          fi
+
+  update-olm-bundles:
+    runs-on: ubuntu-latest
+    needs:
+      - semver
+      - create-release-branch
+    steps:
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+
+      - name: config git user and branch
+        run: |
+          git config --global user.email "team-k8s+github-bot@konghq.com"
+          git config --global user.name "Kong's Team k8s bot"
+          git checkout release/${{ github.event.inputs.tag }}
+
+      - name: GPG sign the commits
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
+      - name: Generate bundles
+        run: |
+          VERSION=${{ needs.semver.outputs.fullversion }}  make bundle.regular
+          VERSION=${{ needs.semver.outputs.fullversion }}  make bundle.redhat-certified
+      
+      - name: Push changes to a release branch
+        run: |
+          if ! git diff --quiet; then
+            git add bundle
+            git add config
+            git commit -m "chore(bundle): update OLM bundles to v${{ needs.semver.outputs.fullversion }}"
+            git push -f origin release/${{ github.event.inputs.tag }}
+          fi
+
   redhat-certified-operators-create-branch:
     runs-on: ubuntu-latest
     needs:
       - semver
+      - update-olm-bundles
       - build-push-images
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
@@ -277,14 +348,17 @@ jobs:
         token: ${{ secrets.PAT_GITHUB }}
         ref: main
 
-    - name: create and push branch
+    - name: create and push branch if not exist
       run: |
-        git checkout -b kong-gateway-operator-${{ github.event.inputs.tag }}
-        git push origin kong-gateway-operator-${{ github.event.inputs.tag }}
+        if ! git ls-remote --exit-code --heads origin kong-gateway-operator-${{ github.event.inputs.tag }}; then
+          git checkout -b kong-gateway-operator-${{ github.event.inputs.tag }}
+          git push origin kong-gateway-operator-${{ github.event.inputs.tag }}
+        fi
 
   redhat-certified-operators-push-bundle:
     runs-on: ubuntu-latest
     needs:
+      - semver
       - redhat-certified-operators-create-branch
     steps:
 
@@ -293,18 +367,9 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Setup go
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
-
-    - name: strip v from tag
+    - name: checkout release/${{ github.event.inputs.tag }} branch
       run: |
-        TAG=${{ github.event.inputs.tag }}
-        echo "VERSION=${TAG#v}" >> $GITHUB_ENV
-
-    - name: bundle
-      run: VERSION=${{ env.VERSION }} make bundle.redhat-certified
+        git checkout release/${{ github.event.inputs.tag }}
 
     - name: Pushes bundle to Kong/redhat-certified-operators
       uses: cpina/github-action-push-to-another-repository@main
@@ -334,22 +399,21 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: checkout release/${{ github.event.inputs.tag }} branch
+      run: |
+        git checkout release/${{ github.event.inputs.tag }}
+
     - name: Setup go
       uses: actions/setup-go@v3
       with:
         go-version: '^1.19'
 
-    - name: strip v from tag
+    - name: get the version, without the v prefix
       run: |
-        TAG=${{ github.event.inputs.tag }}
-        echo "VERSION=${TAG#v}" >> $GITHUB_ENV
+        echo "VERSION=${{ needs.semver.outputs.fullversion }}" >> $GITHUB_ENV
 
     - name: bundle
       run: VERSION=${{ env.VERSION }} make bundle.regular
-    - name: strip v from tag
-      run: |
-        TAG=${{ github.event.inputs.tag }}
-        echo "VERSION=${TAG#v}" >> $GITHUB_ENV
 
     - name: Checkout k8s-operatorhub/k8s-operatorhub-community-operators repo
       uses: actions/checkout@v3
@@ -371,6 +435,14 @@ jobs:
         cat k8s-operatorhub-community-operators/docs/pull_request_template.md >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
 
+    - name: GPG sign the commits
+      uses: crazy-max/ghaction-import-gpg@v5
+      with:
+        gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+        passphrase: ${{ secrets.GPG_PASSPHRASE }}
+        git_user_signingkey: true
+        git_commit_gpgsign: true
+
     - name: Pushes bundle to k8s-operatorhub-community-operators
       uses: peter-evans/create-pull-request@v4
       with:
@@ -387,7 +459,7 @@ jobs:
         delete-branch: true
         title: operator kong-gateway-operator (${{ env.VERSION }})
         body: ${{ env.PR_TEMPLATE }}
-        draft: false
+        team-reviewers: kong/team-k8s
 
   publish-release:
     runs-on: ubuntu-latest
@@ -396,6 +468,7 @@ jobs:
       - build-push-images
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
+      - update-olm-bundles
       - redhat-certified-operators-push-bundle
       - community-operators-push-bundle
     steps:
@@ -415,3 +488,11 @@ jobs:
           tag: ${{ github.event.inputs.tag }}
           commit: ${{ github.sha }}
           prerelease: ${{ github.event.inputs.prerelease }}
+
+      - name: Sync release tags back to main
+        id: pull
+        uses: tretuna/sync-branches@1.4.0
+        with:
+          GITHUB_TOKEN: ${{ secrets.PAT_GITHUB }}
+          FROM_BRANCH: release/${{ github.event.inputs.tag }}
+          TO_BRANCH: main
