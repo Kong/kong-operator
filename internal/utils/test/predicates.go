@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -191,6 +192,21 @@ func GatewayClassIsAccepted(t *testing.T, ctx context.Context, gatewayClassName 
 		return false
 	}
 
+}
+
+// GatewayNotExist is a helper function for tests that returns a function
+// to check a if gateway(with specified namespace and name) does not exist.
+//
+//	Should be used in conjunction with require.Eventually or assert.Eventually.
+func GatewayNotExist(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
+	return func() bool {
+		gateways := clients.GatewayClient.GatewayV1beta1().Gateways(gatewayNSN.Namespace)
+		_, err := gateways.Get(ctx, gatewayNSN.Name, metav1.GetOptions{})
+		if err != nil {
+			return errors.IsNotFound(err)
+		}
+		return false
+	}
 }
 
 func GatewayIsScheduled(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {

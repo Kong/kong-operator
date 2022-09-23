@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -85,6 +86,110 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 	oldGateway.Gateway = gateway.DeepCopy()
+
+	if !gateway.DeletionTimestamp.IsZero() {
+		if gateway.DeletionTimestamp.After(time.Now()) {
+			debug(log, "gateway deletion still under grace period", gateway)
+			return ctrl.Result{
+				Requeue:      true,
+				RequeueAfter: time.Until(gateway.DeletionTimestamp.Time),
+			}, nil
+		}
+		trace(log, "gateway is marked delete, waiting for owned resources deleted", gateway)
+
+		// delete owned dataplanes.
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, r.Client, gateway.Gateway)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if len(dataplanes) > 0 {
+			deletions, err := r.ensureOwnedDataPlanesDeleted(ctx, gateway.Gateway)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			if deletions {
+				debug(log, "deleted owned dataplanes", gateway)
+				return ctrl.Result{}, err
+			}
+		} else {
+			if k8sutils.RemoveFinalizerInMetadata(&gateway.ObjectMeta, string(GatewayFinalizerCleanupDataPlanes)) {
+				err := r.Client.Patch(ctx, gateway.Gateway, client.MergeFrom(oldGateway.Gateway))
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+				debug(log, "finalizer for cleaning up dataplanes removed", gateway)
+				return ctrl.Result{}, nil
+			}
+		}
+
+		// delete owned controlplanes.
+		// Because controlplanes have finalizers, so we only remove the finalizer
+		// for cleaning up owned controlplanes when they disappeared.
+		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, r.Client, gateway.Gateway)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if len(controlplanes) > 0 {
+			deletions, err := r.ensureOwnedControlPlanesDeleted(ctx, gateway.Gateway)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			if deletions {
+				debug(log, "deleted owned controlplanes", gateway)
+				return ctrl.Result{}, err
+			}
+		} else {
+			if k8sutils.RemoveFinalizerInMetadata(&gateway.ObjectMeta, string(GatewayFinalizerCleanupControlPlanes)) {
+				err := r.Client.Patch(ctx, gateway.Gateway, client.MergeFrom(oldGateway.Gateway))
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+				debug(log, "finalizer for cleaning up controlplanes removed", gateway)
+				return ctrl.Result{}, nil
+			}
+		}
+
+		// delete owned network policies
+		networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway.Gateway)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if len(networkPolicies) > 0 {
+			deletions, err := r.ensureOwnedNetworkPoliciesDeleted(ctx, gateway.Gateway)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			if deletions {
+				debug(log, "deleted owned network policies", gateway)
+				return ctrl.Result{}, err
+			}
+		} else {
+			if k8sutils.RemoveFinalizerInMetadata(&gateway.ObjectMeta, string(GatewayFinalizerCleanupNetworkpolicies)) {
+				err := r.Client.Patch(ctx, gateway.Gateway, client.MergeFrom(oldGateway.Gateway))
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+				debug(log, "finalizer for cleaning up network policies removed", gateway)
+				return ctrl.Result{}, nil
+			}
+		}
+
+		// cleanup completed
+		debug(log, "owned resource cleanup completed, gateway deleted", gateway)
+		return ctrl.Result{}, nil
+
+	}
+
+	// ensure the controlplane has a finalizer to delete owned cluster wide resources on delete.
+	finalizersChanged := k8sutils.EnsureFinalizersInMetadata(&gateway.ObjectMeta,
+		string(GatewayFinalizerCleanupControlPlanes),
+		string(GatewayFinalizerCleanupDataPlanes),
+		string(GatewayFinalizerCleanupNetworkpolicies),
+	)
+	if finalizersChanged {
+		trace(log, "update metadata of gateway to set finalizer", gateway)
+		return ctrl.Result{}, r.Client.Update(ctx, gateway.Gateway)
+	}
 	k8sutils.InitReady(gateway)
 
 	trace(log, "checking gatewayclass", gateway)

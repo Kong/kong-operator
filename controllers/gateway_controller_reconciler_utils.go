@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sort"
 
+	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -307,6 +308,74 @@ func generateDataPlaneNetworkPolicy(
 			},
 		},
 	}
+}
+
+// ensureOwnedControlPlanesDeleted deletes all controlplanes owned by gateway.
+// returns true if at least one controlplane resource is deleted.
+func (r *GatewayReconciler) ensureOwnedControlPlanesDeleted(ctx context.Context, gateway *gatewayv1beta1.Gateway) (bool, error) {
+	controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, r.Client, gateway)
+	if err != nil {
+		return false, err
+	}
+
+	deleted := false
+	var deletionErr *multierror.Error
+	for i := range controlplanes {
+		// skip already deleted controlplanes, because controlplanes may have finalizers
+		// to wait for owned cluster wide resources deleted.
+		if !controlplanes[i].DeletionTimestamp.IsZero() {
+			continue
+		}
+		err = r.Client.Delete(ctx, &controlplanes[i])
+		if err != nil && !k8serrors.IsNotFound(err) {
+			deletionErr = multierror.Append(deletionErr, err)
+		}
+		deleted = true
+	}
+
+	return deleted, deletionErr.ErrorOrNil()
+}
+
+// ensureOwnedDataPlanesDeleted deleted all dataplanes owned by gateway.
+// returns true if at least one dataplane resource is deleted.
+func (r *GatewayReconciler) ensureOwnedDataPlanesDeleted(ctx context.Context, gateway *gatewayv1beta1.Gateway) (bool, error) {
+	dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, r.Client, gateway)
+	if err != nil {
+		return false, err
+	}
+
+	deleted := false
+	var deletionErr *multierror.Error
+	for i := range dataplanes {
+		err = r.Client.Delete(ctx, &dataplanes[i])
+		if err != nil && !k8serrors.IsNotFound(err) {
+			deletionErr = multierror.Append(deletionErr, err)
+		}
+		deleted = true
+	}
+
+	return deleted, deletionErr.ErrorOrNil()
+}
+
+// ensureOwnedNetworkPoliciesDeleted deleted all network policies owned by gateway.
+// returns true if at least one networkPolicy resource is deleted.
+func (r *GatewayReconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gateway *gatewayv1beta1.Gateway) (bool, error) {
+	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway)
+	if err != nil {
+		return false, err
+	}
+
+	deleted := false
+	var deletionErr *multierror.Error
+	for i := range networkPolicies {
+		err = r.Client.Delete(ctx, &networkPolicies[i])
+		if err != nil && !k8serrors.IsNotFound(err) {
+			deletionErr = multierror.Append(deletionErr, err)
+		}
+		deleted = true
+	}
+
+	return deleted, deletionErr.ErrorOrNil()
 }
 
 // -----------------------------------------------------------------------------

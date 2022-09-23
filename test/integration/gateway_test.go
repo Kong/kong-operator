@@ -141,6 +141,9 @@ func TestGatewayEssentials(t *testing.T) {
 
 	t.Log("verifying networkpolicies are deleted")
 	require.Eventually(t, testutils.Not(testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients)), time.Minute, time.Second)
+
+	t.Log("verifying that gateway itself is deleted")
+	require.Eventually(t, testutils.GatewayNotExist(t, ctx, gatewayNSN, clients), time.Minute, time.Second)
 }
 
 func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {

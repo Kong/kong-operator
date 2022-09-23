@@ -395,6 +395,7 @@ spec:
           - controlplanes
           verbs:
           - create
+          - delete
           - get
           - list
           - patch
@@ -420,6 +421,7 @@ spec:
           - dataplanes
           verbs:
           - create
+          - delete
           - get
           - list
           - patch
