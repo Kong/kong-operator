@@ -47,7 +47,7 @@ func (r *DataPlaneReconciler) ensureIsMarkedProvisioned(
 		"pods for all Deployments are ready",
 	)
 	k8sutils.SetCondition(condition, dataplane)
-	k8sutils.SetReady(dataplane)
+	k8sutils.SetReady(dataplane, dataplane.Generation)
 }
 
 func (r *DataPlaneReconciler) ensureDataPlaneServiceStatus(

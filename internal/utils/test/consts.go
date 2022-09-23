@@ -26,7 +26,7 @@ const (
 	// GatewayReadyTimeLimit is the maximum amount of time to wait for a
 	// supported Gateway to be fully provisioned and marked as Ready by the
 	// gateway controller.
-	GatewayReadyTimeLimit = time.Minute * 2
+	GatewayReadyTimeLimit = time.Minute * 3
 )
 
 // -----------------------------------------------------------------------------

@@ -19,7 +19,7 @@ const (
 	DependenciesNotReadyReason ConditionReason = "DependenciesNotReady"
 
 	// ResourceReadyReason indicates the resource is ready
-	ResourceReadyReason ConditionReason = "ResourceReady"
+	ResourceReadyReason ConditionReason = ConditionReason("Ready")
 
 	// WaitingToBecomeReadyReason generic message for dependent resources waiting to be ready
 	WaitingToBecomeReadyReason ConditionReason = "WaitingToBecomeReady"
@@ -89,11 +89,13 @@ func InitReady(resource ConditionsAware) {
 }
 
 // SetReady evaluates all the existing conditions and sets the Ready status accordingly
-func SetReady(resource ConditionsAware) {
+func SetReady(resource ConditionsAware, generation int64) {
 	ready := metav1.Condition{
 		Type:               string(ReadyType),
 		LastTransitionTime: metav1.Now(),
+		ObservedGeneration: generation,
 	}
+
 	if areAllConditionsReady(resource) {
 		ready.Status = metav1.ConditionTrue
 		ready.Reason = string(ResourceReadyReason)

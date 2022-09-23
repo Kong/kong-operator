@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 
+	"github.com/blang/semver/v4"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -77,6 +79,17 @@ func setControlPlaneDefaults(
 		}
 	}
 
+	controlPlaneImage := generateControlPlaneImage(spec)
+	if controlPlaneNeedEnableGatewayFeature(controlPlaneImage) {
+		envFeatureGates := envValueByName(spec.Env, "CONTROLLER_FEATURE_GATES")
+		if !strings.Contains(envFeatureGates, "Gateway=true") {
+			envFeatureGates = envFeatureGates + ",Gateway=true"
+			envFeatureGates = strings.TrimPrefix(envFeatureGates, ",")
+			spec.Env = updateEnv(spec.Env, "CONTROLLER_FEATURE_GATES", envFeatureGates)
+			changed = true
+		}
+	}
+
 	if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE"]; !isOverrideDisabled {
 		spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE", "/var/cluster-certificate/tls.crt")
 	}
@@ -88,6 +101,27 @@ func setControlPlaneDefaults(
 	}
 
 	return changed
+}
+
+// controlPlaneNeedEnableGatewayFeature returns true if Gateway Feature needs
+// to be enabled for a controlplane, false otherwise.
+func controlPlaneNeedEnableGatewayFeature(image string) bool {
+
+	parts := strings.Split(image, ":")
+	// get tag of the image by last part of ":" separated parts.
+	// for example kong/kubernetes-ingresss-controller:2.5.0
+	tag := parts[len(parts)-1]
+	version, err := semver.ParseTolerant(tag)
+	// if we failed to get version from image tag, assume that we need to enable Gateway feature gate.
+	if err != nil {
+		return true
+	}
+	// for versions <= 2.6, we need to enable Gateway feature gate.
+	if version.LT(semver.Version{Major: 2, Minor: 6}) {
+		return true
+	}
+
+	return false
 }
 
 func setControlPlaneEnvOnDataPlaneChange(
@@ -199,12 +233,12 @@ func rejectEnvByName(envVars []corev1.EnvVar, name string) []corev1.EnvVar {
 	return newEnvVars
 }
 
-func generateControlPlaneImage(controlplane *operatorv1alpha1.ControlPlane) string {
+func generateControlPlaneImage(opts *operatorv1alpha1.ControlPlaneDeploymentOptions) string {
 
-	if controlplane.Spec.ContainerImage != nil {
-		controlplaneImage := *controlplane.Spec.ContainerImage
-		if controlplane.Spec.Version != nil {
-			controlplaneImage = fmt.Sprintf("%s:%s", controlplaneImage, *controlplane.Spec.Version)
+	if opts.ContainerImage != nil {
+		controlplaneImage := *opts.ContainerImage
+		if opts.Version != nil {
+			controlplaneImage = fmt.Sprintf("%s:%s", controlplaneImage, *opts.Version)
 		}
 		return controlplaneImage
 	}
@@ -220,7 +254,7 @@ func generateControlPlaneImage(controlplane *operatorv1alpha1.ControlPlane) stri
 
 func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.ControlPlane, serviceAccountName,
 	certSecretName string) *appsv1.Deployment {
-	controlplaneImage := generateControlPlaneImage(controlplane)
+	controlplaneImage := generateControlPlaneImage(&controlplane.Spec.ControlPlaneDeploymentOptions)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{

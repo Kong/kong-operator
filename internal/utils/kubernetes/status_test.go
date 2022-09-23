@@ -491,7 +491,7 @@ func TestSetReady(t *testing.T) {
 			resource := &TestResource{
 				tt.conditions,
 			}
-			SetReady(resource)
+			SetReady(resource, 0)
 			current := IsReady(resource)
 			assert.Equal(t, current, tt.expected)
 		})

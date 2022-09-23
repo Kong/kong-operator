@@ -206,7 +206,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	if !k8sutils.IsReady(gateway) {
 		if !k8sutils.IsReady(oldGateway) || !reflect.DeepEqual(gateway.Status.Addresses, oldGateway.Status.Addresses) {
-			k8sutils.SetReady(gateway)
+			k8sutils.SetReady(gateway, gateway.Generation)
 			if err = r.patchStatus(ctx, gateway, oldGateway); err != nil {
 				return ctrl.Result{}, err
 			}
