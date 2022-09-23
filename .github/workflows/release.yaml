@@ -391,6 +391,7 @@ jobs:
       - build-push-images
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
+      - update-olm-bundles
 
     steps:
 
