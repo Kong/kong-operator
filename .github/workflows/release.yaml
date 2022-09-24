@@ -460,7 +460,6 @@ jobs:
         delete-branch: true
         title: operator kong-gateway-operator (${{ env.VERSION }})
         body: ${{ env.PR_TEMPLATE }}
-        team-reviewers: kong/team-k8s
 
   publish-release:
     runs-on: ubuntu-latest
@@ -489,7 +488,6 @@ jobs:
           tag: ${{ github.event.inputs.tag }}
           commit: ${{ github.sha }}
           prerelease: ${{ github.event.inputs.prerelease }}
-
       - name: Sync release tags back to main
         id: pull
         uses: tretuna/sync-branches@1.4.0

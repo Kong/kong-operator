@@ -313,6 +313,8 @@ docker.push:
 _bundle: manifests kustomize operator-sdk
 	$(OPERATOR_SDK) generate kustomize manifests --apis-dir=$(APIS_DIR)/
 	cd config/manager && $(KUSTOMIZE) edit set image $(IMG)=$(IMG):$(VERSION)
+	yq -i e '.metadata.annotations.containerImage |= "$(IMG):$(VERSION)"' \
+		 config/manifests/bases/kong-gateway-operator.clusterserviceversion.yaml
 	$(KUSTOMIZE) build $(KUSTOMIZE_DIR) | $(OPERATOR_SDK) generate bundle --output-dir=$(BUNDLE_DIR) $(BUNDLE_GEN_FLAGS)
 	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
 	mv bundle.Dockerfile $(BUNDLE_DIR)
@@ -328,7 +330,6 @@ bundle.redhat-certified:
 	KUSTOMIZE_DIR=$(BUNDLE_RED_HAT_KUSTOMIZE_MANIFESTS) \
 	BUNDLE_DIR=$(BUNDLE_RED_HAT_DIR) \
 		$(MAKE) _bundle
-
 	yq -i e '.annotations."com.redhat.openshift.versions" = "$(OPENSHIFT_SUPPORTED_VERSIONS)"' \
 		$(BUNDLE_RED_HAT_DIR)/metadata/annotations.yaml
 	echo "# Annotations for OpenShift." >> $(BUNDLE_RED_HAT_DIR)/bundle.Dockerfile
