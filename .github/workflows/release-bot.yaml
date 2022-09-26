@@ -1,0 +1,83 @@
+# This job is not inteneded to be run manually. Instead it assumes that proper
+# release commit is pushed to the repository. It will then create a new release
+# on GitHub.
+name: release-bot
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  look_for_release:
+    outputs:
+      release_found: ${{ steps.commit_parser.outputs.release_found }}
+      release_type: ${{ steps.commit_parser.outputs.release_type }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: search for release command in commit message
+        id: commit_parser
+        shell: bash
+        run: |
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          if [[ $COMMIT_MSG =~ ^"chore(release): [bot]" ]]; then
+            echo "::set-output name=release_found::true"
+            echo "::set-output name=release_type::release"
+          elif [[ $COMMIT_MSG =~ ^"chore(prerelease): [bot]" ]]; then
+            echo "::set-output name=release_found::true"
+            echo "::set-output name=release_type::prerelease"
+          else
+            echo "::set-output name=release_found::false"
+          fi
+
+  semver:
+    needs: look_for_release
+    if: ${{ needs.look_for_release.outputs.release_found == 'true' }}
+    outputs:
+      version: ${{ steps.semver_parser.outputs.fullversion }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Parse semver string
+        id: semver_parser
+        uses: booxmedialtd/ws-action-parse-semver@v1
+        with:
+          input_string: ${{ github.event.head_commit.message }}
+          version_extractor_regex: 'v(.*)$'
+
+      - name: check if tag already exists
+        uses: mukunku/tag-exists-action@v1.0.0
+        id: tag_exists
+        with:
+          tag: ${{ steps.commit_parser.outputs.release_version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: fail if tag already exists
+        if: ${{ steps.tag_exists.outputs.exists == 'true' }}
+        run: exit 1
+
+  publish-release:
+    needs:
+      - look_for_release
+      - semver
+    if: ${{ needs.look_for_release.outputs.release_found == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ncipollo/release-action@v1
+        with:
+          body: |
+            #### Download Kong Gateway Operator ${{ needs.semver.outputs.version }}:
+
+            - [Docker Image](https://github.com/Kong/gateway-operator/pkgs/container/gateway-operator)
+            - [Get started](https://github.com/Kong/gateway-operator/blob/main/README.md)
+
+            #### Links:
+
+            - [Changelog](https://github.com/Kong/gateway-operator/blob/main/CHANGELOG.md#${{ needs.semver.outputs.major }}${{ needs.semver.outputs.minor }}${{ needs.semver.outputs.patch }})
+
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: v${{ needs.semver.outputs.version }}
+          commit: ${{ github.sha }}
+          prerelease: ${{ needs.look_for_release.outputs.release_type == 'prerelease' }}

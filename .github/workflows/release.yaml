@@ -472,26 +472,20 @@ jobs:
       - redhat-certified-operators-push-bundle
       - community-operators-push-bundle
     steps:
-      - uses: ncipollo/release-action@v1
-        with:
-          body: |
-            #### Download Kong Gateway Operator ${{ needs.semver.outputs.fullversion }}:
+      - name: determine release type (release, prerelease)
+        id: release_type
+        shell: bash
+        run: |
+          if [[ "${{ github.event.inputs.prerelease }}" == "true" ]]; then
+            echo "::set-output name=type::prerelease"
+          else
+            echo "::set-output name=type::release"
+          fi
 
-            - [Docker Image](https://github.com/Kong/gateway-operator/pkgs/container/gateway-operator)
-            - [Get started](https://github.com/Kong/gateway-operator/blob/main/README.md)
-
-            #### Links:
-
-            - [Changelog](https://github.com/Kong/gateway-operator/blob/main/CHANGELOG.md#${{ needs.semver.outputs.major }}${{ needs.semver.outputs.minor }}${{ needs.semver.outputs.patch }})
-
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.event.inputs.tag }}
-          commit: ${{ github.sha }}
-          prerelease: ${{ github.event.inputs.prerelease }}
-      - name: Sync release tags back to main
-        id: pull
+      - name: create a release PR
         uses: tretuna/sync-branches@1.4.0
         with:
           GITHUB_TOKEN: ${{ secrets.PAT_GITHUB }}
           FROM_BRANCH: release/${{ github.event.inputs.tag }}
           TO_BRANCH: main
+          PR_TITLE: "${{ steps.release_type.outputs.type }}: ${{ github.event.inputs.tag }}"
