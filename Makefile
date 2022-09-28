@@ -392,6 +392,11 @@ test.integration:
 test.e2e:
 	GOFLAGS="-tags=e2e_tests" go test -race -v ./test/e2e/...
 
+.PHONY: test.conformance
+test.conformance:
+	GOFLAGS="-tags=conformance_tests" go test -race -v ./test/conformance/...
+
+
 # ------------------------------------------------------------------------------
 # Debug
 # ------------------------------------------------------------------------------

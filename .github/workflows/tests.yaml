@@ -97,6 +97,31 @@ jobs:
     - name: run unit tests
       run: make test.unit
 
+  conformance-tests:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: setup golang
+      uses: actions/setup-go@v3
+      with:
+        go-version: '^1.19'
+
+    - name: cache go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: run conformance tests
+      run: make test.conformance
+
   integration-tests:
     runs-on: ubuntu-latest
     steps:

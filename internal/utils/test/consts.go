@@ -2,12 +2,6 @@ package test
 
 import (
 	"time"
-
-	kubernetesclient "k8s.io/client-go/kubernetes"
-	ctrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
-
-	operatorclient "github.com/kong/gateway-operator/pkg/clientset"
 )
 
 // -----------------------------------------------------------------------------
@@ -96,16 +90,7 @@ const (
 
 	// GatewayCRDsKustomizeURL is a URL that provides Gateway CRDs.
 	GatewayCRDsKustomizeURL = "github.com/kubernetes-sigs/gateway-api/config/crd/experimental?ref=v0.5.0"
+
+	// GatewayRawRepoURL is the base URL to the raw Gateway API repository.
+	GatewayRawRepoURL = "https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v0.5.0"
 )
-
-// -----------------------------------------------------------------------------
-// Public Structs - Kubernetes clients
-// -----------------------------------------------------------------------------
-
-// K8sClients is a structu that contains all the Kubernetes clients needed by the tests.
-type K8sClients struct {
-	K8sClient      *kubernetesclient.Clientset
-	OperatorClient *operatorclient.Clientset
-	GatewayClient  *gatewayclient.Clientset
-	MgrClient      ctrlruntimeclient.Client
-}
