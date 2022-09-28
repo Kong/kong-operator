@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kong/kubernetes-telemetry v0.0.0-20220823141552-fa3a962bd6e1
-	github.com/kong/kubernetes-testing-framework v0.21.0
+	github.com/kong/kubernetes-testing-framework v0.22.2
 	github.com/stretchr/testify v1.8.0
 	k8s.io/api v0.25.2
 	k8s.io/apimachinery v0.25.2
@@ -21,7 +21,7 @@ require (
 
 require (
 	cloud.google.com/go/compute v1.7.0 // indirect
-	cloud.google.com/go/container v1.3.1 // indirect
+	cloud.google.com/go/container v1.4.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
@@ -107,13 +107,13 @@ require (
 	golang.org/x/crypto v0.0.0-20220824171710-5757bc0c5503 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/tools v0.1.12 // indirect
-	google.golang.org/api v0.95.0 // indirect
-	google.golang.org/genproto v0.0.0-20220802133213-ce4fa296bf78 // indirect
+	google.golang.org/api v0.97.0 // indirect
+	google.golang.org/genproto v0.0.0-20220916172020-2692e8806bfa // indirect
 	google.golang.org/grpc v1.48.0 // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	sigs.k8s.io/kind v0.15.0 // indirect
+	sigs.k8s.io/kind v0.16.0 // indirect
 )
 
 require (
@@ -162,8 +162,8 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.23.0
-	golang.org/x/net v0.0.0-20220822230855-b0a4917ee28c // indirect
-	golang.org/x/oauth2 v0.0.0-20220822191816-0ebed06d0094 // indirect
+	golang.org/x/net v0.0.0-20220909164309-bea034e7d591 // indirect
+	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1 // indirect
 	golang.org/x/sys v0.0.0-20220818161305-2296e01440c6 // indirect
 	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
 	golang.org/x/text v0.3.7 // indirect
@@ -174,8 +174,8 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.25.0 // indirect
-	k8s.io/component-base v0.25.0 // indirect
+	k8s.io/apiextensions-apiserver v0.25.2 // indirect
+	k8s.io/component-base v0.25.2 // indirect
 	k8s.io/klog/v2 v2.70.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803164354-a70c9af30aea // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
