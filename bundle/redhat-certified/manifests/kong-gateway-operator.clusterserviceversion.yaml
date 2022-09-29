@@ -772,9 +772,9 @@ spec:
                 - /manager
                 env:
                 - name: RELATED_IMAGE_KONG
-                  value: registry.connect.redhat.com/kong/kong:2.8.1
+                  value: registry.connect.redhat.com/kong/kong:3.0.0
                 - name: RELATED_IMAGE_KONG_CONTROLLER
-                  value: registry.connect.redhat.com/kong/kong-ingress-controller:2.6.0-redhat
+                  value: registry.connect.redhat.com/kong/kong-ingress-controller:2.7.0-redhat
                 - name: RELATED_IMAGE_CERTIFICATE_CONFIG
                   value: k8s.gcr.io/ingress-nginx/kube-webhook-certgen:v1.1.1
                 - name: POD_NAMESPACE
@@ -903,9 +903,9 @@ spec:
     name: Kong Inc.
     url: https://konghq.com
   relatedImages:
-  - image: registry.connect.redhat.com/kong/kong:2.8.1
+  - image: registry.connect.redhat.com/kong/kong:3.0.0
     name: kong
-  - image: registry.connect.redhat.com/kong/kong-ingress-controller:2.6.0-redhat
+  - image: registry.connect.redhat.com/kong/kong-ingress-controller:2.7.0-redhat
     name: kong-controller
   - image: k8s.gcr.io/ingress-nginx/kube-webhook-certgen:v1.1.1
     name: certificate-config

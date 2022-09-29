@@ -44,17 +44,22 @@ func TestClusterroleHelpers(t *testing.T) {
 		{
 			controlplane:        "test_2.6",
 			image:               "kong/kubernetes-ingress-controller:2.6",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_6("test_2.6"),
+			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_6_lt2_7("test_2.6"),
+		},
+		{
+			controlplane:        "test_2.7",
+			image:               "kong/kubernetes-ingress-controller:2.7",
+			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_6_lt2_7("test_2.7"),
 		},
 		{
 			controlplane:        "test_latest",
 			image:               "kong/kubernetes-ingress-controller:latest",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_6("test_latest"),
+			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_7("test_latest"),
 		},
 		{
 			controlplane:        "test_empty",
 			image:               "kong/kubernetes-ingress-controller",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_6("test_empty"),
+			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_7("test_empty"),
 		},
 	}
 

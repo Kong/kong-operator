@@ -2,7 +2,7 @@ package versions
 
 const (
 	// Latest is the version of the ClusterRole that will be used for unversioned KIC
-	Latest = "2.6.0"
+	Latest = "2.7.0"
 )
 
 // RoleVersionsForKICVersions is a map that explicitly sets which ClusterRole version to use upon the KIC
@@ -20,7 +20,8 @@ const (
 // the release 5.0, a new entry '">=5.0": "5.0"' should be added to this map, and the previous most
 // updated entry should be limited to "<5.0".
 var RoleVersionsForKICVersions = map[string]string{
-	">=2.6":      "2.6", // TODO: https://github.com/Kong/gateway-operator/issues/86
+	">=2.7":      "2.7", // TODO: https://github.com/Kong/gateway-operator/issues/86
+	">=2.6,<2.7": "2.6",
 	">=2.4,<2.6": "2.5",
 	">=2.3,<2.4": "2.3",
 	">=2.2,<2.3": "2.2",
