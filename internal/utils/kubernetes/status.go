@@ -52,15 +52,17 @@ type ConditionsAware interface {
 
 // SetCondition sets a new condition to the provided resource
 func SetCondition(condition metav1.Condition, resource ConditionsAware) {
-	newConditions := make([]metav1.Condition, 0)
+	conditions := resource.GetConditions()
+	newConditions := make([]metav1.Condition, 0, len(conditions))
 
-	for i := 0; i < len(resource.GetConditions()); i++ {
-		if resource.GetConditions()[i].Type != condition.Type {
-			newConditions = append(newConditions, resource.GetConditions()[i])
+	for i := 0; i < len(conditions); i++ {
+		if conditions[i].Type != condition.Type {
+			newConditions = append(newConditions, conditions[i])
 		}
 	}
 
-	resource.SetConditions(append(newConditions, condition))
+	newConditions = append(newConditions, condition)
+	resource.SetConditions(newConditions)
 }
 
 // GetCondition returns the condition with the given type, if it exists. If the condition does not exists it returns false.

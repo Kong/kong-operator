@@ -382,7 +382,7 @@ test: test.unit
 
 .PHONY: test.unit
 test.unit:
-	go test -race -v ./internal/... ./pkg/...
+	go test -race -v ./internal/... ./pkg/... ./controllers/...
 
 .PHONY: test.integration
 test.integration:

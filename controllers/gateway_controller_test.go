@@ -38,7 +38,7 @@ func init() {
 }
 
 func TestGatewayReconciler_Reconcile(t *testing.T) {
-	var testCases = []struct {
+	testCases := []struct {
 		name                     string
 		gatewayReq               reconcile.Request
 		gatewayClass             *gatewayv1beta1.GatewayClass
@@ -62,6 +62,18 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				},
 				Spec: gatewayv1beta1.GatewayClassSpec{
 					ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
+				},
+				Status: gatewayv1beta1.GatewayClassStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1beta1.GatewayClassConditionStatusAccepted),
+							Status:             metav1.ConditionTrue,
+							ObservedGeneration: 0,
+							LastTransitionTime: metav1.Now(),
+							Reason:             string(gatewayv1beta1.GatewayClassReasonAccepted),
+							Message:            "the gatewayclass has been accepted by the controller",
+						},
+					},
 				},
 			},
 			gateway: &gatewayv1beta1.Gateway{
@@ -138,6 +150,10 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				// the dataplane service starts with no IP assigned, the gateway must be not ready
 				_, err := reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
+				// need to trigger the Reconcile again because the first one only updated the finalizers
+				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				require.NoError(t, err, "reconciliation returned an error")
+
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, currentGateway.Gateway))
 				require.False(t, k8sutils.IsReady(currentGateway))
 				condition, found := k8sutils.GetCondition(GatewayServiceType, currentGateway)

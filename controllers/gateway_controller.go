@@ -190,7 +190,6 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		trace(log, "update metadata of gateway to set finalizer", gateway)
 		return ctrl.Result{}, r.Client.Update(ctx, gateway.Gateway)
 	}
-	k8sutils.InitReady(gateway)
 
 	trace(log, "checking gatewayclass", gateway)
 	gwc, err := r.verifyGatewayClassSupport(ctx, gateway.Gateway)
@@ -206,6 +205,8 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		debug(log, "gatewayclass not accepted , ignoring", gateway)
 		return ctrl.Result{}, nil
 	}
+
+	k8sutils.InitReady(gateway)
 
 	trace(log, "resource is supported, ensuring that it gets marked as scheduled", gateway)
 	if !k8sutils.IsValidCondition(GatewayScheduledType, gateway) {
@@ -328,7 +329,8 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 func (r *GatewayReconciler) provisionDataPlane(ctx context.Context,
 	log logr.Logger,
 	gateway *gatewayDecorator,
-	gatewayConfig *operatorv1alpha1.GatewayConfiguration) *operatorv1alpha1.DataPlane {
+	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
+) *operatorv1alpha1.DataPlane {
 	log = log.WithName("dataplaneProvisioning")
 
 	r.setDataplaneGatewayConfigDefaults(gatewayConfig)
