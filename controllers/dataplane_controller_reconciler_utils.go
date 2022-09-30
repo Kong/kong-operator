@@ -13,6 +13,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
 // -----------------------------------------------------------------------------
@@ -152,7 +153,8 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 		return false, nil, fmt.Errorf("found %d deployments for DataPlane currently unsupported: expected 1 or less", count)
 	}
 
-	generatedDeployment := generateNewDeploymentForDataPlane(dataplane, certSecretName)
+	dataplaneImage := generateDataPlaneImage(dataplane)
+	generatedDeployment := k8sresources.GenerateNewDeploymentForDataPlane(dataplane, dataplaneImage, certSecretName)
 	k8sutils.SetOwnerForObject(generatedDeployment, dataplane)
 	addLabelForDataplane(generatedDeployment)
 

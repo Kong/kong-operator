@@ -7,16 +7,12 @@ import (
 	"strings"
 
 	"github.com/blang/semver/v4"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -250,124 +246,6 @@ func generateControlPlaneImage(opts *operatorv1alpha1.ControlPlaneDeploymentOpti
 	}
 
 	return consts.DefaultControlPlaneImage // TODO: https://github.com/Kong/gateway-operator/issues/20
-}
-
-func generateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.ControlPlane, serviceAccountName,
-	certSecretName string) *appsv1.Deployment {
-	controlplaneImage := generateControlPlaneImage(&controlplane.Spec.ControlPlaneDeploymentOptions)
-
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    controlplane.Namespace,
-			GenerateName: fmt.Sprintf("%s-%s-", consts.ControlPlanePrefix, controlplane.Name),
-			Labels: map[string]string{
-				"app": controlplane.Name,
-			},
-			OwnerReferences: []metav1.OwnerReference{k8sutils.GenerateOwnerReferenceForObject(controlplane)},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": controlplane.Name,
-				},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": controlplane.Name,
-					},
-				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: serviceAccountName,
-					Volumes: []corev1.Volume{
-						{
-							Name: "cluster-certificate",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: certSecretName,
-									Items: []corev1.KeyToPath{
-										{
-											Key:  "tls.crt",
-											Path: "tls.crt",
-										},
-										{
-											Key:  "tls.key",
-											Path: "tls.key",
-										},
-										{
-											Key:  "ca.crt",
-											Path: "ca.crt",
-										},
-									},
-								},
-							},
-						},
-					},
-					Containers: []corev1.Container{{
-						Name:            consts.ControlPlaneControllerContainerName,
-						Env:             controlplane.Spec.Env,
-						EnvFrom:         controlplane.Spec.EnvFrom,
-						Image:           controlplaneImage,
-						ImagePullPolicy: corev1.PullIfNotPresent,
-						VolumeMounts: []corev1.VolumeMount{
-							{
-								Name:      "cluster-certificate",
-								ReadOnly:  true,
-								MountPath: "/var/cluster-certificate",
-							},
-						},
-						Lifecycle: &corev1.Lifecycle{
-							PreStop: &corev1.LifecycleHandler{
-								Exec: &corev1.ExecAction{
-									Command: []string{
-										"/bin/sh",
-										"-c",
-										"kong quit",
-									},
-								},
-							},
-						},
-						Ports: []corev1.ContainerPort{
-							{
-								Name:          "health",
-								ContainerPort: 10254,
-								Protocol:      corev1.ProtocolTCP,
-							},
-						},
-						LivenessProbe: &corev1.Probe{
-							FailureThreshold:    3,
-							InitialDelaySeconds: 5,
-							PeriodSeconds:       10,
-							SuccessThreshold:    1,
-							TimeoutSeconds:      1,
-							ProbeHandler: corev1.ProbeHandler{
-								HTTPGet: &corev1.HTTPGetAction{
-									Path:   "/healthz",
-									Port:   intstr.FromInt(10254),
-									Scheme: corev1.URISchemeHTTP,
-								},
-							},
-						},
-						ReadinessProbe: &corev1.Probe{
-							FailureThreshold:    3,
-							InitialDelaySeconds: 5,
-							PeriodSeconds:       10,
-							SuccessThreshold:    1,
-							TimeoutSeconds:      1,
-							ProbeHandler: corev1.ProbeHandler{
-								HTTPGet: &corev1.HTTPGetAction{
-									Path:   "/readyz",
-									Port:   intstr.FromInt(10254),
-									Scheme: corev1.URISchemeHTTP,
-								},
-							},
-						},
-					}},
-				},
-			},
-		},
-	}
-	return deployment
 }
 
 // -----------------------------------------------------------------------------

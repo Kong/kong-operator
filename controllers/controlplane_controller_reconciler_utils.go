@@ -139,7 +139,8 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		return false, nil, fmt.Errorf("found %d deployments for ControlPlane currently unsupported: expected 1 or less", count)
 	}
 
-	generatedDeployment := generateNewDeploymentForControlPlane(controlplane, serviceAccountName, certSecretName)
+	controlplaneImage := generateControlPlaneImage(&controlplane.Spec.ControlPlaneDeploymentOptions)
+	generatedDeployment := k8sresources.GenerateNewDeploymentForControlPlane(controlplane, controlplaneImage, serviceAccountName, certSecretName)
 	k8sutils.SetOwnerForObject(generatedDeployment, controlplane)
 	addLabelForControlPlane(generatedDeployment)
 
