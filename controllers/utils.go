@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -30,6 +31,7 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 	"github.com/kong/gateway-operator/internal/manager/logging"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
@@ -155,7 +157,10 @@ func maybeCreateCertificateSecret(ctx context.Context,
 
 	count := len(secrets)
 	if count > 1 {
-		return false, nil, fmt.Errorf("found %d mTLS secrets for %s currently unsupported: expected 1 or less", count, owner.GetObjectKind().GroupVersionKind().Kind)
+		if err := k8sreduce.ReduceSecrets(ctx, k8sClient, secrets); err != nil {
+			return false, nil, err
+		}
+		return false, nil, errors.New("number of secrets reduced")
 	}
 
 	ownerPrefix := getPrefixForOwner(owner)

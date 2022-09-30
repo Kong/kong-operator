@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -13,6 +14,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
@@ -150,7 +152,10 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 
 	count := len(deployments)
 	if count > 1 {
-		return false, nil, fmt.Errorf("found %d deployments for DataPlane currently unsupported: expected 1 or less", count)
+		if err := k8sreduce.ReduceDeployments(ctx, r.Client, deployments); err != nil {
+			return false, nil, err
+		}
+		return false, nil, errors.New("number of deployments reduced")
 	}
 
 	dataplaneImage := generateDataPlaneImage(dataplane)
@@ -249,7 +254,10 @@ func (r *DataPlaneReconciler) ensureServiceForDataPlane(
 
 	count := len(services)
 	if count > 1 {
-		return false, nil, fmt.Errorf("found %d services for DataPlane currently unsupported: expected 1 or less", count)
+		if err := k8sreduce.ReduceServices(ctx, r.Client, services); err != nil {
+			return false, nil, err
+		}
+		return false, nil, errors.New("number of services reduced")
 	}
 
 	generatedService := generateNewServiceForDataplane(dataplane)

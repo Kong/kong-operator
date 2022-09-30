@@ -21,6 +21,7 @@ import (
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -87,6 +88,8 @@ func (r *GatewayReconciler) ensureGatewayConnectivityStatus(ctx context.Context,
 	}
 
 	count := len(services)
+	// if too many dataplane services are found here, this is a temporary situation.
+	// the number of services will be reduced to 1 by the dataplane controller.
 	if count > 1 {
 		return fmt.Errorf("found %d services for DataPlane currently unsupported: expected 1 or less", count)
 	}
@@ -222,7 +225,10 @@ func (r *GatewayReconciler) ensureDataPlaneHasNetworkPolicy(
 
 	count := len(networkPolicies)
 	if count > 1 {
-		return false, fmt.Errorf("%w, got: %d, expected 1", operatorerrors.ErrTooManyDataPlaneNetworkPolicies, count)
+		if err := k8sreduce.ReduceNetworkPolicies(ctx, r.Client, networkPolicies); err != nil {
+			return false, err
+		}
+		return false, errors.New("number of networkPolicies reduced")
 	}
 
 	generatedPolicy := generateDataPlaneNetworkPolicy(gateway.Namespace, dataplane, controlplane)

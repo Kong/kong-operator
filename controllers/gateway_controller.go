@@ -260,6 +260,8 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	count := len(services)
+	// if too many dataplane services are found here, this is a temporary situation.
+	// the number of services will be reduced to 1 by the dataplane controller.
 	if count > 1 {
 		return ctrl.Result{}, fmt.Errorf("found %d services for DataPlane currently unsupported: expected 1 or less", count)
 	}

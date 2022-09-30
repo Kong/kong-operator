@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -17,6 +18,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
@@ -136,7 +138,10 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 
 	count := len(deployments)
 	if count > 1 {
-		return false, nil, fmt.Errorf("found %d deployments for ControlPlane currently unsupported: expected 1 or less", count)
+		if err := k8sreduce.ReduceDeployments(ctx, r.Client, deployments); err != nil {
+			return false, nil, err
+		}
+		return false, nil, errors.New("number of deployments reduced")
 	}
 
 	controlplaneImage := generateControlPlaneImage(&controlplane.Spec.ControlPlaneDeploymentOptions)
@@ -236,7 +241,10 @@ func (r *ControlPlaneReconciler) ensureServiceAccountForControlPlane(
 
 	count := len(serviceAccounts)
 	if count > 1 {
-		return false, nil, fmt.Errorf("found %d serviceAccounts for ControlPlane currently unsupported: expected 1 or less", count)
+		if err := k8sreduce.ReduceServiceAccounts(ctx, r.Client, serviceAccounts); err != nil {
+			return false, nil, err
+		}
+		return false, nil, errors.New("number of serviceAccounts reduced")
 	}
 
 	generatedServiceAccount := k8sresources.GenerateNewServiceAccountForControlPlane(controlplane.Namespace, controlplane.Name)
@@ -267,7 +275,10 @@ func (r *ControlPlaneReconciler) ensureClusterRoleForControlPlane(
 
 	count := len(clusterRoles)
 	if count > 1 {
-		return false, nil, fmt.Errorf("found %d ClusterRoles for ControlPlane currently unsupported: expected 1 or less", count)
+		if err := k8sreduce.ReduceClusterRoles(ctx, r.Client, clusterRoles); err != nil {
+			return false, nil, err
+		}
+		return false, nil, errors.New("number of clusterRoles reduced")
 	}
 
 	generatedClusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane(controlplane.Name, controlplane.Spec.ContainerImage)
@@ -303,7 +314,10 @@ func (r *ControlPlaneReconciler) ensureClusterRoleBindingForControlPlane(
 
 	count := len(clusterRoleBindings)
 	if count > 1 {
-		return false, nil, fmt.Errorf("found %d ClusterRoleBindings for ControlPlane currently unsupported: expected 1 or less", count)
+		if err := k8sreduce.ReduceClusterRoleBindings(ctx, r.Client, clusterRoleBindings); err != nil {
+			return false, nil, err
+		}
+		return false, nil, errors.New("number of clusterRoleBindings reduced")
 	}
 
 	generatedClusterRoleBinding := k8sresources.GenerateNewClusterRoleBindingForControlPlane(controlplane.Namespace, controlplane.Name, serviceAccountName, clusterRoleName)

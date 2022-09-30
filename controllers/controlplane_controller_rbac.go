@@ -11,9 +11,9 @@ package controllers
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles/status,verbs=get
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=create;get;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings/status,verbs=get
-//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=create;get;list;watch;update;patch
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=create;get;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get
-//+kubebuilder:rbac:groups=core,resources=services,verbs=create;get;list;watch;update;patch
+//+kubebuilder:rbac:groups=core,resources=services,verbs=create;get;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=services/status,verbs=get
-//+kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=create;get;list;watch;update;patch
+//+kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=create;get;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=serviceaccounts/status,verbs=get

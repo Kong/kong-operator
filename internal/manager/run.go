@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -139,18 +138,6 @@ func Run(cfg Config) error {
 		LeaderElection:         cfg.LeaderElection,
 		LeaderElectionID:       "a7feedc84.konghq.com",
 		NewClient:              cfg.NewClientFunc,
-		// We need to read Deployments and secrets directly from the API server as there is
-		// an indeterministic state in which the controller creates a deployment (or a secret)
-		// for the controlplane (or dataplane) and returns with success. In this scenario there
-		// is already another request in the queue that triggers a new reconciliation loop;
-		// when the controller checks whether there are already deployments, no deployment is
-		// found because the cache has not been updated yet. In the following reconicilation
-		// loop, an error occurs because we have two deployments.
-		// TODO: https://github.com/Kong/gateway-operator/issues/182
-		ClientDisableCacheFor: []client.Object{
-			&appsv1.Deployment{},
-			&corev1.Secret{},
-		},
 	})
 	if err != nil {
 		return err

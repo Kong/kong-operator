@@ -45,8 +45,20 @@ type structuredLogLine struct {
 
 var (
 	// allowedErrorMsgs is the list of error messages that can happen without making the test fail
+	// these log lines have the failure reason in the Msg field of the log
 	allowedErrorMsgs = map[string]struct{}{
 		"failed setting up anonymous reports": {},
+	}
+	// allowedErrorMsgs is the list of the reconciler errors that can happen without making the test fail
+	// these log lines have the failure reason in the Error field of the log
+	allowedReconcilerErrors = map[string]struct{}{
+		"number of deployments reduced":         {},
+		"number of serviceAccounts reduced":     {},
+		"number of clusterRoles reduced":        {},
+		"number of clusterRoleBindings reduced": {},
+		"number of services reduced":            {},
+		"number of secrets reduced":             {},
+		"number of networkPolicies reduced":     {},
 	}
 )
 
@@ -110,6 +122,12 @@ func TestOperatorLogs(t *testing.T) {
 			}
 			// check if the message is in the list of the allowed error messages
 			if _, isAllowed := allowedErrorMsgs[structuredLine.Msg]; strings.ToLower(structuredLine.Level) == "error" && isAllowed {
+				continue
+			}
+			// check if the message is a reconciler error and the error message is in the list of the allowedReconcilerErrors
+			if _, isAllowed := allowedReconcilerErrors[structuredLine.Error]; strings.ToLower(structuredLine.Level) == "error" &&
+				structuredLine.Msg == "Reconciler error" &&
+				isAllowed {
 				continue
 			}
 			// if not, assert that no error occurred
