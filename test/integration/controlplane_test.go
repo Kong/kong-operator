@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -107,7 +108,15 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 
 func TestControlPlaneEssentials(t *testing.T) {
 	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			if assert.NoError(t, err, "failed to dump diagnostics") {
+				t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			}
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
 
 	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
 	controlplaneClient := clients.OperatorClient.ApisV1alpha1().ControlPlanes(namespace.Name)
@@ -182,32 +191,26 @@ func TestControlPlaneEssentials(t *testing.T) {
 	t.Log("verifying controlplane deployment env vars")
 	checkControlPlaneDeploymentEnvVars(t, deployment)
 
-	/*
+	t.Log("deleting the  controlplane ClusterRole and ClusterRoleBinding")
+	clusterRoles := testutils.MustListControlPlaneClusterRoles(t, ctx, controlplane, clients)
+	require.Len(t, clusterRoles, 1, "There must be only one ControlPlane ClusterRole")
+	require.NoError(t, clients.MgrClient.Delete(ctx, &clusterRoles[0]))
+	clusterRoleBindings := testutils.MustListControlPlaneClusterRoleBindings(t, ctx, controlplane, clients)
+	require.Len(t, clusterRoleBindings, 1, "There must be only one ControlPlane ClusterRoleBinding")
+	require.NoError(t, clients.MgrClient.Delete(ctx, &clusterRoleBindings[0]))
 
-		TODO: this is temporarily disabled as it was failing very often and disrupting work. It will be fixed as per https://github.com/Kong/gateway-operator/issues/199 and re-added.
+	t.Log("verifying controlplane ClusterRole and ClusterRoleBinding have been re-created")
+	require.Eventually(t, testutils.ControlPlaneHasClusterRole(t, ctx, controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+	require.Eventually(t, testutils.ControlPlaneHasClusterRoleBinding(t, ctx, controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
-		t.Log("deleting the  controlplane ClusterRole and ClusterRoleBinding")
-		clusterRoles := mustListControlPlaneClusterRoles(t, ctx, controlplane)
-		require.Len(t, clusterRoles, 1, "There must be only one ControlPlane ClusterRole")
-		require.NoError(t, mgrClient.Delete(ctx, &clusterRoles[0]))
-		clusterRoleBindings := mustListControlPlaneClusterRoleBindings(t, ctx, controlplane)
-		require.Len(t, clusterRoleBindings, 1, "There must be only one ControlPlane ClusterRoleBinding")
-		require.NoError(t, mgrClient.Delete(ctx, &clusterRoleBindings[0]))
+	t.Log("deleting the controlplane Deployment")
+	require.NoError(t, clients.MgrClient.Delete(ctx, deployment))
 
-		t.Log("verifying controlplane ClusterRole and ClusterRoleBinding have been re-created")
-		require.Eventually(t, controlPlaneHasClusterRole(t, ctx, controlplane), controlPlaneCondDeadline, controlPlaneCondTick)
-		require.Eventually(t, controlPlaneHasClusterRoleBinding(t, ctx, controlplane), controlPlaneCondDeadline, controlPlaneCondTick)
+	t.Log("verifying deployments managed by the dataplane after deletion")
+	require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t, ctx, controlplaneName, clients), time.Minute, time.Second)
 
-		t.Log("deleting the controlplane Deployment")
-		require.NoError(t, mgrClient.Delete(ctx, deployment))
-
-		t.Log("verifying deployments managed by the dataplane after deletion")
-		require.Eventually(t, controlPlaneHasActiveDeployment(t, ctx, controlplaneName), time.Minute, time.Second)
-
-		t.Log("verifying controlplane deployment env vars")
-		checkControlPlaneDeploymentEnvVars(t, deployment)
-
-	*/
+	t.Log("verifying controlplane deployment env vars")
+	checkControlPlaneDeploymentEnvVars(t, deployment)
 
 	// delete controlplane and verify that cluster wide resources removed.
 	t.Log("verifying cluster wide resources removed after controlplane deleted")

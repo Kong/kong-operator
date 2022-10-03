@@ -25,7 +25,15 @@ import (
 
 func TestGatewayEssentials(t *testing.T) {
 	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			if assert.NoError(t, err, "failed to dump diagnostics") {
+				t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			}
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
 
 	t.Log("deploying a GatewayClass resource")
 	gatewayClass := testutils.GenerateGatewayClass()
@@ -68,31 +76,36 @@ func TestGatewayEssentials(t *testing.T) {
 	t.Log("verifying connectivity to the Gateway")
 	require.Eventually(t, testutils.GetResponseBodyContains(t, ctx, clients, httpc, "http://"+gatewayIPAddress, testutils.DefaultKongResponseBody), testutils.SubresourceReadinessWait, time.Second)
 
-	/*
+	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
+	controlplaneClient := clients.OperatorClient.ApisV1alpha1().ControlPlanes(namespace.Name)
 
-		TODO: this is temporarily disabled as it was failing very often and disrupting work. It will be fixed as per https://github.com/Kong/gateway-operator/issues/197 and re-added.
+	t.Log("deleting controlplane")
+	require.NoError(t, controlplaneClient.Delete(ctx, controlplane.Name, metav1.DeleteOptions{}))
 
-		dataplaneClient := operatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
-		controlplaneClient := operatorClient.ApisV1alpha1().ControlPlanes(namespace.Name)
+	t.Log("deleting dataplane")
+	require.NoError(t, dataplaneClient.Delete(ctx, dataplane.Name, metav1.DeleteOptions{}))
 
-		t.Log("deleting controlplane")
-		require.NoError(t, controlplaneClient.Delete(ctx, controlplane.Name, metav1.DeleteOptions{}))
+	t.Log("verifying Gateway gets marked as not Ready")
+	require.Eventually(t, testutils.Not(testutils.GatewayIsReady(t, ctx, gatewayNSN, clients)), testutils.GatewayReadyTimeLimit, time.Second)
 
-		t.Log("verifying that the ControlPlane becomes provisioned again")
-		require.Eventually(t, gatewayControlPlaneIsProvisioned(t, gateway), resourceReadinessWaitAfterDeletion, time.Second)
-		controlplane = mustListControlPlanesForGateway(t, gateway)[0]
+	t.Log("verifying that the ControlPlane becomes provisioned again")
+	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, ctx, gateway, clients), 45*time.Second, time.Second)
+	controlplane = testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)[0]
 
-		t.Log("deleting dataplane")
-		require.NoError(t, dataplaneClient.Delete(ctx, dataplane.Name, metav1.DeleteOptions{}))
+	t.Log("verifying that the DataPlane becomes provisioned again")
+	require.Eventually(t, testutils.GatewayDataPlaneIsProvisioned(t, ctx, gateway, clients), 45*time.Second, time.Second)
+	dataplane = testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)[0]
 
-		t.Log("verifying that the DataPlane becomes provisioned again")
-		require.Eventually(t, gatewayDataPlaneIsProvisioned(t, gateway), resourceReadinessWaitAfterDeletion, time.Second)
-		dataplane = mustListDataPlanesForGateway(t, ctx, gateway)[0]
+	t.Log("verifying Gateway gets marked as Ready again")
+	require.Eventually(t, testutils.GatewayIsReady(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
-		t.Log("verifying connectivity to the Gateway")
-		require.Eventually(t, getResponseBodyContains(t, ctx, "http://"+gatewayIPAddress, defaultKongResponseBody), subresourceReadinessWait, time.Second)
+	t.Log("verifying Gateway gets an IP address again")
+	require.Eventually(t, testutils.GatewayIpAddressExist(t, ctx, gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
+	gateway = testutils.MustGetGateway(t, ctx, gatewayNSN, clients)
+	gatewayIPAddress = gateway.Status.Addresses[0].Value
 
-	*/
+	t.Log("verifying connectivity to the Gateway")
+	require.Eventually(t, testutils.GetResponseBodyContains(t, ctx, clients, httpc, "http://"+gatewayIPAddress, testutils.DefaultKongResponseBody), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying services managed by the dataplane")
 	var dataplaneService corev1.Service

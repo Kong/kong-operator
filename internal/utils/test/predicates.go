@@ -226,6 +226,11 @@ func GatewayDataPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *g
 		dataplanes := MustListDataPlanesForGateway(t, ctx, gateway, clients)
 
 		if len(dataplanes) == 1 {
+			// if the dataplane DeletionTimestamp is set, the dataplane deletion has been requested.
+			// Hence we cannot consider it as a provisioned valid dataplane.
+			if dataplanes[0].DeletionTimestamp != nil {
+				return false
+			}
 			for _, condition := range dataplanes[0].Status.Conditions {
 				if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) &&
 					condition.Status == metav1.ConditionTrue {
@@ -242,6 +247,11 @@ func GatewayControlPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway
 		controlplanes := MustListControlPlanesForGateway(t, ctx, gateway, clients)
 
 		if len(controlplanes) == 1 {
+			// if the controlplane DeletionTimestamp is set, the controlplane deletion has been requested.
+			// Hence we cannot consider it as a provisioned valid controlplane.
+			if controlplanes[0].DeletionTimestamp != nil {
+				return false
+			}
 			for _, condition := range controlplanes[0].Status.Conditions {
 				if condition.Type == string(controllers.ControlPlaneConditionTypeProvisioned) &&
 					condition.Status == metav1.ConditionTrue {
