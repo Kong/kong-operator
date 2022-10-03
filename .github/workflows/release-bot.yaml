@@ -21,10 +21,10 @@ jobs:
         shell: bash
         run: |
           COMMIT_MSG='${{ github.event.head_commit.message }}'
-          if [[ $COMMIT_MSG =~ ^'chore(release): [bot]' ]]; then
+          if [[ '${COMMIT_MSG}' =~ ^'chore(release): [bot]' ]]; then
             echo '::set-output name=release_found::true'
             echo '::set-output name=release_type::release'
-          elif [[ $COMMIT_MSG =~ ^'chore(prerelease): [bot]' ]]; then
+          elif [[ '${COMMIT_MSG}' =~ ^'chore(prerelease): [bot]' ]]; then
             echo '::set-output name=release_found::true'
             echo '::set-output name=release_type::prerelease'
           else
