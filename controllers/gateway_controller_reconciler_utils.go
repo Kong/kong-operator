@@ -196,7 +196,8 @@ func (r *GatewayReconciler) getGatewayConfigForGatewayClass(ctx context.Context,
 							operatorv1alpha1.SchemeGroupVersion.Group, "GatewayConfiguration"),
 					}},
 				},
-			}}
+			},
+		}
 	}
 
 	if gatewayClass.Spec.ParametersRef.Namespace == nil ||

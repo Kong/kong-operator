@@ -52,3 +52,9 @@ func newGateway() *gatewayDecorator {
 		new(gatewayv1beta1.Gateway),
 	}
 }
+
+func (g *gatewayDecorator) Clone() *gatewayDecorator {
+	return &gatewayDecorator{
+		Gateway: g.Gateway.DeepCopy(),
+	}
+}

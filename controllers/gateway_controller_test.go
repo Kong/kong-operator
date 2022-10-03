@@ -281,3 +281,66 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
+	gatewayClass := &gatewayv1beta1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-gatewayclass",
+		},
+		Spec: gatewayv1beta1.GatewayClassSpec{
+			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
+		},
+		Status: gatewayv1beta1.GatewayClassStatus{
+			Conditions: []metav1.Condition{
+				{
+					Type:               string(gatewayv1beta1.GatewayClassConditionStatusAccepted),
+					Status:             metav1.ConditionTrue,
+					ObservedGeneration: 0,
+					LastTransitionTime: metav1.Now(),
+					Reason:             string(gatewayv1beta1.GatewayClassReasonAccepted),
+					Message:            "the gatewayclass has been accepted by the controller",
+				},
+			},
+		},
+	}
+	gateway := &gatewayv1beta1.Gateway{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "gateway.networking.k8s.io/v1beta1",
+			Kind:       "Gateway",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+			UID:       types.UID(uuid.NewString()),
+		},
+		Spec: gatewayv1beta1.GatewaySpec{
+			GatewayClassName: "test-gatewayclass",
+		},
+	}
+
+	fakeClient := fakectrlruntimeclient.
+		NewClientBuilder().
+		WithScheme(scheme.Scheme).
+		WithObjects(gateway, gatewayClass).
+		Build()
+
+	reconciler := GatewayReconciler{
+		Client: fakeClient,
+	}
+
+	gatewayReq := reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Namespace: "test-namespace",
+			Name:      "test-gateway",
+		},
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, err := reconciler.Reconcile(context.Background(), gatewayReq)
+		if err != nil {
+			b.Error(err)
+		}
+	}
+}

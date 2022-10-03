@@ -78,14 +78,13 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	log := getLogger(ctx, "gateway", r.DevelopmentMode)
 
 	trace(log, "reconciling gateway resource", req)
-	gateway, oldGateway := newGateway(), newGateway()
+	gateway := newGateway()
 	if err := r.Client.Get(ctx, req.NamespacedName, gateway.Gateway); err != nil {
 		if k8serrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
-	oldGateway.Gateway = gateway.DeepCopy()
 
 	if !gateway.DeletionTimestamp.IsZero() {
 		if gateway.DeletionTimestamp.After(time.Now()) {
@@ -102,6 +101,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+
 		if len(dataplanes) > 0 {
 			deletions, err := r.ensureOwnedDataPlanesDeleted(ctx, gateway.Gateway)
 			if err != nil {
@@ -112,6 +112,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				return ctrl.Result{}, err
 			}
 		} else {
+			oldGateway := gateway.Clone()
 			if k8sutils.RemoveFinalizerInMetadata(&gateway.ObjectMeta, string(GatewayFinalizerCleanupDataPlanes)) {
 				err := r.Client.Patch(ctx, gateway.Gateway, client.MergeFrom(oldGateway.Gateway))
 				if err != nil {
@@ -139,6 +140,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				return ctrl.Result{}, err
 			}
 		} else {
+			oldGateway := gateway.Clone()
 			if k8sutils.RemoveFinalizerInMetadata(&gateway.ObjectMeta, string(GatewayFinalizerCleanupControlPlanes)) {
 				err := r.Client.Patch(ctx, gateway.Gateway, client.MergeFrom(oldGateway.Gateway))
 				if err != nil {
@@ -164,6 +166,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				return ctrl.Result{}, err
 			}
 		} else {
+			oldGateway := gateway.Clone()
 			if k8sutils.RemoveFinalizerInMetadata(&gateway.ObjectMeta, string(GatewayFinalizerCleanupNetworkpolicies)) {
 				err := r.Client.Patch(ctx, gateway.Gateway, client.MergeFrom(oldGateway.Gateway))
 				if err != nil {
@@ -177,7 +180,6 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// cleanup completed
 		debug(log, "owned resource cleanup completed, gateway deleted", gateway)
 		return ctrl.Result{}, nil
-
 	}
 
 	// ensure the controlplane has a finalizer to delete owned cluster wide resources on delete.
@@ -223,6 +225,8 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	oldGateway := gateway.Clone()
 
 	// Provision dataplane creates a dataplane and adds the DataPlaneReady=True
 	// condition to the Gateway status if the dataplane is ready. If not ready
