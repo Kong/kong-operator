@@ -18,18 +18,19 @@ jobs:
     steps:
       - name: search for release command in commit message
         id: commit_parser
-        shell: bash
-        run: |
-          COMMIT_MSG='${{ github.event.head_commit.message }}'
-          if [[ '${COMMIT_MSG}' =~ ^'chore(release): [bot]' ]]; then
-            echo '::set-output name=release_found::true'
-            echo '::set-output name=release_type::release'
-          elif [[ '${COMMIT_MSG}' =~ ^'chore(prerelease): [bot]' ]]; then
-            echo '::set-output name=release_found::true'
-            echo '::set-output name=release_type::prerelease'
-          else
-            echo '::set-output name=release_found::false'
-          fi
+        uses: actions/github-script@v4
+        with:
+          script: |
+            const commitMessage = context.payload.head_commit.message
+            if (commitMessage.includes('chore(release): [bot]')) {
+              core.setOutput('release_found', 'true')
+              core.setOutput('release_type', 'release')
+            } else if (commitMessage.includes('chore(prerelease): [bot]')) {
+              core.setOutput('release_found', 'true')
+              core.setOutput('release_type', 'prerelease')
+            } else {
+              core.setOutput('release_found', 'false')
+            }
 
   semver:
     needs: look_for_release
