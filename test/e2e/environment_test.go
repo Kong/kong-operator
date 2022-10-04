@@ -147,6 +147,8 @@ func createEnvironment(t *testing.T, ctx context.Context) (environments.Environm
 			t.Logf("failed to wait for operator webhook: %v", err)
 			return false
 		}
+
+		t.Log("operator webhook ready")
 		return true
 	}, webhookReadinessTimeout, webhookReadinessTick)
 

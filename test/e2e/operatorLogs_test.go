@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -63,13 +62,13 @@ var (
 )
 
 func TestOperatorLogs(t *testing.T) {
-	var env environments.Environment
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	defer require.NoError(t, cleanupEnvironment(ctx, env))
 
-	var clients *testutils.K8sClients
-	env, clients = createEnvironment(t, ctx)
+	env, clients := createEnvironment(t, ctx)
+	defer func() {
+		require.NoError(t, cleanupEnvironment(ctx, env))
+	}()
 
 	testNamespace, cleaner := setup(t, ctx, env)
 	defer func() {
@@ -87,7 +86,9 @@ func TestOperatorLogs(t *testing.T) {
 		"control-plane": "controller-manager",
 	})
 	require.NoError(t, err)
-	require.Len(t, podList.Items, 1)
+	require.Eventually(t, func() bool {
+		return len(podList.Items) == 1
+	}, time.Minute, time.Second)
 	operatorPod := podList.Items[0]
 
 	t.Log("opening a log stream with the gateway operator pod")
