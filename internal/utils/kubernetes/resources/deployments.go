@@ -16,8 +16,8 @@ import (
 func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.ControlPlane,
 	controlplaneImage,
 	serviceAccountName,
-	certSecretName string) *appsv1.Deployment {
-
+	certSecretName string,
+) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    controlplane.Namespace,
@@ -253,8 +253,8 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, da
 								corev1.ResourceMemory: resource.MustParse("20Mi"),
 							},
 							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("200m"),
-								corev1.ResourceMemory: resource.MustParse("100Mi"),
+								corev1.ResourceCPU:    resource.MustParse("1000m"),
+								corev1.ResourceMemory: resource.MustParse("1000Mi"),
 							},
 						},
 					}},
