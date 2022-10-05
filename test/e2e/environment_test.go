@@ -44,9 +44,10 @@ const (
 // -----------------------------------------------------------------------------
 
 var (
-	existingCluster = os.Getenv("KONG_TEST_CLUSTER")
-	imageOverride   = os.Getenv("KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE")
-	imageLoad       = os.Getenv("KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD")
+	existingCluster    = os.Getenv("KONG_TEST_CLUSTER")
+	imageOverride      = os.Getenv("KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE")
+	imageLoad          = os.Getenv("KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD")
+	skipClusterCleanup = strings.ToLower(os.Getenv("KONG_TEST_CLUSTER_PERSIST")) == "true"
 )
 
 // -----------------------------------------------------------------------------
@@ -67,8 +68,6 @@ var (
 // -----------------------------------------------------------------------------
 // Testing Vars - Testing Environment
 // -----------------------------------------------------------------------------
-
-var skipClusterCleanup bool
 
 func createEnvironment(t *testing.T, ctx context.Context) (environments.Environment, *testutils.K8sClients) {
 	skipClusterCleanup = existingCluster != ""

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -31,7 +32,7 @@ import (
 var (
 	existingCluster      = os.Getenv("KONG_TEST_CLUSTER")
 	controllerManagerOut = os.Getenv("KONG_CONTROLLER_OUT")
-	skipClusterCleanup   bool
+	skipClusterCleanup   = strings.ToLower(os.Getenv("KONG_TEST_CLUSTER_PERSIST")) == "true"
 	runWebhookTests      = false
 	webhookCertDir       = ""
 	webhookServerIP      = os.Getenv("GATEWAY_OPERATOR_WEBHOOK_IP")
