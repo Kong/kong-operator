@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: search for release command in commit message
         id: commit_parser
-        uses: actions/github-script@v4
+        uses: actions/github-script@v6
         with:
           script: |
             const commitMessage = context.payload.head_commit.message
