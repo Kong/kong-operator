@@ -255,7 +255,7 @@ func checkControlPlaneDeploymentEnvVars(t *testing.T, deployment *appsv1.Deploym
 	require.Equal(t, "test", testEnvValue)
 }
 
-func TestControPlaneUpdate(t *testing.T) {
+func TestControlPlaneUpdate(t *testing.T) {
 	namespace, cleaner := setup(t, ctx, env, clients)
 	defer func() {
 		assert.NoError(t, cleaner.Cleanup(ctx))
@@ -361,4 +361,37 @@ func TestControPlaneUpdate(t *testing.T) {
 		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 	)
 
+	var correctReadinessProbePath string
+	t.Run("controlplane is not Ready when the underlying deployment changes state to not Ready", func(t *testing.T) {
+		deployments := testutils.MustListControlPlaneDeployments(t, ctx, controlplane, clients)
+		require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
+		deployment := &deployments[0]
+		require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
+		container := &deployment.Spec.Template.Spec.Containers[0]
+		correctReadinessProbePath = container.ReadinessProbe.HTTPGet.Path
+		container.ReadinessProbe.HTTPGet.Path = "/status_which_will_always_return_404"
+		_, err = env.Cluster().Client().AppsV1().Deployments(namespace.Name).Update(ctx, deployment, metav1.UpdateOptions{})
+		require.NoError(t, err)
+
+		t.Logf("verifying that controlplane is indeed not Ready when the underlying deployment is not Ready")
+		require.Eventually(t,
+			testutils.ControlPlaneIsNotReady(t, ctx, controlplaneName, clients),
+			testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+		)
+	})
+
+	t.Run("controlplane gets Ready when the underlying deployment changes state to Ready", func(t *testing.T) {
+		deployments := testutils.MustListControlPlaneDeployments(t, ctx, controlplane, clients)
+		require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
+		deployment := &deployments[0]
+		container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
+		container.ReadinessProbe.HTTPGet.Path = correctReadinessProbePath
+		_, err = env.Cluster().Client().AppsV1().Deployments(namespace.Name).Update(ctx, deployment, metav1.UpdateOptions{})
+		require.NoError(t, err)
+
+		require.Eventually(t,
+			testutils.ControlPlaneIsReady(t, ctx, controlplaneName, clients),
+			testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+		)
+	})
 }

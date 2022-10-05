@@ -197,32 +197,42 @@ func TestDataPlaneUpdate(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
-	t.Log("verifying that the dataplane gets marked as provisioned")
-	isProvisioned := func(dataplane *v1alpha1.DataPlane) bool {
-		for _, condition := range dataplane.Status.Conditions {
-			if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) && condition.Status == metav1.ConditionTrue {
-				return true
+	dataPlaneConditionPredicate := func(c *metav1.Condition) func(dataplane *v1alpha1.DataPlane) bool {
+		return func(dataplane *v1alpha1.DataPlane) bool {
+			for _, condition := range dataplane.Status.Conditions {
+				if condition.Type == c.Type && condition.Status == c.Status {
+					return true
+				}
+				t.Logf("DataPlane condition: Type=%q;Reason:%q;Status:%q;Message:%q",
+					condition.Type, condition.Reason, condition.Status, condition.Message,
+				)
 			}
-			t.Log(condition)
+			return false
 		}
-		return false
 	}
-	require.Eventually(t, testutils.DataPlanePredicate(
-		t, ctx, dataplaneName,
-		isProvisioned, clients.OperatorClient),
-		3*time.Minute, testutils.ControlPlaneCondTick,
+
+	t.Log("verifying that the dataplane gets marked as provisioned")
+	isProvisioned := dataPlaneConditionPredicate(&metav1.Condition{
+		Type:   string(controllers.DataPlaneConditionTypeProvisioned),
+		Status: metav1.ConditionTrue,
+	})
+	require.Eventually(t,
+		testutils.DataPlanePredicate(t, ctx, dataplaneName, isProvisioned, clients.OperatorClient),
+		testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
 	)
 
 	t.Log("verifying deployments managed by the dataplane")
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(
-		t, ctx, dataplaneName, clients),
-		time.Minute, time.Second,
+	require.Eventually(t,
+		testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients),
+		testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
 	)
 
 	t.Log("verifying services managed by the dataplane")
 	var dataplaneService corev1.Service
-	require.Eventually(t, testutils.DataPlaneHasActiveService(
-		t, ctx, dataplaneName, &dataplaneService, clients), time.Minute, time.Second)
+	require.Eventually(t,
+		testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService, clients),
+		testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
+	)
 
 	deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients)
 	require.Len(t, deployments, 1, "There must be only one DatePlane deployment")
@@ -248,7 +258,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	t.Logf("verifying environment variable TEST_ENV in deployment after update")
 	require.Eventually(t, func() bool {
 		deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients)
-		require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
+		require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
 		deployment := &deployments[0]
 
 		container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
@@ -256,5 +266,46 @@ func TestDataPlaneUpdate(t *testing.T) {
 		testEnv := getEnvValueByName(container.Env, "TEST_ENV")
 		t.Logf("Tenvironment variable TEST_ENV is now %s in deployment", testEnv)
 		return testEnv == "after_update"
-	}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+	}, testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
+
+	var correctReadinessProbePath string
+	t.Run("dataplane is not Ready when the underlying deployment changes state to not Ready", func(t *testing.T) {
+		deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients)
+		require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
+		deployment := &deployments[0]
+		require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
+		container := &deployment.Spec.Template.Spec.Containers[0]
+		correctReadinessProbePath = container.ReadinessProbe.HTTPGet.Path
+		container.ReadinessProbe.HTTPGet.Path = "/status_which_will_always_return_404"
+		_, err = env.Cluster().Client().AppsV1().Deployments(namespace.Name).Update(ctx, deployment, metav1.UpdateOptions{})
+		require.NoError(t, err)
+
+		isNotReady := dataPlaneConditionPredicate(&metav1.Condition{
+			Type:   string(k8sutils.ReadyType),
+			Status: metav1.ConditionFalse,
+		})
+		require.Eventually(t,
+			testutils.DataPlanePredicate(t, ctx, dataplaneName, isNotReady, clients.OperatorClient),
+			testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
+		)
+	})
+	t.Run("dataplane gets Ready when the underlying deployment changes state to Ready", func(t *testing.T) {
+		deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients)
+		require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
+		deployment := &deployments[0]
+		container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+		require.NotNil(t, container)
+		container.ReadinessProbe.HTTPGet.Path = correctReadinessProbePath
+		_, err = env.Cluster().Client().AppsV1().Deployments(namespace.Name).Update(ctx, deployment, metav1.UpdateOptions{})
+		require.NoError(t, err)
+
+		isReady := dataPlaneConditionPredicate(&metav1.Condition{
+			Type:   string(k8sutils.ReadyType),
+			Status: metav1.ConditionTrue,
+		})
+		require.Eventually(t,
+			testutils.DataPlanePredicate(t, ctx, dataplaneName, isReady, clients.OperatorClient),
+			testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
+		)
+	})
 }

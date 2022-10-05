@@ -34,7 +34,7 @@ func init() {
 }
 
 func TestDataplaneReconciler_Reconcile(t *testing.T) {
-	var testCases = []struct {
+	testCases := []struct {
 		name                  string
 		dataplaneReq          reconcile.Request
 		dataplane             *operatorv1alpha1.DataPlane

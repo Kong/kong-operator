@@ -6,6 +6,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -69,7 +70,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	trace(log, "validating DataPlane resource conditions", dataplane)
 
 	if r.ensureIsMarkedScheduled(dataplane) {
-		err := r.updateStatus(ctx, dataplane)
+		err := r.patchStatus(ctx, dataplane)
 		if err != nil {
 			debug(log, "unable to update DataPlane resource", dataplane)
 		}
@@ -139,19 +140,18 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	trace(log, "checking readiness of DataPlane deployments", dataplane)
 
 	if dataplaneDeployment.Status.Replicas == 0 || dataplaneDeployment.Status.AvailableReplicas < dataplaneDeployment.Status.Replicas {
-		trace(log, "deployment for DataPlane not yet ready, waiting", dataplane)
-		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
+		debug(log, "deployment for DataPlane not ready yet", dataplane)
+		// Set Ready to false for dataplane as the underlying deployment is not ready.
+		k8sutils.SetCondition(
+			k8sutils.NewCondition(k8sutils.ReadyType, metav1.ConditionFalse, k8sutils.WaitingToBecomeReadyReason, k8sutils.WaitingToBecomeReadyMessage),
+			dataplane,
+		)
+		return ctrl.Result{}, r.patchStatus(ctx, dataplane)
 	}
 
 	r.ensureIsMarkedProvisioned(dataplane)
 
-	err = r.updateStatus(ctx, dataplane)
-	if err != nil {
-		if k8serrors.IsConflict(err) {
-			// no need to throw an error for 409's, just requeue to get a fresh copy
-			debug(log, "conflict during DataPlane reconciliation", dataplane)
-			return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
-		}
+	if err = r.patchStatus(ctx, dataplane); err != nil {
 		debug(log, "unable to reconcile the DataPlane resource", dataplane)
 		return ctrl.Result{}, err
 	}
@@ -160,8 +160,8 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	return ctrl.Result{}, nil
 }
 
-// updateStatus Updates the resource status only when there are changes in the Conditions
-func (r *DataPlaneReconciler) updateStatus(ctx context.Context, updated *operatorv1alpha1.DataPlane) error {
+// patchStatus Patches the resource status only when there are changes in the Conditions
+func (r *DataPlaneReconciler) patchStatus(ctx context.Context, updated *operatorv1alpha1.DataPlane) error {
 	current := &operatorv1alpha1.DataPlane{}
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)
@@ -170,7 +170,7 @@ func (r *DataPlaneReconciler) updateStatus(ctx context.Context, updated *operato
 	}
 
 	if k8sutils.NeedsUpdate(current, updated) {
-		return r.Client.Status().Update(ctx, updated)
+		return r.Client.Status().Patch(ctx, updated, client.MergeFrom(current))
 	}
 
 	return nil

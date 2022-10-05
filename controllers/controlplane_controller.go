@@ -41,7 +41,6 @@ type ControlPlaneReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
 	// for owned objects we need to check if updates to the objects resulted in the
 	// removal of an OwnerReference to the parent object, and if so we need to
 	// enqueue the parent object so that reconciliation can create a replacement.
@@ -171,7 +170,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	trace(log, "validating ControlPlane resource conditions", controlplane)
 	if r.ensureIsMarkedScheduled(controlplane) {
-		err := r.updateStatus(ctx, controlplane)
+		err := r.patchStatus(ctx, controlplane)
 		if err != nil {
 			debug(log, "unable to update ControlPlane resource", controlplane)
 			return ctrl.Result{}, err
@@ -290,7 +289,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		debug(log, "deployment updated", controlplane)
 		if !dataplaneIsSet {
 			debug(log, "DataPlane not set, deployment for ControlPlane has been scaled down to 0 replicas", controlplane)
-			err := r.updateStatus(ctx, controlplane)
+			err := r.patchStatus(ctx, controlplane)
 			if err != nil {
 				debug(log, "unable to reconcile ControlPlane status", controlplane)
 			}
@@ -301,19 +300,18 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	trace(log, "checking readiness of ControlPlane deployments", controlplane)
 
 	if controlplaneDeployment.Status.Replicas == 0 || controlplaneDeployment.Status.AvailableReplicas < controlplaneDeployment.Status.Replicas {
-		trace(log, "deployment for ControlPlane not yet ready, waiting", controlplane)
-		return ctrl.Result{}, nil // requeue will be triggered by the status update
+		debug(log, "deployment for ControlPlane not ready yet", controlplaneDeployment)
+		// Set Ready to false for controlplane as the underlying deployment is not ready.
+		k8sutils.SetCondition(
+			k8sutils.NewCondition(k8sutils.ReadyType, metav1.ConditionFalse, k8sutils.WaitingToBecomeReadyReason, k8sutils.WaitingToBecomeReadyMessage),
+			controlplane,
+		)
+		return ctrl.Result{}, r.patchStatus(ctx, controlplane)
 	}
 
 	r.ensureIsMarkedProvisioned(controlplane)
-	err = r.updateStatus(ctx, controlplane)
 
-	if err != nil {
-		if k8serrors.IsConflict(err) {
-			// no need to throw an error for 409's, just requeue to get a fresh copy
-			debug(log, "conflict during ControlPlane reconciliation", controlplane)
-			return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
-		}
+	if err = r.patchStatus(ctx, controlplane); err != nil {
 		debug(log, "unable to reconcile the ControlPlane resource", controlplane)
 		return ctrl.Result{}, err
 	}
@@ -322,16 +320,18 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	return ctrl.Result{}, nil
 }
 
-// updateStatus Updates the resource status only when there are changes in the Conditions
-func (r *ControlPlaneReconciler) updateStatus(ctx context.Context, updated *operatorv1alpha1.ControlPlane) error {
+// patchStatus Patches the resource status only when there are changes in the Conditions
+func (r *ControlPlaneReconciler) patchStatus(ctx context.Context, updated *operatorv1alpha1.ControlPlane) error {
 	current := &operatorv1alpha1.ControlPlane{}
-	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)
 
+	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
 	}
+
 	if k8sutils.NeedsUpdate(current, updated) {
-		return r.Client.Status().Update(ctx, updated)
+		return r.Client.Status().Patch(ctx, updated, client.MergeFrom(current))
 	}
+
 	return nil
 }

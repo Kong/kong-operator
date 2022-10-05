@@ -17,6 +17,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/clientset"
 )
 
@@ -91,6 +92,36 @@ func ControlPlaneIsProvisioned(t *testing.T, ctx context.Context, controlplane t
 	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1alpha1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(controllers.ControlPlaneConditionTypeProvisioned) &&
+				condition.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+		return false
+	}, clients.OperatorClient)
+}
+
+// ControlPlaneIsNotReady is a helper function for tests. It returns a function
+// that can be used to check if a ControlPlane is marked as not Ready.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func ControlPlaneIsNotReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
+	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1alpha1.ControlPlane) bool {
+		for _, condition := range c.Status.Conditions {
+			if condition.Type == string(k8sutils.ReadyType) &&
+				condition.Status == metav1.ConditionFalse {
+				return true
+			}
+		}
+		return false
+	}, clients.OperatorClient)
+}
+
+// ControlPlaneIsReady is a helper function for tests. It returns a function
+// that can be used to check if a ControlPlane is marked as Ready.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func ControlPlaneIsReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
+	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1alpha1.ControlPlane) bool {
+		for _, condition := range c.Status.Conditions {
+			if condition.Type == string(k8sutils.ReadyType) &&
 				condition.Status == metav1.ConditionTrue {
 				return true
 			}
@@ -191,7 +222,6 @@ func GatewayClassIsAccepted(t *testing.T, ctx context.Context, gatewayClassName 
 		}
 		return false
 	}
-
 }
 
 // GatewayNotExist is a helper function for tests that returns a function

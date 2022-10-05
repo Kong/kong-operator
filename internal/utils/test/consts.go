@@ -36,6 +36,11 @@ const (
 	// a supported ControlPlane to be created after a Gateway resource is
 	// created
 	ControlPlaneSchedulingTimeLimit = time.Minute * 3
+
+	// DataPlaneCondDeadline is the default timeout for checking on dataplane resources.
+	DataPlaneCondDeadline = time.Minute
+	// DataPlaneCondTick is the default tick for checking on dataplane resources.
+	DataPlaneCondTick = 2 * time.Second
 )
 
 // -----------------------------------------------------------------------------
