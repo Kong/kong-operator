@@ -93,9 +93,12 @@ const (
 
 	DefaultHTTPPort = 80
 
+	// GatewayAPIVersionTag stores the Gateway API version that is used in tests.
+	GatewayAPIVersionTag = "v0.5.1"
+
 	// GatewayCRDsKustomizeURL is a URL that provides Gateway CRDs.
-	GatewayCRDsKustomizeURL = "github.com/kubernetes-sigs/gateway-api/config/crd/experimental?ref=v0.5.0"
+	GatewayCRDsKustomizeURL = "github.com/kubernetes-sigs/gateway-api/config/crd/experimental?ref=" + GatewayAPIVersionTag
 
 	// GatewayRawRepoURL is the base URL to the raw Gateway API repository.
-	GatewayRawRepoURL = "https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v0.5.0"
+	GatewayRawRepoURL = "https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/" + GatewayAPIVersionTag
 )
