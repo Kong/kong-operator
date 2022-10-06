@@ -106,6 +106,7 @@ jobs:
         path: coverage.unit.out
 
     - name: collect test report
+      if: ${{ always() }}
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
@@ -139,6 +140,7 @@ jobs:
         GOTESTSUM_JUNITFILE: "conformance-tests.xml"
 
     - name: collect test report
+      if: ${{ always() }}
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
@@ -181,6 +183,7 @@ jobs:
         if-no-files-found: ignore
 
     - name: collect test report
+      if: ${{ always() }}
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
@@ -230,6 +233,7 @@ jobs:
         if-no-files-found: ignore
 
     - name: collect test report
+      if: ${{ always() }}
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
