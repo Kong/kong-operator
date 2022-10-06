@@ -198,7 +198,7 @@ func getReadyEndpointsCount(endpointSlices []discoveryv1.EndpointSlice) int {
 	for _, epSlice := range endpointSlices {
 		for _, endpoint := range epSlice.Endpoints {
 			if endpoint.Conditions.Ready != nil && *endpoint.Conditions.Ready {
-				readyEndpoints += 1
+				readyEndpoints++
 			}
 		}
 	}

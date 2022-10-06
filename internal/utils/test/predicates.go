@@ -309,7 +309,7 @@ func GatewayNetworkPoliciesExist(t *testing.T, ctx context.Context, gateway *gat
 	}
 }
 
-func GatewayIpAddressExist(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
+func GatewayIPAddressExist(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
 		gateway := MustGetGateway(t, ctx, gatewayNSN, clients)
 		if len(gateway.Status.Addresses) > 0 && *gateway.Status.Addresses[0].Type == gatewayv1beta1.IPAddressType {

@@ -63,8 +63,11 @@ linters-settings:
   revive:
     rules:
       - name: context-as-argument
-        arguments:
-          - "allowTypesBefore": "*testing.T"
+        # TODO: re-add this rule after https://github.com/golangci/golangci-lint/issues/3280
+        # is resolved and released.
+        # arguments:
+        #   - "allowTypesBefore": "*testing.T"
+        disabled: true
   exhaustive:
     default-signifies-exhaustive: true
 issues:

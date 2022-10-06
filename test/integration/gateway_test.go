@@ -58,7 +58,7 @@ func TestGatewayEssentials(t *testing.T) {
 	require.Eventually(t, testutils.GatewayIsReady(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets an IP address")
-	require.Eventually(t, testutils.GatewayIpAddressExist(t, ctx, gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, testutils.GatewayIPAddressExist(t, ctx, gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
 	gateway = testutils.MustGetGateway(t, ctx, gatewayNSN, clients)
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
@@ -100,7 +100,7 @@ func TestGatewayEssentials(t *testing.T) {
 	require.Eventually(t, testutils.GatewayIsReady(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets an IP address again")
-	require.Eventually(t, testutils.GatewayIpAddressExist(t, ctx, gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, testutils.GatewayIPAddressExist(t, ctx, gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
 	gateway = testutils.MustGetGateway(t, ctx, gatewayNSN, clients)
 	gatewayIPAddress = gateway.Status.Addresses[0].Value
 
