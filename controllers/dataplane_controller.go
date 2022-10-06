@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -70,7 +71,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	trace(log, "validating DataPlane resource conditions", dataplane)
 
 	if r.ensureIsMarkedScheduled(dataplane) {
-		err := r.patchStatus(ctx, dataplane)
+		err := r.patchStatus(ctx, log, dataplane)
 		if err != nil {
 			debug(log, "unable to update DataPlane resource", dataplane)
 		}
@@ -140,18 +141,18 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	trace(log, "checking readiness of DataPlane deployments", dataplane)
 
 	if dataplaneDeployment.Status.Replicas == 0 || dataplaneDeployment.Status.AvailableReplicas < dataplaneDeployment.Status.Replicas {
-		debug(log, "deployment for DataPlane not ready yet", dataplane)
+		trace(log, "deployment for DataPlane not ready yet", dataplane)
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
 			k8sutils.NewCondition(k8sutils.ReadyType, metav1.ConditionFalse, k8sutils.WaitingToBecomeReadyReason, k8sutils.WaitingToBecomeReadyMessage),
 			dataplane,
 		)
-		return ctrl.Result{}, r.patchStatus(ctx, dataplane)
+		return ctrl.Result{}, r.patchStatus(ctx, log, dataplane)
 	}
 
 	r.ensureIsMarkedProvisioned(dataplane)
 
-	if err = r.patchStatus(ctx, dataplane); err != nil {
+	if err = r.patchStatus(ctx, log, dataplane); err != nil {
 		debug(log, "unable to reconcile the DataPlane resource", dataplane)
 		return ctrl.Result{}, err
 	}
@@ -161,7 +162,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 }
 
 // patchStatus Patches the resource status only when there are changes in the Conditions
-func (r *DataPlaneReconciler) patchStatus(ctx context.Context, updated *operatorv1alpha1.DataPlane) error {
+func (r *DataPlaneReconciler) patchStatus(ctx context.Context, log logr.Logger, updated *operatorv1alpha1.DataPlane) error {
 	current := &operatorv1alpha1.DataPlane{}
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)
@@ -170,6 +171,7 @@ func (r *DataPlaneReconciler) patchStatus(ctx context.Context, updated *operator
 	}
 
 	if k8sutils.NeedsUpdate(current, updated) {
+		debug(log, "patching DataPlane status", updated, "status", updated.Status)
 		return r.Client.Status().Patch(ctx, updated, client.MergeFrom(current))
 	}
 

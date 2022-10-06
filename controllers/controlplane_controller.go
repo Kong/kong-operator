@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -170,7 +171,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	trace(log, "validating ControlPlane resource conditions", controlplane)
 	if r.ensureIsMarkedScheduled(controlplane) {
-		err := r.patchStatus(ctx, controlplane)
+		err := r.patchStatus(ctx, log, controlplane)
 		if err != nil {
 			debug(log, "unable to update ControlPlane resource", controlplane)
 			return ctrl.Result{}, err
@@ -289,7 +290,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		debug(log, "deployment updated", controlplane)
 		if !dataplaneIsSet {
 			debug(log, "DataPlane not set, deployment for ControlPlane has been scaled down to 0 replicas", controlplane)
-			err := r.patchStatus(ctx, controlplane)
+			err := r.patchStatus(ctx, log, controlplane)
 			if err != nil {
 				debug(log, "unable to reconcile ControlPlane status", controlplane)
 			}
@@ -300,18 +301,18 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	trace(log, "checking readiness of ControlPlane deployments", controlplane)
 
 	if controlplaneDeployment.Status.Replicas == 0 || controlplaneDeployment.Status.AvailableReplicas < controlplaneDeployment.Status.Replicas {
-		debug(log, "deployment for ControlPlane not ready yet", controlplaneDeployment)
+		trace(log, "deployment for ControlPlane not ready yet", controlplaneDeployment)
 		// Set Ready to false for controlplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
 			k8sutils.NewCondition(k8sutils.ReadyType, metav1.ConditionFalse, k8sutils.WaitingToBecomeReadyReason, k8sutils.WaitingToBecomeReadyMessage),
 			controlplane,
 		)
-		return ctrl.Result{}, r.patchStatus(ctx, controlplane)
+		return ctrl.Result{}, r.patchStatus(ctx, log, controlplane)
 	}
 
 	r.ensureIsMarkedProvisioned(controlplane)
 
-	if err = r.patchStatus(ctx, controlplane); err != nil {
+	if err = r.patchStatus(ctx, log, controlplane); err != nil {
 		debug(log, "unable to reconcile the ControlPlane resource", controlplane)
 		return ctrl.Result{}, err
 	}
@@ -321,7 +322,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 }
 
 // patchStatus Patches the resource status only when there are changes in the Conditions
-func (r *ControlPlaneReconciler) patchStatus(ctx context.Context, updated *operatorv1alpha1.ControlPlane) error {
+func (r *ControlPlaneReconciler) patchStatus(ctx context.Context, log logr.Logger, updated *operatorv1alpha1.ControlPlane) error {
 	current := &operatorv1alpha1.ControlPlane{}
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)
@@ -330,6 +331,7 @@ func (r *ControlPlaneReconciler) patchStatus(ctx context.Context, updated *opera
 	}
 
 	if k8sutils.NeedsUpdate(current, updated) {
+		debug(log, "patching ControlPlane status", updated, "status", updated.Status)
 		return r.Client.Status().Patch(ctx, updated, client.MergeFrom(current))
 	}
 
