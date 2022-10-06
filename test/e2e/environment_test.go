@@ -129,6 +129,9 @@ func createEnvironment(t *testing.T, ctx context.Context) (environments.Environm
 	fmt.Printf("deploying Gateway APIs CRDs from %s\n", testutils.GatewayCRDsKustomizeURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), testutils.GatewayCRDsKustomizeURL))
 
+	fmt.Printf("deploying KIC CRDs from %s\n", "./../../kubernetes-ingress-controller/config/crd/")
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "./../../kubernetes-ingress-controller/config/crd/"))
+
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")
 	require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
 
