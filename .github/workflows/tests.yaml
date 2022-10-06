@@ -96,6 +96,20 @@ jobs:
 
     - name: run unit tests
       run: make test.unit
+      env:
+        GOTESTSUM_JUNITFILE: "unit-tests.xml"
+
+    - name: collect test coverage
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage
+        path: coverage.unit.out
+
+    - name: collect test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: unit-tests.xml
 
   conformance-tests:
     runs-on: ubuntu-latest
@@ -121,6 +135,14 @@ jobs:
 
     - name: run conformance tests
       run: make test.conformance
+      env:
+        GOTESTSUM_JUNITFILE: "conformance-tests.xml"
+
+    - name: collect test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: conformance-tests.xml
 
   integration-tests:
     runs-on: ubuntu-latest
@@ -148,6 +170,7 @@ jobs:
       run: make test.integration
       env:
         KONG_CONTROLLER_OUT: stdout
+        GOTESTSUM_JUNITFILE: "integration-tests.xml"
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -156,6 +179,12 @@ jobs:
         name: diagnostics-integration
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
+
+    - name: collect test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: integration-tests.xml
 
   e2e-tests:
     runs-on: ubuntu-latest
@@ -189,6 +218,7 @@ jobs:
       run: make test.e2e
       env:
         KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD: gateway-operator:e2e-${{ github.sha }}
+        GOTESTSUM_JUNITFILE: "e2e-tests.xml"
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -197,3 +227,42 @@ jobs:
         name: diagnostics-e2e
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
+
+    - name: collect test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: e2e-tests.xml
+
+  buildpulse-report:
+    environment: "Configure ci"
+    needs:
+      - unit-tests
+      - integration-tests
+      - conformance-tests
+      - e2e-tests
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: download tests report
+        id: download-coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: tests-report
+          path: report
+
+      - name: Upload test results to BuildPulse for flaky test detection
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
+        uses: Workshop64/buildpulse-action@main
+        with:
+          account: 962416
+          repository: 477814940
+          path: report/*.xml
+          key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}

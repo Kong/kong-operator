@@ -95,7 +95,7 @@ _download_tool:
 	(cd third_party && GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
 .PHONY: tools
-tools: envtest kic-role-generator controller-gen kustomize client-gen golangci-lint
+tools: envtest kic-role-generator controller-gen kustomize client-gen golangci-lint gotestsum
 
 ENVTEST = $(PROJECT_DIR)/bin/setup-envtest
 .PHONY: envtest
@@ -131,6 +131,11 @@ OPM = $(PROJECT_DIR)/bin/opm
 .PHONY: opm
 opm:
 	@$(MAKE) _download_tool TOOL=opm
+
+GOTESTSUM = $(PROJECT_DIR)/bin/gotestsum
+.PHONY: gotestsum
+gotestsum: ## Download gotestsum locally if necessary.
+	@$(MAKE) _download_tool TOOL=gotestsum
 
 # It seems that there's problem with operator-sdk dependencies when imported from a different project.
 # After spending some time on it, decided to just use a 'thing that works' which is to download
@@ -377,25 +382,69 @@ catalog-push: ## Push a catalog image.
 # Testing
 # ------------------------------------------------------------------------------
 
+PKG_LIST = ./pkg/...,./internal/...,./controllers/...
+GOTESTSUM_FORMAT ?= standard-verbose
+
 .PHONY: test
 test: test.unit
 
+.PHONY: _test.unit
+_test.unit: gotestsum
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+	$(GOTESTSUM) -- -race $(GOTESTFLAGS) \
+		-covermode=atomic \
+		-coverpkg=$(PKG_LIST) \
+		-coverprofile=coverage.unit.out \
+		./controllers/... \
+		./internal/... \
+		./pkg/...
+
 .PHONY: test.unit
 test.unit:
-	go test -race -v ./internal/... ./pkg/... ./controllers/...
+	@$(MAKE) _test.unit GOTESTFLAGS="$(GOTESTFLAGS)"
+
+.PHONY: test.unit.pretty
+test.unit.pretty:
+	@$(MAKE) _test.unit GOTESTSUM_FORMAT=pkgname
+
+.PHONY: _test.integration
+_test.integration: gotestsum
+	GOFLAGS="-tags=integration_tests" \
+		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+		$(GOTESTSUM) -- -race $(GOTESTFLAGS) \
+		-covermode=atomic \
+		-coverpkg=$(PKG_LIST) \
+		-coverprofile=$(COVERAGE_OUT) \
+		./test/integration/...
 
 .PHONY: test.integration
 test.integration:
-	GOFLAGS="-tags=integration_tests" go test -race -v ./test/integration/...
+	@$(MAKE) _test.integration \
+		GOTESTFLAGS="$(GOTESTFLAGS)"
+
+.PHONY: _test.e2e
+_test.e2e: gotestsum
+	GOFLAGS="-tags=e2e_tests" \
+		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+		$(GOTESTSUM) -- -race $(GOTESTFLAGS) \
+		./test/e2e/...
 
 .PHONY: test.e2e
 test.e2e:
-	GOFLAGS="-tags=e2e_tests" go test -race -v ./test/e2e/...
+	@$(MAKE) _test.e2e \
+		GOTESTFLAGS="$(GOTESTFLAGS)"
+
+.PHONY: _test.conformance
+_test.conformance: gotestsum
+	GOFLAGS="-tags=conformance_tests" \
+		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+		$(GOTESTSUM) -- -race $(GOTESTFLAGS) \
+		./test/conformance/...
 
 .PHONY: test.conformance
 test.conformance:
-	GOFLAGS="-tags=conformance_tests" go test -race -v ./test/conformance/...
-
+	@$(MAKE) _test.conformance \
+		GOTESTFLAGS="$(GOTESTFLAGS)"
 
 # ------------------------------------------------------------------------------
 # Debug
