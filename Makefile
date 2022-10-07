@@ -382,7 +382,6 @@ catalog-push: ## Push a catalog image.
 # Testing
 # ------------------------------------------------------------------------------
 
-PKG_LIST = ./pkg/...,./internal/...,./controllers/...
 GOTESTSUM_FORMAT ?= standard-verbose
 
 .PHONY: test
@@ -391,9 +390,8 @@ test: test.unit
 .PHONY: _test.unit
 _test.unit: gotestsum
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-	$(GOTESTSUM) -- -race $(GOTESTFLAGS) \
-		-covermode=atomic \
-		-coverpkg=$(PKG_LIST) \
+		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-race \
 		-coverprofile=coverage.unit.out \
 		./controllers/... \
 		./internal/... \
@@ -405,16 +403,15 @@ test.unit:
 
 .PHONY: test.unit.pretty
 test.unit.pretty:
-	@$(MAKE) _test.unit GOTESTSUM_FORMAT=pkgname
+	@$(MAKE) _test.unit GOTESTSUM_FORMAT=pkgname GOTESTFLAGS="$(GOTESTFLAGS)"
 
 .PHONY: _test.integration
 _test.integration: gotestsum
 	GOFLAGS="-tags=integration_tests" \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-		$(GOTESTSUM) -- -race $(GOTESTFLAGS) \
-		-covermode=atomic \
-		-coverpkg=$(PKG_LIST) \
-		-coverprofile=$(COVERAGE_OUT) \
+		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-race \
+		-coverprofile=coverage.integration.out \
 		./test/integration/...
 
 .PHONY: test.integration
@@ -426,7 +423,8 @@ test.integration:
 _test.e2e: gotestsum
 	GOFLAGS="-tags=e2e_tests" \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-		$(GOTESTSUM) -- -race $(GOTESTFLAGS) \
+		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-race \
 		./test/e2e/...
 
 .PHONY: test.e2e
@@ -438,7 +436,8 @@ test.e2e:
 _test.conformance: gotestsum
 	GOFLAGS="-tags=conformance_tests" \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-		$(GOTESTSUM) -- -race $(GOTESTFLAGS) \
+		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-race \
 		./test/conformance/...
 
 .PHONY: test.conformance

@@ -182,6 +182,12 @@ jobs:
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
+    - name: collect test coverage
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage
+        path: coverage.integration.out
+
     - name: collect test report
       if: ${{ always() }}
       uses: actions/upload-artifact@v3
