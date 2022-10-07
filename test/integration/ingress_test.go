@@ -28,6 +28,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
 	"github.com/kong/gateway-operator/internal/annotations"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
@@ -58,7 +59,7 @@ func TestIngressEssentials(t *testing.T) {
 	cleaner.Add(gatewayClass)
 
 	t.Log("deploying Gateway resource")
-	gateway := &gatewayv1beta1.Gateway{
+	gateway := &gwtypes.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      uuid.NewString(),

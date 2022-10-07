@@ -17,6 +17,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -26,7 +27,7 @@ import (
 // -----------------------------------------------------------------------------
 
 func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
-	gateway, ok := obj.(*gatewayv1beta1.Gateway)
+	gateway, ok := obj.(*gwtypes.Gateway)
 	if !ok {
 		log.FromContext(context.Background()).Error(
 			operatorerrors.ErrUnexpectedObject,
@@ -240,7 +241,7 @@ func (r *GatewayReconciler) setDataplaneGatewayConfigDefaults(gatewayConfig *ope
 	dataplaneutils.SetDataPlaneDefaults(gatewayConfig.Spec.DataPlaneDeploymentOptions)
 }
 
-func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gatewayDecorator, gatewayConfig *operatorv1alpha1.GatewayConfiguration, dataplaneName, dataplaneServiceName string) {
+func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gwtypes.Gateway, gatewayConfig *operatorv1alpha1.GatewayConfiguration, dataplaneName, dataplaneServiceName string) {
 	dontOverride := make(map[string]struct{})
 	if gatewayConfig.Spec.ControlPlaneDeploymentOptions == nil {
 		gatewayConfig.Spec.ControlPlaneDeploymentOptions = new(operatorv1alpha1.ControlPlaneDeploymentOptions)

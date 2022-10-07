@@ -16,6 +16,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/clientset"
@@ -251,7 +252,7 @@ func GatewayIsReady(t *testing.T, ctx context.Context, gatewayNSN types.Namespac
 	}
 }
 
-func GatewayDataPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *gatewayv1beta1.Gateway, clients K8sClients) func() bool {
+func GatewayDataPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) func() bool {
 	return func() bool {
 		dataplanes := MustListDataPlanesForGateway(t, ctx, gateway, clients)
 
@@ -272,7 +273,7 @@ func GatewayDataPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *g
 	}
 }
 
-func GatewayControlPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *gatewayv1beta1.Gateway, clients K8sClients) func() bool {
+func GatewayControlPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) func() bool {
 	return func() bool {
 		controlplanes := MustListControlPlanesForGateway(t, ctx, gateway, clients)
 
@@ -299,7 +300,7 @@ func GatewayControlPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway
 // Gateway object argument does need to exist in the cluster, thu, the function
 // may be used with Not after the gateway has been deleted, to verify that
 // the networkpolicy has been deleted too.
-func GatewayNetworkPoliciesExist(t *testing.T, ctx context.Context, gateway *gatewayv1beta1.Gateway, clients K8sClients) func() bool {
+func GatewayNetworkPoliciesExist(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) func() bool {
 	return func() bool {
 		networkpolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, clients.MgrClient, gateway)
 		if err != nil {

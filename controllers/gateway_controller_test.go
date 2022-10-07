@@ -20,6 +20,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -42,7 +43,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 		name                     string
 		gatewayReq               reconcile.Request
 		gatewayClass             *gatewayv1beta1.GatewayClass
-		gateway                  *gatewayv1beta1.Gateway
+		gateway                  *gwtypes.Gateway
 		gatewaySubResources      []controllerruntimeclient.Object
 		dataplaneSubResources    []controllerruntimeclient.Object
 		controlplaneSubResources []controllerruntimeclient.Object
@@ -76,7 +77,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			gateway: &gatewayv1beta1.Gateway{
+			gateway: &gwtypes.Gateway{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway.networking.k8s.io/v1beta1",
 					Kind:       "Gateway",
@@ -146,7 +147,6 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				IPAddressTypePointer := (*gatewayv1beta1.AddressType)(pointer.StringPtr(string(gatewayv1beta1.IPAddressType)))
 
 				t.Log("first reconciliation, the dataplane has no IP assigned")
-				currentGateway := newGateway()
 				// the dataplane service starts with no IP assigned, the gateway must be not ready
 				_, err := reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
@@ -154,9 +154,10 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				_, err = reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
 
-				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, currentGateway.Gateway))
-				require.False(t, k8sutils.IsReady(currentGateway))
-				condition, found := k8sutils.GetCondition(GatewayServiceType, currentGateway)
+				var currentGateway gwtypes.Gateway
+				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
+				require.False(t, k8sutils.IsReady(gatewayConditionsAware(&currentGateway)))
+				condition, found := k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionFalse)
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), GatewayServiceErrorReason)
@@ -172,9 +173,9 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				_, err = reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
 				// the dataplane service now has a clusterIP assigned, the gateway must be ready
-				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, currentGateway.Gateway))
-				require.True(t, k8sutils.IsReady(currentGateway))
-				condition, found = k8sutils.GetCondition(GatewayServiceType, currentGateway)
+				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
+				require.True(t, k8sutils.IsReady(gatewayConditionsAware(&currentGateway)))
+				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
@@ -198,9 +199,9 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, reconciler.Client.Status().Update(ctx, dataplaneService))
 				_, err = reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
-				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, currentGateway.Gateway))
-				require.True(t, k8sutils.IsReady(currentGateway))
-				condition, found = k8sutils.GetCondition(GatewayServiceType, currentGateway)
+				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
+				require.True(t, k8sutils.IsReady(gatewayConditionsAware(&currentGateway)))
+				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
@@ -222,11 +223,11 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, reconciler.Client.Update(ctx, dataplaneService))
 				_, err = reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
-				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, currentGateway.Gateway))
+				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
 				// the dataplane service has no clusterIP assigned, the gateway must be not ready
 				// and no addresses must be assigned
-				require.False(t, k8sutils.IsReady(currentGateway))
-				condition, found = k8sutils.GetCondition(GatewayServiceType, currentGateway)
+				require.False(t, k8sutils.IsReady(gatewayConditionsAware(&currentGateway)))
+				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionFalse)
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), GatewayServiceErrorReason)
@@ -303,7 +304,7 @@ func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
 			},
 		},
 	}
-	gateway := &gatewayv1beta1.Gateway{
+	gateway := &gwtypes.Gateway{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "gateway.networking.k8s.io/v1beta1",
 			Kind:       "Gateway",

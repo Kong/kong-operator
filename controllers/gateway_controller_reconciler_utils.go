@@ -19,6 +19,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
@@ -30,7 +31,7 @@ import (
 // -----------------------------------------------------------------------------
 
 func (r *GatewayReconciler) createDataPlane(ctx context.Context,
-	gateway *gatewayDecorator,
+	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 ) error {
 	dataplane := &operatorv1alpha1.DataPlane{
@@ -50,7 +51,7 @@ func (r *GatewayReconciler) createDataPlane(ctx context.Context,
 func (r *GatewayReconciler) createControlPlane(
 	ctx context.Context,
 	gatewayClass *gatewayv1beta1.GatewayClass,
-	gateway *gatewayDecorator,
+	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 	dataplaneName string,
 ) error {
@@ -74,7 +75,7 @@ func (r *GatewayReconciler) createControlPlane(
 	return r.Client.Create(ctx, controlplane)
 }
 
-func (r *GatewayReconciler) ensureGatewayConnectivityStatus(ctx context.Context, gateway *gatewayDecorator, dataplane *operatorv1alpha1.DataPlane) (err error) {
+func (r *GatewayReconciler) ensureGatewayConnectivityStatus(ctx context.Context, gateway *gwtypes.Gateway, dataplane *operatorv1alpha1.DataPlane) (err error) {
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
 		r.Client,
@@ -147,7 +148,7 @@ func (r *GatewayReconciler) ensureGatewayConnectivityStatus(ctx context.Context,
 	return nil
 }
 
-func (r *GatewayReconciler) verifyGatewayClassSupport(ctx context.Context, gateway *gatewayv1beta1.Gateway) (*gatewayClassDecorator, error) {
+func (r *GatewayReconciler) verifyGatewayClassSupport(ctx context.Context, gateway *gwtypes.Gateway) (*gatewayClassDecorator, error) {
 	if gateway.Spec.GatewayClassName == "" {
 		return nil, operatorerrors.ErrUnsupportedGateway
 	}
@@ -215,11 +216,11 @@ func (r *GatewayReconciler) getGatewayConfigForGatewayClass(ctx context.Context,
 
 func (r *GatewayReconciler) ensureDataPlaneHasNetworkPolicy(
 	ctx context.Context,
-	gateway *gatewayDecorator,
+	gateway *gwtypes.Gateway,
 	dataplane *operatorv1alpha1.DataPlane,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (createdOrUpdate bool, err error) {
-	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway.Gateway)
+	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway)
 	if err != nil {
 		return false, err
 	}
@@ -319,7 +320,7 @@ func generateDataPlaneNetworkPolicy(
 
 // ensureOwnedControlPlanesDeleted deletes all controlplanes owned by gateway.
 // returns true if at least one controlplane resource is deleted.
-func (r *GatewayReconciler) ensureOwnedControlPlanesDeleted(ctx context.Context, gateway *gatewayv1beta1.Gateway) (bool, error) {
+func (r *GatewayReconciler) ensureOwnedControlPlanesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
 	controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, r.Client, gateway)
 	if err != nil {
 		return false, err
@@ -345,7 +346,7 @@ func (r *GatewayReconciler) ensureOwnedControlPlanesDeleted(ctx context.Context,
 
 // ensureOwnedDataPlanesDeleted deleted all dataplanes owned by gateway.
 // returns true if at least one dataplane resource is deleted.
-func (r *GatewayReconciler) ensureOwnedDataPlanesDeleted(ctx context.Context, gateway *gatewayv1beta1.Gateway) (bool, error) {
+func (r *GatewayReconciler) ensureOwnedDataPlanesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
 	dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, r.Client, gateway)
 	if err != nil {
 		return false, err
@@ -366,7 +367,7 @@ func (r *GatewayReconciler) ensureOwnedDataPlanesDeleted(ctx context.Context, ga
 
 // ensureOwnedNetworkPoliciesDeleted deleted all network policies owned by gateway.
 // returns true if at least one networkPolicy resource is deleted.
-func (r *GatewayReconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gateway *gatewayv1beta1.Gateway) (bool, error) {
+func (r *GatewayReconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
 	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway)
 	if err != nil {
 		return false, err
@@ -405,3 +406,25 @@ type gwaddrs []gwaddr
 func (g gwaddrs) Len() int           { return len(g) }
 func (g gwaddrs) Swap(i, j int)      { g[i], g[j] = g[j], g[i] }
 func (g gwaddrs) Less(i, j int) bool { return g[i].isLB && !g[j].isLB }
+
+// -----------------------------------------------------------------------------
+// GatewayReconciler - Private type utilities/wrappers
+// -----------------------------------------------------------------------------
+
+type gatewayConditionsAwareT struct {
+	*gatewayv1beta1.Gateway
+}
+
+func gatewayConditionsAware(gw *gwtypes.Gateway) gatewayConditionsAwareT {
+	return gatewayConditionsAwareT{
+		Gateway: gw,
+	}
+}
+
+func (g gatewayConditionsAwareT) GetConditions() []metav1.Condition {
+	return g.Status.Conditions
+}
+
+func (g gatewayConditionsAwareT) SetConditions(conditions []metav1.Condition) {
+	g.Status.Conditions = conditions
+}

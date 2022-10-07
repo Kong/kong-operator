@@ -17,6 +17,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
@@ -87,7 +88,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	cleaner.Add(gatewayClass)
 
 	t.Log("deploying Gateway resource")
-	gateway := &gatewayv1beta1.Gateway{
+	gateway := &gwtypes.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      uuid.NewString(),
@@ -248,7 +249,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 
 // verifyContainerImageForGateway indicates whether or not the underlying
 // Pods' containers are configured with the images provided.
-func verifyContainerImageForGateway(gateway *gatewayv1beta1.Gateway, controlPlaneImage, dataPlaneImage string) (bool, error) {
+func verifyContainerImageForGateway(gateway *gwtypes.Gateway, controlPlaneImage, dataPlaneImage string) (bool, error) {
 	controlPlanes, err := gatewayutils.ListControlPlanesForGateway(ctx, clients.MgrClient, gateway)
 	if err != nil {
 		return false, err

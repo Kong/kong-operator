@@ -1,9 +1,6 @@
 package controllers
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
@@ -33,28 +30,3 @@ const (
 	// GatewayServiceErrorReason the Gateway Service is not properly configured
 	GatewayServiceErrorReason k8sutils.ConditionReason = "GatewayServiceError"
 )
-
-// gatewayDecorator Decorator object to add additional functionality to the base k8s Gateway
-type gatewayDecorator struct {
-	*gatewayv1beta1.Gateway
-}
-
-func (g *gatewayDecorator) GetConditions() []metav1.Condition {
-	return g.Status.Conditions
-}
-
-func (g *gatewayDecorator) SetConditions(conditions []metav1.Condition) {
-	g.Status.Conditions = conditions
-}
-
-func newGateway() *gatewayDecorator {
-	return &gatewayDecorator{
-		new(gatewayv1beta1.Gateway),
-	}
-}
-
-func (g *gatewayDecorator) Clone() *gatewayDecorator {
-	return &gatewayDecorator{
-		Gateway: g.Gateway.DeepCopy(),
-	}
-}

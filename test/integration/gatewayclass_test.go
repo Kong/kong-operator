@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
@@ -53,7 +54,7 @@ func TestGatewayClassUpdates(t *testing.T) {
 		testutils.GatewayClassAcceptanceTimeLimit, time.Second)
 
 	t.Log("deploying a Gateway using an unsupported class")
-	gateway := &gatewayv1beta1.Gateway{
+	gateway := &gwtypes.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      uuid.NewString(),
@@ -102,7 +103,7 @@ func TestGatewayClassCreation(t *testing.T) {
 
 	t.Log("deploying a Gateway with a non-existent GatewayClass")
 	gatewayClassName := uuid.NewString()
-	gateway := &gatewayv1beta1.Gateway{
+	gateway := &gwtypes.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      uuid.NewString(),
