@@ -104,6 +104,7 @@ func BuildEnvironment(ctx context.Context, existingCluster string) (environments
 
 func buildEnvironmentOnNewKindCluster(ctx context.Context) (environments.Environment, error) {
 	builder := environments.NewBuilder()
+	builder.WithCalicoCNI()
 	builder.WithAddons(metallb.New())
 	return builder.Build(ctx)
 }
