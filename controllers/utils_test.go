@@ -1,11 +1,17 @@
 package controllers
 
 import (
+	"bytes"
 	"testing"
 
+	"github.com/bombsimon/logrusr/v3"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/utils/pointer"
+
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 )
 
 func Test_ensureContainerImageUpdated(t *testing.T) {
@@ -107,4 +113,39 @@ func Test_ensureContainerImageUpdated(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLog(t *testing.T) {
+	var buf bytes.Buffer
+	logger := logrus.New()
+	logger.SetOutput(&buf)
+	log := logrusr.New(logger)
+
+	gw := gwtypes.Gateway{}
+	t.Run("info logging works both for values and pointers to objects", func(t *testing.T) {
+		info(log, "message about gw", gw)
+		require.NotContains(t, buf.String(), "unexpected type processed for")
+		buf.Reset()
+		info(log, "message about gw", &gw)
+		require.NotContains(t, buf.String(), "unexpected type processed for")
+		buf.Reset()
+	})
+
+	t.Run("debug logging works both for values and pointers to objects", func(t *testing.T) {
+		debug(log, "message about gw", gw)
+		require.NotContains(t, buf.String(), "unexpected type processed for")
+		buf.Reset()
+		debug(log, "message about gw", &gw)
+		require.NotContains(t, buf.String(), "unexpected type processed for")
+		buf.Reset()
+	})
+
+	t.Run("trace logging works both for values and pointers to objects", func(t *testing.T) {
+		trace(log, "message about gw", gw)
+		require.NotContains(t, buf.String(), "unexpected type processed for")
+		buf.Reset()
+		trace(log, "message about gw", &gw)
+		require.NotContains(t, buf.String(), "unexpected type processed for")
+		buf.Reset()
+	})
 }

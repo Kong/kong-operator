@@ -50,12 +50,12 @@ type loggerShim struct {
 	logger logr.Logger
 }
 
-func (l loggerShim) Debug(msg string)   { l.logger.V(logging.DebugLevel).Info(msg) }
-func (l loggerShim) Info(msg string)    { l.logger.V(logging.DebugLevel).Info(msg) }
-func (l loggerShim) Warning(msg string) { l.logger.V(logging.InfoLevel).Info(msg) }
-func (l loggerShim) Err(msg string)     { l.logger.V(logging.InfoLevel).Info(msg) }
-func (l loggerShim) Crit(msg string)    { l.logger.V(logging.InfoLevel).Info(msg) }
-func (l loggerShim) Emerg(msg string)   { l.logger.V(logging.InfoLevel).Info(msg) }
+func (l loggerShim) Debug(msg string)   { l.logger.V(logging.DebugLevel.Value()).Info(msg) }
+func (l loggerShim) Info(msg string)    { l.logger.V(logging.DebugLevel.Value()).Info(msg) }
+func (l loggerShim) Warning(msg string) { l.logger.V(logging.InfoLevel.Value()).Info(msg) }
+func (l loggerShim) Err(msg string)     { l.logger.V(logging.InfoLevel.Value()).Info(msg) }
+func (l loggerShim) Crit(msg string)    { l.logger.V(logging.InfoLevel.Value()).Info(msg) }
+func (l loggerShim) Emerg(msg string)   { l.logger.V(logging.InfoLevel.Value()).Info(msg) }
 
 var caLoggerInit sync.Once
 
@@ -260,40 +260,56 @@ func maybeCreateCertificateSecret(ctx context.Context,
 // Private Functions - Logging
 // -----------------------------------------------------------------------------
 
-func info(log logr.Logger, msg string, rawOBJ interface{}, keysAndValues ...interface{}) {
-	if obj, ok := rawOBJ.(client.Object); ok {
-		kvs := append([]interface{}{"namespace", obj.GetNamespace(), "name", obj.GetName()}, keysAndValues...)
-		log.V(logging.InfoLevel).Info(msg, kvs...)
-	} else if req, ok := rawOBJ.(reconcile.Request); ok {
-		kvs := append([]interface{}{"namespace", req.Namespace, "name", req.Name}, keysAndValues...)
-		log.V(logging.InfoLevel).Info(msg, kvs...)
-	} else {
-		log.V(logging.InfoLevel).Info(fmt.Sprintf("unexpected type processed for info logging: %T, this is a bug!", rawOBJ))
-	}
+func info[T any](log logr.Logger, msg string, rawObj T, keysAndValues ...interface{}) {
+	_log(log, logging.InfoLevel, msg, rawObj, keysAndValues...)
 }
 
-func debug(log logr.Logger, msg string, rawOBJ interface{}, keysAndValues ...interface{}) {
-	if obj, ok := rawOBJ.(client.Object); ok {
-		kvs := append([]interface{}{"namespace", obj.GetNamespace(), "name", obj.GetName()}, keysAndValues...)
-		log.V(logging.DebugLevel).Info(msg, kvs...)
-	} else if req, ok := rawOBJ.(reconcile.Request); ok {
-		kvs := append([]interface{}{"namespace", req.Namespace, "name", req.Name}, keysAndValues...)
-		log.V(logging.DebugLevel).Info(msg, kvs...)
-	} else {
-		log.V(logging.DebugLevel).Info(fmt.Sprintf("unexpected type processed for debug logging: %T, this is a bug!", rawOBJ))
-	}
+func debug[T any](log logr.Logger, msg string, rawObj T, keysAndValues ...interface{}) {
+	_log(log, logging.DebugLevel, msg, rawObj, keysAndValues...)
 }
 
-func trace(log logr.Logger, msg string, rawOBJ interface{}, keysAndValues ...interface{}) { //nolint:unparam
-	if obj, ok := rawOBJ.(client.Object); ok {
-		kvs := append([]interface{}{"namespace", obj.GetNamespace(), "name", obj.GetName()}, keysAndValues...)
-		log.V(logging.TraceLevel).Info(msg, kvs...)
-	} else if req, ok := rawOBJ.(reconcile.Request); ok {
-		kvs := append([]interface{}{"namespace", req.Namespace, "name", req.Name}, keysAndValues...)
-		log.V(logging.TraceLevel).Info(msg, kvs...)
-	} else {
-		log.V(logging.TraceLevel).Info(fmt.Sprintf("unexpected type processed for debug logging: %T, this is a bug!", rawOBJ))
+func trace[T any](log logr.Logger, msg string, rawObj T, keysAndValues ...interface{}) {
+	_log(log, logging.TraceLevel, msg, rawObj, keysAndValues...)
+}
+
+type nameNamespacer interface {
+	GetName() string
+	GetNamespace() string
+}
+
+func keyValuesFromObj[T any](rawObj T) []interface{} {
+	if obj, ok := any(rawObj).(nameNamespacer); ok {
+		return []interface{}{
+			"namespace", obj.GetNamespace(),
+			"name", obj.GetName(),
+		}
+	} else if obj, ok := any((&rawObj)).(nameNamespacer); ok {
+		return []interface{}{
+			"namespace", obj.GetNamespace(),
+			"name", obj.GetName(),
+		}
+	} else if req, ok := any(rawObj).(reconcile.Request); ok {
+		return []interface{}{
+			"namespace", req.Namespace,
+			"name", req.Name,
+		}
 	}
+
+	return nil
+}
+
+func _log[T any](log logr.Logger, level logging.Level, msg string, rawObj T, keysAndValues ...interface{}) {
+	kvs := keyValuesFromObj(rawObj)
+	if kvs == nil {
+		log.V(level.Value()).Info(
+			fmt.Sprintf("unexpected type processed for %s logging: %T, this is a bug!",
+				level.String(), rawObj,
+			),
+		)
+		return
+	}
+
+	log.V(level.Value()).Info(msg, append(kvs, keysAndValues...)...)
 }
 
 func getLogger(ctx context.Context, controllerName string, developmentMode bool) logr.Logger {
