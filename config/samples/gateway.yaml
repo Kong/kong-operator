@@ -6,7 +6,7 @@ metadata:
 spec:
   dataPlaneDeploymentOptions:
     containerImage: kong
-    version: "2.8"
+    version: "3.0"
   controlPlaneDeploymentOptions:
     env:
     - name: CONTROLLER_LOG_LEVEL
