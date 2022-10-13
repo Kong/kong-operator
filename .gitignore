@@ -17,3 +17,6 @@ bin/*
 
 # Personal TODO lists
 TODO
+
+# VSCode user settings folder
+.vscode/
