@@ -457,32 +457,55 @@ endif
 webhook-certs-dir:
 	@mkdir -p /tmp/k8s-webhook-server/serving-certs/
 
-.PHONY: run 
-run: webhook-certs-dir manifests generate fmt vet install ## Run a controller from your host.
+.PHONY: _ensure-kong-system-namespace
+_ensure-kong-system-namespace:
+	@kubectl create ns kong-system 2>/dev/null || true
+
+# Run a controller from your host.
+# TODO: In order not to rely on 'main' version of Gateway API CRDs address but
+# on the tag that is used in code (defined in go.mod) address this by solving
+# https://github.com/Kong/gateway-operator/pull/480.
+.PHONY: run
+run: webhook-certs-dir manifests generate fmt vet install _ensure-kong-system-namespace
 	kubectl kustomize https://github.com/kubernetes-sigs/gateway-api.git/config/crd?ref=main | kubectl apply -f -
-	CONTROLLER_DEVELOPMENT_MODE=true go run ./main.go --no-leader-election \
+	@$(MAKE) _run
+
+# Run the operator without checking any preconditions, installing CRDs etc.
+# This is mostly useful when 'run' was run at least once on a server and CRDs, RBACs
+# etc didn't change in between the runs.
+.PHONY: _run
+_run:
+	CONTROLLER_DEVELOPMENT_MODE=true go run ./main.go \
+		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		-zap-time-encoding iso8601
 
 .PHONY: debug
-debug: webhook-certs-dir manifests generate fmt vet install
-	CONTROLLER_DEVELOPMENT_MODE=true dlv debug ./main.go -- --no-leader-election \
+debug: webhook-certs-dir manifests generate fmt vet install _ensure-kong-system-namespace
+	CONTROLLER_DEVELOPMENT_MODE=true dlv debug ./main.go -- \
+		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		-zap-time-encoding iso8601
 
+# Install CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install
-install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+install: manifests kustomize
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
+# Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
+# Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall
-uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+uninstall: manifests kustomize
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
+# Deploy controller to the K8s cluster specified in ~/.kube/config.
 .PHONY: deploy
-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
+# Undeploy controller from the K8s cluster specified in ~/.kube/config.
+# Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: undeploy
-undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+undeploy:
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
