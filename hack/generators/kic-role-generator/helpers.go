@@ -139,9 +139,13 @@ func updateFile(path string, buffer []byte) error {
 	return os.WriteFile(path, buffer, os.ModePerm)
 }
 
-func exitOnErr(err error) {
+func exitOnErr(err error, msg ...string) {
 	if err != nil {
-		fmt.Printf("ERROR: %v\n", err)
+		if len(msg) == 1 {
+			fmt.Printf("ERROR: %s: %v\n", msg[0], err)
+		} else {
+			fmt.Printf("ERROR: %v\n", err)
+		}
 		os.Exit(1)
 	}
 }

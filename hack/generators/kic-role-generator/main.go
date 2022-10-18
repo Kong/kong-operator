@@ -50,15 +50,15 @@ func init() {
 
 func main() {
 	gatewayRepo, err := git.PlainOpen(".")
-	exitOnErr(err)
+	exitOnErr(err, "failed opening '.'")
 
 	gatewayWorktree, err := gatewayRepo.Worktree()
-	exitOnErr(err)
+	exitOnErr(err, "failed getting gateway operator's work tree")
 
 	kicSubmodule, err := gatewayWorktree.Submodule("kubernetes-ingress-controller")
-	exitOnErr(err)
+	exitOnErr(err, "failed getting KIC's submodule")
 	kicStatus, err := kicSubmodule.Status()
-	exitOnErr(err)
+	exitOnErr(err, "failed getting KIC's submodule status")
 	prevHead := kicStatus.Current
 	if !kicStatus.IsClean() {
 		exitOnErr(
@@ -70,12 +70,12 @@ func main() {
 			Init: true,
 		},
 	)
-	exitOnErr(err)
+	exitOnErr(err, "failed updating KIC's submodule")
 	kicRepo, err := kicSubmodule.Repository()
-	exitOnErr(err)
+	exitOnErr(err, "failed getting KIC's repository")
 
 	kicWorktree, err := kicRepo.Worktree()
-	exitOnErr(err)
+	exitOnErr(err, "failed getting KIC's work tree")
 
 	if force {
 		exitOnErr(rmDirs(controllerRBACPath, kicRBACPath))
