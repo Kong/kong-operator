@@ -445,7 +445,7 @@ jobs:
         git_commit_gpgsign: true
 
     - name: Pushes bundle to k8s-operatorhub-community-operators
-      uses: peter-evans/create-pull-request@ad43dccb4d726ca8514126628bec209b8354b6dd
+      uses: peter-evans/create-pull-request@b4d51739f96fca8047ad065eccef63442d8e99f7
       with:
         token: ${{ secrets.PAT_GITHUB }}
         path: k8s-operatorhub-community-operators
@@ -521,7 +521,7 @@ jobs:
           git_commit_gpgsign: true
 
       - name: Create a PR to Kong/gateway-operator-docs
-        uses: peter-evans/create-pull-request@ad43dccb4d726ca8514126628bec209b8354b6dd
+        uses: peter-evans/create-pull-request@b4d51739f96fca8047ad065eccef63442d8e99f7
         with:
           token: ${{ secrets.PAT_GITHUB }}
           path: k8s-operatorhub-community-operators
