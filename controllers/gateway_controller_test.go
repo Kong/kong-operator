@@ -153,6 +153,9 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				// need to trigger the Reconcile again because the first one only updated the finalizers
 				_, err = reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
+				// need to trigger the Reconcile again because the previous updated the NetworkPolicy
+				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				require.NoError(t, err, "reconciliation returned an error")
 
 				var currentGateway gwtypes.Gateway
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))

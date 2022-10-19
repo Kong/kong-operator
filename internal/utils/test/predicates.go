@@ -7,8 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -297,7 +299,7 @@ func GatewayControlPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway
 // GatewayNetworkPoliciesExist is a helper function for tests that returns a function
 // that can be used to check if a Gateway owns a networkpolicy.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-// Gateway object argument does need to exist in the cluster, thu, the function
+// Gateway object argument does need to exist in the cluster, thus, the function
 // may be used with Not after the gateway has been deleted, to verify that
 // the networkpolicy has been deleted too.
 func GatewayNetworkPoliciesExist(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) func() bool {
@@ -308,6 +310,51 @@ func GatewayNetworkPoliciesExist(t *testing.T, ctx context.Context, gateway *gwt
 		}
 		return len(networkpolicies) > 0
 	}
+}
+
+type ingressRuleT interface {
+	netv1.NetworkPolicyIngressRule | netv1.NetworkPolicyEgressRule
+}
+
+// GatewayNetworkPolicyForGatewayContainsRules is a helper function for tets that
+// returns a function that can be used to check if exactly 1 NetworkPolicy exist
+// for Gateway and if it contains all the provided rules.
+func GatewayNetworkPolicyForGatewayContainsRules[T ingressRuleT](t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients, rules ...T) func() bool {
+	return func() bool {
+		networkpolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, clients.MgrClient, gateway)
+		if err != nil {
+			return false
+		}
+
+		if len(networkpolicies) != 1 {
+			return false
+		}
+
+		netpol := networkpolicies[0]
+		for _, rule := range rules {
+			switch r := any(rule).(type) {
+			case netv1.NetworkPolicyIngressRule:
+				if !networkPolicyRuleSliceContainsRule(netpol.Spec.Ingress, r) {
+					return false
+				}
+			case netv1.NetworkPolicyEgressRule:
+				if !networkPolicyRuleSliceContainsRule(netpol.Spec.Egress, r) {
+					return false
+				}
+			}
+		}
+		return true
+	}
+}
+
+func networkPolicyRuleSliceContainsRule[T ingressRuleT](rules []T, rule T) bool {
+	for _, r := range rules {
+		if cmp.Equal(r, rule) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func GatewayIPAddressExist(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {

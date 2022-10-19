@@ -180,6 +180,20 @@ func getEnvValueByName(envs []corev1.EnvVar, name string) string {
 	return value
 }
 
+// setEnvValueByName sets the EnvVar in slice with the provided name and value.
+func setEnvValueByName(envs []corev1.EnvVar, name string, value string) []corev1.EnvVar {
+	for _, env := range envs {
+		if env.Name == name {
+			env.Value = value
+			return envs
+		}
+	}
+	return append(envs, corev1.EnvVar{
+		Name:  name,
+		Value: value,
+	})
+}
+
 // GetEnvValueFromByName returns the corresponding ValueFrom pointer of LAST item with given name.
 // returns nil if the name not appeared.
 func getEnvValueFromByName(envs []corev1.EnvVar, name string) *corev1.EnvVarSource {

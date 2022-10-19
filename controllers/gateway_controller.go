@@ -302,7 +302,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// DataPlane NetworkPolicies
 	trace(log, "ensuring DataPlane's NetworkPolicy exists", gateway)
-	createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, dataplane, controlplane)
+	createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, gatewayConfig, dataplane, controlplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

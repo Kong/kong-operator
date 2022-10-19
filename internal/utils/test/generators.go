@@ -6,11 +6,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
-// GenerateGatewayClass generate the default GatewayClass to be used in tests
+// GenerateGatewayClass generates the default GatewayClass to be used in tests
 func GenerateGatewayClass() *gatewayv1beta1.GatewayClass {
 	gatewayClass := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
@@ -23,7 +24,7 @@ func GenerateGatewayClass() *gatewayv1beta1.GatewayClass {
 	return gatewayClass
 }
 
-// GenerateGateway generate a Gateway to be used in tests
+// GenerateGateway generates a Gateway to be used in tests
 func GenerateGateway(gatewayNSN types.NamespacedName, gatewayClass *gatewayv1beta1.GatewayClass) *gwtypes.Gateway {
 	gateway := &gwtypes.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
@@ -40,4 +41,14 @@ func GenerateGateway(gatewayNSN types.NamespacedName, gatewayClass *gatewayv1bet
 		},
 	}
 	return gateway
+}
+
+// GenerateGatewayConfiguration generates a GatewayConfiguration to be used in tests
+func GenerateGatewayConfiguration(gatewayConfigurationNSN types.NamespacedName) *operatorv1alpha1.GatewayConfiguration {
+	return &operatorv1alpha1.GatewayConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: gatewayConfigurationNSN.Namespace,
+			Name:      gatewayConfigurationNSN.Name,
+		},
+	}
 }

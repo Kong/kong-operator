@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +26,7 @@ import (
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
+	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -217,6 +221,7 @@ func (r *GatewayReconciler) getGatewayConfigForGatewayClass(ctx context.Context,
 func (r *GatewayReconciler) ensureDataPlaneHasNetworkPolicy(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
+	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 	dataplane *operatorv1alpha1.DataPlane,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (createdOrUpdate bool, err error) {
@@ -233,7 +238,10 @@ func (r *GatewayReconciler) ensureDataPlaneHasNetworkPolicy(
 		return false, errors.New("number of networkPolicies reduced")
 	}
 
-	generatedPolicy := generateDataPlaneNetworkPolicy(gateway.Namespace, dataplane, controlplane)
+	generatedPolicy, err := generateDataPlaneNetworkPolicy(gateway.Namespace, gatewayConfig, dataplane, controlplane)
+	if err != nil {
+		return false, fmt.Errorf("failed generating network policy for DataPlane %s: %w", dataplane.Name, err)
+	}
 	k8sutils.SetOwnerForObject(generatedPolicy, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(generatedPolicy)
 
@@ -244,6 +252,9 @@ func (r *GatewayReconciler) ensureDataPlaneHasNetworkPolicy(
 		if updated {
 			return true, r.Client.Update(ctx, existingPolicy)
 		}
+		if needsUpdate, updatedPolicy := k8sresources.NetworkPolicyNeedsUpdate(existingPolicy, generatedPolicy); needsUpdate {
+			return true, r.Client.Update(ctx, updatedPolicy)
+		}
 		return false, nil
 	}
 
@@ -252,20 +263,51 @@ func (r *GatewayReconciler) ensureDataPlaneHasNetworkPolicy(
 
 func generateDataPlaneNetworkPolicy(
 	namespace string,
+	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 	dataplane *operatorv1alpha1.DataPlane,
 	controlplane *operatorv1alpha1.ControlPlane,
-) *networkingv1.NetworkPolicy {
+) (*networkingv1.NetworkPolicy, error) {
 	var (
-		protocolTCP  = corev1.ProtocolTCP
-		adminAPIPort = intstr.FromInt(consts.DataPlaneAdminAPIPort)
-		proxyPort    = intstr.FromInt(consts.DataPlaneProxyPort)
-		proxySSLPort = intstr.FromInt(consts.DataPlaneProxySSLPort)
-		metricsPort  = intstr.FromInt(consts.DataPlaneMetricsPort)
+		protocolTCP     = corev1.ProtocolTCP
+		adminAPISSLPort = intstr.FromInt(consts.DataPlaneAdminAPIPort)
+		proxyPort       = intstr.FromInt(consts.DataPlaneProxyPort)
+		proxySSLPort    = intstr.FromInt(consts.DataPlaneProxySSLPort)
+		metricsPort     = intstr.FromInt(consts.DataPlaneMetricsPort)
 	)
+
+	// Check if KONG_PROXY_LISTEN and/or KONG_ADMIN_LISTEN are set in
+	// DataPlaneDeploymentOptions and in that's the case then update NetworkPolicy
+	// ports accordingly to allow communication on those ports.
+	//
+	// Note: for now only direct env variable manipulation is allowed (through
+	// the .Env field in DataPlaneDeploymentOptions). EnvFrom is not taken into
+	// account when updating NetworkPolicy ports.
+	dpOpts := gatewayConfig.Spec.DataPlaneDeploymentOptions
+	if proxyListen := envValueByName(dpOpts.Env, "KONG_PROXY_LISTEN"); proxyListen != "" {
+		kongListenConfig, err := parseKongListenEnv(proxyListen)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing KONG_PROXY_LISTEN env: %w", err)
+		}
+		if kongListenConfig.Endpoint != nil {
+			proxyPort = intstr.FromInt(kongListenConfig.Endpoint.Port)
+		}
+		if kongListenConfig.SSLEndpoint != nil {
+			proxySSLPort = intstr.FromInt(kongListenConfig.SSLEndpoint.Port)
+		}
+	}
+	if adminListen := envValueByName(dpOpts.Env, "KONG_ADMIN_LISTEN"); adminListen != "" {
+		kongListenConfig, err := parseKongListenEnv(adminListen)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing KONG_ADMIN_LISTEN env: %w", err)
+		}
+		if kongListenConfig.SSLEndpoint != nil {
+			adminAPISSLPort = intstr.FromInt(kongListenConfig.SSLEndpoint.Port)
+		}
+	}
 
 	limitAdminAPIIngress := networkingv1.NetworkPolicyIngressRule{
 		Ports: []networkingv1.NetworkPolicyPort{
-			{Protocol: &protocolTCP, Port: &adminAPIPort},
+			{Protocol: &protocolTCP, Port: &adminAPISSLPort},
 		},
 		From: []networkingv1.NetworkPolicyPeer{{
 			PodSelector: &metav1.LabelSelector{
@@ -276,7 +318,7 @@ func generateDataPlaneNetworkPolicy(
 			// NamespaceDefaultLabelName feature gate must be enabled for this to work
 			NamespaceSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"kubernetes.io/metadata.name": dataplane.Namespace,
+					"kubernetes.io/metadata.name": controlplane.Namespace,
 				},
 			},
 		}},
@@ -315,7 +357,7 @@ func generateDataPlaneNetworkPolicy(
 				allowMetricsIngress,
 			},
 		},
-	}
+	}, nil
 }
 
 // ensureOwnedControlPlanesDeleted deletes all controlplanes owned by gateway.
@@ -427,4 +469,63 @@ func (g gatewayConditionsAwareT) GetConditions() []metav1.Condition {
 
 func (g gatewayConditionsAwareT) SetConditions(conditions []metav1.Condition) {
 	g.Status.Conditions = conditions
+}
+
+type proxyListenEndpoint struct {
+	Address string
+	Port    int
+}
+
+type KongListenConfig struct {
+	Endpoint    *proxyListenEndpoint
+	SSLEndpoint *proxyListenEndpoint
+}
+
+// parseKongListenEnv parses the provided kong listen string and returns
+// a KongProxyListen which can have the endpoint data filled in, if parsing is
+// successful.
+//
+// One can find more information about the kong listen format at:
+// - https://docs.konghq.com/gateway/3.0.x/reference/configuration/#admin_listen
+// - https://docs.konghq.com/gateway/3.0.x/reference/configuration/#proxy_listen
+func parseKongListenEnv(str string) (KongListenConfig, error) {
+	kongListenConfig := KongListenConfig{}
+
+	for _, s := range strings.Split(str, ",") {
+		s = strings.TrimPrefix(s, " ")
+		i := strings.IndexRune(s, ' ')
+		var hostPort string
+		if i >= 0 {
+			hostPort = s[:i]
+		} else {
+			hostPort = s
+		}
+
+		host, port, err := net.SplitHostPort(hostPort)
+		if err != nil {
+			return kongListenConfig, fmt.Errorf("failed parsing host %s: %w", hostPort, err)
+		}
+		flags := s[i+1:]
+		if strings.Contains(flags, "ssl") {
+			p, err := strconv.Atoi(port)
+			if err != nil {
+				return kongListenConfig, fmt.Errorf("failed parsing port %s: %w", port, err)
+			}
+			kongListenConfig.SSLEndpoint = &proxyListenEndpoint{
+				Address: host,
+				Port:    p,
+			}
+		} else {
+			p, err := strconv.Atoi(port)
+			if err != nil {
+				return kongListenConfig, fmt.Errorf("failed parsing port %s: %w", port, err)
+			}
+			kongListenConfig.Endpoint = &proxyListenEndpoint{
+				Address: host,
+				Port:    p,
+			}
+		}
+	}
+
+	return kongListenConfig, nil
 }
