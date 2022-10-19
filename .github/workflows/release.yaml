@@ -310,7 +310,7 @@ jobs:
           git checkout release/${{ github.event.inputs.tag }}
 
       - name: GPG sign the commits
-        uses: crazy-max/ghaction-import-gpg@c8bb57c57e8df1be8c73ff3d59deab1dbc00e0d1
+        uses: crazy-max/ghaction-import-gpg@111c56156bcc6918c056dbef52164cfa583dc549
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
@@ -437,7 +437,7 @@ jobs:
         echo "EOF" >> $GITHUB_ENV
 
     - name: GPG sign the commits
-      uses: crazy-max/ghaction-import-gpg@c8bb57c57e8df1be8c73ff3d59deab1dbc00e0d1
+      uses: crazy-max/ghaction-import-gpg@111c56156bcc6918c056dbef52164cfa583dc549
       with:
         gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
         passphrase: ${{ secrets.GPG_PASSPHRASE }}
@@ -513,7 +513,7 @@ jobs:
           cp CHANGELOG.md gateway-operator-docs
 
       - name: GPG sign the commits
-        uses: crazy-max/ghaction-import-gpg@c8bb57c57e8df1be8c73ff3d59deab1dbc00e0d1
+        uses: crazy-max/ghaction-import-gpg@111c56156bcc6918c056dbef52164cfa583dc549
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
