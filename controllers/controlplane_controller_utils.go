@@ -13,6 +13,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
+	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -26,7 +27,8 @@ func setControlPlaneDefaults(
 	spec *operatorv1alpha1.ControlPlaneDeploymentOptions,
 	namespace string, dataplaneServiceName string,
 	dontOverride map[string]struct{},
-) bool {
+	devMode bool,
+) (bool, error) {
 	changed := false
 
 	// set env POD_NAMESPACE. should be always from `metadata.namespace` of pod.
@@ -75,7 +77,14 @@ func setControlPlaneDefaults(
 		}
 	}
 
-	controlPlaneImage := generateControlPlaneImage(spec)
+	versionValidationOptions := make([]versions.VersionValidationOption, 0)
+	if !devMode {
+		versionValidationOptions = append(versionValidationOptions, versions.IsControlPlaneSupported)
+	}
+	controlPlaneImage, err := generateControlPlaneImage(spec, versionValidationOptions...)
+	if err != nil {
+		return false, err
+	}
 	if controlPlaneNeedEnableGatewayFeature(controlPlaneImage) {
 		envFeatureGates := envValueByName(spec.Env, "CONTROLLER_FEATURE_GATES")
 		if !strings.Contains(envFeatureGates, "Gateway=true") {
@@ -96,7 +105,7 @@ func setControlPlaneDefaults(
 		spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_CA_CERT_FILE", "/var/cluster-certificate/ca.crt")
 	}
 
-	return changed
+	return changed, nil
 }
 
 // controlPlaneNeedEnableGatewayFeature returns true if Gateway Feature needs
@@ -229,23 +238,27 @@ func rejectEnvByName(envVars []corev1.EnvVar, name string) []corev1.EnvVar {
 	return newEnvVars
 }
 
-func generateControlPlaneImage(opts *operatorv1alpha1.ControlPlaneDeploymentOptions) string {
-
+func generateControlPlaneImage(opts *operatorv1alpha1.ControlPlaneDeploymentOptions, validators ...versions.VersionValidationOption) (string, error) {
 	if opts.ContainerImage != nil {
 		controlplaneImage := *opts.ContainerImage
 		if opts.Version != nil {
 			controlplaneImage = fmt.Sprintf("%s:%s", controlplaneImage, *opts.Version)
 		}
-		return controlplaneImage
+		for _, v := range validators {
+			if !v(controlplaneImage) {
+				return "", fmt.Errorf("unsupported ControlPlane image %s", controlplaneImage)
+			}
+		}
+		return controlplaneImage, nil
 	}
 
 	if relatedKongControllerImage := os.Getenv("RELATED_IMAGE_KONG_CONTROLLER"); relatedKongControllerImage != "" {
 		// RELATED_IMAGE_KONG_CONTROLLER is set by the operator-sdk when building the operator bundle.
 		// https://github.com/Kong/gateway-operator/issues/261
-		return relatedKongControllerImage
+		return relatedKongControllerImage, nil
 	}
 
-	return consts.DefaultControlPlaneImage // TODO: https://github.com/Kong/gateway-operator/issues/20
+	return consts.DefaultControlPlaneImage, nil // TODO: https://github.com/Kong/gateway-operator/issues/20
 }
 
 // -----------------------------------------------------------------------------

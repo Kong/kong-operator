@@ -16,6 +16,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	"github.com/kong/gateway-operator/internal/versions"
 )
 
 // -----------------------------------------------------------------------------
@@ -158,7 +159,14 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 		return false, nil, errors.New("number of deployments reduced")
 	}
 
-	dataplaneImage := generateDataPlaneImage(dataplane)
+	versionValidationOptions := make([]versions.VersionValidationOption, 0)
+	if !r.DevelopmentMode {
+		versionValidationOptions = append(versionValidationOptions, versions.IsDataPlaneSupported)
+	}
+	dataplaneImage, err := generateDataPlaneImage(dataplane, versionValidationOptions...)
+	if err != nil {
+		return false, nil, err
+	}
 	generatedDeployment := k8sresources.GenerateNewDeploymentForDataPlane(dataplane, dataplaneImage, certSecretName)
 	k8sutils.SetOwnerForObject(generatedDeployment, dataplane)
 	addLabelForDataplane(generatedDeployment)

@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -33,7 +34,7 @@ func init() {
 	}
 }
 
-func TestDataplaneReconciler_Reconcile(t *testing.T) {
+func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 	testCases := []struct {
 		name                  string
 		dataplaneReq          reconcile.Request
@@ -52,7 +53,7 @@ func TestDataplaneReconciler_Reconcile(t *testing.T) {
 			dataplane: &operatorv1alpha1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway-operator.konghq.com/v1alpha1",
-					Kind:       "Dataplane",
+					Kind:       "DataPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-dataplane",
@@ -102,6 +103,132 @@ func TestDataplaneReconciler_Reconcile(t *testing.T) {
 				require.True(t, k8serrors.IsNotFound(err))
 				err = reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "svc-to-keep"}, svcToBeKept)
 				require.NoError(t, err)
+			},
+		},
+		{
+			name: "valid DataPlane image",
+			dataplaneReq: reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "test-namespace",
+					Name:      "test-dataplane",
+				},
+			},
+			dataplane: &operatorv1alpha1.DataPlane{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					Kind:       "DataPlane",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-dataplane",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
+				},
+				Spec: operatorv1alpha1.DataPlaneSpec{
+					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
+						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+							ContainerImage: pointer.StringPtr("kong"),
+							Version:        pointer.StringPtr("3.0"),
+						},
+					},
+				},
+				Status: operatorv1alpha1.DataPlaneStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(DataPlaneConditionTypeProvisioned),
+							Status: metav1.ConditionTrue,
+						},
+					},
+				},
+			},
+			dataplaneSubResources: []controllerruntimeclient.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service",
+						Namespace: "test-namespace",
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "1.1.1.1",
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-tls-secret",
+						Namespace: "test-namespace",
+					},
+				},
+			},
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request) {
+				ctx := context.Background()
+
+				// first reconcile loop to allow the reconciler to set the dataplane defaults
+				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "invalid DataPlane image",
+			dataplaneReq: reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "test-namespace",
+					Name:      "test-dataplane",
+				},
+			},
+			dataplane: &operatorv1alpha1.DataPlane{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					Kind:       "DataPlane",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-dataplane",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
+				},
+				Spec: operatorv1alpha1.DataPlaneSpec{
+					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
+						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+							ContainerImage: pointer.StringPtr("kong"),
+							Version:        pointer.StringPtr("1.0"),
+						},
+					},
+				},
+				Status: operatorv1alpha1.DataPlaneStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(DataPlaneConditionTypeProvisioned),
+							Status: metav1.ConditionTrue,
+						},
+					},
+				},
+			},
+			dataplaneSubResources: []controllerruntimeclient.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-service",
+						Namespace: "test-namespace",
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "1.1.1.1",
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-tls-secret",
+						Namespace: "test-namespace",
+					},
+				},
+			},
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request) {
+				ctx := context.Background()
+
+				// first reconcile loop to allow the reconciler to set the dataplane defaults
+				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.EqualError(t, err, "unsupported DataPlane image kong:1.0")
 			},
 		},
 	}

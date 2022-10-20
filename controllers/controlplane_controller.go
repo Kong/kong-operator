@@ -204,10 +204,12 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// TODO: add validating here: https://github.com/Kong/gateway-operator/issues/109
 
 	trace(log, "configuring ControlPlane resource", controlplane)
-	changed := setControlPlaneDefaults(
+	changed, err := setControlPlaneDefaults(
 		&controlplane.Spec.ControlPlaneDeploymentOptions,
-		controlplane.Namespace, dataplaneServiceName, nil)
-
+		controlplane.Namespace, dataplaneServiceName, nil, r.DevelopmentMode)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	if changed {
 		debug(log, "updating ControlPlane resource after defaults are set since resource has changed", controlplane)
 		err := r.Client.Update(ctx, controlplane)

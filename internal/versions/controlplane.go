@@ -1,8 +1,14 @@
 package versions
 
+import (
+	"fmt"
+
+	"github.com/kong/gateway-operator/internal/consts"
+)
+
 const (
-	// Latest is the version of the ClusterRole that will be used for unversioned KIC
-	Latest = "2.7.0"
+	// LatestClusterRoleVersion is the version of the ClusterRole that will be used for unversioned KIC
+	LatestClusterRoleVersion = "2.7.0"
 )
 
 // RoleVersionsForKICVersions is a map that explicitly sets which ClusterRole version to use upon the KIC
@@ -20,10 +26,18 @@ const (
 // the release 5.0, a new entry '">=5.0": "5.0"' should be added to this map, and the previous most
 // updated entry should be limited to "<5.0".
 var RoleVersionsForKICVersions = map[string]string{
-	">=2.7":      "2.7", // TODO: https://github.com/Kong/gateway-operator/issues/86
-	">=2.6,<2.7": "2.6",
-	">=2.4,<2.6": "2.5",
-	">=2.3,<2.4": "2.3",
-	">=2.2,<2.3": "2.2",
-	">=2.1,<2.2": "2.1",
+	">=2.7": "2.7", // TODO: https://github.com/Kong/gateway-operator/issues/86
+}
+
+// supportedControlPlaneImages is the list of the supported ControlPlane images
+var supportedControlPlaneImages = map[string]struct{}{
+	fmt.Sprintf("%s:2.7", consts.DefaultControlPlaneBaseImage): {},
+}
+
+// IsControlPlaneSupported is a helper intended to validate the ControlPlane
+// image support.
+// The image is expected to follow the format <container-image-name>:<tag>
+func IsControlPlaneSupported(image string) bool {
+	_, ok := supportedControlPlaneImages[image]
+	return ok
 }

@@ -258,7 +258,8 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		index := i
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			changed := setControlPlaneDefaults(tc.spec, tc.namespace, tc.dataplaceServiceName, map[string]struct{}{})
+			changed, err := setControlPlaneDefaults(tc.spec, tc.namespace, tc.dataplaceServiceName, map[string]struct{}{}, false)
+			require.NoError(t, err)
 			require.Equalf(t, tc.changed, changed,
 				"should return the same value for test case %d:%s", index, tc.name)
 			for _, env := range tc.newSpec.Env {

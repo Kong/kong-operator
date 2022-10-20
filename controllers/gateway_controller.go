@@ -443,7 +443,15 @@ func (r *GatewayReconciler) provisionControlPlane(
 	services []corev1.Service,
 ) *operatorv1alpha1.ControlPlane {
 	log = log.WithName("controlplaneProvisioning")
-	r.setControlplaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, services[0].Name)
+	err := r.setControlplaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, services[0].Name)
+	if err != nil {
+		debug(log, fmt.Sprintf("failed setting the GatewayConfig defaults - error: %v", err), gateway)
+		k8sutils.SetCondition(
+			createControlPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error()),
+			gatewayConditionsAware(gateway),
+		)
+		return nil
+	}
 
 	trace(log, "looking for associated controlplanes", gateway)
 	controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, r.Client, gateway)

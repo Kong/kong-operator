@@ -12,28 +12,34 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
+	"github.com/kong/gateway-operator/internal/versions"
 )
 
 // -----------------------------------------------------------------------------
 // DataPlane - Private Functions - Generators
 // -----------------------------------------------------------------------------
 
-func generateDataPlaneImage(dataplane *operatorv1alpha1.DataPlane) string {
+func generateDataPlaneImage(dataplane *operatorv1alpha1.DataPlane, validators ...versions.VersionValidationOption) (string, error) {
 	if dataplane.Spec.ContainerImage != nil {
 		dataplaneImage := *dataplane.Spec.ContainerImage
 		if dataplane.Spec.Version != nil {
 			dataplaneImage = fmt.Sprintf("%s:%s", dataplaneImage, *dataplane.Spec.Version)
 		}
-		return dataplaneImage
+		for _, v := range validators {
+			if !v(dataplaneImage) {
+				return "", fmt.Errorf("unsupported DataPlane image %s", dataplaneImage)
+			}
+		}
+		return dataplaneImage, nil
 	}
 
 	if relatedKongImage := os.Getenv("RELATED_IMAGE_KONG"); relatedKongImage != "" {
 		// RELATED_IMAGE_KONG is set by the operator-sdk when building the operator bundle.
 		// https://github.com/Kong/gateway-operator/issues/261
-		return relatedKongImage
+		return relatedKongImage, nil
 	}
 
-	return consts.DefaultDataPlaneImage // TODO: https://github.com/Kong/gateway-operator/issues/20
+	return consts.DefaultDataPlaneImage, nil // TODO: https://github.com/Kong/gateway-operator/issues/20
 
 }
 

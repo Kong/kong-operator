@@ -20,6 +20,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	"github.com/kong/gateway-operator/internal/versions"
 )
 
 // numReplicasWhenNoDataplane represents the desired number of replicas
@@ -144,7 +145,14 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		return false, nil, errors.New("number of deployments reduced")
 	}
 
-	controlplaneImage := generateControlPlaneImage(&controlplane.Spec.ControlPlaneDeploymentOptions)
+	versionValidationOptions := make([]versions.VersionValidationOption, 0)
+	if !r.DevelopmentMode {
+		versionValidationOptions = append(versionValidationOptions, versions.IsControlPlaneSupported)
+	}
+	controlplaneImage, err := generateControlPlaneImage(&controlplane.Spec.ControlPlaneDeploymentOptions, versionValidationOptions...)
+	if err != nil {
+		return false, nil, err
+	}
 	generatedDeployment := k8sresources.GenerateNewDeploymentForControlPlane(controlplane, controlplaneImage, serviceAccountName, certSecretName)
 	k8sutils.SetOwnerForObject(generatedDeployment, controlplane)
 	addLabelForControlPlane(generatedDeployment)
@@ -281,7 +289,7 @@ func (r *ControlPlaneReconciler) ensureClusterRoleForControlPlane(
 		return false, nil, errors.New("number of clusterRoles reduced")
 	}
 
-	generatedClusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane(controlplane.Name, controlplane.Spec.ContainerImage)
+	generatedClusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane(controlplane.Name, controlplane.Spec.ContainerImage, controlplane.Spec.Version)
 	if err != nil {
 		return false, nil, err
 	}

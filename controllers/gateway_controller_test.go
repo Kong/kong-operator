@@ -261,7 +261,8 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				}
 				if gatewaySubResource.GetName() == "test-controlplane" {
 					controlplane := gatewaySubResource.(*operatorv1alpha1.ControlPlane)
-					setControlPlaneDefaults(&controlplane.Spec.ControlPlaneDeploymentOptions, "test-namespace", "svc-test-dataplane", map[string]struct{}{})
+					_, err := setControlPlaneDefaults(&controlplane.Spec.ControlPlaneDeploymentOptions, "test-namespace", "svc-test-dataplane", map[string]struct{}{}, false)
+					require.NoError(t, err)
 					for _, controlplaneSubResource := range tc.controlplaneSubResources {
 						k8sutils.SetOwnerForObject(controlplaneSubResource, gatewaySubResource)
 						addLabelForControlPlane(controlplaneSubResource)

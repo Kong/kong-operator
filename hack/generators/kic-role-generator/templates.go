@@ -88,7 +88,6 @@ package resources
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/Masterminds/semver"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -105,20 +104,20 @@ import (
 // GenerateNewClusterRoleForControlPlane is a helper function that extract
 // the version from the tag, and returns the ClusterRole with all the needed
 // permissions.
-func GenerateNewClusterRoleForControlPlane(controlplaneName string, image *string) (*rbacv1.ClusterRole, error) {
-	version := consts.DefaultControlPlaneTag
+func GenerateNewClusterRoleForControlPlane(controlplaneName string, image, tag *string) (*rbacv1.ClusterRole, error) {
+	versionToUse := consts.DefaultControlPlaneTag
+	imageToUse := consts.DefaultControlPlaneImage
 	var constraint *semver.Constraints
 
-	if image != nil && *image != "" {
-		parts := strings.Split(*image, ":")
-		if len(parts) != 2 || parts[1] == "latest" {
-			version = versions.Latest
-		} else if len(parts) == 2 {
-			version = parts[1]
+	if image != nil && *image != "" && tag != nil && *tag != "" {
+		askedImage := fmt.Sprintf("%s:%s", *image, *tag)
+		if versions.IsControlPlaneSupported(askedImage) {
+			imageToUse = askedImage
+			versionToUse = *tag
 		}
 	}
 
-	semVersion, err := semver.NewVersion(version)
+	semVersion, err := semver.NewVersion(versionToUse)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +131,7 @@ func GenerateNewClusterRoleForControlPlane(controlplaneName string, image *strin
 		return clusterroles.GenerateNewClusterRoleForControlPlane_{{$suffix}}(controlplaneName), nil
 	}	
 	{{ end}}
-	return nil, fmt.Errorf("version %s not supported", version)
+	return nil, fmt.Errorf("version %s not supported", imageToUse)
 }
 
 `
