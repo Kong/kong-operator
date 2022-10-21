@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -54,13 +56,40 @@ func (r *DataPlaneReconciler) ensureIsMarkedProvisioned(
 	k8sutils.SetReady(dataplane, dataplane.Generation)
 }
 
+func addressOf[T any](v T) *T {
+	return &v
+}
+
 func (r *DataPlaneReconciler) ensureDataPlaneServiceStatus(
 	ctx context.Context,
 	dataplane *operatorv1alpha1.DataPlane,
-	serviceName string,
+	dataplaneServiceName string,
 ) error {
-	dataplane.Status.Service = serviceName
+	dataplane.Status.Service = dataplaneServiceName
 	return r.Status().Update(ctx, dataplane)
+}
+
+// ensureDataPlaneAddressesStatus ensures that provided DataPlane's status addresses
+// are as expected and pathes its status if there's a difference between the
+// current state and what's expected.
+// It returns a boolean indicating if the patch has been trigerred and an error.
+func (r *DataPlaneReconciler) ensureDataPlaneAddressesStatus(
+	ctx context.Context,
+	log logr.Logger,
+	dataplane *operatorv1alpha1.DataPlane,
+	dataplaneService *corev1.Service,
+) (bool, error) {
+	addresses := addressesFromService(dataplaneService)
+
+	// Compare the lengths prior to cmp.Equal() because cmp.Equal() will return
+	// false when comparing nil slice and 0 length slice.
+	if len(addresses) != len(dataplane.Status.Addresses) ||
+		!cmp.Equal(addresses, dataplane.Status.Addresses) {
+		dataplane.Status.Addresses = addresses
+		return true, r.patchStatus(ctx, log, dataplane)
+	}
+
+	return false, nil
 }
 
 // isSameDataPlaneCondition returns true if two `metav1.Condition`s
@@ -225,7 +254,6 @@ func (r *DataPlaneReconciler) deploymentSpecVolumesNeedsUpdate(
 	existingDeploymentSpec *appsv1.DeploymentSpec,
 	generatedDeploymentSpec *appsv1.DeploymentSpec,
 ) bool {
-
 	generatedClusterCertVolume := k8sutils.GetPodVolumeByName(&generatedDeploymentSpec.Template.Spec, consts.ClusterCertificateVolume)
 	existingClusterCertVolume := k8sutils.GetPodVolumeByName(&existingDeploymentSpec.Template.Spec, consts.ClusterCertificateVolume)
 	// check for cluster certificate volume.

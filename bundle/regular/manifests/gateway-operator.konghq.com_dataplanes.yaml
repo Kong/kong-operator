@@ -209,6 +209,29 @@ spec:
           status:
             description: DataPlaneStatus defines the observed state of DataPlane
             properties:
+              addresses:
+                description: Addresses lists the addresses that have actually been
+                  bound to the DataPlane.
+                items:
+                  description: Address describes an address which can be either an
+                    IP address or a hostname.
+                  properties:
+                    type:
+                      default: IPAddress
+                      description: Type of the address.
+                      pattern: ^IPAddress|Hostname$
+                      type: string
+                    value:
+                      description: "Value of the address. The validity of the values
+                        will depend on the type and support by the controller. \n
+                        Examples: `1.2.3.4`, `128::1`, `my-ip-address`."
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                  required:
+                  - value
+                  type: object
+                type: array
               conditions:
                 description: Conditions describe the status of the DataPlane.
                 items:

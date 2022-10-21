@@ -5,10 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 
-	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -176,58 +173,6 @@ func (r *GatewayReconciler) listGatewaysForGatewayConfig(obj client.Object) (rec
 					Name:      gateway.Name,
 				},
 			})
-		}
-	}
-
-	return
-}
-
-// TODO: this was a quick fix for demos, but a better solution would
-// be to use the Owns() functionality to allow the DataPlane to inform
-// the Gateway when it's had address changes, rather than this daisy
-// chaining to the Service.
-//
-// See: https://github.com/Kong/gateway-operator/issues/272
-func (r *GatewayReconciler) listGatewaysForService(obj client.Object) (recs []reconcile.Request) {
-	ctx := context.Background()
-	logger := log.FromContext(ctx)
-
-	service, ok := obj.(*corev1.Service)
-	if !ok {
-		logger.Error(
-			operatorerrors.ErrUnexpectedObject,
-			"failed to run map funcs",
-			"expected", "Service", "found", reflect.TypeOf(obj),
-		)
-		return
-	}
-
-	for _, owner := range service.OwnerReferences {
-		ourAPIVersion := fmt.Sprintf("%s/%s", operatorv1alpha1.SchemeGroupVersion.Group, operatorv1alpha1.SchemeGroupVersion.Version)
-		if owner.APIVersion == ourAPIVersion && owner.Kind == "DataPlane" {
-			dataPlane := &operatorv1alpha1.DataPlane{}
-			if err := r.Client.Get(ctx, client.ObjectKey{
-				Namespace: service.Namespace,
-				Name:      owner.Name,
-			}, dataPlane); err != nil {
-				// if the object doesn't exist, that's fine there's nothing to do.
-				// if we get any other error however, log it.
-				if !k8serrors.IsNotFound(err) {
-					logger.Error(err, "failed to run map funcs")
-				}
-				return
-			}
-
-			for _, owner := range dataPlane.OwnerReferences {
-				if strings.Contains(owner.APIVersion, gatewayv1beta1.GroupName) && owner.Kind == "Gateway" {
-					recs = append(recs, reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Namespace: service.Namespace,
-							Name:      owner.Name,
-						},
-					})
-				}
-			}
 		}
 	}
 

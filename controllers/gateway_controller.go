@@ -66,11 +66,6 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&source.Kind{Type: &gatewayv1beta1.GatewayClass{}},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatchesController))).
-		// watch for updates to Services which are owned by DataPlanes that
-		// are owned by a Gateway.
-		Watches(
-			&source.Kind{Type: &corev1.Service{}},
-			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForService)).
 		Complete(r)
 }
 

@@ -205,6 +205,59 @@ func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName 
 	}, clients.OperatorClient)
 }
 
+// DataPlaneHasServiceAndAddressesInStatus is a helper function for tests that returns
+// a function that can be used to check if a DataPlane has:
+// - a backing service name in its .Service status field
+// - a list of addreses of its backing service in its .Addresses status field
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func DataPlaneHasServiceAndAddressesInStatus(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients) func() bool {
+	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1alpha1.DataPlane) bool {
+		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient)
+		if len(services) != 1 {
+			return false
+		}
+		service := services[0]
+		if dataplane.Status.Service != service.Name {
+			t.Logf("DataPlane %q: found %q as backing service, wanted %q",
+				dataplane.Name, dataplane.Status.Service, service.Name,
+			)
+			return false
+		}
+
+		var wanted []string
+		for _, ingress := range service.Status.LoadBalancer.Ingress {
+			if ingress.IP != "" {
+				wanted = append(wanted, ingress.IP)
+			}
+			if ingress.Hostname != "" {
+				wanted = append(wanted, ingress.Hostname)
+			}
+		}
+		wanted = append(wanted, service.Spec.ClusterIPs...)
+
+		var addresses []string
+		for _, addr := range dataplane.Status.Addresses {
+			addresses = append(addresses, addr.Value)
+		}
+
+		if len(addresses) != len(wanted) {
+			t.Logf("DataPlane %q: found %d addresses %v, wanted %d %v",
+				dataplane.Name, len(addresses), addresses, len(wanted), wanted,
+			)
+			return false
+		}
+
+		if !cmp.Equal(addresses, wanted) {
+			t.Logf("DataPlane %q: found addresses %v, wanted %v",
+				dataplane.Name, addresses, wanted,
+			)
+			return false
+		}
+
+		return true
+	}, clients.OperatorClient)
+}
+
 // GatewayClassIsAccepted is a helper function for tests that returns a function
 // that can be used to check if a GatewayClass is accepted.
 // Should be used in conjunction with require.Eventually or assert.Eventually.

@@ -139,8 +139,10 @@ func TestDataplaneEssentials(t *testing.T) {
 		}
 		return false
 	}, time.Minute, time.Second)
-
 	verifyConnectivity(t, dataplaneIP)
+
+	t.Log("verifying dataplane status is properly filled with backing service name and its addresses")
+	require.Eventually(t, testutils.DataPlaneHasServiceAndAddressesInStatus(t, ctx, dataplaneName, clients), time.Minute, time.Second)
 }
 
 func verifyConnectivity(t *testing.T, dataplaneIP string) {

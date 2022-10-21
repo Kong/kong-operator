@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -69,7 +70,6 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	k8sutils.InitReady(dataplane)
 
 	trace(log, "validating DataPlane resource conditions", dataplane)
-
 	if r.ensureIsMarkedScheduled(dataplane) {
 		err := r.patchStatus(ctx, log, dataplane)
 		if err != nil {
@@ -78,23 +78,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err // requeue will be triggered by the creation or update of the owned object
 	}
 
-	trace(log, "exposing DataPlane deployment via service", dataplane)
-	createdOrUpdated, dataplaneService, err := r.ensureServiceForDataPlane(ctx, dataplane)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if createdOrUpdated {
-		debug(log, "service updated", dataplane)
-		return ctrl.Result{}, r.ensureDataPlaneServiceStatus(ctx, dataplane, dataplaneService.Name)
-	}
-
-	trace(log, "checking readiness of DataPlane service", dataplaneService)
-	if dataplaneService.Spec.ClusterIP == "" {
-		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
-	}
-
 	trace(log, "validating DataPlane configuration", dataplane)
-
 	updated := dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneDeploymentOptions)
 	if updated {
 		trace(log, "setting default ENVs", dataplane)
@@ -109,13 +93,36 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// validate dataplane
-	err = dataplanevalidation.NewValidator(r.Client).Validate(dataplane)
+	err := dataplanevalidation.NewValidator(r.Client).Validate(dataplane)
 	if err != nil {
 		info(log, "failed to validate dataplane: "+err.Error(), dataplane)
 		r.eventRecorder.Event(dataplane, "Warning", "ValidationFailed", err.Error())
 		markErr := r.ensureDataPlaneIsMarkedNotProvisioned(ctx, dataplane,
 			DataPlaneConditionValidationFailed, err.Error())
 		return ctrl.Result{}, markErr
+	}
+
+	trace(log, "exposing DataPlane deployment via service", dataplane)
+	createdOrUpdated, dataplaneService, err := r.ensureServiceForDataPlane(ctx, dataplane)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if createdOrUpdated {
+		debug(log, "DataPlane service created/updated", dataplane, "service", dataplaneService)
+		return ctrl.Result{}, r.ensureDataPlaneServiceStatus(ctx, dataplane, dataplaneService.Name)
+	}
+
+	trace(log, "checking readiness of DataPlane service", dataplaneService)
+	if dataplaneService.Spec.ClusterIP == "" {
+		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
+	}
+
+	trace(log, "ensuring DataPlane has service addesses in status", dataplaneService)
+	if updated, err := r.ensureDataPlaneAddressesStatus(ctx, log, dataplane, dataplaneService); err != nil {
+		return ctrl.Result{}, err
+	} else if updated {
+		debug(log, "dataplane status.Addresses updated", dataplane)
+		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
 	trace(log, "ensuring mTLS certificate", dataplane)
@@ -170,10 +177,16 @@ func (r *DataPlaneReconciler) patchStatus(ctx context.Context, log logr.Logger, 
 		return err
 	}
 
-	if k8sutils.NeedsUpdate(current, updated) {
+	if k8sutils.NeedsUpdate(current, updated) || addressesChanged(current, updated) {
 		debug(log, "patching DataPlane status", updated, "status", updated.Status)
 		return r.Client.Status().Patch(ctx, updated, client.MergeFrom(current))
 	}
 
 	return nil
+}
+
+// addressesChanged returns a boolean indicating whether the addresses in provided
+// DataPlane stauses differ.
+func addressesChanged(current, updated *operatorv1alpha1.DataPlane) bool {
+	return !cmp.Equal(current.Status.Addresses, updated.Status.Addresses)
 }

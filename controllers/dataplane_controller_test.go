@@ -96,6 +96,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				ctx := context.Background()
 
 				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.EqualError(t, err, "number of services reduced")
 
 				svcToBeDeleted, svcToBeKept := &corev1.Service{}, &corev1.Service{}
@@ -210,7 +213,8 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Namespace: "test-namespace",
 					},
 					Spec: corev1.ServiceSpec{
-						ClusterIP: "1.1.1.1",
+						ClusterIP:  "1.1.1.1",
+						ClusterIPs: []string{"1.1.1.1"},
 					},
 				},
 				&corev1.Secret{
@@ -228,7 +232,102 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err)
 
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.EqualError(t, err, "unsupported DataPlane image kong:1.0")
+			},
+		},
+		{
+			name: "dataplane status is populated with backing service and its addresses",
+			dataplaneReq: reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "test-namespace",
+					Name:      "test-dataplane",
+				},
+			},
+			dataplane: &operatorv1alpha1.DataPlane{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					Kind:       "Dataplane",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-dataplane",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
+				},
+				Status: operatorv1alpha1.DataPlaneStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(DataPlaneConditionTypeProvisioned),
+							Status: metav1.ConditionTrue,
+						},
+					},
+				},
+			},
+			dataplaneSubResources: []controllerruntimeclient.Object{
+				&corev1.Service{
+					Spec: corev1.ServiceSpec{
+						ClusterIP:  "10.0.0.1",
+						ClusterIPs: []string{"10.0.0.1"},
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "dataplane-service",
+						Namespace: "test-namespace",
+					},
+					Status: corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{
+								{
+									IP: "6.7.8.9",
+								},
+								{
+									Hostname: "mycustomhostname.com",
+								},
+							},
+						},
+					},
+				},
+			},
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request) {
+				ctx := context.Background()
+
+				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				// The second reconcile is needed because the first one would only get to marking
+				// the DataPlane as Scheduled.
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				// The third reconcile is needed because the second one will only ensure
+				// the service is deployed for the DataPlane.
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				dp := &operatorv1alpha1.DataPlane{}
+				err = reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "test-dataplane"}, dp)
+				require.NoError(t, err)
+				require.Equal(t, "dataplane-service", dp.Status.Service)
+				require.Equal(t, []operatorv1alpha1.Address{
+					// This currently assumes that we sort the addresses in a way
+					// such that LoadBalancer IPs, then LoadBalancer hostnames are added
+					// and then ClusterIPs follow.
+					// If this ends up being the desired logic and aligns with what
+					// has been agreed in https://github.com/Kong/gateway-operator/issues/281
+					// then no action has to be taken. Otherwise this might need to be changed.
+					{
+						Type:  addressOf(operatorv1alpha1.IPAddressType),
+						Value: "6.7.8.9",
+					},
+					{
+						Type:  addressOf(operatorv1alpha1.HostnameAddressType),
+						Value: "mycustomhostname.com",
+					},
+					{
+						Type:  addressOf(operatorv1alpha1.IPAddressType),
+						Value: "10.0.0.1",
+					},
+				}, dp.Status.Addresses)
 			},
 		},
 	}
