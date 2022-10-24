@@ -18,8 +18,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  RH_SCAN_REGISTRY: scan.connect.redhat.com
-  RH_IMAGE_NAME: ${{ secrets.RH_PROJECT_ID }}/gateway-operator
+  RH_SCAN_REGISTRY: quay.io
+  RH_IMAGE_NAME: quay.io/redhat-isv-containers/62c721d5ea2ed524ce4af71b
 
 
 jobs:

@@ -8,8 +8,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  RH_SCAN_REGISTRY: scan.connect.redhat.com
-  RH_IMAGE_NAME: ${{ secrets.RH_PROJECT_ID }}/gateway-operator
+  RH_SCAN_REGISTRY: quay.io
+  RH_IMAGE_NAME: quay.io/redhat-isv-containers/62c721d5ea2ed524ce4af71b
 
 jobs:
   build-push-images:
@@ -21,17 +21,17 @@ jobs:
 
       - name: Add standard tags
         run: |
-          echo 'TAGS_STANDARD<<EOF' >> $GITHUB_ENV
-          echo 'type=raw,value=nightly' >> $GITHUB_ENV
-          echo "type=raw,value={{date 'YYYY-MM-DD'}}" >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
+          echo 'TAGS_STANDARD<<EOF' >> $GITHUB_OUTPUT
+          echo 'type=raw,value=nightly' >> $GITHUB_OUTPUT
+          echo "type=raw,value={{date 'YYYY-MM-DD'}}" >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
 
       - name: Add Red Hat standard tags
         run: |
-          echo 'REDHAT_STANDARD<<EOF' >> $GITHUB_ENV
-          echo 'type=raw,value=nightly,suffix=-redhat' >> $GITHUB_ENV
-          echo "type=raw,value={{date 'YYYY-MM-DD'}},suffix=-redhat" >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
+          echo 'TAGS_REDHAT_STANDARD<<EOF' >> $GITHUB_OUTPUT
+          echo 'type=raw,value=nightly,suffix=-redhat' >> $GITHUB_OUTPUT
+          echo "type=raw,value={{date 'YYYY-MM-DD'}},suffix=-redhat" >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -54,13 +54,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to RH Scan Registry
-        uses: docker/login-action@v2.1.0
-        with:
-          registry: ${{ env.RH_SCAN_REGISTRY }}
-          username: ${{ secrets.RH_USERNAME }}
-          password: ${{ secrets.RH_TOKEN }}
-
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4.1.1
@@ -68,7 +61,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: |
             latest=false
-          tags: ${{ env.TAGS_STANDARD }}
+          tags: ${{ steps.tags-standard.outputs.TAGS_STANDARD }}
 
       - name: Docker meta (RedHat)
         id: meta_redhat
@@ -77,7 +70,7 @@ jobs:
           images: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_IMAGE_NAME }}
           flavor: |
             latest=false
-          tags: ${{ env.REDHAT_STANDARD }}
+          tags: ${{ steps.tags-redhat-standard.outputs.TAGS_REDHAT_STANDARD }}
 
       - name: Build binary
         id: docker_build_binary
