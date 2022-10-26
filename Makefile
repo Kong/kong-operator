@@ -51,6 +51,9 @@ else
   VERSION ?= $(RELEASE_BRANCH:release/v%=%)
 endif
 
+# workaround to unblock the release
+VERSION = 0.2.0
+
 
 CHANNELS ?= alpha
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
