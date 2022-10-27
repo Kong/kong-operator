@@ -13,6 +13,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
@@ -68,8 +69,9 @@ func (r *ControlPlaneReconciler) ensureIsMarkedProvisioned(
 // Information about the missing dataplane is stored in the controlplane status.
 func (r *ControlPlaneReconciler) ensureDataPlaneStatus(
 	controlplane *operatorv1alpha1.ControlPlane,
+	dataplane *operatorv1alpha1.DataPlane,
 ) (dataplaneIsSet bool) {
-	dataplaneIsSet = controlplane.Spec.DataPlane != nil && *controlplane.Spec.DataPlane != ""
+	dataplaneIsSet = controlplane.Spec.DataPlane != nil && *controlplane.Spec.DataPlane == dataplane.Name
 	condition, present := k8sutils.GetCondition(ControlPlaneConditionTypeProvisioned, controlplane)
 
 	newCondition := k8sutils.NewCondition(
@@ -358,8 +360,10 @@ func (r *ControlPlaneReconciler) ensureCertificate(
 	return maybeCreateCertificateSecret(ctx,
 		controlplane,
 		fmt.Sprintf("%s.%s", controlplane.Name, controlplane.Namespace),
-		r.ClusterCASecretName,
-		r.ClusterCASecretNamespace,
+		types.NamespacedName{
+			Namespace: r.ClusterCASecretNamespace,
+			Name:      r.ClusterCASecretName,
+		},
 		usages,
 		r.Client)
 }
@@ -390,7 +394,6 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRolesDeleted(
 	}
 
 	return deleted, deletionErr.ErrorOrNil()
-
 }
 
 // ensureOwnedClusterRoleBindingsDeleted removes all the owned ClusterRoleBindings of the controlplane

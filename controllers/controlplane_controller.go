@@ -236,7 +236,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	trace(log, "validating ControlPlane's DataPlane status", controlplane)
-	dataplaneIsSet := r.ensureDataPlaneStatus(controlplane)
+	dataplaneIsSet := r.ensureDataPlaneStatus(controlplane, dataplane)
 	if dataplaneIsSet {
 		trace(log, "DataPlane is set, deployment for ControlPlane will be provisioned", controlplane)
 	} else {

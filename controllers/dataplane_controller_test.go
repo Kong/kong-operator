@@ -21,6 +21,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func init() {
@@ -35,6 +36,18 @@ func init() {
 }
 
 func TestDataPlaneReconciler_Reconcile(t *testing.T) {
+	ca := helpers.CreateCA(t)
+	mtlsSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "mtls-secret",
+			Namespace: "test-namespace",
+		},
+		Data: map[string][]byte{
+			"tls.crt": ca.CertPEM.Bytes(),
+			"tls.key": ca.KeyPEM.Bytes(),
+		},
+	}
+
 	testCases := []struct {
 		name                  string
 		dataplaneReq          reconcile.Request
@@ -175,8 +188,8 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 			name: "invalid DataPlane image",
 			dataplaneReq: reconcile.Request{
 				NamespacedName: types.NamespacedName{
-					Namespace: "test-namespace",
 					Name:      "test-dataplane",
+					Namespace: "default",
 				},
 			},
 			dataplane: &operatorv1alpha1.DataPlane{
@@ -186,7 +199,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-dataplane",
-					Namespace: "test-namespace",
+					Namespace: "default",
 					UID:       types.UID(uuid.NewString()),
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
@@ -209,8 +222,8 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 			dataplaneSubResources: []controllerruntimeclient.Object{
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service",
-						Namespace: "test-namespace",
+						Name:      "test-dataplane-svc",
+						Namespace: "default",
 					},
 					Spec: corev1.ServiceSpec{
 						ClusterIP:  "1.1.1.1",
@@ -219,9 +232,15 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				},
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-tls-secret",
+						Name:      "test-dataplane-tls-secret",
 						Namespace: "test-namespace",
+						Labels: map[string]string{
+							"konghq.com/gateway-operator": "dataplane",
+						},
 					},
+					Data: helpers.TLSSecretData(t, ca,
+						helpers.CreateCert(t, "test-dataplane-svc.default.svc", ca.Cert, ca.Key),
+					),
 				},
 			},
 			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request) {
@@ -242,8 +261,8 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 			name: "dataplane status is populated with backing service and its addresses",
 			dataplaneReq: reconcile.Request{
 				NamespacedName: types.NamespacedName{
-					Namespace: "test-namespace",
-					Name:      "test-dataplane",
+					Name:      "dataplane-kong",
+					Namespace: "default",
 				},
 			},
 			dataplane: &operatorv1alpha1.DataPlane{
@@ -252,8 +271,8 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Kind:       "Dataplane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "test-namespace",
+					Name:      "dataplane-kong",
+					Namespace: "default",
 					UID:       types.UID(uuid.NewString()),
 				},
 				Status: operatorv1alpha1.DataPlaneStatus{
@@ -272,8 +291,8 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						ClusterIPs: []string{"10.0.0.1"},
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "dataplane-service",
-						Namespace: "test-namespace",
+						Name:      "test-dataplane-svc-2",
+						Namespace: "default",
 					},
 					Status: corev1.ServiceStatus{
 						LoadBalancer: corev1.LoadBalancerStatus{
@@ -287,6 +306,15 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 							},
 						},
 					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-dataplane-tls-secret-2",
+						Namespace: "default",
+					},
+					Data: helpers.TLSSecretData(t, ca,
+						helpers.CreateCert(t, "test-dataplane-svc-2.default.svc", ca.Cert, ca.Key),
+					),
 				},
 			},
 			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request) {
@@ -303,11 +331,13 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				// the service is deployed for the DataPlane.
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
 
 				dp := &operatorv1alpha1.DataPlane{}
-				err = reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "test-dataplane"}, dp)
+				err = reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "default", Name: "dataplane-kong"}, dp)
 				require.NoError(t, err)
-				require.Equal(t, "dataplane-service", dp.Status.Service)
+				require.Equal(t, "test-dataplane-svc-2", dp.Status.Service)
 				require.Equal(t, []operatorv1alpha1.Address{
 					// This currently assumes that we sort the addresses in a way
 					// such that LoadBalancer IPs, then LoadBalancer hostnames are added
@@ -338,6 +368,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ObjectsToAdd := []controllerruntimeclient.Object{
 				tc.dataplane,
+				mtlsSecret,
 			}
 
 			for _, dataplaneSubresource := range tc.dataplaneSubResources {
@@ -353,7 +384,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				Build()
 
 			reconciler := DataPlaneReconciler{
-				Client: fakeClient,
+				Client:                   fakeClient,
+				ClusterCASecretName:      mtlsSecret.Name,
+				ClusterCASecretNamespace: mtlsSecret.Namespace,
 			}
 
 			tc.testBody(t, reconciler, tc.dataplaneReq)

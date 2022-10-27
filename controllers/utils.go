@@ -23,6 +23,7 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -88,10 +89,17 @@ limitations under the License.
 // signed by the certificate in the Secret.
 func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Secret) ([]byte, error) {
 	caKeyBlock, _ := pem.Decode(ca.Data["tls.key"])
-	caCertBlock, _ := pem.Decode(ca.Data["tls.crt"])
+	if caKeyBlock == nil {
+		return nil, fmt.Errorf("failed decoding 'tls.key' data from secret %s", ca.Name)
+	}
 	priv, err := x509.ParseECPrivateKey(caKeyBlock.Bytes)
 	if err != nil {
 		return nil, err
+	}
+
+	caCertBlock, _ := pem.Decode(ca.Data["tls.crt"])
+	if caCertBlock == nil {
+		return nil, fmt.Errorf("failed decoding 'tls.crt' data from secret %s", ca.Name)
 	}
 	caCert, err := x509.ParseCertificate(caCertBlock.Bytes)
 	if err != nil {
@@ -135,9 +143,11 @@ func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Se
 // mtlsCASecretNamespace/mtlsCASecretName Secret, or does nothing if a namespace/name Secret is
 // already present. It returns a boolean indicating if it created a Secret and an error indicating
 // any failures it encountered.
-func maybeCreateCertificateSecret(ctx context.Context,
+func maybeCreateCertificateSecret(
+	ctx context.Context,
 	owner client.Object,
-	subject, mtlsCASecretName, mtlsCASecretNamespace string,
+	subject string,
+	mtlsCASecretNN types.NamespacedName,
 	usages []certificatesv1.KeyUsage,
 	k8sClient client.Client,
 ) (bool, *corev1.Secret, error) {
@@ -168,16 +178,59 @@ func maybeCreateCertificateSecret(ctx context.Context,
 	k8sutils.SetOwnerForObject(generatedSecret, owner)
 	addLabelForOwner(generatedSecret, owner)
 
-	if count == 1 {
-		var updated bool
-		existingSecret := &secrets[0]
-		updated, existingSecret.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingSecret.ObjectMeta, generatedSecret.ObjectMeta)
-		if updated {
-			return true, existingSecret, k8sClient.Update(ctx, existingSecret)
-		}
-		return false, existingSecret, nil
+	// If there are no secrets yet, then create one.
+	if count == 0 {
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, k8sClient)
 	}
 
+	// Otherwise there is already 1 certificate matching specified selectors.
+	existingSecret := &secrets[0]
+
+	// Check if existing certificate is for a different subject.
+	// If that's the case, delete the old certificate and create a new one.
+	block, _ := pem.Decode(existingSecret.Data["tls.crt"])
+	if block == nil {
+		// The existing secret has a broken certificate, delete it and recreate it.
+		if err := k8sClient.Delete(ctx, existingSecret); err != nil {
+			return false, nil, err
+		}
+
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, k8sClient)
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return false, nil, err
+	}
+	if cert.Subject.CommonName != subject {
+		if err := k8sClient.Delete(ctx, existingSecret); err != nil {
+			return false, nil, err
+		}
+
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, k8sClient)
+	}
+
+	var updated bool
+	updated, existingSecret.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingSecret.ObjectMeta, generatedSecret.ObjectMeta)
+	if updated {
+		return true, existingSecret, k8sClient.Update(ctx, existingSecret)
+	}
+	return false, existingSecret, nil
+}
+
+// generateTLSDataSecret generates a TLS certificate data, fills the provided secret with
+// that data and creates it using the k8s client.
+// It returns a boolean indicating whether the secret has been created, the secret
+// itself and an error.
+func generateTLSDataSecret(
+	ctx context.Context,
+	generatedSecret *corev1.Secret,
+	owner client.Object,
+	subject string,
+	mtlsCASecret types.NamespacedName,
+	usages []certificatesv1.KeyUsage,
+	k8sClient client.Client,
+) (bool, *corev1.Secret, error) {
 	template := x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:   subject,
@@ -225,7 +278,7 @@ func maybeCreateCertificateSecret(ctx context.Context,
 	}
 
 	ca := &corev1.Secret{}
-	err = k8sClient.Get(ctx, client.ObjectKey{Namespace: mtlsCASecretNamespace, Name: mtlsCASecretName}, ca)
+	err = k8sClient.Get(ctx, mtlsCASecret, ca)
 	if err != nil {
 		return false, nil, err
 	}

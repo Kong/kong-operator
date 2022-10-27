@@ -112,6 +112,16 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, r.ensureDataPlaneServiceStatus(ctx, dataplane, dataplaneService.Name)
 	}
 
+	trace(log, "ensuring mTLS certificate", dataplane)
+	createdOrUpdated, certSecret, err := r.ensureCertificate(ctx, dataplane, dataplaneService.Name)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if createdOrUpdated {
+		debug(log, "mTLS certificate created", dataplane)
+		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+	}
+
 	trace(log, "checking readiness of DataPlane service", dataplaneService)
 	if dataplaneService.Spec.ClusterIP == "" {
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
@@ -123,16 +133,6 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	} else if updated {
 		debug(log, "dataplane status.Addresses updated", dataplane)
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
-	}
-
-	trace(log, "ensuring mTLS certificate", dataplane)
-	createdOrUpdated, certSecret, err := r.ensureCertificate(ctx, dataplane, dataplaneService.Name)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if createdOrUpdated {
-		debug(log, "mTLS certificate created", dataplane)
-		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
 	trace(log, "looking for existing deployments for DataPlane resource", dataplane)

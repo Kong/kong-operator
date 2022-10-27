@@ -21,6 +21,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func init() {
@@ -35,6 +36,18 @@ func init() {
 }
 
 func TestControlPlaneReconciler_Reconcile(t *testing.T) {
+	ca := helpers.CreateCA(t)
+	mtlsSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "mtls-secret",
+			Namespace: "test-namespace",
+		},
+		Data: map[string][]byte{
+			"tls.crt": ca.CertPEM.Bytes(),
+			"tls.key": ca.KeyPEM.Bytes(),
+		},
+	}
+
 	testCases := []struct {
 		name                     string
 		controlplaneReq          reconcile.Request
@@ -306,6 +319,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 			ObjectsToAdd := []controllerruntimeclient.Object{
 				tc.controlplane,
 				tc.dataplane,
+				mtlsSecret,
 			}
 
 			for _, controlplaneSubresource := range tc.controlplaneSubResources {
@@ -327,8 +341,10 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				Build()
 
 			reconciler := ControlPlaneReconciler{
-				Client: fakeClient,
-				Scheme: scheme.Scheme,
+				Client:                   fakeClient,
+				Scheme:                   scheme.Scheme,
+				ClusterCASecretName:      mtlsSecret.Name,
+				ClusterCASecretNamespace: mtlsSecret.Namespace,
 			}
 
 			tc.testBody(t, reconciler, tc.controlplaneReq)

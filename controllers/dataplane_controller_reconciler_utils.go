@@ -12,6 +12,7 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -157,8 +158,10 @@ func (r *DataPlaneReconciler) ensureCertificate(
 	return maybeCreateCertificateSecret(ctx,
 		dataplane,
 		fmt.Sprintf("%s.%s.svc", serviceName, dataplane.Namespace),
-		r.ClusterCASecretName,
-		r.ClusterCASecretNamespace,
+		types.NamespacedName{
+			Namespace: r.ClusterCASecretNamespace,
+			Name:      r.ClusterCASecretName,
+		},
 		usages,
 		r.Client)
 }
