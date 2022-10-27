@@ -59,20 +59,32 @@ func main() {
 	exitOnErr(err, "failed getting KIC's submodule")
 	kicStatus, err := kicSubmodule.Status()
 	exitOnErr(err, "failed getting KIC's submodule status")
-	prevHead := kicStatus.Current
 	if !kicStatus.IsClean() {
 		exitOnErr(
 			fmt.Errorf("status of kubernetes-ingress-controller submodule is not clean: %s", kicStatus))
 	}
+	prevHead := kicStatus.Current
+
+	err = kicSubmodule.Init()
+	if err != nil && !errors.Is(err, git.ErrSubmoduleAlreadyInitialized) {
+		exitOnErr(err, "failed initializing KIC's submodule")
+	}
 
 	err = kicSubmodule.UpdateContext(context.Background(),
 		&git.SubmoduleUpdateOptions{
-			Init: true,
+			Init:    false,
+			NoFetch: true,
 		},
 	)
 	exitOnErr(err, "failed updating KIC's submodule")
+
 	kicRepo, err := kicSubmodule.Repository()
 	exitOnErr(err, "failed getting KIC's repository")
+
+	err = kicRepo.FetchContext(context.Background(), &git.FetchOptions{})
+	if err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
+		exitOnErr(err, "failed fetching for KIC's submodule repo")
+	}
 
 	kicWorktree, err := kicRepo.Worktree()
 	exitOnErr(err, "failed getting KIC's work tree")

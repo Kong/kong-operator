@@ -70,7 +70,11 @@ jobs:
       run: make verify.manifests
 
     - name: Verify generators consistency
-      run: make verify.generators
+      uses: nick-fields/retry@v2
+      with:
+        timeout_minutes: 3
+        max_attempts: 3
+        command: make verify.generators
 
   unit-tests:
     runs-on: ubuntu-latest
