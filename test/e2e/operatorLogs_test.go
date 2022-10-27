@@ -27,7 +27,7 @@ import (
 
 const (
 	// parallelGateways is the total number of gateways that are created and deleted one after the other
-	parallelGateways = 5
+	parallelGateways = 3
 	// concurrentGatewaysReadyTimeLimit is the maximum amount of time to wait for a
 	// supported Gateway to be fully provisioned and marked as Ready by the
 	// gateway controller. This applies in testing environment with many concurrent gateways to be reconciled
@@ -165,6 +165,7 @@ func TestOperatorLogs(t *testing.T) {
 		gateway, err = clients.GatewayClient.GatewayV1beta1().Gateways(testNamespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 		require.NoError(t, err)
 		cleaner.Add(gateway)
+		t.Logf("deployed gateway#%d, name: %q", i, gateway.Name)
 	}
 
 	gateways, err := clients.GatewayClient.GatewayV1beta1().Gateways(testNamespace.Name).List(ctx, metav1.ListOptions{})
@@ -172,11 +173,13 @@ func TestOperatorLogs(t *testing.T) {
 
 	t.Log("verifying all the Gateways get marked as Ready")
 	for _, gateway := range gateways.Items {
+		t.Logf("verifying gateway %q is ready", gateway.Name)
 		require.Eventually(t, testutils.GatewayIsReady(t, ctx, types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name}, *clients), concurrentGatewaysReadyTimeLimit, time.Second)
 	}
 
 	t.Log("deleting all the Gateways")
 	for _, gateway := range gateways.Items {
+		t.Logf("deleting gateway %q", gateway.Name)
 		require.NoError(t, clients.GatewayClient.GatewayV1beta1().Gateways(testNamespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 	}
 
