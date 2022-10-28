@@ -41,15 +41,8 @@ RHTAG ?= latest-redhat
 # ------------------------------------------------------------------------------
 
 
-# If the current branch constains release/v* then we are building a release
-# and the tag may not exist yet. In this case we use the branch name as the
-# version.
-RELEASE_BRANCH := $(shell git rev-parse --abbrev-ref HEAD | grep -E '^release/v.*')
-ifeq ($(RELEASE_BRANCH),)
-  VERSION ?= $(shell git describe --tags --abbrev=0 | sed 's/^v//')
-else
-  VERSION ?= $(RELEASE_BRANCH:release/v%=%)
-endif
+# Read the version from the VERSION file
+VERSION ?= $(shell cat VERSION)
 
 CHANNELS ?= alpha
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
