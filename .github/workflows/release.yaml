@@ -262,81 +262,10 @@ jobs:
       - name: Kubernetes ${{ matrix.kubernetes_version }} E2E Tests
         run: make test.e2e
 
-  create-release-branch:
-    runs-on: ubuntu-latest
-    needs: 
-      - test-integration-current-kubernetes
-      - test-e2e-current-kubernetes
-    steps:
-      - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Create release branch if not exist
-        run: |
-          if ! git ls-remote --exit-code --heads origin release/${{ github.event.inputs.tag }}; then
-            git checkout -b release/${{ github.event.inputs.tag }}
-            git push origin release/${{ github.event.inputs.tag }}
-          fi
-
-  update-olm-bundles:
-    runs-on: ubuntu-latest
-    needs:
-      - semver
-      - create-release-branch
-    steps:
-      - name: setup golang
-        uses: actions/setup-go@v3
-        with:
-          go-version: '^1.19'
-
-      - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: cache go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-build-codegen-
-
-      - name: config git user and branch
-        run: |
-          git config --global user.email "team-k8s+github-bot@konghq.com"
-          git config --global user.name "Kong's Team k8s bot"
-          git checkout release/${{ github.event.inputs.tag }}
-
-      - name: GPG sign the commits
-        uses: crazy-max/ghaction-import-gpg@111c56156bcc6918c056dbef52164cfa583dc549
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-
-      - name: Generate bundles
-        run: |
-          VERSION=${{ needs.semver.outputs.fullversion }}  make bundle.regular
-          VERSION=${{ needs.semver.outputs.fullversion }}  make bundle.redhat-certified
-      
-      - name: Push changes to a release branch
-        run: |
-          if ! git diff --quiet; then
-            git add bundle
-            git add config
-            git commit -m "chore(bundle): update OLM bundles to v${{ needs.semver.outputs.fullversion }}"
-            git push -f origin release/${{ github.event.inputs.tag }}
-          fi
-
   redhat-certified-operators-create-branch:
     runs-on: ubuntu-latest
     needs:
       - semver
-      - update-olm-bundles
       - build-push-images
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
@@ -368,9 +297,21 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: checkout release/${{ github.event.inputs.tag }} branch
+    - name: Setup go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '^1.19'
+
+    - name: Ensure version is set
+      env:
+        VERSION: ${{ needs.semver.outputs.fullversion }}
       run: |
-        git checkout release/${{ github.event.inputs.tag }}
+        echo "VERSION=${VERSION}" >> $GITHUB_ENV
+        echo ${VERSION} > VERSION
+
+    - name: Generate bundle
+      run: |
+        make bundle.redhat-certified
 
     - name: Pushes bundle to Kong/redhat-certified-operators
       uses: cpina/github-action-push-to-another-repository@main
@@ -392,7 +333,6 @@ jobs:
       - build-push-images
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
-      - update-olm-bundles
 
     steps:
 
@@ -401,21 +341,20 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: checkout release/${{ github.event.inputs.tag }} branch
-      run: |
-        git checkout release/${{ github.event.inputs.tag }}
-
     - name: Setup go
       uses: actions/setup-go@v3
       with:
         go-version: '^1.19'
 
-    - name: get the version, without the v prefix
+    - name: Ensure version is set
+      env:
+        VERSION: ${{ needs.semver.outputs.fullversion }}
       run: |
-        echo "VERSION=${{ needs.semver.outputs.fullversion }}" >> $GITHUB_ENV
+        echo "VERSION=${VERSION}" >> $GITHUB_ENV
+        echo ${VERSION} > VERSION
 
-    - name: bundle
-      run: VERSION=${{ env.VERSION }} make bundle.regular
+    - name: Generate bundle
+      run: make bundle.regular
 
     - name: Checkout k8s-operatorhub/community-operators repo
       uses: actions/checkout@v3
