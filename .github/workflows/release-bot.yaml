@@ -40,12 +40,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Read version from VERSION file
+        run: |
+          VERSION=$(cat VERSION)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+        
       - name: Parse semver string
         id: semver_parser
         uses: booxmedialtd/ws-action-parse-semver@v1
         with:
-          input_string: ${{ github.event.head_commit.message }}
-          version_extractor_regex: 'v(.*)$'
+          input_string: ${{ env.VERSION }}
+          version_extractor_regex: '(.*)$'
 
       - name: check if tag already exists
         uses: mukunku/tag-exists-action@v1.0.0
