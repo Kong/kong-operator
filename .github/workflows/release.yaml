@@ -469,7 +469,6 @@ jobs:
       - build-push-images
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
-      - update-olm-bundles
       - redhat-certified-operators-push-bundle
       - community-operators-push-bundle
     steps:
@@ -483,22 +482,54 @@ jobs:
             echo "::set-output name=type::release"
           fi
 
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+
+      # Use the main branch as a base for the release.
+      # Any changes made on the branch that the workflow was triggered on will not be included 
+      # in the release PR. If anything needs to be fixed before a release, it should be
+      # done on the main branch.
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          ref: main
+          token: ${{ secrets.PAT_GITHUB }}
 
-      - name: create a release PR
-        uses: tretuna/sync-branches@1.4.0
-        with:
-          GITHUB_TOKEN: ${{ secrets.PAT_GITHUB }}
-          FROM_BRANCH: release/${{ github.event.inputs.tag }}
-          TO_BRANCH: main
-          PR_TITLE: "${{ steps.release_type.outputs.type }}: ${{ github.event.inputs.tag }}"
-          
-      - name: Checkout to Kong/gateway-operator release branch
+      # The bumped version file is included in the release PR.
+      - name: Ensure version is set
+        env:
+          VERSION: ${{ needs.semver.outputs.fullversion }}
         run: |
-          git checkout release/${{ github.event.inputs.tag }}
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo ${VERSION} > VERSION
+
+      # Generated bundles and kustomized config are part of the release PR.
+      # This is done locally in this job, to avoid including unintended changes.
+      # If anything needs to be fixed before a release, it should be done on the main branch.
+      - name: Generate bundles
+        run: |
+          make bundle.regular
+          make bundle.redhat-certified
+
+      # PRs to the main branch will update the version file, generated bundles and kustomized config.
+      - name: create a release PR
+        uses: peter-evans/create-pull-request@b4d51739f96fca8047ad065eccef63442d8e99f7
+        with:
+          token: ${{ secrets.PAT_GITHUB }}
+          path: .
+          add-paths: |
+            bundle
+            config
+            VERSION
+          commit-message: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
+          committer: Kong <team-k8s+github-bot@konghq.com>
+          author: Kong <team-k8s+github-bot@konghq.com>
+          delete-branch: true
+          title: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
+          body: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
 
       - name: Checkout to Kong/gateway-operator-docs repository
         uses: actions/checkout@v3
@@ -528,7 +559,7 @@ jobs:
         with:
           token: ${{ secrets.PAT_GITHUB }}
           path: gateway-operator-docs
-          add-paths:
+          add-paths: |
             config
             CHANGELOG.md
           commit-message: "chore(release): operator kong-gateway-operator (${{ env.VERSION }})"
