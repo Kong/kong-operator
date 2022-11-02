@@ -126,8 +126,8 @@ func createEnvironment(t *testing.T, ctx context.Context) (environments.Environm
 	require.NoError(t, gatewayv1beta1.AddToScheme(clients.MgrClient.Scheme()))
 	require.NoError(t, operatorv1alpha1.AddToScheme(clients.MgrClient.Scheme()))
 
-	fmt.Printf("deploying Gateway APIs CRDs from %s\n", testutils.GatewayCRDsKustomizeURL)
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), testutils.GatewayCRDsKustomizeURL))
+	fmt.Printf("deploying Gateway APIs CRDs from %s\n", testutils.GatewayExperimentalCRDsKustomizeURL)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), testutils.GatewayExperimentalCRDsKustomizeURL))
 
 	fmt.Printf("deploying KIC CRDs from %s\n", "./../../kubernetes-ingress-controller/config/crd/")
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "./../../kubernetes-ingress-controller/config/crd/"))

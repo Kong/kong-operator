@@ -240,7 +240,7 @@ verify.generators: verify.repo generate verify.diff
 APIS_DIR ?= apis
 
 .PHONY: generate
-generate: controller-gen generate.apis generate.clientsets generate.rbacs
+generate: controller-gen generate.apis generate.clientsets generate.rbacs generate.gateway-api-urls
 
 .PHONY: generate.apis
 generate.apis:
@@ -438,6 +438,57 @@ test.conformance:
 		GOTESTFLAGS="$(GOTESTFLAGS)"
 
 # ------------------------------------------------------------------------------
+# Gateway API
+# ------------------------------------------------------------------------------
+
+# GATEWAY_API_VERSION will be processed by kustomize and therefore accepts
+# only branch names, tags, or full commit hashes, i.e. short hashes or go
+# pseudo versions are not supported [1].
+# Please also note that kustomize fails silently when provided with an
+# unsupported ref and downloads the manifests from the main branch.
+#
+# [1]: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md#remote-directories
+GATEWAY_API_PACKAGE ?= sigs.k8s.io/gateway-api
+GATEWAY_API_RELEASE_CHANNEL ?= experimental
+GATEWAY_API_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(GATEWAY_API_PACKAGE))
+GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)/config/crd
+GATEWAY_API_REPO ?= kubernetes-sigs/gateway-api
+GATEWAY_API_RAW_REPO ?= https://raw.githubusercontent.com/$(GATEWAY_API_REPO)
+GATEWAY_API_CRDS_URL = github.com/$(GATEWAY_API_REPO)/config/crd/$(GATEWAY_API_RELEASE_CHANNEL)?ref=$(GATEWAY_API_VERSION)
+GATEWAY_API_RAW_REPO_URL = $(GATEWAY_API_RAW_REPO)/$(GATEWAY_API_VERSION)
+
+.PHONY: print-gateway-api-crds-url
+print-gateway-api-crds-url:
+	@echo $(GATEWAY_API_CRDS_URL)
+
+.PHONY: print-gateway-api-raw-repo-url
+print-gateway-api-raw-repo-url:
+	@echo $(GATEWAY_API_RAW_REPO_URL)
+
+.PHONY: generate.gateway-api-urls
+generate.gateway-api-urls:
+	CRDS_STANDARD_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="" $(MAKE) print-gateway-api-crds-url)\
+		CRDS_EXPERIMENTAL_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="experimental" $(MAKE) print-gateway-api-crds-url) \
+		RAW_REPO_URL=$(shell $(MAKE) print-gateway-api-raw-repo-url) \
+		INPUT=$(shell pwd)/internal/utils/cmd/generate-gateway-api-urls/gateway_consts.tmpl \
+		OUTPUT=$(shell pwd)/internal/utils/test/zz_generated_gateway_api.go \
+		go generate -tags=generate_gateway_api_urls ./internal/utils/cmd/generate-gateway-api-urls
+
+.PHONY: go-mod-download-gateway-api
+go-mod-download-gateway-api:
+	@go mod download $(GATEWAY_API_PACKAGE)
+
+.PHONY: install-gateway-api-crds
+install-gateway-api-crds: go-mod-download-gateway-api kustomize
+	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH) | kubectl apply -f -
+	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH)/experimental | kubectl apply -f -
+
+.PHONY: uninstall-gateway-api-crds
+uninstall-gateway-api-crds: go-mod-download-gateway-api kustomize
+	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH) | kubectl delete -f -
+	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH)/experimental | kubectl delete -f -
+
+# ------------------------------------------------------------------------------
 # Debug
 # ------------------------------------------------------------------------------
 
@@ -458,8 +509,7 @@ _ensure-kong-system-namespace:
 # on the tag that is used in code (defined in go.mod) address this by solving
 # https://github.com/Kong/gateway-operator/pull/480.
 .PHONY: run
-run: webhook-certs-dir manifests generate fmt vet install _ensure-kong-system-namespace
-	kubectl kustomize https://github.com/kubernetes-sigs/gateway-api.git/config/crd?ref=main | kubectl apply -f -
+run: webhook-certs-dir manifests generate fmt vet install-gateway-api-crds install _ensure-kong-system-namespace
 	@$(MAKE) _run
 
 # Run the operator without checking any preconditions, installing CRDs etc.

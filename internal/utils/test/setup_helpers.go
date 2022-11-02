@@ -179,7 +179,7 @@ func DeployCRDs(ctx context.Context, operatorClient *operatorclient.Clientset, e
 	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "../../config/crd"); err != nil {
 		return err
 	}
-	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), GatewayCRDsKustomizeURL); err != nil {
+	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), GatewayExperimentalCRDsKustomizeURL); err != nil {
 		return err
 	}
 	if err := WaitForOperatorCRDs(ctx, operatorClient); err != nil {
