@@ -143,8 +143,11 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				// apart from the existence of an address.
 				clusterIP := "10.96.1.50"
 				loadBalancerIP := "172.18.1.18"
+				otherBalancerIP := "172.18.1.19"
+				exampleHostname := "host.example.com"
 
 				IPAddressTypePointer := (*gatewayv1beta1.AddressType)(pointer.StringPtr(string(gatewayv1beta1.IPAddressType)))
+				HostnameAddressTypePointer := (*gatewayv1beta1.AddressType)(pointer.StringPtr(string(gatewayv1beta1.HostnameAddressType)))
 
 				t.Log("first reconciliation, the dataplane has no IP assigned")
 				// the dataplane service starts with no IP assigned, the gateway must be not ready
@@ -171,6 +174,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "svc-test-dataplane"}, dataplaneService))
 				dataplaneService.Spec = corev1.ServiceSpec{
 					ClusterIP: clusterIP,
+					Type:      corev1.ServiceTypeClusterIP,
 				}
 				require.NoError(t, reconciler.Client.Update(ctx, dataplaneService))
 				_, err = reconciler.Reconcile(ctx, gatewayReq)
@@ -182,7 +186,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
-				require.Equal(t, currentGateway.Status.Addresses, []gatewayv1beta1.GatewayAddress{
+				require.Equal(t, currentGateway.Status.Addresses, []gwtypes.GatewayAddress{
 					{
 						Type:  IPAddressTypePointer,
 						Value: clusterIP,
@@ -190,11 +194,15 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				})
 
 				t.Log("adding a LoadBalancer IP to the dataplane service")
+				dataplaneService.Spec.Type = corev1.ServiceTypeLoadBalancer
 				dataplaneService.Status = corev1.ServiceStatus{
 					LoadBalancer: corev1.LoadBalancerStatus{
 						Ingress: []corev1.LoadBalancerIngress{
 							{
 								IP: loadBalancerIP,
+							},
+							{
+								IP: otherBalancerIP,
 							},
 						},
 					},
@@ -208,14 +216,40 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
-				require.Equal(t, currentGateway.Status.Addresses, []gatewayv1beta1.GatewayAddress{
+				require.Equal(t, currentGateway.Status.Addresses, []gwtypes.GatewayAddress{
 					{
 						Type:  IPAddressTypePointer,
 						Value: loadBalancerIP,
 					},
 					{
 						Type:  IPAddressTypePointer,
-						Value: clusterIP,
+						Value: otherBalancerIP,
+					},
+				})
+
+				t.Log("replacing LoadBalancer IP with hostname")
+				dataplaneService.Status = corev1.ServiceStatus{
+					LoadBalancer: corev1.LoadBalancerStatus{
+						Ingress: []corev1.LoadBalancerIngress{
+							{
+								Hostname: exampleHostname,
+							},
+						},
+					},
+				}
+				require.NoError(t, reconciler.Client.Status().Update(ctx, dataplaneService))
+				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				require.NoError(t, err, "reconciliation returned an error")
+				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
+				require.True(t, k8sutils.IsReady(gatewayConditionsAware(&currentGateway)))
+				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAware(&currentGateway))
+				require.True(t, found)
+				require.Equal(t, condition.Status, metav1.ConditionTrue)
+				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
+				require.Equal(t, currentGateway.Status.Addresses, []gwtypes.GatewayAddress{
+					{
+						Type:  HostnameAddressTypePointer,
+						Value: exampleHostname,
 					},
 				})
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -28,6 +27,11 @@ import (
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
+)
+
+var (
+	IPAddressType       = gatewayv1beta1.IPAddressType
+	HostnameAddressType = gatewayv1beta1.HostnameAddressType
 )
 
 // -----------------------------------------------------------------------------
@@ -79,7 +83,10 @@ func (r *GatewayReconciler) createControlPlane(
 	return r.Client.Create(ctx, controlplane)
 }
 
-func (r *GatewayReconciler) ensureGatewayConnectivityStatus(ctx context.Context, gateway *gwtypes.Gateway, dataplane *operatorv1alpha1.DataPlane) (err error) {
+func (r *GatewayReconciler) getGatewayAddresses(
+	ctx context.Context,
+	dataplane *operatorv1alpha1.DataPlane,
+) ([]gwtypes.GatewayAddress, error) {
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
 		r.Client,
@@ -89,67 +96,54 @@ func (r *GatewayReconciler) ensureGatewayConnectivityStatus(ctx context.Context,
 		dataplane.UID,
 	)
 	if err != nil {
-		return err
+		return []gwtypes.GatewayAddress{}, err
 	}
 
 	count := len(services)
 	// if too many dataplane services are found here, this is a temporary situation.
 	// the number of services will be reduced to 1 by the dataplane controller.
 	if count > 1 {
-		return fmt.Errorf("found %d services for DataPlane currently unsupported: expected 1 or less", count)
+		return []gwtypes.GatewayAddress{}, fmt.Errorf("DataPlane %s/%s has multiple Services", dataplane.Namespace, dataplane.Name)
 	}
 
 	if count == 0 {
-		return fmt.Errorf("no services found for dataplane %s/%s", dataplane.Namespace, dataplane.Name)
+		return []gwtypes.GatewayAddress{}, fmt.Errorf("no Services found for DataPlane %s/%s", dataplane.Namespace, dataplane.Name)
 	}
-	svc := services[0]
-	if svc.Spec.ClusterIP == "" {
-		gateway.Status.Addresses = []gatewayv1beta1.GatewayAddress{}
-		return fmt.Errorf("service %s doesn't have a ClusterIP yet, not ready", svc.Name)
-	}
+	return gatewayAddressesFromService(services[0])
+}
 
-	// start collecting network addresses where the gateway is reachable
-	// at for ingress traffic.
-	gatewayAddrs := make(gwaddrs, 0)
-	if len(svc.Status.LoadBalancer.Ingress) > 0 {
-		switch {
-		case svc.Status.LoadBalancer.Ingress[0].IP != "":
-			gatewayAddrs = append(gatewayAddrs, gwaddr{
-				addr:     svc.Status.LoadBalancer.Ingress[0].IP,
-				addrType: ipaddrT,
-				isLB:     true,
-			})
-		case svc.Status.LoadBalancer.Ingress[0].Hostname != "":
-			gatewayAddrs = append(gatewayAddrs, gwaddr{
-				addr:     svc.Status.LoadBalancer.Ingress[0].Hostname,
-				addrType: hostAddrT,
-				isLB:     true,
-			})
-		default:
-			return fmt.Errorf("missing loadbalancer address in service %s/%s", svc.Namespace, svc.Name)
+func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayAddress, error) {
+	addresses := make([]gwtypes.GatewayAddress, 0, len(svc.Status.LoadBalancer.Ingress))
+
+	switch svc.Spec.Type {
+	case corev1.ServiceTypeLoadBalancer:
+		for _, serviceAddr := range svc.Status.LoadBalancer.Ingress {
+			if serviceAddr.IP != "" {
+				addresses = append(addresses, gwtypes.GatewayAddress{
+					Value: serviceAddr.IP,
+					Type:  &IPAddressType,
+				})
+			}
+			if serviceAddr.Hostname != "" {
+				addresses = append(addresses, gwtypes.GatewayAddress{
+					Value: serviceAddr.Hostname,
+					Type:  &HostnameAddressType,
+				})
+			}
 		}
-	}
-
-	// combine all addresses, including the ClusterIP and sort them
-	// according to priority (LoadBalancer addresses have the highest
-	// priority).
-	newAddresses := make([]gatewayv1beta1.GatewayAddress, 0, len(gatewayAddrs))
-	allAddrs := append(gatewayAddrs, gwaddr{
-		addr:     svc.Spec.ClusterIP,
-		addrType: ipaddrT,
-	})
-	sort.Sort(allAddrs)
-
-	for _, addr := range allAddrs {
-		newAddresses = append(newAddresses, gatewayv1beta1.GatewayAddress{
-			Type:  &(addr.addrType),
-			Value: addr.addr,
+	default:
+		// if the Service is not a LoadBalancer, it will never have any public addresses and its status address list
+		// will always be empty, so we use its internal IP instead
+		if svc.Spec.ClusterIP == "" {
+			return addresses, fmt.Errorf("service %s doesn't have a ClusterIP yet, not ready", svc.Name)
+		}
+		addresses = append(addresses, gwtypes.GatewayAddress{
+			Value: svc.Spec.ClusterIP,
+			Type:  &IPAddressType,
 		})
 	}
 
-	gateway.Status.Addresses = newAddresses
-
-	return nil
+	return addresses, nil
 }
 
 func (r *GatewayReconciler) verifyGatewayClassSupport(ctx context.Context, gateway *gwtypes.Gateway) (*gatewayClassDecorator, error) {
@@ -427,27 +421,6 @@ func (r *GatewayReconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Contex
 
 	return deleted, deletionErr.ErrorOrNil()
 }
-
-// -----------------------------------------------------------------------------
-// GatewayReconciler - Private Network Address Utilities
-// -----------------------------------------------------------------------------
-
-var (
-	ipaddrT   = gatewayv1beta1.IPAddressType
-	hostAddrT = gatewayv1beta1.HostnameAddressType
-)
-
-type gwaddr struct {
-	addr     string
-	addrType gatewayv1beta1.AddressType
-	isLB     bool
-}
-
-type gwaddrs []gwaddr
-
-func (g gwaddrs) Len() int           { return len(g) }
-func (g gwaddrs) Swap(i, j int)      { g[i], g[j] = g[j], g[i] }
-func (g gwaddrs) Less(i, j int) bool { return g[i].isLB && !g[j].isLB }
 
 // -----------------------------------------------------------------------------
 // GatewayReconciler - Private type utilities/wrappers

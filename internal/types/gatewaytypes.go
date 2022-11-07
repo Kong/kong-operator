@@ -5,5 +5,6 @@ import (
 )
 
 type (
-	Gateway = gatewayv1beta1.Gateway
+	Gateway        = gatewayv1beta1.Gateway
+	GatewayAddress = gatewayv1beta1.GatewayAddress
 )

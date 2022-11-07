@@ -307,26 +307,23 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	debug(log, "ensuring DataPlane connectivity for Gateway", gateway)
-	connectivityStatusError := r.ensureGatewayConnectivityStatus(ctx, &gateway, dataplane)
-	if connectivityStatusError == nil {
-		k8sutils.SetCondition(
-			k8sutils.NewCondition(GatewayServiceType, metav1.ConditionTrue, k8sutils.ResourceReadyReason, ""),
-			gatewayConditionsAware(&gateway),
-		)
+	gateway.Status.Addresses, err = r.getGatewayAddresses(ctx, dataplane)
+	if err == nil {
+		k8sutils.SetCondition(k8sutils.NewCondition(GatewayServiceType, metav1.ConditionTrue, k8sutils.ResourceReadyReason, ""),
+			gatewayConditionsAware(&gateway))
 	} else {
-		k8sutils.SetCondition(
-			k8sutils.NewCondition(GatewayServiceType, metav1.ConditionFalse, GatewayServiceErrorReason, connectivityStatusError.Error()),
-			gatewayConditionsAware(&gateway),
-		)
+		info(log, "could not determine gateway status: %s", err)
+		k8sutils.SetCondition(k8sutils.NewCondition(GatewayServiceType, metav1.ConditionFalse, GatewayServiceErrorReason, err.Error()),
+			gatewayConditionsAware(&gateway))
 	}
 
-	if !k8sutils.IsReady(gwConditionAware) {
-		if !k8sutils.IsReady(oldGwConditionsAware) || !reflect.DeepEqual(gateway.Status.Addresses, oldGateway.Status.Addresses) {
+	if !k8sutils.IsReady(gwConditionAware) || !reflect.DeepEqual(gateway.Status.Addresses, oldGateway.Status.Addresses) {
+		if !k8sutils.IsReady(oldGwConditionsAware) {
 			k8sutils.SetReady(gwConditionAware, gateway.Generation)
-			if err = r.patchStatus(ctx, &gateway, oldGateway); err != nil {
-				return ctrl.Result{}, err
-			}
 			debug(log, "gateway is ready", gateway)
+		}
+		if err = r.patchStatus(ctx, &gateway, oldGateway); err != nil {
+			return ctrl.Result{}, err
 		}
 	}
 

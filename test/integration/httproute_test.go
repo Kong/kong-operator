@@ -17,7 +17,6 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	"github.com/kong/gateway-operator/internal/utils/test"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -90,7 +89,7 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Log("deploying backend deployment (httpbin) of HTTPRoute")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
