@@ -13,6 +13,7 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 )
 
+// GenerateNewDeploymentForControlPlane generates a new Deployment for the ControlPlane
 func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.ControlPlane,
 	controlplaneImage,
 	serviceAccountName,
@@ -141,6 +142,7 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 	return deployment
 }
 
+// GenerateNewDeploymentForDataPlane generates a new Deployment for the DataPlane
 func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, dataplaneImage, certSecretName string) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -154,6 +156,19 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, da
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": dataplane.Name,
+				},
+			},
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxUnavailable: &intstr.IntOrString{
+						Type:   intstr.Int,
+						IntVal: 0,
+					},
+					MaxSurge: &intstr.IntOrString{
+						Type:   intstr.Int,
+						IntVal: 1,
+					},
 				},
 			},
 			Template: corev1.PodTemplateSpec{
