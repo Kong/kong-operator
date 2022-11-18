@@ -18,7 +18,7 @@ func GenerateGatewayClass() *gatewayv1beta1.GatewayClass {
 			Name: uuid.NewString(),
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
+			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName()),
 		},
 	}
 	return gatewayClass

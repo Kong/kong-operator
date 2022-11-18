@@ -93,6 +93,10 @@ type Config struct {
 	ControlPlaneControllerEnabled bool
 	DataPlaneControllerEnabled    bool
 	ValidatingWebhookEnabled      bool
+
+	// StartedCh can be used as a signal to notify the caller when the manager has been started.
+	// Specifically, this channel gets closed when manager.Start() is called.
+	StartedCh chan struct{}
 }
 
 func DefaultConfig() Config {
@@ -127,7 +131,7 @@ func Run(cfg Config) error {
 
 	if cfg.ControllerName != "" {
 		setupLog.Info(fmt.Sprintf("custom controller name provided: %s", cfg.ControllerName))
-		vars.ControllerName = cfg.ControllerName
+		vars.SetControllerName(cfg.ControllerName)
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -202,6 +206,10 @@ func Run(cfg Config) error {
 	}
 
 	setupLog.Info("starting manager")
+	// If started channel is set, close it to notify the caller that manager has started.
+	if cfg.StartedCh != nil {
+		close(cfg.StartedCh)
+	}
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		return fmt.Errorf("problem running manager: %w", err)
 	}

@@ -57,7 +57,7 @@ func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) boo
 		return false
 	}
 
-	return string(gatewayClass.Spec.ControllerName) == vars.ControllerName
+	return string(gatewayClass.Spec.ControllerName) == vars.ControllerName()
 }
 
 func (r *GatewayReconciler) gatewayConfigurationMatchesController(obj client.Object) bool {
@@ -78,7 +78,7 @@ func (r *GatewayReconciler) gatewayConfigurationMatchesController(obj client.Obj
 	}
 
 	for _, gatewayClass := range gatewayClassList.Items {
-		if string(gatewayClass.Spec.ControllerName) == vars.ControllerName {
+		if string(gatewayClass.Spec.ControllerName) == vars.ControllerName() {
 			return true
 		}
 	}

@@ -156,7 +156,7 @@ func (r *GatewayReconciler) verifyGatewayClassSupport(ctx context.Context, gatew
 		return nil, err
 	}
 
-	if string(gwc.Spec.ControllerName) != vars.ControllerName {
+	if string(gwc.Spec.ControllerName) != vars.ControllerName() {
 		return nil, operatorerrors.ErrUnsupportedGateway
 	}
 

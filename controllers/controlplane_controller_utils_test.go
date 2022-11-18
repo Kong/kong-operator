@@ -43,7 +43,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 						},
 						{
 							Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
-							Value: vars.ControllerName,
+							Value: vars.ControllerName(),
 						},
 					},
 				},
@@ -74,7 +74,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 						},
 						{
 							Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
-							Value: vars.ControllerName,
+							Value: vars.ControllerName(),
 						},
 						{
 							Name:  "CONTROLLER_PUBLISH_SERVICE",
@@ -132,7 +132,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 						},
 						{
 							Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
-							Value: vars.ControllerName,
+							Value: vars.ControllerName(),
 						},
 						{
 							Name:  "CONTROLLER_PUBLISH_SERVICE",
@@ -179,7 +179,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 						},
 						{
 							Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
-							Value: vars.ControllerName,
+							Value: vars.ControllerName(),
 						},
 						{
 							Name:  "CONTROLLER_PUBLISH_SERVICE",
@@ -226,7 +226,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 						},
 						{
 							Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
-							Value: vars.ControllerName,
+							Value: vars.ControllerName(),
 						},
 						{
 							Name:  "CONTROLLER_PUBLISH_SERVICE",

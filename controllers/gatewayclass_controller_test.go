@@ -31,7 +31,7 @@ func init() {
 }
 
 func TestGatewayClassReconciler_Reconcile(t *testing.T) {
-	var testCases = []struct {
+	testCases := []struct {
 		name            string
 		gatewayClassReq reconcile.Request
 		gatewayClass    *gatewayv1beta1.GatewayClass
@@ -60,7 +60,6 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 				err = reconciler.Client.Get(ctx, gatewayClassReq.NamespacedName, gwc.GatewayClass)
 				require.NoError(t, err)
 				require.False(t, gwc.isAccepted())
-
 			},
 		},
 		{
@@ -75,7 +74,7 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 					Name: "test-gatewayclass",
 				},
 				Spec: gatewayv1beta1.GatewayClassSpec{
-					ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
+					ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName()),
 				},
 			},
 			testBody: func(t *testing.T, reconciler GatewayClassReconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1beta1.GatewayClass) {
@@ -86,7 +85,6 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 				err = reconciler.Client.Get(ctx, gatewayClassReq.NamespacedName, gwc.GatewayClass)
 				require.NoError(t, err)
 				require.True(t, gwc.isAccepted())
-
 			},
 		},
 	}

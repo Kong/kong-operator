@@ -102,5 +102,5 @@ func (gwc *gatewayClassDecorator) isAccepted() bool {
 
 // isControlled returns boolean if the GatewayClass is controlled by this controller.
 func (gwc *gatewayClassDecorator) isControlled() bool {
-	return string(gwc.Spec.ControllerName) == vars.ControllerName
+	return string(gwc.Spec.ControllerName) == vars.ControllerName()
 }

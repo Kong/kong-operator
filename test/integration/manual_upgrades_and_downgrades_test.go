@@ -80,7 +80,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 				Namespace: (*gatewayv1beta1.Namespace)(&gatewayConfig.Namespace),
 				Name:      gatewayConfig.Name,
 			},
-			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
+			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName()),
 		},
 	}
 	gatewayClass, err = clients.GatewayClient.GatewayV1beta1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})

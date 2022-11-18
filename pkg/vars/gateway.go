@@ -1,15 +1,19 @@
 package vars
 
-import "os"
+import (
+	"os"
+	"sync"
+)
 
 // -----------------------------------------------------------------------------
 // Gateway - Vars & Consts
 // -----------------------------------------------------------------------------
 
 var (
-	// ControllerName is a unique identifier which indicates this operator's name.
+	// _controllerName is a unique identifier which indicates this operator's name.
 	// This value may be overwritten by ENV vars or via the manager.
-	ControllerName = "konghq.com/gateway-operator" // TODO: multi-tenancy: https://github.com/Kong/gateway-operator/issues/35
+	_controllerName     = "konghq.com/gateway-operator" // TODO: multi-tenancy: https://github.com/Kong/gateway-operator/issues/35
+	_controllerNameLock sync.RWMutex
 )
 
 // -----------------------------------------------------------------------------
@@ -22,12 +26,24 @@ const (
 	ControllerNameOverrideVar = "KONG_CONTROLLER_NAME"
 )
 
+func ControllerName() string {
+	_controllerNameLock.RLock()
+	defer _controllerNameLock.RUnlock()
+	return _controllerName
+}
+
+func SetControllerName(name string) {
+	_controllerNameLock.Lock()
+	defer _controllerNameLock.Unlock()
+	_controllerName = name
+}
+
 // -----------------------------------------------------------------------------
 // Gateway - Private Functions - Env Var Init
 // -----------------------------------------------------------------------------
 
 func init() {
 	if v := os.Getenv(ControllerNameOverrideVar); v != "" {
-		ControllerName = v
+		SetControllerName(v)
 	}
 }

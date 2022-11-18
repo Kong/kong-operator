@@ -95,7 +95,10 @@ func TestMain(m *testing.M) {
 	}
 
 	fmt.Println("INFO: starting the operator's controller manager")
-	go startControllerManager()
+	// startControllerManager will spawn the controller manager in a separate
+	// goroutine and will report whether that succeeded.
+	started := startControllerManager()
+	<-started
 
 	exitOnErr(testutils.BuildMTLSCredentials(ctx, clients.K8sClient, &httpc))
 
@@ -129,7 +132,9 @@ func exitOnErr(err error) {
 	}
 }
 
-func startControllerManager() {
+// startControllerManager will configure the manager and start it in a separate goroutine.
+// It returns a channel which will get closed when manager.Start() gets called.
+func startControllerManager() <-chan struct{} {
 	cfg := manager.DefaultConfig()
 	cfg.LeaderElection = false
 	cfg.DevelopmentMode = true
@@ -139,6 +144,7 @@ func startControllerManager() {
 	cfg.DataPlaneControllerEnabled = true
 	cfg.ValidatingWebhookEnabled = false
 	cfg.AnonymousReports = false
+	cfg.StartedCh = make(chan struct{})
 
 	if runWebhookTests {
 		cfg.WebhookCertDir = webhookCertDir
@@ -162,7 +168,11 @@ func startControllerManager() {
 		})
 	}
 
-	exitOnErr(manager.Run(cfg))
+	go func() {
+		exitOnErr(manager.Run(cfg))
+	}()
+
+	return cfg.StartedCh
 }
 
 func generateWebhookCertificates() error {

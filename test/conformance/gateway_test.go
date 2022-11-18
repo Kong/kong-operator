@@ -26,7 +26,7 @@ func TestGatewayConformance(t *testing.T) {
 			Name: uuid.NewString(),
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
+			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName()),
 		},
 	}
 	require.NoError(t, clients.MgrClient.Create(ctx, gwc))
@@ -51,5 +51,4 @@ func TestGatewayConformance(t *testing.T) {
 		},
 	})
 	cSuite.Setup(t)
-
 }

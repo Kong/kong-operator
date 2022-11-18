@@ -83,7 +83,10 @@ func TestMain(m *testing.M) {
 	exitOnErr(testutils.DeployCRDs(ctx, clients.OperatorClient, env))
 
 	fmt.Println("INFO: starting the operator's controller manager")
-	go startControllerManager()
+	// startControllerManager will spawn the controller manager in a separate
+	// goroutine and will report whether that succeeded.
+	started := startControllerManager()
+	<-started
 
 	exitOnErr(testutils.BuildMTLSCredentials(ctx, clients.K8sClient, &httpc))
 
@@ -112,7 +115,9 @@ func exitOnErr(err error) {
 	}
 }
 
-func startControllerManager() {
+// startControllerManager will configure the manager and start it in a separate goroutine.
+// It returns a channel which will get closed when manager.Start() gets called.
+func startControllerManager() <-chan struct{} {
 	cfg := manager.DefaultConfig()
 	cfg.LeaderElection = false
 	cfg.DevelopmentMode = true
@@ -122,6 +127,7 @@ func startControllerManager() {
 	cfg.DataPlaneControllerEnabled = true
 	cfg.ValidatingWebhookEnabled = false
 	cfg.AnonymousReports = false
+	cfg.StartedCh = make(chan struct{})
 
 	cfg.NewClientFunc = func(cache cache.Cache, config *rest.Config, options client.Options, uncachedObjects ...client.Object) (client.Client, error) {
 		// always hijack and impersonate the system service account here so that the manager
@@ -141,5 +147,9 @@ func startControllerManager() {
 		})
 	}
 
-	exitOnErr(manager.Run(cfg))
+	go func() {
+		exitOnErr(manager.Run(cfg))
+	}()
+
+	return cfg.StartedCh
 }

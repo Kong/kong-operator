@@ -62,7 +62,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					Name: "test-gatewayclass",
 				},
 				Spec: gatewayv1beta1.GatewayClassSpec{
-					ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
+					ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName()),
 				},
 				Status: gatewayv1beta1.GatewayClassStatus{
 					Conditions: []metav1.Condition{
@@ -327,7 +327,7 @@ func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
 			Name: "test-gatewayclass",
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
+			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName()),
 		},
 		Status: gatewayv1beta1.GatewayClassStatus{
 			Conditions: []metav1.Condition{

@@ -43,7 +43,7 @@ func TestGatewayClassUpdates(t *testing.T) {
 			Name: gatewayClassName,
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
+			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName()),
 		},
 	}
 	gatewayClass, err = clients.GatewayClient.GatewayV1beta1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
@@ -135,7 +135,7 @@ func TestGatewayClassCreation(t *testing.T) {
 			Name: gatewayClassName,
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName),
+			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName()),
 		},
 	}
 

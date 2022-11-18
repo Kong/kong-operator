@@ -55,8 +55,8 @@ func setControlPlaneDefaults(
 		changed = true
 	}
 
-	if envValueByName(spec.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME") != vars.ControllerName {
-		spec.Env = updateEnv(spec.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME", vars.ControllerName)
+	if envValueByName(spec.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME") != vars.ControllerName() {
+		spec.Env = updateEnv(spec.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME", vars.ControllerName())
 		changed = true
 	}
 
@@ -111,7 +111,6 @@ func setControlPlaneDefaults(
 // controlPlaneNeedEnableGatewayFeature returns true if Gateway Feature needs
 // to be enabled for a controlplane, false otherwise.
 func controlPlaneNeedEnableGatewayFeature(image string) bool {
-
 	parts := strings.Split(image, ":")
 	// get tag of the image by last part of ":" separated parts.
 	// for example kong/kubernetes-ingresss-controller:2.5.0

@@ -193,7 +193,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	gwc, err := r.verifyGatewayClassSupport(ctx, &gateway)
 	if err != nil {
 		if errors.Is(err, operatorerrors.ErrUnsupportedGateway) {
-			debug(log, "resource not supported, ignoring", gateway, "ExpectedGatewayClass", vars.ControllerName)
+			debug(log, "resource not supported, ignoring", gateway, "ExpectedGatewayClass", vars.ControllerName())
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -212,7 +212,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		condition := k8sutils.NewCondition(
 			k8sutils.ConditionType(gatewayv1beta1.GatewayConditionScheduled),
 			metav1.ConditionTrue, k8sutils.ConditionReason(gatewayv1beta1.GatewayReasonScheduled),
-			fmt.Sprintf("this gateway has been picked up by the %s and will be processed", vars.ControllerName),
+			fmt.Sprintf("this gateway has been picked up by the %s and will be processed", vars.ControllerName()),
 		)
 		k8sutils.SetCondition(condition, gwConditionAware)
 	}
