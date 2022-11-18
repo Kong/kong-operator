@@ -146,16 +146,34 @@ func buildEnvironmentOnExistingCluster(ctx context.Context, existingCluster stri
 //   - k8sClient: the k8s client to use.
 //   - httpc: the http client to configure with the mTLS credentials.
 func BuildMTLSCredentials(ctx context.Context, k8sClient *kubernetes.Clientset, httpc *http.Client) error {
-	timeout := time.Now().Add(time.Minute)
-	for timeout.After(time.Now()) {
-		err := func() error {
-			ca, err := k8sClient.CoreV1().Secrets("kong-system").Get(ctx, manager.DefaultConfig().ClusterCASecretName, metav1.GetOptions{})
-			if err != nil {
-				return err
+	var (
+		err     error
+		timeout = time.After(time.Minute)
+		ticker  = time.NewTicker(time.Second)
+	)
+
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("failed to BuildMTLSCredentials: %w", ctx.Err())
+
+		case <-timeout:
+			return fmt.Errorf("failed to BuildMTLSCredentials: %w", err)
+
+		case <-ticker.C:
+			ca, localErr := k8sClient.CoreV1().Secrets("kong-system").Get(ctx,
+				manager.DefaultConfig().ClusterCASecretName, metav1.GetOptions{},
+			)
+			if localErr != nil {
+				err = localErr
+				continue
 			}
-			cert, err := tls.X509KeyPair(ca.Data["tls.crt"], ca.Data["tls.key"])
-			if err != nil {
-				return err
+
+			cert, localErr := tls.X509KeyPair(ca.Data["tls.crt"], ca.Data["tls.key"])
+			if localErr != nil {
+				err = localErr
+				continue
 			}
 
 			transport := &http.Transport{
@@ -166,12 +184,8 @@ func BuildMTLSCredentials(ctx context.Context, k8sClient *kubernetes.Clientset, 
 			}
 			httpc.Transport = transport
 			return nil
-		}()
-		if err != nil {
-			time.Sleep(time.Second)
 		}
 	}
-	return nil
 }
 
 // DeployCRDs deploys the CRDs commonly used in tests.
