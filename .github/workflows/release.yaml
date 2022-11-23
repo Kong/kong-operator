@@ -385,7 +385,7 @@ jobs:
         git_commit_gpgsign: true
 
     - name: Pushes bundle to k8s-operatorhub-community-operators
-      uses: peter-evans/create-pull-request@b4d51739f96fca8047ad065eccef63442d8e99f7
+      uses: peter-evans/create-pull-request@d7db273d6c7206ba99224e659c982ae34a1025e3
       with:
         token: ${{ secrets.PAT_GITHUB }}
         path: k8s-operatorhub-community-operators
@@ -455,7 +455,7 @@ jobs:
 
       # PRs to the main branch will update the version file, generated bundles and kustomized config.
       - name: create a release PR
-        uses: peter-evans/create-pull-request@b4d51739f96fca8047ad065eccef63442d8e99f7
+        uses: peter-evans/create-pull-request@d7db273d6c7206ba99224e659c982ae34a1025e3
         with:
           token: ${{ secrets.PAT_GITHUB }}
           path: .
@@ -494,7 +494,7 @@ jobs:
       # Create a PR to update the docs repo with the new release.
       # PR includes the CHANGELOG and config files.
       - name: Create a PR to Kong/gateway-operator-docs
-        uses: peter-evans/create-pull-request@b4d51739f96fca8047ad065eccef63442d8e99f7
+        uses: peter-evans/create-pull-request@d7db273d6c7206ba99224e659c982ae34a1025e3
         with:
           token: ${{ secrets.PAT_GITHUB }}
           path: gateway-operator-docs
