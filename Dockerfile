@@ -92,6 +92,10 @@ RUN groupadd --system gateway-operator && \
 COPY --from=builder /workspace/bin/manager .
 COPY LICENSE /licenses/
 
+# Run yum update to prevent vulnerable packages getting into the final image
+# and preventing publishing on Redhat connect registry.
+RUN yum update -y
+
 # Perform any further action as an unprivileged user.
 USER 1000
 
