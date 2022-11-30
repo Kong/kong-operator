@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - uses: actions/checkout@v3
+
       - name: search for release command in commit message
         id: commit_parser
         uses: actions/github-script@v6
@@ -40,6 +42,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v3
+
       - name: Read version from VERSION file
         run: |
           VERSION=$(cat VERSION)
