@@ -8,7 +8,8 @@ import (
 
 // supportedControlPlaneImages is the list of the supported DataPlane images
 var supportedDataPlaneImages = map[string]struct{}{
-	fmt.Sprintf("%s:3.0", consts.DefaultDataPlaneBaseImage): {},
+	fmt.Sprintf("%s:3.0", consts.DefaultDataPlaneBaseImage):   {},
+	fmt.Sprintf("%s:3.0.1", consts.DefaultDataPlaneBaseImage): {},
 }
 
 // IsDataPlaneSupported is a helper intended to validate the DataPlane
