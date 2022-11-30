@@ -416,9 +416,9 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ github.event.inputs.prerelease }}" == "true" ]]; then
-            echo "::set-output name=type::prerelease"
+            echo "type=prerelease" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=type::release"
+            echo "type=release" >> $GITHUB_OUTPUT
           fi
 
       - name: setup golang

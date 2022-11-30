@@ -121,4 +121,4 @@ jobs:
       - name: Set artifact output
         if: ${{ inputs.upload-artifact }}
         id: set-artifact
-        run: echo "::set-output name=artifact::${{ inputs.upload-artifact }}"
+        run: echo "artifact=${{ inputs.upload-artifact }}" >> $GITHUB_OUTPUT

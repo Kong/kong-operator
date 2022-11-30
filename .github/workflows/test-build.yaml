@@ -56,7 +56,7 @@ jobs:
         run: |
           docker load --input ${{ needs.build.outputs.artifact }}
           VERSION_JSON=$(docker run ghcr.io/${REPO}:${{ needs.build.outputs.version }} -version)
-          echo "::set-output name=json::${VERSION_JSON}"
+          echo "json=${VERSION_JSON}" >> $GITHUB_OUTPUT
 
       - name: Test operator version
         run: |
