@@ -392,8 +392,8 @@ jobs:
         push-to-fork: Kong/k8s-operatorhub-community-operators
         add-paths: operators/kong-gateway-operator/${{ env.VERSION }}
         commit-message: operator kong-gateway-operator (${{ env.VERSION }})
-        committer: Kong <team-k8s+github-bot@konghq.com>
-        author: Kong <team-k8s+github-bot@konghq.com>
+        committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
+        author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
         signoff: true
         base: main
         branch: kong-gateway-operator-${{ github.event.inputs.tag }}
@@ -464,8 +464,8 @@ jobs:
             config
             VERSION
           commit-message: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
-          committer: Kong <team-k8s+github-bot@konghq.com>
-          author: Kong <team-k8s+github-bot@konghq.com>
+          committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
+          author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           delete-branch: true
           title: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
           body: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
@@ -502,8 +502,8 @@ jobs:
             config
             CHANGELOG.md
           commit-message: "chore(release): operator kong-gateway-operator (${{ env.VERSION }})"
-          committer: Kong <team-k8s+github-bot@konghq.com>
-          author: Kong <team-k8s+github-bot@konghq.com>
+          committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
+          author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           base: main
           branch: kong-gateway-operator-${{ github.event.inputs.tag }}
           delete-branch: true
