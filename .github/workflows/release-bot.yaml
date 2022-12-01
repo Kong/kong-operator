@@ -57,7 +57,7 @@ jobs:
           version_extractor_regex: '(.*)$'
 
       - name: check if tag already exists
-        uses: mukunku/tag-exists-action@v1.1.0
+        uses: mukunku/tag-exists-action@v1.2.0
         id: tag_exists
         with:
           tag: ${{ steps.commit_parser.outputs.release_version }}
