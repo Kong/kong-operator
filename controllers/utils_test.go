@@ -30,6 +30,22 @@ func Test_ensureContainerImageUpdated(t *testing.T) {
 			wantErr:       "invalid container image found: fake:invalid:image",
 		},
 		{
+			name:          "setting new image when existing is local with port is allowed",
+			originalImage: "localhost:5000/kic:2.7.0",
+			newImage:      pointer.String("kong/kong"),
+			newVersion:    pointer.String("2.7.0"),
+			expectedImage: "kong/kong:2.7.0",
+			updated:       true,
+		},
+		{
+			name:          "setting new local image is allowed",
+			originalImage: "kong/kong:2.7.0",
+			newImage:      pointer.String("localhost:5000/kong"),
+			newVersion:    pointer.String("2.7.0"),
+			expectedImage: "localhost:5000/kong:2.7.0",
+			updated:       true,
+		},
+		{
 			name:          "empty image and version makes no changes",
 			originalImage: "kong/kong:2.7.0",
 			expectedImage: "kong/kong:2.7.0",
@@ -95,7 +111,7 @@ func Test_ensureContainerImageUpdated(t *testing.T) {
 			container := generators.NewContainer("test", tt.originalImage, 80)
 			updated, err := ensureContainerImageUpdated(&container, tt.newImage, tt.newVersion)
 			if tt.wantErr != "" {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Equal(t, tt.wantErr, err.Error())
 			} else {
 				assert.NoError(t, err)

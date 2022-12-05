@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
 	"strings"
 	"sync"
@@ -445,9 +446,27 @@ func addLabelForOwner(obj client.Object, owner client.Object) {
 // nil when not wanted.
 func ensureContainerImageUpdated(container *corev1.Container, image *string, version *string) (updated bool, err error) {
 	imageParts := strings.Split(container.Image, ":")
-	if len(imageParts) > 2 {
+	if len(imageParts) > 3 {
 		err = fmt.Errorf("invalid container image found: %s", container.Image)
 		return
+	}
+
+	containerImageURL := imageParts[0]
+	// This is a special case for registries that specify a non default port,
+	// e.g. localhost:5000 or myregistry.io:8000. We do look for '/' since the
+	// contianer.Image will contain it as a separator between the registry+image
+	// and the version.
+	if len(imageParts) == 3 {
+		if !strings.Contains(container.Image, "/") {
+			return false, fmt.Errorf("invalid container image found: %s", container.Image)
+		}
+
+		containerImageURL = imageParts[0] + imageParts[1]
+		u, err := url.Parse(containerImageURL)
+		if err != nil {
+			return false, fmt.Errorf("invalid registry URL %s: %w", containerImageURL, err)
+		}
+		containerImageURL = u.String()
 	}
 
 	switch {
@@ -464,7 +483,7 @@ func ensureContainerImageUpdated(container *corev1.Container, image *string, ver
 	case image != nil && *image != "":
 		expectedImage := *image
 		if len(imageParts) == 2 {
-			if imageParts[0] != expectedImage {
+			if containerImageURL != expectedImage {
 				container.Image = fmt.Sprintf("%s:%s", expectedImage, imageParts[1])
 				updated = true
 			}
@@ -480,11 +499,11 @@ func ensureContainerImageUpdated(container *corev1.Container, image *string, ver
 		expectedVersion := *version
 		if len(imageParts) == 2 {
 			if imageParts[1] != expectedVersion {
-				container.Image = fmt.Sprintf("%s:%s", imageParts[0], expectedVersion)
+				container.Image = fmt.Sprintf("%s:%s", containerImageURL, expectedVersion)
 				updated = true
 			}
 		} else {
-			container.Image = fmt.Sprintf("%s:%s", imageParts[0], expectedVersion)
+			container.Image = fmt.Sprintf("%s:%s", containerImageURL, expectedVersion)
 			updated = true
 		}
 	}
