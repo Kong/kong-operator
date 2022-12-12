@@ -74,4 +74,5 @@ linters-settings:
   exhaustive:
     default-signifies-exhaustive: true
 issues:
+  max-same-issues: 0
   fix: true

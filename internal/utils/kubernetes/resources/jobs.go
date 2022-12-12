@@ -20,7 +20,8 @@ func GenerateNewWebhookCertificateConfigJobs(namespace,
 	serviceAccountName,
 	imageName,
 	secretName,
-	webhookName string) (createJob, patchJob *batchv1.Job) {
+	webhookName string,
+) (createJob, patchJob *batchv1.Job) {
 	createJob = newWebhookCertificateConfigJobCommon(namespace, serviceAccountName, imageName, func(j *batchv1.Job) {
 		j.GenerateName = fmt.Sprintf("%s-create-", consts.WebhookCertificateConfigName)
 		j.Spec.Template.Spec.Containers[0].Name = "create"
@@ -66,8 +67,8 @@ func newWebhookCertificateConfigJobCommon(namespace, serviceAccountName, imageNa
 					RestartPolicy:      corev1.RestartPolicyOnFailure,
 					ServiceAccountName: serviceAccountName,
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: pointer.BoolPtr(true),
-						RunAsUser:    pointer.Int64Ptr(2000),
+						RunAsNonRoot: pointer.Bool(true),
+						RunAsUser:    pointer.Int64(2000),
 					},
 				},
 			},

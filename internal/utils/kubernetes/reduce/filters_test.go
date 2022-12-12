@@ -126,7 +126,8 @@ func TestFilterDeployments(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              "12/31/1995",
-						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC)},
+						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
+					},
 				},
 			},
 			filteredDeployments: []appsv1.Deployment{
@@ -329,7 +330,7 @@ func TestFilterServices(t *testing.T) {
 						Endpoints: []discoveryv1.Endpoint{
 							{
 								Conditions: discoveryv1.EndpointConditions{
-									Ready: pointer.BoolPtr(true),
+									Ready: pointer.Bool(true),
 								},
 							},
 						},

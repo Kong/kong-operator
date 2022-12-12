@@ -20,7 +20,7 @@ func GenerateOwnerReferenceForObject(obj client.Object) metav1.OwnerReference {
 		Kind:       obj.GetObjectKind().GroupVersionKind().Kind,
 		Name:       obj.GetName(),
 		UID:        obj.GetUID(),
-		Controller: pointer.BoolPtr(true),
+		Controller: pointer.Bool(true),
 	}
 }
 

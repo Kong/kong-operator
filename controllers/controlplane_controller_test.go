@@ -82,10 +82,10 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				Spec: operatorv1alpha1.ControlPlaneSpec{
 					ControlPlaneDeploymentOptions: operatorv1alpha1.ControlPlaneDeploymentOptions{
 						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-							ContainerImage: pointer.StringPtr("kong/kubernetes-ingress-controller"),
-							Version:        pointer.StringPtr("2.7"),
+							ContainerImage: pointer.String("kong/kubernetes-ingress-controller"),
+							Version:        pointer.String("2.7"),
 						},
-						DataPlane: pointer.StringPtr("test-dataplane"),
+						DataPlane: pointer.String("test-dataplane"),
 					},
 				},
 				Status: operatorv1alpha1.ControlPlaneStatus{
@@ -110,8 +110,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
 						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-							ContainerImage: pointer.StringPtr("kong"),
-							Version:        pointer.StringPtr("3.0"),
+							ContainerImage: pointer.String("kong"),
+							Version:        pointer.String("3.0"),
 						},
 					},
 				},
@@ -209,10 +209,10 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				Spec: operatorv1alpha1.ControlPlaneSpec{
 					ControlPlaneDeploymentOptions: operatorv1alpha1.ControlPlaneDeploymentOptions{
 						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-							ContainerImage: pointer.StringPtr("kong/kubernetes-ingress-controller"),
-							Version:        pointer.StringPtr("1.0"),
+							ContainerImage: pointer.String("kong/kubernetes-ingress-controller"),
+							Version:        pointer.String("1.0"),
 						},
-						DataPlane: pointer.StringPtr("test-dataplane"),
+						DataPlane: pointer.String("test-dataplane"),
 					},
 				},
 				Status: operatorv1alpha1.ControlPlaneStatus{
@@ -237,8 +237,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
 						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-							ContainerImage: pointer.StringPtr("kong"),
-							Version:        pointer.StringPtr("3.0"),
+							ContainerImage: pointer.String("kong"),
+							Version:        pointer.String("3.0"),
 						},
 					},
 				},

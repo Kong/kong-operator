@@ -40,7 +40,7 @@ func GenerateNewValidatingWebhookConfiguration(serviceNamespace, serviceName, we
 					Service: &admissionregistrationv1.ServiceReference{
 						Namespace: serviceNamespace,
 						Name:      serviceName,
-						Path:      pointer.StringPtr("/validate"),
+						Path:      pointer.String("/validate"),
 					},
 				},
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},

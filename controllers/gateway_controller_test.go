@@ -112,7 +112,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					},
 					Spec: operatorv1alpha1.ControlPlaneSpec{
 						ControlPlaneDeploymentOptions: operatorv1alpha1.ControlPlaneDeploymentOptions{
-							DataPlane: pointer.StringPtr("test-dataplane"),
+							DataPlane: pointer.String("test-dataplane"),
 						},
 					},
 					Status: operatorv1alpha1.ControlPlaneStatus{
@@ -146,8 +146,8 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				otherBalancerIP := "172.18.1.19"
 				exampleHostname := "host.example.com"
 
-				IPAddressTypePointer := (*gatewayv1beta1.AddressType)(pointer.StringPtr(string(gatewayv1beta1.IPAddressType)))
-				HostnameAddressTypePointer := (*gatewayv1beta1.AddressType)(pointer.StringPtr(string(gatewayv1beta1.HostnameAddressType)))
+				IPAddressTypePointer := (*gatewayv1beta1.AddressType)(pointer.String(string(gatewayv1beta1.IPAddressType)))
+				HostnameAddressTypePointer := (*gatewayv1beta1.AddressType)(pointer.String(string(gatewayv1beta1.HostnameAddressType)))
 
 				t.Log("first reconciliation, the dataplane has no IP assigned")
 				// the dataplane service starts with no IP assigned, the gateway must be not ready
