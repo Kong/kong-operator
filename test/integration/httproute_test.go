@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,13 +18,12 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func TestHTTPRouteV1Beta1(t *testing.T) {
-	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() {
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	t.Log("deploying a GatewayConfiguration to set KIC log level")
 	gatewayConfig := &operatorv1alpha1.GatewayConfiguration{

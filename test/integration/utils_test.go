@@ -15,43 +15,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/require"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesclient "k8s.io/client-go/kubernetes"
-
-	testutils "github.com/kong/gateway-operator/internal/utils/test"
 )
-
-// TODO https://github.com/Kong/kubernetes-testing-framework/issues/302
-// we have this in both integration and e2e pkgs, and also in the controller integration pkg
-// they should be standardized
-
-// Setup is a helper function for tests which conveniently creates a cluster
-// cleaner (to clean up test resources automatically after the test finishes)
-// and creates a new namespace for the test to use. It also enables parallel
-// testing.
-func setup(t *testing.T, ctx context.Context, env environments.Environment, clients testutils.K8sClients) (*corev1.Namespace, *clusters.Cleaner) {
-	t.Log("performing test setup")
-	t.Parallel()
-	cleaner := clusters.NewCleaner(env.Cluster())
-
-	t.Log("creating a testing namespace")
-	namespace, err := clients.K8sClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
-	}, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.AddNamespace(namespace)
-
-	return namespace, cleaner
-}
 
 // Expect404WithNoRoute is used to check whether a given http response is (specifically) a Kong 404.
 func expect404WithNoRoute(t *testing.T, proxyURL string, resp *http.Response) bool {

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +18,7 @@ import (
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 const (
@@ -29,8 +29,8 @@ const (
 )
 
 func TestGatewayConfigurationEssentials(t *testing.T) {
-	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{

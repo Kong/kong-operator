@@ -23,19 +23,12 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func TestGatewayEssentials(t *testing.T) {
-	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			if assert.NoError(t, err, "failed to dump diagnostics") {
-				t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			}
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	t.Log("deploying a GatewayClass resource")
 	gatewayClass := testutils.GenerateGatewayClass()
@@ -162,8 +155,8 @@ func TestGatewayEssentials(t *testing.T) {
 }
 
 func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
-	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	var err error
 	gatewayConfigurationName := uuid.NewString()

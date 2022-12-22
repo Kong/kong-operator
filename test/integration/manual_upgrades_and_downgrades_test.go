@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -22,11 +21,12 @@ import (
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
-	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	originalControlPlaneImageName := "kong/kubernetes-ingress-controller"
 	originalControlPlaneImageVersion := "2.5.0"

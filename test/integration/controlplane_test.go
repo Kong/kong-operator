@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,11 +21,12 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func TestControlPlaneWhenNoDataPlane(t *testing.T) {
-	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
 	controlplaneClient := clients.OperatorClient.ApisV1alpha1().ControlPlanes(namespace.Name)
@@ -107,16 +107,8 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 }
 
 func TestControlPlaneEssentials(t *testing.T) {
-	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			if assert.NoError(t, err, "failed to dump diagnostics") {
-				t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			}
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
 	controlplaneClient := clients.OperatorClient.ApisV1alpha1().ControlPlanes(namespace.Name)
@@ -256,10 +248,8 @@ func checkControlPlaneDeploymentEnvVars(t *testing.T, deployment *appsv1.Deploym
 }
 
 func TestControlPlaneUpdate(t *testing.T) {
-	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() {
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
 	controlplaneClient := clients.OperatorClient.ApisV1alpha1().ControlPlanes(namespace.Name)

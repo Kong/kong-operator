@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,11 +23,12 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func TestDataplaneEssentials(t *testing.T) {
-	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	t.Log("deploying dataplane resource")
 	dataplaneName := types.NamespacedName{
@@ -170,8 +170,8 @@ func verifyConnectivity(t *testing.T, dataplaneIP string) {
 }
 
 func TestDataPlaneUpdate(t *testing.T) {
-	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
 	t.Log("deploying dataplane resource")

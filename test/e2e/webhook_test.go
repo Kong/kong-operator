@@ -8,34 +8,20 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	testutils "github.com/kong/gateway-operator/internal/utils/test"
 )
 
 func TestDataplaneValidatingWebhook(t *testing.T) {
-	var env environments.Environment
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	defer require.NoError(t, cleanupEnvironment(ctx, env))
 
-	var clients *testutils.K8sClients
-	env, clients = createEnvironment(t, ctx)
-
-	testNamespace, cleaner := setup(t, ctx, env)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	// createEnvironment will queue up environment cleanup if necessary
+	// and dumping diagnostics if the test fails.
+	clients, testNamespace, _ := createEnvironment(t, ctx)
 
 	testCases := []struct {
 		name      string

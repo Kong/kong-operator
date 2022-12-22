@@ -18,7 +18,9 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/networking"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +30,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/clientset"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -69,7 +72,9 @@ var (
 // Testing Vars - Testing Environment
 // -----------------------------------------------------------------------------
 
-func createEnvironment(t *testing.T, ctx context.Context) (environments.Environment, *testutils.K8sClients) {
+func createEnvironment(t *testing.T, ctx context.Context) (*testutils.K8sClients, *corev1.Namespace, *clusters.Cleaner) {
+	t.Helper()
+
 	skipClusterCleanup = existingCluster != ""
 
 	fmt.Println("INFO: configuring cluster for testing environment")
@@ -105,12 +110,17 @@ func createEnvironment(t *testing.T, ctx context.Context) (environments.Environm
 		fmt.Println("INFO: load image", imageLoad)
 		builder.WithAddons(imageLoader.Build())
 	}
-	var err error
+
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		assert.NoError(t, cleanupEnvironment(context.Background(), env), "failed cleaning up the environment")
+	})
 
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
 	require.NoError(t, <-env.WaitForReady(ctx))
+
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	fmt.Println("INFO: initializing Kubernetes API clients")
 	clients := &testutils.K8sClients{}
@@ -123,6 +133,7 @@ func createEnvironment(t *testing.T, ctx context.Context) (environments.Environm
 	fmt.Println("INFO: intializing manager client")
 	clients.MgrClient, err = client.New(env.Cluster().Config(), client.Options{})
 	require.NoError(t, err)
+
 	require.NoError(t, gatewayv1beta1.AddToScheme(clients.MgrClient.Scheme()))
 	require.NoError(t, operatorv1alpha1.AddToScheme(clients.MgrClient.Scheme()))
 
@@ -155,10 +166,9 @@ func createEnvironment(t *testing.T, ctx context.Context) (environments.Environm
 	}, webhookReadinessTimeout, webhookReadinessTick)
 
 	fmt.Println("INFO: environment is ready, starting tests")
-
 	require.NoError(t, restoreKustomizationFile())
 
-	return env, clients
+	return clients, namespace, cleaner
 }
 
 func cleanupEnvironment(ctx context.Context, env environments.Environment) error {

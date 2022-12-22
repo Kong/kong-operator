@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,14 +16,15 @@ import (
 	"github.com/kong/gateway-operator/controllers"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func TestDataplaneValidation(t *testing.T) {
-	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	// create a configmap containing "KONG_DATABASE" key for envFroms
-	_, err := clients.K8sClient.CoreV1().ConfigMaps(namespace.Name).Create(ctx, &corev1.ConfigMap{
+	configMap, err := clients.K8sClient.CoreV1().ConfigMaps(namespace.Name).Create(ctx, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "dataplane-configs",
 			Namespace: namespace.Name,
@@ -36,6 +36,7 @@ func TestDataplaneValidation(t *testing.T) {
 		},
 	}, metav1.CreateOptions{})
 	require.NoError(t, err, "failed to create configmap")
+	cleaner.Add(configMap)
 
 	if runWebhookTests {
 		testDataplaneValidatingWebhook(t, namespace)
@@ -289,5 +290,4 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 			}
 		})
 	}
-
 }

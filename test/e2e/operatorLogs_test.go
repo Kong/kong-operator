@@ -66,20 +66,9 @@ func TestOperatorLogs(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env, clients := createEnvironment(t, ctx)
-	defer func() {
-		require.NoError(t, cleanupEnvironment(ctx, env))
-	}()
-
-	testNamespace, cleaner := setup(t, ctx, env)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	// createEnvironment will queue up environment cleanup if necessary
+	// and dumping diagnostics if the test fails.
+	clients, testNamespace, cleaner := createEnvironment(t, ctx)
 
 	t.Log("finding the Pod for the Gateway Operator")
 	podList := &corev1.PodList{}

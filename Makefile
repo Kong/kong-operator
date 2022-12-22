@@ -375,6 +375,7 @@ catalog-push: ## Push a catalog image.
 # ------------------------------------------------------------------------------
 
 GOTESTSUM_FORMAT ?= standard-verbose
+INTEGRATION_TEST_TIMEOUT ?= "30m"
 
 .PHONY: test
 test: test.unit
@@ -402,6 +403,7 @@ _test.integration: gotestsum
 	GOFLAGS="-tags=integration_tests" \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-race \
 		-coverprofile=coverage.integration.out \
 		./test/integration/...

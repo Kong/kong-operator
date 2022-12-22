@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -17,11 +16,12 @@ import (
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func TestGatewayClassUpdates(t *testing.T) {
-	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	t.Log("deploying an unsupported GatewayClass resource")
 	unsupportedGatewayClass := &gatewayv1beta1.GatewayClass{
@@ -98,8 +98,8 @@ func TestGatewayClassUpdates(t *testing.T) {
 }
 
 func TestGatewayClassCreation(t *testing.T) {
-	namespace, cleaner := setup(t, ctx, env, clients)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	t.Log("deploying a Gateway with a non-existent GatewayClass")
 	gatewayClassName := uuid.NewString()
