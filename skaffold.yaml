@@ -1,0 +1,47 @@
+apiVersion: skaffold/v4beta1
+kind: Config
+metadata:
+  name: gateway-operator
+build:
+  tagPolicy:
+    inputDigest: {}
+manifests:
+  kustomize:
+    paths:
+    - config/default
+deploy:
+  kubectl: {}
+profiles:
+- name: default
+  manifests:
+    kustomize:
+      paths:
+      - config/default
+  build:
+    artifacts:
+    - image: ghcr.io/kong/gateway-operator
+      docker:
+        dockerfile: Dockerfile
+        target: distroless
+- name: dev
+  manifests:
+    kustomize:
+      paths:
+      - config/dev
+  build:
+    artifacts:
+    - image: ghcr.io/kong/gateway-operator
+      docker:
+        dockerfile: Dockerfile
+        target: distroless
+- name: debug
+  manifests:
+    kustomize:
+      paths:
+      - config/debug
+  build:
+    artifacts:
+    - image: ghcr.io/kong/gateway-operator
+      docker:
+        dockerfile: debug.Dockerfile
+        target: debug

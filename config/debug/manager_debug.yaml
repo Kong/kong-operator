@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+  labels:
+    control-plane: controller-manager
+spec:
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    spec:
+      securityContext:
+        runAsNonRoot: false
+      containers:
+        - command:
+            - /go/bin/dlv
+            - --continue
+            - --accept-multiclient
+            - --listen=:40000
+            - --check-go-version=false
+            - --headless=true
+            - --api-version=2
+            - --log=true
+            - --log-output=debugger,debuglineerr,gdbwire
+            - exec
+            - /go/bin/manager
+            - --
+            - -no-leader-election
+            - -zap-time-encoding=iso8601
+            - -cluster-ca-secret-namespace=kong-system
+            - -zap-log-level=debug
+          name: manager
+          env:
+            - name: CONTROLLER_DEVELOPMENT_MODE
+              value: "true"
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1024Mi

@@ -84,10 +84,12 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
 .PHONY: _download_tool
 _download_tool:
-	(cd third_party && GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
+	(cd third_party && \
+		ls ./$(TOOL).go > /dev/null && \
+		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
 .PHONY: tools
-tools: envtest kic-role-generator controller-gen kustomize client-gen golangci-lint gotestsum
+tools: envtest kic-role-generator controller-gen kustomize client-gen golangci-lint gotestsum dlv
 
 ENVTEST = $(PROJECT_DIR)/bin/setup-envtest
 .PHONY: envtest
@@ -128,6 +130,24 @@ GOTESTSUM = $(PROJECT_DIR)/bin/gotestsum
 .PHONY: gotestsum
 gotestsum: ## Download gotestsum locally if necessary.
 	@$(MAKE) _download_tool TOOL=gotestsum
+
+DLV = $(PROJECT_DIR)/bin/dlv
+.PHONY: dlv
+dlv: ## Download dlv locally if necessary.
+	@$(MAKE) _download_tool TOOL=dlv
+
+SKAFFOLD = $(PROJECT_DIR)/bin/skaffold
+.PHONY: skaffold
+skaffold: ## Download skaffold locally if necessary.
+# NOTE: this step is not idempotent like other tool download steps because for
+# some reason skaffold doesn't want to be included in imports or installed via
+# go install:
+# go: github.com/GoogleContainerTools/skaffold@v2.0.4: invalid version: module contains a go.mod file, so module path must match major version ("github.com/GoogleContainerTools/skaffold/v2")
+ifeq ($(wildcard $(SKAFFOLD)),)
+	curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/v2.0.4/skaffold-$(shell go env GOOS)-$(shell go env GOARCH)
+	@chmod +x skaffold
+	@mv skaffold ./bin/
+endif
 
 # It seems that there's problem with operator-sdk dependencies when imported from a different project.
 # After spending some time on it, decided to just use a 'thing that works' which is to download
@@ -194,7 +214,15 @@ tidy:
 
 .PHONY: build.operator
 build.operator:
-	go build -o bin/manager -ldflags "-s -w \
+	$(MAKE) _build.operator LDFLAGS="-s -w"
+
+.PHONY: build.operator.debug
+build.operator.debug:
+	$(MAKE) _build.operator GCFLAGS="-gcflags='all=-N -l'"
+
+.PHONY: _build.operator
+_build.operator:
+	go build -o bin/manager $(GCFLAGS) -ldflags "$(LDFLAGS) \
 		-X $(REPO)/internal/manager/metadata.Release=$(TAG) \
 		-X $(REPO)/internal/manager/metadata.Commit=$(COMMIT) \
 		-X $(REPO)/internal/manager/metadata.Repo=$(REPO_INFO)" \
@@ -524,12 +552,24 @@ _run:
 		-cluster-ca-secret-namespace kong-system \
 		-zap-time-encoding iso8601
 
+.PHONY: run.skaffold
+run.skaffold: _ensure-kong-system-namespace
+	$(SKAFFOLD) dev --port-forward=pods --profile=dev
+
 .PHONY: debug
 debug: webhook-certs-dir manifests generate fmt vet install _ensure-kong-system-namespace
 	CONTROLLER_DEVELOPMENT_MODE=true dlv debug ./main.go -- \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		-zap-time-encoding iso8601
+
+.PHONY: debug.skaffold
+debug.skaffold: _ensure-kong-system-namespace
+	$(SKAFFOLD) debug --port-forward=pods --profile=debug
+
+.PHONY: debug.skaffold.continuous
+debug.skaffold.continuous: _ensure-kong-system-namespace
+	$(SKAFFOLD) debug --port-forward=pods --profile=debug --auto-build --auto-deploy --auto-sync
 
 # Install CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install
