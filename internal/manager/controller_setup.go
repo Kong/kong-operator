@@ -11,6 +11,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/gateway-operator/controllers"
+	"github.com/kong/gateway-operator/internal/utils/index"
 )
 
 // -----------------------------------------------------------------------------
@@ -50,6 +51,10 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 		}
 	}
 	return c.Controller.SetupWithManager(mgr)
+}
+
+func setupIndexes(mgr manager.Manager) error {
+	return index.IndexDataPlaneNameOnControlPlane(mgr.GetCache())
 }
 
 func setupControllers(mgr manager.Manager, c *Config) []ControllerDef {

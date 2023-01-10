@@ -253,10 +253,12 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
 		r.Client,
-		consts.GatewayOperatorControlledLabel,
-		consts.DataPlaneManagedLabelValue,
 		dataplane.Namespace,
 		dataplane.UID,
+		map[string]string{
+			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneProxyServiceLabelValue),
+		},
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -306,7 +308,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
-	debug(log, "ensuring DataPlane connectivity for Gateway", gateway)
+	trace(log, "ensuring DataPlane connectivity for Gateway", gateway)
 	gateway.Status.Addresses, err = r.getGatewayAddresses(ctx, dataplane)
 	if err == nil {
 		k8sutils.SetCondition(k8sutils.NewCondition(GatewayServiceType, metav1.ConditionTrue, k8sutils.ResourceReadyReason, ""),
@@ -486,7 +488,7 @@ func (r *GatewayReconciler) provisionControlPlane(
 
 	trace(log, "ensuring controlplane config is up to date", gateway)
 	if gatewayConfig.Spec.ControlPlaneDeploymentOptions != nil {
-		if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneDeploymentOptions, gatewayConfig.Spec.ControlPlaneDeploymentOptions) {
+		if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneDeploymentOptions, gatewayConfig.Spec.ControlPlaneDeploymentOptions, "CONTROLLER_KONG_ADMIN_URL") {
 			trace(log, "controlplane config is out of date, updating", gateway)
 			controlplane.Spec.ControlPlaneDeploymentOptions = *gatewayConfig.Spec.ControlPlaneDeploymentOptions
 			if err := r.Client.Update(ctx, controlplane); err != nil {
@@ -512,7 +514,8 @@ func (r *GatewayReconciler) provisionControlPlane(
 		expectedControlplaneDeploymentOptions = gatewayConfig.Spec.ControlPlaneDeploymentOptions
 	}
 
-	if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneDeploymentOptions, expectedControlplaneDeploymentOptions) {
+	//
+	if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneDeploymentOptions, expectedControlplaneDeploymentOptions, "CONTROLLER_KONG_ADMIN_URL") {
 		trace(log, "controlplane config is out of date, updating", gateway)
 		controlplane.Spec.ControlPlaneDeploymentOptions = *expectedControlplaneDeploymentOptions
 		err = r.Client.Update(ctx, controlplane)

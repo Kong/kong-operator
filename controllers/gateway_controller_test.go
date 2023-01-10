@@ -20,6 +20,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
@@ -131,8 +132,23 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 			dataplaneSubResources: []controllerruntimeclient.Object{
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-test-dataplane",
+						Name:      "test-admin-service",
 						Namespace: "test-namespace",
+						Labels: map[string]string{
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: corev1.ClusterIPNone,
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-proxy-service",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneProxyServiceLabelValue),
+						},
 					},
 				},
 			},
@@ -171,7 +187,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 
 				t.Log("adding a ClusterIP to the dataplane service")
 				dataplaneService := &corev1.Service{}
-				require.NoError(t, reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "svc-test-dataplane"}, dataplaneService))
+				require.NoError(t, reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "test-proxy-service"}, dataplaneService))
 				dataplaneService.Spec = corev1.ServiceSpec{
 					ClusterIP: clusterIP,
 					Type:      corev1.ServiceTypeClusterIP,
@@ -295,7 +311,10 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				}
 				if gatewaySubResource.GetName() == "test-controlplane" {
 					controlplane := gatewaySubResource.(*operatorv1alpha1.ControlPlane)
-					_, err := setControlPlaneDefaults(&controlplane.Spec.ControlPlaneDeploymentOptions, "test-namespace", "svc-test-dataplane", map[string]struct{}{}, false)
+					_, err := setControlPlaneDefaults(&controlplane.Spec.ControlPlaneDeploymentOptions, map[string]struct{}{}, false, controlPlaneDefaultsArgs{
+						namespace:                 "test-namespace",
+						dataplaneProxyServiceName: "test-proxy-service",
+					})
 					require.NoError(t, err)
 					for _, controlplaneSubResource := range tc.controlplaneSubResources {
 						k8sutils.SetOwnerForObject(controlplaneSubResource, gatewaySubResource)

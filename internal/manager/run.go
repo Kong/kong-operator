@@ -157,6 +157,10 @@ func Run(cfg Config) error {
 		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
+	if err := setupIndexes(mgr); err != nil {
+		return err
+	}
+
 	if cfg.ValidatingWebhookEnabled {
 		// if the validatingWebhook is enabled, we don't need to setup the Gateway API controllers
 		// here, as they will be set up by the webhook manager once all the webhook resources will be created

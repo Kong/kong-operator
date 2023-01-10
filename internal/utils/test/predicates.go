@@ -184,17 +184,17 @@ func DataPlaneHasActiveDeployment(t *testing.T, ctx context.Context, dataplaneNa
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasService(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1alpha1.DataPlane) bool {
-		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient)
+		services := MustListDataPlaneProxyServices(t, ctx, dataplane, clients.MgrClient)
 		return len(services) == 1
 	}, clients.OperatorClient)
 }
 
 // DataPlaneHasActiveService is a helper function for tests that returns a function
-// that can be used to check if a DataPlane has an active service.
+// that can be used to check if a DataPlane has an active proxy service.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, ret *corev1.Service, clients K8sClients) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1alpha1.DataPlane) bool {
-		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient)
+		services := MustListDataPlaneProxyServices(t, ctx, dataplane, clients.MgrClient)
 		if len(services) == 1 {
 			if ret != nil {
 				*ret = services[0]
@@ -212,7 +212,7 @@ func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName 
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasServiceAndAddressesInStatus(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1alpha1.DataPlane) bool {
-		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient)
+		services := MustListDataPlaneProxyServices(t, ctx, dataplane, clients.MgrClient)
 		if len(services) != 1 {
 			return false
 		}

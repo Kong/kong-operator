@@ -4,7 +4,9 @@ import (
 	"context"
 	"reflect"
 
+	appsv1 "k8s.io/api/apps/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -12,6 +14,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	"github.com/kong/gateway-operator/internal/utils/index"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
@@ -127,4 +130,73 @@ func (r *ControlPlaneReconciler) getControlplaneRequestFromRefUID(ctx context.Co
 	}
 
 	return
+}
+
+func (r *ControlPlaneReconciler) getControlPlanesFromDataPlaneDeployment(obj client.Object) (recs []reconcile.Request) {
+	ctx := context.Background()
+
+	deployment, ok := obj.(*appsv1.Deployment)
+	if !ok {
+		log.FromContext(ctx).Error(
+			operatorerrors.ErrUnexpectedObject,
+			"failed to map ControlPlane on DataPlane Deployment",
+			"expected", "Deployment", "found", reflect.TypeOf(obj),
+		)
+		return
+	}
+
+	var dataPlaneOwnerName string
+	for _, ownRef := range deployment.OwnerReferences {
+		if ownRef.APIVersion == operatorv1alpha1.SchemeGroupVersion.String() && ownRef.Kind == "DataPlane" {
+			dataPlaneOwnerName = ownRef.Name
+			break
+		}
+	}
+	if dataPlaneOwnerName == "" {
+		return
+	}
+
+	dataPlane := &operatorv1alpha1.DataPlane{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: deployment.Namespace, Name: dataPlaneOwnerName}, dataPlane); err != nil {
+		if !k8serrors.IsNotFound(err) {
+			log.FromContext(ctx).Error(err, "failed to map ControlPlane on DataPlane Deployment")
+		}
+		return
+	}
+	return r.getControlPlanesFromDataPlane(dataPlane)
+}
+
+func (r *ControlPlaneReconciler) getControlPlanesFromDataPlane(obj client.Object) (recs []reconcile.Request) {
+	ctx := context.Background()
+
+	dataplane, ok := obj.(*operatorv1alpha1.DataPlane)
+	if !ok {
+		log.FromContext(ctx).Error(
+			operatorerrors.ErrUnexpectedObject,
+			"failed to map ControlPlane on DataPlane",
+			"expected", "DataPlane", "found", reflect.TypeOf(obj),
+		)
+		return
+	}
+
+	controlPlaneList := &operatorv1alpha1.ControlPlaneList{}
+	if err := r.Client.List(ctx, controlPlaneList,
+		client.InNamespace(dataplane.Namespace),
+		client.MatchingFields{
+			index.DataplaneNameIndex: dataplane.Name,
+		}); err != nil {
+		log.FromContext(ctx).Error(err, "failed to map ControlPlane on DataPlane")
+		return
+	}
+
+	recs = make([]reconcile.Request, 0, len(controlPlaneList.Items))
+	for _, cp := range controlPlaneList.Items {
+		recs = append(recs, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: cp.Namespace,
+				Name:      cp.Name,
+			},
+		})
+	}
+	return recs
 }

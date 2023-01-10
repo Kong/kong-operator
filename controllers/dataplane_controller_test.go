@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,6 +21,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers"
 )
@@ -85,8 +87,11 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 			dataplaneSubResources: []controllerruntimeclient.Object{
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-to-keep",
+						Name:      "svc-proxy-to-keep",
 						Namespace: "test-namespace",
+						Labels: map[string]string{
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneProxyServiceLabelValue),
+						},
 					},
 					Status: corev1.ServiceStatus{
 						LoadBalancer: corev1.LoadBalancerStatus{
@@ -100,24 +105,42 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				},
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-to-delete",
+						Name:      "test-admin-service",
 						Namespace: "test-namespace",
+						Labels: map[string]string{
+							"app":                            "test-dataplane",
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: corev1.ClusterIPNone,
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-proxy-to-delete",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							"app":                            "test-dataplane",
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneProxyServiceLabelValue),
+						},
 					},
 				},
 			},
 			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request) {
 				ctx := context.Background()
 
+				// first reconcile loop to allow the reconciler to set the dataplane defaults
 				_, err := reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
-				require.EqualError(t, err, "number of services reduced")
+				require.EqualError(t, err, "number of dataplane proxy services reduced")
 
 				svcToBeDeleted, svcToBeKept := &corev1.Service{}, &corev1.Service{}
-				err = reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "svc-to-delete"}, svcToBeDeleted)
+				err = reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "svc-proxy-to-delete"}, svcToBeDeleted)
 				require.True(t, k8serrors.IsNotFound(err))
-				err = reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "svc-to-keep"}, svcToBeKept)
+				err = reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "svc-proxy-to-keep"}, svcToBeKept)
 				require.NoError(t, err)
 			},
 		},
@@ -148,6 +171,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					},
 				},
 				Status: operatorv1alpha1.DataPlaneStatus{
+					Service: "svc-proxy-to-delete",
 					Conditions: []metav1.Condition{
 						{
 							Type:   string(DataPlaneConditionTypeProvisioned),
@@ -159,11 +183,25 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 			dataplaneSubResources: []controllerruntimeclient.Object{
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service",
+						Name:      "test-admin-service",
 						Namespace: "test-namespace",
+						Labels: map[string]string{
+							"app":                            "test-dataplane",
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
+						},
 					},
 					Spec: corev1.ServiceSpec{
-						ClusterIP: "1.1.1.1",
+						ClusterIP: corev1.ClusterIPNone,
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-proxy-to-delete",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							"app":                            "test-dataplane",
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneProxyServiceLabelValue),
+						},
 					},
 				},
 				&corev1.Secret{
@@ -222,8 +260,25 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 			dataplaneSubResources: []controllerruntimeclient.Object{
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-dataplane-svc",
+						Name:      "test-admin-service",
 						Namespace: "default",
+						Labels: map[string]string{
+							"app":                            "test-dataplane",
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: corev1.ClusterIPNone,
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-proxy-service",
+						Namespace: "default",
+						Labels: map[string]string{
+							"app":                            "test-dataplane",
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneProxyServiceLabelValue),
+						},
 					},
 					Spec: corev1.ServiceSpec{
 						ClusterIP:  "1.1.1.1",
@@ -233,13 +288,13 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-dataplane-tls-secret",
-						Namespace: "test-namespace",
+						Namespace: "default",
 						Labels: map[string]string{
 							"konghq.com/gateway-operator": "dataplane",
 						},
 					},
 					Data: helpers.TLSSecretData(t, ca,
-						helpers.CreateCert(t, "test-dataplane-svc.default.svc", ca.Cert, ca.Key),
+						helpers.CreateCert(t, "*.test-admin-service.default.svc", ca.Cert, ca.Key),
 					),
 				},
 			},
@@ -248,6 +303,10 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 
 				// first reconcile loop to allow the reconciler to set the dataplane defaults
 				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				// second reconcile loop to allow the reconciler to set the service name in the dataplane status
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
@@ -268,7 +327,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 			dataplane: &operatorv1alpha1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway-operator.konghq.com/v1alpha1",
-					Kind:       "Dataplane",
+					Kind:       "DataPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "dataplane-kong",
@@ -285,14 +344,40 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			dataplaneSubResources: []controllerruntimeclient.Object{
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-dataplane-deployment",
+						Namespace: "default",
+					},
+					Status: appsv1.DeploymentStatus{
+						ReadyReplicas: 1,
+					},
+				},
 				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-admin-service",
+						Namespace: "default",
+						Labels: map[string]string{
+							"app":                            "test-dataplane",
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: corev1.ClusterIPNone,
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-proxy-service",
+						Namespace: "default",
+						Labels: map[string]string{
+							"app":                            "test-dataplane",
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneProxyServiceLabelValue),
+						},
+					},
 					Spec: corev1.ServiceSpec{
 						ClusterIP:  "10.0.0.1",
 						ClusterIPs: []string{"10.0.0.1"},
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-dataplane-svc-2",
-						Namespace: "default",
 					},
 					Status: corev1.ServiceStatus{
 						LoadBalancer: corev1.LoadBalancerStatus{
@@ -313,7 +398,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Namespace: "default",
 					},
 					Data: helpers.TLSSecretData(t, ca,
-						helpers.CreateCert(t, "test-dataplane-svc-2.default.svc", ca.Cert, ca.Key),
+						helpers.CreateCert(t, "*.test-admin-service.default.svc", ca.Cert, ca.Key),
 					),
 				},
 			},
@@ -331,13 +416,17 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				// the service is deployed for the DataPlane.
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
+				// The fourth reconcile is needed to ensure the service name in the dataplane status
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
 				dp := &operatorv1alpha1.DataPlane{}
 				err = reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "default", Name: "dataplane-kong"}, dp)
 				require.NoError(t, err)
-				require.Equal(t, "test-dataplane-svc-2", dp.Status.Service)
+				require.Equal(t, "test-proxy-service", dp.Status.Service)
 				require.Equal(t, []operatorv1alpha1.Address{
 					// This currently assumes that we sort the addresses in a way
 					// such that LoadBalancer IPs, then LoadBalancer hostnames are added

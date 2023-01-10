@@ -102,18 +102,37 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, markErr
 	}
 
-	trace(log, "exposing DataPlane deployment via service", dataplane)
-	createdOrUpdated, dataplaneService, err := r.ensureServiceForDataPlane(ctx, dataplane)
+	trace(log, "exposing DataPlane deployment admin API via headless service", dataplane)
+	createdOrUpdated, dataplaneAdminService, err := r.ensureAdminServiceForDataPlane(ctx, dataplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if createdOrUpdated {
-		debug(log, "DataPlane service created/updated", dataplane, "service", dataplaneService)
-		return ctrl.Result{}, r.ensureDataPlaneServiceStatus(ctx, dataplane, dataplaneService.Name)
+		debug(log, "DataPlane admin service created/updated", dataplane, "service", dataplaneAdminService)
+		return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
+	}
+
+	trace(log, "exposing DataPlane deployment proxy via service", dataplane)
+	createdOrUpdated, dataplaneProxyService, err := r.ensureProxyServiceForDataPlane(ctx, dataplane)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if createdOrUpdated {
+		debug(log, "DataPlane proxy service created/updated", dataplane, "service", dataplaneProxyService)
+		return ctrl.Result{}, nil
+	}
+
+	dataplaneServiceChanged, err := r.ensureDataPlaneServiceStatus(ctx, dataplane, dataplaneProxyService.Name)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if dataplaneServiceChanged {
+		debug(log, "proxy service updated in the dataplane status", dataplane)
+		return ctrl.Result{}, nil // dataplane status update will trigger reconciliation
 	}
 
 	trace(log, "ensuring mTLS certificate", dataplane)
-	createdOrUpdated, certSecret, err := r.ensureCertificate(ctx, dataplane, dataplaneService.Name)
+	createdOrUpdated, certSecret, err := r.ensureCertificate(ctx, dataplane, dataplaneAdminService.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -122,13 +141,13 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
-	trace(log, "checking readiness of DataPlane service", dataplaneService)
-	if dataplaneService.Spec.ClusterIP == "" {
+	trace(log, "checking readiness of DataPlane service", dataplaneProxyService)
+	if dataplaneProxyService.Spec.ClusterIP == "" {
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	trace(log, "ensuring DataPlane has service addesses in status", dataplaneService)
-	if updated, err := r.ensureDataPlaneAddressesStatus(ctx, log, dataplane, dataplaneService); err != nil {
+	trace(log, "ensuring DataPlane has service addesses in status", dataplaneProxyService)
+	if updated, err := r.ensureDataPlaneAddressesStatus(ctx, log, dataplane, dataplaneProxyService); err != nil {
 		return ctrl.Result{}, err
 	} else if updated {
 		debug(log, "dataplane status.Addresses updated", dataplane)

@@ -115,7 +115,9 @@ func TestGatewayEssentials(t *testing.T) {
 
 	t.Log("verifying services managed by the dataplane after deletion")
 	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService, clients), time.Minute, time.Second)
-	service := testutils.MustListDataPlaneServices(t, ctx, &dataplane, clients.MgrClient)[0]
+	services := testutils.MustListDataPlaneProxyServices(t, ctx, &dataplane, clients.MgrClient)
+	require.Len(t, services, 1)
+	service := services[0]
 
 	t.Log("verifying controlplane deployment updated with new dataplane service")
 	require.Eventually(t, func() bool {

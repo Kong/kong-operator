@@ -102,18 +102,22 @@ func GetDataPlaneForControlPlane(
 	return &dataplane, nil
 }
 
-// GetDataplaneServiceName is a helper functions that retrieves the name of the service owned by dataplane
+// GetDataplaneServiceName is a helper function that retrieves the name of the service owned by provided dataplane.
+// It accepts a string as the last argument to specify which service to retrieve (proxy/admin)
 func GetDataplaneServiceName(
 	ctx context.Context,
 	c client.Client,
 	dataplane *operatorv1alpha1.DataPlane,
+	serviceTypeLabelValue consts.ServiceType,
 ) (string, error) {
 	services, err := k8sutils.ListServicesForOwner(ctx,
 		c,
-		consts.GatewayOperatorControlledLabel,
-		consts.DataPlaneManagedLabelValue,
 		dataplane.Namespace,
 		dataplane.UID,
+		map[string]string{
+			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+			consts.DataPlaneServiceTypeLabel:      string(serviceTypeLabelValue),
+		},
 	)
 	if err != nil {
 		return "", err
@@ -121,11 +125,11 @@ func GetDataplaneServiceName(
 
 	count := len(services)
 	if count > 1 {
-		return "", fmt.Errorf("found %d services for DataPlane currently unsupported: expected 1 or less", count)
+		return "", fmt.Errorf("found %d %s services for DataPlane currently unsupported: expected 1 or less", count, serviceTypeLabelValue)
 	}
 
 	if count == 0 {
-		return "", fmt.Errorf("found 0 services for DataPlane")
+		return "", fmt.Errorf("found 0 %s services for DataPlane", serviceTypeLabelValue)
 	}
 
 	return services[0].Name, nil

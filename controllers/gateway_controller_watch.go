@@ -186,7 +186,7 @@ func (r *GatewayReconciler) setDataplaneGatewayConfigDefaults(gatewayConfig *ope
 	dataplaneutils.SetDataPlaneDefaults(gatewayConfig.Spec.DataPlaneDeploymentOptions)
 }
 
-func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gwtypes.Gateway, gatewayConfig *operatorv1alpha1.GatewayConfiguration, dataplaneName, dataplaneServiceName string) error {
+func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gwtypes.Gateway, gatewayConfig *operatorv1alpha1.GatewayConfiguration, dataplaneName, dataplaneProxyServiceName string) error {
 	dontOverride := make(map[string]struct{})
 	if gatewayConfig.Spec.ControlPlaneDeploymentOptions == nil {
 		gatewayConfig.Spec.ControlPlaneDeploymentOptions = new(operatorv1alpha1.ControlPlaneDeploymentOptions)
@@ -199,7 +199,10 @@ func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gwtype
 		dontOverride[env.Name] = struct{}{}
 	}
 
-	if _, err := setControlPlaneDefaults(gatewayConfig.Spec.ControlPlaneDeploymentOptions, gateway.Namespace, dataplaneServiceName, dontOverride, r.DevelopmentMode); err != nil {
+	if _, err := setControlPlaneDefaults(gatewayConfig.Spec.ControlPlaneDeploymentOptions, dontOverride, r.DevelopmentMode, controlPlaneDefaultsArgs{
+		namespace:                 gateway.Namespace,
+		dataplaneProxyServiceName: dataplaneProxyServiceName,
+	}); err != nil {
 		return err
 	}
 

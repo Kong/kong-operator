@@ -15,13 +15,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -80,7 +80,13 @@ func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(clusterRoleBindingPredicate)).
 		Watches(
 			&source.Kind{Type: &operatorv1alpha1.DataPlane{}},
-			&handler.EnqueueRequestForOwner{OwnerType: &operatorv1alpha1.ControlPlane{}, IsController: true}).
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlane)).
+		// watch for changes in the DataPlane deployments, as we want to be aware of all
+		// the DataPlane pod changes (every time a new pod gets ready, the deployment
+		// status gets updated accordingly, leading to a reconciliation loop trigger)
+		Watches(
+			&source.Kind{Type: &appsv1.Deployment{}},
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlaneDeployment)).
 		Complete(r)
 }
 
@@ -183,21 +189,32 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	trace(log, "retrieving connected dataplane", controlplane)
 	dataplane, err := gatewayutils.GetDataPlaneForControlPlane(ctx, r.Client, controlplane)
-	var dataplaneServiceName string
+	var dataplaneProxyServiceName, dataplaneAdminServiceName string
+	var dataPlanePodIP string
 	if err != nil {
 		if !errors.Is(err, operatorerrors.ErrDataPlaneNotSet) {
 			return ctrl.Result{}, err
 		}
 		debug(log, "no existing dataplane for controlplane", controlplane, "error", err)
 	} else {
-		if err := controllerutil.SetOwnerReference(controlplane, dataplane, r.Scheme); err != nil {
-			return ctrl.Result{}, err
-		}
-		dataplaneServiceName, err = gatewayutils.GetDataplaneServiceName(ctx, r.Client, dataplane)
+		dataplaneProxyServiceName, err = gatewayutils.GetDataplaneServiceName(ctx, r.Client, dataplane, consts.DataPlaneProxyServiceLabelValue)
 		if err != nil {
-			debug(log, "no existing dataplane service for controlplane", controlplane, "error", err)
+			debug(log, "no existing dataplane proxy service for controlplane", controlplane, "error", err)
 			return ctrl.Result{}, err
 		}
+
+		dataplaneAdminServiceName, err = gatewayutils.GetDataplaneServiceName(ctx, r.Client, dataplane, consts.DataPlaneAdminServiceLabelValue)
+		if err != nil {
+			debug(log, "no existing dataplane admin service for controlplane", controlplane, "error", err)
+			return ctrl.Result{}, err
+		}
+
+		trace(log, "retrieving the newest DataPlane pod", controlplane)
+		dataPlanePod, err := r.getDataPlanePod(ctx, dataplane.Name, dataplane.Namespace)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		dataPlanePodIP = dataPlanePod.Status.PodIP
 	}
 
 	trace(log, "validating ControlPlane configuration", controlplane)
@@ -206,7 +223,14 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	trace(log, "configuring ControlPlane resource", controlplane)
 	changed, err := setControlPlaneDefaults(
 		&controlplane.Spec.ControlPlaneDeploymentOptions,
-		controlplane.Namespace, dataplaneServiceName, nil, r.DevelopmentMode)
+		nil,
+		r.DevelopmentMode,
+		controlPlaneDefaultsArgs{
+			dataPlanePodIP:            dataPlanePodIP,
+			namespace:                 controlplane.Namespace,
+			dataplaneProxyServiceName: dataplaneProxyServiceName,
+			dataplaneAdminServiceName: dataplaneAdminServiceName,
+		})
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -223,7 +247,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	trace(log, "validating that the ControlPlane's DataPlane configuration is up to date", controlplane)
-	if err = r.ensureDataPlaneConfiguration(ctx, controlplane, dataplaneServiceName); err != nil {
+	if err = r.ensureDataPlaneConfiguration(ctx, controlplane, dataplaneProxyServiceName); err != nil {
 		if k8serrors.IsConflict(err) {
 			debug(
 				log,

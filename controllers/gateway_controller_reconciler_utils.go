@@ -90,10 +90,12 @@ func (r *GatewayReconciler) getGatewayAddresses(
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
 		r.Client,
-		consts.GatewayOperatorControlledLabel,
-		consts.DataPlaneManagedLabelValue,
 		dataplane.Namespace,
 		dataplane.UID,
+		map[string]string{
+			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneProxyServiceLabelValue),
+		},
 	)
 	if err != nil {
 		return []gwtypes.GatewayAddress{}, err

@@ -1,5 +1,8 @@
 package consts
 
+// ServiceType is a re-typing of string to be used to distinguish between proxy and admin service
+type ServiceType string
+
 // -----------------------------------------------------------------------------
 // Consts - Standard Kubernetes Object Labels
 // -----------------------------------------------------------------------------
@@ -20,6 +23,18 @@ const (
 	// GatewayManagedLabelValue indicates that the object's lifecycle is managed by
 	// the gateway controller.
 	GatewayManagedLabelValue = "gateway"
+
+	// DataPlaneServiceTypeLabel is the labels that is used for the services created by
+	// the DataPlane controller to expose the DataPlane deployment.
+	DataPlaneServiceTypeLabel = "konghq.com/dataplane-service-type"
+
+	// DataPlaneAdminServiceLabelValue indicates that the service is intended to expose the
+	// DataPlane admin API.
+	DataPlaneAdminServiceLabelValue ServiceType = "admin"
+
+	// DataPlaneProxyServiceLabelValue indicates that the service is inteded to expose the
+	// DataPlane proxy.
+	DataPlaneProxyServiceLabelValue ServiceType = "proxy"
 )
 
 // -----------------------------------------------------------------------------

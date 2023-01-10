@@ -4,7 +4,6 @@
 package integration
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -146,27 +145,14 @@ func TestDataplaneEssentials(t *testing.T) {
 }
 
 func verifyConnectivity(t *testing.T, dataplaneIP string) {
-	t.Log("verifying un-authenticated requests fail")
-	badhttpc := http.Client{
-		Timeout: time.Second * 10,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true, //nolint:gosec
-			},
-		},
-	}
-	resp, err := badhttpc.Get(fmt.Sprintf("https://%s:8444/status", dataplaneIP))
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	require.Equal(t, resp.StatusCode, http.StatusBadRequest)
-
 	t.Log("verifying connectivity to the dataplane")
-	resp, err = httpc.Get(fmt.Sprintf("https://%s:8444/status", dataplaneIP))
+	resp, err := httpc.Get(fmt.Sprintf("https://%s", dataplaneIP))
 	require.NoError(t, err)
 	defer resp.Body.Close()
+	require.Equal(t, resp.StatusCode, http.StatusNotFound)
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	require.Contains(t, string(body), `"database":{"reachable":true}`)
+	require.Equal(t, string(body), `{"message":"no Route matched with those values"}`)
 }
 
 func TestDataPlaneUpdate(t *testing.T) {

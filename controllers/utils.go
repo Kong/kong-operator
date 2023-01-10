@@ -379,7 +379,7 @@ func getLogger(ctx context.Context, controllerName string, developmentMode bool)
 // DeploymentOptions - Private Functions - Equality Checks
 // -----------------------------------------------------------------------------
 
-func deploymentOptionsDeepEqual(opts1, opts2 *operatorv1alpha1.DeploymentOptions) bool {
+func deploymentOptionsDeepEqual(opts1, opts2 *operatorv1alpha1.DeploymentOptions, envVarsToIgnore ...string) bool {
 	if !reflect.DeepEqual(opts1.ContainerImage, opts2.ContainerImage) {
 		return false
 	}
@@ -388,12 +388,30 @@ func deploymentOptionsDeepEqual(opts1, opts2 *operatorv1alpha1.DeploymentOptions
 		return false
 	}
 
-	if !reflect.DeepEqual(opts1.Env, opts2.Env) {
+	if !reflect.DeepEqual(opts1.EnvFrom, opts2.EnvFrom) {
 		return false
 	}
 
-	if !reflect.DeepEqual(opts1.EnvFrom, opts2.EnvFrom) {
+	// envVarsToIgnore contains all the env vars to not consider when checking the opts equality
+	if len(opts1.Env) != len(opts2.Env)+len(envVarsToIgnore) {
 		return false
+	}
+	var env2i = 0
+	for _, env1 := range opts1.Env {
+		ignored := false
+		for _, envIgn := range envVarsToIgnore {
+			if envIgn == env1.Name {
+				ignored = true
+				break
+			}
+		}
+		if ignored {
+			continue
+		}
+		if env1.Name != opts2.Env[env2i].Name || env1.Value != opts2.Env[env2i].Value {
+			return false
+		}
+		env2i += 1
 	}
 
 	return true

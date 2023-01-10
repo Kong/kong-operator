@@ -15,9 +15,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
+	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
@@ -446,4 +448,27 @@ func (r *ControlPlaneReconciler) deploymentSpecVolumesNeedsUpdate(
 	}
 
 	return false
+}
+
+// getDataPlanePod returns the IP of the newest DataPlane pod.
+func (r *ControlPlaneReconciler) getDataPlanePod(ctx context.Context, dataplaneName, namespace string) (*corev1.Pod, error) {
+	podList := corev1.PodList{}
+	if err := r.Client.List(ctx, &podList, client.InNamespace(namespace), client.MatchingLabels{
+		"app": dataplaneName,
+	}); err != nil {
+		return nil, err
+	}
+	if len(podList.Items) == 0 {
+		return nil, operatorerrors.ErrNoDataPlanePods
+	}
+	newestDataPlanePod := podList.Items[0]
+	for _, pod := range podList.Items[1:] {
+		if pod.DeletionTimestamp != nil || pod.Status.PodIP == "" {
+			continue
+		}
+		if pod.CreationTimestamp.After(newestDataPlanePod.CreationTimestamp.Time) {
+			newestDataPlanePod = pod
+		}
+	}
+	return &newestDataPlanePod, nil
 }

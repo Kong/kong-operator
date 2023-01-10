@@ -20,6 +20,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers"
 )
@@ -55,6 +56,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 		dataplane                *operatorv1alpha1.DataPlane
 		controlplaneSubResources []controllerruntimeclient.Object
 		dataplaneSubResources    []controllerruntimeclient.Object
+		dataplanePods            []controllerruntimeclient.Object
 		testBody                 func(t *testing.T, reconciler ControlPlaneReconciler, controlplane reconcile.Request)
 	}{
 		{
@@ -124,6 +126,21 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
+			dataplanePods: []controllerruntimeclient.Object{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "dataplane-pod",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							"app": "test-dataplane",
+						},
+						CreationTimestamp: metav1.Now(),
+					},
+					Status: corev1.PodStatus{
+						PodIP: "1.2.3.4",
+					},
+				},
+			},
 			controlplaneSubResources: []controllerruntimeclient.Object{
 				&corev1.ServiceAccount{
 					ObjectMeta: metav1.ObjectMeta{
@@ -165,11 +182,26 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 			dataplaneSubResources: []controllerruntimeclient.Object{
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service",
+						Name:      "test-proxy-service",
 						Namespace: "test-namespace",
+						Labels: map[string]string{
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneProxyServiceLabelValue),
+						},
 					},
 					Spec: corev1.ServiceSpec{
-						ClusterIP: "1.1.1.1",
+						ClusterIP: corev1.ClusterIPNone,
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-admin-service",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: corev1.ClusterIPNone,
 					},
 				},
 			},
@@ -251,6 +283,21 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
+			dataplanePods: []controllerruntimeclient.Object{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "dataplane-pod",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							"app": "test-dataplane",
+						},
+						CreationTimestamp: metav1.Now(),
+					},
+					Status: corev1.PodStatus{
+						PodIP: "1.2.3.4",
+					},
+				},
+			},
 			controlplaneSubResources: []controllerruntimeclient.Object{
 				&corev1.ServiceAccount{
 					ObjectMeta: metav1.ObjectMeta{
@@ -292,11 +339,26 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 			dataplaneSubResources: []controllerruntimeclient.Object{
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service",
+						Name:      "test-proxy-service",
 						Namespace: "test-namespace",
+						Labels: map[string]string{
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneProxyServiceLabelValue),
+						},
 					},
 					Spec: corev1.ServiceSpec{
-						ClusterIP: "1.1.1.1",
+						ClusterIP: corev1.ClusterIPNone,
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-admin-service",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: corev1.ClusterIPNone,
 					},
 				},
 			},
@@ -321,6 +383,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				tc.dataplane,
 				mtlsSecret,
 			}
+
+			ObjectsToAdd = append(ObjectsToAdd, tc.dataplanePods...)
 
 			for _, controlplaneSubresource := range tc.controlplaneSubResources {
 				k8sutils.SetOwnerForObject(controlplaneSubresource, tc.controlplane)

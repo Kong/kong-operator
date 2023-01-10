@@ -3,14 +3,12 @@ package test
 import (
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	kubernetesclient "k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	"github.com/kong/gateway-operator/pkg/clientset"
 	operatorclient "github.com/kong/gateway-operator/pkg/clientset"
 )
 
@@ -28,7 +26,7 @@ func NewK8sClients(env environments.Environment) (K8sClients, error) {
 	var clients K8sClients
 
 	clients.K8sClient = env.Cluster().Client()
-	clients.OperatorClient, err = clientset.NewForConfig(env.Cluster().Config())
+	clients.OperatorClient, err = operatorclient.NewForConfig(env.Cluster().Config())
 	if err != nil {
 		return clients, err
 	}
@@ -38,7 +36,7 @@ func NewK8sClients(env environments.Environment) (K8sClients, error) {
 		return clients, err
 	}
 
-	clients.MgrClient, err = client.New(env.Cluster().Config(), client.Options{})
+	clients.MgrClient, err = ctrlruntimeclient.New(env.Cluster().Config(), ctrlruntimeclient.Options{})
 	if err != nil {
 		return clients, err
 	}

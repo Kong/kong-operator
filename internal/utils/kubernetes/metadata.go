@@ -72,12 +72,15 @@ func EnsureObjectMetaIsUpdated(
 	newObjectMeta := existingObjMeta.DeepCopy()
 	newObjectMeta.SetOwnerReferences(generatedObjMeta.GetOwnerReferences())
 
+	var labelsToUpdate bool
 	for k, v := range generatedObjMeta.GetLabels() {
 		newObjectMeta.Labels[k] = v
+		if existingObjMeta.Labels[k] != v {
+			labelsToUpdate = true
+		}
 	}
 
-	if !reflect.DeepEqual(existingObjMeta.OwnerReferences, newObjectMeta.OwnerReferences) ||
-		!reflect.DeepEqual(existingObjMeta.Labels, newObjectMeta.Labels) {
+	if !reflect.DeepEqual(existingObjMeta.OwnerReferences, newObjectMeta.OwnerReferences) || labelsToUpdate {
 		return true, *newObjectMeta
 	}
 

@@ -49,10 +49,9 @@ func ListDeploymentsForOwner(
 func ListServicesForOwner(
 	ctx context.Context,
 	c client.Client,
-	requiredLabel string,
-	requiredValue string,
 	namespace string,
 	uid types.UID,
+	requiredLabels map[string]string,
 ) ([]corev1.Service, error) {
 	serviceList := &corev1.ServiceList{}
 
@@ -60,7 +59,7 @@ func ListServicesForOwner(
 		ctx,
 		serviceList,
 		client.InNamespace(namespace),
-		client.MatchingLabels{requiredLabel: requiredValue},
+		client.MatchingLabels(requiredLabels),
 	)
 	if err != nil {
 		return nil, err

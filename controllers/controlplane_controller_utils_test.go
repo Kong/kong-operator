@@ -13,15 +13,15 @@ import (
 
 func TestSetControlPlaneDefaults(t *testing.T) {
 	testCases := []struct {
-		name                 string
-		spec                 *operatorv1alpha1.ControlPlaneDeploymentOptions
-		namespace            string
-		dataplaceServiceName string
-		changed              bool
-		newSpec              *operatorv1alpha1.ControlPlaneDeploymentOptions
+		name                      string
+		spec                      *operatorv1alpha1.ControlPlaneDeploymentOptions
+		namespace                 string
+		dataplaneProxyServiceName string
+		changed                   bool
+		newSpec                   *operatorv1alpha1.ControlPlaneDeploymentOptions
 	}{
 		{
-			name:    "no_envs_no_dataplane",
+			name:    "no envs no dataplane",
 			spec:    &operatorv1alpha1.ControlPlaneDeploymentOptions{},
 			changed: true,
 			newSpec: &operatorv1alpha1.ControlPlaneDeploymentOptions{
@@ -50,11 +50,11 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			},
 		},
 		{
-			name:                 "no_envs_has_dataplane",
-			spec:                 &operatorv1alpha1.ControlPlaneDeploymentOptions{},
-			changed:              true,
-			namespace:            "test-ns",
-			dataplaceServiceName: "kong-proxy",
+			name:                      "no_envs_has_dataplane",
+			spec:                      &operatorv1alpha1.ControlPlaneDeploymentOptions{},
+			changed:                   true,
+			namespace:                 "test-ns",
+			dataplaneProxyServiceName: "kong-proxy",
 			newSpec: &operatorv1alpha1.ControlPlaneDeploymentOptions{
 				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
@@ -82,7 +82,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 						},
 						{
 							Name:  "CONTROLLER_KONG_ADMIN_URL",
-							Value: "https://kong-proxy.test-ns.svc:8444",
+							Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
 						},
 						{
 							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
@@ -109,9 +109,9 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 					},
 				},
 			},
-			changed:              true,
-			namespace:            "test-ns",
-			dataplaceServiceName: "kong-proxy",
+			changed:                   true,
+			namespace:                 "test-ns",
+			dataplaneProxyServiceName: "kong-proxy",
 			newSpec: &operatorv1alpha1.ControlPlaneDeploymentOptions{
 				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
@@ -140,7 +140,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 						},
 						{
 							Name:  "CONTROLLER_KONG_ADMIN_URL",
-							Value: "https://kong-proxy.test-ns.svc:8444",
+							Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
 						},
 						{
 							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
@@ -187,7 +187,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 						},
 						{
 							Name:  "CONTROLLER_KONG_ADMIN_URL",
-							Value: "https://kong-proxy.test-ns.svc:8444",
+							Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
 						},
 						{
 							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
@@ -204,9 +204,9 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 					},
 				},
 			},
-			namespace:            "test-ns",
-			dataplaceServiceName: "kong-proxy",
-			changed:              false,
+			namespace:                 "test-ns",
+			dataplaneProxyServiceName: "kong-proxy",
+			changed:                   false,
 			newSpec: &operatorv1alpha1.ControlPlaneDeploymentOptions{
 				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
@@ -234,7 +234,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 						},
 						{
 							Name:  "CONTROLLER_KONG_ADMIN_URL",
-							Value: "https://kong-proxy.test-ns.svc:8444",
+							Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
 						},
 						{
 							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
@@ -258,7 +258,12 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		index := i
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			changed, err := setControlPlaneDefaults(tc.spec, tc.namespace, tc.dataplaceServiceName, map[string]struct{}{}, false)
+			changed, err := setControlPlaneDefaults(tc.spec, map[string]struct{}{}, false, controlPlaneDefaultsArgs{
+				dataPlanePodIP:            "1.2.3.4",
+				namespace:                 tc.namespace,
+				dataplaneProxyServiceName: tc.dataplaneProxyServiceName,
+				dataplaneAdminServiceName: "kong-admin",
+			})
 			require.NoError(t, err)
 			require.Equalf(t, tc.changed, changed,
 				"should return the same value for test case %d:%s", index, tc.name)
@@ -274,6 +279,194 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 						"should have same valuefrom of env %s", env.Name)
 				}
 			}
+		})
+	}
+}
+
+func TestControlPlaneSpecDeepEqual(t *testing.T) {
+	var testCases = []struct {
+		name            string
+		spec1           *operatorv1alpha1.ControlPlaneDeploymentOptions
+		spec2           *operatorv1alpha1.ControlPlaneDeploymentOptions
+		envVarsToIgnore []string
+		equal           bool
+	}{
+		{
+			name: "matching env vars, no ignored vars",
+			spec1: &operatorv1alpha1.ControlPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "CONTROLLER_PUBLISH_SERVICE",
+							Value: "test-ns/kong-proxy",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+							Value: "/var/cluster-certificate/tls.crt",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+							Value: "/var/cluster-certificate/tls.key",
+						},
+					},
+				},
+			},
+			spec2: &operatorv1alpha1.ControlPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "CONTROLLER_PUBLISH_SERVICE",
+							Value: "test-ns/kong-proxy",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+							Value: "/var/cluster-certificate/tls.crt",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+							Value: "/var/cluster-certificate/tls.key",
+						},
+					},
+				},
+			},
+			equal: true,
+		},
+		{
+			name: "matching env vars, with ignored vars",
+			spec1: &operatorv1alpha1.ControlPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "CONTROLLER_PUBLISH_SERVICE",
+							Value: "test-ns/kong-proxy",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_URL",
+							Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+							Value: "/var/cluster-certificate/tls.crt",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+							Value: "/var/cluster-certificate/tls.key",
+						},
+					},
+				},
+			},
+			spec2: &operatorv1alpha1.ControlPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "CONTROLLER_PUBLISH_SERVICE",
+							Value: "test-ns/kong-proxy",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+							Value: "/var/cluster-certificate/tls.crt",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+							Value: "/var/cluster-certificate/tls.key",
+						},
+					},
+				},
+			},
+			envVarsToIgnore: []string{
+				"CONTROLLER_KONG_ADMIN_URL",
+			},
+			equal: true,
+		},
+		{
+			name: "not matching env vars, no ignored vars",
+			spec1: &operatorv1alpha1.ControlPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "CONTROLLER_PUBLISH_SERVICE",
+							Value: "test-ns/kong-proxy",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_URL",
+							Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+							Value: "/var/cluster-certificate/tls.crt",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+							Value: "/var/cluster-certificate/tls.key",
+						},
+					},
+				},
+			},
+			spec2: &operatorv1alpha1.ControlPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "CONTROLLER_PUBLISH_SERVICE",
+							Value: "test-ns/kong-proxy",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+							Value: "/var/cluster-certificate/tls.crt",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+							Value: "/var/cluster-certificate/tls.key",
+						},
+					},
+				},
+			},
+			equal: false,
+		},
+		{
+			name: "not matching env vars, with ignored vars",
+			spec1: &operatorv1alpha1.ControlPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "CONTROLLER_PUBLISH_SERVICE",
+							Value: "test-ns/kong-proxy",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_URL",
+							Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+							Value: "/var/cluster-certificate/tls.key",
+						},
+					},
+				},
+			},
+			spec2: &operatorv1alpha1.ControlPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "CONTROLLER_PUBLISH_SERVICE",
+							Value: "test-ns/kong-proxy",
+						},
+						{
+							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+							Value: "/var/cluster-certificate/tls.crt",
+						},
+					},
+				},
+			},
+			envVarsToIgnore: []string{
+				"CONTROLLER_KONG_ADMIN_URL",
+			},
+			equal: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.equal, controlplaneSpecDeepEqual(tc.spec1, tc.spec2, tc.envVarsToIgnore...))
 		})
 	}
 }

@@ -40,3 +40,7 @@ var ErrObjectMissingParametersRef = errors.New("no reference to related objects"
 // ErrDataPlaneNotSet is a custom error that must be used when a specific OwnerReference
 // is expected to be on an object, but it is not found.
 var ErrDataPlaneNotSet = errors.New("no dataplane name set")
+
+// ErrNoDataPlanePods is a custom error that must be used when the DataPlane Deployment
+// referenced by the ControlPlane has no pods ready yet.
+var ErrNoDataPlanePods = errors.New("no dataplane pods existing yet")

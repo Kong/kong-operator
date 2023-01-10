@@ -17,6 +17,14 @@ import (
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
+// controlPlaneDefaultsArgs contains the parameters to pass to setControlPlaneDefaults
+type controlPlaneDefaultsArgs struct {
+	namespace                 string
+	dataPlanePodIP            string
+	dataplaneProxyServiceName string
+	dataplaneAdminServiceName string
+}
+
 // -----------------------------------------------------------------------------
 // ControlPlane - Private Functions
 // -----------------------------------------------------------------------------
@@ -25,9 +33,9 @@ import (
 // and returns true if env field is changed.
 func setControlPlaneDefaults(
 	spec *operatorv1alpha1.ControlPlaneDeploymentOptions,
-	namespace string, dataplaneServiceName string,
 	dontOverride map[string]struct{},
 	devMode bool,
+	args controlPlaneDefaultsArgs,
 ) (bool, error) {
 	changed := false
 
@@ -60,18 +68,21 @@ func setControlPlaneDefaults(
 		changed = true
 	}
 
-	if namespace != "" && dataplaneServiceName != "" {
+	if args.namespace != "" && args.dataplaneProxyServiceName != "" {
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_PUBLISH_SERVICE"]; !isOverrideDisabled {
-			publishService := controllerPublishService(dataplaneServiceName, namespace)
+			publishService := controllerPublishService(args.dataplaneProxyServiceName, args.namespace)
 			if envValueByName(spec.Env, "CONTROLLER_PUBLISH_SERVICE") != publishService {
-				spec.Env = updateEnv(spec.Env, "CONTROLLER_PUBLISH_SERVICE", controllerPublishService(dataplaneServiceName, namespace))
+				spec.Env = updateEnv(spec.Env, "CONTROLLER_PUBLISH_SERVICE", controllerPublishService(args.dataplaneProxyServiceName, args.namespace))
 				changed = true
 			}
 		}
+	}
+
+	if args.dataPlanePodIP != "" && args.dataplaneAdminServiceName != "" {
+		adminURL := controllerKongAdminURL(args.dataPlanePodIP, args.dataplaneAdminServiceName, args.namespace)
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_URL"]; !isOverrideDisabled {
-			kongAdminURL := controllerKongAdminURL(dataplaneServiceName, namespace)
-			if envValueByName(spec.Env, "CONTROLLER_KONG_ADMIN_URL") != kongAdminURL {
-				spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_URL", kongAdminURL)
+			if envValueByName(spec.Env, "CONTROLLER_KONG_ADMIN_URL") != adminURL {
+				spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_URL", adminURL)
 				changed = true
 			}
 		}
@@ -142,18 +153,9 @@ func setControlPlaneEnvOnDataPlaneChange(
 			spec.Env = updateEnv(spec.Env, "CONTROLLER_PUBLISH_SERVICE", newPublishServiceValue)
 			changed = true
 		}
-		newKongAdminURL := controllerKongAdminURL(dataplaneServiceName, namespace)
-		if envValueByName(spec.Env, "CONTROLLER_KONG_ADMIN_URL") != newKongAdminURL {
-			spec.Env = updateEnv(spec.Env, "CONTROLLER_KONG_ADMIN_URL", newKongAdminURL)
-			changed = true
-		}
 	} else {
 		if envValueByName(spec.Env, "CONTROLLER_PUBLISH_SERVICE") != "" {
 			spec.Env = rejectEnvByName(spec.Env, "CONTROLLER_PUBLISH_SERVICE")
-			changed = true
-		}
-		if envValueByName(spec.Env, "CONTROLLER_KONG_ADMIN_URL") != "" {
-			spec.Env = rejectEnvByName(spec.Env, "CONTROLLER_KONG_ADMIN_URL")
 			changed = true
 		}
 	}
@@ -161,9 +163,9 @@ func setControlPlaneEnvOnDataPlaneChange(
 	return changed
 }
 
-func controllerKongAdminURL(dataplaneName, dataplaneNamespace string) string {
-	return fmt.Sprintf("https://%s.%s.svc:%d",
-		dataplaneName, dataplaneNamespace, dataplaneutils.DefaultKongAdminPort)
+func controllerKongAdminURL(podIP, adminServiceName, podNamespace string) string {
+	return fmt.Sprintf("https://%s.%s.%s.svc:%d",
+		strings.ReplaceAll(podIP, ".", "-"), adminServiceName, podNamespace, dataplaneutils.DefaultKongAdminPort)
 }
 
 func controllerPublishService(dataplaneName, dataplaneNamespace string) string {
@@ -277,8 +279,8 @@ func addLabelForControlPlane(obj client.Object) {
 // ControlPlane - Private Functions - Equality Checks
 // -----------------------------------------------------------------------------
 
-func controlplaneSpecDeepEqual(spec1, spec2 *operatorv1alpha1.ControlPlaneDeploymentOptions) bool {
-	if !deploymentOptionsDeepEqual(&spec1.DeploymentOptions, &spec2.DeploymentOptions) {
+func controlplaneSpecDeepEqual(spec1, spec2 *operatorv1alpha1.ControlPlaneDeploymentOptions, envVarsToIgnore ...string) bool {
+	if !deploymentOptionsDeepEqual(&spec1.DeploymentOptions, &spec2.DeploymentOptions, envVarsToIgnore...) {
 		return false
 	}
 

@@ -65,9 +65,12 @@ func (r *DataPlaneReconciler) ensureDataPlaneServiceStatus(
 	ctx context.Context,
 	dataplane *operatorv1alpha1.DataPlane,
 	dataplaneServiceName string,
-) error {
-	dataplane.Status.Service = dataplaneServiceName
-	return r.Status().Update(ctx, dataplane)
+) (bool, error) {
+	if dataplane.Status.Service != dataplaneServiceName {
+		dataplane.Status.Service = dataplaneServiceName
+		return true, r.Status().Update(ctx, dataplane)
+	}
+	return false, nil
 }
 
 // ensureDataPlaneAddressesStatus ensures that provided DataPlane's status addresses
@@ -149,7 +152,7 @@ func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
 func (r *DataPlaneReconciler) ensureCertificate(
 	ctx context.Context,
 	dataplane *operatorv1alpha1.DataPlane,
-	serviceName string,
+	adminServiceName string,
 ) (bool, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
@@ -157,7 +160,7 @@ func (r *DataPlaneReconciler) ensureCertificate(
 	}
 	return maybeCreateCertificateSecret(ctx,
 		dataplane,
-		fmt.Sprintf("%s.%s.svc", serviceName, dataplane.Namespace),
+		fmt.Sprintf("*.%s.%s.svc", adminServiceName, dataplane.Namespace),
 		types.NamespacedName{
 			Namespace: r.ClusterCASecretNamespace,
 			Name:      r.ClusterCASecretName,
@@ -280,17 +283,62 @@ func (r *DataPlaneReconciler) deploymentSpecVolumesNeedsUpdate(
 	return false
 }
 
-func (r *DataPlaneReconciler) ensureServiceForDataPlane(
+func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
 	ctx context.Context,
 	dataplane *operatorv1alpha1.DataPlane,
 ) (createdOrUpdated bool, svc *corev1.Service, err error) {
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
 		r.Client,
-		consts.GatewayOperatorControlledLabel,
-		consts.DataPlaneManagedLabelValue,
 		dataplane.Namespace,
 		dataplane.UID,
+		map[string]string{
+			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneProxyServiceLabelValue),
+		},
+	)
+	if err != nil {
+		return false, nil, err
+	}
+
+	count := len(services)
+	if count > 1 {
+		if err := k8sreduce.ReduceServices(ctx, r.Client, services); err != nil {
+			return false, nil, err
+		}
+		return false, nil, errors.New("number of dataplane proxy services reduced")
+	}
+
+	generatedService := k8sresources.GenerateNewProxyServiceForDataplane(dataplane)
+	addLabelForDataplane(generatedService)
+	k8sutils.SetOwnerForObject(generatedService, dataplane)
+
+	if count == 1 {
+		var updated bool
+		existingService := &services[0]
+		updated, existingService.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingService.ObjectMeta, generatedService.ObjectMeta)
+		if updated {
+			return true, existingService, r.Client.Update(ctx, existingService)
+		}
+		return false, existingService, nil
+	}
+
+	return true, generatedService, r.Client.Create(ctx, generatedService)
+}
+
+func (r *DataPlaneReconciler) ensureAdminServiceForDataPlane(
+	ctx context.Context,
+	dataplane *operatorv1alpha1.DataPlane,
+) (createdOrUpdated bool, svc *corev1.Service, err error) {
+	services, err := k8sutils.ListServicesForOwner(
+		ctx,
+		r.Client,
+		dataplane.Namespace,
+		dataplane.UID,
+		map[string]string{
+			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
+		},
 	)
 	if err != nil {
 		return false, nil, err
@@ -304,7 +352,7 @@ func (r *DataPlaneReconciler) ensureServiceForDataPlane(
 		return false, nil, errors.New("number of services reduced")
 	}
 
-	generatedService := generateNewServiceForDataplane(dataplane)
+	generatedService := k8sresources.GenerateNewAdminServiceForDataPlane(dataplane)
 	addLabelForDataplane(generatedService)
 	k8sutils.SetOwnerForObject(generatedService, dataplane)
 
