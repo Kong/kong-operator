@@ -56,7 +56,7 @@ jobs:
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4.1.1
+        uses: docker/metadata-action@v4.2.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: |
@@ -65,7 +65,7 @@ jobs:
 
       - name: Docker meta (RedHat)
         id: meta_redhat
-        uses: docker/metadata-action@v4.1.1
+        uses: docker/metadata-action@v4.2.0
         with:
           images: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_IMAGE_NAME }}
           flavor: |
