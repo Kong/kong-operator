@@ -307,6 +307,12 @@ func GatewayIsReady(t *testing.T, ctx context.Context, gatewayNSN types.Namespac
 	}
 }
 
+func GatewayListenersAreReady(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
+	return func() bool {
+		return gatewayutils.AreListenersReady(MustGetGateway(t, ctx, gatewayNSN, clients))
+	}
+}
+
 func GatewayDataPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) func() bool {
 	return func() bool {
 		dataplanes := MustListDataPlanesForGateway(t, ctx, gateway, clients)

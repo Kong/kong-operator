@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -36,4 +37,20 @@ func IsReady(gateway *gwtypes.Gateway) bool {
 		}
 	}
 	return false
+}
+
+// AreListenersReady indicates whether or not all the provided Gateway listeners were
+// marked as ready by the controller.
+func AreListenersReady(gateway *gwtypes.Gateway) bool {
+	return lo.ContainsBy(gateway.Spec.Listeners, func(listener gatewayv1beta1.Listener) bool {
+		return lo.ContainsBy(gateway.Status.Listeners, func(listenerStatus gatewayv1beta1.ListenerStatus) bool {
+			if listener.Name == listenerStatus.Name {
+				return lo.ContainsBy(listenerStatus.Conditions, func(condition metav1.Condition) bool {
+					return condition.Type == string(gatewayv1beta1.ListenerConditionReady) &&
+						condition.Status == metav1.ConditionTrue
+				})
+			}
+			return false
+		})
+	})
 }

@@ -204,8 +204,9 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, nil
 	}
 
+	oldGateway := gateway.DeepCopy()
 	gwConditionAware := gatewayConditionsAware(&gateway)
-	k8sutils.InitReady(gwConditionAware)
+	oldGwConditionsAware := gatewayConditionsAware(oldGateway)
 
 	trace(log, "resource is supported, ensuring that it gets marked as scheduled", gateway)
 	if !k8sutils.IsValidCondition(GatewayScheduledType, gwConditionAware) {
@@ -216,15 +217,13 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		)
 		k8sutils.SetCondition(condition, gwConditionAware)
 	}
+	gwConditionAware.InitReady()
 
 	trace(log, "determining configuration", gateway)
 	gatewayConfig, err := r.getOrCreateGatewayConfiguration(ctx, gwc.GatewayClass)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-
-	oldGateway := gateway.DeepCopy()
-	oldGwConditionsAware := gatewayConditionsAware(oldGateway)
 
 	// Provision dataplane creates a dataplane and adds the DataPlaneReady=True
 	// condition to the Gateway status if the dataplane is ready. If not ready
@@ -319,11 +318,9 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			gatewayConditionsAware(&gateway))
 	}
 
-	if !k8sutils.IsReady(gwConditionAware) || !reflect.DeepEqual(gateway.Status.Addresses, oldGateway.Status.Addresses) {
-		if !k8sutils.IsReady(oldGwConditionsAware) {
-			k8sutils.SetReady(gwConditionAware, gateway.Generation)
-			debug(log, "gateway is ready", gateway)
-		}
+	if (!k8sutils.IsReady(gwConditionAware) && !k8sutils.IsReady(oldGwConditionsAware)) || !reflect.DeepEqual(gateway.Status.Addresses, oldGateway.Status.Addresses) {
+		gwConditionAware.SetReady()
+		debug(log, "gateway is ready", gateway)
 		if err = r.patchStatus(ctx, &gateway, oldGateway); err != nil {
 			return ctrl.Result{}, err
 		}

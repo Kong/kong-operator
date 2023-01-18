@@ -425,7 +425,7 @@ func (r *GatewayReconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Contex
 }
 
 // -----------------------------------------------------------------------------
-// GatewayReconciler - Private type utilities/wrappers
+// GatewayReconciler - Private type status-related utilities/wrappers
 // -----------------------------------------------------------------------------
 
 type gatewayConditionsAwareT struct {
@@ -444,6 +444,120 @@ func (g gatewayConditionsAwareT) GetConditions() []metav1.Condition {
 
 func (g gatewayConditionsAwareT) SetConditions(conditions []metav1.Condition) {
 	g.Status.Conditions = conditions
+}
+
+// supportedRoutesByProtocol returns a map of maps to relate each protocolType with the
+// set of supported Routes.
+//
+// Note: the inner maps have only one element as for now, but in future they will be improved,
+// as each protocolType can be compatible with many different route types.
+func supportedRoutesByProtocol() map[gatewayv1beta1.ProtocolType]map[gatewayv1beta1.Kind]struct{} {
+	return map[gatewayv1beta1.ProtocolType]map[gatewayv1beta1.Kind]struct{}{
+		gatewayv1beta1.HTTPProtocolType:  {"HTTPRoute": {}},
+		gatewayv1beta1.HTTPSProtocolType: {"HTTPRoute": {}},
+		gatewayv1beta1.TLSProtocolType:   {"TLSRoute": {}},
+		gatewayv1beta1.TCPProtocolType:   {"TCPRoute": {}},
+		gatewayv1beta1.UDPProtocolType:   {"UDPRoute": {}},
+	}
+}
+
+// InitReady initializes the gateway readiness by setting the Gateway ready status to false.
+// Furthermore, it sets the supportedKinds and initializes the readiness to false with reason
+// Pending for each Gateway listener.
+func (g *gatewayConditionsAwareT) InitReady() {
+	k8sutils.InitReady(g)
+	g.Status.Listeners = make([]gatewayv1beta1.ListenerStatus, 0, len(g.Spec.Listeners))
+	for _, listener := range g.Spec.Listeners {
+		supportedKinds, resolvedRefsCondition := getSupportedKindsWithCondition(g.Generation, listener)
+		lStatus := gatewayv1beta1.ListenerStatus{
+			Name:           listener.Name,
+			SupportedKinds: supportedKinds,
+			Conditions: []metav1.Condition{
+				{
+					Type:               string(gatewayv1beta1.ListenerConditionReady),
+					Status:             metav1.ConditionFalse,
+					Reason:             string(gatewayv1beta1.ListenerReasonPending),
+					ObservedGeneration: g.Generation,
+					LastTransitionTime: metav1.Now(),
+				},
+				resolvedRefsCondition,
+			},
+		}
+		g.Status.Listeners = append(g.Status.Listeners, lStatus)
+	}
+}
+
+// SetReady sets the gateway readiness by setting the Gateway ready status to true.
+// Furthermore, it sets the supportedKinds and initializes the readiness to true with reason
+// Ready or false with reason Invalid for each Gateway listener.
+func (g *gatewayConditionsAwareT) SetReady() {
+	k8sutils.SetReady(g, g.Generation)
+	listenersStatus := []gatewayv1beta1.ListenerStatus{}
+	for _, listener := range g.Spec.Listeners {
+		supportedKinds, resolvedRefsCondition := getSupportedKindsWithCondition(g.Generation, listener)
+		readyCondition := metav1.Condition{
+			Type:               string(gatewayv1beta1.ListenerConditionReady),
+			Status:             metav1.ConditionTrue,
+			Reason:             string(gatewayv1beta1.ListenerReasonReady),
+			ObservedGeneration: g.Generation,
+			LastTransitionTime: metav1.Now(),
+		}
+		if resolvedRefsCondition.Status == metav1.ConditionFalse {
+			readyCondition.Status = metav1.ConditionFalse
+			readyCondition.Reason = string(gatewayv1beta1.ListenerReasonInvalid)
+		}
+		lStatus := gatewayv1beta1.ListenerStatus{
+			Name:           listener.Name,
+			SupportedKinds: supportedKinds,
+			Conditions: []metav1.Condition{
+				readyCondition,
+				resolvedRefsCondition,
+			},
+		}
+		listenersStatus = append(listenersStatus, lStatus)
+	}
+	g.Status.Listeners = listenersStatus
+}
+
+// getSupportedKindsWithCondition returns all the route kinds supported by the listener, along with the resolvedRefs
+// condition, that is based on the presence of errors in such a field.
+func getSupportedKindsWithCondition(generation int64, listener gatewayv1beta1.Listener) (supportedKinds []gatewayv1beta1.RouteGroupKind, resolvedRefsCondition metav1.Condition) {
+	supportedKinds = make([]gatewayv1beta1.RouteGroupKind, 0)
+	resolvedRefsCondition = metav1.Condition{
+		Type:               string(gatewayv1beta1.ListenerConditionResolvedRefs),
+		Status:             metav1.ConditionTrue,
+		Reason:             string(gatewayv1beta1.ListenerReasonResolvedRefs),
+		ObservedGeneration: generation,
+		LastTransitionTime: metav1.Now(),
+	}
+	if len(listener.AllowedRoutes.Kinds) == 0 {
+		supportedRoutes, ok := supportedRoutesByProtocol()[listener.Protocol]
+		if !ok {
+			resolvedRefsCondition.Status = metav1.ConditionFalse
+			resolvedRefsCondition.Reason = string(gatewayv1beta1.ListenerReasonInvalidRouteKinds)
+		}
+		for route := range supportedRoutes {
+			supportedKinds = append(supportedKinds, gatewayv1beta1.RouteGroupKind{
+				Group: (*gatewayv1beta1.Group)(&gatewayv1beta1.GroupVersion.Group),
+				Kind:  route,
+			})
+		}
+	}
+
+	for _, k := range listener.AllowedRoutes.Kinds {
+		validRoutes := supportedRoutesByProtocol()[listener.Protocol]
+		if _, ok := validRoutes[k.Kind]; !ok || k.Group == nil || *k.Group != gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group) {
+			resolvedRefsCondition.Status = metav1.ConditionFalse
+			resolvedRefsCondition.Reason = string(gatewayv1beta1.ListenerReasonInvalidRouteKinds)
+			continue
+		}
+
+		supportedKinds = append(supportedKinds, gatewayv1beta1.RouteGroupKind{
+			Group: k.Group,
+			Kind:  k.Kind,
+		})
+	}
+	return supportedKinds, resolvedRefsCondition
 }
 
 type proxyListenEndpoint struct {
