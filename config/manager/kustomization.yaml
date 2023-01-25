@@ -15,4 +15,4 @@ configMapGenerator:
 images:
 - name: ghcr.io/kong/gateway-operator
   newName: ghcr.io/kong/gateway-operator
-  newTag: 0.3.0
+  newTag: 0.4.0
