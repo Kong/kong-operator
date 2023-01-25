@@ -8,8 +8,6 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  RH_SCAN_REGISTRY: quay.io
-  RH_IMAGE_NAME: redhat-isv-containers/62c721d5ea2ed524ce4af71b
 
 jobs:
   build-push-images:
@@ -24,13 +22,6 @@ jobs:
           echo 'TAGS_STANDARD<<EOF' >> $GITHUB_OUTPUT
           echo 'type=raw,value=nightly' >> $GITHUB_OUTPUT
           echo "type=raw,value={{date 'YYYY-MM-DD'}}" >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
-
-      - name: Add Red Hat standard tags
-        run: |
-          echo 'TAGS_REDHAT_STANDARD<<EOF' >> $GITHUB_OUTPUT
-          echo 'type=raw,value=nightly,suffix=-redhat' >> $GITHUB_OUTPUT
-          echo "type=raw,value={{date 'YYYY-MM-DD'}},suffix=-redhat" >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
 
       - name: Set up QEMU
@@ -63,15 +54,6 @@ jobs:
             latest=false
           tags: ${{ steps.tags-standard.outputs.TAGS_STANDARD }}
 
-      - name: Docker meta (RedHat)
-        id: meta_redhat
-        uses: docker/metadata-action@v4.3.0
-        with:
-          images: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_IMAGE_NAME }}
-          flavor: |
-            latest=false
-          tags: ${{ steps.tags-redhat-standard.outputs.TAGS_REDHAT_STANDARD }}
-
       - name: Build binary
         id: docker_build_binary
         uses: docker/build-push-action@v3.3.0
@@ -103,32 +85,3 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
-
-      - name: Build and push Red Hat
-        id: docker_build_redhat
-        env:
-          TAG: ${{ steps.meta_redhat.outputs.version }}
-        uses: docker/build-push-action@v3.3.0
-        with:
-          context: .
-          push: false
-          file: Dockerfile
-          tags: ${{ steps.meta_redhat.outputs.tags }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          target: redhat
-          # RedHat scan registry does not support multiarch images
-          platforms: linux/amd64
-          build-args: |
-            TAG=${{ steps.meta_redhat.outputs.version }}
-            COMMIT=${{ github.sha }}
-            REPO_INFO=https://github.com/${{ github.repository }}.git
-
-      - name: Run Red Hat certification
-        uses: ./.github/actions/redhat-certification-action
-        with:
-          image: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_IMAGE_NAME }}:${{ steps.meta_redhat.outputs.version }}
-          submit: false
-          username: ${{ secrets.RH_USERNAME }}
-          password: ${{ secrets.RH_TOKEN }}
-          apitoken: ${{ secrets.RH_PYXIS_TOKEN }}
-          certificationid: ${{ secrets.RH_PROJECT_ID }}

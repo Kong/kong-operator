@@ -18,9 +18,6 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  RH_SCAN_REGISTRY: quay.io
-  RH_IMAGE_NAME: redhat-isv-containers/62c721d5ea2ed524ce4af71b
-
 
 jobs:
   semver:
@@ -81,20 +78,6 @@ jobs:
           echo 'type=raw,value=${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
 
-      - name: Add Red Hat standard tags
-        run: |
-          echo 'REDHAT_STANDARD<<EOF' >> $GITHUB_ENV
-          echo 'type=raw,value=${{ needs.semver.outputs.fullversion }},suffix=-redhat' >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
-
-      - name: Add Red Hat major.minor tag
-        if: ${{ needs.semver.outputs.prerelease == '' }}
-        run: |
-          echo 'REDHAT_SUPPLEMENTAL<<EOF' >> $GITHUB_ENV
-          echo "" >> $GITHUB_ENV
-          echo 'type=raw,value=${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }},suffix=-redhat' >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
@@ -116,13 +99,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to RH Scan Registry
-        uses: docker/login-action@v2.1.0
-        with:
-          registry: ${{ env.RH_SCAN_REGISTRY }}
-          username: ${{ secrets.RH_USERNAME }}
-          password: ${{ secrets.RH_TOKEN }}
-
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4.3.0
@@ -131,15 +107,6 @@ jobs:
           flavor: |
             latest=${{ github.event.inputs.latest == 'true' }}
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
-
-      - name: Docker meta (RedHat)
-        id: meta_redhat
-        uses: docker/metadata-action@v4.3.0
-        with:
-          images: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_IMAGE_NAME }}
-          flavor: |
-            latest=false
-          tags: ${{ env.REDHAT_STANDARD }}${{ env.REDHAT_SUPPLEMENTAL }}
 
       - name: Build binary
         id: docker_build_binary
@@ -172,36 +139,6 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
-
-      - name: Build and push Red Hat
-        id: docker_build_redhat
-        env:
-          TAG: ${{ steps.meta_redhat.outputs.version }}
-        uses: docker/build-push-action@v3.3.0
-        with:
-          context: .
-          push: true
-          file: Dockerfile
-          tags: ${{ steps.meta_redhat.outputs.tags }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          target: redhat
-          # RedHat scan registry does not support multiarch images
-          platforms: linux/amd64
-          build-args: |
-            TAG=${{ steps.meta_redhat.outputs.version }}
-            COMMIT=${{ github.sha }}
-            REPO_INFO=https://github.com/${{ github.repository }}.git
-
-
-      - name: Run Red Hat certification
-        uses: ./.github/actions/redhat-certification-action
-        with:
-          image: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_IMAGE_NAME }}:${{ steps.meta_redhat.outputs.version }}
-          submit: true
-          username: ${{ secrets.RH_USERNAME }}
-          password: ${{ secrets.RH_TOKEN }}
-          apitoken: ${{ secrets.RH_PYXIS_TOKEN }}
-          certificationid: ${{ secrets.RH_PROJECT_ID }}
 
   test-integration-current-kubernetes:
     runs-on: ubuntu-latest
@@ -261,70 +198,6 @@ jobs:
 
       - name: Kubernetes ${{ matrix.kubernetes_version }} E2E Tests
         run: make test.e2e
-
-  redhat-certified-operators-create-branch:
-    runs-on: ubuntu-latest
-    needs:
-      - semver
-      - build-push-images
-      - test-integration-current-kubernetes
-      - test-e2e-current-kubernetes
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-        repository: Kong/redhat-certified-operators
-        token: ${{ secrets.PAT_GITHUB }}
-        ref: main
-
-    - name: create and push branch if not exist
-      run: |
-        if ! git ls-remote --exit-code --heads origin kong-gateway-operator-${{ github.event.inputs.tag }}; then
-          git checkout -b kong-gateway-operator-${{ github.event.inputs.tag }}
-          git push origin kong-gateway-operator-${{ github.event.inputs.tag }}
-        fi
-
-  redhat-certified-operators-push-bundle:
-    runs-on: ubuntu-latest
-    needs:
-      - semver
-      - redhat-certified-operators-create-branch
-    steps:
-
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    - name: Setup go
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
-
-    - name: Ensure version is set
-      env:
-        VERSION: ${{ needs.semver.outputs.fullversion }}
-      run: |
-        echo "VERSION=${VERSION}" >> $GITHUB_ENV
-        echo ${VERSION} > VERSION
-
-    - name: Generate bundle
-      run: |
-        make bundle.redhat-certified
-
-    - name: Pushes bundle to Kong/redhat-certified-operators
-      uses: cpina/github-action-push-to-another-repository@main
-      env:
-        API_TOKEN_GITHUB: ${{ secrets.PAT_GITHUB }}
-      with:
-        commit-message: operator kong-gateway-operator (${{ github.event.inputs.tag }})
-        source-directory: bundle/redhat-certified
-        destination-github-username: Kong
-        destination-repository-name: redhat-certified-operators
-        user-email: team-k8s+github-bot@konghq.com
-        target-branch: kong-gateway-operator-${{ github.event.inputs.tag }}
-        target-directory: operators/kong-gateway-operator/${{ github.event.inputs.tag }}
 
   community-operators-push-bundle:
     runs-on: ubuntu-latest
@@ -408,7 +281,6 @@ jobs:
       - build-push-images
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
-      - redhat-certified-operators-push-bundle
       - community-operators-push-bundle
     steps:
       - name: determine release type (release, prerelease)
@@ -451,7 +323,6 @@ jobs:
       - name: Generate bundles
         run: |
           make bundle.regular
-          make bundle.redhat-certified
 
       # PRs to the main branch will update the version file, generated bundles and kustomized config.
       - name: create a release PR

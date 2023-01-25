@@ -63,10 +63,6 @@ BUNDLE_DEFAULT_KUSTOMIZE_MANIFESTS ?= config/manifests
 BUNDLE_DEFAULT_DIR ?= bundle/regular
 BUNDLE_DEFAULT_DOCKERFILE ?= bundle_regular.Dockerfile
 
-BUNDLE_RED_HAT_KUSTOMIZE_MANIFESTS ?= config/redhat-certified
-BUNDLE_RED_HAT_DIR ?= bundle/redhat-certified
-BUNDLE_RED_HAT_DOCKERFILE ?= bundle_redhat_certified.Dockerfile
-
 OPENSHIFT_SUPPORTED_VERSIONS ?= v4.10-v4.11
 
 # ------------------------------------------------------------------------------
@@ -245,7 +241,7 @@ lint: golangci-lint
 	$(GOLANGCI_LINT) run -v
 
 .PHONY: verify.bundle
-verify.bundle: verify.repo bundle.regular bundle.redhat-certified verify.diff
+verify.bundle: verify.repo bundle.regular verify.diff
 
 .PHONY: verify.diff
 verify.diff:
@@ -323,10 +319,6 @@ _docker.build:
 docker.build:
 	TAG=$(TAG) TARGET=distroless $(MAKE) _docker.build
 
-.PHONY: docker.build.redhat
-docker.build.redhat:
-	TAG=$(RHTAG) TARGET=redhat $(MAKE) _docker.build
-
 .PHONY: docker.push
 docker.push:
 	docker push $(IMG):$(TAG)
@@ -350,25 +342,9 @@ bundle.regular:
 	BUNDLE_DIR=$(BUNDLE_DEFAULT_DIR) \
 		$(MAKE) _bundle
 
-.PHONY: bundle.redhat-certified
-bundle.redhat-certified:
-	KUSTOMIZE_DIR=$(BUNDLE_RED_HAT_KUSTOMIZE_MANIFESTS) \
-	BUNDLE_DIR=$(BUNDLE_RED_HAT_DIR) \
-		$(MAKE) _bundle
-	yq -i e '.annotations."com.redhat.openshift.versions" = "$(OPENSHIFT_SUPPORTED_VERSIONS)"' \
-		$(BUNDLE_RED_HAT_DIR)/metadata/annotations.yaml
-	echo "# Annotations for OpenShift." >> $(BUNDLE_RED_HAT_DIR)/bundle.Dockerfile
-	echo "# https://redhat-connect.gitbook.io/certified-operator-guide/ocp-deployment/operator-metadata/bundle-directory" >> $(BUNDLE_RED_HAT_DIR)/bundle.Dockerfile
-	echo "LABEL com.redhat.openshift.versions=\"$(OPENSHIFT_SUPPORTED_VERSIONS)\"" >> $(BUNDLE_RED_HAT_DIR)/bundle.Dockerfile
-	echo "LABEL com.redhat.delivery.operator.bundle=true" >> $(BUNDLE_RED_HAT_DIR)/bundle.Dockerfile
-
 .PHONY: bundle.regular.build
 bundle.regular.build: ## Build the bundle image.
 	docker build -f $(BUNDLE_DEFAULT_DIR)/bundle.Dockerfile -t $(BUNDLE_IMG) .
-
-.PHONY: bundle.redhat-certified.build
-bundle.redhat-certified.build: ## Build the bundle image.
-	docker build -f $(BUNDLE_RED_HAT_DIR)/bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
