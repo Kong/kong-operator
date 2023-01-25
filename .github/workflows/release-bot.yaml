@@ -51,7 +51,7 @@ jobs:
         
       - name: Parse semver string
         id: semver_parser
-        uses: booxmedialtd/ws-action-parse-semver@v1
+        uses: booxmedialtd/ws-action-parse-semver@v1.4.7
         with:
           input_string: ${{ env.VERSION }}
           version_extractor_regex: '(.*)$'
