@@ -324,6 +324,14 @@ jobs:
         run: |
           make bundle.regular
 
+      - name: GPG sign the commits
+        uses: crazy-max/ghaction-import-gpg@111c56156bcc6918c056dbef52164cfa583dc549
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
       # PRs to the main branch will update the version file, generated bundles and kustomized config.
       - name: create a release PR
         uses: peter-evans/create-pull-request@2b011faafdcbc9ceb11414d64d0573f37c774b04
@@ -337,6 +345,7 @@ jobs:
           commit-message: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
           committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
+          signoff: true
           delete-branch: true
           title: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
           body: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
