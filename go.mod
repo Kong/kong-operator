@@ -11,9 +11,10 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kong/kubernetes-telemetry v0.0.0-20220823141552-fa3a962bd6e1
 	github.com/kong/kubernetes-testing-framework v0.24.0
+	github.com/samber/lo v1.37.0
 	github.com/stretchr/testify v1.8.1
 	k8s.io/api v0.25.5
-	k8s.io/apimachinery v0.26.0
+	k8s.io/apimachinery v0.26.1
 	k8s.io/client-go v0.25.5
 	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d
 	sigs.k8s.io/controller-runtime v0.13.1
@@ -84,7 +85,6 @@ require (
 	github.com/puzpuzpuz/xsync v1.4.3 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/samber/lo v1.37.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/skeema/knownhosts v1.1.0 // indirect
 	github.com/soheilhy/cmux v0.1.5 // indirect
