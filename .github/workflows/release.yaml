@@ -148,23 +148,15 @@ jobs:
         kubernetes-version:
           - 'v1.24.2'
     steps:
-      - name: setup golang
-        uses: actions/setup-go@v3
-        with:
-          go-version: '^1.19'
-
-      - name: cache go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-build-codegen-
-
       - name: checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
+      - name: setup golang
+        uses: actions/setup-go@v4
+        with:
+          go-version: '^1.19'
 
       - name: Kubernetes ${{ matrix.kubernetes_version }} Integration Tests
         run: make test.integration
@@ -177,24 +169,16 @@ jobs:
         kubernetes-version:
           - 'v1.24.2'
     steps:
-      - name: setup golang
-        uses: actions/setup-go@v3
-        with:
-          go-version: '^1.19'
-
-      - name: cache go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-build-codegen-
-
       - name: checkout repository
         uses: actions/checkout@v3
         with:
           submodules: true
           fetch-depth: 0
+
+      - name: setup golang
+        uses: actions/setup-go@v4
+        with:
+          go-version: '^1.19'
 
       - name: Kubernetes ${{ matrix.kubernetes_version }} E2E Tests
         run: make test.e2e
@@ -215,7 +199,7 @@ jobs:
         fetch-depth: 0
 
     - name: Setup go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: '^1.19'
 
@@ -294,7 +278,7 @@ jobs:
           fi
 
       - name: setup golang
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: '^1.19'
 
