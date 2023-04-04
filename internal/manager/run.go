@@ -168,12 +168,17 @@ func Run(cfg Config) error {
 		webhookMgr := &webhookManager{
 			client: mgr.GetClient(),
 			mgr:    mgr,
+			logger: ctrl.Log.WithName("webhook_manager"),
 			cfg:    &cfg,
 		}
-		err = mgr.Add(webhookMgr)
-		if err != nil {
+		if err := mgr.Add(webhookMgr); err != nil {
 			return fmt.Errorf("unable to add webhook manager: %w", err)
 		}
+
+		if err := webhookMgr.PrepareWebhookServer(context.Background()); err != nil {
+			return fmt.Errorf("unable to create webhook server: %w", err)
+		}
+
 		defer func() {
 			setupLog.Info("cleaning up webhook and certificateConfig resources")
 			if err := webhookMgr.cleanup(context.Background()); err != nil {

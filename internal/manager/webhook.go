@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/kong/gateway-operator/internal/admission"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -48,10 +50,16 @@ const (
 type webhookManager struct {
 	client client.Client
 	mgr    ctrl.Manager
+	logger logr.Logger
 	cfg    *Config
+	server *webhook.Server
 }
 
-func (m *webhookManager) Start(ctx context.Context) error {
+// PrepareWebhookServer creates a webhook server and add it to the controller manager.
+// Because the controller runtime 0.14.x doed not allow adding readiness probe after manager starts,
+// We need to create webhook server and add it to manager before manager starts.
+// https://github.com/Kong/gateway-operator/issues/611
+func (m *webhookManager) PrepareWebhookServer(ctx context.Context) error {
 	if m.cfg.ControllerNamespace == "" {
 		return errors.New("controllerNamespace must be set")
 	}
@@ -61,6 +69,17 @@ func (m *webhookManager) Start(ctx context.Context) error {
 	if m.cfg.WebhookPort == 0 {
 		return errors.New("webhookPort must be set")
 	}
+
+	// create and start a new webhook server
+	hookServer, err := admission.AddNewWebhookServerToManager(m.mgr, ctrl.Log, m.cfg.WebhookPort, m.cfg.WebhookCertDir)
+	if err != nil {
+		return err
+	}
+	m.server = hookServer
+	return nil
+}
+
+func (m *webhookManager) Start(ctx context.Context) error {
 
 	// create the webhook resources (if they already exist, it is no-op)
 	if err := m.createWebhookResources(ctx); err != nil {
@@ -85,6 +104,12 @@ func (m *webhookManager) Start(ctx context.Context) error {
 		}
 	}
 
+	handler := admission.NewRequestHandler(m.mgr.GetClient(), m.logger)
+	m.server.Register("/validate", handler)
+	if err := m.mgr.Add(m.server); err != nil {
+		return err
+	}
+
 	// write the webhook certificate files on the filesystem
 	if err := os.WriteFile(path.Join(m.cfg.WebhookCertDir, caCertFilename), certSecret.Data["ca"], os.ModePerm); err != nil {
 		return err
@@ -93,11 +118,6 @@ func (m *webhookManager) Start(ctx context.Context) error {
 		return err
 	}
 	if err := os.WriteFile(path.Join(m.cfg.WebhookCertDir, tlsKeyFilename), certSecret.Data["key"], os.ModePerm); err != nil {
-		return err
-	}
-
-	// create and start a new webhook server
-	if err := admission.AddNewWebhookServerToManager(m.mgr, ctrl.Log, m.cfg.WebhookPort, m.cfg.WebhookCertDir); err != nil {
 		return err
 	}
 

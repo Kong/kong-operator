@@ -26,19 +26,17 @@ var (
 )
 
 // AddNewWebhookServerToManager creates a webhook server in manager.
-func AddNewWebhookServerToManager(mgr ctrl.Manager, logger logr.Logger, webhookPort int, webhookCertDir string) error {
+func AddNewWebhookServerToManager(mgr ctrl.Manager, logger logr.Logger, webhookPort int, webhookCertDir string) (*webhook.Server, error) {
 	hookServer := &webhook.Server{
 		CertDir: webhookCertDir,
 		Port:    webhookPort,
 	}
-	handler := NewRequestHandler(mgr.GetClient(), logger)
-	hookServer.Register("/validate", handler)
 	// add readyz check for checking connection to webhook server
 	// to make the controller to be marked as ready after webhook started.
 	if err := mgr.AddReadyzCheck("readyz", hookServer.StartedChecker()); err != nil {
-		return fmt.Errorf("failed to add readiness probe for webhook: %w", err)
+		return nil, fmt.Errorf("failed to add readiness probe for webhook: %w", err)
 	}
-	return mgr.Add(hookServer)
+	return hookServer, nil
 }
 
 // Validator is the interface of validating
