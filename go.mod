@@ -13,9 +13,9 @@ require (
 	github.com/kong/kubernetes-testing-framework v0.28.2
 	github.com/samber/lo v1.37.0
 	github.com/stretchr/testify v1.8.2
-	k8s.io/api v0.26.1
-	k8s.io/apimachinery v0.26.1
-	k8s.io/client-go v0.26.1
+	k8s.io/api v0.26.3
+	k8s.io/apimachinery v0.26.3
+	k8s.io/client-go v0.26.3
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
 	sigs.k8s.io/controller-runtime v0.14.6
 	sigs.k8s.io/gateway-api v0.5.1
