@@ -9,6 +9,7 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
 	"github.com/kong/kubernetes-telemetry/pkg/serializers"
 	"github.com/kong/kubernetes-telemetry/pkg/telemetry"
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -23,7 +24,7 @@ const (
 	SignalPing  = "gateway-operator-ping"
 )
 
-type Payload = provider.Report
+type Payload = types.ProviderReport
 
 // CreateManager creates telemetry manager using the provider rest.Config.
 func CreateManager(signal string, restConfig *rest.Config, log logr.Logger, payload Payload) (telemetry.Manager, error) {

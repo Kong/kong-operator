@@ -2,6 +2,13 @@ module github.com/kong/gateway-operator
 
 go 1.19
 
+// Ref: https://github.com/Kong/gateway-operator/issues/618
+exclude (
+	sigs.k8s.io/gateway-api v0.6.0
+	sigs.k8s.io/gateway-api v0.6.1
+	sigs.k8s.io/gateway-api v0.6.2
+)
+
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/bombsimon/logrusr/v3 v3.1.0
@@ -9,7 +16,7 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/kong/kubernetes-telemetry v0.0.0-20220823141552-fa3a962bd6e1
+	github.com/kong/kubernetes-telemetry v0.0.2
 	github.com/kong/kubernetes-testing-framework v0.28.2
 	github.com/samber/lo v1.37.0
 	github.com/stretchr/testify v1.8.2
@@ -77,7 +84,7 @@ require (
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
-	github.com/puzpuzpuz/xsync v1.4.3 // indirect
+	github.com/puzpuzpuz/xsync/v2 v2.4.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
