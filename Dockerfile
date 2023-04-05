@@ -2,7 +2,7 @@
 # Builder
 # ------------------------------------------------------------------------------
 
-FROM golang:1.20.0 as builder
+FROM golang:1.20.3 as builder
 
 ARG TARGETPLATFORM
 ARG TARGETOS
