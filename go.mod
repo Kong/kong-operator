@@ -18,7 +18,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kong/kubernetes-telemetry v0.0.2
 	github.com/kong/kubernetes-testing-framework v0.30.0
-	github.com/samber/lo v1.37.0
+	github.com/samber/lo v1.38.1
 	github.com/stretchr/testify v1.8.2
 	k8s.io/api v0.26.3
 	k8s.io/apimachinery v0.26.3
