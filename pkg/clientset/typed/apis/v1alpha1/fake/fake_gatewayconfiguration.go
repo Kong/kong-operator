@@ -24,7 +24,6 @@ import (
 	v1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeGatewayConfigurations struct {
 	ns   string
 }
 
-var gatewayconfigurationsResource = schema.GroupVersionResource{Group: "apis", Version: "v1alpha1", Resource: "gatewayconfigurations"}
+var gatewayconfigurationsResource = v1alpha1.SchemeGroupVersion.WithResource("gatewayconfigurations")
 
-var gatewayconfigurationsKind = schema.GroupVersionKind{Group: "apis", Version: "v1alpha1", Kind: "GatewayConfiguration"}
+var gatewayconfigurationsKind = v1alpha1.SchemeGroupVersion.WithKind("GatewayConfiguration")
 
 // Get takes name of the gatewayConfiguration, and returns the corresponding gatewayConfiguration object, and an error if there is any.
 func (c *FakeGatewayConfigurations) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.GatewayConfiguration, err error) {

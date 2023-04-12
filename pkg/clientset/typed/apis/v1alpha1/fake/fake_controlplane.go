@@ -24,7 +24,6 @@ import (
 	v1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeControlPlanes struct {
 	ns   string
 }
 
-var controlplanesResource = schema.GroupVersionResource{Group: "apis", Version: "v1alpha1", Resource: "controlplanes"}
+var controlplanesResource = v1alpha1.SchemeGroupVersion.WithResource("controlplanes")
 
-var controlplanesKind = schema.GroupVersionKind{Group: "apis", Version: "v1alpha1", Kind: "ControlPlane"}
+var controlplanesKind = v1alpha1.SchemeGroupVersion.WithKind("ControlPlane")
 
 // Get takes name of the controlPlane, and returns the corresponding controlPlane object, and an error if there is any.
 func (c *FakeControlPlanes) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ControlPlane, err error) {
