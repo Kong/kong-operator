@@ -171,12 +171,12 @@ func Run(cfg Config) error {
 			logger: ctrl.Log.WithName("webhook_manager"),
 			cfg:    &cfg,
 		}
-		if err := mgr.Add(webhookMgr); err != nil {
-			return fmt.Errorf("unable to add webhook manager: %w", err)
-		}
-
 		if err := webhookMgr.PrepareWebhookServer(context.Background()); err != nil {
 			return fmt.Errorf("unable to create webhook server: %w", err)
+		}
+
+		if err := mgr.Add(webhookMgr); err != nil {
+			return fmt.Errorf("unable to add webhook manager: %w", err)
 		}
 
 		defer func() {
@@ -192,15 +192,19 @@ func Run(cfg Config) error {
 				return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
 			}
 		}
+
+		// Add readyz check here only if the validating webhook is disabled.
+		// When the webhook is enabled we add a readyz check in PrepareWebhookServer
+		// to mark the controller ready only after the webhook has started.
+		if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+			return fmt.Errorf("unable to set up ready check: %w", err)
+		}
 	}
 
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		return fmt.Errorf("unable to set up health check: %w", err)
-	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		return fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
 	// Enable anonnymous reporting when configured but not for development builds

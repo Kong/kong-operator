@@ -80,7 +80,6 @@ func (m *webhookManager) PrepareWebhookServer(ctx context.Context) error {
 }
 
 func (m *webhookManager) Start(ctx context.Context) error {
-
 	// create the webhook resources (if they already exist, it is no-op)
 	if err := m.createWebhookResources(ctx); err != nil {
 		return err
@@ -104,20 +103,29 @@ func (m *webhookManager) Start(ctx context.Context) error {
 		}
 	}
 
+	// write the webhook certificate files on the filesystem
+	{
+		p := path.Join(m.cfg.WebhookCertDir, caCertFilename)
+		if err := os.WriteFile(p, certSecret.Data["ca"], os.ModePerm); err != nil {
+			return fmt.Errorf("failed writing CA to %s: %w", p, err)
+		}
+	}
+	{
+		p := path.Join(m.cfg.WebhookCertDir, tlsCertFilename)
+		if err := os.WriteFile(p, certSecret.Data["cert"], os.ModePerm); err != nil {
+			return fmt.Errorf("failed writing certificate to %s: %w", p, err)
+		}
+	}
+	{
+		p := path.Join(m.cfg.WebhookCertDir, tlsKeyFilename)
+		if err := os.WriteFile(p, certSecret.Data["key"], os.ModePerm); err != nil {
+			return fmt.Errorf("failed writing key to %s: %w", p, err)
+		}
+	}
+
 	handler := admission.NewRequestHandler(m.mgr.GetClient(), m.logger)
 	m.server.Register("/validate", handler)
 	if err := m.mgr.Add(m.server); err != nil {
-		return err
-	}
-
-	// write the webhook certificate files on the filesystem
-	if err := os.WriteFile(path.Join(m.cfg.WebhookCertDir, caCertFilename), certSecret.Data["ca"], os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.WriteFile(path.Join(m.cfg.WebhookCertDir, tlsCertFilename), certSecret.Data["cert"], os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.WriteFile(path.Join(m.cfg.WebhookCertDir, tlsKeyFilename), certSecret.Data["key"], os.ModePerm); err != nil {
 		return err
 	}
 
@@ -217,19 +225,18 @@ func (m *webhookManager) createCertificateConfigJobs(ctx context.Context) error 
 		// https://github.com/Kong/gateway-operator/issues/261
 		jobCertificateConfigImage = relatedJobImage
 	}
-	createJob, patchJob := k8sresources.GenerateNewWebhookCertificateConfigJobs(m.cfg.ControllerNamespace,
+	job := k8sresources.GenerateNewWebhookCertificateConfigJob(
+		m.cfg.ControllerNamespace,
 		consts.WebhookCertificateConfigName,
 		jobCertificateConfigImage,
 		consts.WebhookCertificateConfigSecretName,
-		consts.WebhookName)
+		consts.WebhookName,
+	)
 
-	if err := m.client.Create(ctx, createJob); err != nil {
+	if err := m.client.Create(ctx, job); err != nil {
 		return err
 	}
 
-	if err := m.client.Create(ctx, patchJob); err != nil {
-		return err
-	}
 	return nil
 }
 

@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 const gatewayOperatorImageKustomizationContents = `
@@ -31,15 +34,11 @@ func setOperatorImage() error {
 		return nil
 	}
 
-	// TODO: deal with image names in format <host>:<port>/<repo>/<name>:[tag]
-	// e.g localhost:32000/kong/gateway-operator:xxx
-	parts := strings.Split(image, ":")
-	if len(parts) != 2 {
-		fmt.Printf("could not parse override image '%s', use default image\n", image)
-		return nil
+	imageName, imageTag, err := extractImageNameAndTag(image)
+	if err != nil {
+		fmt.Printf("ERROR: failed to parse custom image '%s', using default image\n", image)
+		return nil //nolint:nilerr
 	}
-	imageName := parts[0]
-	imageTag := parts[1]
 
 	fmt.Println("INFO: use custom image", image)
 
@@ -91,4 +90,57 @@ func restoreKustomizationFile() error {
 	}
 
 	return os.WriteFile(kustomizationFile, backUpBuf, os.ModeAppend)
+}
+
+func extractImageNameAndTag(fullname string) (name, tag string, err error) {
+	var (
+		lastColon  = strings.LastIndex(fullname, ":")
+		parts      = strings.Split(fullname, ":")
+		countParts = len(parts)
+	)
+
+	if countParts == 0 {
+		return "", "", fmt.Errorf("could not parse image '%s'", fullname)
+	}
+
+	name = fullname[0:lastColon]
+	tag = fullname[lastColon+1:]
+
+	return name, tag, nil
+}
+
+func Test_extractImageNameAndTag(t *testing.T) {
+	tests := []struct {
+		name     string
+		fullName string
+		wantName string
+		wantTag  string
+		wantErr  bool
+	}{
+		{
+			name:     "gcr.io/kong/gateway-operator:v1.0",
+			fullName: "gcr.io/kong/gateway-operator:v1.0",
+			wantName: "gcr.io/kong/gateway-operator",
+			wantTag:  "v1.0",
+		},
+		{
+			name:     "localhost:5000/kong/gateway-operator:v1.0",
+			fullName: "localhost:5000/kong/gateway-operator:v1.0",
+			wantName: "localhost:5000/kong/gateway-operator",
+			wantTag:  "v1.0",
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			gotName, gotTag, err := extractImageNameAndTag(tt.fullName)
+			if tt.wantErr {
+				require.NoError(t, err)
+				return
+			}
+
+			require.Equal(t, tt.wantName, gotName)
+			require.Equal(t, tt.wantTag, gotTag)
+		})
+	}
 }
