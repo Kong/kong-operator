@@ -4,6 +4,19 @@
 
 FROM golang:1.20.3 as builder
 
+WORKDIR /workspace
+COPY go.mod go.mod
+COPY go.sum go.sum
+RUN go mod download
+
+COPY main.go main.go
+COPY apis/ apis/
+COPY controllers/ controllers/
+COPY pkg/ pkg/
+COPY internal/ internal/
+COPY Makefile Makefile
+COPY .git/ .git/
+
 ARG TARGETPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
@@ -16,21 +29,6 @@ RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
     && printf ", TARGETOS=${TARGETOS}" \
     && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
     && printf "With 'uname -s': $(uname -s) and 'uname -m': $(uname -m)"
-
-WORKDIR /workspace
-
-COPY go.mod go.mod
-COPY go.sum go.sum
-
-RUN go mod download
-
-COPY main.go main.go
-COPY apis/ apis/
-COPY controllers/ controllers/
-COPY pkg/ pkg/
-COPY internal/ internal/
-COPY Makefile Makefile
-COPY .git/ .git/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
     TAG="${TAG}" COMMIT="${COMMIT}" REPO_INFO="${REPO_INFO}" \
