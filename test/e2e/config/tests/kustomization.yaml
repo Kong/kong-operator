@@ -6,12 +6,17 @@ images:
   newName: ghcr.io/kong/gateway-operator
   newTag: main
 
-# Prevent tests sending telemetry reports.
 patches:
 - patch: |-
     - op: add
       path: /spec/template/spec/containers/0/args/-
       value: -anonymous-reports=false
+    - op: add
+      path: /spec/template/spec/containers/0/args/-
+      value: -zap-devel
+    - op: add
+      path: /spec/template/spec/containers/0/args/-
+      value: -no-leader-election=true
   target:
     kind: Deployment
     group: apps
