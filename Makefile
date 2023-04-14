@@ -84,8 +84,14 @@ _download_tool:
 		ls ./$(TOOL).go > /dev/null && \
 		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
+.PHONY: _download_tool_own
+_download_tool_own:
+	(cd third_party/$(TOOL) && \
+		ls ./$(TOOL).go > /dev/null && \
+		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
+
 .PHONY: tools
-tools: envtest kic-role-generator controller-gen kustomize client-gen golangci-lint gotestsum dlv
+tools: envtest kic-role-generator controller-gen kustomize client-gen golangci-lint gotestsum dlv skaffold
 
 ENVTEST = $(PROJECT_DIR)/bin/setup-envtest
 .PHONY: envtest
@@ -135,15 +141,7 @@ dlv: ## Download dlv locally if necessary.
 SKAFFOLD = $(PROJECT_DIR)/bin/skaffold
 .PHONY: skaffold
 skaffold: ## Download skaffold locally if necessary.
-# NOTE: this step is not idempotent like other tool download steps because for
-# some reason skaffold doesn't want to be included in imports or installed via
-# go install:
-# go: github.com/GoogleContainerTools/skaffold@v2.0.4: invalid version: module contains a go.mod file, so module path must match major version ("github.com/GoogleContainerTools/skaffold/v2")
-ifeq ($(wildcard $(SKAFFOLD)),)
-	curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/v2.0.4/skaffold-$(shell go env GOOS)-$(shell go env GOARCH)
-	@chmod +x skaffold
-	@mv skaffold ./bin/
-endif
+	@$(MAKE) _download_tool_own TOOL=skaffold
 
 # It seems that there's problem with operator-sdk dependencies when imported from a different project.
 # After spending some time on it, decided to just use a 'thing that works' which is to download
@@ -530,7 +528,8 @@ _run:
 
 .PHONY: run.skaffold
 run.skaffold: _ensure-kong-system-namespace
-	$(SKAFFOLD) dev --port-forward=pods --profile=dev
+	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
+		$(SKAFFOLD) dev --port-forward=pods --profile=dev
 
 .PHONY: debug
 debug: webhook-certs-dir manifests generate fmt vet install _ensure-kong-system-namespace
@@ -541,11 +540,13 @@ debug: webhook-certs-dir manifests generate fmt vet install _ensure-kong-system-
 
 .PHONY: debug.skaffold
 debug.skaffold: _ensure-kong-system-namespace
-	$(SKAFFOLD) debug --port-forward=pods --profile=debug
+	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
+		$(SKAFFOLD) debug --port-forward=pods --profile=debug
 
 .PHONY: debug.skaffold.continuous
 debug.skaffold.continuous: _ensure-kong-system-namespace
-	$(SKAFFOLD) debug --port-forward=pods --profile=debug --auto-build --auto-deploy --auto-sync
+	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
+		$(SKAFFOLD) debug --port-forward=pods --profile=debug --auto-build --auto-deploy --auto-sync
 
 # Install CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install
