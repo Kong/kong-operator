@@ -7,7 +7,7 @@ require (
 	github.com/golangci/golangci-lint v1.52.2
 	github.com/operator-framework/operator-registry v1.26.5
 	gotest.tools/gotestsum v1.10.0
-	k8s.io/code-generator v0.27.0
+	k8s.io/code-generator v0.27.1
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220715194349-88234a8fc9ad
 	sigs.k8s.io/controller-tools v0.11.3
 	sigs.k8s.io/kustomize/kustomize/v4 v4.5.7
