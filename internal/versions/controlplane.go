@@ -8,7 +8,7 @@ import (
 
 const (
 	// LatestClusterRoleVersion is the version of the ClusterRole that will be used for unversioned KIC
-	LatestClusterRoleVersion = "2.9.2"
+	LatestClusterRoleVersion = "2.9.3"
 )
 
 // RoleVersionsForKICVersions is a map that explicitly sets which ClusterRole version to use upon the KIC

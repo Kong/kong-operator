@@ -169,11 +169,20 @@ func (r *DataPlaneReconciler) ensureCertificate(
 		r.Client)
 }
 
+type CreatedUpdatedOrNoop byte
+
+const (
+	Created CreatedUpdatedOrNoop = iota
+	Updated
+	Noop
+)
+
 func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 	ctx context.Context,
+	log logr.Logger,
 	dataplane *operatorv1alpha1.DataPlane,
 	certSecretName string,
-) (createdOrUpdate bool, deploy *appsv1.Deployment, err error) {
+) (res CreatedUpdatedOrNoop, deploy *appsv1.Deployment, err error) {
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
 		r.Client,
@@ -183,15 +192,15 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 		dataplane.UID,
 	)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, err
 	}
 
 	count := len(deployments)
 	if count > 1 {
 		if err := k8sreduce.ReduceDeployments(ctx, r.Client, deployments); err != nil {
-			return false, nil, err
+			return Noop, nil, err
 		}
-		return false, nil, errors.New("number of deployments reduced")
+		return Updated, nil, errors.New("number of deployments reduced")
 	}
 
 	versionValidationOptions := make([]versions.VersionValidationOption, 0)
@@ -200,7 +209,7 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 	}
 	dataplaneImage, err := generateDataPlaneImage(dataplane, versionValidationOptions...)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, err
 	}
 	generatedDeployment := k8sresources.GenerateNewDeploymentForDataPlane(dataplane, dataplaneImage, certSecretName)
 	k8sutils.SetOwnerForObject(generatedDeployment, dataplane)
@@ -229,13 +238,37 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 			container = k8sutils.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 		}
 		if !reflect.DeepEqual(container.Env, dataplane.Spec.Deployment.Env) {
+			trace(log, "DataPlane deployment Env needs updating", dataplane)
 			container.Env = dataplane.Spec.Deployment.Env
 			updated = true
 		}
 
 		if !reflect.DeepEqual(container.EnvFrom, dataplane.Spec.Deployment.EnvFrom) {
+			trace(log, "DataPlane deployment EnvFrom needs updating", dataplane)
 			container.EnvFrom = dataplane.Spec.Deployment.EnvFrom
 			updated = true
+		}
+
+		if dataplane.Spec.Deployment.Resources != nil {
+			// DataPlane deployment resources are set.
+			// Check if existing container already has its resources set per DataPlane spec.
+			dataPlaneResources := dataplane.Spec.Deployment.Resources
+			if !k8sresources.ResourceRequirementsEqual(container.Resources, dataPlaneResources) {
+				trace(log, "DataPlane deployment Resources needs to be set as per DataPlane spec",
+					dataplane, "dataplane.resources", dataPlaneResources,
+				)
+				container.Resources = *dataPlaneResources
+				updated = true
+			}
+		} else {
+			// DataPlane deployment resources are unset.
+			// Check if existing container already has defaults set.
+			defaults := k8sresources.DefaultDataPlaneResources()
+			if !k8sresources.ResourceRequirementsEqual(container.Resources, defaults) {
+				trace(log, "DataPlane deployment Resources need to be set to defaults", dataplane)
+				container.Resources = *defaults
+				updated = true
+			}
 		}
 
 		if !reflect.DeepEqual(existingDeployment.Spec.Strategy, generatedDeployment.Spec.Strategy) {
@@ -246,19 +279,19 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 		// update the container image or image version if needed
 		imageUpdated, err := ensureContainerImageUpdated(container, dataplane.Spec.Deployment.ContainerImage, dataplane.Spec.Deployment.Version)
 		if err != nil {
-			return false, nil, err
+			return Noop, nil, err
 		}
 		if imageUpdated {
 			updated = true
 		}
 
 		if updated {
-			return true, existingDeployment, r.Client.Update(ctx, existingDeployment)
+			return Updated, existingDeployment, r.Client.Update(ctx, existingDeployment)
 		}
-		return false, existingDeployment, nil
+		return Noop, existingDeployment, nil
 	}
 
-	return true, generatedDeployment, r.Client.Create(ctx, generatedDeployment)
+	return Created, generatedDeployment, r.Client.Create(ctx, generatedDeployment)
 }
 
 func (r *DataPlaneReconciler) deploymentSpecVolumesNeedsUpdate(

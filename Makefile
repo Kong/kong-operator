@@ -524,7 +524,8 @@ _run:
 	CONTROLLER_DEVELOPMENT_MODE=true go run ./main.go \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
-		-zap-time-encoding iso8601
+		-zap-time-encoding iso8601 \
+		-zap-log-level 2
 
 .PHONY: run.skaffold
 run.skaffold: _ensure-kong-system-namespace

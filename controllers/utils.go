@@ -396,7 +396,7 @@ func deploymentOptionsDeepEqual(opts1, opts2 *operatorv1alpha1.DeploymentOptions
 	if len(opts1.Env) != len(opts2.Env)+len(envVarsToIgnore) {
 		return false
 	}
-	var env2i = 0
+	env2i := 0
 	for _, env1 := range opts1.Env {
 		ignored := false
 		for _, envIgn := range envVarsToIgnore {

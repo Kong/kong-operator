@@ -9,6 +9,11 @@ import (
 // includes options for managing Deployments such as the container image and
 // version, as well as Env variable overrides.
 type DeploymentOptions struct {
+	// Resources describes the compute resource requirements.
+	//
+	// +optional
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+
 	// ContainerImage indicates the image that will be used for the Deployment.
 	//
 	// If omitted a default image will be automatically chosen.

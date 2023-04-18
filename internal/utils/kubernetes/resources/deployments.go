@@ -2,6 +2,7 @@ package resources
 
 import (
 	"fmt"
+	"sync"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -11,6 +12,14 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
+)
+
+const (
+	DefaultControlPlaneCPURequest = "100m"
+	DefaultControlPlaneCPULimit   = "200m"
+
+	DefaultControlPlaneMemoryRequest = "20Mi"
+	DefaultControlPlaneMemoryLimit   = "100Mi"
 )
 
 // GenerateNewDeploymentForControlPlane generates a new Deployment for the ControlPlane
@@ -124,16 +133,7 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 								},
 							},
 						},
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("100m"),
-								corev1.ResourceMemory: resource.MustParse("20Mi"),
-							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("200m"),
-								corev1.ResourceMemory: resource.MustParse("100Mi"),
-							},
-						},
+						Resources: getResourceRequirements(controlplane.Spec),
 					}},
 				},
 			},
@@ -141,6 +141,14 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 	}
 	return deployment
 }
+
+const (
+	DefaultDataPlaneCPURequest = "100m"
+	DefaultDataPlaneCPULimit   = "1000m"
+
+	DefaultDataPlaneMemoryRequest = "20Mi"
+	DefaultDataPlaneMemoryLimit   = "1000Mi"
+)
 
 // GenerateNewDeploymentForDataPlane generates a new Deployment for the DataPlane
 func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, dataplaneImage, certSecretName string) *appsv1.Deployment {
@@ -262,20 +270,93 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, da
 								},
 							},
 						},
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("100m"),
-								corev1.ResourceMemory: resource.MustParse("20Mi"),
-							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("1000m"),
-								corev1.ResourceMemory: resource.MustParse("1000Mi"),
-							},
-						},
+						Resources: getResourceRequirements(dataplane.Spec),
 					}},
 				},
 			},
 		},
 	}
 	return deployment
+}
+
+var (
+	_defaultDataPlaneResourcesOnce    sync.Once
+	_dataPlaneDefaultResources        corev1.ResourceRequirements
+	_defaultControlPlaneResourcesOnce sync.Once
+	_controlPlaneDefaultResources     corev1.ResourceRequirements
+)
+
+func DefaultDataPlaneResources() *corev1.ResourceRequirements {
+	_defaultDataPlaneResourcesOnce.Do(func() {
+		// Initialize just once, no need to do it more.
+		_dataPlaneDefaultResources = corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse(DefaultDataPlaneCPURequest),
+				corev1.ResourceMemory: resource.MustParse(DefaultDataPlaneMemoryRequest),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse(DefaultDataPlaneCPULimit),
+				corev1.ResourceMemory: resource.MustParse(DefaultDataPlaneMemoryLimit),
+			},
+		}
+	})
+	return _dataPlaneDefaultResources.DeepCopy()
+}
+
+func DefaultControlPlaneResources() *corev1.ResourceRequirements {
+	_defaultControlPlaneResourcesOnce.Do(func() {
+		_controlPlaneDefaultResources = corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse(DefaultControlPlaneCPURequest),
+				corev1.ResourceMemory: resource.MustParse(DefaultControlPlaneMemoryRequest),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse(DefaultControlPlaneCPULimit),
+				corev1.ResourceMemory: resource.MustParse(DefaultControlPlaneMemoryLimit),
+			},
+		}
+	})
+	return _controlPlaneDefaultResources.DeepCopy()
+}
+
+func getResourceRequirements[
+	targetT interface {
+		operatorv1alpha1.DataPlaneSpec |
+			operatorv1alpha1.ControlPlaneSpec
+	},
+](
+	spec targetT,
+) corev1.ResourceRequirements {
+	var (
+		ret       *corev1.ResourceRequirements
+		requested *corev1.ResourceRequirements
+	)
+
+	switch s := any(spec).(type) {
+	case operatorv1alpha1.DataPlaneSpec:
+		ret = DefaultDataPlaneResources()
+		requested = s.Deployment.Resources
+	case operatorv1alpha1.ControlPlaneSpec:
+		ret = DefaultControlPlaneResources()
+		requested = s.Deployment.Resources
+	}
+	if requested == nil {
+		return *ret
+	}
+
+	if v, ok := requested.Limits[corev1.ResourceCPU]; ok {
+		ret.Limits[corev1.ResourceCPU] = v
+	}
+	if v, ok := requested.Limits[corev1.ResourceMemory]; ok {
+		ret.Limits[corev1.ResourceMemory] = v
+	}
+
+	if v, ok := requested.Requests[corev1.ResourceCPU]; ok {
+		ret.Requests[corev1.ResourceCPU] = v
+	}
+	if v, ok := requested.Requests[corev1.ResourceMemory]; ok {
+		ret.Requests[corev1.ResourceMemory] = v
+	}
+
+	return *ret
 }

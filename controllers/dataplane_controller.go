@@ -155,14 +155,20 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	trace(log, "looking for existing deployments for DataPlane resource", dataplane)
-	createdOrUpdated, dataplaneDeployment, err := r.ensureDeploymentForDataPlane(ctx, dataplane, certSecret.Name)
+	res, dataplaneDeployment, err := r.ensureDeploymentForDataPlane(ctx, log, dataplane, certSecret.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if createdOrUpdated {
+	switch res {
+	case Created:
+		debug(log, "deployment created", dataplane)
+		return ctrl.Result{}, nil // requeue will be triggered by the creation of the owned object
+	case Updated:
 		debug(log, "deployment updated", dataplane)
-		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+		return ctrl.Result{}, nil // requeue will be triggered by the update of the owned object
+	default:
 	}
+	debug(log, "no need for deployment update", dataplane)
 
 	trace(log, "checking readiness of DataPlane deployments", dataplane)
 

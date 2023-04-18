@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -22,6 +23,7 @@ import (
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
+	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/internal/versions"
 )
@@ -125,6 +127,7 @@ func (r *ControlPlaneReconciler) ensureDataPlaneConfiguration(
 // corresponding dataplane is set.
 func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	ctx context.Context,
+	log logr.Logger,
 	controlplane *operatorv1alpha1.ControlPlane,
 	serviceAccountName, certSecretName string,
 ) (bool, *appsv1.Deployment, error) {
@@ -218,6 +221,28 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		if !reflect.DeepEqual(container.EnvFrom, controlplane.Spec.Deployment.EnvFrom) {
 			container.EnvFrom = controlplane.Spec.Deployment.EnvFrom
 			updated = true
+		}
+
+		if controlplane.Spec.Deployment.Resources != nil {
+			// ControlPlane deployment resources are set.
+			// Check if existing container already has its resources set per ControlPlane spec.
+			controlPlaneResources := controlplane.Spec.Deployment.Resources
+			if !resources.ResourceRequirementsEqual(container.Resources, controlPlaneResources) {
+				trace(log, "ControlPlane deployment Resources needs to be set as per ControlPlane spec",
+					controlplane, "controlplane.resources", controlPlaneResources,
+				)
+				container.Resources = *controlPlaneResources
+				updated = true
+			}
+		} else {
+			// ControlPlane deployment resources are unset.
+			// Check if existing container already has defaults set.
+			defaults := k8sresources.DefaultControlPlaneResources()
+			if !resources.ResourceRequirementsEqual(container.Resources, defaults) {
+				trace(log, "ControlPlane deployment Resources need to be set to defaults", controlplane)
+				container.Resources = *defaults
+				updated = true
+			}
 		}
 
 		// update the container image or image version if needed

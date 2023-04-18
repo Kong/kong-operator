@@ -6,8 +6,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -16,6 +19,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/internal/versions"
 )
@@ -45,6 +49,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 			},
 		},
 	}
+	defaultDataPlaneResources := resources.DefaultDataPlaneResources()
 
 	testCases := []struct {
 		name           string
@@ -63,8 +68,8 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
 				ctx := context.Background()
-				createdOrUpdated, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, dataPlane, certSecretName)
-				require.True(t, createdOrUpdated)
+				res, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, logr.Discard(), dataPlane, certSecretName)
+				require.Equal(t, Created, res)
 				require.NoError(t, err)
 				require.Equal(t, expectedDeploymentStrategy, deployment.Spec.Strategy)
 			},
@@ -92,18 +97,73 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				addLabelForDataplane(existingDeployment)
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
-				createdOrUpdated, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, dataPlane, certSecretName)
-				require.True(t, createdOrUpdated, "the DataPlane deployment should be updated with the original strategy")
+				res, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, logr.Discard(), dataPlane, certSecretName)
+				require.Equal(t, Updated, res, "the DataPlane deployment should be updated with the original strategy")
 				require.NoError(t, err)
 				require.Equal(t, expectedDeploymentStrategy, deployment.Spec.Strategy)
 			},
 		},
 		{
-			name: "existing DataPlane deployment does not get updated when already has expected spec.Strategy",
+			name: "existing DataPlane deployment does get updated when it doesn't have the resources equal to defaults",
 			dataPlane: &operatorv1alpha1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "default",
+				},
+				Spec: operatorv1alpha1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
+							Resources: &corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("2"),
+									corev1.ResourceMemory: resource.MustParse("1237Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("3"),
+									corev1.ResourceMemory: resource.MustParse("1237Mi"),
+								},
+							},
+						},
+					},
+				},
+			},
+			certSecretName: "certificate",
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
+				ctx := context.Background()
+				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneSupported)
+				require.NoError(t, err)
+				// generate the DataPlane as it is expected to be and create it.
+				existingDeployment := k8sresources.GenerateNewDeploymentForDataPlane(dataPlane, dataplaneImage, certSecretName)
+
+				// generateDataPlaneImage will set deployment's containers resources
+				// to the ones set in dataplane spec so we set it here to get the
+				// expected behavior in reconciler's ensureDeploymentForDataPlane().
+				dataPlane.Spec.Deployment.Resources.Limits[corev1.ResourceCPU] = resource.MustParse("1337m")
+
+				k8sutils.SetOwnerForObject(existingDeployment, dataPlane)
+				addLabelForDataplane(existingDeployment)
+				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
+
+				res, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, logr.Discard(), dataPlane, certSecretName)
+				require.Equal(t, Updated, res, "the DataPlane deployment should be updated to get the resources set to defaults")
+				require.NoError(t, err)
+				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
+				require.Equal(t, *dataPlane.Spec.Deployment.Resources, deployment.Spec.Template.Spec.Containers[0].Resources)
+			},
+		},
+		{
+			name: "existing DataPlane deployment does not get updated when already has expected spec.Strategy and resources equal to defaults",
+			dataPlane: &operatorv1alpha1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Spec: operatorv1alpha1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
+							Resources: defaultDataPlaneResources,
+						},
+					},
 				},
 			},
 			certSecretName: "certificate",
@@ -117,8 +177,8 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				addLabelForDataplane(existingDeployment)
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
-				createdOrUpdated, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, dataPlane, certSecretName)
-				require.False(t, createdOrUpdated, "the DataPlane deployment should not be updated")
+				res, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, logr.Discard(), dataPlane, certSecretName)
+				require.Equal(t, Noop, res, "the DataPlane deployment should not be updated")
 				require.NoError(t, err)
 				require.Equal(t, expectedDeploymentStrategy, deployment.Spec.Strategy)
 			},
