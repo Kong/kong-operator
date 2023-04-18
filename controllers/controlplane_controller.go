@@ -222,7 +222,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	trace(log, "configuring ControlPlane resource", controlplane)
 	changed, err := setControlPlaneDefaults(
-		&controlplane.Spec.ControlPlaneDeploymentOptions,
+		&controlplane.Spec.ControlPlaneOptions,
 		nil,
 		r.DevelopmentMode,
 		controlPlaneDefaultsArgs{

@@ -75,8 +75,8 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 					Name:      uuid.NewString(),
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							Env: []corev1.EnvVar{
 								{Name: "KONG_DATABASE", Value: "postgres"},
 							},
@@ -96,8 +96,8 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 					Name:      uuid.NewString(),
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							Env: []corev1.EnvVar{
 								{Name: "KONG_DATABASE", Value: "xxx"},
 							},
@@ -116,8 +116,8 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 					Name:      uuid.NewString(),
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							Env: []corev1.EnvVar{
 								{
 									Name: "KONG_DATABASE",
@@ -218,8 +218,8 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 					Name:      uuid.NewString(),
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							Env: []corev1.EnvVar{
 								{Name: "KONG_DATABASE", Value: "postgres"},
 							},
@@ -237,8 +237,8 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 					Name:      uuid.NewString(),
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							Env: []corev1.EnvVar{
 								{Name: "KONG_DATABASE", Value: "xxx"},
 							},
@@ -256,8 +256,8 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 					Name:      uuid.NewString(),
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							Env: []corev1.EnvVar{
 								{
 									Name: "KONG_DATABASE",

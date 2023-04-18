@@ -48,8 +48,8 @@ func (r *GatewayReconciler) createDataPlane(ctx context.Context,
 			GenerateName: fmt.Sprintf("%s-", gateway.Name),
 		},
 	}
-	if gatewayConfig.Spec.DataPlaneDeploymentOptions != nil {
-		dataplane.Spec.DataPlaneDeploymentOptions = *gatewayConfig.Spec.DataPlaneDeploymentOptions
+	if gatewayConfig.Spec.DataPlaneOptions != nil {
+		dataplane.Spec.DataPlaneOptions = *gatewayConfig.Spec.DataPlaneOptions
 	}
 	k8sutils.SetOwnerForObject(dataplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(dataplane)
@@ -72,8 +72,8 @@ func (r *GatewayReconciler) createControlPlane(
 			GatewayClass: (*gatewayv1beta1.ObjectName)(&gatewayClass.Name),
 		},
 	}
-	if gatewayConfig.Spec.ControlPlaneDeploymentOptions != nil {
-		controlplane.Spec.ControlPlaneDeploymentOptions = *gatewayConfig.Spec.ControlPlaneDeploymentOptions
+	if gatewayConfig.Spec.ControlPlaneOptions != nil {
+		controlplane.Spec.ControlPlaneOptions = *gatewayConfig.Spec.ControlPlaneOptions
 	}
 	if controlplane.Spec.DataPlane == nil {
 		controlplane.Spec.DataPlane = &dataplaneName
@@ -278,8 +278,8 @@ func generateDataPlaneNetworkPolicy(
 	// Note: for now only direct env variable manipulation is allowed (through
 	// the .Env field in DataPlaneDeploymentOptions). EnvFrom is not taken into
 	// account when updating NetworkPolicy ports.
-	dpOpts := gatewayConfig.Spec.DataPlaneDeploymentOptions
-	if proxyListen := envValueByName(dpOpts.Env, "KONG_PROXY_LISTEN"); proxyListen != "" {
+	dpOpts := gatewayConfig.Spec.DataPlaneOptions
+	if proxyListen := envValueByName(dpOpts.Deployment.Env, "KONG_PROXY_LISTEN"); proxyListen != "" {
 		kongListenConfig, err := parseKongListenEnv(proxyListen)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_PROXY_LISTEN env: %w", err)
@@ -291,7 +291,7 @@ func generateDataPlaneNetworkPolicy(
 			proxySSLPort = intstr.FromInt(kongListenConfig.SSLEndpoint.Port)
 		}
 	}
-	if adminListen := envValueByName(dpOpts.Env, "KONG_ADMIN_LISTEN"); adminListen != "" {
+	if adminListen := envValueByName(dpOpts.Deployment.Env, "KONG_ADMIN_LISTEN"); adminListen != "" {
 		kongListenConfig, err := parseKongListenEnv(adminListen)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_ADMIN_LISTEN env: %w", err)

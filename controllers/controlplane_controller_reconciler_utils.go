@@ -106,7 +106,7 @@ func (r *ControlPlaneReconciler) ensureDataPlaneConfiguration(
 	dataplaneServiceName string,
 ) error {
 	changed := setControlPlaneEnvOnDataPlaneChange(
-		&controlplane.Spec.ControlPlaneDeploymentOptions,
+		&controlplane.Spec.ControlPlaneOptions,
 		controlplane.Namespace,
 		dataplaneServiceName,
 	)
@@ -153,7 +153,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	if !r.DevelopmentMode {
 		versionValidationOptions = append(versionValidationOptions, versions.IsControlPlaneSupported)
 	}
-	controlplaneImage, err := generateControlPlaneImage(&controlplane.Spec.ControlPlaneDeploymentOptions, versionValidationOptions...)
+	controlplaneImage, err := generateControlPlaneImage(&controlplane.Spec.ControlPlaneOptions, versionValidationOptions...)
 	if err != nil {
 		return false, nil, err
 	}
@@ -188,7 +188,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		case dataplaneIsSet && (replicas != nil && *replicas == numReplicasWhenNoDataplane):
 			existingDeployment.Spec.Replicas = nil
 			if len(container.Env) > 0 {
-				container.Env = controlplane.Spec.Env
+				container.Env = controlplane.Spec.Deployment.Env
 			}
 			updated = true
 		}
@@ -210,18 +210,18 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		// in the ControlPlane. If the actual Deployment environment does not match the generated environment, either
 		// something requires an update (e.g. the associated DataPlane Service changed and value generation changed the
 		// publish service configuration) or there was a manual edit we want to purge.
-		if !reflect.DeepEqual(container.Env, controlplane.Spec.Env) {
-			container.Env = controlplane.Spec.Env
+		if !reflect.DeepEqual(container.Env, controlplane.Spec.Deployment.Env) {
+			container.Env = controlplane.Spec.Deployment.Env
 			updated = true
 		}
 
-		if !reflect.DeepEqual(container.EnvFrom, controlplane.Spec.EnvFrom) {
-			container.EnvFrom = controlplane.Spec.EnvFrom
+		if !reflect.DeepEqual(container.EnvFrom, controlplane.Spec.Deployment.EnvFrom) {
+			container.EnvFrom = controlplane.Spec.Deployment.EnvFrom
 			updated = true
 		}
 
 		// update the container image or image version if needed
-		imageUpdated, err := ensureContainerImageUpdated(container, controlplane.Spec.ContainerImage, controlplane.Spec.Version)
+		imageUpdated, err := ensureContainerImageUpdated(container, controlplane.Spec.Deployment.ContainerImage, controlplane.Spec.Deployment.Version)
 		if err != nil {
 			return false, nil, err
 		}
@@ -293,7 +293,7 @@ func (r *ControlPlaneReconciler) ensureClusterRoleForControlPlane(
 		return false, nil, errors.New("number of clusterRoles reduced")
 	}
 
-	generatedClusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane(controlplane.Name, controlplane.Spec.ContainerImage, controlplane.Spec.Version)
+	generatedClusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane(controlplane.Name, controlplane.Spec.Deployment.ContainerImage, controlplane.Spec.Deployment.Version)
 	if err != nil {
 		return false, nil, err
 	}

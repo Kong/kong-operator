@@ -32,8 +32,8 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 			Name:      uuid.NewString(),
 		},
 		Spec: operatorv1alpha1.GatewayConfigurationSpec{
-			ControlPlaneDeploymentOptions: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			ControlPlaneOptions: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{Name: "CONTROLLER_LOG_LEVEL", Value: "trace"},
 					},

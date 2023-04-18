@@ -79,7 +79,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	trace(log, "validating DataPlane configuration", dataplane)
-	updated := dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneDeploymentOptions)
+	updated := dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneOptions)
 	if updated {
 		trace(log, "setting default ENVs", dataplane)
 		if err := r.Client.Update(ctx, dataplane); err != nil {

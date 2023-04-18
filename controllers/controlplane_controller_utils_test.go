@@ -14,18 +14,18 @@ import (
 func TestSetControlPlaneDefaults(t *testing.T) {
 	testCases := []struct {
 		name                      string
-		spec                      *operatorv1alpha1.ControlPlaneDeploymentOptions
+		spec                      *operatorv1alpha1.ControlPlaneOptions
 		namespace                 string
 		dataplaneProxyServiceName string
 		changed                   bool
-		newSpec                   *operatorv1alpha1.ControlPlaneDeploymentOptions
+		newSpec                   *operatorv1alpha1.ControlPlaneOptions
 	}{
 		{
 			name:    "no envs no dataplane",
-			spec:    &operatorv1alpha1.ControlPlaneDeploymentOptions{},
+			spec:    &operatorv1alpha1.ControlPlaneOptions{},
 			changed: true,
-			newSpec: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			newSpec: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{
 							Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
@@ -51,12 +51,12 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		},
 		{
 			name:                      "no_envs_has_dataplane",
-			spec:                      &operatorv1alpha1.ControlPlaneDeploymentOptions{},
+			spec:                      &operatorv1alpha1.ControlPlaneOptions{},
 			changed:                   true,
 			namespace:                 "test-ns",
 			dataplaneProxyServiceName: "kong-proxy",
-			newSpec: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			newSpec: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{
 							Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
@@ -102,8 +102,8 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		},
 		{
 			name: "has_envs_and_dataplane",
-			spec: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			spec: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{Name: "TEST_ENV", Value: "test"},
 					},
@@ -112,8 +112,8 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			changed:                   true,
 			namespace:                 "test-ns",
 			dataplaneProxyServiceName: "kong-proxy",
-			newSpec: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			newSpec: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{Name: "TEST_ENV", Value: "test"},
 						{
@@ -160,8 +160,8 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		},
 		{
 			name: "has_dataplane_env_unchanged",
-			spec: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			spec: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{
 							Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
@@ -207,8 +207,8 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			namespace:                 "test-ns",
 			dataplaneProxyServiceName: "kong-proxy",
 			changed:                   false,
-			newSpec: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			newSpec: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{
 							Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
@@ -267,14 +267,14 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			require.NoError(t, err)
 			require.Equalf(t, tc.changed, changed,
 				"should return the same value for test case %d:%s", index, tc.name)
-			for _, env := range tc.newSpec.Env {
+			for _, env := range tc.newSpec.Deployment.Env {
 				if env.Value != "" {
-					actualValue := envValueByName(tc.spec.Env, env.Name)
+					actualValue := envValueByName(tc.spec.Deployment.Env, env.Name)
 					require.Equalf(t, env.Value, actualValue,
 						"should have the same value of env %s", env.Name)
 				}
 				if env.ValueFrom != nil {
-					actualValueFrom := envVarSourceByName(tc.spec.Env, env.Name)
+					actualValueFrom := envVarSourceByName(tc.spec.Deployment.Env, env.Name)
 					require.Truef(t, reflect.DeepEqual(env.ValueFrom, actualValueFrom),
 						"should have same valuefrom of env %s", env.Name)
 				}
@@ -286,15 +286,15 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 func TestControlPlaneSpecDeepEqual(t *testing.T) {
 	var testCases = []struct {
 		name            string
-		spec1           *operatorv1alpha1.ControlPlaneDeploymentOptions
-		spec2           *operatorv1alpha1.ControlPlaneDeploymentOptions
+		spec1           *operatorv1alpha1.ControlPlaneOptions
+		spec2           *operatorv1alpha1.ControlPlaneOptions
 		envVarsToIgnore []string
 		equal           bool
 	}{
 		{
 			name: "matching env vars, no ignored vars",
-			spec1: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			spec1: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{
 							Name:  "CONTROLLER_PUBLISH_SERVICE",
@@ -311,8 +311,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			spec2: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			spec2: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{
 							Name:  "CONTROLLER_PUBLISH_SERVICE",
@@ -333,8 +333,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 		},
 		{
 			name: "matching env vars, with ignored vars",
-			spec1: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			spec1: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{
 							Name:  "CONTROLLER_PUBLISH_SERVICE",
@@ -355,8 +355,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			spec2: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			spec2: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{
 							Name:  "CONTROLLER_PUBLISH_SERVICE",
@@ -380,8 +380,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 		},
 		{
 			name: "not matching env vars, no ignored vars",
-			spec1: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			spec1: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{
 							Name:  "CONTROLLER_PUBLISH_SERVICE",
@@ -402,8 +402,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			spec2: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			spec2: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{
 							Name:  "CONTROLLER_PUBLISH_SERVICE",
@@ -424,8 +424,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 		},
 		{
 			name: "not matching env vars, with ignored vars",
-			spec1: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			spec1: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{
 							Name:  "CONTROLLER_PUBLISH_SERVICE",
@@ -442,8 +442,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			spec2: &operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			spec2: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{
 							Name:  "CONTROLLER_PUBLISH_SERVICE",

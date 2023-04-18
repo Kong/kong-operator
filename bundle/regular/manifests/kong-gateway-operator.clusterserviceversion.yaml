@@ -22,12 +22,14 @@ metadata:
             "name": "dataplane-example"
           },
           "spec": {
-            "env": [
-              {
-                "name": "KONG_LOG_LEVEL",
-                "value": "debug"
-              }
-            ]
+            "deployment": {
+              "env": [
+                {
+                  "name": "KONG_LOG_LEVEL",
+                  "value": "debug"
+                }
+              ]
+            }
           }
         },
         {
@@ -38,17 +40,21 @@ metadata:
             "namespace": "default"
           },
           "spec": {
-            "controlPlaneDeploymentOptions": {
-              "env": [
-                {
-                  "name": "CONTROLLER_LOG_LEVEL",
-                  "value": "debug"
-                }
-              ]
+            "controlPlaneOptions": {
+              "deployment": {
+                "env": [
+                  {
+                    "name": "CONTROLLER_LOG_LEVEL",
+                    "value": "debug"
+                  }
+                ]
+              }
             },
-            "dataPlaneDeploymentOptions": {
-              "containerImage": "kong",
-              "version": "3.0"
+            "dataPlaneOptions": {
+              "deployment": {
+                "containerImage": "kong",
+                "version": "3.0"
+              }
             }
           }
         }

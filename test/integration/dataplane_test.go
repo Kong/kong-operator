@@ -40,8 +40,8 @@ func TestDataplaneEssentials(t *testing.T) {
 			Name:      dataplaneName.Name,
 		},
 		Spec: v1alpha1.DataPlaneSpec{
-			DataPlaneDeploymentOptions: v1alpha1.DataPlaneDeploymentOptions{
-				DeploymentOptions: v1alpha1.DeploymentOptions{
+			DataPlaneOptions: v1alpha1.DataPlaneOptions{
+				Deployment: v1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{Name: "TEST_ENV", Value: "test"},
 					},
@@ -171,8 +171,8 @@ func TestDataPlaneUpdate(t *testing.T) {
 			Name:      dataplaneName.Name,
 		},
 		Spec: v1alpha1.DataPlaneSpec{
-			DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{Name: "TEST_ENV", Value: "before_update"},
 						{Name: consts.EnvVarKongDatabase, Value: "off"},
@@ -235,7 +235,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	t.Logf("updating dataplane resource")
 	dataplane, err = dataplaneClient.Get(ctx, dataplane.Name, metav1.GetOptions{})
 	require.NoError(t, err)
-	dataplane.Spec.DeploymentOptions.Env = []corev1.EnvVar{
+	dataplane.Spec.Deployment.Env = []corev1.EnvVar{
 		{
 			Name: "TEST_ENV", Value: "after_update",
 		},

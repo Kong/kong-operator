@@ -53,7 +53,7 @@ type ControlPlaneList struct {
 
 // ControlPlaneSpec defines the desired state of ControlPlane
 type ControlPlaneSpec struct {
-	ControlPlaneDeploymentOptions `json:",inline"`
+	ControlPlaneOptions `json:",inline"`
 
 	// GatewayClass indicates the Gateway resources which this ControlPlane
 	// should be responsible for configuring routes for (e.g. HTTPRoute,
@@ -78,10 +78,11 @@ type ControlPlaneSpec struct {
 	IngressClass *string `json:"ingressClass,omitempty"`
 }
 
-// ControlPlaneDeploymentOptions indicates the specific information needed to
+// ControlPlaneOptions indicates the specific information needed to
 // deploy and connect a ControlPlane to a DataPlane object.
-type ControlPlaneDeploymentOptions struct {
-	DeploymentOptions `json:",inline"`
+type ControlPlaneOptions struct {
+	// +optional
+	Deployment DeploymentOptions `json:"deployment"`
 
 	// DataPlanes refers to the named DataPlane objects which this ControlPlane
 	// is responsible for. Currently they must be in the same namespace as the

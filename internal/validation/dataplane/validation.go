@@ -26,7 +26,7 @@ func NewValidator(c client.Client) *Validator {
 
 // Validate validates a DataPlane object and return the first validation error found.
 func (v *Validator) Validate(dataplane *operatorv1alpha1.DataPlane) error {
-	err := v.ValidateDeployOptions(dataplane.Namespace, &dataplane.Spec.DeploymentOptions)
+	err := v.ValidateDeployOptions(dataplane.Namespace, &dataplane.Spec.Deployment)
 	if err != nil {
 		return err
 	}

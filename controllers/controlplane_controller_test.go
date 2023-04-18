@@ -82,8 +82,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 					},
 				},
 				Spec: operatorv1alpha1.ControlPlaneSpec{
-					ControlPlaneDeploymentOptions: operatorv1alpha1.ControlPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							ContainerImage: pointer.String("kong/kubernetes-ingress-controller"),
 							Version:        pointer.String("2.7"),
 						},
@@ -110,8 +110,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 					UID:       types.UID(uuid.NewString()),
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							ContainerImage: pointer.String("kong"),
 							Version:        pointer.String("3.0"),
 						},
@@ -239,8 +239,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 					},
 				},
 				Spec: operatorv1alpha1.ControlPlaneSpec{
-					ControlPlaneDeploymentOptions: operatorv1alpha1.ControlPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							ContainerImage: pointer.String("kong/kubernetes-ingress-controller"),
 							Version:        pointer.String("1.0"),
 						},
@@ -267,8 +267,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 					UID:       types.UID(uuid.NewString()),
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							ContainerImage: pointer.String("kong"),
 							Version:        pointer.String("3.0"),
 						},

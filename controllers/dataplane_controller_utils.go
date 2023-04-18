@@ -16,10 +16,10 @@ import (
 // -----------------------------------------------------------------------------
 
 func generateDataPlaneImage(dataplane *operatorv1alpha1.DataPlane, validators ...versions.VersionValidationOption) (string, error) {
-	if dataplane.Spec.ContainerImage != nil {
-		dataplaneImage := *dataplane.Spec.ContainerImage
-		if dataplane.Spec.Version != nil {
-			dataplaneImage = fmt.Sprintf("%s:%s", dataplaneImage, *dataplane.Spec.Version)
+	if dataplane.Spec.Deployment.ContainerImage != nil {
+		dataplaneImage := *dataplane.Spec.Deployment.ContainerImage
+		if dataplane.Spec.Deployment.Version != nil {
+			dataplaneImage = fmt.Sprintf("%s:%s", dataplaneImage, *dataplane.Spec.Deployment.Version)
 		}
 		for _, v := range validators {
 			if !v(dataplaneImage) {
@@ -56,6 +56,6 @@ func addLabelForDataplane(obj client.Object) {
 // DataPlane - Private Functions - Equality Checks
 // -----------------------------------------------------------------------------
 
-func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1alpha1.DataPlaneDeploymentOptions) bool {
-	return deploymentOptionsDeepEqual(&spec1.DeploymentOptions, &spec2.DeploymentOptions)
+func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1alpha1.DataPlaneOptions) bool {
+	return deploymentOptionsDeepEqual(&spec1.Deployment, &spec2.Deployment)
 }

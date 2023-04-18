@@ -40,17 +40,17 @@ type GatewayConfiguration struct {
 
 // GatewayConfigurationSpec defines the desired state of GatewayConfiguration
 type GatewayConfigurationSpec struct {
-	// DataPlaneDeploymentOptions is the specification for configuration
+	// DataPlaneOptions is the specification for configuration
 	// overrides for DataPlane resources that will be created for the Gateway.
 	//
 	// +optional
-	DataPlaneDeploymentOptions *DataPlaneDeploymentOptions `json:"dataPlaneDeploymentOptions,omitempty"`
+	DataPlaneOptions *DataPlaneOptions `json:"dataPlaneOptions,omitempty"`
 
-	// ControlPlaneDeploymentOptions is the specification for configuration
+	// ControlPlaneOptions is the specification for configuration
 	// overrides for ControlPlane resources that will be created for the Gateway.
 	//
 	// +optional
-	ControlPlaneDeploymentOptions *ControlPlaneDeploymentOptions `json:"controlPlaneDeploymentOptions,omitempty"`
+	ControlPlaneOptions *ControlPlaneOptions `json:"controlPlaneOptions,omitempty"`
 }
 
 // GatewayConfigurationStatus defines the observed state of GatewayConfiguration

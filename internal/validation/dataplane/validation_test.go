@@ -62,8 +62,8 @@ func TestValidateDeployOptions(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							Env: []corev1.EnvVar{
 								{
 									Name:  consts.EnvVarKongDatabase,
@@ -84,8 +84,8 @@ func TestValidateDeployOptions(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							Env: []corev1.EnvVar{
 								{
 									Name:  consts.EnvVarKongDatabase,
@@ -106,8 +106,8 @@ func TestValidateDeployOptions(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							Env: []corev1.EnvVar{
 								{
 									Name:  consts.EnvVarKongDatabase,
@@ -129,8 +129,8 @@ func TestValidateDeployOptions(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							Env: []corev1.EnvVar{
 								{
 									Name:  consts.EnvVarKongDatabase,
@@ -152,8 +152,8 @@ func TestValidateDeployOptions(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							Env: []corev1.EnvVar{
 								{
 									Name: consts.EnvVarKongDatabase,
@@ -179,8 +179,8 @@ func TestValidateDeployOptions(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							Env: []corev1.EnvVar{
 								{
 									Name: consts.EnvVarKongDatabase,
@@ -207,8 +207,8 @@ func TestValidateDeployOptions(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							EnvFrom: []corev1.EnvFromSource{
 								{
 									Prefix: "",
@@ -232,8 +232,8 @@ func TestValidateDeployOptions(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							EnvFrom: []corev1.EnvFromSource{
 								{
 									Prefix: "KONG_",

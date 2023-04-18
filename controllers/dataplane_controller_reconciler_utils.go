@@ -228,13 +228,13 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 			updated = true
 			container = k8sutils.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 		}
-		if !reflect.DeepEqual(container.Env, dataplane.Spec.Env) {
-			container.Env = dataplane.Spec.Env
+		if !reflect.DeepEqual(container.Env, dataplane.Spec.Deployment.Env) {
+			container.Env = dataplane.Spec.Deployment.Env
 			updated = true
 		}
 
-		if !reflect.DeepEqual(container.EnvFrom, dataplane.Spec.EnvFrom) {
-			container.EnvFrom = dataplane.Spec.EnvFrom
+		if !reflect.DeepEqual(container.EnvFrom, dataplane.Spec.Deployment.EnvFrom) {
+			container.EnvFrom = dataplane.Spec.Deployment.EnvFrom
 			updated = true
 		}
 
@@ -244,7 +244,7 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 		}
 
 		// update the container image or image version if needed
-		imageUpdated, err := ensureContainerImageUpdated(container, dataplane.Spec.ContainerImage, dataplane.Spec.Version)
+		imageUpdated, err := ensureContainerImageUpdated(container, dataplane.Spec.Deployment.ContainerImage, dataplane.Spec.Deployment.Version)
 		if err != nil {
 			return false, nil, err
 		}

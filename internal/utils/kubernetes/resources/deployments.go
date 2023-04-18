@@ -67,8 +67,8 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 					},
 					Containers: []corev1.Container{{
 						Name:            consts.ControlPlaneControllerContainerName,
-						Env:             controlplane.Spec.Env,
-						EnvFrom:         controlplane.Spec.EnvFrom,
+						Env:             controlplane.Spec.Deployment.Env,
+						EnvFrom:         controlplane.Spec.Deployment.EnvFrom,
 						Image:           controlplaneImage,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						VolumeMounts: []corev1.VolumeMount{
@@ -211,8 +211,8 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, da
 								MountPath: "/var/cluster-certificate",
 							},
 						},
-						Env:             dataplane.Spec.Env,
-						EnvFrom:         dataplane.Spec.EnvFrom,
+						Env:             dataplane.Spec.Deployment.Env,
+						EnvFrom:         dataplane.Spec.Deployment.EnvFrom,
 						Image:           dataplaneImage,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Lifecycle: &corev1.Lifecycle{

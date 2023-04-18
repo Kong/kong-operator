@@ -112,7 +112,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 						UID:       types.UID(uuid.NewString()),
 					},
 					Spec: operatorv1alpha1.ControlPlaneSpec{
-						ControlPlaneDeploymentOptions: operatorv1alpha1.ControlPlaneDeploymentOptions{
+						ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
 							DataPlane: pointer.String("test-dataplane"),
 						},
 					},
@@ -302,7 +302,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				gatewayutils.LabelObjectAsGatewayManaged(gatewaySubResource)
 				if gatewaySubResource.GetName() == "test-dataplane" {
 					dataplane := gatewaySubResource.(*operatorv1alpha1.DataPlane)
-					dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneDeploymentOptions)
+					dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneOptions)
 					for _, dataplaneSubresource := range tc.dataplaneSubResources {
 						k8sutils.SetOwnerForObject(dataplaneSubresource, gatewaySubResource)
 						addLabelForDataplane(dataplaneSubresource)
@@ -311,7 +311,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				}
 				if gatewaySubResource.GetName() == "test-controlplane" {
 					controlplane := gatewaySubResource.(*operatorv1alpha1.ControlPlane)
-					_, err := setControlPlaneDefaults(&controlplane.Spec.ControlPlaneDeploymentOptions, map[string]struct{}{}, false, controlPlaneDefaultsArgs{
+					_, err := setControlPlaneDefaults(&controlplane.Spec.ControlPlaneOptions, map[string]struct{}{}, false, controlPlaneDefaultsArgs{
 						namespace:                 "test-namespace",
 						dataplaneProxyServiceName: "test-proxy-service",
 					})

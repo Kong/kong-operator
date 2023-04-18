@@ -180,26 +180,26 @@ func (r *GatewayReconciler) listGatewaysForGatewayConfig(obj client.Object) (rec
 }
 
 func (r *GatewayReconciler) setDataplaneGatewayConfigDefaults(gatewayConfig *operatorv1alpha1.GatewayConfiguration) {
-	if gatewayConfig.Spec.DataPlaneDeploymentOptions == nil {
-		gatewayConfig.Spec.DataPlaneDeploymentOptions = new(operatorv1alpha1.DataPlaneDeploymentOptions)
+	if gatewayConfig.Spec.DataPlaneOptions == nil {
+		gatewayConfig.Spec.DataPlaneOptions = new(operatorv1alpha1.DataPlaneOptions)
 	}
-	dataplaneutils.SetDataPlaneDefaults(gatewayConfig.Spec.DataPlaneDeploymentOptions)
+	dataplaneutils.SetDataPlaneDefaults(gatewayConfig.Spec.DataPlaneOptions)
 }
 
 func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gwtypes.Gateway, gatewayConfig *operatorv1alpha1.GatewayConfiguration, dataplaneName, dataplaneProxyServiceName string) error {
 	dontOverride := make(map[string]struct{})
-	if gatewayConfig.Spec.ControlPlaneDeploymentOptions == nil {
-		gatewayConfig.Spec.ControlPlaneDeploymentOptions = new(operatorv1alpha1.ControlPlaneDeploymentOptions)
+	if gatewayConfig.Spec.ControlPlaneOptions == nil {
+		gatewayConfig.Spec.ControlPlaneOptions = new(operatorv1alpha1.ControlPlaneOptions)
 	}
-	if gatewayConfig.Spec.ControlPlaneDeploymentOptions.DataPlane == nil ||
-		*gatewayConfig.Spec.ControlPlaneDeploymentOptions.DataPlane == "" {
-		gatewayConfig.Spec.ControlPlaneDeploymentOptions.DataPlane = &dataplaneName
+	if gatewayConfig.Spec.ControlPlaneOptions.DataPlane == nil ||
+		*gatewayConfig.Spec.ControlPlaneOptions.DataPlane == "" {
+		gatewayConfig.Spec.ControlPlaneOptions.DataPlane = &dataplaneName
 	}
-	for _, env := range gatewayConfig.Spec.ControlPlaneDeploymentOptions.Env {
+	for _, env := range gatewayConfig.Spec.ControlPlaneOptions.Deployment.Env {
 		dontOverride[env.Name] = struct{}{}
 	}
 
-	if _, err := setControlPlaneDefaults(gatewayConfig.Spec.ControlPlaneDeploymentOptions, dontOverride, r.DevelopmentMode, controlPlaneDefaultsArgs{
+	if _, err := setControlPlaneDefaults(gatewayConfig.Spec.ControlPlaneOptions, dontOverride, r.DevelopmentMode, controlPlaneDefaultsArgs{
 		namespace:                 gateway.Namespace,
 		dataplaneProxyServiceName: dataplaneProxyServiceName,
 	}); err != nil {

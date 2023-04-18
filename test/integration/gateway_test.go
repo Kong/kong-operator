@@ -307,35 +307,35 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 }
 
 func setGatewayConfigurationEnvProxyPort(gatewayConfiguration *operatorv1alpha1.GatewayConfiguration, proxyPort int, proxySSLPort int) {
-	dpOptions := gatewayConfiguration.Spec.DataPlaneDeploymentOptions
+	dpOptions := gatewayConfiguration.Spec.DataPlaneOptions
 	if dpOptions == nil {
-		dpOptions = &operatorv1alpha1.DataPlaneDeploymentOptions{}
+		dpOptions = &operatorv1alpha1.DataPlaneOptions{}
 	}
 
-	dpOptions.Env = setEnvValueByName(dpOptions.Env,
+	dpOptions.Deployment.Env = setEnvValueByName(dpOptions.Deployment.Env,
 		"KONG_PROXY_LISTEN",
 		fmt.Sprintf("0.0.0.0:%d reuseport backlog=16384, 0.0.0.0:%d http2 ssl reuseport backlog=16384", proxyPort, proxySSLPort),
 	)
-	dpOptions.Env = setEnvValueByName(dpOptions.Env,
+	dpOptions.Deployment.Env = setEnvValueByName(dpOptions.Deployment.Env,
 		"KONG_PORT_MAPS",
 		fmt.Sprintf("80:%d, 443:%d", proxyPort, proxySSLPort),
 	)
 
-	gatewayConfiguration.Spec.DataPlaneDeploymentOptions = dpOptions
+	gatewayConfiguration.Spec.DataPlaneOptions = dpOptions
 }
 
 func setGatewayConfigurationEnvAdminAPIPort(gatewayConfiguration *operatorv1alpha1.GatewayConfiguration, adminAPIPort int) {
-	dpOptions := gatewayConfiguration.Spec.DataPlaneDeploymentOptions
+	dpOptions := gatewayConfiguration.Spec.DataPlaneOptions
 	if dpOptions == nil {
-		dpOptions = &operatorv1alpha1.DataPlaneDeploymentOptions{}
+		dpOptions = &operatorv1alpha1.DataPlaneOptions{}
 	}
 
-	dpOptions.Env = setEnvValueByName(dpOptions.Env,
+	dpOptions.Deployment.Env = setEnvValueByName(dpOptions.Deployment.Env,
 		"KONG_ADMIN_LISTEN",
 		fmt.Sprintf("0.0.0.0:%d ssl reuseport backlog=16384", adminAPIPort),
 	)
 
-	gatewayConfiguration.Spec.DataPlaneDeploymentOptions = dpOptions
+	gatewayConfiguration.Spec.DataPlaneOptions = dpOptions
 }
 
 type networkPolicyIngressRuleDecorator struct {

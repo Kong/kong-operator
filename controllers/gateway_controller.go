@@ -385,13 +385,13 @@ func (r *GatewayReconciler) provisionDataPlane(
 	trace(log, "ensuring dataplane config is up to date", gateway)
 	// compare deployment option of dataplane with dataplane deployment option of gatewayconfiguration.
 	// if not configured in gatewayconfiguration, compare deployment option of dataplane with an empty one.
-	expectedDataplaneDeploymentOptions := &operatorv1alpha1.DataPlaneDeploymentOptions{}
-	if gatewayConfig.Spec.DataPlaneDeploymentOptions != nil {
-		expectedDataplaneDeploymentOptions = gatewayConfig.Spec.DataPlaneDeploymentOptions
+	expectedDataplaneDeploymentOptions := &operatorv1alpha1.DataPlaneOptions{}
+	if gatewayConfig.Spec.DataPlaneOptions != nil {
+		expectedDataplaneDeploymentOptions = gatewayConfig.Spec.DataPlaneOptions
 	}
-	if !dataplaneSpecDeepEqual(&dataplane.Spec.DataPlaneDeploymentOptions, expectedDataplaneDeploymentOptions) {
+	if !dataplaneSpecDeepEqual(&dataplane.Spec.DataPlaneOptions, expectedDataplaneDeploymentOptions) {
 		trace(log, "dataplane config is out of date, updating", gateway)
-		dataplane.Spec.DataPlaneDeploymentOptions = *expectedDataplaneDeploymentOptions
+		dataplane.Spec.DataPlaneOptions = *expectedDataplaneDeploymentOptions
 
 		err = r.Client.Update(ctx, dataplane)
 		if err != nil {
@@ -484,10 +484,10 @@ func (r *GatewayReconciler) provisionControlPlane(
 	controlplane := controlplanes[0].DeepCopy()
 
 	trace(log, "ensuring controlplane config is up to date", gateway)
-	if gatewayConfig.Spec.ControlPlaneDeploymentOptions != nil {
-		if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneDeploymentOptions, gatewayConfig.Spec.ControlPlaneDeploymentOptions, "CONTROLLER_KONG_ADMIN_URL") {
+	if gatewayConfig.Spec.ControlPlaneOptions != nil {
+		if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneOptions, gatewayConfig.Spec.ControlPlaneOptions, "CONTROLLER_KONG_ADMIN_URL") {
 			trace(log, "controlplane config is out of date, updating", gateway)
-			controlplane.Spec.ControlPlaneDeploymentOptions = *gatewayConfig.Spec.ControlPlaneDeploymentOptions
+			controlplane.Spec.ControlPlaneOptions = *gatewayConfig.Spec.ControlPlaneOptions
 			if err := r.Client.Update(ctx, controlplane); err != nil {
 				k8sutils.SetCondition(
 					createControlPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error()),
@@ -506,15 +506,15 @@ func (r *GatewayReconciler) provisionControlPlane(
 	trace(log, "ensuring controlplane config is up to date", gateway)
 	// compare deployment option of controlplane with controlplane deployment option of gatewayconfiguration.
 	// if not configured in gatewayconfiguration, compare deployment option of controlplane with an empty one.
-	expectedControlplaneDeploymentOptions := &operatorv1alpha1.ControlPlaneDeploymentOptions{}
-	if gatewayConfig.Spec.ControlPlaneDeploymentOptions != nil {
-		expectedControlplaneDeploymentOptions = gatewayConfig.Spec.ControlPlaneDeploymentOptions
+	expectedControlplaneDeploymentOptions := &operatorv1alpha1.ControlPlaneOptions{}
+	if gatewayConfig.Spec.ControlPlaneOptions != nil {
+		expectedControlplaneDeploymentOptions = gatewayConfig.Spec.ControlPlaneOptions
 	}
 
 	//
-	if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneDeploymentOptions, expectedControlplaneDeploymentOptions, "CONTROLLER_KONG_ADMIN_URL") {
+	if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneOptions, expectedControlplaneDeploymentOptions, "CONTROLLER_KONG_ADMIN_URL") {
 		trace(log, "controlplane config is out of date, updating", gateway)
-		controlplane.Spec.ControlPlaneDeploymentOptions = *expectedControlplaneDeploymentOptions
+		controlplane.Spec.ControlPlaneOptions = *expectedControlplaneDeploymentOptions
 		err = r.Client.Update(ctx, controlplane)
 		if err != nil {
 			k8sutils.SetCondition(

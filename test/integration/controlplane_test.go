@@ -41,9 +41,9 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 			Name:      controlplaneName.Name,
 		},
 		Spec: operatorv1alpha1.ControlPlaneSpec{
-			ControlPlaneDeploymentOptions: operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{},
-				DataPlane:         nil,
+			ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{},
+				DataPlane:  nil,
 			},
 		},
 	}
@@ -135,8 +135,8 @@ func TestControlPlaneEssentials(t *testing.T) {
 			Name:      controlplaneName.Name,
 		},
 		Spec: operatorv1alpha1.ControlPlaneSpec{
-			ControlPlaneDeploymentOptions: operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{Name: "TEST_ENV", Value: "test"},
 					},
@@ -275,8 +275,8 @@ func TestControlPlaneUpdate(t *testing.T) {
 			Name:      controlplaneName.Name,
 		},
 		Spec: operatorv1alpha1.ControlPlaneSpec{
-			ControlPlaneDeploymentOptions: operatorv1alpha1.ControlPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
 					Env: []corev1.EnvVar{
 						{
 							Name: "TEST_ENV", Value: "before_update",
@@ -328,7 +328,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 	t.Logf("updating controlplane resource")
 	controlplane, err = controlplaneClient.Get(ctx, controlplaneName.Name, metav1.GetOptions{})
 	require.NoError(t, err)
-	controlplane.Spec.DeploymentOptions.Env = []corev1.EnvVar{
+	controlplane.Spec.Deployment.Env = []corev1.EnvVar{
 		{
 			Name: "TEST_ENV", Value: "after_update",
 		},

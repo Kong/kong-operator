@@ -163,8 +163,8 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					UID:       types.UID(uuid.NewString()),
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							ContainerImage: pointer.String("kong"),
 							Version:        pointer.String("3.0"),
 						},
@@ -241,8 +241,8 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					UID:       types.UID(uuid.NewString()),
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneDeploymentOptions: operatorv1alpha1.DataPlaneDeploymentOptions{
-						DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
 							ContainerImage: pointer.String("kong"),
 							Version:        pointer.String("1.0"),
 						},

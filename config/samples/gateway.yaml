@@ -4,13 +4,15 @@ metadata:
   name: kong
   namespace: default
 spec:
-  dataPlaneDeploymentOptions:
-    containerImage: kong
-    version: "3.0"
-  controlPlaneDeploymentOptions:
-    env:
-    - name: CONTROLLER_LOG_LEVEL
-      value: debug
+  dataPlaneOptions:
+    deployment:
+      containerImage: kong
+      version: "3.0"
+  controlPlaneOptions:
+    deployment:
+      env:
+      - name: CONTROLLER_LOG_LEVEL
+        value: debug
 ---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1beta1
