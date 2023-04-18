@@ -13,10 +13,10 @@ import (
 // ClusterRole generator
 // -----------------------------------------------------------------------------
 
-// GenerateNewClusterRoleForControlPlane_ge2_7 is a helper to generate a ClusterRole
+// GenerateNewClusterRoleForControlPlane_lt2_9_ge2_7 is a helper to generate a ClusterRole
 // resource with all the permissions needed by the controlplane deployment.
-// It is used for controlplanes that match the semver constraint ">=2.7"
-func GenerateNewClusterRoleForControlPlane_ge2_7(controlplaneName string) *rbacv1.ClusterRole {
+// It is used for controlplanes that match the semver constraint "<2.9, >=2.7"
+func GenerateNewClusterRoleForControlPlane_lt2_9_ge2_7(controlplaneName string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", controlplaneName),
