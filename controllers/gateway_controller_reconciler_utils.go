@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -364,8 +363,10 @@ func (r *GatewayReconciler) ensureOwnedControlPlanesDeleted(ctx context.Context,
 		return false, err
 	}
 
-	deleted := false
-	var deletionErr *multierror.Error
+	var (
+		deleted bool
+		errs    []error
+	)
 	for i := range controlplanes {
 		// skip already deleted controlplanes, because controlplanes may have finalizers
 		// to wait for owned cluster wide resources deleted.
@@ -374,12 +375,12 @@ func (r *GatewayReconciler) ensureOwnedControlPlanesDeleted(ctx context.Context,
 		}
 		err = r.Client.Delete(ctx, &controlplanes[i])
 		if err != nil && !k8serrors.IsNotFound(err) {
-			deletionErr = multierror.Append(deletionErr, err)
+			errs = append(errs, err)
 		}
 		deleted = true
 	}
 
-	return deleted, deletionErr.ErrorOrNil()
+	return deleted, errors.Join(errs...)
 }
 
 // ensureOwnedDataPlanesDeleted deleted all dataplanes owned by gateway.
@@ -390,17 +391,19 @@ func (r *GatewayReconciler) ensureOwnedDataPlanesDeleted(ctx context.Context, ga
 		return false, err
 	}
 
-	deleted := false
-	var deletionErr *multierror.Error
+	var (
+		deleted bool
+		errs    []error
+	)
 	for i := range dataplanes {
 		err = r.Client.Delete(ctx, &dataplanes[i])
 		if err != nil && !k8serrors.IsNotFound(err) {
-			deletionErr = multierror.Append(deletionErr, err)
+			errs = append(errs, err)
 		}
 		deleted = true
 	}
 
-	return deleted, deletionErr.ErrorOrNil()
+	return deleted, errors.Join(errs...)
 }
 
 // ensureOwnedNetworkPoliciesDeleted deleted all network policies owned by gateway.
@@ -411,17 +414,19 @@ func (r *GatewayReconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Contex
 		return false, err
 	}
 
-	deleted := false
-	var deletionErr *multierror.Error
+	var (
+		deleted bool
+		errs    []error
+	)
 	for i := range networkPolicies {
 		err = r.Client.Delete(ctx, &networkPolicies[i])
 		if err != nil && !k8serrors.IsNotFound(err) {
-			deletionErr = multierror.Append(deletionErr, err)
+			errs = append(errs, err)
 		}
 		deleted = true
 	}
 
-	return deleted, deletionErr.ErrorOrNil()
+	return deleted, errors.Join(errs...)
 }
 
 // -----------------------------------------------------------------------------

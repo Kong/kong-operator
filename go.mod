@@ -1,6 +1,6 @@
 module github.com/kong/gateway-operator
 
-go 1.19
+go 1.20
 
 // Ref: https://github.com/Kong/gateway-operator/issues/618
 exclude (
@@ -15,7 +15,6 @@ require (
 	github.com/cloudflare/cfssl v1.6.4
 	github.com/go-logr/logr v1.2.4
 	github.com/google/uuid v1.3.0
-	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kong/kubernetes-telemetry v0.0.2
 	github.com/kong/kubernetes-testing-framework v0.30.1
 	github.com/samber/lo v1.38.1
@@ -49,6 +48,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.7.1 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jmoiron/sqlx v1.3.3 // indirect

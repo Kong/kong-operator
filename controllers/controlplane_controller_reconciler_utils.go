@@ -7,7 +7,6 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -402,7 +401,6 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRolesDeleted(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (deletions bool, err error) {
-	var deleted bool
 	clusterRoles, err := k8sutils.ListClusterRolesForOwner(
 		ctx, r.Client,
 		consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.UID,
@@ -411,16 +409,19 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRolesDeleted(
 		return false, err
 	}
 
-	var deletionErr *multierror.Error
+	var (
+		deleted bool
+		errs    []error
+	)
 	for i := range clusterRoles {
 		err = r.Client.Delete(ctx, &clusterRoles[i])
 		if err != nil && !k8serrors.IsNotFound(err) {
-			deletionErr = multierror.Append(deletionErr, err)
+			errs = append(errs, err)
 		}
 		deleted = true
 	}
 
-	return deleted, deletionErr.ErrorOrNil()
+	return deleted, errors.Join(errs...)
 }
 
 // ensureOwnedClusterRoleBindingsDeleted removes all the owned ClusterRoleBindings of the controlplane
@@ -430,7 +431,6 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRoleBindingsDeleted(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (deletions bool, err error) {
-	var deleted bool
 	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(
 		ctx, r.Client,
 		consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.UID,
@@ -439,16 +439,19 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRoleBindingsDeleted(
 		return false, err
 	}
 
-	var deletionErr *multierror.Error
+	var (
+		deleted bool
+		errs    []error
+	)
 	for i := range clusterRoleBindings {
 		err = r.Client.Delete(ctx, &clusterRoleBindings[i])
 		if err != nil && !k8serrors.IsNotFound(err) {
-			deletionErr = multierror.Append(deletionErr, err)
+			errs = append(errs, err)
 		}
 		deleted = true
 	}
 
-	return deleted, deletionErr.ErrorOrNil()
+	return deleted, errors.Join(errs...)
 }
 
 // deploymentSpecVolumesNeedsUpdate returns true if the volumes in deployment
