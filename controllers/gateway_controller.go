@@ -211,8 +211,8 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	trace(log, "resource is supported, ensuring that it gets marked as scheduled", gateway)
 	if !k8sutils.IsValidCondition(GatewayScheduledType, gwConditionAware) {
 		condition := k8sutils.NewCondition(
-			k8sutils.ConditionType(gatewayv1beta1.GatewayConditionScheduled),
-			metav1.ConditionTrue, k8sutils.ConditionReason(gatewayv1beta1.GatewayReasonScheduled),
+			k8sutils.ConditionType(gatewayv1beta1.GatewayConditionAccepted),
+			metav1.ConditionTrue, k8sutils.ConditionReason(gatewayv1beta1.GatewayClassReasonAccepted),
 			fmt.Sprintf("this gateway has been picked up by the %s and will be processed", vars.ControllerName()),
 		)
 		k8sutils.SetCondition(condition, gwConditionAware)

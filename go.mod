@@ -2,10 +2,7 @@ module github.com/kong/gateway-operator
 
 go 1.20
 
-// Ref: https://github.com/Kong/gateway-operator/issues/618
 exclude (
-	sigs.k8s.io/gateway-api v0.6.0
-	sigs.k8s.io/gateway-api v0.6.1
 	sigs.k8s.io/gateway-api v0.6.2
 )
 
@@ -25,7 +22,7 @@ require (
 	k8s.io/client-go v0.26.3
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
 	sigs.k8s.io/controller-runtime v0.14.6
-	sigs.k8s.io/gateway-api v0.5.1
+	sigs.k8s.io/gateway-api v0.6.1
 )
 
 require (

@@ -17,8 +17,8 @@ import (
 // marked as scheduled by the controller.
 func IsScheduled(gateway *gwtypes.Gateway) bool {
 	for _, cond := range gateway.Status.Conditions {
-		if cond.Type == string(gatewayv1beta1.GatewayConditionScheduled) &&
-			cond.Reason == string(gatewayv1beta1.GatewayReasonScheduled) &&
+		if cond.Type == string(gatewayv1beta1.GatewayConditionAccepted) &&
+			cond.Reason == string(gatewayv1beta1.GatewayClassReasonAccepted) &&
 			cond.Status == metav1.ConditionTrue {
 			return true
 		}

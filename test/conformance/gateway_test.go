@@ -17,6 +17,12 @@ import (
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
+const (
+	showDebug                  = true
+	shouldCleanup              = true
+	enableAllSupportedFeatures = true
+)
+
 func TestGatewayConformance(t *testing.T) {
 	t.Parallel()
 
@@ -41,14 +47,12 @@ func TestGatewayConformance(t *testing.T) {
 	conformanceTestsBaseManifests := fmt.Sprintf("%s/conformance/base/manifests.yaml", testutils.GatewayRawRepoURL)
 
 	cSuite := suite.New(suite.Options{
-		Client:               clients.MgrClient,
-		GatewayClassName:     gwc.Name,
-		Debug:                true,
-		CleanupBaseResources: true,
-		BaseManifests:        conformanceTestsBaseManifests,
-		SupportedFeatures: []suite.SupportedFeature{
-			suite.SupportReferenceGrant,
-		},
+		Client:                     clients.MgrClient,
+		GatewayClassName:           gwc.Name,
+		Debug:                      showDebug,
+		CleanupBaseResources:       shouldCleanup,
+		BaseManifests:              conformanceTestsBaseManifests,
+		EnableAllSupportedFeatures: enableAllSupportedFeatures,
 	})
 	cSuite.Setup(t)
 }

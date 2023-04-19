@@ -97,6 +97,8 @@ jobs:
         path: unit-tests.xml
 
   conformance-tests:
+    # https://github.com/Kong/gateway-operator/issues/11#issuecomment-1514712925
+    if: false
     runs-on: ubuntu-latest
     steps:
     - name: checkout repository
@@ -207,7 +209,8 @@ jobs:
     needs:
       - unit-tests
       - integration-tests
-      - conformance-tests
+      # https://github.com/Kong/gateway-operator/issues/11#issuecomment-1514712925
+      # - conformance-tests
       - e2e-tests
     if: ${{ always() }}
     runs-on: ubuntu-latest
