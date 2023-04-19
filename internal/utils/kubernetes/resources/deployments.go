@@ -87,17 +87,6 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 								MountPath: "/var/cluster-certificate",
 							},
 						},
-						Lifecycle: &corev1.Lifecycle{
-							PreStop: &corev1.LifecycleHandler{
-								Exec: &corev1.ExecAction{
-									Command: []string{
-										"/bin/sh",
-										"-c",
-										"kong quit",
-									},
-								},
-							},
-						},
 						Ports: []corev1.ContainerPort{
 							{
 								Name:          "health",
