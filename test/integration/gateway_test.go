@@ -73,7 +73,15 @@ func TestGatewayEssentials(t *testing.T) {
 	require.Eventually(t, testutils.GetResponseBodyContains(t, ctx, clients, httpc, "http://"+gatewayIPAddress, testutils.DefaultKongResponseBody), testutils.SubresourceReadinessWait, time.Second)
 
 	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
+	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
 	controlplaneClient := clients.OperatorClient.ApisV1alpha1().ControlPlanes(namespace.Name)
+	controlplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: controlplane.Name}
+
+	t.Log("verifying that dataplane has 1 ready replica")
+	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneNN, clients, 1), time.Minute, time.Second)
+
+	t.Log("verifying that controlplane has 1 ready replica")
+	require.Eventually(t, testutils.ControlPlaneHasNReadyPods(t, ctx, controlplaneNN, clients, 1), time.Minute, time.Second)
 
 	t.Log("deleting controlplane")
 	require.NoError(t, controlplaneClient.Delete(ctx, controlplane.Name, metav1.DeleteOptions{}))

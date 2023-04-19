@@ -72,6 +72,20 @@ func ControlPlaneIsScheduled(t *testing.T, ctx context.Context, controlplane typ
 	}, operatorClient)
 }
 
+// DataPlaneIsProvisioned is a helper function for tests that returns a function
+// that can be used to check if a DataPlane was provisioned.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func DataPlaneIsProvisioned(t *testing.T, ctx context.Context, dataplane types.NamespacedName, operatorClient *clientset.Clientset) func() bool {
+	return DataPlanePredicate(t, ctx, dataplane, func(c *operatorv1alpha1.DataPlane) bool {
+		for _, condition := range c.Status.Conditions {
+			if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) && condition.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+		return false
+	}, operatorClient)
+}
+
 // ControlPlaneDetectedNoDataplane is a helper function for tests that returns a function
 // that can be used to check if a ControlPlane detected unset dataplane.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
@@ -167,6 +181,15 @@ func ControlPlaneHasClusterRoleBinding(t *testing.T, ctx context.Context, contro
 	}
 }
 
+func ControlPlaneHasNReadyPods(t *testing.T, ctx context.Context, controlplaneName types.NamespacedName, clients K8sClients, n int) func() bool {
+	return controlPlanePredicate(t, ctx, controlplaneName, func(controlplane *operatorv1alpha1.ControlPlane) bool {
+		deployments := MustListControlPlaneDeployments(t, ctx, controlplane, clients)
+		return len(deployments) == 1 &&
+			*deployments[0].Spec.Replicas == int32(n) &&
+			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
+	}, clients.OperatorClient)
+}
+
 // DataPlaneHasActiveDeployment is a helper function for tests that returns a function
 // that can be used to check if a DataPlane has an active deployment.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
@@ -175,6 +198,15 @@ func DataPlaneHasActiveDeployment(t *testing.T, ctx context.Context, dataplaneNa
 		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients)
 		return len(deployments) == 1 &&
 			*deployments[0].Spec.Replicas > 0 &&
+			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
+	}, clients.OperatorClient)
+}
+
+func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, n int) func() bool {
+	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1alpha1.DataPlane) bool {
+		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients)
+		return len(deployments) == 1 &&
+			*deployments[0].Spec.Replicas == int32(n) &&
 			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
 	}, clients.OperatorClient)
 }

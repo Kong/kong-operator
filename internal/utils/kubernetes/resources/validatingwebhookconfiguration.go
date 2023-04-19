@@ -35,6 +35,18 @@ func GenerateNewValidatingWebhookConfiguration(serviceNamespace, serviceName, we
 							admissionregistrationv1.Update,
 						},
 					},
+					{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"gateway-operator.konghq.com"},
+							APIVersions: []string{"v1alpha1"},
+							Resources:   []string{"controlplanes"},
+							Scope:       &namespacedScope,
+						},
+						Operations: []admissionregistrationv1.OperationType{
+							admissionregistrationv1.Create,
+							admissionregistrationv1.Update,
+						},
+					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service: &admissionregistrationv1.ServiceReference{

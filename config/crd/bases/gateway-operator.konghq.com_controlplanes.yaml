@@ -219,6 +219,14 @@ spec:
                           x-kubernetes-map-type: atomic
                       type: object
                     type: array
+                  replicas:
+                    default: 1
+                    description: Replicas describes the number of desired pods. This
+                      is a pointer to distinguish between explicit zero and not specified.
+                      This only affects the DataPlane deployments for now, for more
+                      details on ControlPlane scaling please see https://github.com/Kong/gateway-operator/issues/736.
+                    format: int32
+                    type: integer
                   resources:
                     description: Resources describes the compute resource requirements.
                     properties:

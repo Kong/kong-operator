@@ -150,6 +150,7 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, da
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
+			Replicas: dataplane.Spec.Deployment.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": dataplane.Name,

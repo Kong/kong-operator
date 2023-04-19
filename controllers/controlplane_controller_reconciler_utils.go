@@ -160,6 +160,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		return false, nil, err
 	}
 	generatedDeployment := k8sresources.GenerateNewDeploymentForControlPlane(controlplane, controlplaneImage, serviceAccountName, certSecretName)
+
 	k8sutils.SetOwnerForObject(generatedDeployment, controlplane)
 	addLabelForControlPlane(generatedDeployment)
 

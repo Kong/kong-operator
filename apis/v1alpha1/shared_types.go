@@ -9,6 +9,15 @@ import (
 // includes options for managing Deployments such as the container image and
 // version, as well as Env variable overrides.
 type DeploymentOptions struct {
+	// Replicas describes the number of desired pods.
+	// This is a pointer to distinguish between explicit zero and not specified.
+	// This only affects the DataPlane deployments for now, for more details on
+	// ControlPlane scaling please see https://github.com/Kong/gateway-operator/issues/736.
+	//
+	// +optional
+	// +kubebuilder:default=1
+	Replicas *int32 `json:"replicas,omitempty"`
+
 	// Resources describes the compute resource requirements.
 	//
 	// +optional

@@ -276,6 +276,11 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 			updated = true
 		}
 
+		if !reflect.DeepEqual(existingDeployment.Spec.Replicas, generatedDeployment.Spec.Replicas) {
+			existingDeployment.Spec.Replicas = generatedDeployment.Spec.Replicas
+			updated = true
+		}
+
 		// update the container image or image version if needed
 		imageUpdated, err := ensureContainerImageUpdated(container, dataplane.Spec.Deployment.ContainerImage, dataplane.Spec.Deployment.Version)
 		if err != nil {
