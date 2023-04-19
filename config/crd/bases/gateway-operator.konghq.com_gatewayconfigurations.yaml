@@ -512,6 +512,25 @@ spec:
                           is in use. \n If omitted a default version will be chosen."
                         type: string
                     type: object
+                  services:
+                    description: DataPlaneServicesOptions defines the information
+                      specifically needed to customize the dataplane services
+                    properties:
+                      proxy:
+                        description: Proxy defines the information related to the
+                          DataPlane proxy service.
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            description: 'Annotations is an unstructured key value
+                              map stored with a resource that may be set by external
+                              tools to store and retrieve arbitrary metadata. They
+                              are not queryable and should be preserved when modifying
+                              objects. More info: http://kubernetes.io/docs/user-guide/annotations'
+                            type: object
+                        type: object
+                    type: object
                 type: object
             type: object
           status:

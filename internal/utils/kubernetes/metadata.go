@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"fmt"
-	"reflect"
 
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -66,23 +67,43 @@ func RemoveFinalizerInMetadata(metadata *metav1.ObjectMeta, finalizer string) bo
 // all the needed fields set. The source of truth is the second argument of
 // the function, a generated object metadata.
 func EnsureObjectMetaIsUpdated(
-	existingObjMeta metav1.ObjectMeta,
-	generatedObjMeta metav1.ObjectMeta,
+	existingMeta metav1.ObjectMeta,
+	generatedMeta metav1.ObjectMeta,
+	options ...func(existingMeta, generatedMeta metav1.ObjectMeta) (bool, metav1.ObjectMeta),
 ) (toUpdate bool, updatedMeta metav1.ObjectMeta) {
-	newObjectMeta := existingObjMeta.DeepCopy()
-	newObjectMeta.SetOwnerReferences(generatedObjMeta.GetOwnerReferences())
+	var metaToUpdate bool
 
-	var labelsToUpdate bool
-	for k, v := range generatedObjMeta.GetLabels() {
-		newObjectMeta.Labels[k] = v
-		if existingObjMeta.Labels[k] != v {
-			labelsToUpdate = true
+	// compare and enforce labels
+	if !maps.Equal(existingMeta.Labels, generatedMeta.Labels) {
+		existingMeta.SetLabels(generatedMeta.GetLabels())
+		metaToUpdate = true
+	}
+
+	// compare and enforce ownerReferences
+	if !slices.EqualFunc(existingMeta.OwnerReferences, generatedMeta.OwnerReferences, func(newObjRef metav1.OwnerReference, genObjRef metav1.OwnerReference) bool {
+		sameController := (newObjRef.Controller != nil && genObjRef.Controller != nil && *newObjRef.Controller == *genObjRef.Controller) ||
+			(newObjRef.Controller == nil && genObjRef.Controller == nil)
+		sameBlockOwnerDeletion := (newObjRef.BlockOwnerDeletion != nil && genObjRef.BlockOwnerDeletion != nil && *newObjRef.BlockOwnerDeletion == *genObjRef.BlockOwnerDeletion) ||
+			(newObjRef.BlockOwnerDeletion == nil && genObjRef.BlockOwnerDeletion == nil)
+		return newObjRef.APIVersion == genObjRef.APIVersion &&
+			newObjRef.Kind == genObjRef.Kind &&
+			newObjRef.Name == genObjRef.Name &&
+			newObjRef.UID == genObjRef.UID &&
+			sameController &&
+			sameBlockOwnerDeletion
+	}) {
+		existingMeta.SetOwnerReferences(generatedMeta.GetOwnerReferences())
+		metaToUpdate = true
+	}
+
+	// apply all the passed options
+	for _, opt := range options {
+		var changed bool
+		changed, existingMeta = opt(existingMeta, generatedMeta)
+		if changed {
+			metaToUpdate = true
 		}
 	}
 
-	if !reflect.DeepEqual(existingObjMeta.OwnerReferences, newObjectMeta.OwnerReferences) || labelsToUpdate {
-		return true, *newObjectMeta
-	}
-
-	return false, *newObjectMeta
+	return metaToUpdate, existingMeta
 }

@@ -20,6 +20,7 @@ require (
 	github.com/kong/kubernetes-testing-framework v0.30.1
 	github.com/samber/lo v1.38.1
 	github.com/stretchr/testify v1.8.2
+	golang.org/x/exp v0.0.0-20220407100705-7b9b53b0aca4
 	k8s.io/api v0.26.3
 	k8s.io/apimachinery v0.27.1
 	k8s.io/client-go v0.26.3
@@ -68,7 +69,6 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
 	golang.org/x/crypto v0.6.0 // indirect
-	golang.org/x/exp v0.0.0-20220407100705-7b9b53b0aca4 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	google.golang.org/api v0.114.0 // indirect
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect

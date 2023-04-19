@@ -60,6 +60,32 @@ type DataPlaneSpec struct {
 type DataPlaneOptions struct {
 	// +optional
 	Deployment DeploymentOptions `json:"deployment"`
+	// +optional
+	Services DataPlaneServicesOptions `json:"services"`
+}
+
+// DataPlaneServicesOptions defines the information specifically needed to
+// customize the dataplane services
+type DataPlaneServicesOptions struct {
+	// Proxy defines the information related to the
+	// DataPlane proxy service.
+	//
+	// +optional
+	Proxy *ProxyServiceOptions `json:"proxy,omitempty"`
+
+	// This struct is where we'll be adding a new DataPlaneAdminServiceOptions in
+	// the future when needed.
+}
+
+// ProxyServiceOptions is used to includes options to customize the proxy service,
+// such as the annotations.
+type ProxyServiceOptions struct {
+	// Annotations is an unstructured key value map stored with a resource that may be
+	// set by external tools to store and retrieve arbitrary metadata. They are not
+	// queryable and should be preserved when modifying objects.
+	// More info: http://kubernetes.io/docs/user-guide/annotations
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,12,rep,name=annotations"`
 }
 
 // DataPlaneStatus defines the observed state of DataPlane

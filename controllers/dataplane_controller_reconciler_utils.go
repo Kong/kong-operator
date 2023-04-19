@@ -344,12 +344,27 @@ func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
 
 	generatedService := k8sresources.GenerateNewProxyServiceForDataplane(dataplane)
 	addLabelForDataplane(generatedService)
+	addAnnotationsForDataplaneProxyService(generatedService, *dataplane)
 	k8sutils.SetOwnerForObject(generatedService, dataplane)
 
 	if count == 1 {
 		var updated bool
 		existingService := &services[0]
-		updated, existingService.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingService.ObjectMeta, generatedService.ObjectMeta)
+		updated, existingService.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingService.ObjectMeta, generatedService.ObjectMeta,
+			// enforce all the annotations provided through the dataplane API
+			func(existingMeta metav1.ObjectMeta, generatedMeta metav1.ObjectMeta) (bool, metav1.ObjectMeta) {
+				var metaToUpdate bool
+				if existingMeta.Annotations == nil && generatedMeta.Annotations != nil {
+					existingMeta.Annotations = map[string]string{}
+				}
+				for k, v := range generatedMeta.Annotations {
+					if existingMeta.Annotations[k] != v {
+						existingMeta.Annotations[k] = v
+						metaToUpdate = true
+					}
+				}
+				return metaToUpdate, existingMeta
+			})
 		if updated {
 			return true, existingService, r.Client.Update(ctx, existingService)
 		}

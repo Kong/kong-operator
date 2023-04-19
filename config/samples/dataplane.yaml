@@ -14,3 +14,7 @@ spec:
       limits:
         memory: "1024Mi"
         cpu: "1000m"
+  services:
+    proxy:
+      annotations:
+        foo: bar

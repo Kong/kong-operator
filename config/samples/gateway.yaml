@@ -8,6 +8,10 @@ spec:
     deployment:
       containerImage: kong
       version: "3.0"
+    services:
+      proxy:
+        annotations:
+          foo: bar
   controlPlaneOptions:
     deployment:
       env:

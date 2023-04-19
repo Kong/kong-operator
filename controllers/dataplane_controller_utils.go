@@ -40,7 +40,7 @@ func generateDataPlaneImage(dataplane *operatorv1alpha1.DataPlane, validators ..
 }
 
 // -----------------------------------------------------------------------------
-// DataPlane - Private Functions - Kubernetes Object Labels
+// DataPlane - Private Functions - Kubernetes Object Labels and Annotations
 // -----------------------------------------------------------------------------
 
 func addLabelForDataplane(obj client.Object) {
@@ -52,10 +52,25 @@ func addLabelForDataplane(obj client.Object) {
 	obj.SetLabels(labels)
 }
 
+func addAnnotationsForDataplaneProxyService(obj client.Object, dataplane operatorv1alpha1.DataPlane) {
+	if dataplane.Spec.Services.Proxy == nil || dataplane.Spec.Services.Proxy.Annotations == nil {
+		return
+	}
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	for k, v := range dataplane.Spec.Services.Proxy.Annotations {
+		annotations[k] = v
+	}
+	obj.SetAnnotations(annotations)
+}
+
 // -----------------------------------------------------------------------------
 // DataPlane - Private Functions - Equality Checks
 // -----------------------------------------------------------------------------
 
 func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1alpha1.DataPlaneOptions) bool {
-	return deploymentOptionsDeepEqual(&spec1.Deployment, &spec2.Deployment)
+	return deploymentOptionsDeepEqual(&spec1.Deployment, &spec2.Deployment) &&
+		servicesOptionsDeepEqual(&spec1.Services, &spec2.Services)
 }

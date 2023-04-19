@@ -418,6 +418,14 @@ func deploymentOptionsDeepEqual(opts1, opts2 *operatorv1alpha1.DeploymentOptions
 }
 
 // -----------------------------------------------------------------------------
+// ServicesOptions - Private Functions - Equality Checks
+// -----------------------------------------------------------------------------
+
+func servicesOptionsDeepEqual(opts1, opts2 *operatorv1alpha1.DataPlaneServicesOptions) bool {
+	return reflect.DeepEqual(opts1.Proxy, opts2.Proxy)
+}
+
+// -----------------------------------------------------------------------------
 // Owner based metadata getters - Private Functions
 // -----------------------------------------------------------------------------
 

@@ -51,6 +51,13 @@ metadata:
                   "memory": "64Mi"
                 }
               }
+            },
+            "services": {
+              "proxy": {
+                "annotations": {
+                  "foo": "bar"
+                }
+              }
             }
           }
         },
@@ -76,6 +83,13 @@ metadata:
               "deployment": {
                 "containerImage": "kong",
                 "version": "3.0"
+              },
+              "services": {
+                "proxy": {
+                  "annotations": {
+                    "foo": "bar"
+                  }
+                }
               }
             }
           }
