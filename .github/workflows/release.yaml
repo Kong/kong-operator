@@ -211,7 +211,7 @@ jobs:
         echo ${VERSION} > VERSION
 
     - name: Generate bundle
-      run: make bundle.regular
+      run: make bundle
 
     - name: Checkout k8s-operatorhub/community-operators repo
       uses: actions/checkout@v3
@@ -306,7 +306,7 @@ jobs:
       # If anything needs to be fixed before a release, it should be done on the main branch.
       - name: Generate bundles
         run: |
-          make bundle.regular
+          make bundle
 
       - name: GPG sign the commits
         uses: crazy-max/ghaction-import-gpg@111c56156bcc6918c056dbef52164cfa583dc549

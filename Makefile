@@ -239,7 +239,7 @@ lint: golangci-lint
 	$(GOLANGCI_LINT) run -v
 
 .PHONY: verify.bundle
-verify.bundle: verify.repo bundle.regular verify.diff
+verify.bundle: verify.repo bundle verify.diff
 
 .PHONY: verify.diff
 verify.diff:
@@ -334,14 +334,14 @@ _bundle: manifests kustomize operator-sdk
 	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
 	mv bundle.Dockerfile $(BUNDLE_DIR)
 
-.PHONY: bundle.regular
-bundle.regular:
+.PHONY: bundle
+bundle:
 	KUSTOMIZE_DIR=$(BUNDLE_DEFAULT_KUSTOMIZE_MANIFESTS) \
 	BUNDLE_DIR=$(BUNDLE_DEFAULT_DIR) \
 		$(MAKE) _bundle
 
-.PHONY: bundle.regular.build
-bundle.regular.build: ## Build the bundle image.
+.PHONY: bundle.build
+bundle.build: ## Build the bundle image.
 	docker build -f $(BUNDLE_DEFAULT_DIR)/bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 .PHONY: bundle-push
