@@ -176,39 +176,10 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, da
 					},
 				},
 				Spec: corev1.PodSpec{
-					Volumes: []corev1.Volume{
-						{
-							Name: "cluster-certificate",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: certSecretName,
-									Items: []corev1.KeyToPath{
-										{
-											Key:  "tls.crt",
-											Path: "tls.crt",
-										},
-										{
-											Key:  "tls.key",
-											Path: "tls.key",
-										},
-										{
-											Key:  "ca.crt",
-											Path: "ca.crt",
-										},
-									},
-								},
-							},
-						},
-					},
+					Volumes: generateDataplaneDeploymentVolumes(dataplane, certSecretName),
 					Containers: []corev1.Container{{
-						Name: consts.DataPlaneProxyContainerName,
-						VolumeMounts: []corev1.VolumeMount{
-							{
-								Name:      "cluster-certificate",
-								ReadOnly:  true,
-								MountPath: "/var/cluster-certificate",
-							},
-						},
+						Name:            consts.DataPlaneProxyContainerName,
+						VolumeMounts:    generateDataplaneDeploymentVolumeMounts(dataplane),
 						Env:             dataplane.Spec.Deployment.Env,
 						EnvFrom:         dataplane.Spec.Deployment.EnvFrom,
 						Image:           dataplaneImage,
@@ -266,7 +237,59 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, da
 			},
 		},
 	}
+
 	return deployment
+}
+
+// generateDataplaneDeploymentVolumes generates volumes in pods containing cluster certificate for mTLS
+// between control plane (KIC) and data plane,
+// and also other specified secret volumes in deployment options.
+func generateDataplaneDeploymentVolumes(dataplane *operatorv1alpha1.DataPlane, certSecretName string) []corev1.Volume {
+	volumes := []corev1.Volume{
+		{
+			Name: "cluster-certificate",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: certSecretName,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "tls.crt",
+							Path: "tls.crt",
+						},
+						{
+							Key:  "tls.key",
+							Path: "tls.key",
+						},
+						{
+							Key:  "ca.crt",
+							Path: "ca.crt",
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, volume := range dataplane.Spec.Deployment.Volumes {
+		volumes = append(volumes, *volume.DeepCopy())
+	}
+	return volumes
+}
+
+// generateDataplaneDeploymentVolumeMounts generates volume mounts in containers.
+func generateDataplaneDeploymentVolumeMounts(dataplane *operatorv1alpha1.DataPlane) []corev1.VolumeMount {
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      "cluster-certificate",
+			ReadOnly:  true,
+			MountPath: "/var/cluster-certificate",
+		},
+	}
+
+	for _, mount := range dataplane.Spec.Deployment.VolumeMounts {
+		volumeMounts = append(volumeMounts, *mount.DeepCopy())
+	}
+
+	return volumeMounts
 }
 
 var (

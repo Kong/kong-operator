@@ -35,7 +35,7 @@ func TestDataplaneEssentials(t *testing.T) {
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	dataplane := &v1alpha1.DataPlane{
+	dataplane := &operatorv1alpha1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dataplaneName.Namespace,
 			Name:      dataplaneName.Name,
@@ -76,10 +76,10 @@ func TestDataplaneEssentials(t *testing.T) {
 	require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
 	deployment := &deployments[0]
 
-	controllerContainer := k8sutils.GetPodContainerByName(
+	proxyContainer := k8sutils.GetPodContainerByName(
 		&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
-	require.NotNil(t, controllerContainer)
-	envs := controllerContainer.Env
+	require.NotNil(t, proxyContainer)
+	envs := proxyContainer.Env
 	// check specified custom envs
 	testEnvValue := getEnvValueByName(envs, "TEST_ENV")
 	require.Equal(t, "test", testEnvValue)
@@ -357,4 +357,159 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 
 	t.Log("verifying that dataplane has indeed 1 ready replica after scaling down")
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneName, clients, 1), time.Minute, time.Second)
+}
+
+func TestDataPlaneVolumeMounts(t *testing.T) {
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+
+	t.Log("creating a secret to mount to dataplane containers")
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace.Name,
+			Name:      "test-secret",
+		},
+		StringData: map[string]string{
+			"file-0": "foo",
+		},
+	}
+	secret, err := clients.K8sClient.CoreV1().Secrets(namespace.Name).Create(ctx, secret, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(secret)
+
+	t.Log("deploying dataplane resource")
+	dataplaneName := types.NamespacedName{
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
+	}
+	dataplane := &operatorv1alpha1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: dataplaneName.Namespace,
+			Name:      dataplaneName.Name,
+		},
+		Spec: operatorv1alpha1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Volumes: []corev1.Volume{
+						{
+							Name: "test-volume",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secret.Name,
+								},
+							},
+						},
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "test-volume",
+							MountPath: "/var/test",
+							ReadOnly:  true,
+						},
+					},
+				},
+			},
+		},
+	}
+	dataplane, err = clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name).Create(ctx, dataplane, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(dataplane)
+
+	t.Log("verifying dataplane gets marked scheduled")
+	isScheduled := func(dataplane *v1alpha1.DataPlane) bool {
+		for _, condition := range dataplane.Status.Conditions {
+			if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) {
+				return true
+			}
+		}
+		return false
+	}
+	require.Eventually(t, testutils.DataPlanePredicate(t, ctx, dataplaneName, isScheduled, clients.OperatorClient), time.Minute, time.Second)
+
+	t.Log("verifying that the dataplane gets marked as provisioned")
+	isProvisioned := func(dataplane *v1alpha1.DataPlane) bool {
+		for _, condition := range dataplane.Status.Conditions {
+			if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) && condition.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+		return false
+	}
+	require.Eventually(t, testutils.DataPlanePredicate(t, ctx, dataplaneName, isProvisioned, clients.OperatorClient), time.Minute, time.Second)
+
+	t.Log("verifying deployments managed by the dataplane")
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients), time.Minute, time.Second)
+
+	t.Log("verifying dataplane deployment volume mounts")
+	deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients)
+	require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
+	deployment := &deployments[0]
+
+	proxyContainer := k8sutils.GetPodContainerByName(
+		&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+	require.NotNil(t, proxyContainer)
+
+	t.Log("verifying dataplane has default cluster-certificate volume")
+	vol := getVolumeByName(deployment.Spec.Template.Spec.Volumes, consts.ClusterCertificateVolume)
+	require.NotNil(t, vol, "dataplane pod should have the cluster-certificate volume")
+	require.NotNil(t, vol.Secret, "cluster-certificate volume should come from secret")
+
+	t.Log("verifying Kong proxy container has mounted  default cluster-certificate volume")
+	volMounts := getVolumeMountsByVolumeName(proxyContainer.VolumeMounts, consts.ClusterCertificateVolume)
+	require.Len(t, volMounts, 1, "proxy container should mount cluster-certificate volume")
+	require.Equal(t, volMounts[0].MountPath, "/var/cluster-certificate", "proxy container should mount cluster-certificate volume to path /var/cluster-certificate")
+	require.True(t, volMounts[0].ReadOnly, "proxy container should mount cluster-certificate volume in read only mode")
+
+	t.Log("verifying dataplane pod has custom secret volume")
+	vol = getVolumeByName(deployment.Spec.Template.Spec.Volumes, "test-volume")
+	require.NotNil(t, vol, "dataplane pod should have the volume test-volume")
+	require.NotNil(t, vol.Secret, "test-volume should come from secret")
+	require.Equalf(t, vol.Secret.SecretName, secret.Name, "test-volume should come from secret %s", secret.Name)
+
+	t.Log("verifying Kong proxy container has mounted custom secret volume")
+	volMounts = getVolumeMountsByVolumeName(proxyContainer.VolumeMounts, "test-volume")
+	require.Len(t, volMounts, 1, "proxy container should mount custom secret volume 'test-volume'")
+	require.Equal(t, volMounts[0].MountPath, "/var/test", "proxy container should mount custom secret volume to path /var/test")
+	require.True(t, volMounts[0].ReadOnly, "proxy container should mount 'test-volume' in read only mode")
+
+	t.Log("updating volumes and volume mounts in dataplane deployment to verify volumes could be reconciled")
+	deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
+		{
+			Name: "test-volume-1",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secret.Name,
+				},
+			},
+		},
+	}
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
+		{
+			Name:      "test-volume-1",
+			MountPath: "/var/test",
+			ReadOnly:  true,
+		},
+	}
+	_, err = clients.K8sClient.AppsV1().Deployments(namespace.Name).Update(ctx, deployment, metav1.UpdateOptions{})
+	require.NoError(t, err, "should update deployment successfully")
+
+	require.Eventually(t, func() bool {
+		deployment, err = clients.K8sClient.AppsV1().Deployments(namespace.Name).Get(ctx, deployment.Name, metav1.GetOptions{})
+		require.NoError(t, err, "should get dataplane deployment successfully")
+		vol := getVolumeByName(deployment.Spec.Template.Spec.Volumes, "test-volume")
+		if vol == nil || vol.Secret == nil || vol.Secret.SecretName != secret.Name {
+			return false
+		}
+		proxyContainer := k8sutils.GetPodContainerByName(
+			&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+		require.NotNilf(t, proxyContainer, "dataplane deployment should have container %s", consts.DataPlaneProxyContainerName)
+		volMounts = getVolumeMountsByVolumeName(proxyContainer.VolumeMounts, "test-volume")
+		if len(volMounts) != 1 {
+			return false
+		}
+		if volMounts[0].MountPath != "/var/test" || !volMounts[0].ReadOnly {
+			return false
+		}
+		return true
+	}, time.Minute, time.Second)
 }

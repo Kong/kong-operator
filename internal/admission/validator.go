@@ -17,6 +17,10 @@ func (v *validator) ValidateControlPlane(ctx context.Context, controlPlane opera
 	if controlPlane.Spec.Deployment.Replicas != nil && *controlPlane.Spec.Deployment.Replicas != 1 {
 		return errors.New("ControlPlanes only support replicas of 1")
 	}
+	// Ref: https://github.com/Kong/gateway-operator/issues/740
+	if len(controlPlane.Spec.Deployment.Volumes) > 0 || len(controlPlane.Spec.Deployment.VolumeMounts) > 0 {
+		return errors.New("ControlPlanes does not support custom volumes and volume mounts")
+	}
 	return nil
 }
 

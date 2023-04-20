@@ -249,6 +249,13 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 			updated = true
 		}
 
+		// check for volume mounts.
+		generatedContainer := k8sutils.GetPodContainerByName(&generatedDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+		if containerVolumeMountNeedsUpdate(generatedContainer, container) {
+			container.VolumeMounts = generatedContainer.VolumeMounts
+			updated = true
+		}
+
 		if dataplane.Spec.Deployment.Resources != nil {
 			// DataPlane deployment resources are set.
 			// Check if existing container already has its resources set per DataPlane spec.
@@ -316,6 +323,21 @@ func (r *DataPlaneReconciler) deploymentSpecVolumesNeedsUpdate(
 
 	if generatedClusterCertVolume.Secret.SecretName != existingClusterCertVolume.Secret.SecretName {
 		return true
+	}
+
+	// check for other volumes.
+	for _, generatedVolume := range generatedDeploymentSpec.Template.Spec.Volumes {
+		// skip already checked cluster-certificate volume.
+		if generatedVolume.Name == consts.ClusterCertificateVolume {
+			continue
+		}
+		existingVolume := k8sutils.GetPodVolumeByName(&existingDeploymentSpec.Template.Spec, generatedVolume.Name)
+		if existingVolume == nil {
+			return true
+		}
+		if !k8sutils.HasSameVolumeSource(&generatedVolume.VolumeSource, &existingVolume.VolumeSource) {
+			return true
+		}
 	}
 
 	return false
@@ -426,4 +448,23 @@ func (r *DataPlaneReconciler) ensureAdminServiceForDataPlane(
 	}
 
 	return true, generatedService, r.Client.Create(ctx, generatedService)
+}
+
+func containerVolumeMountNeedsUpdate(
+	generatedContainer *corev1.Container,
+	existingContainer *corev1.Container,
+) bool {
+	for _, generatedVolumeMount := range generatedContainer.VolumeMounts {
+		existingVolumeMount := k8sutils.GetContainerVolumeMountByMountPath(existingContainer, generatedVolumeMount.MountPath)
+		if existingVolumeMount == nil {
+			return true
+		}
+		if !(generatedVolumeMount.Name == existingVolumeMount.Name) ||
+			!(generatedVolumeMount.ReadOnly == existingVolumeMount.ReadOnly) ||
+			!(generatedVolumeMount.SubPath == existingVolumeMount.SubPath) {
+			return true
+		}
+	}
+
+	return false
 }

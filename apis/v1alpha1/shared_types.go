@@ -49,6 +49,17 @@ type DeploymentOptions struct {
 	//
 	// +optional
 	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
+
+	// Volumes defines additional volumes to attach to the pods in the Deployment.
+	//
+	// +optional
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// VolumeMounts defines additional volumes to mount to proxy containers of pods
+	// in the Deployment.
+	//
+	// +optional
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 }
 
 // GatewayConfigurationTargetKind is an object kind that can be targeted for

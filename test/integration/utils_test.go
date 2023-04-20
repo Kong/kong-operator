@@ -177,3 +177,22 @@ func getEnvValueFromByName(envs []corev1.EnvVar, name string) *corev1.EnvVarSour
 
 	return valueFrom
 }
+
+func getVolumeByName(volumes []corev1.Volume, name string) *corev1.Volume {
+	for _, v := range volumes {
+		if v.Name == name {
+			return v.DeepCopy()
+		}
+	}
+	return nil
+}
+
+func getVolumeMountsByVolumeName(volumeMounts []corev1.VolumeMount, name string) []corev1.VolumeMount {
+	ret := make([]corev1.VolumeMount, 0)
+	for _, m := range volumeMounts {
+		if m.Name == name {
+			ret = append(ret, m)
+		}
+	}
+	return ret
+}

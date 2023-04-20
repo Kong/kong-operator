@@ -75,6 +75,53 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 			},
 		},
 		{
+			name: "new DataPlane with custom secret",
+			dataPlane: &operatorv1alpha1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret-volume",
+					Namespace: "default",
+				},
+				Spec: operatorv1alpha1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
+							Volumes: []corev1.Volume{
+								{
+									Name: "test-volume",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName: "test-secret",
+										},
+									},
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "test-volume",
+									MountPath: "/var/test/",
+									ReadOnly:  true,
+								},
+							},
+						},
+					},
+				},
+			},
+			certSecretName: "certificate",
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
+				ctx := context.Background()
+				createdOrUpdated, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, logr.Discard(), dataPlane, certSecretName)
+				require.Equal(t, createdOrUpdated, Created)
+				require.NoError(t, err)
+				require.Contains(t, deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: "test-volume",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: "test-secret",
+						},
+					},
+				})
+			},
+		},
+		{
 			name: "existing DataPlane deployment gets updated with expected spec.Strategy",
 			dataPlane: &operatorv1alpha1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{

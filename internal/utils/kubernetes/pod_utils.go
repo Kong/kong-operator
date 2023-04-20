@@ -27,3 +27,15 @@ func GetPodVolumeByName(podSpec *corev1.PodSpec, name string) *corev1.Volume {
 	}
 	return nil
 }
+
+// GetContainerVolumeMountByPath gets the volume mounted to given path in container.
+// if the mount path does not exist, it returns `nil`.
+func GetContainerVolumeMountByMountPath(container *corev1.Container, mountPath string) *corev1.VolumeMount {
+	for i, volumeMount := range container.VolumeMounts {
+		if volumeMount.MountPath == mountPath {
+			return &container.VolumeMounts[i]
+		}
+	}
+
+	return nil
+}
