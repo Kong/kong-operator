@@ -290,6 +290,29 @@ func DataPlaneHasServiceAndAddressesInStatus(t *testing.T, ctx context.Context, 
 	}, clients.OperatorClient)
 }
 
+// DataPlaneUpdateEventually is a helper function for tests that returns a function
+// that can be used to update the DataPlane.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func DataPlaneUpdateEventually(t *testing.T, ctx context.Context, dataplaneNN types.NamespacedName, clients K8sClients, updateFunc func(*operatorv1alpha1.DataPlane)) func() bool {
+	return func() bool {
+		cl := clients.OperatorClient.ApisV1alpha1().DataPlanes(dataplaneNN.Namespace)
+		dp, err := cl.Get(ctx, dataplaneNN.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting dataplane: %v", err)
+			return false
+		}
+
+		updateFunc(dp)
+
+		_, err = cl.Update(ctx, dp, metav1.UpdateOptions{})
+		if err != nil {
+			t.Logf("error updating dataplane: %v", err)
+			return false
+		}
+		return true
+	}
+}
+
 // GatewayClassIsAccepted is a helper function for tests that returns a function
 // that can be used to check if a GatewayClass is accepted.
 // Should be used in conjunction with require.Eventually or assert.Eventually.

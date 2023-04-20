@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -80,6 +81,21 @@ type DataPlaneServicesOptions struct {
 // ProxyServiceOptions is used to includes options to customize the proxy service,
 // such as the annotations.
 type ProxyServiceOptions struct {
+	// Type determines how the Service is exposed.
+	// Defaults to LoadBalancer.
+	// Valid options are LoadBalancer and ClusterIP.
+	// "ClusterIP" allocates a cluster-internal IP address for load-balancing
+	// to endpoints.
+	// "LoadBalancer" builds on NodePort and creates an external load-balancer
+	// (if supported in the current cloud) which routes to the same endpoints
+	// as the clusterIP.
+	//
+	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+	// +optional
+	// +kubebuilder:default=LoadBalancer
+	// +kubebuilder:validation:Enum=LoadBalancer;ClusterIP
+	Type corev1.ServiceType `json:"type,omitempty" protobuf:"bytes,4,opt,name=type,casttype=ServiceType"`
+
 	// Annotations is an unstructured key value map stored with a resource that may be
 	// set by external tools to store and retrieve arbitrary metadata. They are not
 	// queryable and should be preserved when modifying objects.

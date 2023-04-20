@@ -292,6 +292,19 @@ spec:
                           and should be preserved when modifying objects. More info:
                           http://kubernetes.io/docs/user-guide/annotations'
                         type: object
+                      type:
+                        default: LoadBalancer
+                        description: "Type determines how the Service is exposed.
+                          Defaults to LoadBalancer. Valid options are LoadBalancer
+                          and ClusterIP. \"ClusterIP\" allocates a cluster-internal
+                          IP address for load-balancing to endpoints. \"LoadBalancer\"
+                          builds on NodePort and creates an external load-balancer
+                          (if supported in the current cloud) which routes to the
+                          same endpoints as the clusterIP. \n More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types"
+                        enum:
+                        - LoadBalancer
+                        - ClusterIP
+                        type: string
                     type: object
                 type: object
             type: object

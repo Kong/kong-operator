@@ -313,6 +313,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err)
 
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.EqualError(t, err, "unsupported DataPlane image kong:1.0")
 			},
 		},

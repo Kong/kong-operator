@@ -370,6 +370,12 @@ func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
 				}
 				return metaToUpdate, existingMeta
 			})
+
+		if existingService.Spec.Type != generatedService.Spec.Type {
+			existingService.Spec.Type = generatedService.Spec.Type
+			updated = true
+		}
+
 		if updated {
 			return true, existingService, r.Client.Update(ctx, existingService)
 		}

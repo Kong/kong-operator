@@ -57,7 +57,9 @@ func TestDataplaneEssentials(t *testing.T) {
 			},
 		},
 	}
-	dataplane, err := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name).Create(ctx, dataplane, metav1.CreateOptions{})
+
+	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
+	dataplane, err := dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
@@ -134,8 +136,26 @@ func TestDataplaneEssentials(t *testing.T) {
 	t.Log("verifying dataplane status is properly filled with backing service name and its addresses")
 	require.Eventually(t, testutils.DataPlaneHasServiceAndAddressesInStatus(t, ctx, dataplaneName, clients), time.Minute, time.Second)
 
-	t.Log("verifying dataplane status is properly filled with backing service name and its addresses")
-	require.Eventually(t, testutils.DataPlaneHasServiceAndAddressesInStatus(t, ctx, dataplaneName, clients), time.Minute, time.Second)
+	t.Log("updating dataplane spec with proxy service type of ClusterIP")
+	require.Eventually(t,
+		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1alpha1.DataPlane) { dp.Spec.Services.Proxy.Type = corev1.ServiceTypeClusterIP }),
+		time.Minute, time.Second)
+
+	t.Log("checking if dataplane proxy service type changes to ClusterIP")
+	require.Eventually(t, func() bool {
+		servicesClient := clients.K8sClient.CoreV1().Services(dataplane.Namespace)
+		dataplaneProxyService, err := servicesClient.Get(ctx, dataplaneProxyService.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting dataplane proxy service: %v", err)
+			return false
+		}
+		if dataplaneProxyService.Spec.Type != corev1.ServiceTypeClusterIP {
+			t.Logf("dataplane proxy service should be of ClusterIP type but is %s", dataplaneProxyService.Spec.Type)
+			return false
+		}
+
+		return true
+	}, time.Minute, time.Second)
 }
 
 func verifyConnectivity(t *testing.T, dataplaneIP string) {
@@ -331,20 +351,9 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneName, clients, 2), time.Minute, time.Second)
 
 	t.Log("changing replicas in dataplane spec to 1 should scale down the deployment back to 1")
-	require.Eventually(t, func() bool {
-		dataplane, err = dataplaneClient.Get(ctx, dataplane.Name, metav1.GetOptions{})
-		if err != nil {
-			t.Logf("error getting dataplane")
-			return false
-		}
-		dataplane.Spec.Deployment.Replicas = lo.ToPtr(int32(1))
-		dataplane, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
-		if err != nil {
-			t.Logf("error updating dataplane")
-			return false
-		}
-		return true
-	}, time.Minute, time.Second)
+	require.Eventually(t,
+		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1alpha1.DataPlane) { dp.Spec.Deployment.Replicas = lo.ToPtr(int32(1)) }),
+		time.Minute, time.Second)
 
 	t.Log("verifying that dataplane has indeed 1 ready replica after scaling down")
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneName, clients, 1), time.Minute, time.Second)

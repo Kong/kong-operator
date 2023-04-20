@@ -52,7 +52,7 @@ func GenerateNewProxyServiceForDataplane(dataplane *operatorv1alpha1.DataPlane) 
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeLoadBalancer,
+			Type:     getDataPlaneServiceType(dataplane),
 			Selector: map[string]string{"app": dataplane.Name},
 			Ports: []corev1.ServicePort{
 				{
@@ -70,6 +70,16 @@ func GenerateNewProxyServiceForDataplane(dataplane *operatorv1alpha1.DataPlane) 
 			},
 		},
 	}
+}
+
+const DefaultDataPlaneProxyServiceType = corev1.ServiceTypeLoadBalancer
+
+func getDataPlaneServiceType(dataplane *operatorv1alpha1.DataPlane) corev1.ServiceType {
+	if dataplane == nil || dataplane.Spec.Services.Proxy == nil {
+		return DefaultDataPlaneProxyServiceType
+	}
+
+	return dataplane.Spec.Services.Proxy.Type
 }
 
 // GenerateNewAdminServiceForDataPlane is a helper to generate the headless dataplane admin service
