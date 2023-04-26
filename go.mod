@@ -2,8 +2,13 @@ module github.com/kong/gateway-operator
 
 go 1.20
 
+exclude sigs.k8s.io/gateway-api v0.6.2
+
 exclude (
-	sigs.k8s.io/gateway-api v0.6.2
+	// NOTE: excluded until https://github.com/kubernetes-sigs/controller-runtime/pull/2189
+	// gets resolved
+	k8s.io/api v0.27.1
+	k8s.io/client-go v0.27.1
 )
 
 require (
@@ -12,7 +17,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.4
 	github.com/go-logr/logr v1.2.4
 	github.com/google/uuid v1.3.0
-	github.com/kong/kubernetes-telemetry v0.0.2
+	github.com/kong/kubernetes-telemetry v0.0.3
 	github.com/kong/kubernetes-testing-framework v0.30.1
 	github.com/samber/lo v1.38.1
 	github.com/stretchr/testify v1.8.2
@@ -44,8 +49,6 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.7.1 // indirect
-	github.com/hashicorp/errwrap v1.0.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jmoiron/sqlx v1.3.3 // indirect
