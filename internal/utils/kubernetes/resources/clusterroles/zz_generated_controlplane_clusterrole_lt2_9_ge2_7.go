@@ -501,6 +501,29 @@ func GenerateNewClusterRoleForControlPlane_lt2_9_ge2_7(controlplaneName string) 
 					"get", "patch", "update",
 				},
 			},
+
+			{
+				APIGroups: []string{
+					"",
+				},
+				Resources: []string{
+					"configmaps",
+				},
+				Verbs: []string{
+					"get", "list", "watch", "create", "update", "patch", "delete",
+				},
+			},
+			{
+				APIGroups: []string{
+					"coordination.k8s.io",
+				},
+				Resources: []string{
+					"leases",
+				},
+				Verbs: []string{
+					"get", "list", "watch", "create", "update", "patch", "delete",
+				},
+			},
 		},
 	}
 }

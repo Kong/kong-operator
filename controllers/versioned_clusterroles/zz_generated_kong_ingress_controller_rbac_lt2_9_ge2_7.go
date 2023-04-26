@@ -51,3 +51,6 @@ package controllers
 
 //+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses/status,verbs=get;patch;update
+
+//+kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete

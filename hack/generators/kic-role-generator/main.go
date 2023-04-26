@@ -13,6 +13,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kicversions "github.com/kong/gateway-operator/internal/versions"
 )
@@ -117,6 +118,44 @@ func main() {
 			exitOnErr(err)
 			clusterRoles = append(clusterRoles, newRole)
 		}
+
+		// Don't add the same policy rules twice.
+		// Those might hypothetically come from different roles which we use for generation.
+		rolePermissionsCache := make(map[string]struct{}, 0)
+		for _, clusterRole := range clusterRoles {
+			for idx, policyRule := range clusterRole.Rules {
+				key := policyRule.String()
+				if _, ok := rolePermissionsCache[key]; ok {
+					clusterRole.Rules = append(clusterRole.Rules[:idx], clusterRole.Rules[idx+1:]...)
+					continue
+				}
+				rolePermissionsCache[key] = struct{}{}
+			}
+		}
+		// TODO: Instead of adding a broken config/rbac/leader_election_role.yaml
+		// role from KIC - which was fixed in
+		// https://github.com/Kong/kubernetes-ingress-controller/pull/3932
+		// but yet unreleased - we manually add the leader election policy rules
+		// to allow KIC to use them for leader election.
+		//
+		// Ref: https://github.com/Kong/gateway-operator/issues/744
+		clusterRoles = append(clusterRoles, &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "leader-election-stopgap-cluster-role",
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+					APIGroups: []string{""},
+					Resources: []string{"configmaps"},
+				},
+				{
+					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+				},
+			},
+		})
 
 		exitOnErr(generatefile(
 			clusterRoles,
