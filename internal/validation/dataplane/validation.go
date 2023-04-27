@@ -36,16 +36,15 @@ func (v *Validator) Validate(dataplane *operatorv1alpha1.DataPlane) error {
 
 // ValidateDeployOptions validates the DeploymentOptions field of DataPlane object.
 func (v *Validator) ValidateDeployOptions(namespace string, opts *operatorv1alpha1.DeploymentOptions) error {
-
 	// validate db mode.
-	dbMode, dbModeFound, err := v.getDBModeFromEnv(namespace, opts.Env)
+	dbMode, dbModeFound, err := v.getDBModeFromEnv(namespace, opts.Pods.Env)
 	if err != nil {
 		return err
 	}
 
 	// if dbMode not found in envVar, search for it in EnvVarFrom.
 	if !dbModeFound {
-		dbMode, _, err = v.getDBModeFromEnvFrom(namespace, opts.EnvFrom)
+		dbMode, _, err = v.getDBModeFromEnvFrom(namespace, opts.Pods.EnvFrom)
 		if err != nil {
 			return err
 		}
@@ -61,7 +60,6 @@ func (v *Validator) ValidateDeployOptions(namespace string, opts *operatorv1alph
 // getDBModeFromEnv gets the dbmode from Env.
 // If the second return value is false, the dbMode is not found in Env.
 func (v *Validator) getDBModeFromEnv(namespace string, envs []corev1.EnvVar) (string, bool, error) {
-
 	dbMode := ""
 	dbModeFound := false
 	for _, envVar := range envs {

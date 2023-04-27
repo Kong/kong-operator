@@ -16,10 +16,10 @@ import (
 // -----------------------------------------------------------------------------
 
 func generateDataPlaneImage(dataplane *operatorv1alpha1.DataPlane, validators ...versions.VersionValidationOption) (string, error) {
-	if dataplane.Spec.Deployment.ContainerImage != nil {
-		dataplaneImage := *dataplane.Spec.Deployment.ContainerImage
-		if dataplane.Spec.Deployment.Version != nil {
-			dataplaneImage = fmt.Sprintf("%s:%s", dataplaneImage, *dataplane.Spec.Deployment.Version)
+	if dataplane.Spec.Deployment.Pods.ContainerImage != nil {
+		dataplaneImage := *dataplane.Spec.Deployment.Pods.ContainerImage
+		if dataplane.Spec.Deployment.Pods.Version != nil {
+			dataplaneImage = fmt.Sprintf("%s:%s", dataplaneImage, *dataplane.Spec.Deployment.Pods.Version)
 		}
 		for _, v := range validators {
 			if !v(dataplaneImage) {
@@ -36,7 +36,6 @@ func generateDataPlaneImage(dataplane *operatorv1alpha1.DataPlane, validators ..
 	}
 
 	return consts.DefaultDataPlaneImage, nil // TODO: https://github.com/Kong/gateway-operator/issues/20
-
 }
 
 // -----------------------------------------------------------------------------

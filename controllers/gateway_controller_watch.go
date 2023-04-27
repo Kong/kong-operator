@@ -195,7 +195,7 @@ func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gwtype
 		*gatewayConfig.Spec.ControlPlaneOptions.DataPlane == "" {
 		gatewayConfig.Spec.ControlPlaneOptions.DataPlane = &dataplaneName
 	}
-	for _, env := range gatewayConfig.Spec.ControlPlaneOptions.Deployment.Env {
+	for _, env := range gatewayConfig.Spec.ControlPlaneOptions.Deployment.Pods.Env {
 		dontOverride[env.Name] = struct{}{}
 	}
 

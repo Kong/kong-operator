@@ -26,24 +26,26 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			changed: true,
 			newSpec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
-								FieldRef: &corev1.ObjectFieldSelector{
-									APIVersion: "v1", FieldPath: "metadata.namespace",
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										APIVersion: "v1", FieldPath: "metadata.namespace",
+									},
 								},
 							},
-						},
-						{
-							Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
-								FieldRef: &corev1.ObjectFieldSelector{
-									APIVersion: "v1", FieldPath: "metadata.name",
+							{
+								Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										APIVersion: "v1", FieldPath: "metadata.name",
+									},
 								},
 							},
-						},
-						{
-							Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
-							Value: vars.ControllerName(),
+							{
+								Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
+								Value: vars.ControllerName(),
+							},
 						},
 					},
 				},
@@ -57,44 +59,46 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			dataplaneProxyServiceName: "kong-proxy",
 			newSpec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
-								FieldRef: &corev1.ObjectFieldSelector{
-									APIVersion: "v1", FieldPath: "metadata.namespace",
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										APIVersion: "v1", FieldPath: "metadata.namespace",
+									},
 								},
 							},
-						},
-						{
-							Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
-								FieldRef: &corev1.ObjectFieldSelector{
-									APIVersion: "v1", FieldPath: "metadata.name",
+							{
+								Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										APIVersion: "v1", FieldPath: "metadata.name",
+									},
 								},
 							},
-						},
-						{
-							Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
-							Value: vars.ControllerName(),
-						},
-						{
-							Name:  "CONTROLLER_PUBLISH_SERVICE",
-							Value: "test-ns/kong-proxy",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_URL",
-							Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
-							Value: "/var/cluster-certificate/tls.crt",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
-							Value: "/var/cluster-certificate/tls.key",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
-							Value: "/var/cluster-certificate/ca.crt",
+							{
+								Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
+								Value: vars.ControllerName(),
+							},
+							{
+								Name:  "CONTROLLER_PUBLISH_SERVICE",
+								Value: "test-ns/kong-proxy",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_URL",
+								Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+								Value: "/var/cluster-certificate/tls.crt",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+								Value: "/var/cluster-certificate/tls.key",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
+								Value: "/var/cluster-certificate/ca.crt",
+							},
 						},
 					},
 				},
@@ -104,8 +108,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			name: "has_envs_and_dataplane",
 			spec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{Name: "TEST_ENV", Value: "test"},
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{Name: "TEST_ENV", Value: "test"},
+						},
 					},
 				},
 			},
@@ -114,45 +120,47 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			dataplaneProxyServiceName: "kong-proxy",
 			newSpec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{Name: "TEST_ENV", Value: "test"},
-						{
-							Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
-								FieldRef: &corev1.ObjectFieldSelector{
-									APIVersion: "v1", FieldPath: "metadata.namespace",
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{Name: "TEST_ENV", Value: "test"},
+							{
+								Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										APIVersion: "v1", FieldPath: "metadata.namespace",
+									},
 								},
 							},
-						},
-						{
-							Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
-								FieldRef: &corev1.ObjectFieldSelector{
-									APIVersion: "v1", FieldPath: "metadata.name",
+							{
+								Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										APIVersion: "v1", FieldPath: "metadata.name",
+									},
 								},
 							},
-						},
-						{
-							Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
-							Value: vars.ControllerName(),
-						},
-						{
-							Name:  "CONTROLLER_PUBLISH_SERVICE",
-							Value: "test-ns/kong-proxy",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_URL",
-							Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
-							Value: "/var/cluster-certificate/tls.crt",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
-							Value: "/var/cluster-certificate/tls.key",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
-							Value: "/var/cluster-certificate/ca.crt",
+							{
+								Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
+								Value: vars.ControllerName(),
+							},
+							{
+								Name:  "CONTROLLER_PUBLISH_SERVICE",
+								Value: "test-ns/kong-proxy",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_URL",
+								Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+								Value: "/var/cluster-certificate/tls.crt",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+								Value: "/var/cluster-certificate/tls.key",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
+								Value: "/var/cluster-certificate/ca.crt",
+							},
 						},
 					},
 				},
@@ -162,44 +170,46 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			name: "has_dataplane_env_unchanged",
 			spec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
-								FieldRef: &corev1.ObjectFieldSelector{
-									APIVersion: "v1", FieldPath: "metadata.namespace",
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										APIVersion: "v1", FieldPath: "metadata.namespace",
+									},
 								},
 							},
-						},
-						{
-							Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
-								FieldRef: &corev1.ObjectFieldSelector{
-									APIVersion: "v1", FieldPath: "metadata.name",
+							{
+								Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										APIVersion: "v1", FieldPath: "metadata.name",
+									},
 								},
 							},
-						},
-						{
-							Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
-							Value: vars.ControllerName(),
-						},
-						{
-							Name:  "CONTROLLER_PUBLISH_SERVICE",
-							Value: "test-ns/kong-proxy",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_URL",
-							Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
-							Value: "/var/cluster-certificate/tls.crt",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
-							Value: "/var/cluster-certificate/tls.key",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
-							Value: "/var/cluster-certificate/ca.crt",
+							{
+								Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
+								Value: vars.ControllerName(),
+							},
+							{
+								Name:  "CONTROLLER_PUBLISH_SERVICE",
+								Value: "test-ns/kong-proxy",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_URL",
+								Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+								Value: "/var/cluster-certificate/tls.crt",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+								Value: "/var/cluster-certificate/tls.key",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
+								Value: "/var/cluster-certificate/ca.crt",
+							},
 						},
 					},
 				},
@@ -209,44 +219,46 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			changed:                   false,
 			newSpec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
-								FieldRef: &corev1.ObjectFieldSelector{
-									APIVersion: "v1", FieldPath: "metadata.namespace",
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										APIVersion: "v1", FieldPath: "metadata.namespace",
+									},
 								},
 							},
-						},
-						{
-							Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
-								FieldRef: &corev1.ObjectFieldSelector{
-									APIVersion: "v1", FieldPath: "metadata.name",
+							{
+								Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										APIVersion: "v1", FieldPath: "metadata.name",
+									},
 								},
 							},
-						},
-						{
-							Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
-							Value: vars.ControllerName(),
-						},
-						{
-							Name:  "CONTROLLER_PUBLISH_SERVICE",
-							Value: "test-ns/kong-proxy",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_URL",
-							Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
-							Value: "/var/cluster-certificate/tls.crt",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
-							Value: "/var/cluster-certificate/tls.key",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
-							Value: "/var/cluster-certificate/ca.crt",
+							{
+								Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
+								Value: vars.ControllerName(),
+							},
+							{
+								Name:  "CONTROLLER_PUBLISH_SERVICE",
+								Value: "test-ns/kong-proxy",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_URL",
+								Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+								Value: "/var/cluster-certificate/tls.crt",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+								Value: "/var/cluster-certificate/tls.key",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
+								Value: "/var/cluster-certificate/ca.crt",
+							},
 						},
 					},
 				},
@@ -267,14 +279,14 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			require.NoError(t, err)
 			require.Equalf(t, tc.changed, changed,
 				"should return the same value for test case %d:%s", index, tc.name)
-			for _, env := range tc.newSpec.Deployment.Env {
+			for _, env := range tc.newSpec.Deployment.Pods.Env {
 				if env.Value != "" {
-					actualValue := envValueByName(tc.spec.Deployment.Env, env.Name)
+					actualValue := envValueByName(tc.spec.Deployment.Pods.Env, env.Name)
 					require.Equalf(t, env.Value, actualValue,
 						"should have the same value of env %s", env.Name)
 				}
 				if env.ValueFrom != nil {
-					actualValueFrom := envVarSourceByName(tc.spec.Deployment.Env, env.Name)
+					actualValueFrom := envVarSourceByName(tc.spec.Deployment.Pods.Env, env.Name)
 					require.Truef(t, reflect.DeepEqual(env.ValueFrom, actualValueFrom),
 						"should have same valuefrom of env %s", env.Name)
 				}
@@ -284,7 +296,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 }
 
 func TestControlPlaneSpecDeepEqual(t *testing.T) {
-	var testCases = []struct {
+	testCases := []struct {
 		name            string
 		spec1           *operatorv1alpha1.ControlPlaneOptions
 		spec2           *operatorv1alpha1.ControlPlaneOptions
@@ -295,36 +307,40 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 			name: "matching env vars, no ignored vars",
 			spec1: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name:  "CONTROLLER_PUBLISH_SERVICE",
-							Value: "test-ns/kong-proxy",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
-							Value: "/var/cluster-certificate/tls.crt",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
-							Value: "/var/cluster-certificate/tls.key",
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name:  "CONTROLLER_PUBLISH_SERVICE",
+								Value: "test-ns/kong-proxy",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+								Value: "/var/cluster-certificate/tls.crt",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+								Value: "/var/cluster-certificate/tls.key",
+							},
 						},
 					},
 				},
 			},
 			spec2: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name:  "CONTROLLER_PUBLISH_SERVICE",
-							Value: "test-ns/kong-proxy",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
-							Value: "/var/cluster-certificate/tls.crt",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
-							Value: "/var/cluster-certificate/tls.key",
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name:  "CONTROLLER_PUBLISH_SERVICE",
+								Value: "test-ns/kong-proxy",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+								Value: "/var/cluster-certificate/tls.crt",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+								Value: "/var/cluster-certificate/tls.key",
+							},
 						},
 					},
 				},
@@ -335,40 +351,44 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 			name: "matching env vars, with ignored vars",
 			spec1: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name:  "CONTROLLER_PUBLISH_SERVICE",
-							Value: "test-ns/kong-proxy",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_URL",
-							Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
-							Value: "/var/cluster-certificate/tls.crt",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
-							Value: "/var/cluster-certificate/tls.key",
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name:  "CONTROLLER_PUBLISH_SERVICE",
+								Value: "test-ns/kong-proxy",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_URL",
+								Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+								Value: "/var/cluster-certificate/tls.crt",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+								Value: "/var/cluster-certificate/tls.key",
+							},
 						},
 					},
 				},
 			},
 			spec2: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name:  "CONTROLLER_PUBLISH_SERVICE",
-							Value: "test-ns/kong-proxy",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
-							Value: "/var/cluster-certificate/tls.crt",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
-							Value: "/var/cluster-certificate/tls.key",
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name:  "CONTROLLER_PUBLISH_SERVICE",
+								Value: "test-ns/kong-proxy",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+								Value: "/var/cluster-certificate/tls.crt",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+								Value: "/var/cluster-certificate/tls.key",
+							},
 						},
 					},
 				},
@@ -382,40 +402,44 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 			name: "not matching env vars, no ignored vars",
 			spec1: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name:  "CONTROLLER_PUBLISH_SERVICE",
-							Value: "test-ns/kong-proxy",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_URL",
-							Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
-							Value: "/var/cluster-certificate/tls.crt",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
-							Value: "/var/cluster-certificate/tls.key",
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name:  "CONTROLLER_PUBLISH_SERVICE",
+								Value: "test-ns/kong-proxy",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_URL",
+								Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+								Value: "/var/cluster-certificate/tls.crt",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+								Value: "/var/cluster-certificate/tls.key",
+							},
 						},
 					},
 				},
 			},
 			spec2: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name:  "CONTROLLER_PUBLISH_SERVICE",
-							Value: "test-ns/kong-proxy",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
-							Value: "/var/cluster-certificate/tls.crt",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
-							Value: "/var/cluster-certificate/tls.key",
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name:  "CONTROLLER_PUBLISH_SERVICE",
+								Value: "test-ns/kong-proxy",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+								Value: "/var/cluster-certificate/tls.crt",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+								Value: "/var/cluster-certificate/tls.key",
+							},
 						},
 					},
 				},
@@ -426,32 +450,36 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 			name: "not matching env vars, with ignored vars",
 			spec1: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name:  "CONTROLLER_PUBLISH_SERVICE",
-							Value: "test-ns/kong-proxy",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_URL",
-							Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
-							Value: "/var/cluster-certificate/tls.key",
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name:  "CONTROLLER_PUBLISH_SERVICE",
+								Value: "test-ns/kong-proxy",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_URL",
+								Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+								Value: "/var/cluster-certificate/tls.key",
+							},
 						},
 					},
 				},
 			},
 			spec2: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name:  "CONTROLLER_PUBLISH_SERVICE",
-							Value: "test-ns/kong-proxy",
-						},
-						{
-							Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
-							Value: "/var/cluster-certificate/tls.crt",
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name:  "CONTROLLER_PUBLISH_SERVICE",
+								Value: "test-ns/kong-proxy",
+							},
+							{
+								Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+								Value: "/var/cluster-certificate/tls.crt",
+							},
 						},
 					},
 				},

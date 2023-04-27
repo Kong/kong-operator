@@ -54,19 +54,21 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		Spec: operatorv1alpha1.GatewayConfigurationSpec{
 			DataPlaneOptions: &operatorv1alpha1.DataPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name:  testEnvVar,
-							Value: testEnvVal,
-						},
-						{
-							Name: testEnvVarFromName,
-							ValueFrom: &corev1.EnvVarSource{
-								ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: configMap.Name,
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name:  testEnvVar,
+								Value: testEnvVal,
+							},
+							{
+								Name: testEnvVarFromName,
+								ValueFrom: &corev1.EnvVarSource{
+									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: configMap.Name,
+										},
+										Key: testEnvVarFromKV,
 									},
-									Key: testEnvVarFromKV,
 								},
 							},
 						},
@@ -75,19 +77,21 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			},
 			ControlPlaneOptions: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name:  testEnvVar,
-							Value: testEnvVal,
-						},
-						{
-							Name: testEnvVarFromName,
-							ValueFrom: &corev1.EnvVarSource{
-								ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: configMap.Name,
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name:  testEnvVar,
+								Value: testEnvVal,
+							},
+							{
+								Name: testEnvVarFromName,
+								ValueFrom: &corev1.EnvVarSource{
+									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: configMap.Name,
+										},
+										Key: testEnvVarFromKV,
 									},
-									Key: testEnvVarFromKV,
 								},
 							},
 						},
@@ -147,7 +151,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		if len(dataplanes) != 1 {
 			return false
 		}
-		for _, envVar := range dataplanes[0].Spec.Deployment.Env {
+		for _, envVar := range dataplanes[0].Spec.Deployment.Pods.Env {
 			if envVar.Name == testEnvVar && envVar.Value == testEnvVal {
 				return true
 			}
@@ -164,7 +168,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		if len(controlplanes) != 1 {
 			return false
 		}
-		for _, envVar := range controlplanes[0].Spec.Deployment.Env {
+		for _, envVar := range controlplanes[0].Spec.Deployment.Pods.Env {
 			if envVar.Name == testEnvVar && envVar.Value == testEnvVal {
 				return true
 			}
@@ -181,7 +185,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		if len(dataplanes) != 1 {
 			return false
 		}
-		for _, envVar := range dataplanes[0].Spec.Deployment.Env {
+		for _, envVar := range dataplanes[0].Spec.Deployment.Pods.Env {
 			if envVar.Name == testEnvVarFromName && envVar.ValueFrom.ConfigMapKeyRef.Key == testEnvVarFromKV {
 				return true
 			}
@@ -198,7 +202,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		if len(controlplanes) != 1 {
 			return false
 		}
-		for _, envVar := range controlplanes[0].Spec.Deployment.Env {
+		for _, envVar := range controlplanes[0].Spec.Deployment.Pods.Env {
 			if envVar.Name == testEnvVarFromName && envVar.ValueFrom.ConfigMapKeyRef.Key == testEnvVarFromKV {
 				return true
 			}
@@ -227,7 +231,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		if len(dataplanes) != 1 {
 			return false
 		}
-		for _, envVar := range dataplanes[0].Spec.Deployment.Env {
+		for _, envVar := range dataplanes[0].Spec.Deployment.Pods.Env {
 			if envVar.Name == testEnvVarFromName && envVar.ValueFrom.ConfigMapKeyRef.Key == testEnvVarFromKV {
 				return false
 			}
@@ -247,7 +251,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		if len(controlplanes) != 1 {
 			return false
 		}
-		for _, envVar := range controlplanes[0].Spec.Deployment.Env {
+		for _, envVar := range controlplanes[0].Spec.Deployment.Pods.Env {
 			if envVar.Name == testEnvVarFromName && envVar.ValueFrom.ConfigMapKeyRef.Key == testEnvVarFromKV {
 				return false
 			}

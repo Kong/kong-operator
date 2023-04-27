@@ -6,11 +6,15 @@ import (
 
 	"github.com/bombsimon/logrusr/v3"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
 
+	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 )
 
@@ -164,4 +168,294 @@ func TestLog(t *testing.T) {
 		require.NotContains(t, buf.String(), "unexpected type processed for")
 		buf.Reset()
 	})
+}
+
+func TestDeploymentOptionsDeepEqual(t *testing.T) {
+	testcases := []struct {
+		name         string
+		o1, o2       *operatorv1alpha1.DeploymentOptions
+		envsToIgnore []string
+		expect       bool
+	}{
+		{
+			name:   "nils are equal",
+			expect: true,
+		},
+		{
+			name:   "empty values are equal",
+			o1:     &operatorv1alpha1.DeploymentOptions{},
+			o2:     &operatorv1alpha1.DeploymentOptions{},
+			expect: true,
+		},
+		{
+			name: "different resource requirements implies different deployment options",
+			o1: &operatorv1alpha1.DeploymentOptions{
+				Pods: operatorv1alpha1.PodsOptions{
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+			o2: &operatorv1alpha1.DeploymentOptions{
+				Pods: operatorv1alpha1.PodsOptions{
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1001m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "different pod labels implies different deployment options",
+			o1: &operatorv1alpha1.DeploymentOptions{
+				Pods: operatorv1alpha1.PodsOptions{
+					Labels: map[string]string{
+						"a": "v",
+					},
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+			o2: &operatorv1alpha1.DeploymentOptions{
+				Pods: operatorv1alpha1.PodsOptions{
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "different version implies different deployment options",
+			o1: &operatorv1alpha1.DeploymentOptions{
+				Pods: operatorv1alpha1.PodsOptions{
+					Version: lo.ToPtr("1.0"),
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+			o2: &operatorv1alpha1.DeploymentOptions{
+				Pods: operatorv1alpha1.PodsOptions{
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "different container image implies different deployment options",
+			o1: &operatorv1alpha1.DeploymentOptions{
+				Pods: operatorv1alpha1.PodsOptions{
+					ContainerImage: lo.ToPtr("kong/custom"),
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+			o2: &operatorv1alpha1.DeploymentOptions{
+				Pods: operatorv1alpha1.PodsOptions{
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "different env var implies different deployment options",
+			o1: &operatorv1alpha1.DeploymentOptions{
+				Pods: operatorv1alpha1.PodsOptions{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "KONG_TEST_VAR",
+							Value: "VALUE1",
+						},
+					},
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+			o2: &operatorv1alpha1.DeploymentOptions{
+				Pods: operatorv1alpha1.PodsOptions{
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "the same",
+			o1: &operatorv1alpha1.DeploymentOptions{
+				Pods: operatorv1alpha1.PodsOptions{
+					Labels: map[string]string{
+						"a": "v",
+					},
+					Version:        lo.ToPtr("1.0"),
+					ContainerImage: lo.ToPtr("kong/custom"),
+					Env: []corev1.EnvVar{
+						{
+							Name:  "KONG_TEST_VAR",
+							Value: "VALUE1",
+						},
+					},
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+			o2: &operatorv1alpha1.DeploymentOptions{
+				Pods: operatorv1alpha1.PodsOptions{
+					Labels: map[string]string{
+						"a": "v",
+					},
+					Version:        lo.ToPtr("1.0"),
+					ContainerImage: lo.ToPtr("kong/custom"),
+					Env: []corev1.EnvVar{
+						{
+							Name:  "KONG_TEST_VAR",
+							Value: "VALUE1",
+						},
+					},
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "different replicas implies different deployment options",
+			o1: &operatorv1alpha1.DeploymentOptions{
+				Replicas: lo.ToPtr(int32(1)),
+				Pods: operatorv1alpha1.PodsOptions{
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+			o2: &operatorv1alpha1.DeploymentOptions{
+				Pods: operatorv1alpha1.PodsOptions{
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			ret := deploymentOptionsDeepEqual(tc.o1, tc.o2, tc.envsToIgnore...)
+			if tc.expect {
+				require.True(t, ret)
+			} else {
+				require.False(t, ret)
+			}
+		})
+	}
 }

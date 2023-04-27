@@ -19,7 +19,6 @@ import (
 
 	"github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	"github.com/kong/gateway-operator/controllers"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
@@ -43,8 +42,14 @@ func TestDataplaneEssentials(t *testing.T) {
 		Spec: v1alpha1.DataPlaneSpec{
 			DataPlaneOptions: v1alpha1.DataPlaneOptions{
 				Deployment: v1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{Name: "TEST_ENV", Value: "test"},
+					Pods: operatorv1alpha1.PodsOptions{
+						Labels: map[string]string{
+							"label-a": "value-a",
+							"label-x": "value-x",
+						},
+						Env: []corev1.EnvVar{
+							{Name: "TEST_ENV", Value: "test"},
+						},
 					},
 				},
 				Services: operatorv1alpha1.DataPlaneServicesOptions{
@@ -69,9 +74,29 @@ func TestDataplaneEssentials(t *testing.T) {
 	t.Log("verifying deployments managed by the dataplane")
 	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients), time.Minute, time.Second)
 
+	t.Logf("verifying that pod labels were set per the provided spec")
+	require.Eventually(t, func() bool {
+		deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients)
+		require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
+		deployment := &deployments[0]
+
+		va, oka := deployment.Spec.Template.Labels["label-a"]
+		if !oka || va != "value-a" {
+			t.Logf("got unexpected %q label-a value", va)
+			return false
+		}
+		vx, okx := deployment.Spec.Template.Labels["label-x"]
+		if !okx || vx != "value-x" {
+			t.Logf("got unexpected %q label-x value", vx)
+			return false
+		}
+
+		return true
+	}, testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
+
 	// check environment variables of deployments and pods.
 
-	t.Log("verifying dataplane deployment env vars")
+	t.Log("verifying dataplane Deployment.Pods.Env vars")
 	deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients)
 	require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
 	deployment := &deployments[0]
@@ -187,9 +212,11 @@ func TestDataPlaneUpdate(t *testing.T) {
 		Spec: v1alpha1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{Name: "TEST_ENV", Value: "before_update"},
-						{Name: consts.EnvVarKongDatabase, Value: "off"},
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{Name: "TEST_ENV", Value: "before_update"},
+							{Name: consts.EnvVarKongDatabase, Value: "off"},
+						},
 					},
 				},
 			},
@@ -199,27 +226,9 @@ func TestDataPlaneUpdate(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
-	dataPlaneConditionPredicate := func(c *metav1.Condition) func(dataplane *v1alpha1.DataPlane) bool {
-		return func(dataplane *v1alpha1.DataPlane) bool {
-			for _, condition := range dataplane.Status.Conditions {
-				if condition.Type == c.Type && condition.Status == c.Status {
-					return true
-				}
-				t.Logf("DataPlane condition: Type=%q;Reason:%q;Status:%q;Message:%q",
-					condition.Type, condition.Reason, condition.Status, condition.Message,
-				)
-			}
-			return false
-		}
-	}
-
 	t.Log("verifying that the dataplane gets marked as provisioned")
-	isProvisioned := dataPlaneConditionPredicate(&metav1.Condition{
-		Type:   string(controllers.DataPlaneConditionTypeProvisioned),
-		Status: metav1.ConditionTrue,
-	})
-	require.Eventually(t,
-		testutils.DataPlanePredicate(t, ctx, dataplaneName, isProvisioned, clients.OperatorClient),
+	require.Eventually(t, testutils.DataPlaneIsProvisioned(
+		t, ctx, dataplaneName, clients.OperatorClient),
 		testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
 	)
 
@@ -249,7 +258,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	t.Logf("updating dataplane resource")
 	dataplane, err = dataplaneClient.Get(ctx, dataplane.Name, metav1.GetOptions{})
 	require.NoError(t, err)
-	dataplane.Spec.Deployment.Env = []corev1.EnvVar{
+	dataplane.Spec.Deployment.Pods.Env = []corev1.EnvVar{
 		{
 			Name: "TEST_ENV", Value: "after_update",
 		},
@@ -269,6 +278,20 @@ func TestDataPlaneUpdate(t *testing.T) {
 		t.Logf("Tenvironment variable TEST_ENV is now %s in deployment", testEnv)
 		return testEnv == "after_update"
 	}, testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
+
+	dataPlaneConditionPredicate := func(c *metav1.Condition) func(dataplane *v1alpha1.DataPlane) bool {
+		return func(dataplane *v1alpha1.DataPlane) bool {
+			for _, condition := range dataplane.Status.Conditions {
+				if condition.Type == c.Type && condition.Status == c.Status {
+					return true
+				}
+				t.Logf("DataPlane condition: Type=%q;Reason:%q;Status:%q;Message:%q",
+					condition.Type, condition.Reason, condition.Status, condition.Message,
+				)
+			}
+			return false
+		}
+	}
 
 	var correctReadinessProbePath string
 	t.Run("dataplane is not Ready when the underlying deployment changes state to not Ready", func(t *testing.T) {
@@ -390,21 +413,23 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 		Spec: operatorv1alpha1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Volumes: []corev1.Volume{
-						{
-							Name: "test-volume",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: secret.Name,
+					Pods: operatorv1alpha1.PodsOptions{
+						Volumes: []corev1.Volume{
+							{
+								Name: "test-volume",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secret.Name,
+									},
 								},
 							},
 						},
-					},
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      "test-volume",
-							MountPath: "/var/test",
-							ReadOnly:  true,
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "test-volume",
+								MountPath: "/var/test",
+								ReadOnly:  true,
+							},
 						},
 					},
 				},
@@ -415,27 +440,8 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
-	t.Log("verifying dataplane gets marked scheduled")
-	isScheduled := func(dataplane *v1alpha1.DataPlane) bool {
-		for _, condition := range dataplane.Status.Conditions {
-			if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) {
-				return true
-			}
-		}
-		return false
-	}
-	require.Eventually(t, testutils.DataPlanePredicate(t, ctx, dataplaneName, isScheduled, clients.OperatorClient), time.Minute, time.Second)
-
 	t.Log("verifying that the dataplane gets marked as provisioned")
-	isProvisioned := func(dataplane *v1alpha1.DataPlane) bool {
-		for _, condition := range dataplane.Status.Conditions {
-			if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) && condition.Status == metav1.ConditionTrue {
-				return true
-			}
-		}
-		return false
-	}
-	require.Eventually(t, testutils.DataPlanePredicate(t, ctx, dataplaneName, isProvisioned, clients.OperatorClient), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneIsProvisioned(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
 	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients), time.Minute, time.Second)

@@ -46,8 +46,8 @@ func setControlPlaneDefaults(
 			FieldPath:  "metadata.namespace",
 		},
 	}
-	if !reflect.DeepEqual(envSourceMetadataNamespace, envVarSourceByName(spec.Deployment.Env, "POD_NAMESPACE")) {
-		spec.Deployment.Env = updateEnvSource(spec.Deployment.Env, "POD_NAMESPACE", envSourceMetadataNamespace)
+	if !reflect.DeepEqual(envSourceMetadataNamespace, envVarSourceByName(spec.Deployment.Pods.Env, "POD_NAMESPACE")) {
+		spec.Deployment.Pods.Env = updateEnvSource(spec.Deployment.Pods.Env, "POD_NAMESPACE", envSourceMetadataNamespace)
 		changed = true
 	}
 
@@ -58,21 +58,21 @@ func setControlPlaneDefaults(
 			FieldPath:  "metadata.name",
 		},
 	}
-	if !reflect.DeepEqual(envSourceMetadataName, envVarSourceByName(spec.Deployment.Env, "POD_NAME")) {
-		spec.Deployment.Env = updateEnvSource(spec.Deployment.Env, "POD_NAME", envSourceMetadataName)
+	if !reflect.DeepEqual(envSourceMetadataName, envVarSourceByName(spec.Deployment.Pods.Env, "POD_NAME")) {
+		spec.Deployment.Pods.Env = updateEnvSource(spec.Deployment.Pods.Env, "POD_NAME", envSourceMetadataName)
 		changed = true
 	}
 
-	if envValueByName(spec.Deployment.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME") != vars.ControllerName() {
-		spec.Deployment.Env = updateEnv(spec.Deployment.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME", vars.ControllerName())
+	if envValueByName(spec.Deployment.Pods.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME") != vars.ControllerName() {
+		spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME", vars.ControllerName())
 		changed = true
 	}
 
 	if args.namespace != "" && args.dataplaneProxyServiceName != "" {
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_PUBLISH_SERVICE"]; !isOverrideDisabled {
 			publishService := controllerPublishService(args.dataplaneProxyServiceName, args.namespace)
-			if envValueByName(spec.Deployment.Env, "CONTROLLER_PUBLISH_SERVICE") != publishService {
-				spec.Deployment.Env = updateEnv(spec.Deployment.Env, "CONTROLLER_PUBLISH_SERVICE", controllerPublishService(args.dataplaneProxyServiceName, args.namespace))
+			if envValueByName(spec.Deployment.Pods.Env, "CONTROLLER_PUBLISH_SERVICE") != publishService {
+				spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_PUBLISH_SERVICE", controllerPublishService(args.dataplaneProxyServiceName, args.namespace))
 				changed = true
 			}
 		}
@@ -81,8 +81,8 @@ func setControlPlaneDefaults(
 	if args.dataPlanePodIP != "" && args.dataplaneAdminServiceName != "" {
 		adminURL := controllerKongAdminURL(args.dataPlanePodIP, args.dataplaneAdminServiceName, args.namespace)
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_URL"]; !isOverrideDisabled {
-			if envValueByName(spec.Deployment.Env, "CONTROLLER_KONG_ADMIN_URL") != adminURL {
-				spec.Deployment.Env = updateEnv(spec.Deployment.Env, "CONTROLLER_KONG_ADMIN_URL", adminURL)
+			if envValueByName(spec.Deployment.Pods.Env, "CONTROLLER_KONG_ADMIN_URL") != adminURL {
+				spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_KONG_ADMIN_URL", adminURL)
 				changed = true
 			}
 		}
@@ -97,23 +97,23 @@ func setControlPlaneDefaults(
 		return false, err
 	}
 	if controlPlaneNeedEnableGatewayFeature(controlPlaneImage) {
-		envFeatureGates := envValueByName(spec.Deployment.Env, "CONTROLLER_FEATURE_GATES")
+		envFeatureGates := envValueByName(spec.Deployment.Pods.Env, "CONTROLLER_FEATURE_GATES")
 		if !strings.Contains(envFeatureGates, "Gateway=true") {
 			envFeatureGates = envFeatureGates + ",Gateway=true"
 			envFeatureGates = strings.TrimPrefix(envFeatureGates, ",")
-			spec.Deployment.Env = updateEnv(spec.Deployment.Env, "CONTROLLER_FEATURE_GATES", envFeatureGates)
+			spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_FEATURE_GATES", envFeatureGates)
 			changed = true
 		}
 	}
 
 	if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE"]; !isOverrideDisabled {
-		spec.Deployment.Env = updateEnv(spec.Deployment.Env, "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE", "/var/cluster-certificate/tls.crt")
+		spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE", "/var/cluster-certificate/tls.crt")
 	}
 	if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE"]; !isOverrideDisabled {
-		spec.Deployment.Env = updateEnv(spec.Deployment.Env, "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE", "/var/cluster-certificate/tls.key")
+		spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE", "/var/cluster-certificate/tls.key")
 	}
 	if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_CA_CERT_FILE"]; !isOverrideDisabled {
-		spec.Deployment.Env = updateEnv(spec.Deployment.Env, "CONTROLLER_KONG_ADMIN_CA_CERT_FILE", "/var/cluster-certificate/ca.crt")
+		spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_KONG_ADMIN_CA_CERT_FILE", "/var/cluster-certificate/ca.crt")
 	}
 
 	return changed, nil
@@ -149,13 +149,13 @@ func setControlPlaneEnvOnDataPlaneChange(
 	dataplaneIsSet := spec.DataPlane != nil && *spec.DataPlane != ""
 	if dataplaneIsSet {
 		newPublishServiceValue := controllerPublishService(dataplaneServiceName, namespace)
-		if envValueByName(spec.Deployment.Env, "CONTROLLER_PUBLISH_SERVICE") != newPublishServiceValue {
-			spec.Deployment.Env = updateEnv(spec.Deployment.Env, "CONTROLLER_PUBLISH_SERVICE", newPublishServiceValue)
+		if envValueByName(spec.Deployment.Pods.Env, "CONTROLLER_PUBLISH_SERVICE") != newPublishServiceValue {
+			spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_PUBLISH_SERVICE", newPublishServiceValue)
 			changed = true
 		}
 	} else {
-		if envValueByName(spec.Deployment.Env, "CONTROLLER_PUBLISH_SERVICE") != "" {
-			spec.Deployment.Env = rejectEnvByName(spec.Deployment.Env, "CONTROLLER_PUBLISH_SERVICE")
+		if envValueByName(spec.Deployment.Pods.Env, "CONTROLLER_PUBLISH_SERVICE") != "" {
+			spec.Deployment.Pods.Env = rejectEnvByName(spec.Deployment.Pods.Env, "CONTROLLER_PUBLISH_SERVICE")
 			changed = true
 		}
 	}
@@ -240,10 +240,10 @@ func rejectEnvByName(envVars []corev1.EnvVar, name string) []corev1.EnvVar {
 }
 
 func generateControlPlaneImage(opts *operatorv1alpha1.ControlPlaneOptions, validators ...versions.VersionValidationOption) (string, error) {
-	if opts.Deployment.ContainerImage != nil {
-		controlplaneImage := *opts.Deployment.ContainerImage
-		if opts.Deployment.Version != nil {
-			controlplaneImage = fmt.Sprintf("%s:%s", controlplaneImage, *opts.Deployment.Version)
+	if opts.Deployment.Pods.ContainerImage != nil {
+		controlplaneImage := *opts.Deployment.Pods.ContainerImage
+		if opts.Deployment.Pods.Version != nil {
+			controlplaneImage = fmt.Sprintf("%s:%s", controlplaneImage, *opts.Deployment.Pods.Version)
 		}
 		for _, v := range validators {
 			if !v(controlplaneImage) {

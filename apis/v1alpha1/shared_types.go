@@ -6,7 +6,8 @@ import (
 
 // DeploymentOptions is a shared type used on objects to indicate that their
 // configuration results in a Deployment which is managed by the Operator and
-// includes options for managing Deployments such as the container image and
+// includes options for managing Deployments such as the the number of replicas
+// or pod options like container image and resource requirements.
 // version, as well as Env variable overrides.
 type DeploymentOptions struct {
 	// Replicas describes the number of desired pods.
@@ -18,6 +19,15 @@ type DeploymentOptions struct {
 	// +kubebuilder:default=1
 	Replicas *int32 `json:"replicas,omitempty"`
 
+	// Pods defines the Deployment's pods.
+	//
+	// +optional
+	Pods PodsOptions `json:"pods,omitempty"`
+}
+
+// PodOptions is a shared type defining options on Pods deployed as part of
+// Deployments managed by the Operator.
+type PodsOptions struct {
 	// Resources describes the compute resource requirements.
 	//
 	// +optional
@@ -60,6 +70,11 @@ type DeploymentOptions struct {
 	//
 	// +optional
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
+
+	// Labels define labels on Deployment's pods.
+	//
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // GatewayConfigurationTargetKind is an object kind that can be targeted for

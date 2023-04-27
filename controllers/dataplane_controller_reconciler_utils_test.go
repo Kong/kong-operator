@@ -84,21 +84,23 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DeploymentOptions{
-							Volumes: []corev1.Volume{
-								{
-									Name: "test-volume",
-									VolumeSource: corev1.VolumeSource{
-										Secret: &corev1.SecretVolumeSource{
-											SecretName: "test-secret",
+							Pods: operatorv1alpha1.PodsOptions{
+								Volumes: []corev1.Volume{
+									{
+										Name: "test-volume",
+										VolumeSource: corev1.VolumeSource{
+											Secret: &corev1.SecretVolumeSource{
+												SecretName: "test-secret",
+											},
 										},
 									},
 								},
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "test-volume",
-									MountPath: "/var/test/",
-									ReadOnly:  true,
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      "test-volume",
+										MountPath: "/var/test/",
+										ReadOnly:  true,
+									},
 								},
 							},
 						},
@@ -160,14 +162,16 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DeploymentOptions{
-							Resources: &corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("2"),
-									corev1.ResourceMemory: resource.MustParse("1237Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("3"),
-									corev1.ResourceMemory: resource.MustParse("1237Mi"),
+							Pods: operatorv1alpha1.PodsOptions{
+								Resources: &corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("2"),
+										corev1.ResourceMemory: resource.MustParse("1237Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("3"),
+										corev1.ResourceMemory: resource.MustParse("1237Mi"),
+									},
 								},
 							},
 						},
@@ -185,7 +189,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				// generateDataPlaneImage will set deployment's containers resources
 				// to the ones set in dataplane spec so we set it here to get the
 				// expected behavior in reconciler's ensureDeploymentForDataPlane().
-				dataPlane.Spec.Deployment.Resources.Limits[corev1.ResourceCPU] = resource.MustParse("1337m")
+				dataPlane.Spec.Deployment.Pods.Resources.Limits[corev1.ResourceCPU] = resource.MustParse("1337m")
 
 				k8sutils.SetOwnerForObject(existingDeployment, dataPlane)
 				addLabelForDataplane(existingDeployment)
@@ -195,7 +199,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				require.Equal(t, Updated, res, "the DataPlane deployment should be updated to get the resources set to defaults")
 				require.NoError(t, err)
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
-				require.Equal(t, *dataPlane.Spec.Deployment.Resources, deployment.Spec.Template.Spec.Containers[0].Resources)
+				require.Equal(t, *dataPlane.Spec.Deployment.Pods.Resources, deployment.Spec.Template.Spec.Containers[0].Resources)
 			},
 		},
 		{
@@ -208,7 +212,9 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DeploymentOptions{
-							Resources: defaultDataPlaneResources,
+							Pods: operatorv1alpha1.PodsOptions{
+								Resources: defaultDataPlaneResources,
+							},
 						},
 					},
 				},

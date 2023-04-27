@@ -77,8 +77,10 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DeploymentOptions{
-							Env: []corev1.EnvVar{
-								{Name: "KONG_DATABASE", Value: "postgres"},
+							Pods: operatorv1alpha1.PodsOptions{
+								Env: []corev1.EnvVar{
+									{Name: "KONG_DATABASE", Value: "postgres"},
+								},
 							},
 						},
 					},
@@ -98,8 +100,10 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DeploymentOptions{
-							Env: []corev1.EnvVar{
-								{Name: "KONG_DATABASE", Value: "xxx"},
+							Pods: operatorv1alpha1.PodsOptions{
+								Env: []corev1.EnvVar{
+									{Name: "KONG_DATABASE", Value: "xxx"},
+								},
 							},
 						},
 					},
@@ -118,13 +122,15 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DeploymentOptions{
-							Env: []corev1.EnvVar{
-								{
-									Name: "KONG_DATABASE",
-									ValueFrom: &corev1.EnvVarSource{
-										ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{Name: "dataplane-configs"},
-											Key:                  "database1",
+							Pods: operatorv1alpha1.PodsOptions{
+								Env: []corev1.EnvVar{
+									{
+										Name: "KONG_DATABASE",
+										ValueFrom: &corev1.EnvVarSource{
+											ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+												LocalObjectReference: corev1.LocalObjectReference{Name: "dataplane-configs"},
+												Key:                  "database1",
+											},
 										},
 									},
 								},
@@ -220,8 +226,10 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DeploymentOptions{
-							Env: []corev1.EnvVar{
-								{Name: "KONG_DATABASE", Value: "postgres"},
+							Pods: operatorv1alpha1.PodsOptions{
+								Env: []corev1.EnvVar{
+									{Name: "KONG_DATABASE", Value: "postgres"},
+								},
 							},
 						},
 					},
@@ -239,8 +247,10 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DeploymentOptions{
-							Env: []corev1.EnvVar{
-								{Name: "KONG_DATABASE", Value: "xxx"},
+							Pods: operatorv1alpha1.PodsOptions{
+								Env: []corev1.EnvVar{
+									{Name: "KONG_DATABASE", Value: "xxx"},
+								},
 							},
 						},
 					},
@@ -258,13 +268,15 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DeploymentOptions{
-							Env: []corev1.EnvVar{
-								{
-									Name: "KONG_DATABASE",
-									ValueFrom: &corev1.EnvVarSource{
-										ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{Name: "dataplane-configs"},
-											Key:                  "database1",
+							Pods: operatorv1alpha1.PodsOptions{
+								Env: []corev1.EnvVar{
+									{
+										Name: "KONG_DATABASE",
+										ValueFrom: &corev1.EnvVarSource{
+											ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+												LocalObjectReference: corev1.LocalObjectReference{Name: "dataplane-configs"},
+												Key:                  "database1",
+											},
 										},
 									},
 								},

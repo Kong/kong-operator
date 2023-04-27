@@ -34,6 +34,7 @@ import (
 	"github.com/kong/gateway-operator/internal/manager/logging"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
+	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
@@ -379,7 +380,27 @@ func getLogger(ctx context.Context, controllerName string, developmentMode bool)
 // DeploymentOptions - Private Functions - Equality Checks
 // -----------------------------------------------------------------------------
 
-func deploymentOptionsDeepEqual(opts1, opts2 *operatorv1alpha1.DeploymentOptions, envVarsToIgnore ...string) bool {
+func deploymentOptionsDeepEqual(o1, o2 *operatorv1alpha1.DeploymentOptions, envVarsToIgnore ...string) bool {
+	if o1 == nil && o2 == nil {
+		return true
+	}
+
+	if (o1 == nil && o2 != nil) || (o1 != nil && o2 == nil) {
+		return false
+	}
+
+	var (
+		opts1 = o1.Pods
+		opts2 = o2.Pods
+	)
+
+	if (opts1.Resources != nil && opts2.Resources == nil) || (opts1.Resources == nil && opts2.Resources != nil) {
+		return false
+	}
+	if opts1.Resources != nil && opts2.Resources != nil && !resources.ResourceRequirementsEqual(*opts1.Resources, opts2.Resources) {
+		return false
+	}
+
 	if !reflect.DeepEqual(opts1.ContainerImage, opts2.ContainerImage) {
 		return false
 	}
@@ -389,6 +410,10 @@ func deploymentOptionsDeepEqual(opts1, opts2 *operatorv1alpha1.DeploymentOptions
 	}
 
 	if !reflect.DeepEqual(opts1.EnvFrom, opts2.EnvFrom) {
+		return false
+	}
+
+	if !reflect.DeepEqual(opts1.Labels, opts2.Labels) {
 		return false
 	}
 
@@ -412,6 +437,10 @@ func deploymentOptionsDeepEqual(opts1, opts2 *operatorv1alpha1.DeploymentOptions
 			return false
 		}
 		env2i += 1
+	}
+
+	if !reflect.DeepEqual(o1.Replicas, o2.Replicas) { //nolint:gosimple
+		return false
 	}
 
 	return true

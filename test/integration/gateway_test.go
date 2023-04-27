@@ -320,11 +320,11 @@ func setGatewayConfigurationEnvProxyPort(gatewayConfiguration *operatorv1alpha1.
 		dpOptions = &operatorv1alpha1.DataPlaneOptions{}
 	}
 
-	dpOptions.Deployment.Env = setEnvValueByName(dpOptions.Deployment.Env,
+	dpOptions.Deployment.Pods.Env = setEnvValueByName(dpOptions.Deployment.Pods.Env,
 		"KONG_PROXY_LISTEN",
 		fmt.Sprintf("0.0.0.0:%d reuseport backlog=16384, 0.0.0.0:%d http2 ssl reuseport backlog=16384", proxyPort, proxySSLPort),
 	)
-	dpOptions.Deployment.Env = setEnvValueByName(dpOptions.Deployment.Env,
+	dpOptions.Deployment.Pods.Env = setEnvValueByName(dpOptions.Deployment.Pods.Env,
 		"KONG_PORT_MAPS",
 		fmt.Sprintf("80:%d, 443:%d", proxyPort, proxySSLPort),
 	)
@@ -338,7 +338,7 @@ func setGatewayConfigurationEnvAdminAPIPort(gatewayConfiguration *operatorv1alph
 		dpOptions = &operatorv1alpha1.DataPlaneOptions{}
 	}
 
-	dpOptions.Deployment.Env = setEnvValueByName(dpOptions.Deployment.Env,
+	dpOptions.Deployment.Pods.Env = setEnvValueByName(dpOptions.Deployment.Pods.Env,
 		"KONG_ADMIN_LISTEN",
 		fmt.Sprintf("0.0.0.0:%d ssl reuseport backlog=16384", adminAPIPort),
 	)

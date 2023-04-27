@@ -4,16 +4,19 @@ metadata:
   name: dataplane-example
 spec:
   deployment:
-    env:
-    - name: KONG_LOG_LEVEL
-      value: debug
-    resources:
-      requests:
-        memory: "64Mi"
-        cpu: "250m"
-      limits:
-        memory: "1024Mi"
-        cpu: "1000m"
+    pods:
+      labels:
+        dataplane-pod-label: example
+      env:
+      - name: KONG_LOG_LEVEL
+        value: debug
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: "250m"
+        limits:
+          memory: "1024Mi"
+          cpu: "1000m"
   services:
     proxy:
       annotations:

@@ -487,13 +487,14 @@ func (r *GatewayReconciler) provisionControlPlane(
 	if gatewayConfig.Spec.ControlPlaneOptions != nil {
 		if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneOptions, gatewayConfig.Spec.ControlPlaneOptions, "CONTROLLER_KONG_ADMIN_URL") {
 			trace(log, "controlplane config is out of date, updating", gateway)
+			controlplaneOld := controlplane.DeepCopy()
 			controlplane.Spec.ControlPlaneOptions = *gatewayConfig.Spec.ControlPlaneOptions
-			if err := r.Client.Update(ctx, controlplane); err != nil {
+			if err := r.Client.Patch(ctx, controlplane, client.MergeFrom(controlplaneOld)); err != nil {
 				k8sutils.SetCondition(
 					createControlPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error()),
 					gatewayConditionsAware(gateway),
 				)
-				debug(log, fmt.Sprintf("failed updating the controlplane config - error: %v", err), gateway)
+				debug(log, fmt.Sprintf("failed patching the controlplane config - error: %v", err), gateway)
 				return nil
 			}
 			k8sutils.SetCondition(
@@ -514,9 +515,9 @@ func (r *GatewayReconciler) provisionControlPlane(
 	//
 	if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneOptions, expectedControlplaneDeploymentOptions, "CONTROLLER_KONG_ADMIN_URL") {
 		trace(log, "controlplane config is out of date, updating", gateway)
+		controlplaneOld := controlplane.DeepCopy()
 		controlplane.Spec.ControlPlaneOptions = *expectedControlplaneDeploymentOptions
-		err = r.Client.Update(ctx, controlplane)
-		if err != nil {
+		if err := r.Client.Patch(ctx, controlplane, client.MergeFrom(controlplaneOld)); err != nil {
 			k8sutils.SetCondition(
 				createControlPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error()),
 				gatewayConditionsAware(gateway),

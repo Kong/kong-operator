@@ -6,17 +6,19 @@ metadata:
 spec:
   dataPlaneOptions:
     deployment:
-      containerImage: kong
-      version: "3.0"
+      pods:
+        containerImage: kong
+        version: "3.2"
     services:
       proxy:
         annotations:
           foo: bar
   controlPlaneOptions:
     deployment:
-      env:
-      - name: CONTROLLER_LOG_LEVEL
-        value: debug
+      pods:
+        env:
+        - name: CONTROLLER_LOG_LEVEL
+          value: debug
 ---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1beta1

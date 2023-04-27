@@ -227,7 +227,7 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 		}
 
 		// We do not want to permit direct edits of the Deployment environment. Any user-supplied values should be set
-		// in the DataPlane. If the actual Deployment environment does not match the generated environment, either
+		// in the DataPlane. If the actual Deployment.Pods.Environment does not match the generated environment, either
 		// something requires an update or there was a manual edit we want to purge.
 		container := k8sutils.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 		if container == nil {
@@ -237,15 +237,15 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 			updated = true
 			container = k8sutils.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 		}
-		if !reflect.DeepEqual(container.Env, dataplane.Spec.Deployment.Env) {
-			trace(log, "DataPlane deployment Env needs updating", dataplane)
-			container.Env = dataplane.Spec.Deployment.Env
+		if !reflect.DeepEqual(container.Env, dataplane.Spec.Deployment.Pods.Env) {
+			trace(log, "DataPlane Deployment.Pods.Env needs updating", dataplane)
+			container.Env = dataplane.Spec.Deployment.Pods.Env
 			updated = true
 		}
 
-		if !reflect.DeepEqual(container.EnvFrom, dataplane.Spec.Deployment.EnvFrom) {
-			trace(log, "DataPlane deployment EnvFrom needs updating", dataplane)
-			container.EnvFrom = dataplane.Spec.Deployment.EnvFrom
+		if !reflect.DeepEqual(container.EnvFrom, dataplane.Spec.Deployment.Pods.EnvFrom) {
+			trace(log, "DataPlane Deployment.Pods.EnvFrom needs updating", dataplane)
+			container.EnvFrom = dataplane.Spec.Deployment.Pods.EnvFrom
 			updated = true
 		}
 
@@ -256,10 +256,10 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 			updated = true
 		}
 
-		if dataplane.Spec.Deployment.Resources != nil {
+		if dataplane.Spec.Deployment.Pods.Resources != nil {
 			// DataPlane deployment resources are set.
 			// Check if existing container already has its resources set per DataPlane spec.
-			dataPlaneResources := dataplane.Spec.Deployment.Resources
+			dataPlaneResources := dataplane.Spec.Deployment.Pods.Resources
 			if !k8sresources.ResourceRequirementsEqual(container.Resources, dataPlaneResources) {
 				trace(log, "DataPlane deployment Resources needs to be set as per DataPlane spec",
 					dataplane, "dataplane.resources", dataPlaneResources,
@@ -288,8 +288,13 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 			updated = true
 		}
 
+		if !reflect.DeepEqual(existingDeployment.Spec.Template.Labels, generatedDeployment.Spec.Template.Labels) {
+			existingDeployment.Spec.Template.Labels = generatedDeployment.Spec.Template.Labels
+			updated = true
+		}
+
 		// update the container image or image version if needed
-		imageUpdated, err := ensureContainerImageUpdated(container, dataplane.Spec.Deployment.ContainerImage, dataplane.Spec.Deployment.Version)
+		imageUpdated, err := ensureContainerImageUpdated(container, dataplane.Spec.Deployment.Pods.ContainerImage, dataplane.Spec.Deployment.Pods.Version)
 		if err != nil {
 			return Noop, nil, err
 		}

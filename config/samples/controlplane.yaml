@@ -6,6 +6,9 @@ spec:
   dataplane: dataplane-example
   gatewayClass: kong
   deployment:
+    pods:
+      labels:
+        controlplane-pod-label: example
     resources:
       requests:
         memory: "64Mi"

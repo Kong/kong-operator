@@ -13,6 +13,11 @@ metadata:
           "spec": {
             "dataplane": "dataplane-example",
             "deployment": {
+              "pods": {
+                "labels": {
+                  "controlplane-pod-label": "example"
+                }
+              },
               "resources": {
                 "limits": {
                   "cpu": "1000m",
@@ -35,20 +40,25 @@ metadata:
           },
           "spec": {
             "deployment": {
-              "env": [
-                {
-                  "name": "KONG_LOG_LEVEL",
-                  "value": "debug"
-                }
-              ],
-              "resources": {
-                "limits": {
-                  "cpu": "1000m",
-                  "memory": "1024Mi"
+              "pods": {
+                "env": [
+                  {
+                    "name": "KONG_LOG_LEVEL",
+                    "value": "debug"
+                  }
+                ],
+                "labels": {
+                  "dataplane-pod-label": "example"
                 },
-                "requests": {
-                  "cpu": "250m",
-                  "memory": "64Mi"
+                "resources": {
+                  "limits": {
+                    "cpu": "1000m",
+                    "memory": "1024Mi"
+                  },
+                  "requests": {
+                    "cpu": "250m",
+                    "memory": "64Mi"
+                  }
                 }
               }
             },
@@ -71,18 +81,22 @@ metadata:
           "spec": {
             "controlPlaneOptions": {
               "deployment": {
-                "env": [
-                  {
-                    "name": "CONTROLLER_LOG_LEVEL",
-                    "value": "debug"
-                  }
-                ]
+                "pods": {
+                  "env": [
+                    {
+                      "name": "CONTROLLER_LOG_LEVEL",
+                      "value": "debug"
+                    }
+                  ]
+                }
               }
             },
             "dataPlaneOptions": {
               "deployment": {
-                "containerImage": "kong",
-                "version": "3.0"
+                "pods": {
+                  "containerImage": "kong",
+                  "version": "3.2"
+                }
               },
               "services": {
                 "proxy": {

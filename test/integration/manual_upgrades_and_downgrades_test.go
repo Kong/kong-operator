@@ -51,14 +51,18 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		Spec: operatorv1alpha1.GatewayConfigurationSpec{
 			ControlPlaneOptions: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					ContainerImage: pointer.String(originalControlPlaneImageName),
-					Version:        pointer.String(originalControlPlaneImageVersion),
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: pointer.String(originalControlPlaneImageName),
+						Version:        pointer.String(originalControlPlaneImageVersion),
+					},
 				},
 			},
 			DataPlaneOptions: &operatorv1alpha1.DataPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					ContainerImage: pointer.String(originalDataPlaneImageName),
-					Version:        pointer.String(originalDataPlaneImageVersion),
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: pointer.String(originalDataPlaneImageName),
+						Version:        pointer.String(originalDataPlaneImageVersion),
+					},
 				},
 			},
 		},
@@ -115,10 +119,10 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		if len(controlplanes) != 1 {
 			return false
 		}
-		return controlplanes[0].Spec.Deployment.ContainerImage != nil &&
-			controlplanes[0].Spec.Deployment.Version != nil &&
-			*controlplanes[0].Spec.Deployment.ContainerImage == originalControlPlaneImageName &&
-			*controlplanes[0].Spec.Deployment.Version == originalControlPlaneImageVersion
+		return controlplanes[0].Spec.Deployment.Pods.ContainerImage != nil &&
+			controlplanes[0].Spec.Deployment.Pods.Version != nil &&
+			*controlplanes[0].Spec.Deployment.Pods.ContainerImage == originalControlPlaneImageName &&
+			*controlplanes[0].Spec.Deployment.Pods.Version == originalControlPlaneImageVersion
 	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
 
 	t.Log("verifying that the DataPlane receives the configuration override")
@@ -130,10 +134,10 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		if len(dataplanes) != 1 {
 			return false
 		}
-		return dataplanes[0].Spec.Deployment.ContainerImage != nil &&
-			dataplanes[0].Spec.Deployment.Version != nil &&
-			*dataplanes[0].Spec.Deployment.ContainerImage == originalDataPlaneImageName &&
-			*dataplanes[0].Spec.Deployment.Version == originalDataPlaneImageVersion
+		return dataplanes[0].Spec.Deployment.Pods.ContainerImage != nil &&
+			dataplanes[0].Spec.Deployment.Pods.Version != nil &&
+			*dataplanes[0].Spec.Deployment.Pods.ContainerImage == originalDataPlaneImageName &&
+			*dataplanes[0].Spec.Deployment.Pods.Version == originalDataPlaneImageVersion
 	}, testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying initial pod images for Gateway")
@@ -156,10 +160,10 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		if len(controlplanes) != 1 {
 			return false
 		}
-		return controlplanes[0].Spec.Deployment.ContainerImage != nil &&
-			controlplanes[0].Spec.Deployment.Version != nil &&
-			*controlplanes[0].Spec.Deployment.ContainerImage == originalControlPlaneImageName &&
-			*controlplanes[0].Spec.Deployment.Version == newControlPlaneImageVersion
+		return controlplanes[0].Spec.Deployment.Pods.ContainerImage != nil &&
+			controlplanes[0].Spec.Deployment.Pods.Version != nil &&
+			*controlplanes[0].Spec.Deployment.Pods.ContainerImage == originalControlPlaneImageName &&
+			*controlplanes[0].Spec.Deployment.Pods.Version == newControlPlaneImageVersion
 	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
 
 	t.Log("verifying upgraded ControlPlane Pod images for Gateway")
@@ -182,10 +186,10 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		if len(dataplanes) != 1 {
 			return false
 		}
-		return dataplanes[0].Spec.Deployment.ContainerImage != nil &&
-			dataplanes[0].Spec.Deployment.Version != nil &&
-			*dataplanes[0].Spec.Deployment.ContainerImage == originalDataPlaneImageName &&
-			*dataplanes[0].Spec.Deployment.Version == newDataPlaneImageVersion
+		return dataplanes[0].Spec.Deployment.Pods.ContainerImage != nil &&
+			dataplanes[0].Spec.Deployment.Pods.Version != nil &&
+			*dataplanes[0].Spec.Deployment.Pods.ContainerImage == originalDataPlaneImageName &&
+			*dataplanes[0].Spec.Deployment.Pods.Version == newDataPlaneImageVersion
 	}, testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying upgraded DataPlane Pod images for Gateway")
@@ -208,10 +212,10 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		if len(controlplanes) != 1 {
 			return false
 		}
-		return controlplanes[0].Spec.Deployment.ContainerImage != nil &&
-			controlplanes[0].Spec.Deployment.Version != nil &&
-			*controlplanes[0].Spec.Deployment.ContainerImage == originalControlPlaneImageName &&
-			*controlplanes[0].Spec.Deployment.Version == originalControlPlaneImageVersion
+		return controlplanes[0].Spec.Deployment.Pods.ContainerImage != nil &&
+			controlplanes[0].Spec.Deployment.Pods.Version != nil &&
+			*controlplanes[0].Spec.Deployment.Pods.ContainerImage == originalControlPlaneImageName &&
+			*controlplanes[0].Spec.Deployment.Pods.Version == originalControlPlaneImageVersion
 	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
 
 	t.Log("verifying downgraded ControlPlane Pod images for Gateway")
@@ -234,10 +238,10 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		if len(dataplanes) != 1 {
 			return false
 		}
-		return dataplanes[0].Spec.Deployment.ContainerImage != nil &&
-			dataplanes[0].Spec.Deployment.Version != nil &&
-			*dataplanes[0].Spec.Deployment.ContainerImage == originalDataPlaneImageName &&
-			*dataplanes[0].Spec.Deployment.Version == originalDataPlaneImageVersion
+		return dataplanes[0].Spec.Deployment.Pods.ContainerImage != nil &&
+			dataplanes[0].Spec.Deployment.Pods.Version != nil &&
+			*dataplanes[0].Spec.Deployment.Pods.ContainerImage == originalDataPlaneImageName &&
+			*dataplanes[0].Spec.Deployment.Pods.Version == originalDataPlaneImageVersion
 	}, testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying downgraded DataPlane Pod images for Gateway")
@@ -338,8 +342,8 @@ func changeControlPlaneImage(
 		return err
 	}
 
-	gcfg.Spec.ControlPlaneOptions.Deployment.ContainerImage = &controlPlaneImageName
-	gcfg.Spec.ControlPlaneOptions.Deployment.Version = &controlPlaneImageVersion
+	gcfg.Spec.ControlPlaneOptions.Deployment.Pods.ContainerImage = &controlPlaneImageName
+	gcfg.Spec.ControlPlaneOptions.Deployment.Pods.Version = &controlPlaneImageVersion
 
 	_, err = clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(gcfg.Namespace).Update(ctx, gcfg, metav1.UpdateOptions{})
 	return err
@@ -358,8 +362,8 @@ func changeDataPlaneImage(
 		return err
 	}
 
-	gcfg.Spec.DataPlaneOptions.Deployment.ContainerImage = &dataPlaneImageName
-	gcfg.Spec.DataPlaneOptions.Deployment.Version = &dataPlaneImageVersion
+	gcfg.Spec.DataPlaneOptions.Deployment.Pods.ContainerImage = &dataPlaneImageName
+	gcfg.Spec.DataPlaneOptions.Deployment.Pods.Version = &dataPlaneImageVersion
 
 	_, err = clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(gcfg.Namespace).Update(ctx, gcfg, metav1.UpdateOptions{})
 	return err

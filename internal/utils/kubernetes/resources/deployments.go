@@ -76,8 +76,8 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 					},
 					Containers: []corev1.Container{{
 						Name:            consts.ControlPlaneControllerContainerName,
-						Env:             controlplane.Spec.Deployment.Env,
-						EnvFrom:         controlplane.Spec.Deployment.EnvFrom,
+						Env:             controlplane.Spec.Deployment.Pods.Env,
+						EnvFrom:         controlplane.Spec.Deployment.Pods.EnvFrom,
 						Image:           controlplaneImage,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						VolumeMounts: []corev1.VolumeMount{
@@ -128,6 +128,9 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 			},
 		},
 	}
+
+	addLabelForDeploymentPods(deployment, controlplane.Spec.Deployment.Pods.Labels)
+
 	return deployment
 }
 
@@ -180,8 +183,8 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, da
 					Containers: []corev1.Container{{
 						Name:            consts.DataPlaneProxyContainerName,
 						VolumeMounts:    generateDataplaneDeploymentVolumeMounts(dataplane),
-						Env:             dataplane.Spec.Deployment.Env,
-						EnvFrom:         dataplane.Spec.Deployment.EnvFrom,
+						Env:             dataplane.Spec.Deployment.Pods.Env,
+						EnvFrom:         dataplane.Spec.Deployment.Pods.EnvFrom,
 						Image:           dataplaneImage,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Lifecycle: &corev1.Lifecycle{
@@ -238,7 +241,27 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, da
 		},
 	}
 
+	addLabelForDeploymentPods(deployment, dataplane.Spec.Deployment.Pods.Labels)
+
 	return deployment
+}
+
+func addLabelForDeploymentPods(deployment *appsv1.Deployment, labels map[string]string) {
+	if deployment.Spec.Template.Labels == nil && len(labels) > 0 {
+		deployment.Spec.Template.Labels = make(map[string]string)
+	}
+
+	for k, v := range labels {
+		ev, ok := deployment.Spec.Template.Labels[k]
+		if ok {
+			continue
+		}
+		if v == ev {
+			continue
+		}
+
+		deployment.Spec.Template.Labels[k] = v
+	}
 }
 
 // generateDataplaneDeploymentVolumes generates volumes in pods containing cluster certificate for mTLS
@@ -269,7 +292,7 @@ func generateDataplaneDeploymentVolumes(dataplane *operatorv1alpha1.DataPlane, c
 			},
 		},
 	}
-	for _, volume := range dataplane.Spec.Deployment.Volumes {
+	for _, volume := range dataplane.Spec.Deployment.Pods.Volumes {
 		volumes = append(volumes, *volume.DeepCopy())
 	}
 	return volumes
@@ -285,7 +308,7 @@ func generateDataplaneDeploymentVolumeMounts(dataplane *operatorv1alpha1.DataPla
 		},
 	}
 
-	for _, mount := range dataplane.Spec.Deployment.VolumeMounts {
+	for _, mount := range dataplane.Spec.Deployment.Pods.VolumeMounts {
 		volumeMounts = append(volumeMounts, *mount.DeepCopy())
 	}
 
@@ -348,10 +371,10 @@ func getResourceRequirements[
 	switch s := any(spec).(type) {
 	case operatorv1alpha1.DataPlaneSpec:
 		ret = DefaultDataPlaneResources()
-		requested = s.Deployment.Resources
+		requested = s.Deployment.Pods.Resources
 	case operatorv1alpha1.ControlPlaneSpec:
 		ret = DefaultControlPlaneResources()
-		requested = s.Deployment.Resources
+		requested = s.Deployment.Pods.Resources
 	}
 	if requested == nil {
 		return *ret

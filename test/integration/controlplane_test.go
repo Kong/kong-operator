@@ -137,8 +137,14 @@ func TestControlPlaneEssentials(t *testing.T) {
 		Spec: operatorv1alpha1.ControlPlaneSpec{
 			ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{Name: "TEST_ENV", Value: "test"},
+					Pods: operatorv1alpha1.PodsOptions{
+						Labels: map[string]string{
+							"label-a": "value-a",
+							"label-x": "value-x",
+						},
+						Env: []corev1.EnvVar{
+							{Name: "TEST_ENV", Value: "test"},
+						},
 					},
 				},
 				DataPlane: &dataplane.Name,
@@ -175,12 +181,32 @@ func TestControlPlaneEssentials(t *testing.T) {
 	t.Log("verifying controlplane deployment has active replicas")
 	require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t, ctx, controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
+	t.Logf("verifying that pod labels were set per the provided spec")
+	require.Eventually(t, func() bool {
+		deployments := testutils.MustListControlPlaneDeployments(t, ctx, controlplane, clients)
+		require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
+		deployment := &deployments[0]
+
+		va, oka := deployment.Spec.Template.Labels["label-a"]
+		if !oka || va != "value-a" {
+			t.Logf("got unexpected %q label-a value", va)
+			return false
+		}
+		vx, okx := deployment.Spec.Template.Labels["label-x"]
+		if !okx || vx != "value-x" {
+			t.Logf("got unexpected %q label-x value", vx)
+			return false
+		}
+
+		return true
+	}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+
 	// check environment variables of deployments and pods.
 	deployments := testutils.MustListControlPlaneDeployments(t, ctx, controlplane, clients)
 	require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
 	deployment := &deployments[0]
 
-	t.Log("verifying controlplane deployment env vars")
+	t.Log("verifying controlplane Deployment.Pods.Env vars")
 	checkControlPlaneDeploymentEnvVars(t, deployment)
 
 	t.Log("deleting the  controlplane ClusterRole and ClusterRoleBinding")
@@ -201,7 +227,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 	t.Log("verifying deployments managed by the dataplane after deletion")
 	require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t, ctx, controlplaneName, clients), time.Minute, time.Second)
 
-	t.Log("verifying controlplane deployment env vars")
+	t.Log("verifying controlplane Deployment.Pods.Env vars")
 	checkControlPlaneDeploymentEnvVars(t, deployment)
 
 	// delete controlplane and verify that cluster wide resources removed.
@@ -277,9 +303,11 @@ func TestControlPlaneUpdate(t *testing.T) {
 		Spec: operatorv1alpha1.ControlPlaneSpec{
 			ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name: "TEST_ENV", Value: "before_update",
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{
+								Name: "TEST_ENV", Value: "before_update",
+							},
 						},
 					},
 				},
@@ -328,7 +356,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 	t.Logf("updating controlplane resource")
 	controlplane, err = controlplaneClient.Get(ctx, controlplaneName.Name, metav1.GetOptions{})
 	require.NoError(t, err)
-	controlplane.Spec.Deployment.Env = []corev1.EnvVar{
+	controlplane.Spec.Deployment.Pods.Env = []corev1.EnvVar{
 		{
 			Name: "TEST_ENV", Value: "after_update",
 		},

@@ -78,11 +78,11 @@ func SetDataPlaneDefaults(spec *operatorv1alpha1.DataPlaneOptions) bool {
 	updated := false
 	for k, v := range KongDefaults {
 		envVar := corev1.EnvVar{Name: k, Value: v}
-		if !k8sutils.IsEnvVarPresent(envVar, spec.Deployment.Env) {
-			spec.Deployment.Env = append(spec.Deployment.Env, envVar)
+		if !k8sutils.IsEnvVarPresent(envVar, spec.Deployment.Pods.Env) {
+			spec.Deployment.Pods.Env = append(spec.Deployment.Pods.Env, envVar)
 			updated = true
 		}
 	}
-	sort.Sort(k8sutils.SortableEnvVars(spec.Deployment.Env))
+	sort.Sort(k8sutils.SortableEnvVars(spec.Deployment.Pods.Env))
 	return updated
 }

@@ -84,8 +84,10 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				Spec: operatorv1alpha1.ControlPlaneSpec{
 					ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
 						Deployment: operatorv1alpha1.DeploymentOptions{
-							ContainerImage: pointer.String("kong/kubernetes-ingress-controller"),
-							Version:        pointer.String("2.7"),
+							Pods: operatorv1alpha1.PodsOptions{
+								ContainerImage: pointer.String("kong/kubernetes-ingress-controller"),
+								Version:        pointer.String("2.7"),
+							},
 						},
 						DataPlane: pointer.String("test-dataplane"),
 					},
@@ -112,8 +114,10 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DeploymentOptions{
-							ContainerImage: pointer.String("kong"),
-							Version:        pointer.String("3.0"),
+							Pods: operatorv1alpha1.PodsOptions{
+								ContainerImage: pointer.String("kong"),
+								Version:        pointer.String("3.0"),
+							},
 						},
 					},
 				},
@@ -241,8 +245,10 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				Spec: operatorv1alpha1.ControlPlaneSpec{
 					ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
 						Deployment: operatorv1alpha1.DeploymentOptions{
-							ContainerImage: pointer.String("kong/kubernetes-ingress-controller"),
-							Version:        pointer.String("1.0"),
+							Pods: operatorv1alpha1.PodsOptions{
+								ContainerImage: pointer.String("kong/kubernetes-ingress-controller"),
+								Version:        pointer.String("1.0"),
+							},
 						},
 						DataPlane: pointer.String("test-dataplane"),
 					},
@@ -269,8 +275,10 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DeploymentOptions{
-							ContainerImage: pointer.String("kong"),
-							Version:        pointer.String("3.0"),
+							Pods: operatorv1alpha1.PodsOptions{
+								ContainerImage: pointer.String("kong"),
+								Version:        pointer.String("3.0"),
+							},
 						},
 					},
 				},

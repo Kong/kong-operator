@@ -34,8 +34,10 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 		Spec: operatorv1alpha1.GatewayConfigurationSpec{
 			ControlPlaneOptions: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Env: []corev1.EnvVar{
-						{Name: "CONTROLLER_LOG_LEVEL", Value: "trace"},
+					Pods: operatorv1alpha1.PodsOptions{
+						Env: []corev1.EnvVar{
+							{Name: "CONTROLLER_LOG_LEVEL", Value: "trace"},
+						},
 					},
 				},
 			},
