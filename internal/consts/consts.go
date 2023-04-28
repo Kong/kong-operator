@@ -59,6 +59,9 @@ const (
 	// decide an image fail.
 	DefaultDataPlaneBaseImage = "kong"
 
+	// DefaultDataPlaneEnterpriseImage is the enterprise base container image.
+	DefaultDataPlaneEnterpriseImage = "kong/kong-gateway"
+
 	// DefaultDataPlaneTag is the base container image tag that can be used
 	// by default for a DataPlane resource if all other attempts to dynamically
 	// decide an image tag fail.
