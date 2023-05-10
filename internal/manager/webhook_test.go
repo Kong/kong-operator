@@ -33,6 +33,8 @@ import (
 )
 
 func TestWaitForWebhookCertificate(t *testing.T) {
+	t.Parallel()
+
 	testScheme := runtime.NewScheme()
 	require.NoError(t, clientgoscheme.AddToScheme(testScheme))
 
@@ -47,9 +49,9 @@ func TestWaitForWebhookCertificate(t *testing.T) {
 	}{
 		{
 			name:         "secret created before the timer expires",
-			pollTimeout:  5 * time.Second,
-			pollInterval: 1 * time.Second,
-			createAfter:  2 * time.Second,
+			pollTimeout:  4 * time.Second,
+			pollInterval: 10 * time.Millisecond,
+			createAfter:  500 * time.Millisecond,
 			namespace:    "test",
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -61,8 +63,8 @@ func TestWaitForWebhookCertificate(t *testing.T) {
 		},
 		{
 			name:         "secret not created before the timer expires",
-			pollTimeout:  3 * time.Second,
-			pollInterval: 1 * time.Second,
+			pollTimeout:  500 * time.Millisecond,
+			pollInterval: 10 * time.Millisecond,
 			namespace:    "test",
 			err:          fmt.Errorf("timeout for creating webhook certificate expired"),
 		},
