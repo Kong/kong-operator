@@ -17,7 +17,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.4
 	github.com/go-logr/logr v1.2.4
 	github.com/google/uuid v1.3.0
-	github.com/kong/kubernetes-telemetry v0.0.3
+	github.com/kong/kubernetes-telemetry v0.0.4
 	github.com/kong/kubernetes-testing-framework v0.30.1
 	github.com/samber/lo v1.38.1
 	github.com/stretchr/testify v1.8.2
