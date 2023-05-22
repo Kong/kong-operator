@@ -8,6 +8,9 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  pull_request_target:
+    branches:
+      - '*'
   pull_request:
     branches:
       - '*'
