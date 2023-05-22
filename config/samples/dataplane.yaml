@@ -5,6 +5,8 @@ metadata:
 spec:
   deployment:
     pods:
+      containerImage: kong
+      version: "3.2"
       labels:
         dataplane-pod-label: example
       env:

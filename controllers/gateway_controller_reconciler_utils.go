@@ -50,6 +50,7 @@ func (r *GatewayReconciler) createDataPlane(ctx context.Context,
 	if gatewayConfig.Spec.DataPlaneOptions != nil {
 		dataplane.Spec.DataPlaneOptions = *gatewayConfig.Spec.DataPlaneOptions
 	}
+	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions)
 	k8sutils.SetOwnerForObject(dataplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(dataplane)
 	return r.Client.Create(ctx, dataplane)
@@ -77,6 +78,8 @@ func (r *GatewayReconciler) createControlPlane(
 	if controlplane.Spec.DataPlane == nil {
 		controlplane.Spec.DataPlane = &dataplaneName
 	}
+
+	setControlPlaneOptionsDefaults(&controlplane.Spec.ControlPlaneOptions)
 	k8sutils.SetOwnerForObject(controlplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(controlplane)
 	return r.Client.Create(ctx, controlplane)

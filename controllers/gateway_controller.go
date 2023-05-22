@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -385,13 +386,16 @@ func (r *GatewayReconciler) provisionDataPlane(
 	trace(log, "ensuring dataplane config is up to date", gateway)
 	// compare deployment option of dataplane with dataplane deployment option of gatewayconfiguration.
 	// if not configured in gatewayconfiguration, compare deployment option of dataplane with an empty one.
-	expectedDataplaneDeploymentOptions := &operatorv1alpha1.DataPlaneOptions{}
+	expectedDataplaneOptions := &operatorv1alpha1.DataPlaneOptions{}
 	if gatewayConfig.Spec.DataPlaneOptions != nil {
-		expectedDataplaneDeploymentOptions = gatewayConfig.Spec.DataPlaneOptions
+		expectedDataplaneOptions = gatewayConfig.Spec.DataPlaneOptions
 	}
-	if !dataplaneSpecDeepEqual(&dataplane.Spec.DataPlaneOptions, expectedDataplaneDeploymentOptions) {
+	// Don't require setting defaults for DataPlane when using Gateway CRD.
+	setDataPlaneOptionsDefaults(expectedDataplaneOptions)
+
+	if !dataplaneSpecDeepEqual(&dataplane.Spec.DataPlaneOptions, expectedDataplaneOptions) {
 		trace(log, "dataplane config is out of date, updating", gateway)
-		dataplane.Spec.DataPlaneOptions = *expectedDataplaneDeploymentOptions
+		dataplane.Spec.DataPlaneOptions = *expectedDataplaneOptions
 
 		err = r.Client.Update(ctx, dataplane)
 		if err != nil {
@@ -484,39 +488,19 @@ func (r *GatewayReconciler) provisionControlPlane(
 	controlplane := controlplanes[0].DeepCopy()
 
 	trace(log, "ensuring controlplane config is up to date", gateway)
-	if gatewayConfig.Spec.ControlPlaneOptions != nil {
-		if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneOptions, gatewayConfig.Spec.ControlPlaneOptions, "CONTROLLER_KONG_ADMIN_URL") {
-			trace(log, "controlplane config is out of date, updating", gateway)
-			controlplaneOld := controlplane.DeepCopy()
-			controlplane.Spec.ControlPlaneOptions = *gatewayConfig.Spec.ControlPlaneOptions
-			if err := r.Client.Patch(ctx, controlplane, client.MergeFrom(controlplaneOld)); err != nil {
-				k8sutils.SetCondition(
-					createControlPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error()),
-					gatewayConditionsAware(gateway),
-				)
-				debug(log, fmt.Sprintf("failed patching the controlplane config - error: %v", err), gateway)
-				return nil
-			}
-			k8sutils.SetCondition(
-				createControlPlaneCondition(metav1.ConditionFalse, k8sutils.ResourceCreatedOrUpdatedReason, k8sutils.ResourceUpdatedMessage),
-				gatewayConditionsAware(gateway),
-			)
-			debug(log, "controlplane config updated", gateway)
-		}
-	}
-	trace(log, "ensuring controlplane config is up to date", gateway)
 	// compare deployment option of controlplane with controlplane deployment option of gatewayconfiguration.
 	// if not configured in gatewayconfiguration, compare deployment option of controlplane with an empty one.
-	expectedControlplaneDeploymentOptions := &operatorv1alpha1.ControlPlaneOptions{}
+	expectedControlplaneOptions := &operatorv1alpha1.ControlPlaneOptions{}
 	if gatewayConfig.Spec.ControlPlaneOptions != nil {
-		expectedControlplaneDeploymentOptions = gatewayConfig.Spec.ControlPlaneOptions
+		expectedControlplaneOptions = gatewayConfig.Spec.ControlPlaneOptions
 	}
+	// Don't require setting defaults for ControlPlane when using Gateway CRD.
+	setControlPlaneOptionsDefaults(expectedControlplaneOptions)
 
-	//
-	if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneOptions, expectedControlplaneDeploymentOptions, "CONTROLLER_KONG_ADMIN_URL") {
+	if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneOptions, expectedControlplaneOptions, "CONTROLLER_KONG_ADMIN_URL") {
 		trace(log, "controlplane config is out of date, updating", gateway)
 		controlplaneOld := controlplane.DeepCopy()
-		controlplane.Spec.ControlPlaneOptions = *expectedControlplaneDeploymentOptions
+		controlplane.Spec.ControlPlaneOptions = *expectedControlplaneOptions
 		if err := r.Client.Patch(ctx, controlplane, client.MergeFrom(controlplaneOld)); err != nil {
 			k8sutils.SetCondition(
 				createControlPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error()),
@@ -544,6 +528,36 @@ func (r *GatewayReconciler) provisionControlPlane(
 		gatewayConditionsAware(gateway),
 	)
 	return controlplane
+}
+
+// setControlPlaneOptionsDefaults sets the default ControlPlane options not overriding
+// what's been provided only filling in those fields that were unset or empty.
+func setControlPlaneOptionsDefaults(opts *operatorv1alpha1.ControlPlaneOptions) {
+	if opts.Deployment.Pods.ContainerImage == nil || len(*opts.Deployment.Pods.ContainerImage) == 0 {
+		opts.Deployment.Pods.ContainerImage = lo.ToPtr(consts.DefaultControlPlaneBaseImage)
+	}
+	if opts.Deployment.Pods.Version == nil || len(*opts.Deployment.Pods.Version) == 0 {
+		opts.Deployment.Pods.Version = lo.ToPtr(consts.DefaultControlPlaneTag)
+	}
+
+	if opts.Deployment.Replicas == nil {
+		opts.Deployment.Replicas = lo.ToPtr(int32(1))
+	}
+}
+
+// setDataPlaneOptionsDefaults sets the default DataPlane options not overriding
+// what's been provided only filling in those fields that were unset or empty.
+func setDataPlaneOptionsDefaults(opts *operatorv1alpha1.DataPlaneOptions) {
+	if opts.Deployment.Pods.ContainerImage == nil || len(*opts.Deployment.Pods.ContainerImage) == 0 {
+		opts.Deployment.Pods.ContainerImage = lo.ToPtr(consts.DefaultDataPlaneBaseImage)
+	}
+	if opts.Deployment.Pods.Version == nil || len(*opts.Deployment.Pods.Version) == 0 {
+		opts.Deployment.Pods.Version = lo.ToPtr(consts.DefaultDataPlaneTag)
+	}
+
+	if opts.Deployment.Replicas == nil {
+		opts.Deployment.Replicas = lo.ToPtr(int32(1))
+	}
 }
 
 func createDataPlaneCondition(status metav1.ConditionStatus, reason k8sutils.ConditionReason, message string) metav1.Condition {

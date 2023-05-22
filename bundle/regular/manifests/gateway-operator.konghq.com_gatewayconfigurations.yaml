@@ -64,7 +64,9 @@ spec:
                           containerImage:
                             description: "ContainerImage indicates the image that
                               will be used for the Deployment. \n If omitted a default
-                              image will be automatically chosen."
+                              image will be automatically chosen. In case of DataPlane
+                              and ControlPlane CRDs, this is a required field, validated
+                              by the admission webhook."
                             type: string
                           env:
                             description: Env indicates the environment variables to
@@ -291,7 +293,9 @@ spec:
                           version:
                             description: "Version indicates the desired version of
                               the ContainerImage. \n Not available when AutomaticUpgrades
-                              is in use. \n If omitted a default version will be chosen."
+                              is in use. \n If omitted a default version will be chosen.
+                              In case of DataPlane and ControlPlane CRDs, this is
+                              a required field, validated by the admission webhook."
                             type: string
                           volumeMounts:
                             description: VolumeMounts defines additional volumes to
@@ -2147,7 +2151,9 @@ spec:
                           containerImage:
                             description: "ContainerImage indicates the image that
                               will be used for the Deployment. \n If omitted a default
-                              image will be automatically chosen."
+                              image will be automatically chosen. In case of DataPlane
+                              and ControlPlane CRDs, this is a required field, validated
+                              by the admission webhook."
                             type: string
                           env:
                             description: Env indicates the environment variables to
@@ -2374,7 +2380,9 @@ spec:
                           version:
                             description: "Version indicates the desired version of
                               the ContainerImage. \n Not available when AutomaticUpgrades
-                              is in use. \n If omitted a default version will be chosen."
+                              is in use. \n If omitted a default version will be chosen.
+                              In case of DataPlane and ControlPlane CRDs, this is
+                              a required field, validated by the admission webhook."
                             type: string
                           volumeMounts:
                             description: VolumeMounts defines additional volumes to

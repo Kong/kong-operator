@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,14 +59,15 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 		conditionMessage string
 	}{
 		{
-			name: "reconciler:validating_ok_with_empty_deplyoptions",
+			name: "reconciler:validating_error_with_empty_deplyoptions",
 			dataplane: &operatorv1alpha1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace.Name,
 					Name:      uuid.NewString(),
 				},
 			},
-			validatingOK: true,
+			validatingOK:     false,
+			conditionMessage: "DataPlanes requires a containerImage",
 		},
 		{
 			name: "reconciler:database_postgres_not_supported",
@@ -81,6 +83,8 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 								Env: []corev1.EnvVar{
 									{Name: "KONG_DATABASE", Value: "postgres"},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -104,6 +108,8 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 								Env: []corev1.EnvVar{
 									{Name: "KONG_DATABASE", Value: "xxx"},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -134,6 +140,8 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 										},
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},

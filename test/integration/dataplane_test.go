@@ -50,6 +50,8 @@ func TestDataplaneEssentials(t *testing.T) {
 						Env: []corev1.EnvVar{
 							{Name: "TEST_ENV", Value: "test"},
 						},
+						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 					},
 				},
 				Services: operatorv1alpha1.DataPlaneServicesOptions{
@@ -217,6 +219,8 @@ func TestDataPlaneUpdate(t *testing.T) {
 							{Name: "TEST_ENV", Value: "before_update"},
 							{Name: consts.EnvVarKongDatabase, Value: "off"},
 						},
+						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 					},
 				},
 			},
@@ -353,6 +357,10 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 			DataPlaneOptions: v1alpha1.DataPlaneOptions{
 				Deployment: v1alpha1.DeploymentOptions{
 					Replicas: lo.ToPtr(int32(2)),
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+					},
 				},
 			},
 		},
@@ -431,6 +439,8 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 								ReadOnly:  true,
 							},
 						},
+						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 					},
 				},
 			},

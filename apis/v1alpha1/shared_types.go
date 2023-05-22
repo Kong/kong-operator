@@ -36,6 +36,8 @@ type PodsOptions struct {
 	// ContainerImage indicates the image that will be used for the Deployment.
 	//
 	// If omitted a default image will be automatically chosen.
+	// In case of DataPlane and ControlPlane CRDs, this is a required field,
+	// validated by the admission webhook.
 	//
 	// +optional
 	ContainerImage *string `json:"containerImage,omitempty"`
@@ -45,6 +47,8 @@ type PodsOptions struct {
 	// Not available when AutomaticUpgrades is in use.
 	//
 	// If omitted a default version will be chosen.
+	// In case of DataPlane and ControlPlane CRDs, this is a required field,
+	// validated by the admission webhook.
 	//
 	// +optional
 	Version *string `json:"version,omitempty"`

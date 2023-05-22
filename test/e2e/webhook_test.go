@@ -8,11 +8,13 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 )
 
 func TestDataplaneValidatingWebhook(t *testing.T) {
@@ -29,14 +31,14 @@ func TestDataplaneValidatingWebhook(t *testing.T) {
 		errMsg    string
 	}{
 		{
-			name: "validating_ok",
+			name: "validating_error",
 			dataplane: &operatorv1alpha1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace.Name,
 					Name:      uuid.NewString(),
 				},
 			},
-			errMsg: "",
+			errMsg: "DataPlanes requires a containerImage",
 		},
 		{
 			name: "database_postgres_not_supported",
@@ -52,6 +54,8 @@ func TestDataplaneValidatingWebhook(t *testing.T) {
 								Env: []corev1.EnvVar{
 									{Name: "KONG_DATABASE", Value: "postgres"},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},

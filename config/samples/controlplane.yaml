@@ -7,6 +7,8 @@ spec:
   gatewayClass: kong
   deployment:
     pods:
+      containerImage: kong/kubernetes-ingress-controller
+      version: "2.9"
       labels:
         controlplane-pod-label: example
     resources:

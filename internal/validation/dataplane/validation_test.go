@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,6 +72,8 @@ func TestValidateDeployOptions(t *testing.T) {
 										Value: "off",
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -95,6 +98,8 @@ func TestValidateDeployOptions(t *testing.T) {
 										Value: "",
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -119,6 +124,8 @@ func TestValidateDeployOptions(t *testing.T) {
 										Value: "postgres",
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -144,6 +151,8 @@ func TestValidateDeployOptions(t *testing.T) {
 										Value: "xxx",
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -174,6 +183,8 @@ func TestValidateDeployOptions(t *testing.T) {
 										},
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -203,6 +214,8 @@ func TestValidateDeployOptions(t *testing.T) {
 										},
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -230,6 +243,8 @@ func TestValidateDeployOptions(t *testing.T) {
 										},
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -257,6 +272,8 @@ func TestValidateDeployOptions(t *testing.T) {
 										},
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -268,14 +285,17 @@ func TestValidateDeployOptions(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		v := &Validator{
-			c: b.Build(),
-		}
-		err := v.Validate(tc.dataplane)
-		if !tc.hasError {
-			require.NoErrorf(t, err, tc.msg)
-		} else {
-			require.ErrorContainsf(t, err, tc.errMsg, tc.msg)
-		}
+		tc := tc
+		t.Run(tc.msg, func(t *testing.T) {
+			v := &Validator{
+				c: b.Build(),
+			}
+			err := v.Validate(tc.dataplane)
+			if !tc.hasError {
+				require.NoError(t, err, tc.msg)
+			} else {
+				require.EqualError(t, err, tc.errMsg, tc.msg)
+			}
+		})
 	}
 }

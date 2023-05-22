@@ -206,5 +206,7 @@ func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gwtype
 		return err
 	}
 
+	setControlPlaneOptionsDefaults(gatewayConfig.Spec.ControlPlaneOptions)
+
 	return nil
 }

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,8 +43,13 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 		},
 		Spec: operatorv1alpha1.ControlPlaneSpec{
 			ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{},
-				DataPlane:  nil,
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr(consts.DefaultControlPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultControlPlaneTag),
+					},
+				},
+				DataPlane: nil,
 			},
 		},
 	}
@@ -57,6 +63,16 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dataplaneName.Namespace,
 			Name:      dataplaneName.Name,
+		},
+		Spec: operatorv1alpha1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+					},
+				},
+			},
 		},
 	}
 
@@ -123,6 +139,16 @@ func TestControlPlaneEssentials(t *testing.T) {
 			Namespace: dataplaneName.Namespace,
 			Name:      dataplaneName.Name,
 		},
+		Spec: operatorv1alpha1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+					},
+				},
+			},
+		},
 	}
 
 	controlplaneName := types.NamespacedName{
@@ -145,6 +171,8 @@ func TestControlPlaneEssentials(t *testing.T) {
 						Env: []corev1.EnvVar{
 							{Name: "TEST_ENV", Value: "test"},
 						},
+						ContainerImage: lo.ToPtr(consts.DefaultControlPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultControlPlaneTag),
 					},
 				},
 				DataPlane: &dataplane.Name,
@@ -289,6 +317,16 @@ func TestControlPlaneUpdate(t *testing.T) {
 			Namespace: dataplaneName.Namespace,
 			Name:      dataplaneName.Name,
 		},
+		Spec: operatorv1alpha1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+					},
+				},
+			},
+		},
 	}
 
 	controlplaneName := types.NamespacedName{
@@ -309,6 +347,8 @@ func TestControlPlaneUpdate(t *testing.T) {
 								Name: "TEST_ENV", Value: "before_update",
 							},
 						},
+						ContainerImage: lo.ToPtr(consts.DefaultControlPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultControlPlaneTag),
 					},
 				},
 				DataPlane: &dataplane.Name,

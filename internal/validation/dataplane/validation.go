@@ -3,6 +3,7 @@ package dataplane
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -26,7 +27,7 @@ func NewValidator(c client.Client) *Validator {
 
 // Validate validates a DataPlane object and return the first validation error found.
 func (v *Validator) Validate(dataplane *operatorv1alpha1.DataPlane) error {
-	err := v.ValidateDeployOptions(dataplane.Namespace, &dataplane.Spec.Deployment)
+	err := v.ValidateDeploymentOptions(dataplane.Namespace, &dataplane.Spec.Deployment)
 	if err != nil {
 		return err
 	}
@@ -34,8 +35,18 @@ func (v *Validator) Validate(dataplane *operatorv1alpha1.DataPlane) error {
 	return nil
 }
 
-// ValidateDeployOptions validates the DeploymentOptions field of DataPlane object.
-func (v *Validator) ValidateDeployOptions(namespace string, opts *operatorv1alpha1.DeploymentOptions) error {
+// ValidateDeploymentOptions validates the DeploymentOptions field of DataPlane object.
+func (v *Validator) ValidateDeploymentOptions(namespace string, opts *operatorv1alpha1.DeploymentOptions) error {
+	// Until https://github.com/Kong/gateway-operator/issues/20 is resolved we
+	// require DataPlanes that they are provided with image and version set.
+	// Related: https://github.com/Kong/gateway-operator/issues/754.
+	if opts.Pods.ContainerImage == nil || len(*opts.Pods.ContainerImage) == 0 {
+		return errors.New("DataPlanes requires a containerImage")
+	}
+	if opts.Pods.Version == nil || len(*opts.Pods.Version) == 0 {
+		return errors.New("DataPlanes requires a version")
+	}
+
 	// validate db mode.
 	dbMode, dbModeFound, err := v.getDBModeFromEnv(namespace, opts.Pods.Env)
 	if err != nil {

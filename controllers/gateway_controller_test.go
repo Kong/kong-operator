@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -336,6 +337,176 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 			}
 
 			tc.testBody(t, reconciler, tc.gatewayReq)
+		})
+	}
+}
+
+func Test_setControlPlaneOptionsDefaults(t *testing.T) {
+	testcases := []struct {
+		name     string
+		input    operatorv1alpha1.ControlPlaneOptions
+		expected operatorv1alpha1.ControlPlaneOptions
+	}{
+		{
+			name:  "no providing any options",
+			input: operatorv1alpha1.ControlPlaneOptions{},
+			expected: operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Replicas: lo.ToPtr(int32(1)),
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr(consts.DefaultControlPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultControlPlaneTag),
+					},
+				},
+			},
+		},
+		{
+			name: "providing only replicas",
+			input: operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Replicas: lo.ToPtr(int32(10)),
+				},
+			},
+			expected: operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Replicas: lo.ToPtr(int32(10)),
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr(consts.DefaultControlPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultControlPlaneTag),
+					},
+				},
+			},
+		},
+		{
+			name: "providing only replicas that are equal to default",
+			input: operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Replicas: lo.ToPtr(int32(1)),
+				},
+			},
+			expected: operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Replicas: lo.ToPtr(int32(1)),
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr(consts.DefaultControlPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultControlPlaneTag),
+					},
+				},
+			},
+		},
+		{
+			name: "providing more options",
+			input: operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Replicas: lo.ToPtr(int32(10)),
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr("image"),
+						Version:        lo.ToPtr("version"),
+					},
+				},
+			},
+			expected: operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Replicas: lo.ToPtr(int32(10)),
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr("image"),
+						Version:        lo.ToPtr("version"),
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			setControlPlaneOptionsDefaults(&tc.input)
+			require.Equal(t, tc.expected, tc.input)
+		})
+	}
+}
+
+func Test_setDataPlaneOptionsDefaults(t *testing.T) {
+	testcases := []struct {
+		name     string
+		input    operatorv1alpha1.DataPlaneOptions
+		expected operatorv1alpha1.DataPlaneOptions
+	}{
+		{
+			name:  "no providing any options",
+			input: operatorv1alpha1.DataPlaneOptions{},
+			expected: operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Replicas: lo.ToPtr(int32(1)),
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+					},
+				},
+			},
+		},
+		{
+			name: "providing only replicas",
+			input: operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Replicas: lo.ToPtr(int32(10)),
+				},
+			},
+			expected: operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Replicas: lo.ToPtr(int32(10)),
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+					},
+				},
+			},
+		},
+		{
+			name: "providing only replicas that are equal to default",
+			input: operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Replicas: lo.ToPtr(int32(1)),
+				},
+			},
+			expected: operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Replicas: lo.ToPtr(int32(1)),
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+					},
+				},
+			},
+		},
+		{
+			name: "providing more options",
+			input: operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Replicas: lo.ToPtr(int32(10)),
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr("image"),
+						Version:        lo.ToPtr("version"),
+					},
+				},
+			},
+			expected: operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					Replicas: lo.ToPtr(int32(10)),
+					Pods: operatorv1alpha1.PodsOptions{
+						ContainerImage: lo.ToPtr("image"),
+						Version:        lo.ToPtr("version"),
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			setDataPlaneOptionsDefaults(&tc.input)
+			require.Equal(t, tc.expected, tc.input)
 		})
 	}
 }

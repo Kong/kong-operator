@@ -17,6 +17,9 @@ patches:
     - op: add
       path: /spec/template/spec/containers/0/args/-
       value: -no-leader-election=true
+    - op: add
+      path: /spec/template/spec/containers/0/args/-
+      value: -zap-log-level=2
   target:
     kind: Deployment
     group: apps

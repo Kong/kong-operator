@@ -32,8 +32,9 @@ var RoleVersionsForKICVersions = map[string]string{
 
 // supportedControlPlaneImages is the list of the supported ControlPlane images
 var supportedControlPlaneImages = map[string]struct{}{
-	fmt.Sprintf("%s:2.9", consts.DefaultControlPlaneBaseImage): {},
-	fmt.Sprintf("%s:2.7", consts.DefaultControlPlaneBaseImage): {},
+	fmt.Sprintf("%s:2.9.3", consts.DefaultControlPlaneBaseImage): {},
+	fmt.Sprintf("%s:2.9", consts.DefaultControlPlaneBaseImage):   {},
+	fmt.Sprintf("%s:2.7", consts.DefaultControlPlaneBaseImage):   {},
 }
 
 // IsControlPlaneSupported is a helper intended to validate the ControlPlane

@@ -14,9 +14,11 @@ metadata:
             "dataplane": "dataplane-example",
             "deployment": {
               "pods": {
+                "containerImage": "kong/kubernetes-ingress-controller",
                 "labels": {
                   "controlplane-pod-label": "example"
-                }
+                },
+                "version": "2.9"
               },
               "resources": {
                 "limits": {
@@ -41,6 +43,7 @@ metadata:
           "spec": {
             "deployment": {
               "pods": {
+                "containerImage": "kong",
                 "env": [
                   {
                     "name": "KONG_LOG_LEVEL",
@@ -59,7 +62,8 @@ metadata:
                     "cpu": "250m",
                     "memory": "64Mi"
                   }
-                }
+                },
+                "version": "3.2"
               }
             },
             "services": {

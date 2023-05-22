@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -74,6 +75,16 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Name:      "test-dataplane",
 					Namespace: "test-namespace",
 					UID:       types.UID(uuid.NewString()),
+				},
+				Spec: operatorv1alpha1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
+							Pods: operatorv1alpha1.PodsOptions{
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+							},
+						},
+					},
 				},
 				Status: operatorv1alpha1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
@@ -340,6 +351,16 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Name:      "dataplane-kong",
 					Namespace: "default",
 					UID:       types.UID(uuid.NewString()),
+				},
+				Spec: operatorv1alpha1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
+							Pods: operatorv1alpha1.PodsOptions{
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+							},
+						},
+					},
 				},
 				Status: operatorv1alpha1.DataPlaneStatus{
 					Conditions: []metav1.Condition{

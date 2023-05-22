@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -83,6 +84,8 @@ func TestHandleDataplaneValidation(t *testing.T) {
 										Value: "off",
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -107,6 +110,8 @@ func TestHandleDataplaneValidation(t *testing.T) {
 										Value: "",
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -131,6 +136,8 @@ func TestHandleDataplaneValidation(t *testing.T) {
 										Value: "postgres",
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -156,6 +163,8 @@ func TestHandleDataplaneValidation(t *testing.T) {
 										Value: "xxx",
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -186,6 +195,8 @@ func TestHandleDataplaneValidation(t *testing.T) {
 										},
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -215,6 +226,8 @@ func TestHandleDataplaneValidation(t *testing.T) {
 										},
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -242,6 +255,8 @@ func TestHandleDataplaneValidation(t *testing.T) {
 										},
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -269,6 +284,8 @@ func TestHandleDataplaneValidation(t *testing.T) {
 										},
 									},
 								},
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -276,6 +293,46 @@ func TestHandleDataplaneValidation(t *testing.T) {
 			},
 			hasError: true,
 			errMsg:   "database backend xxx of dataplane not supported currently",
+		},
+		{
+			name: "validate_error:missing_container_image",
+			dataplane: &operatorv1alpha1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-db-off-in-secret",
+					Namespace: "default",
+				},
+				Spec: operatorv1alpha1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
+							Pods: operatorv1alpha1.PodsOptions{
+								Version: lo.ToPtr(consts.DefaultDataPlaneTag),
+							},
+						},
+					},
+				},
+			},
+			hasError: true,
+			errMsg:   "DataPlanes requires a containerImage",
+		},
+		{
+			name: "validate_error:missing_container_version",
+			dataplane: &operatorv1alpha1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-db-off-in-secret",
+					Namespace: "default",
+				},
+				Spec: operatorv1alpha1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
+							Pods: operatorv1alpha1.PodsOptions{
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+							},
+						},
+					},
+				},
+			},
+			hasError: true,
+			errMsg:   "DataPlanes requires a version",
 		},
 	}
 
@@ -320,7 +377,7 @@ func TestHandleDataplaneValidation(t *testing.T) {
 				require.EqualValues(t, http.StatusOK, validationResp.Result.Code, "response code should be 200 OK")
 			} else {
 				require.EqualValues(t, http.StatusBadRequest, validationResp.Result.Code, "response code should be 400 Bad Request")
-				require.Contains(t, validationResp.Result.Message, tc.errMsg, "result message should contain expected content")
+				require.Equal(t, validationResp.Result.Message, tc.errMsg, "result message should contain expected content")
 			}
 		})
 	}
