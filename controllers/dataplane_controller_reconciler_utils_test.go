@@ -236,6 +236,63 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				require.Equal(t, expectedDeploymentStrategy, deployment.Spec.Strategy)
 			},
 		},
+		{
+			name: "existing DataPlane deployment does get updated when it doesn't have the affinity set",
+			dataPlane: &operatorv1alpha1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Spec: operatorv1alpha1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
+							Pods: operatorv1alpha1.PodsOptions{
+								Affinity: &corev1.Affinity{
+									PodAntiAffinity: &corev1.PodAntiAffinity{
+										PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+											{
+												PodAffinityTerm: corev1.PodAffinityTerm{
+													TopologyKey: "kubernetes.io/hostname",
+													LabelSelector: &metav1.LabelSelector{
+														MatchLabels: map[string]string{
+															"workload-type": "dataplane",
+														},
+													},
+													NamespaceSelector: &metav1.LabelSelector{},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			certSecretName: "certificate",
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
+				ctx := context.Background()
+				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneSupported)
+				// generateDataPlaneImage will set deployment's containers resources
+				// to the ones set in dataplane spec so we set it here to get the
+				// expected behavior in reconciler's ensureDeploymentForDataPlane().
+				require.NoError(t, err)
+				// generate the DataPlane as it is expected to be and create it.
+				existingDeployment := k8sresources.GenerateNewDeploymentForDataPlane(dataPlane, dataplaneImage, certSecretName)
+
+				dataPlane.Spec.Deployment.Pods.Affinity = &corev1.Affinity{}
+
+				k8sutils.SetOwnerForObject(existingDeployment, dataPlane)
+				addLabelForDataplane(existingDeployment)
+				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
+
+				res, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, logr.Discard(), dataPlane, certSecretName)
+				require.Equal(t, Updated, res, "the DataPlane deployment should be updated to get the affinity set to the dataplane's spec")
+				require.NoError(t, err)
+				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
+				require.Equal(t, dataPlane.Spec.DataPlaneOptions.Deployment.Pods.Affinity.PodAntiAffinity, deployment.Spec.Template.Spec.Affinity.PodAntiAffinity)
+			},
+		},
 	}
 
 	for _, tc := range testCases {

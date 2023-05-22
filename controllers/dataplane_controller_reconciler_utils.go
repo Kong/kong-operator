@@ -256,6 +256,19 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 			updated = true
 		}
 
+		if dataplane.Spec.Deployment.Pods.Affinity != nil {
+			// DataPlane pod affinity is set.
+			// Check if existing deployment already has its affinity set per DataPlane spec.
+			dataPlaneAffinity := dataplane.Spec.Deployment.Pods.Affinity
+			if !reflect.DeepEqual(existingDeployment.Spec.Template.Spec.Affinity, dataPlaneAffinity) {
+				trace(log, "DataPlane deployment Affinity needs to be set as per DataPlane spec",
+					dataplane, "dataplane.affinity", dataPlaneAffinity,
+				)
+				existingDeployment.Spec.Template.Spec.Affinity = dataPlaneAffinity
+				updated = true
+			}
+		}
+
 		if dataplane.Spec.Deployment.Pods.Resources != nil {
 			// DataPlane deployment resources are set.
 			// Check if existing container already has its resources set per DataPlane spec.

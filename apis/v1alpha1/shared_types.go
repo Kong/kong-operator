@@ -28,6 +28,11 @@ type DeploymentOptions struct {
 // PodOptions is a shared type defining options on Pods deployed as part of
 // Deployments managed by the Operator.
 type PodsOptions struct {
+	// Affinity describes the scheduling rules for the pod.
+	//
+	// +optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
 	// Resources describes the compute resource requirements.
 	//
 	// +optional

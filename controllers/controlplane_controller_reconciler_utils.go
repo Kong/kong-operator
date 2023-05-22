@@ -222,6 +222,19 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 			updated = true
 		}
 
+		if controlplane.Spec.Deployment.Pods.Affinity != nil {
+			// ControlPlane pod affinity is set.
+			// Check if existing deployment already has its affinity set per ControlPlane spec.
+			controlPlaneAffiity := controlplane.Spec.Deployment.Pods.Affinity
+			if !reflect.DeepEqual(existingDeployment.Spec.Template.Spec.Affinity, controlPlaneAffiity) {
+				trace(log, "ControlPlane deployment Affinity needs to be set as per ControlPlane spec",
+					controlplane, "controlplane.affinity", controlPlaneAffiity,
+				)
+				existingDeployment.Spec.Template.Spec.Affinity = controlPlaneAffiity
+				updated = true
+			}
+		}
+
 		if controlplane.Spec.Deployment.Pods.Resources != nil {
 			// ControlPlane deployment resources are set.
 			// Check if existing container already has its resources set per ControlPlane spec.
