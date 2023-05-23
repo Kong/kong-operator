@@ -267,6 +267,14 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 				existingDeployment.Spec.Template.Spec.Affinity = dataPlaneAffinity
 				updated = true
 			}
+		} else {
+			if existingDeployment.Spec.Template.Spec.Affinity != nil {
+				trace(log, "DataPlane deployment Affinity needs to be unset",
+					dataplane, "dataplane.affinity", nil,
+				)
+				existingDeployment.Spec.Template.Spec.Affinity = nil
+				updated = true
+			}
 		}
 
 		if dataplane.Spec.Deployment.Pods.Resources != nil {

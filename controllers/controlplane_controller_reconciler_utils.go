@@ -233,6 +233,14 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 				existingDeployment.Spec.Template.Spec.Affinity = controlPlaneAffiity
 				updated = true
 			}
+		} else {
+			if existingDeployment.Spec.Template.Spec.Affinity != nil {
+				trace(log, "ControlPlane deployment Affinity needs to be unset",
+					controlplane, "controplane.affinity", nil,
+				)
+				existingDeployment.Spec.Template.Spec.Affinity = nil
+				updated = true
+			}
 		}
 
 		if controlplane.Spec.Deployment.Pods.Resources != nil {
