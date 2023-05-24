@@ -69,8 +69,8 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 				res, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, logr.Discard(), dataPlane, certSecretName)
-				require.Equal(t, Created, res)
 				require.NoError(t, err)
+				require.Equal(t, Created, res)
 				require.Equal(t, expectedDeploymentStrategy, deployment.Spec.Strategy)
 			},
 		},
@@ -111,8 +111,8 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 				createdOrUpdated, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, logr.Discard(), dataPlane, certSecretName)
-				require.Equal(t, createdOrUpdated, Created)
 				require.NoError(t, err)
+				require.Equal(t, createdOrUpdated, Created)
 				require.Contains(t, deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 					Name: "test-volume",
 					VolumeSource: corev1.VolumeSource{
@@ -147,8 +147,8 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
 				res, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, logr.Discard(), dataPlane, certSecretName)
-				require.Equal(t, Updated, res, "the DataPlane deployment should be updated with the original strategy")
 				require.NoError(t, err)
+				require.Equal(t, Updated, res, "the DataPlane deployment should be updated with the original strategy")
 				require.Equal(t, expectedDeploymentStrategy, deployment.Spec.Strategy)
 			},
 		},
@@ -196,8 +196,8 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
 				res, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, logr.Discard(), dataPlane, certSecretName)
-				require.Equal(t, Updated, res, "the DataPlane deployment should be updated to get the resources set to defaults")
 				require.NoError(t, err)
+				require.Equal(t, Updated, res, "the DataPlane deployment should be updated to get the resources set to defaults")
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 				require.Equal(t, *dataPlane.Spec.Deployment.Pods.Resources, deployment.Spec.Template.Spec.Containers[0].Resources)
 			},
@@ -231,8 +231,8 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
 				res, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, logr.Discard(), dataPlane, certSecretName)
-				require.Equal(t, Noop, res, "the DataPlane deployment should not be updated")
 				require.NoError(t, err)
+				require.Equal(t, Noop, res, "the DataPlane deployment should not be updated")
 				require.Equal(t, expectedDeploymentStrategy, deployment.Spec.Strategy)
 			},
 		},
@@ -287,8 +287,8 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
 				res, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, logr.Discard(), dataPlane, certSecretName)
-				require.Equal(t, Updated, res, "the DataPlane deployment should be updated to get the affinity set to the dataplane's spec")
 				require.NoError(t, err)
+				require.Equal(t, Updated, res, "the DataPlane deployment should be updated to get the affinity set to the dataplane's spec")
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 				require.Equal(t, dataPlane.Spec.DataPlaneOptions.Deployment.Pods.Affinity.PodAntiAffinity, deployment.Spec.Template.Spec.Affinity.PodAntiAffinity)
 			},
