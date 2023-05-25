@@ -52,7 +52,7 @@ type webhookManager struct {
 	mgr    ctrl.Manager
 	logger logr.Logger
 	cfg    *Config
-	server *webhook.Server
+	server webhook.Server
 }
 
 // PrepareWebhookServer creates a webhook server and add it to the controller manager.

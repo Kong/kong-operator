@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
@@ -58,13 +57,13 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// watch for updates to GatewayConfigurations, if any configuration targets a
 		// Gateway that is supported, enqueue that Gateway.
 		Watches(
-			&source.Kind{Type: &operatorv1alpha1.GatewayConfiguration{}},
+			&operatorv1alpha1.GatewayConfiguration{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayConfig),
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayConfigurationMatchesController))).
 		// watch for updates to GatewayClasses, if any GatewayClasses change, enqueue
 		// reconciliation for all supported gateway objects which reference it.
 		Watches(
-			&source.Kind{Type: &gatewayv1beta1.GatewayClass{}},
+			&gatewayv1beta1.GatewayClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatchesController))).
 		Complete(r)

@@ -203,15 +203,19 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
-				require.Equal(t, currentGateway.Status.Addresses, []gwtypes.GatewayAddress{
-					{
-						Type:  IPAddressTypePointer,
-						Value: clusterIP,
+				require.Equal(t,
+					[]gwtypes.GatewayAddress{
+						{
+							Type:  IPAddressTypePointer,
+							Value: clusterIP,
+						},
 					},
-				})
+					currentGateway.Status.Addresses,
+				)
 
 				t.Log("adding a LoadBalancer IP to the dataplane service")
 				dataplaneService.Spec.Type = corev1.ServiceTypeLoadBalancer
+				require.NoError(t, reconciler.Client.Update(ctx, dataplaneService))
 				dataplaneService.Status = corev1.ServiceStatus{
 					LoadBalancer: corev1.LoadBalancerStatus{
 						Ingress: []corev1.LoadBalancerIngress{
@@ -233,16 +237,19 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
-				require.Equal(t, currentGateway.Status.Addresses, []gwtypes.GatewayAddress{
-					{
-						Type:  IPAddressTypePointer,
-						Value: loadBalancerIP,
+				require.Equal(t,
+					[]gwtypes.GatewayAddress{
+						{
+							Type:  IPAddressTypePointer,
+							Value: loadBalancerIP,
+						},
+						{
+							Type:  IPAddressTypePointer,
+							Value: otherBalancerIP,
+						},
 					},
-					{
-						Type:  IPAddressTypePointer,
-						Value: otherBalancerIP,
-					},
-				})
+					currentGateway.Status.Addresses,
+				)
 
 				t.Log("replacing LoadBalancer IP with hostname")
 				dataplaneService.Status = corev1.ServiceStatus{
@@ -330,6 +337,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithObjects(ObjectsToAdd...).
+				WithStatusSubresource(ObjectsToAdd...).
 				Build()
 
 			reconciler := GatewayReconciler{

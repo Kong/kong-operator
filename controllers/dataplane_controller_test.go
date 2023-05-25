@@ -498,6 +498,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithObjects(ObjectsToAdd...).
+				WithStatusSubresource(tc.dataplane).
 				Build()
 
 			reconciler := DataPlaneReconciler{

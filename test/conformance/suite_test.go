@@ -14,7 +14,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/internal/manager"
@@ -129,22 +128,13 @@ func startControllerManager() <-chan struct{} {
 	cfg.AnonymousReports = false
 	cfg.StartedCh = make(chan struct{})
 
-	cfg.NewClientFunc = func(cache cache.Cache, config *rest.Config, options client.Options, uncachedObjects ...client.Object) (client.Client, error) {
+	cfg.NewClientFunc = func(config *rest.Config, options client.Options) (client.Client, error) {
 		// always hijack and impersonate the system service account here so that the manager
 		// is testing the RBAC permissions we provide under config/rbac/. This helps alert us
 		// if we break our RBAC configs as the manager will emit permissions errors.
 		config.Impersonate.UserName = "system:serviceaccount:kong-system:controller-manager"
 
-		c, err := client.New(config, options)
-		if err != nil {
-			return nil, err
-		}
-
-		return client.NewDelegatingClient(client.NewDelegatingClientInput{
-			CacheReader:     cache,
-			Client:          c,
-			UncachedObjects: uncachedObjects,
-		})
+		return client.New(config, options)
 	}
 
 	go func() {

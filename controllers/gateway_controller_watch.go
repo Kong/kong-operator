@@ -90,10 +90,10 @@ func (r *GatewayReconciler) gatewayConfigurationMatchesController(obj client.Obj
 // GatewayReconciler - Watch Map Funcs
 // -----------------------------------------------------------------------------
 
-func (r *GatewayReconciler) listGatewaysForGatewayClass(obj client.Object) (recs []reconcile.Request) {
+func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	gatewayClass, ok := obj.(*gatewayv1beta1.GatewayClass)
 	if !ok {
-		log.FromContext(context.Background()).Error(
+		log.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run map funcs",
 			"expected", "GatewayClass", "found", reflect.TypeOf(obj),
@@ -102,8 +102,8 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(obj client.Object) (recs
 	}
 
 	gateways := new(gatewayv1beta1.GatewayList)
-	if err := r.Client.List(context.Background(), gateways); err != nil {
-		log.FromContext(context.Background()).Error(err, "could not list gateways in map func")
+	if err := r.Client.List(ctx, gateways); err != nil {
+		log.FromContext(ctx).Error(err, "could not list gateways in map func")
 		return
 	}
 
@@ -121,8 +121,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(obj client.Object) (recs
 	return
 }
 
-func (r *GatewayReconciler) listGatewaysForGatewayConfig(obj client.Object) (recs []reconcile.Request) {
-	ctx := context.Background()
+func (r *GatewayReconciler) listGatewaysForGatewayConfig(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	logger := log.FromContext(ctx)
 
 	gatewayConfig, ok := obj.(*operatorv1alpha1.GatewayConfiguration)

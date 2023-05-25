@@ -77,9 +77,7 @@ func (r *ControlPlaneReconciler) objHasControlplaneOwner(ctx context.Context, ob
 // ControlplaneReconciler - Watch Map Funcs
 // -----------------------------------------------------------------------------
 
-func (r *ControlPlaneReconciler) getControlplaneForClusterRole(obj client.Object) (recs []reconcile.Request) {
-	ctx := context.Background()
-
+func (r *ControlPlaneReconciler) getControlplaneForClusterRole(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	clusterRole, ok := obj.(*rbacv1.ClusterRole)
 	if !ok {
 		log.FromContext(ctx).Error(
@@ -93,9 +91,7 @@ func (r *ControlPlaneReconciler) getControlplaneForClusterRole(obj client.Object
 	return r.getControlplaneRequestFromRefUID(ctx, clusterRole)
 }
 
-func (r *ControlPlaneReconciler) getControlplaneForClusterRoleBinding(obj client.Object) (recs []reconcile.Request) {
-	ctx := context.Background()
-
+func (r *ControlPlaneReconciler) getControlplaneForClusterRoleBinding(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	clusterRoleBinding, ok := obj.(*rbacv1.ClusterRoleBinding)
 	if !ok {
 		log.FromContext(ctx).Error(
@@ -132,9 +128,7 @@ func (r *ControlPlaneReconciler) getControlplaneRequestFromRefUID(ctx context.Co
 	return
 }
 
-func (r *ControlPlaneReconciler) getControlPlanesFromDataPlaneDeployment(obj client.Object) (recs []reconcile.Request) {
-	ctx := context.Background()
-
+func (r *ControlPlaneReconciler) getControlPlanesFromDataPlaneDeployment(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	deployment, ok := obj.(*appsv1.Deployment)
 	if !ok {
 		log.FromContext(ctx).Error(
@@ -163,12 +157,10 @@ func (r *ControlPlaneReconciler) getControlPlanesFromDataPlaneDeployment(obj cli
 		}
 		return
 	}
-	return r.getControlPlanesFromDataPlane(dataPlane)
+	return r.getControlPlanesFromDataPlane(ctx, dataPlane)
 }
 
-func (r *ControlPlaneReconciler) getControlPlanesFromDataPlane(obj client.Object) (recs []reconcile.Request) {
-	ctx := context.Background()
-
+func (r *ControlPlaneReconciler) getControlPlanesFromDataPlane(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	dataplane, ok := obj.(*operatorv1alpha1.DataPlane)
 	if !ok {
 		log.FromContext(ctx).Error(

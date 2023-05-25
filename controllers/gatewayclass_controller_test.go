@@ -101,6 +101,7 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 				NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithObjects(ObjectsToAdd...).
+				WithStatusSubresource(tc.gatewayClass).
 				Build()
 
 			reconciler := GatewayClassReconciler{

@@ -26,11 +26,12 @@ var (
 )
 
 // AddNewWebhookServerToManager creates a webhook server in manager.
-func AddNewWebhookServerToManager(mgr ctrl.Manager, logger logr.Logger, webhookPort int, webhookCertDir string) (*webhook.Server, error) {
-	hookServer := &webhook.Server{
+func AddNewWebhookServerToManager(mgr ctrl.Manager, logger logr.Logger, webhookPort int, webhookCertDir string) (webhook.Server, error) {
+	hookServer := webhook.NewServer(webhook.Options{
 		CertDir: webhookCertDir,
 		Port:    webhookPort,
-	}
+	})
+
 	// add readyz check for checking connection to webhook server
 	// to make the controller to be marked as ready after webhook started.
 	if err := mgr.AddReadyzCheck("readyz", hookServer.StartedChecker()); err != nil {
@@ -119,8 +120,8 @@ var (
 )
 
 func (h *RequestHandler) handleValidation(ctx context.Context, req *admissionv1.AdmissionRequest) (
-	*admissionv1.AdmissionResponse, error) {
-
+	*admissionv1.AdmissionResponse, error,
+) {
 	if req == nil {
 		return &admissionv1.AdmissionResponse{
 			Allowed: false,

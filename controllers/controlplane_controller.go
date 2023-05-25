@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -67,7 +66,8 @@ func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Since the ClusterRoles are cluster-wide but controlplanes are namespaced,
 		// we need to manually detect the owner by means of the UID
 		// (Owns cannot be used in this case)
-		Watches(&source.Kind{Type: &rbacv1.ClusterRole{}},
+		Watches(
+			&rbacv1.ClusterRole{},
 			handler.EnqueueRequestsFromMapFunc(r.getControlplaneForClusterRole),
 			builder.WithPredicates(clusterRolePredicate)).
 		// watch for changes in ClusterRoleBindings created by the controlplane controller.
@@ -75,17 +75,17 @@ func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// we need to manually detect the owner by means of the UID
 		// (Owns cannot be used in this case)
 		Watches(
-			&source.Kind{Type: &rbacv1.ClusterRoleBinding{}},
+			&rbacv1.ClusterRoleBinding{},
 			handler.EnqueueRequestsFromMapFunc(r.getControlplaneForClusterRoleBinding),
 			builder.WithPredicates(clusterRoleBindingPredicate)).
 		Watches(
-			&source.Kind{Type: &operatorv1alpha1.DataPlane{}},
+			&operatorv1alpha1.DataPlane{},
 			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlane)).
 		// watch for changes in the DataPlane deployments, as we want to be aware of all
 		// the DataPlane pod changes (every time a new pod gets ready, the deployment
 		// status gets updated accordingly, leading to a reconciliation loop trigger)
 		Watches(
-			&source.Kind{Type: &appsv1.Deployment{}},
+			&appsv1.Deployment{},
 			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlaneDeployment)).
 		Complete(r)
 }

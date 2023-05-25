@@ -41,7 +41,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -79,7 +78,7 @@ type Config struct {
 	LeaderElection           bool
 	DevelopmentMode          bool
 	Out                      *os.File
-	NewClientFunc            cluster.NewClientFunc
+	NewClientFunc            client.NewClientFunc
 	ControllerName           string
 	ControllerNamespace      string
 	AnonymousReports         bool
