@@ -138,6 +138,9 @@ type Address struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Value string `json:"value"`
+
+	// Source type of the address.
+	SourceType AddressSourceType `json:"sourceType"`
 }
 
 // AddressType defines how a network address is represented as a text string.
@@ -161,6 +164,27 @@ const (
 	// example, this concept may be used for cloud load balancers where a DNS
 	// name is used to expose a load balancer.
 	HostnameAddressType AddressType = "Hostname"
+)
+
+// AddressSourceType defines the type of source this address represents.
+//
+// +kubebuilder:validation:Pattern=`^PublicLoadBalancer|PrivateLoadBalancer|PublicIP|PrivateIP$`
+type AddressSourceType string
+
+const (
+	// PublicLoadBalancerAddressSourceType represents an address belonging to
+	// a public Load Balancer.
+	PublicLoadBalancerAddressSourceType AddressSourceType = "PublicLoadBalancer"
+
+	// PrivateLoadBalancerAddressSourceType represents an address belonging to
+	// a private Load Balancer.
+	PrivateLoadBalancerAddressSourceType AddressSourceType = "PrivateLoadBalancer"
+
+	// PublicIPAddressSourceType represents an address belonging to a public IP.
+	PublicIPAddressSourceType AddressSourceType = "PublicIP"
+
+	// PrivateIPAddressSourceType  represents an address belonging to a private IP.
+	PrivateIPAddressSourceType AddressSourceType = "PrivateIP"
 )
 
 // GetConditions retrieves the DataPlane Status Conditions

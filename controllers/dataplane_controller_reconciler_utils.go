@@ -83,7 +83,10 @@ func (r *DataPlaneReconciler) ensureDataPlaneAddressesStatus(
 	dataplane *operatorv1alpha1.DataPlane,
 	dataplaneService *corev1.Service,
 ) (bool, error) {
-	addresses := addressesFromService(dataplaneService)
+	addresses, err := addressesFromService(dataplaneService)
+	if err != nil {
+		return false, fmt.Errorf("failed getting addresses for service %s: %w", dataplaneService, err)
+	}
 
 	// Compare the lengths prior to cmp.Equal() because cmp.Equal() will return
 	// false when comparing nil slice and 0 length slice.

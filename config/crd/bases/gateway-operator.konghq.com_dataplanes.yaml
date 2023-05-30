@@ -2984,6 +2984,10 @@ spec:
                   description: Address describes an address which can be either an
                     IP address or a hostname.
                   properties:
+                    sourceType:
+                      description: Source type of the address.
+                      pattern: ^PublicLoadBalancer|PrivateLoadBalancer|PublicIP|PrivateIP$
+                      type: string
                     type:
                       default: IPAddress
                       description: Type of the address.
@@ -2997,6 +3001,7 @@ spec:
                       minLength: 1
                       type: string
                   required:
+                  - sourceType
                   - value
                   type: object
                 type: array

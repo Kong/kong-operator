@@ -463,16 +463,19 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					// has been agreed in https://github.com/Kong/gateway-operator/issues/281
 					// then no action has to be taken. Otherwise this might need to be changed.
 					{
-						Type:  addressOf(operatorv1alpha1.IPAddressType),
-						Value: "6.7.8.9",
+						Type:       addressOf(operatorv1alpha1.IPAddressType),
+						Value:      "6.7.8.9",
+						SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 					},
 					{
-						Type:  addressOf(operatorv1alpha1.HostnameAddressType),
-						Value: "mycustomhostname.com",
+						Type:       addressOf(operatorv1alpha1.HostnameAddressType),
+						Value:      "mycustomhostname.com",
+						SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 					},
 					{
-						Type:  addressOf(operatorv1alpha1.IPAddressType),
-						Value: "10.0.0.1",
+						Type:       addressOf(operatorv1alpha1.IPAddressType),
+						Value:      "10.0.0.1",
+						SourceType: operatorv1alpha1.PrivateIPAddressSourceType,
 					},
 				}, dp.Status.Addresses)
 			},

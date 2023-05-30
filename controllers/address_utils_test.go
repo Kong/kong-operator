@@ -30,8 +30,9 @@ func Test_addressesFromService(t *testing.T) {
 			},
 			want: []operatorv1alpha1.Address{
 				{
-					Type:  addressOf(operatorv1alpha1.IPAddressType),
-					Value: "1.1.1.1",
+					Type:       addressOf(operatorv1alpha1.IPAddressType),
+					Value:      "1.1.1.1",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 			},
 		},
@@ -53,12 +54,14 @@ func Test_addressesFromService(t *testing.T) {
 			},
 			want: []operatorv1alpha1.Address{
 				{
-					Type:  addressOf(operatorv1alpha1.IPAddressType),
-					Value: "1.1.1.1",
+					Type:       addressOf(operatorv1alpha1.IPAddressType),
+					Value:      "1.1.1.1",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:  addressOf(operatorv1alpha1.HostnameAddressType),
-					Value: "myhostname.com",
+					Type:       addressOf(operatorv1alpha1.HostnameAddressType),
+					Value:      "myhostname.com",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 			},
 		},
@@ -86,20 +89,24 @@ func Test_addressesFromService(t *testing.T) {
 			},
 			want: []operatorv1alpha1.Address{
 				{
-					Type:  addressOf(operatorv1alpha1.IPAddressType),
-					Value: "1.1.1.1",
+					Type:       addressOf(operatorv1alpha1.IPAddressType),
+					Value:      "1.1.1.1",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:  addressOf(operatorv1alpha1.HostnameAddressType),
-					Value: "myhostname.com",
+					Type:       addressOf(operatorv1alpha1.HostnameAddressType),
+					Value:      "myhostname.com",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:  addressOf(operatorv1alpha1.IPAddressType),
-					Value: "2.2.2.2",
+					Type:       addressOf(operatorv1alpha1.IPAddressType),
+					Value:      "2.2.2.2",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:  addressOf(operatorv1alpha1.HostnameAddressType),
-					Value: "myhostname2.com",
+					Type:       addressOf(operatorv1alpha1.HostnameAddressType),
+					Value:      "myhostname2.com",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 			},
 		},
@@ -123,20 +130,24 @@ func Test_addressesFromService(t *testing.T) {
 			},
 			want: []operatorv1alpha1.Address{
 				{
-					Type:  addressOf(operatorv1alpha1.IPAddressType),
-					Value: "1.1.1.1",
+					Type:       addressOf(operatorv1alpha1.IPAddressType),
+					Value:      "1.1.1.1",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:  addressOf(operatorv1alpha1.HostnameAddressType),
-					Value: "myhostname.com",
+					Type:       addressOf(operatorv1alpha1.HostnameAddressType),
+					Value:      "myhostname.com",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:  addressOf(operatorv1alpha1.IPAddressType),
-					Value: "2.2.2.2",
+					Type:       addressOf(operatorv1alpha1.IPAddressType),
+					Value:      "2.2.2.2",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:  addressOf(operatorv1alpha1.HostnameAddressType),
-					Value: "myhostname2.com",
+					Type:       addressOf(operatorv1alpha1.HostnameAddressType),
+					Value:      "myhostname2.com",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 			},
 		},
@@ -171,28 +182,34 @@ func Test_addressesFromService(t *testing.T) {
 			},
 			want: []operatorv1alpha1.Address{
 				{
-					Type:  addressOf(operatorv1alpha1.IPAddressType),
-					Value: "1.1.1.1",
+					Type:       addressOf(operatorv1alpha1.IPAddressType),
+					Value:      "1.1.1.1",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:  addressOf(operatorv1alpha1.HostnameAddressType),
-					Value: "myhostname.com",
+					Type:       addressOf(operatorv1alpha1.HostnameAddressType),
+					Value:      "myhostname.com",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:  addressOf(operatorv1alpha1.IPAddressType),
-					Value: "2.2.2.2",
+					Type:       addressOf(operatorv1alpha1.IPAddressType),
+					Value:      "2.2.2.2",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:  addressOf(operatorv1alpha1.HostnameAddressType),
-					Value: "myhostname2.com",
+					Type:       addressOf(operatorv1alpha1.HostnameAddressType),
+					Value:      "myhostname2.com",
+					SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:  addressOf(operatorv1alpha1.IPAddressType),
-					Value: "10.0.0.1",
+					Type:       addressOf(operatorv1alpha1.IPAddressType),
+					Value:      "10.0.0.1",
+					SourceType: operatorv1alpha1.PrivateIPAddressSourceType,
 				},
 				{
-					Type:  addressOf(operatorv1alpha1.IPAddressType),
-					Value: "2001:0db8::1428:57ab",
+					Type:       addressOf(operatorv1alpha1.IPAddressType),
+					Value:      "2001:0db8::1428:57ab",
+					SourceType: operatorv1alpha1.PrivateIPAddressSourceType,
 				},
 			},
 		},
@@ -200,7 +217,9 @@ func Test_addressesFromService(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, addressesFromService(tt.service))
+			actual, err := addressesFromService(tt.service)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, actual)
 		})
 	}
 }
