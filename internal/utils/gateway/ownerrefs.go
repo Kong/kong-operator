@@ -114,7 +114,7 @@ func GetDataplaneServiceName(
 		c,
 		dataplane.Namespace,
 		dataplane.UID,
-		map[string]string{
+		client.MatchingLabels{
 			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
 			consts.DataPlaneServiceTypeLabel:      string(serviceTypeLabelValue),
 		},

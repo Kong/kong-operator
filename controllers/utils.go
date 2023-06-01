@@ -159,9 +159,10 @@ func maybeCreateCertificateSecret(
 	secrets, err := k8sutils.ListSecretsForOwner(
 		ctx,
 		k8sClient,
-		selectorKey,
-		selectorValue,
 		owner.GetUID(),
+		client.MatchingLabels{
+			selectorKey: selectorValue,
+		},
 	)
 	if err != nil {
 		return false, nil, err

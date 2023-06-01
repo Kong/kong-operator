@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
@@ -183,10 +184,11 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 					deployments, err := k8sutils.ListDeploymentsForOwner(
 						ctx,
 						clients.MgrClient,
-						consts.GatewayOperatorControlledLabel,
-						consts.DataPlaneManagedLabelValue,
 						dataplane.Namespace,
 						dataplane.UID,
+						client.MatchingLabels{
+							consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+						},
 					)
 					require.NoError(t, err)
 					return len(deployments) == 1 && deployments[0].Status.AvailableReplicas >= deployments[0].Status.ReadyReplicas

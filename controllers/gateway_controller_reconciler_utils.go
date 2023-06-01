@@ -94,7 +94,7 @@ func (r *GatewayReconciler) getGatewayAddresses(
 		r.Client,
 		dataplane.Namespace,
 		dataplane.UID,
-		map[string]string{
+		client.MatchingLabels{
 			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
 			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneProxyServiceLabelValue),
 		},

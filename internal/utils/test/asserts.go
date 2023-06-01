@@ -26,10 +26,11 @@ func MustListControlPlaneDeployments(t *testing.T, ctx context.Context, controlp
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
 		clients.MgrClient,
-		consts.GatewayOperatorControlledLabel,
-		consts.ControlPlaneManagedLabelValue,
 		controlplane.Namespace,
 		controlplane.UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+		},
 	)
 	require.NoError(t, err)
 	return deployments
@@ -41,9 +42,10 @@ func MustListControlPlaneClusterRoles(t *testing.T, ctx context.Context, control
 	clusterRoles, err := k8sutils.ListClusterRolesForOwner(
 		ctx,
 		clients.MgrClient,
-		consts.GatewayOperatorControlledLabel,
-		consts.ControlPlaneManagedLabelValue,
 		controlplane.UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+		},
 	)
 	require.NoError(t, err)
 	return clusterRoles
@@ -55,9 +57,10 @@ func MustListControlPlaneClusterRoleBindings(t *testing.T, ctx context.Context, 
 	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(
 		ctx,
 		clients.MgrClient,
-		consts.GatewayOperatorControlledLabel,
-		consts.ControlPlaneManagedLabelValue,
 		controlplane.UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+		},
 	)
 	require.NoError(t, err)
 	return clusterRoleBindings
@@ -87,7 +90,7 @@ func MustListDataPlaneProxyServices(t *testing.T, ctx context.Context, dataplane
 		mgrClient,
 		dataplane.Namespace,
 		dataplane.UID,
-		map[string]string{
+		client.MatchingLabels{
 			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
 			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneProxyServiceLabelValue),
 		},
@@ -102,10 +105,11 @@ func MustListDataPlaneDeployments(t *testing.T, ctx context.Context, dataplane *
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
 		clients.MgrClient,
-		consts.GatewayOperatorControlledLabel,
-		consts.DataPlaneManagedLabelValue,
 		dataplane.Namespace,
 		dataplane.UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		},
 	)
 	require.NoError(t, err)
 	return deployments

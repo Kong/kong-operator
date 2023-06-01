@@ -11,23 +11,24 @@ import (
 )
 
 // ListDeploymentsForOwner is a helper function to map a list of Deployments
-// by label and reduce by OwnerReference UID and namespace to efficiently list
-// only the objects owned by the provided UID.
+// by list options and reduce by OwnerReference UID and namespace to efficiently
+// list only the objects owned by the provided UID.
 func ListDeploymentsForOwner(
 	ctx context.Context,
 	c client.Client,
-	requiredLabel string,
-	requiredValue string,
 	namespace string,
 	uid types.UID,
+	listOpts ...client.ListOption,
 ) ([]appsv1.Deployment, error) {
 	deploymentList := &appsv1.DeploymentList{}
 
 	err := c.List(
 		ctx,
 		deploymentList,
-		client.InNamespace(namespace),
-		client.MatchingLabels{requiredLabel: requiredValue},
+		append(
+			[]client.ListOption{client.InNamespace(namespace)},
+			listOpts...,
+		)...,
 	)
 	if err != nil {
 		return nil, err
@@ -44,22 +45,24 @@ func ListDeploymentsForOwner(
 }
 
 // ListServicesForOwner is a helper function to map a list of Services
-// by label and reduce by OwnerReference UID and namespace to efficiently list
-// only the objects owned by the provided UID.
+// by list options and reduce by OwnerReference UID and namespace to efficiently
+// list only the objects owned by the provided UID.
 func ListServicesForOwner(
 	ctx context.Context,
 	c client.Client,
 	namespace string,
 	uid types.UID,
-	requiredLabels map[string]string,
+	listOpts ...client.ListOption,
 ) ([]corev1.Service, error) {
 	serviceList := &corev1.ServiceList{}
 
 	err := c.List(
 		ctx,
 		serviceList,
-		client.InNamespace(namespace),
-		client.MatchingLabels(requiredLabels),
+		append(
+			[]client.ListOption{client.InNamespace(namespace)},
+			listOpts...,
+		)...,
 	)
 	if err != nil {
 		return nil, err
@@ -76,23 +79,24 @@ func ListServicesForOwner(
 }
 
 // ListServiceAccountsForOwner is a helper function to map a list of ServiceAccounts
-// by label and reduce by OwnerReference UID and namespace to efficiently list
-// only the objects owned by the provided UID.
+// by list options and reduce by OwnerReference UID and namespace to efficiently
+// list only the objects owned by the provided UID.
 func ListServiceAccountsForOwner(
 	ctx context.Context,
 	c client.Client,
-	requiredLabel string,
-	requiredValue string,
 	namespace string,
 	uid types.UID,
+	listOpts ...client.ListOption,
 ) ([]corev1.ServiceAccount, error) {
 	serviceAccountList := &corev1.ServiceAccountList{}
 
 	err := c.List(
 		ctx,
 		serviceAccountList,
-		client.InNamespace(namespace),
-		client.MatchingLabels{requiredLabel: requiredValue},
+		append(
+			[]client.ListOption{client.InNamespace(namespace)},
+			listOpts...,
+		)...,
 	)
 	if err != nil {
 		return nil, err
@@ -112,21 +116,20 @@ func ListServiceAccountsForOwner(
 }
 
 // ListClusterRolesForOwner is a helper function to map a list of ClusterRoles
-// by label and reduce by OwnerReference UID to efficiently list
-// only the objects owned by the provided UID.
+// by list options and reduce by OwnerReference UID to efficiently
+// list only the objects owned by the provided UID.
 func ListClusterRolesForOwner(
 	ctx context.Context,
 	c client.Client,
-	requiredLabel string,
-	requiredValue string,
 	uid types.UID,
+	listOpts ...client.ListOption,
 ) ([]rbacv1.ClusterRole, error) {
 	clusterRoleList := &rbacv1.ClusterRoleList{}
 
 	err := c.List(
 		ctx,
 		clusterRoleList,
-		client.MatchingLabels{requiredLabel: requiredValue},
+		listOpts...,
 	)
 	if err != nil {
 		return nil, err
@@ -146,21 +149,20 @@ func ListClusterRolesForOwner(
 }
 
 // ListClusterRoleBindingsForOwner is a helper function to map a list of ClusterRoleBindings
-// by label and reduce by OwnerReference UID to efficiently list
-// only the objects owned by the provided UID.
+// by list options and reduce by OwnerReference UID to efficiently
+// list only the objects owned by the provided UID.
 func ListClusterRoleBindingsForOwner(
 	ctx context.Context,
 	c client.Client,
-	requiredLabel string,
-	requiredValue string,
 	uid types.UID,
+	listOpts ...client.ListOption,
 ) ([]rbacv1.ClusterRoleBinding, error) {
 	clusterRoleBindingList := &rbacv1.ClusterRoleBindingList{}
 
 	err := c.List(
 		ctx,
 		clusterRoleBindingList,
-		client.MatchingLabels{requiredLabel: requiredValue},
+		listOpts...,
 	)
 	if err != nil {
 		return nil, err
@@ -180,20 +182,19 @@ func ListClusterRoleBindingsForOwner(
 }
 
 // ListSecretsForOwner is a helper function to map a list of Secrets
-// by label and reduce by OwnerReference UID to efficiently list
-// only the objects owned by the provided UID.
+// by list options and reduce by OwnerReference UID to efficiently
+// list only the objects owned by the provided UID.
 func ListSecretsForOwner(ctx context.Context,
 	c client.Client,
-	requiredLabel string,
-	requiredValue string,
 	uid types.UID,
+	listOpts ...client.ListOption,
 ) ([]corev1.Secret, error) {
 	secretList := &corev1.SecretList{}
 
 	err := c.List(
 		ctx,
 		secretList,
-		client.MatchingLabels{requiredLabel: requiredValue},
+		listOpts...,
 	)
 	if err != nil {
 		return nil, err

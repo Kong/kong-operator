@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -189,10 +190,11 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
 		r.Client,
-		consts.GatewayOperatorControlledLabel,
-		consts.DataPlaneManagedLabelValue,
 		dataplane.Namespace,
 		dataplane.UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		},
 	)
 	if err != nil {
 		return Noop, nil, err
@@ -381,7 +383,7 @@ func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
 		r.Client,
 		dataplane.Namespace,
 		dataplane.UID,
-		map[string]string{
+		client.MatchingLabels{
 			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
 			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneProxyServiceLabelValue),
 		},
@@ -445,7 +447,7 @@ func (r *DataPlaneReconciler) ensureAdminServiceForDataPlane(
 		r.Client,
 		dataplane.Namespace,
 		dataplane.UID,
-		map[string]string{
+		client.MatchingLabels{
 			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
 			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
 		},

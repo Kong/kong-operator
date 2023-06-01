@@ -134,10 +134,11 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 
 	deployments, err := k8sutils.ListDeploymentsForOwner(ctx,
 		r.Client,
-		consts.GatewayOperatorControlledLabel,
-		consts.ControlPlaneManagedLabelValue,
 		controlplane.Namespace,
 		controlplane.UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+		},
 	)
 	if err != nil {
 		return false, nil, err
@@ -296,7 +297,15 @@ func (r *ControlPlaneReconciler) ensureServiceAccountForControlPlane(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (createdOrModified bool, sa *corev1.ServiceAccount, err error) {
-	serviceAccounts, err := k8sutils.ListServiceAccountsForOwner(ctx, r.Client, consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.Namespace, controlplane.UID)
+	serviceAccounts, err := k8sutils.ListServiceAccountsForOwner(
+		ctx,
+		r.Client,
+		controlplane.Namespace,
+		controlplane.UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+		},
+	)
 	if err != nil {
 		return false, nil, err
 	}
@@ -330,7 +339,14 @@ func (r *ControlPlaneReconciler) ensureClusterRoleForControlPlane(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (createdOrUpdated bool, cr *rbacv1.ClusterRole, err error) {
-	clusterRoles, err := k8sutils.ListClusterRolesForOwner(ctx, r.Client, consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.UID)
+	clusterRoles, err := k8sutils.ListClusterRolesForOwner(
+		ctx,
+		r.Client,
+		controlplane.UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+		},
+	)
 	if err != nil {
 		return false, nil, err
 	}
@@ -369,7 +385,14 @@ func (r *ControlPlaneReconciler) ensureClusterRoleBindingForControlPlane(
 	serviceAccountName string,
 	clusterRoleName string,
 ) (createdOrUpdate bool, crb *rbacv1.ClusterRoleBinding, err error) {
-	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(ctx, r.Client, consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.UID)
+	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(
+		ctx,
+		r.Client,
+		controlplane.UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+		},
+	)
 	if err != nil {
 		return false, nil, err
 	}
@@ -429,7 +452,10 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRolesDeleted(
 ) (deletions bool, err error) {
 	clusterRoles, err := k8sutils.ListClusterRolesForOwner(
 		ctx, r.Client,
-		consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.UID,
+		controlplane.UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+		},
 	)
 	if err != nil {
 		return false, err
@@ -459,7 +485,10 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRoleBindingsDeleted(
 ) (deletions bool, err error) {
 	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(
 		ctx, r.Client,
-		consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue, controlplane.UID,
+		controlplane.UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+		},
 	)
 	if err != nil {
 		return false, err

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
@@ -275,10 +276,11 @@ func verifyContainerImageForGateway(gateway *gwtypes.Gateway, controlPlaneImage,
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
 		clients.MgrClient,
-		consts.GatewayOperatorControlledLabel,
-		consts.ControlPlaneManagedLabelValue,
 		controlPlanes[0].Namespace,
 		controlPlanes[0].UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+		},
 	)
 	if err != nil {
 		return false, err
@@ -302,10 +304,11 @@ func verifyContainerImageForGateway(gateway *gwtypes.Gateway, controlPlaneImage,
 	deployments, err = k8sutils.ListDeploymentsForOwner(
 		ctx,
 		clients.MgrClient,
-		consts.GatewayOperatorControlledLabel,
-		consts.DataPlaneManagedLabelValue,
 		dataPlanes[0].Namespace,
 		dataPlanes[0].UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		},
 	)
 	if err != nil {
 		return false, err
