@@ -13,7 +13,7 @@ require (
 	github.com/kong/kubernetes-telemetry v0.0.4
 	github.com/kong/kubernetes-testing-framework v0.30.1
 	github.com/samber/lo v1.38.1
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20220407100705-7b9b53b0aca4
 	k8s.io/api v0.27.2
 	k8s.io/apimachinery v0.27.2
