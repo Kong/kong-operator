@@ -16,40 +16,41 @@ func TestClusterroleHelpers(t *testing.T) {
 		image               string
 		version             string
 		expectedClusterRole *rbacv1.ClusterRole
+		expectedErrorMsg    string
 	}{
 		{
-			controlplane:        "test_2.7",
+			controlplane:        "test_2.10",
 			image:               "kong/kubernetes-ingress-controller",
-			version:             "2.7",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_lt2_9_ge2_7("test_2.7"),
+			version:             "2.10",
+			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10("test_2.10"),
 		},
 		{
 			controlplane:        "test_2.9",
 			image:               "kong/kubernetes-ingress-controller",
 			version:             "2.9",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_9("test_2.9"),
+			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_lt2_10_ge2_9("test_2.9"),
 		},
 		{
 			controlplane:        "test_development_untagged",
 			image:               "test/development",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_9("test_development_untagged"),
-		},
-		{
-			controlplane:        "test_development_tagged",
-			image:               "test/development",
-			version:             "main",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_9("test_development_tagged"),
+			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10("test_development_untagged"),
 		},
 		{
 			controlplane:        "test_empty",
 			image:               "kong/kubernetes-ingress-controller",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_9("test_empty"),
+			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10("test_empty"),
 		},
 		{
 			controlplane:        "test_unsupported",
 			image:               "kong/kubernetes-ingress-controller",
 			version:             "1.0",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_9("test_unsupported"),
+			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10("test_unsupported"),
+		},
+		{
+			controlplane:     "test_invalid_tag",
+			image:            "test/development",
+			version:          "main",
+			expectedErrorMsg: "could not validate image",
 		},
 	}
 
@@ -57,9 +58,12 @@ func TestClusterroleHelpers(t *testing.T) {
 		tc := tc
 		t.Run(tc.controlplane, func(t *testing.T) {
 			clusterRole, err := resources.GenerateNewClusterRoleForControlPlane(tc.controlplane, &tc.image, &tc.version)
-			require.NoError(t, err)
-
-			require.Equal(t, tc.expectedClusterRole, clusterRole)
+			if tc.expectedErrorMsg != "" {
+				require.Contains(t, err.Error(), tc.expectedErrorMsg)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expectedClusterRole, clusterRole)
+			}
 		})
 	}
 }

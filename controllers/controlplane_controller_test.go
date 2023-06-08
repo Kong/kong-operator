@@ -86,7 +86,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Deployment: operatorv1alpha1.DeploymentOptions{
 							Pods: operatorv1alpha1.PodsOptions{
 								ContainerImage: pointer.String("kong/kubernetes-ingress-controller"),
-								Version:        pointer.String("2.7"),
+								Version:        pointer.String("2.9"),
 							},
 						},
 						DataPlane: pointer.String("test-dataplane"),
