@@ -210,7 +210,7 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 
 	versionValidationOptions := make([]versions.VersionValidationOption, 0)
 	if !r.DevelopmentMode {
-		versionValidationOptions = append(versionValidationOptions, versions.IsDataPlaneSupported)
+		versionValidationOptions = append(versionValidationOptions, versions.IsDataPlaneImageVersionSupported)
 	}
 	dataplaneImage, err := generateDataPlaneImage(dataplane, versionValidationOptions...)
 	if err != nil {

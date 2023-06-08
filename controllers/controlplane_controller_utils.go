@@ -90,7 +90,7 @@ func setControlPlaneDefaults(
 
 	versionValidationOptions := make([]versions.VersionValidationOption, 0)
 	if !devMode {
-		versionValidationOptions = append(versionValidationOptions, versions.IsControlPlaneSupported)
+		versionValidationOptions = append(versionValidationOptions, versions.IsControlPlaneImageVersionSupported)
 	}
 	controlPlaneImage, err := generateControlPlaneImage(spec, versionValidationOptions...)
 	if err != nil {
@@ -246,7 +246,11 @@ func generateControlPlaneImage(opts *operatorv1alpha1.ControlPlaneOptions, valid
 			controlplaneImage = fmt.Sprintf("%s:%s", controlplaneImage, *opts.Deployment.Pods.Version)
 		}
 		for _, v := range validators {
-			if !v(controlplaneImage) {
+			supported, err := v(controlplaneImage)
+			if err != nil {
+				return "", err
+			}
+			if !supported {
 				return "", fmt.Errorf("unsupported ControlPlane image %s", controlplaneImage)
 			}
 		}

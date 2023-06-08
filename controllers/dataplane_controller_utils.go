@@ -22,7 +22,11 @@ func generateDataPlaneImage(dataplane *operatorv1alpha1.DataPlane, validators ..
 			dataplaneImage = fmt.Sprintf("%s:%s", dataplaneImage, *dataplane.Spec.Deployment.Pods.Version)
 		}
 		for _, v := range validators {
-			if !v(dataplaneImage) {
+			supported, err := v(dataplaneImage)
+			if err != nil {
+				return "", err
+			}
+			if !supported {
 				return "", fmt.Errorf("unsupported DataPlane image %s", dataplaneImage)
 			}
 		}

@@ -134,7 +134,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
 				ctx := context.Background()
-				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneSupported)
+				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				require.NoError(t, err)
 				// generate the DataPlane as it is supposed to be, change the .spec.strategy field, and create it.
 				existingDeployment := k8sresources.GenerateNewDeploymentForDataPlane(dataPlane, dataplaneImage, certSecretName)
@@ -181,7 +181,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
 				ctx := context.Background()
-				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneSupported)
+				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				require.NoError(t, err)
 				// generate the DataPlane as it is expected to be and create it.
 				existingDeployment := k8sresources.GenerateNewDeploymentForDataPlane(dataPlane, dataplaneImage, certSecretName)
@@ -222,7 +222,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
 				ctx := context.Background()
-				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneSupported)
+				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				require.NoError(t, err)
 				// generate the DataPlane as it is expected to be and create it.
 				existingDeployment := k8sresources.GenerateNewDeploymentForDataPlane(dataPlane, dataplaneImage, certSecretName)
@@ -272,7 +272,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
 				ctx := context.Background()
-				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneSupported)
+				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				// generateDataPlaneImage will set deployment's containers resources
 				// to the ones set in dataplane spec so we set it here to get the
 				// expected behavior in reconciler's ensureDeploymentForDataPlane().
@@ -313,7 +313,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
 				ctx := context.Background()
-				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneSupported)
+				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				// generateDataPlaneImage will set deployment's containers resources
 				// to the ones set in dataplane spec so we set it here to get the
 				// expected behavior in reconciler's ensureDeploymentForDataPlane().

@@ -154,7 +154,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 
 	versionValidationOptions := make([]versions.VersionValidationOption, 0)
 	if !r.DevelopmentMode {
-		versionValidationOptions = append(versionValidationOptions, versions.IsControlPlaneSupported)
+		versionValidationOptions = append(versionValidationOptions, versions.IsControlPlaneImageVersionSupported)
 	}
 	controlplaneImage, err := generateControlPlaneImage(&controlplane.Spec.ControlPlaneOptions, versionValidationOptions...)
 	if err != nil {
