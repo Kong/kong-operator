@@ -111,7 +111,11 @@ func GenerateNewClusterRoleForControlPlane(controlplaneName string, image, tag *
 
 	if image != nil && *image != "" && tag != nil && *tag != "" {
 		askedImage := fmt.Sprintf("%s:%s", *image, *tag)
-		if versions.IsControlPlaneSupported(askedImage) {
+		supported, err := versions.IsControlPlaneImageVersionSupported(askedImage)
+		if err != nil {
+			return nil, err
+		}
+		if supported {
 			imageToUse = askedImage
 			versionToUse = *tag
 		}
