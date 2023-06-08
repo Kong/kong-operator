@@ -2,6 +2,7 @@ package versions
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/blang/semver/v4"
@@ -19,6 +20,8 @@ type VersionValidationOption func(version string) (bool, error)
 // Private Helper Functions
 // ----------------------------------------------------------------------------
 
+var patchVersionNotPresentRE = regexp.MustCompile(`^[0-9]+\.[0-9]+$`)
+
 // versionFromImage takes a container image in the format "<image>:<version>"
 // and returns a semver instance of the version.
 func versionFromImage(image string) (semver.Version, error) {
@@ -27,7 +30,12 @@ func versionFromImage(image string) (semver.Version, error) {
 		return semver.Version{}, fmt.Errorf(`expected "<image>:<tag>" format, got: %s`, image)
 	}
 
-	imageVersion, err := semver.Parse(splitImage[1])
+	rawVersion := strings.TrimPrefix(splitImage[1], "v")
+	if patchVersionNotPresentRE.MatchString(rawVersion) {
+		rawVersion = fmt.Sprintf("%s.0", rawVersion)
+	}
+
+	imageVersion, err := semver.Parse(rawVersion)
 	if err != nil {
 		return semver.Version{}, fmt.Errorf("could not validate image (%s): %w", image, err)
 	}

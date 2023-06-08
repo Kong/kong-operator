@@ -12,7 +12,7 @@ const (
 var (
 	// minimumControlPlaneVersion indicates the bare minimum version of the
 	// ControlPlane that can be used by the operator.
-	minimumControlPlaneVersion = semver.MustParse("2.9.3")
+	minimumControlPlaneVersion = semver.MustParse("2.9.0")
 )
 
 // RoleVersionsForKICVersions is a map that explicitly sets which ClusterRole version to use upon the KIC
