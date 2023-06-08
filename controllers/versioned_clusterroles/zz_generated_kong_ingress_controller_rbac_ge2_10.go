@@ -6,13 +6,10 @@ package controllers
 // Kong Ingress Controller - RBAC
 // -----------------------------------------------------------------------------
 
-//+kubebuilder:rbac:groups=core,resources=endpoints,verbs=list;watch
-//+kubebuilder:rbac:groups=core,resources=endpoints/status,verbs=get;patch;update
 //+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 //+kubebuilder:rbac:groups=core,resources=nodes,verbs=list;watch
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=list;watch
-//+kubebuilder:rbac:groups=core,resources=secrets/status,verbs=get;patch;update
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch
 //+kubebuilder:rbac:groups=core,resources=services/status,verbs=get;patch;update
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=ingressclassparameterses,verbs=get;list;watch
@@ -28,8 +25,7 @@ package controllers
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses/status,verbs=get;patch;update
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/status,verbs=get;patch;update
-//+kubebuilder:rbac:groups=extensions,resources=ingresses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=extensions,resources=ingresses/status,verbs=get;patch;update
+//+kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingressclasses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get;patch;update
@@ -38,6 +34,8 @@ package controllers
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gatewayclasses/status,verbs=get;update
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways,verbs=get;list;update;watch
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways/status,verbs=get;update
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=grpcroutes,verbs=get;list;watch
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=grpcroutes/status,verbs=get;patch;update
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes/status,verbs=get;update
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants,verbs=get;list;watch

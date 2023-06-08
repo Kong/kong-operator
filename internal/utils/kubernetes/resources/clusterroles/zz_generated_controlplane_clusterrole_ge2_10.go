@@ -13,10 +13,10 @@ import (
 // ClusterRole generator
 // -----------------------------------------------------------------------------
 
-// GenerateNewClusterRoleForControlPlane_lt2_9_ge2_7 is a helper to generate a ClusterRole
+// GenerateNewClusterRoleForControlPlane_ge2_10 is a helper to generate a ClusterRole
 // resource with all the permissions needed by the controlplane deployment.
-// It is used for controlplanes that match the semver constraint "<2.9, >=2.7"
-func GenerateNewClusterRoleForControlPlane_lt2_9_ge2_7(controlplaneName string) *rbacv1.ClusterRole {
+// It is used for controlplanes that match the semver constraint ">=2.10"
+func GenerateNewClusterRoleForControlPlane_ge2_10(controlplaneName string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", controlplaneName),
@@ -26,28 +26,6 @@ func GenerateNewClusterRoleForControlPlane_lt2_9_ge2_7(controlplaneName string) 
 		},
 		Rules: []rbacv1.PolicyRule{
 
-			{
-				APIGroups: []string{
-					"",
-				},
-				Resources: []string{
-					"endpoints",
-				},
-				Verbs: []string{
-					"list", "watch",
-				},
-			},
-			{
-				APIGroups: []string{
-					"",
-				},
-				Resources: []string{
-					"endpoints/status",
-				},
-				Verbs: []string{
-					"get", "patch", "update",
-				},
-			},
 			{
 				APIGroups: []string{
 					"",
@@ -90,17 +68,6 @@ func GenerateNewClusterRoleForControlPlane_lt2_9_ge2_7(controlplaneName string) 
 				},
 				Verbs: []string{
 					"list", "watch",
-				},
-			},
-			{
-				APIGroups: []string{
-					"",
-				},
-				Resources: []string{
-					"secrets/status",
-				},
-				Verbs: []string{
-					"get", "patch", "update",
 				},
 			},
 			{
@@ -270,24 +237,13 @@ func GenerateNewClusterRoleForControlPlane_lt2_9_ge2_7(controlplaneName string) 
 			},
 			{
 				APIGroups: []string{
-					"extensions",
+					"discovery.k8s.io",
 				},
 				Resources: []string{
-					"ingresses",
+					"endpointslices",
 				},
 				Verbs: []string{
 					"get", "list", "watch",
-				},
-			},
-			{
-				APIGroups: []string{
-					"extensions",
-				},
-				Resources: []string{
-					"ingresses/status",
-				},
-				Verbs: []string{
-					"get", "patch", "update",
 				},
 			},
 			{
@@ -366,6 +322,28 @@ func GenerateNewClusterRoleForControlPlane_lt2_9_ge2_7(controlplaneName string) 
 				},
 				Verbs: []string{
 					"get", "update",
+				},
+			},
+			{
+				APIGroups: []string{
+					"gateway.networking.k8s.io",
+				},
+				Resources: []string{
+					"grpcroutes",
+				},
+				Verbs: []string{
+					"get", "list", "watch",
+				},
+			},
+			{
+				APIGroups: []string{
+					"gateway.networking.k8s.io",
+				},
+				Resources: []string{
+					"grpcroutes/status",
+				},
+				Verbs: []string{
+					"get", "patch", "update",
 				},
 			},
 			{
