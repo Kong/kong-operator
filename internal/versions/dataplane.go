@@ -1,29 +1,28 @@
 package versions
 
 import (
-	"fmt"
-
-	"github.com/kong/gateway-operator/internal/consts"
+	"github.com/blang/semver/v4"
 )
 
-// supportedControlPlaneImages is the list of the supported DataPlane images
-var supportedDataPlaneImages = map[string]struct{}{
-	fmt.Sprintf("%s:3.0", consts.DefaultDataPlaneBaseImage):         {},
-	fmt.Sprintf("%s:3.0", consts.DefaultDataPlaneEnterpriseImage):   {},
-	fmt.Sprintf("%s:3.0.1", consts.DefaultDataPlaneBaseImage):       {},
-	fmt.Sprintf("%s:3.0.1", consts.DefaultDataPlaneEnterpriseImage): {},
-	fmt.Sprintf("%s:3.1", consts.DefaultDataPlaneBaseImage):         {},
-	fmt.Sprintf("%s:3.1", consts.DefaultDataPlaneEnterpriseImage):   {},
-	fmt.Sprintf("%s:3.2", consts.DefaultDataPlaneBaseImage):         {},
-	fmt.Sprintf("%s:3.2", consts.DefaultDataPlaneEnterpriseImage):   {},
-	fmt.Sprintf("%s:3.2.2", consts.DefaultDataPlaneBaseImage):       {},
-	fmt.Sprintf("%s:3.2.2", consts.DefaultDataPlaneEnterpriseImage): {},
-}
+var (
+	// minimumDataPlaneVersion indicates the bare minimum version of the
+	// DataPlane component that the operator will support.
+	minimumDataPlaneVersion = semver.MustParse("3.0.0")
+)
 
-// IsDataPlaneSupported is a helper intended to validate the DataPlane
-// image support.
-// The image is expected to follow the format <container-image-name>:<tag>
-func IsDataPlaneSupported(version string) bool {
-	_, ok := supportedDataPlaneImages[version]
-	return ok
+// IsDataPlaneImageVersionSupported is a helper intended to validate the
+// DataPlane image and indicate if the operator can support it.
+//
+// Presently only a minimum version is required, there are no limits on the
+// maximum. This may change in the future.
+//
+// The image is expected to follow the format "<image>:<tag>" and only supports
+// a provided "<tag>" if it is a semver compatible version.
+func IsDataPlaneImageVersionSupported(image string) (bool, error) {
+	imageVersion, err := versionFromImage(image)
+	if err != nil {
+		return false, err
+	}
+
+	return imageVersion.GE(minimumDataPlaneVersion), nil
 }
