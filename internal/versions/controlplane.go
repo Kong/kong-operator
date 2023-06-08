@@ -1,14 +1,18 @@
 package versions
 
 import (
-	"fmt"
-
-	"github.com/kong/gateway-operator/internal/consts"
+	"github.com/blang/semver/v4"
 )
 
 const (
 	// LatestClusterRoleVersion is the version of the ClusterRole that will be used for unversioned KIC
-	LatestClusterRoleVersion = "2.9.3"
+	LatestClusterRoleVersion = "2.10.0"
+)
+
+var (
+	// minimumControlPlaneVersion indicates the bare minimum version of the
+	// ControlPlane that can be used by the operator.
+	minimumControlPlaneVersion = semver.MustParse("2.9.3")
 )
 
 // RoleVersionsForKICVersions is a map that explicitly sets which ClusterRole version to use upon the KIC
@@ -26,21 +30,23 @@ const (
 // the release 5.0, a new entry '">=5.0": "5.0"' should be added to this map, and the previous most
 // updated entry should be limited to "<5.0".
 var RoleVersionsForKICVersions = map[string]string{
-	">=2.9":       "2.9.3",
-	"<2.9, >=2.7": "2.7", // TODO: https://github.com/Kong/gateway-operator/issues/86
+	">=2.10":       "2.10.0",
+	"<2.10, >=2.9": "2.9.3",
 }
 
-// supportedControlPlaneImages is the list of the supported ControlPlane images
-var supportedControlPlaneImages = map[string]struct{}{
-	fmt.Sprintf("%s:2.9.3", consts.DefaultControlPlaneBaseImage): {},
-	fmt.Sprintf("%s:2.9", consts.DefaultControlPlaneBaseImage):   {},
-	fmt.Sprintf("%s:2.7", consts.DefaultControlPlaneBaseImage):   {},
-}
+// IsControlPlaneImageVersionSupported is a helper intended to validate the
+// ControlPlane image and indicate if the operator can support it.
+//
+// Presently only a minimum version is required, there are no limits on the
+// maximum. This may change in the future.
+//
+// The image is expected to follow the format "<image>:<tag>" and only supports
+// a provided "<tag>" if it is a semver compatible version.
+func IsControlPlaneImageVersionSupported(image string) (bool, error) {
+	imageVersion, err := versionFromImage(image)
+	if err != nil {
+		return false, err
+	}
 
-// IsControlPlaneSupported is a helper intended to validate the ControlPlane
-// image support.
-// The image is expected to follow the format <container-image-name>:<tag>
-func IsControlPlaneSupported(image string) bool {
-	_, ok := supportedControlPlaneImages[image]
-	return ok
+	return imageVersion.GE(minimumControlPlaneVersion), nil
 }
