@@ -96,10 +96,10 @@ func main() {
 
 	// defer reverting KIC's submodule back to status from before.
 	defer checkout(kicWorktree, prevHead)
-	for c, v := range kicversions.RoleVersionsForKICVersions {
-		fmt.Printf("INFO: checking and generating code for constraint %s with version %s\n", c, v)
+	for versionConstraint, rbacVersion := range kicversions.RoleVersionsForKICVersions {
+		fmt.Printf("INFO: checking and generating code for constraint %s with version %s\n", versionConstraint, rbacVersion)
 		// ensure the version has the "v" prefix
-		version := semver.MustParse(v).String()
+		version := semver.MustParse(rbacVersion).String()
 		if !strings.HasPrefix(version, "v") {
 			version = fmt.Sprintf("v%s", version)
 		}
@@ -159,7 +159,7 @@ func main() {
 
 		exitOnErr(generatefile(
 			clusterRoles,
-			c,
+			versionConstraint,
 			"kic-rbac",
 			kicRBACTemplate,
 			kicRBACPath,
@@ -168,7 +168,7 @@ func main() {
 
 		exitOnErr(generatefile(
 			clusterRoles,
-			c,
+			versionConstraint,
 			"controller-annotations",
 			controlplaneControllerRBACTemplate,
 			controllerRBACPath,
@@ -214,15 +214,15 @@ func checkout(workTree *git.Worktree, hash plumbing.Hash) {
 
 func generatefile(
 	roles []*rbacv1.ClusterRole,
-	constraint string,
+	versionConstraint string,
 	templateName string,
 	template string,
 	folderPath string,
 	fileNamePrefix string,
 ) error {
-	file := buildFileName(folderPath, fileNamePrefix, convertConstraintName(constraint))
-	fmt.Printf("INFO: rendering file %s template for semver constraint %s\n", file, constraint)
-	buffer, err := renderTemplate(roles, constraint, templateName, template)
+	file := buildFileName(folderPath, fileNamePrefix, convertConstraintName(versionConstraint))
+	fmt.Printf("INFO: rendering file %s template for semver constraint %s\n", file, versionConstraint)
+	buffer, err := renderTemplate(roles, versionConstraint, templateName, template)
 	if err != nil {
 		return err
 	}
@@ -232,11 +232,11 @@ func generatefile(
 	}
 	if !m {
 		if failOnError {
-			return fmt.Errorf("file %s for constraint %s out of date, please regenerate it", file, constraint)
+			return fmt.Errorf("file %s for constraint %s out of date, please regenerate it", file, versionConstraint)
 		}
-		fmt.Printf("INFO: file %s for constraint %s out of date, needs to be regenerated\n", file, constraint)
+		fmt.Printf("INFO: file %s for constraint %s out of date, needs to be regenerated\n", file, versionConstraint)
 		if !dryRun {
-			fmt.Printf("INFO: regenerating file %s for constraint %s\n", file, constraint)
+			fmt.Printf("INFO: regenerating file %s for constraint %s\n", file, versionConstraint)
 			if err := mkdir(folderPath); err != nil {
 				return err
 			}
@@ -245,7 +245,7 @@ func generatefile(
 			}
 		}
 	} else {
-		fmt.Printf("INFO: file %s for constraint %s up to date, doesn't need to be regenerated\n", file, constraint)
+		fmt.Printf("INFO: file %s for constraint %s up to date, doesn't need to be regenerated\n", file, versionConstraint)
 	}
 
 	return nil
