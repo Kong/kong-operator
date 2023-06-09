@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/blang/semver/v4"
+
+	kgoerrors "github.com/kong/gateway-operator/internal/errors"
 )
 
 // ----------------------------------------------------------------------------
@@ -37,7 +39,7 @@ func versionFromImage(image string) (semver.Version, error) {
 
 	imageVersion, err := semver.Parse(rawVersion)
 	if err != nil {
-		return semver.Version{}, fmt.Errorf("could not validate image (%s): %w", image, err)
+		return semver.Version{}, fmt.Errorf("%w (image %s): %w", kgoerrors.ErrInvalidSemverVersion, image, err)
 	}
 
 	return imageVersion, nil

@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	rbacv1 "k8s.io/api/rbac/v1"
 
+	kgoerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources/clusterroles"
 )
@@ -16,7 +17,7 @@ func TestClusterroleHelpers(t *testing.T) {
 		image               string
 		version             string
 		expectedClusterRole *rbacv1.ClusterRole
-		expectedErrorMsg    string
+		expectedError       error
 	}{
 		{
 			controlplane:        "test_2.10",
@@ -47,10 +48,10 @@ func TestClusterroleHelpers(t *testing.T) {
 			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10("test_unsupported"),
 		},
 		{
-			controlplane:     "test_invalid_tag",
-			image:            "test/development",
-			version:          "main",
-			expectedErrorMsg: "could not validate image",
+			controlplane:  "test_invalid_tag",
+			image:         "test/development",
+			version:       "main",
+			expectedError: kgoerrors.ErrInvalidSemverVersion,
 		},
 	}
 
@@ -58,8 +59,8 @@ func TestClusterroleHelpers(t *testing.T) {
 		tc := tc
 		t.Run(tc.controlplane, func(t *testing.T) {
 			clusterRole, err := resources.GenerateNewClusterRoleForControlPlane(tc.controlplane, &tc.image, &tc.version)
-			if tc.expectedErrorMsg != "" {
-				require.Contains(t, err.Error(), tc.expectedErrorMsg)
+			if tc.expectedError != nil {
+				require.ErrorIs(t, err, kgoerrors.ErrInvalidSemverVersion)
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedClusterRole, clusterRole)

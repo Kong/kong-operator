@@ -44,3 +44,12 @@ var ErrDataPlaneNotSet = errors.New("no dataplane name set")
 // ErrNoDataPlanePods is a custom error that must be used when the DataPlane Deployment
 // referenced by the ControlPlane has no pods ready yet.
 var ErrNoDataPlanePods = errors.New("no dataplane pods existing yet")
+
+// -----------------------------------------------------------------------------
+// Version Strings - Errors
+// -----------------------------------------------------------------------------
+
+// ErrInvalidSemverVersion is a custom error that indicates a provided
+// version string (which we were expecting to be in the format of
+// <Major>.<Minor>.<Patch>) was invalid, and not in the expected format.
+var ErrInvalidSemverVersion = errors.New("not a valid semver version")
