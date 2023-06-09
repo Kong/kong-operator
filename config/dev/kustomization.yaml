@@ -4,5 +4,5 @@ kind: Kustomization
 resources:
 - ../default
 
-patchesStrategicMerge:
-- manager_dev.yaml
+patches:
+- path: manager_dev.yaml
