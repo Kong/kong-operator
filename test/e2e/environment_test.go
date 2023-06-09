@@ -54,18 +54,12 @@ var (
 )
 
 // -----------------------------------------------------------------------------
-// Testing Vars - path of kustomization directories and files
+// Testing Consts - paths of kustomization directories and files
 // -----------------------------------------------------------------------------
 
-var (
-	// This adds one more layer of kustomzations in order to use main tag for e2e tests
-	// rather than last release.
-	kustomizationDir  = "./config/tests/"
-	kustomizationFile = kustomizationDir + "/kustomization.yaml"
-	// backupKustomizationFile is used to save the original kustomization file if we modified it.
-	// iIf the kustomization file is changed multiple times,
-	// only the content before the first change should be used as backup to keep the content as same as the origin.
-	backupKustomizationFile = ""
+const (
+	// testsKustomizationPath is a relative path to tests kustomization directory.
+	testsKustomizationPath = "config/tests/"
 )
 
 // -----------------------------------------------------------------------------
@@ -77,16 +71,16 @@ func createEnvironment(t *testing.T, ctx context.Context) (*testutils.K8sClients
 
 	skipClusterCleanup = existingCluster != ""
 
-	fmt.Println("INFO: configuring cluster for testing environment")
+	t.Log("configuring cluster for testing environment")
 	builder := environments.NewBuilder()
 	if existingCluster != "" {
 		clusterParts := strings.Split(existingCluster, ":")
-		if len(clusterParts) != 2 {
-			t.Fatal(fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster))
-		}
+		require.Lenf(t, clusterParts, 2,
+			"existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster,
+		)
 		clusterType, clusterName := clusterParts[0], clusterParts[1]
 
-		fmt.Printf("INFO: using existing %s cluster %s\n", clusterType, clusterName)
+		t.Logf("using existing %s cluster %s\n", clusterType, clusterName)
 		switch clusterType {
 		case string(kind.KindClusterType):
 			cluster, err := kind.NewFromExisting(clusterName)
@@ -101,28 +95,31 @@ func createEnvironment(t *testing.T, ctx context.Context) (*testutils.K8sClients
 			t.Fatal(fmt.Errorf("unknown cluster type: %s", clusterType))
 		}
 	} else {
-		fmt.Println("INFO: no existing cluster found, deploying using Kubernetes In Docker (KIND)")
+		t.Log("no existing cluster found, deploying using Kubernetes In Docker (KIND)")
 		builder.WithAddons(metallb.New())
 	}
 	if imageLoad != "" {
 		imageLoader, err := loadimage.NewBuilder().WithImage(imageLoad)
 		require.NoError(t, err)
-		fmt.Println("INFO: load image", imageLoad)
+		t.Logf("loading image: %s", imageLoad)
 		builder.WithAddons(imageLoader.Build())
 	}
+
+	image := getOperatorImage(t)
+	kustomizationDir := prepareKustomizeDir(t, image)
 
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		assert.NoError(t, cleanupEnvironment(context.Background(), env), "failed cleaning up the environment")
+		cleanupEnvironment(t, context.Background(), env, kustomizationDir)
 	})
 
-	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
+	t.Logf("waiting for cluster %s and all addons to become ready", env.Cluster().Name())
 	require.NoError(t, <-env.WaitForReady(ctx))
 
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
-	fmt.Println("INFO: initializing Kubernetes API clients")
+	t.Log("initializing Kubernetes API clients")
 	clients := &testutils.K8sClients{}
 	clients.K8sClient = env.Cluster().Client()
 	clients.OperatorClient, err = clientset.NewForConfig(env.Cluster().Config())
@@ -130,31 +127,29 @@ func createEnvironment(t *testing.T, ctx context.Context) (*testutils.K8sClients
 	clients.GatewayClient, err = gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
-	fmt.Println("INFO: intializing manager client")
+	t.Log("intializing manager client")
 	clients.MgrClient, err = client.New(env.Cluster().Config(), client.Options{})
 	require.NoError(t, err)
 
 	require.NoError(t, gatewayv1beta1.AddToScheme(clients.MgrClient.Scheme()))
 	require.NoError(t, operatorv1alpha1.AddToScheme(clients.MgrClient.Scheme()))
 
-	fmt.Printf("deploying Gateway APIs CRDs from %s\n", testutils.GatewayExperimentalCRDsKustomizeURL)
+	t.Logf("deploying Gateway APIs CRDs from %s", testutils.GatewayExperimentalCRDsKustomizeURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), testutils.GatewayExperimentalCRDsKustomizeURL))
 
-	fmt.Printf("deploying KIC CRDs from %s\n", "./../../kubernetes-ingress-controller/config/crd/")
+	t.Logf("deploying KIC CRDs from %s", "./../../kubernetes-ingress-controller/config/crd/")
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "./../../kubernetes-ingress-controller/config/crd/"))
 
-	fmt.Println("INFO: creating system namespaces and serviceaccounts")
+	t.Log("creating system namespaces and serviceaccounts")
 	require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
 
-	require.NoError(t, setOperatorImage())
-
-	fmt.Println("INFO: deploying operator to test cluster via kustomize")
+	t.Log("deploying operator to test cluster via kustomize")
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizationDir))
 
-	fmt.Println("INFO: waiting for operator deployment to complete")
+	t.Log("waiting for operator deployment to complete")
 	require.NoError(t, waitForOperatorDeployment(ctx, clients.K8sClient))
 
-	fmt.Println("INFO: waiting for operator webhook service to be connective")
+	t.Log("waiting for operator webhook service to be connective")
 	require.Eventually(t, func() bool {
 		if err := waitForOperatorWebhook(ctx, clients.K8sClient); err != nil {
 			t.Logf("failed to wait for operator webhook: %v", err)
@@ -165,23 +160,26 @@ func createEnvironment(t *testing.T, ctx context.Context) (*testutils.K8sClients
 		return true
 	}, webhookReadinessTimeout, webhookReadinessTick)
 
-	fmt.Println("INFO: environment is ready, starting tests")
-	require.NoError(t, restoreKustomizationFile())
+	t.Log("environment is ready, starting tests")
 
 	return clients, namespace, cleaner
 }
 
-func cleanupEnvironment(ctx context.Context, env environments.Environment) error {
+func cleanupEnvironment(t *testing.T, ctx context.Context, env environments.Environment, kustomizePath string) {
+	t.Helper()
+
 	if env == nil {
-		return nil
-	}
-	if skipClusterCleanup {
-		fmt.Println("INFO: cleaning up operator manifests")
-		return clusters.KustomizeDeleteForCluster(ctx, env.Cluster(), kustomizationDir)
+		return
 	}
 
-	fmt.Println("INFO: cleaning up testing cluster and environment")
-	return env.Cleanup(ctx)
+	if skipClusterCleanup {
+		t.Logf("cleaning up operator manifests using kustomize path: %s", kustomizePath)
+		assert.NoError(t, clusters.KustomizeDeleteForCluster(ctx, env.Cluster(), kustomizePath))
+		return
+	}
+
+	t.Logf("cleaning up testing cluster and environment %q", env.Name())
+	assert.NoError(t, env.Cleanup(ctx))
 }
 
 // -----------------------------------------------------------------------------

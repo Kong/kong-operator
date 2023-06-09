@@ -6,90 +6,93 @@ package e2e
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/kustomize/kyaml/copyutil"
+	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
-const gatewayOperatorImageKustomizationContents = `
-images:
-- name: ghcr.io/kong/gateway-operator
-  newName: %v
-  newTag: '%v'
-`
+// prepareKustomizeDir prepares a temporary kustomize directory with operator
+// image patch in place.
+// It takes the provided image and uses it to append an "images:" section to
+// resulting kustomization.yaml.
+// It returns the path of said directory.
+func prepareKustomizeDir(t *testing.T, image string) string {
+	t.Helper()
 
-// setOperatorImage appends content for replacing image to kustomization file
-// and puts original content of kustomization file into a temporary file for backup.
-func setOperatorImage() error {
-	var image string
+	const (
+		configDir                                 = "../../config"
+		gatewayOperatorDefaultImage               = "ghcr.io/kong/gateway-operator"
+		gatewayOperatorDefaultTag                 = "main"
+		gatewayOperatorImageKustomizationContents = "\n" +
+			"images:\n" +
+			"- name: ghcr.io/kong/gateway-operator\n" +
+			"  newName: %v\n" +
+			"  newTag: '%v'\n"
+	)
+
+	var (
+		imageName = gatewayOperatorDefaultImage
+		imageTag  = gatewayOperatorDefaultTag
+	)
+	if image != "" {
+		var err error
+		imageName, imageTag, err = extractImageNameAndTag(image)
+		if err != nil {
+			t.Logf("failed to parse custom image '%s': %v, using default image: %s:%s",
+				image, err, gatewayOperatorDefaultImage, gatewayOperatorDefaultTag)
+			imageName, imageTag = gatewayOperatorDefaultImage, gatewayOperatorDefaultTag
+		}
+	}
+
+	fs := filesys.MakeFsOnDisk()
+	tmp, err := filesys.NewTmpConfirmedDir()
+	require.NoError(t, err)
+
+	// Copy the whole contents of config/ dir to temp dir for tests.
+	require.NoError(t, copyutil.CopyDir(fs, configDir, tmp.String()))
+
+	// Create tests/ dir to contain the tests specific kustomization.
+	testsDir := filepath.Join(tmp.String(), "tests")
+	require.NoError(t, fs.MkdirAll(testsDir))
+	t.Logf("using temporary directory for tests' kustomization.yaml: %s", testsDir)
+
+	// Copy tests dir (containing kustomization.yaml) to tmp tests/ dir.
+	require.NoError(t, copyutil.CopyDir(fs, testsKustomizationPath, testsDir))
+
+	// Write the image patch to tests/kustomization.yaml in temp dir.
+	// NOTE: This could probably be done via parsed structs somehow instead of
+	// appending the patch verbatim to the file.
+	imagesPatch := fmt.Sprintf(gatewayOperatorImageKustomizationContents, imageName, imageTag)
+	f, err := os.OpenFile(fmt.Sprintf("%s%c%s", testsDir, filepath.Separator, "kustomization.yaml"),
+		os.O_APPEND|os.O_WRONLY|os.O_CREATE,
+		0o600,
+	)
+	require.NoError(t, err)
+	_, err = f.WriteString(imagesPatch)
+	require.NoError(t, err)
+
+	return testsDir
+}
+
+// getOperatorImage gets the operator image to use in tests based on the image
+// load and override environment variables.
+func getOperatorImage(t *testing.T) string {
+	t.Helper()
+
 	if imageLoad != "" {
-		image = imageLoad
-	} else {
-		image = imageOverride
+		t.Logf("using custom image via image load: %s", imageLoad)
+		return imageLoad
+	} else if imageOverride != "" {
+		t.Logf("using custom image via image override: %s", imageOverride)
+		return imageOverride
 	}
 
-	if image == "" {
-		fmt.Println("INFO: use default image")
-		return nil
-	}
-
-	imageName, imageTag, err := extractImageNameAndTag(image)
-	if err != nil {
-		fmt.Printf("ERROR: failed to parse custom image '%s', using default image\n", image)
-		return nil //nolint:nilerr
-	}
-
-	fmt.Println("INFO: use custom image", image)
-
-	buf, err := os.ReadFile(kustomizationFile)
-	if err != nil {
-		return err
-	}
-
-	// write current content of kustomization file to backup file.
-	if backupKustomizationFile == "" {
-		filename, err := createBackupKustomizationFile()
-		if err != nil {
-			return err
-		}
-		backupKustomizationFile = filename
-		fmt.Printf("INFO: writing current content of kustomization file to %s for backup\n", filename)
-		err = os.WriteFile(filename, buf, os.ModeAppend)
-		if err != nil {
-			return err
-		}
-	}
-
-	// append image contents to replace image
-	fmt.Println("INFO: replacing image in kustomization file")
-	appendImageKustomizationContents := []byte(fmt.Sprintf(gatewayOperatorImageKustomizationContents, imageName, imageTag))
-	newBuf := append(buf, appendImageKustomizationContents...)
-	return os.WriteFile(kustomizationFile, newBuf, os.ModeAppend)
-}
-
-func createBackupKustomizationFile() (string, error) {
-	file, err := os.CreateTemp("", "kustomization-yaml-backup")
-	if err != nil {
-		return "", err
-	}
-
-	defer file.Close()
-	return file.Name(), nil
-}
-
-func restoreKustomizationFile() error {
-	if backupKustomizationFile == "" {
-		return nil
-	}
-
-	fmt.Printf("INFO: restore kustomization file from backup file %s\n", backupKustomizationFile)
-	backUpBuf, err := os.ReadFile(backupKustomizationFile)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(kustomizationFile, backUpBuf, os.ModeAppend)
+	t.Log("using default image")
+	return ""
 }
 
 func extractImageNameAndTag(fullname string) (name, tag string, err error) {
