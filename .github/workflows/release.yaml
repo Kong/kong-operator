@@ -110,7 +110,7 @@ jobs:
 
       - name: Build binary
         id: docker_build_binary
-        uses: docker/build-push-action@v4.0.0
+        uses: docker/build-push-action@v4.1.0
         with:
           context: .
           push: false
@@ -126,7 +126,7 @@ jobs:
 
       - name: Build and push
         id: docker_build
-        uses: docker/build-push-action@v4.0.0
+        uses: docker/build-push-action@v4.1.0
         with:
           context: .
           push: true
