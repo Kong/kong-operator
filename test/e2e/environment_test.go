@@ -18,8 +18,10 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/networking"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -39,7 +41,7 @@ import (
 
 const (
 	webhookReadinessTimeout = 2 * time.Minute
-	webhookReadinessTick    = 5 * time.Second
+	webhookReadinessTick    = 2 * time.Second
 )
 
 // -----------------------------------------------------------------------------
@@ -66,8 +68,31 @@ const (
 // Testing Vars - Testing Environment
 // -----------------------------------------------------------------------------
 
-func createEnvironment(t *testing.T, ctx context.Context) (*testutils.K8sClients, *corev1.Namespace, *clusters.Cleaner) {
+type testEnvironment struct {
+	Clients     *testutils.K8sClients
+	Namespace   *corev1.Namespace
+	Cleaner     *clusters.Cleaner
+	Environment environments.Environment
+}
+
+type TestEnvOption func(opt *TestEnvOptions)
+
+type TestEnvOptions struct {
+	Image string
+}
+
+func WithOperatorImage(image string) TestEnvOption {
+	return func(opts *TestEnvOptions) {
+		opts.Image = image
+	}
+}
+
+func createEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption) testEnvironment {
 	t.Helper()
+	var opt TestEnvOptions
+	for _, o := range opts {
+		o(&opt)
+	}
 
 	skipClusterCleanup = existingCluster != ""
 
@@ -105,8 +130,10 @@ func createEnvironment(t *testing.T, ctx context.Context) (*testutils.K8sClients
 		builder.WithAddons(imageLoader.Build())
 	}
 
-	image := getOperatorImage(t)
-	kustomizationDir := prepareKustomizeDir(t, image)
+	if len(opt.Image) == 0 {
+		opt.Image = getOperatorImage(t)
+	}
+	kustomizationDir := prepareKustomizeDir(t, opt.Image)
 
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
@@ -150,19 +177,17 @@ func createEnvironment(t *testing.T, ctx context.Context) (*testutils.K8sClients
 	require.NoError(t, waitForOperatorDeployment(ctx, clients.K8sClient))
 
 	t.Log("waiting for operator webhook service to be connective")
-	require.Eventually(t, func() bool {
-		if err := waitForOperatorWebhook(ctx, clients.K8sClient); err != nil {
-			t.Logf("failed to wait for operator webhook: %v", err)
-			return false
-		}
-
-		t.Log("operator webhook ready")
-		return true
-	}, webhookReadinessTimeout, webhookReadinessTick)
+	require.Eventually(t, waitForOperatorWebhookEventually(t, ctx, clients.K8sClient),
+		webhookReadinessTimeout, webhookReadinessTick)
 
 	t.Log("environment is ready, starting tests")
 
-	return clients, namespace, cleaner
+	return testEnvironment{
+		Clients:     clients,
+		Namespace:   namespace,
+		Cleaner:     cleaner,
+		Environment: env,
+	}
 }
 
 func cleanupEnvironment(t *testing.T, ctx context.Context, env environments.Environment, kustomizePath string) {
@@ -186,9 +211,23 @@ func cleanupEnvironment(t *testing.T, ctx context.Context, env environments.Envi
 // Testing Main - Helper Functions
 // -----------------------------------------------------------------------------
 
-func waitForOperatorDeployment(ctx context.Context, k8sClient *kubernetes.Clientset) error {
-	ready := false
-	for !ready {
+type DeploymentAssertOptions func(*appsv1.Deployment) bool
+
+func DeploymentAssertConditions(conds ...appsv1.DeploymentCondition) DeploymentAssertOptions {
+	return func(deployment *appsv1.Deployment) bool {
+		return lo.EveryBy(conds, func(cond appsv1.DeploymentCondition) bool {
+			return lo.ContainsBy(deployment.Status.Conditions, func(c appsv1.DeploymentCondition) bool {
+				return c.Type == cond.Type &&
+					c.Status == cond.Status &&
+					c.Reason == cond.Reason
+			})
+		})
+	}
+}
+
+func waitForOperatorDeployment(ctx context.Context, k8sClient *kubernetes.Clientset, opts ...DeploymentAssertOptions) error {
+outer:
+	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -197,12 +236,30 @@ func waitForOperatorDeployment(ctx context.Context, k8sClient *kubernetes.Client
 			if err != nil {
 				return err
 			}
-			if deployment.Status.AvailableReplicas >= 1 {
-				ready = true
+			if deployment.Status.AvailableReplicas <= 0 {
+				continue
 			}
+
+			for _, opt := range opts {
+				if !opt(deployment) {
+					continue outer
+				}
+			}
+			return nil
 		}
 	}
-	return nil
+}
+
+func waitForOperatorWebhookEventually(t *testing.T, ctx context.Context, k8sClient *kubernetes.Clientset) func() bool {
+	return func() bool {
+		if err := waitForOperatorWebhook(ctx, k8sClient); err != nil {
+			t.Logf("failed to wait for operator webhook: %v", err)
+			return false
+		}
+
+		t.Log("operator webhook ready")
+		return true
+	}
 }
 
 func waitForOperatorWebhook(ctx context.Context, k8sClient *kubernetes.Clientset) error {

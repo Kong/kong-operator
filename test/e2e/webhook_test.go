@@ -23,7 +23,8 @@ func TestDataplaneValidatingWebhook(t *testing.T) {
 
 	// createEnvironment will queue up environment cleanup if necessary
 	// and dumping diagnostics if the test fails.
-	clients, testNamespace, _ := createEnvironment(t, ctx)
+	e := createEnvironment(t, ctx)
+	clients, testNamespace := e.Clients, e.Namespace
 
 	testCases := []struct {
 		name      string

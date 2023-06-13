@@ -5,6 +5,10 @@ resources:
 - ../default
 
 patches:
+# By default we start the operator in e2e tests with leader election on.
+# This is intended to test upgrade scenarios with it enabled.
+# This might require additional configuration in the future, where one would
+# like to run tests with and without leader election.
 - patch: |-
     - op: add
       path: /spec/template/spec/containers/0/args/-
@@ -12,9 +16,6 @@ patches:
     - op: add
       path: /spec/template/spec/containers/0/args/-
       value: -zap-devel
-    - op: add
-      path: /spec/template/spec/containers/0/args/-
-      value: -no-leader-election=true
     - op: add
       path: /spec/template/spec/containers/0/args/-
       value: -zap-log-level=2

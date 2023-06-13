@@ -13,6 +13,8 @@ metadata:
   labels:
     control-plane: controller-manager
 spec:
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       control-plane: controller-manager

@@ -80,6 +80,8 @@ func (m *webhookManager) PrepareWebhookServer(ctx context.Context) error {
 }
 
 func (m *webhookManager) Start(ctx context.Context) error {
+	m.logger.Info("starting webhook manager")
+
 	// create the webhook resources (if they already exist, it is no-op)
 	if err := m.createWebhookResources(ctx); err != nil {
 		return err
@@ -136,6 +138,7 @@ func (m *webhookManager) Start(ctx context.Context) error {
 			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
 		}
 	}
+
 	return nil
 }
 
@@ -241,6 +244,8 @@ func (m *webhookManager) createCertificateConfigJobs(ctx context.Context) error 
 }
 
 func (m *webhookManager) cleanup(ctx context.Context) error {
+	m.logger.Info("cleaning up webhook resources")
+
 	if err := m.cleanupCertificateConfigResources(ctx); err != nil {
 		return err
 	}

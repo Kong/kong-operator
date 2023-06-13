@@ -37,6 +37,7 @@ func AddNewWebhookServerToManager(mgr ctrl.Manager, logger logr.Logger, webhookP
 	if err := mgr.AddReadyzCheck("readyz", hookServer.StartedChecker()); err != nil {
 		return nil, fmt.Errorf("failed to add readiness probe for webhook: %w", err)
 	}
+
 	return hookServer, nil
 }
 
