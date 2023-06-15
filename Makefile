@@ -238,6 +238,9 @@ vet: ## Run go vet against code.
 lint: golangci-lint
 	$(GOLANGCI_LINT) run -v
 
+.PHONY: verify
+verify: verify.generators verify.manifests verify.bundle
+
 .PHONY: verify.bundle
 verify.bundle: verify.repo bundle verify.diff
 
