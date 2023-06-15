@@ -193,7 +193,7 @@ func verifyConnectivity(t *testing.T, dataplaneIP string) {
 	require.Equal(t, resp.StatusCode, http.StatusNotFound)
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	require.Equal(t, string(body), `{"message":"no Route matched with those values"}`)
+	require.Contains(t, string(body), `"message":"no Route matched with those values"`) // TODO: https://github.com/Kong/gateway-operator/issues/835
 }
 
 func TestDataPlaneUpdate(t *testing.T) {
