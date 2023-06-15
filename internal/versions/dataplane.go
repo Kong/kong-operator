@@ -1,14 +1,12 @@
 package versions
 
 import (
-	"github.com/blang/semver/v4"
+	"github.com/kong/semver/v4"
 )
 
-var (
-	// minimumDataPlaneVersion indicates the bare minimum version of the
-	// DataPlane component that the operator will support.
-	minimumDataPlaneVersion = semver.MustParse("3.0.0")
-)
+// minimumDataPlaneVersion indicates the bare minimum version of the
+// DataPlane component that the operator will support.
+var minimumDataPlaneVersion = semver.MustParse("3.0.0")
 
 // IsDataPlaneImageVersionSupported is a helper intended to validate the
 // DataPlane image and indicate if the operator can support it.

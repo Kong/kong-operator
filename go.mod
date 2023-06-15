@@ -16,6 +16,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/kong/kubernetes-telemetry v0.0.4
 	github.com/kong/kubernetes-testing-framework v0.31.1
+	github.com/kong/semver/v4 v4.0.1
 	github.com/samber/lo v1.38.1
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20220407100705-7b9b53b0aca4
@@ -29,6 +30,7 @@ require (
 
 require (
 	github.com/avast/retry-go/v4 v4.3.4 // indirect
+	github.com/go-task/slim-sprig v2.20.0+incompatible // indirect
 	github.com/google/s2a-go v0.1.4 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/tools v0.9.1 // indirect
@@ -55,7 +57,7 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.10.0 // indirect
-	github.com/huandu/xstrings v1.3.2 // indirect
+	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jmoiron/sqlx v1.3.3 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect

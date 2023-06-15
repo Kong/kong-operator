@@ -1,7 +1,7 @@
 package versions
 
 import (
-	"github.com/blang/semver/v4"
+	"github.com/kong/semver/v4"
 )
 
 const (
@@ -9,11 +9,9 @@ const (
 	LatestClusterRoleVersion = "2.10.0"
 )
 
-var (
-	// minimumControlPlaneVersion indicates the bare minimum version of the
-	// ControlPlane that can be used by the operator.
-	minimumControlPlaneVersion = semver.MustParse("2.9.0")
-)
+// minimumControlPlaneVersion indicates the bare minimum version of the
+// ControlPlane that can be used by the operator.
+var minimumControlPlaneVersion = semver.MustParse("2.9.0")
 
 // RoleVersionsForKICVersions is a map that explicitly sets which ClusterRole version to use upon the KIC
 // version. It is used by /hack/generators/kic-role-generator to generate the roles to be used by KIC.
