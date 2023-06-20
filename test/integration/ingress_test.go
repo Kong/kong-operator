@@ -6,7 +6,6 @@ package integration
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -126,16 +125,7 @@ func TestIngressEssentials(t *testing.T) {
 	require.NotNil(t, controlplane)
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, func() bool {
-		resp, err := httpc.Get("http://" + gatewayIP)
-		if err != nil {
-			return false
-		}
-		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		require.NoError(t, err)
-		return strings.Contains(string(body), testutils.DefaultKongResponseBody)
-	}, testutils.DefaultIngressWait, time.Second)
+	require.Eventually(t, expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s", gatewayIP)), testutils.DefaultIngressWait, time.Second)
 
 	t.Log("retrieving the kong-proxy url")
 	services := testutils.MustListDataPlaneProxyServices(t, ctx, dataplane, clients.MgrClient)
@@ -226,15 +216,9 @@ func TestIngressEssentials(t *testing.T) {
 	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
 	t.Logf("verifying that removing the ingress.class annotation %q from ingress causes routes to disconnect", ingressClass)
-	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name())))
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
-		}
-		defer resp.Body.Close()
-		return expect404WithNoRoute(t, proxyURL.String(), resp)
-	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
+	require.Eventually(t,
+		expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name()))),
+		testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
 	t.Logf("putting the ingress.class annotation %q back on ingress", ingressClass)
 	require.Eventually(t, func() bool {
@@ -285,13 +269,7 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), namespace.Name, ingress))
-	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name())))
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
-		}
-		defer resp.Body.Close()
-		return expect404WithNoRoute(t, proxyURL.String(), resp)
-	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
+	require.Eventually(t,
+		expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name()))),
+		testutils.DefaultIngressWait, testutils.WaitIngressTick)
 }

@@ -77,11 +77,6 @@ const (
 // -----------------------------------------------------------------------------
 
 const (
-	// defaultKongResponseBody is the default response body that will be returned
-	// from the Kong Gateway when it is first provisioned and when no default
-	// routes are configured.
-	DefaultKongResponseBody = `{"message":"no Route matched with those values"}`
-
 	// ObjectUpdateTimeout is the amount of time that will be allowed for
 	// conflicts to be resolved before an object update will be considered failed.
 	ObjectUpdateTimeout = time.Second * 30

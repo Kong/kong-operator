@@ -4,9 +4,6 @@
 package integration
 
 import (
-	"fmt"
-	"io"
-	"net/http"
 	"testing"
 	"time"
 
@@ -132,7 +129,7 @@ func TestDataplaneEssentials(t *testing.T) {
 		return false
 	}, time.Minute, time.Second)
 
-	verifyConnectivity(t, dataplaneIP)
+	require.Eventually(t, expect404WithNoRouteFunc(t, ctx, "http://"+dataplaneIP), time.Minute, time.Second)
 
 	t.Log("deleting the dataplane deployment")
 	dataplaneDeployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients)
@@ -158,7 +155,8 @@ func TestDataplaneEssentials(t *testing.T) {
 		}
 		return false
 	}, time.Minute, time.Second)
-	verifyConnectivity(t, dataplaneIP)
+
+	require.Eventually(t, expect404WithNoRouteFunc(t, ctx, "http://"+dataplaneIP), time.Minute, time.Second)
 
 	t.Log("verifying dataplane status is properly filled with backing service name and its addresses")
 	require.Eventually(t, testutils.DataPlaneHasServiceAndAddressesInStatus(t, ctx, dataplaneName, clients), time.Minute, time.Second)
@@ -183,17 +181,6 @@ func TestDataplaneEssentials(t *testing.T) {
 
 		return true
 	}, time.Minute, time.Second)
-}
-
-func verifyConnectivity(t *testing.T, dataplaneIP string) {
-	t.Log("verifying connectivity to the dataplane")
-	resp, err := httpc.Get(fmt.Sprintf("https://%s", dataplaneIP))
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	require.Equal(t, resp.StatusCode, http.StatusNotFound)
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.Contains(t, string(body), `"message":"no Route matched with those values"`) // TODO: https://github.com/Kong/gateway-operator/issues/835
 }
 
 func TestDataPlaneUpdate(t *testing.T) {

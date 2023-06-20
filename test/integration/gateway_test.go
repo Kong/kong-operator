@@ -70,7 +70,7 @@ func TestGatewayEssentials(t *testing.T) {
 	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, testutils.GetResponseBodyContains(t, ctx, clients, httpc, "http://"+gatewayIPAddress, testutils.DefaultKongResponseBody), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, expect404WithNoRouteFunc(t, ctx, "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
 
 	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
 	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
@@ -111,7 +111,7 @@ func TestGatewayEssentials(t *testing.T) {
 	gatewayIPAddress = gateway.Status.Addresses[0].Value
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, testutils.GetResponseBodyContains(t, ctx, clients, httpc, "http://"+gatewayIPAddress, testutils.DefaultKongResponseBody), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, expect404WithNoRouteFunc(t, ctx, "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying services managed by the dataplane")
 	var dataplaneService corev1.Service

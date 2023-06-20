@@ -4,7 +4,6 @@
 package integration
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -16,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/stretchr/testify/require"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,24 +22,45 @@ import (
 	kubernetesclient "k8s.io/client-go/kubernetes"
 )
 
-// Expect404WithNoRoute is used to check whether a given http response is (specifically) a Kong 404.
-func expect404WithNoRoute(t *testing.T, proxyURL string, resp *http.Response) bool {
-	if resp.StatusCode == http.StatusNotFound {
-		// once the route is torn down and returning 404's, ensure that we got the expected response body back from Kong
-		// Expected: {"message":"no Route matched with those values"}
-		b := new(bytes.Buffer)
-		_, err := b.ReadFrom(resp.Body)
-		require.NoError(t, err)
-		body := struct {
-			Message string `json:"message"`
-		}{}
-		if err := json.Unmarshal(b.Bytes(), &body); err != nil {
-			t.Logf("WARNING: error decoding JSON from proxy while waiting for %s: %v", proxyURL, err)
+// expect404WithNoRouteFunc is used to check whether a given URL responds
+// with 404 and a standard Kong no route message.
+func expect404WithNoRouteFunc(t *testing.T, ctx context.Context, url string) func() bool {
+	t.Helper()
+
+	return func() bool {
+		t.Logf("verifying connectivity to the dataplane %v", url)
+
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		if err != nil {
+			t.Logf("failed creating request for %s: %v", url, err)
 			return false
 		}
-		return body.Message == "no Route matched with those values"
+		resp, err := httpc.Do(req)
+		if err != nil {
+			t.Logf("failed issuing HTTP GET for %s: %v", url, err)
+			return false
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNotFound {
+			t.Logf("expected 404 got %d from HTTP GET for %s: %v", resp.StatusCode, url, err)
+			return false
+		}
+		var proxyResponse struct {
+			Message string `json:"message"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&proxyResponse); err != nil {
+			t.Logf("failed decoding HTTP GET response from %s: %v", url, err)
+			return false
+		}
+
+		const expected = "no Route matched with those values"
+		if expected != proxyResponse.Message {
+			t.Logf("expected %s got in HTTP GET response from %s", expected, url)
+			return false
+		}
+		return true
 	}
-	return false
 }
 
 func urlForService(ctx context.Context, cluster clusters.Cluster, nsn types.NamespacedName, port int) (*url.URL, error) {
