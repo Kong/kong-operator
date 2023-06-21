@@ -1,5 +1,4 @@
 //go:build generate_gateway_api_urls
-// +build generate_gateway_api_urls
 
 package main
 
