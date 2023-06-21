@@ -97,8 +97,6 @@ jobs:
         path: unit-tests.xml
 
   conformance-tests:
-    # https://github.com/Kong/gateway-operator/issues/11#issuecomment-1514712925
-    if: false
     runs-on: ubuntu-latest
     steps:
     - name: checkout repository

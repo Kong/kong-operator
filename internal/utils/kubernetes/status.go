@@ -140,6 +140,13 @@ func NewCondition(cType ConditionType, status metav1.ConditionStatus, reason Con
 	}
 }
 
+// NewConditionWithGeneration convenience method for creating conditions with ObservedGeneration set.
+func NewConditionWithGeneration(cType ConditionType, status metav1.ConditionStatus, reason ConditionReason, message string, observedGeneration int64) metav1.Condition {
+	c := NewCondition(cType, status, reason, message)
+	c.ObservedGeneration = observedGeneration
+	return c
+}
+
 // NeedsUpdate retrieves the persisted state and compares all the conditions
 // to decide whether the status must be updated or not
 func NeedsUpdate(current, updated ConditionsAware) bool {
