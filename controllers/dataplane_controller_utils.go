@@ -56,14 +56,14 @@ func addLabelForDataplane(obj client.Object) {
 }
 
 func addAnnotationsForDataplaneProxyService(obj client.Object, dataplane operatorv1alpha1.DataPlane) {
-	if dataplane.Spec.Services.Proxy == nil || dataplane.Spec.Services.Proxy.Annotations == nil {
+	if dataplane.Spec.Network.Services == nil || dataplane.Spec.Network.Services.Ingress.Annotations == nil {
 		return
 	}
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
-	for k, v := range dataplane.Spec.Services.Proxy.Annotations {
+	for k, v := range dataplane.Spec.Network.Services.Ingress.Annotations {
 		annotations[k] = v
 	}
 	obj.SetAnnotations(annotations)
@@ -75,5 +75,5 @@ func addAnnotationsForDataplaneProxyService(obj client.Object, dataplane operato
 
 func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1alpha1.DataPlaneOptions) bool {
 	return deploymentOptionsDeepEqual(&spec1.Deployment, &spec2.Deployment) &&
-		servicesOptionsDeepEqual(&spec1.Services, &spec2.Services)
+		servicesOptionsDeepEqual(&spec1.Network, &spec2.Network)
 }

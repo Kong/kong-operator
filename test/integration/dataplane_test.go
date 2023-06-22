@@ -50,10 +50,13 @@ func TestDataplaneEssentials(t *testing.T) {
 						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 					},
 				},
-				Services: operatorv1alpha1.DataPlaneServicesOptions{
-					Proxy: &operatorv1alpha1.ProxyServiceOptions{
-						Annotations: map[string]string{
-							"foo": "bar",
+				Network: operatorv1alpha1.DataPlaneNetworkOptions{
+					Services: &operatorv1alpha1.DataPlaneServices{
+						Ingress: &operatorv1alpha1.ServiceOptions{
+
+							Annotations: map[string]string{
+								"foo": "bar",
+							},
 						},
 					},
 				},
@@ -162,7 +165,9 @@ func TestDataplaneEssentials(t *testing.T) {
 
 	t.Log("updating dataplane spec with proxy service type of ClusterIP")
 	require.Eventually(t,
-		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1alpha1.DataPlane) { dp.Spec.Services.Proxy.Type = corev1.ServiceTypeClusterIP }),
+		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1alpha1.DataPlane) {
+			dp.Spec.Network.Services.Ingress.Type = corev1.ServiceTypeClusterIP
+		}),
 		time.Minute, time.Second)
 
 	t.Log("checking if dataplane proxy service type changes to ClusterIP")

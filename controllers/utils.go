@@ -451,8 +451,8 @@ func deploymentOptionsDeepEqual(o1, o2 *operatorv1alpha1.DeploymentOptions, envV
 // ServicesOptions - Private Functions - Equality Checks
 // -----------------------------------------------------------------------------
 
-func servicesOptionsDeepEqual(opts1, opts2 *operatorv1alpha1.DataPlaneServicesOptions) bool {
-	return reflect.DeepEqual(opts1.Proxy, opts2.Proxy)
+func servicesOptionsDeepEqual(opts1, opts2 *operatorv1alpha1.DataPlaneNetworkOptions) bool {
+	return reflect.DeepEqual(opts1.Services, opts2.Services)
 }
 
 // -----------------------------------------------------------------------------

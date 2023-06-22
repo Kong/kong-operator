@@ -61,36 +61,48 @@ type DataPlaneSpec struct {
 type DataPlaneOptions struct {
 	// +optional
 	Deployment DeploymentOptions `json:"deployment"`
+
 	// +optional
-	Services DataPlaneServicesOptions `json:"services"`
+	Network DataPlaneNetworkOptions `json:"network"`
 }
 
-// DataPlaneServicesOptions defines the information specifically needed to
-// customize the dataplane services
-type DataPlaneServicesOptions struct {
-	// Proxy defines the information related to the
-	// DataPlane proxy service.
+// DataPlaneNetworkOptions defines network related options for a DataPlane.
+type DataPlaneNetworkOptions struct {
+	// Services indicates the configuration of Kubernetes Services needed for
+	// the topology of various forms of traffic (including ingress, e.t.c.) to
+	// and from the DataPlane.
+	Services *DataPlaneServices `json:"services,omitempty"`
+}
+
+type DataPlaneServices struct {
+	// Ingress is the Kubernetes Service that will be used to expose ingress
+	// traffic for the DataPlane. Here you can determine whether the DataPlane
+	// will be exposed outside the cluster (e.g. using a LoadBalancer type
+	// Services) or only internally (e.g. ClusterIP), and inject any additional
+	// annotations you need on the service (for instance, if you need to
+	// influence a cloud provider LoadBalancer configuration).
 	//
 	// +optional
-	Proxy *ProxyServiceOptions `json:"proxy,omitempty"`
-
-	// This struct is where we'll be adding a new DataPlaneAdminServiceOptions in
-	// the future when needed.
+	Ingress *ServiceOptions `json:"ingress,omitempty"`
 }
 
-// ProxyServiceOptions is used to includes options to customize the proxy service,
+// ServiceOptions is used to includes options to customize the proxy service,
 // such as the annotations.
-type ProxyServiceOptions struct {
+type ServiceOptions struct {
 	// Type determines how the Service is exposed.
 	// Defaults to LoadBalancer.
+	//
 	// Valid options are LoadBalancer and ClusterIP.
+	//
 	// "ClusterIP" allocates a cluster-internal IP address for load-balancing
 	// to endpoints.
+	//
 	// "LoadBalancer" builds on NodePort and creates an external load-balancer
 	// (if supported in the current cloud) which routes to the same endpoints
 	// as the clusterIP.
 	//
 	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+	//
 	// +optional
 	// +kubebuilder:default=LoadBalancer
 	// +kubebuilder:validation:Enum=LoadBalancer;ClusterIP
@@ -99,7 +111,9 @@ type ProxyServiceOptions struct {
 	// Annotations is an unstructured key value map stored with a resource that may be
 	// set by external tools to store and retrieve arbitrary metadata. They are not
 	// queryable and should be preserved when modifying objects.
+	//
 	// More info: http://kubernetes.io/docs/user-guide/annotations
+	//
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,12,rep,name=annotations"`
 }
