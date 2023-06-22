@@ -90,6 +90,14 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: environment is ready, starting tests")
 	code := m.Run()
+	if code != 0 {
+		output, err := env.Cluster().DumpDiagnostics(ctx, "gateway_api_conformance")
+		if err != nil {
+			fmt.Printf("ERROR: conformance tests failed and failed to dump the diagnostics: %v\n", err)
+		} else {
+			fmt.Printf("INFO: conformance tests failed, dumped diagnostics to %s\n", output)
+		}
+	}
 
 	if !skipClusterCleanup && existingCluster == "" {
 		fmt.Println("INFO: cleaning up testing cluster and environment")

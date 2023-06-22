@@ -114,6 +114,14 @@ jobs:
       env:
         GOTESTSUM_JUNITFILE: "conformance-tests.xml"
 
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-conformance
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
     - name: collect test report
       if: ${{ always() }}
       uses: actions/upload-artifact@v3
