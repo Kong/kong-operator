@@ -91,7 +91,7 @@ _download_tool_own:
 		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
 .PHONY: tools
-tools: envtest kic-role-generator controller-gen kustomize client-gen golangci-lint gotestsum dlv skaffold
+tools: envtest kic-role-generator controller-gen kustomize client-gen golangci-lint gotestsum dlv skaffold yq
 
 ENVTEST = $(PROJECT_DIR)/bin/setup-envtest
 .PHONY: envtest
@@ -187,6 +187,11 @@ operator-sdk:
 	make build/operator-sdk BUILD_DIR=$(PROJECT_DIR)/bin ;\
 	rm -rf $$TMP_DIR ;\
 	}
+
+YQ = $(PROJECT_DIR)/bin/yq
+.PHONY: yq
+yq: ## Download yq locally if necessary.
+	@$(MAKE) _download_tool_own TOOL=yq
 
 # ------------------------------------------------------------------------------
 # Build
@@ -328,10 +333,10 @@ docker.push:
 # Build - OperatorHub Bundles
 # ------------------------------------------------------------------------------
 .PHONY: _bundle
-_bundle: manifests kustomize operator-sdk
+_bundle: manifests kustomize operator-sdk yq
 	$(OPERATOR_SDK) generate kustomize manifests --apis-dir=$(APIS_DIR)/
 	cd config/manager && $(KUSTOMIZE) edit set image $(IMG)=$(IMG):$(VERSION)
-	yq -i e '.metadata.annotations.containerImage |= "$(IMG):$(VERSION)"' \
+	$(YQ) -i e '.metadata.annotations.containerImage |= "$(IMG):$(VERSION)"' \
 		 config/manifests/bases/kong-gateway-operator.clusterserviceversion.yaml
 	$(KUSTOMIZE) build $(KUSTOMIZE_DIR) | $(OPERATOR_SDK) generate bundle --output-dir=$(BUNDLE_DIR) $(BUNDLE_GEN_FLAGS)
 	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
