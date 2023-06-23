@@ -3,6 +3,7 @@
 package conformance
 
 import (
+	"flag"
 	"fmt"
 	"testing"
 
@@ -18,9 +19,10 @@ import (
 
 const (
 	showDebug                  = true
-	shouldCleanup              = true
 	enableAllSupportedFeatures = true
 )
+
+var shouldCleanup = flag.Bool("cleanup", true, "indicates whether or not the base test resources such as Gateways should be cleaned up after the run.")
 
 func TestGatewayConformance(t *testing.T) {
 	t.Parallel()
@@ -49,7 +51,7 @@ func TestGatewayConformance(t *testing.T) {
 		Client:                     clients.MgrClient,
 		GatewayClassName:           gwc.Name,
 		Debug:                      showDebug,
-		CleanupBaseResources:       shouldCleanup,
+		CleanupBaseResources:       *shouldCleanup,
 		BaseManifests:              conformanceTestsBaseManifests,
 		EnableAllSupportedFeatures: enableAllSupportedFeatures,
 	})

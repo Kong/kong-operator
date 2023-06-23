@@ -12,8 +12,10 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1beta1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1beta1"
 
 	"github.com/kong/gateway-operator/internal/manager"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
@@ -99,6 +101,14 @@ func TestMain(m *testing.M) {
 		}
 	}
 
+	// If we set the shouldCleanup flag on the conformance suite we need to wait
+	// for the operator to handle Gateway finalizers.
+	// If we don't do it then we'll be left with Gateways that have a deleted
+	// timestamp and finalizers set but no operator running which could handle those.
+	if *shouldCleanup {
+		exitOnErr(waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1beta1()))
+	}
+
 	if !skipClusterCleanup && existingCluster == "" {
 		fmt.Println("INFO: cleaning up testing cluster and environment")
 		exitOnErr(env.Cleanup(ctx))
@@ -149,4 +159,31 @@ func startControllerManager() <-chan struct{} {
 	}()
 
 	return cfg.StartedCh
+}
+
+func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1beta1.GatewayV1beta1Interface) error {
+	const conformanceInfraNamespace = "gateway-conformance-infra"
+
+	var (
+		gwClient         = gw.Gateways(conformanceInfraNamespace)
+		ticker           = time.NewTicker(100 * time.Millisecond)
+		gatewayRemaining = 0
+	)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("conformance cleanup failed (%d gateways remain): %w", gatewayRemaining, ctx.Err())
+		case <-ticker.C:
+			gws, err := gwClient.List(ctx, metav1.ListOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to list Gateways in %s namespace during cleanup: %w", conformanceInfraNamespace, err)
+			}
+			if len(gws.Items) == 0 {
+				return nil
+			}
+			gatewayRemaining = len(gws.Items)
+		}
+	}
 }
