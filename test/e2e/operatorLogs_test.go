@@ -160,10 +160,10 @@ func TestOperatorLogs(t *testing.T) {
 	gateways, err := clients.GatewayClient.GatewayV1beta1().Gateways(testNamespace.Name).List(ctx, metav1.ListOptions{})
 	require.NoError(t, err)
 
-	t.Log("verifying all the Gateways get marked as Ready")
+	t.Log("verifying all the Gateways get marked as Programmed")
 	for _, gateway := range gateways.Items {
 		t.Logf("verifying gateway %q is ready", gateway.Name)
-		require.Eventually(t, testutils.GatewayIsReady(t, ctx, types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name}, *clients), concurrentGatewaysReadyTimeLimit, time.Second)
+		require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name}, *clients), concurrentGatewaysReadyTimeLimit, time.Second)
 		require.Eventually(t, testutils.GatewayListenersAreReady(t, ctx, types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name}, *clients), concurrentGatewaysReadyTimeLimit, time.Second)
 	}
 

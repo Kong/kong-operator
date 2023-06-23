@@ -356,9 +356,9 @@ func GatewayIsScheduled(t *testing.T, ctx context.Context, gatewayNSN types.Name
 	}
 }
 
-func GatewayIsReady(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
+func GatewayIsProgrammed(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
-		return gatewayutils.IsReady(MustGetGateway(t, ctx, gatewayNSN, clients))
+		return gatewayutils.IsProgrammed(MustGetGateway(t, ctx, gatewayNSN, clients))
 	}
 }
 

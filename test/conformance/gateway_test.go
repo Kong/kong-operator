@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
@@ -54,6 +55,54 @@ func TestGatewayConformance(t *testing.T) {
 		CleanupBaseResources:       *shouldCleanup,
 		BaseManifests:              conformanceTestsBaseManifests,
 		EnableAllSupportedFeatures: enableAllSupportedFeatures,
+		SkipTests: []string{
+			// core conformance
+			// Gateway
+			tests.GatewayInvalidRouteKind.ShortName,
+			tests.GatewayInvalidTLSConfiguration.ShortName,
+			tests.GatewayObservedGenerationBump.ShortName,
+			tests.GatewayWithAttachedRoutes.ShortName,
+			tests.GatewaySecretInvalidReferenceGrant.ShortName,
+			tests.GatewaySecretMissingReferenceGrant.ShortName,
+			tests.GatewaySecretReferenceGrantAllInNamespace.ShortName,
+			// HTTPRoute
+			tests.HTTPRouteCrossNamespace.ShortName,
+			tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
+			tests.HTTPRouteInvalidCrossNamespaceParentRef.ShortName,
+			tests.HTTPRouteInvalidParentRefNotMatchingListenerPort.ShortName,
+			tests.HTTPRoutePartiallyInvalidViaInvalidReferenceGrant.ShortName,
+			tests.HTTPRouteReferenceGrant.ShortName,
+
+			// this test is currently fixed but cannot be re-enabled yet due to an upstream issue
+			// https://github.com/kubernetes-sigs/gateway-api/pull/1745
+			tests.GatewaySecretReferenceGrantSpecific.ShortName,
+
+			// standard conformance
+			tests.HTTPRouteHeaderMatching.ShortName,
+
+			// extended conformance
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3680
+			tests.GatewayClassObservedGenerationBump.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3678
+			tests.TLSRouteSimpleSameNamespace.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3679
+			tests.HTTPRouteQueryParamMatching.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3681
+			tests.HTTPRouteRedirectPort.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3682
+			tests.HTTPRouteRedirectScheme.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3683
+			tests.HTTPRouteResponseHeaderModifier.ShortName,
+
+			// experimental conformance
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3684
+			tests.HTTPRouteRedirectPath.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3685
+			tests.HTTPRouteRewriteHost.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3686
+			tests.HTTPRouteRewritePath.ShortName,
+		},
 	})
 	cSuite.Setup(t)
+	cSuite.Run(t, tests.ConformanceTests)
 }

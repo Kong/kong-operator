@@ -469,11 +469,13 @@ func supportedRoutesByProtocol() map[gatewayv1beta1.ProtocolType]map[gatewayv1be
 	}
 }
 
-// InitReady initializes the gateway readiness by setting the Gateway ready status to false.
+// InitReadyAndProgrammed initializes the gateway Programmed and Ready conditions
+// by setting the underlying Gateway Programmed and Ready status to false.
 // Furthermore, it sets the supportedKinds and initializes the readiness to false with reason
 // Pending for each Gateway listener.
-func (g *gatewayConditionsAwareT) InitReady() {
+func (g *gatewayConditionsAwareT) InitReadyAndProgrammed() {
 	k8sutils.InitReady(g)
+	k8sutils.InitProgrammed(g)
 	g.Status.Listeners = make([]gatewayv1beta1.ListenerStatus, 0, len(g.Spec.Listeners))
 	for _, listener := range g.Spec.Listeners {
 		supportedKinds, resolvedRefsCondition := getSupportedKindsWithCondition(g.Generation, listener)
@@ -495,11 +497,13 @@ func (g *gatewayConditionsAwareT) InitReady() {
 	}
 }
 
-// SetReady sets the gateway readiness by setting the Gateway ready status to true.
+// SetReadyAndProgrammed sets the gateway Programmed and Ready conditions by
+// setting the underlying Gateway Programmed and Ready status to true.
 // Furthermore, it sets the supportedKinds and initializes the readiness to true with reason
 // Ready or false with reason Invalid for each Gateway listener.
-func (g *gatewayConditionsAwareT) SetReady() {
+func (g *gatewayConditionsAwareT) SetReadyAndProgrammed() {
 	k8sutils.SetReady(g, g.Generation)
+	k8sutils.SetProgrammed(g, g.Generation)
 	listenersStatus := []gatewayv1beta1.ListenerStatus{}
 	for _, listener := range g.Spec.Listeners {
 		supportedKinds, resolvedRefsCondition := getSupportedKindsWithCondition(g.Generation, listener)

@@ -86,30 +86,36 @@ func WaitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Cli
 	return nil
 }
 
+type BuilderOpt func(*environments.Builder)
+
 // BuildEnvironment builds the k8s environment for the tests.
 // Args:
 //   - ctx: the context to use for the environment build.
 //   - existingCluster: the name of the existing cluster to use for the tests. If empty, a new kind cluster will be created.
+//   - builderOpts: accept a list of builder options that will be applied to the builder before buildling the environment.
 //
 // Returns the environment on success and an error on failure.
-func BuildEnvironment(ctx context.Context, existingCluster string) (environments.Environment, error) {
+func BuildEnvironment(ctx context.Context, existingCluster string, builderOpts ...BuilderOpt) (environments.Environment, error) {
 	if existingCluster != "" {
 		fmt.Println("INFO: existing cluster found, deploying on existing cluster")
-		return buildEnvironmentOnExistingCluster(ctx, existingCluster)
+		return buildEnvironmentOnExistingCluster(ctx, existingCluster, builderOpts...)
 	}
 
 	fmt.Println("INFO: no existing cluster found, deploying using Kubernetes In Docker (KIND)")
-	return buildEnvironmentOnNewKindCluster(ctx)
+	return buildEnvironmentOnNewKindCluster(ctx, builderOpts...)
 }
 
-func buildEnvironmentOnNewKindCluster(ctx context.Context) (environments.Environment, error) {
+func buildEnvironmentOnNewKindCluster(ctx context.Context, builderOpts ...BuilderOpt) (environments.Environment, error) {
 	builder := environments.NewBuilder()
-	builder.WithCalicoCNI()
 	builder.WithAddons(metallb.New())
+
+	for _, o := range builderOpts {
+		o(builder)
+	}
 	return builder.Build(ctx)
 }
 
-func buildEnvironmentOnExistingCluster(ctx context.Context, existingCluster string) (environments.Environment, error) {
+func buildEnvironmentOnExistingCluster(ctx context.Context, existingCluster string, builderOpts ...BuilderOpt) (environments.Environment, error) {
 	builder := environments.NewBuilder()
 
 	clusterParts := strings.Split(existingCluster, ":")
@@ -135,6 +141,10 @@ func buildEnvironmentOnExistingCluster(ctx context.Context, existingCluster stri
 		builder.WithExistingCluster(cluster)
 	default:
 		return nil, fmt.Errorf("unknown cluster type: %s", clusterType)
+	}
+
+	for _, o := range builderOpts {
+		o(builder)
 	}
 
 	return builder.Build(ctx)

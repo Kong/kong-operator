@@ -378,6 +378,7 @@ catalog-push: ## Push a catalog image.
 
 GOTESTSUM_FORMAT ?= standard-verbose
 INTEGRATION_TEST_TIMEOUT ?= "30m"
+CONFORMANCE_TEST_TIMEOUT ?= "20m"
 
 .PHONY: test
 test: test.unit
@@ -428,12 +429,17 @@ test.e2e:
 	@$(MAKE) _test.e2e \
 		GOTESTFLAGS="$(GOTESTFLAGS)"
 
+NCPU := $(shell getconf _NPROCESSORS_ONLN)
+PARALLEL := $(if $(PARALLEL),$(PARALLEL),$(NCPU))
+
 .PHONY: _test.conformance
 _test.conformance: gotestsum
 	GOFLAGS="-tags=conformance_tests" \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-timeout $(CONFORMANCE_TEST_TIMEOUT) \
 		-race \
+		-parallel $(PARALLEL) \
 		./test/conformance/...
 
 .PHONY: test.conformance

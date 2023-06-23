@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // ConditionType literal that defines the different types of condition
@@ -14,6 +15,14 @@ const (
 
 	// ReadyType indicates if the resource has all the dependent conditions Ready
 	ReadyType ConditionType = "Ready"
+
+	// ProgrammedType condition indicates whether a Gateway has generated some
+	// configuration that is assumed to be ready soon in the underlying data
+	// plane.
+	ProgrammedType ConditionType = ConditionType(gatewayv1beta1.GatewayConditionProgrammed)
+
+	// PendingReason is a Reason for Programmed condition.
+	PendingReason ConditionReason = ConditionReason(gatewayv1beta1.GatewayReasonPending)
 
 	// DependenciesNotReadyReason is a generic reason describing that the other Conditions are not true
 	DependenciesNotReadyReason ConditionReason = "DependenciesNotReady"
@@ -90,6 +99,11 @@ func InitReady(resource ConditionsAware) {
 	SetCondition(NewCondition(ReadyType, metav1.ConditionFalse, DependenciesNotReadyReason, DependenciesNotReadyMessage), resource)
 }
 
+// InitProgrammed initializes the Programmed status to False
+func InitProgrammed(resource ConditionsAware) {
+	SetCondition(NewCondition(ProgrammedType, metav1.ConditionFalse, PendingReason, DependenciesNotReadyMessage), resource)
+}
+
 // SetReady evaluates all the existing conditions and sets the Ready status accordingly
 func SetReady(resource ConditionsAware, generation int64) {
 	ready := metav1.Condition{
@@ -98,7 +112,7 @@ func SetReady(resource ConditionsAware, generation int64) {
 		ObservedGeneration: generation,
 	}
 
-	if areAllConditionsReady(resource) {
+	if areAllConditionsHaveTrueStatus(resource) {
 		ready.Status = metav1.ConditionTrue
 		ready.Reason = string(ResourceReadyReason)
 	} else {
@@ -109,8 +123,30 @@ func SetReady(resource ConditionsAware, generation int64) {
 	SetCondition(ready, resource)
 }
 
-func areAllConditionsReady(resource ConditionsAware) bool {
+// SetProgrammed evaluates all the existing conditions and sets the Programmed status accordingly
+func SetProgrammed(resource ConditionsAware, generation int64) {
+	ready := metav1.Condition{
+		Type:               string(gatewayv1beta1.GatewayConditionProgrammed),
+		LastTransitionTime: metav1.Now(),
+		ObservedGeneration: generation,
+	}
+
+	if areAllConditionsHaveTrueStatus(resource) {
+		ready.Status = metav1.ConditionTrue
+		ready.Reason = string(gatewayv1beta1.GatewayReasonProgrammed)
+	} else {
+		ready.Status = metav1.ConditionFalse
+		ready.Reason = string(DependenciesNotReadyReason)
+		ready.Message = DependenciesNotReadyMessage
+	}
+	SetCondition(ready, resource)
+}
+
+func areAllConditionsHaveTrueStatus(resource ConditionsAware) bool {
 	for _, condition := range resource.GetConditions() {
+		if condition.Type == string(gatewayv1beta1.GatewayConditionProgrammed) {
+			continue
+		}
 		if condition.Type != string(ReadyType) && condition.Status != metav1.ConditionTrue {
 			return false
 		}
@@ -123,6 +159,16 @@ func areAllConditionsReady(resource ConditionsAware) bool {
 func IsReady(resource ConditionsAware) bool {
 	for _, condition := range resource.GetConditions() {
 		if condition.Type == string(ReadyType) {
+			return condition.Status == metav1.ConditionTrue
+		}
+	}
+	return false
+}
+
+// IsProgrammed evaluates whether a resource is in Programmed state.
+func IsProgrammed(resource ConditionsAware) bool {
+	for _, condition := range resource.GetConditions() {
+		if condition.Type == string(ProgrammedType) {
 			return condition.Status == metav1.ConditionTrue
 		}
 	}

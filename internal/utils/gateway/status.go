@@ -6,7 +6,6 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------
@@ -26,12 +25,12 @@ func IsScheduled(gateway *gwtypes.Gateway) bool {
 	return false
 }
 
-// IsReady indicates whether or not the provided Gateway object was
-// marked as ready by the controller.
-func IsReady(gateway *gwtypes.Gateway) bool {
+// IsProgrammed indicates whether or not the provided Gateway object was
+// marked as Programmed by the controller.
+func IsProgrammed(gateway *gwtypes.Gateway) bool {
 	for _, cond := range gateway.Status.Conditions {
-		if cond.Type == string(gatewayv1beta1.GatewayConditionReady) &&
-			cond.Reason == string(kubernetes.ResourceReadyReason) &&
+		if cond.Type == string(gatewayv1beta1.GatewayConditionProgrammed) &&
+			cond.Reason == string(gatewayv1beta1.GatewayReasonProgrammed) &&
 			cond.Status == metav1.ConditionTrue {
 			return true
 		}

@@ -218,7 +218,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		)
 		k8sutils.SetCondition(condition, gwConditionAware)
 	}
-	gwConditionAware.InitReady()
+	gwConditionAware.InitReadyAndProgrammed()
 
 	trace(log, "determining configuration", gateway)
 	gatewayConfig, err := r.getOrCreateGatewayConfiguration(ctx, gwc.GatewayClass)
@@ -319,9 +319,9 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			gatewayConditionsAware(&gateway))
 	}
 
-	if (!k8sutils.IsReady(gwConditionAware) && !k8sutils.IsReady(oldGwConditionsAware)) || !reflect.DeepEqual(gateway.Status.Addresses, oldGateway.Status.Addresses) {
-		gwConditionAware.SetReady()
-		debug(log, "gateway is ready", gateway)
+	if (!k8sutils.IsProgrammed(gwConditionAware) && !k8sutils.IsProgrammed(oldGwConditionsAware)) || !reflect.DeepEqual(gateway.Status.Addresses, oldGateway.Status.Addresses) {
+		gwConditionAware.SetReadyAndProgrammed()
+		debug(log, "gateway is Programmed", gateway)
 		if err = r.patchStatus(ctx, &gateway, oldGateway); err != nil {
 			return ctrl.Result{}, err
 		}

@@ -61,6 +61,12 @@ func TestMain(m *testing.M) {
 
 	var skipClusterCleanup bool
 	fmt.Println("INFO: configuring cluster for testing environment")
+	// NOTE: We run the conformance tests on a cluster without a CNI that enforces
+	// resources like NetworkPolicy.
+	// Running those tests on a cluster with CNI like Calico would break because
+	// Gateway API conformance tests do not create resources like NetworkPolicy
+	// that would allow e.g. cross namespace traffic.
+	// Related upstream discussion: https://github.com/kubernetes-sigs/gateway-api/discussions/2137
 	env, err = testutils.BuildEnvironment(ctx, existingCluster)
 	exitOnErr(err)
 

@@ -48,8 +48,8 @@ func TestGatewayEssentials(t *testing.T) {
 	t.Log("verifying Gateway gets marked as Scheduled")
 	require.Eventually(t, testutils.GatewayIsScheduled(t, ctx, gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
-	t.Log("verifying Gateway gets marked as Ready")
-	require.Eventually(t, testutils.GatewayIsReady(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	t.Log("verifying Gateway gets marked as Programmed")
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 	require.Eventually(t, testutils.GatewayListenersAreReady(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets an IP address")
@@ -88,8 +88,8 @@ func TestGatewayEssentials(t *testing.T) {
 	t.Log("deleting dataplane")
 	require.NoError(t, dataplaneClient.Delete(ctx, dataplane.Name, metav1.DeleteOptions{}))
 
-	t.Log("verifying Gateway gets marked as not Ready")
-	require.Eventually(t, testutils.Not(testutils.GatewayIsReady(t, ctx, gatewayNSN, clients)), testutils.GatewayReadyTimeLimit, time.Second)
+	t.Log("verifying Gateway gets marked as not Programmed")
+	require.Eventually(t, testutils.Not(testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, clients)), testutils.GatewayReadyTimeLimit, time.Second)
 	require.Eventually(t, testutils.GatewayListenersAreReady(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying that the ControlPlane becomes provisioned again")
@@ -100,8 +100,8 @@ func TestGatewayEssentials(t *testing.T) {
 	require.Eventually(t, testutils.GatewayDataPlaneIsProvisioned(t, ctx, gateway, clients), 45*time.Second, time.Second)
 	dataplane = testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)[0]
 
-	t.Log("verifying Gateway gets marked as Ready again")
-	require.Eventually(t, testutils.GatewayIsReady(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	t.Log("verifying Gateway gets marked as Programmed again")
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 	require.Eventually(t, testutils.GatewayListenersAreReady(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets an IP address again")
@@ -203,8 +203,8 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	t.Log("verifying Gateway gets marked as Scheduled")
 	require.Eventually(t, testutils.GatewayIsScheduled(t, ctx, gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
-	t.Log("verifying Gateway gets marked as Ready")
-	require.Eventually(t, testutils.GatewayIsReady(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	t.Log("verifying Gateway gets marked as Programmed")
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 	require.Eventually(t, testutils.GatewayListenersAreReady(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying that the DataPlane becomes provisioned")

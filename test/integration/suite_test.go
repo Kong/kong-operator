@@ -66,7 +66,9 @@ func TestMain(m *testing.M) {
 	defer closeControllerLogFile() //nolint:errcheck
 
 	fmt.Println("INFO: configuring cluster for testing environment")
-	env, err = testutils.BuildEnvironment(ctx, existingCluster)
+	env, err = testutils.BuildEnvironment(ctx, existingCluster,
+		func(b *environments.Builder) { b.WithCalicoCNI() },
+	)
 	exitOnErr(err)
 
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
