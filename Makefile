@@ -228,16 +228,8 @@ _build.operator:
 		main.go
 
 .PHONY: build
-build: generate fmt vet lint submodule
+build: generate submodule
 	$(MAKE) build.operator
-
-.PHONY: fmt
-fmt: ## Run go fmt against code.
-	go fmt ./...
-
-.PHONY: vet
-vet: ## Run go vet against code.
-	go vet ./...
 
 .PHONY: lint
 lint: golangci-lint
@@ -521,7 +513,7 @@ _ensure-kong-system-namespace:
 # on the tag that is used in code (defined in go.mod) address this by solving
 # https://github.com/Kong/gateway-operator/pull/480.
 .PHONY: run
-run: webhook-certs-dir manifests generate fmt vet install-gateway-api-crds install _ensure-kong-system-namespace
+run: webhook-certs-dir manifests generate install-gateway-api-crds install _ensure-kong-system-namespace
 	@$(MAKE) _run
 
 # Run the operator without checking any preconditions, installing CRDs etc.
@@ -541,7 +533,7 @@ run.skaffold: _ensure-kong-system-namespace
 		$(SKAFFOLD) dev --port-forward=pods --profile=dev
 
 .PHONY: debug
-debug: webhook-certs-dir manifests generate fmt vet install _ensure-kong-system-namespace
+debug: webhook-certs-dir manifests generate install _ensure-kong-system-namespace
 	CONTROLLER_DEVELOPMENT_MODE=true dlv debug ./main.go -- \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
