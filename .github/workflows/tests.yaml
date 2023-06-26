@@ -177,7 +177,7 @@ jobs:
       with:
         fetch-depth: 0
         submodules: true
-    
+
     - name: setup golang
       uses: actions/setup-go@v4
       with:
@@ -188,7 +188,7 @@ jobs:
         IMG: gateway-operator
         TAG: e2e-${{ github.sha }}
       run: make docker.build
-    
+
     - name: run e2e tests
       run: make test.e2e
       env:
@@ -236,7 +236,7 @@ jobs:
 
       - name: Upload test results to BuildPulse for flaky test detection
         if: ${{ !cancelled() }}
-        uses: Workshop64/buildpulse-action@43cb4e7429b9a6d8f882d188062573b7c937de14
+        uses: buildpulse/buildpulse-action@v0.11.0
         with:
           account: 962416
           repository: 477814940
