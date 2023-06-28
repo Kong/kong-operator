@@ -3,7 +3,7 @@ module github.com/kong/gateway-operator/third_party
 go 1.19
 
 require (
-	github.com/go-delve/delve v1.20.2
+	github.com/go-delve/delve v1.21.0
 	github.com/golangci/golangci-lint v1.53.3
 	github.com/operator-framework/operator-registry v1.28.0
 	gotest.tools/gotestsum v1.10.0
@@ -122,7 +122,7 @@ require (
 	github.com/google/cel-go v0.12.6 // indirect
 	github.com/google/gnostic v0.6.9 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
-	github.com/google/go-dap v0.7.0 // indirect
+	github.com/google/go-dap v0.9.1 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.3.0 // indirect

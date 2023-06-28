@@ -340,8 +340,8 @@ github.com/gliderlabs/ssh v0.2.2/go.mod h1:U7qILu1NlMHj9FlMhZLlkCdDnU1DBEAqr0aev
 github.com/go-critic/go-critic v0.6.1/go.mod h1:SdNCfU0yF3UBjtaZGw6586/WocupMOJuiqgom5DsQxM=
 github.com/go-critic/go-critic v0.8.1 h1:16omCF1gN3gTzt4j4J6fKI/HnRojhEp+Eks6EuKw3vw=
 github.com/go-critic/go-critic v0.8.1/go.mod h1:kpzXl09SIJX1cr9TB/g/sAG+eFEl7ZS9f9cqvZtyNl0=
-github.com/go-delve/delve v1.20.2 h1:rgPK7Iqb1oQk+i2Ilg0fpH6p5LqyixYiAt4N3Lhx4/Y=
-github.com/go-delve/delve v1.20.2/go.mod h1:KQtnLRy2M+cNHCRnDzURxljVNbRTdvVDD5Mb10KGP18=
+github.com/go-delve/delve v1.21.0 h1:npcc8TZhdVxaMSJon+zqcE3bXM/ck8SSOOWw/id13jI=
+github.com/go-delve/delve v1.21.0/go.mod h1:U+OAdfhewudkHsVs/AwhfpSBu7t/NgIXH3+my4T5q78=
 github.com/go-delve/liner v1.2.3-0.20220127212407-d32d89dd2a5d h1:pxjSLshkZJGLVm0wv20f/H0oTWiq/egkoJQ2ja6LEvo=
 github.com/go-delve/liner v1.2.3-0.20220127212407-d32d89dd2a5d/go.mod h1:biJCRbqp51wS+I92HMqn5H8/A0PAhxn2vyOT+JqhiGI=
 github.com/go-errors/errors v1.4.2 h1:J6MZopCL4uSllY1OfXM374weqZFFItUbrImctkmUxIA=
@@ -528,8 +528,8 @@ github.com/google/go-cmp v0.5.6/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
 github.com/google/go-cmp v0.5.8/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/google/go-cmp v0.5.9 h1:O2Tfq5qg4qc4AmwVlvv0oLiVAGB7enBSJ2x2DqQFi38=
 github.com/google/go-cmp v0.5.9/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
-github.com/google/go-dap v0.7.0 h1:088PdKBUkxAxrXrnY8FREUJXpS6Y6jhAyZIuJv3OGOM=
-github.com/google/go-dap v0.7.0/go.mod h1:5q8aYQFnHOAZEMP+6vmq25HKYAEwE+LF5yh7JKrrhSQ=
+github.com/google/go-dap v0.9.1 h1:d8dETjgHMR9/xs+Xza+NrZmB7jxIS5OtM2uRsyJVA/c=
+github.com/google/go-dap v0.9.1/go.mod h1:HAeyoSd2WIfTfg+0GRXcFrb+RnojAtGNh+k+XTIxJDE=
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/google/gofuzz v1.1.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/google/gofuzz v1.2.0 h1:xRy4A+RhZaiKjJ1bPfwQ8sedCA+YS2YcCHW6ec7JMi0=
