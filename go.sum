@@ -194,8 +194,8 @@ github.com/kevinburke/ssh_config v1.2.0 h1:x584FjTGwHzMwvHx18PXxbBVzfnxogHaAReU4
 github.com/kevinburke/ssh_config v1.2.0/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
-github.com/kong/kubernetes-telemetry v0.0.6 h1:JR1Ry69Dkzzn6x6w3Ep2Uxyd8JrLSItEICfilA7WsP0=
-github.com/kong/kubernetes-telemetry v0.0.6/go.mod h1:ynIsrEEpp2j7l+SdfMtqZTjyA/uOkvOWWc7Zdrd9/88=
+github.com/kong/kubernetes-telemetry v0.1.0 h1:dyDhB2SUvxVaDAxaZtLWL7JGAbkgwlCUM1P8gR/rCl0=
+github.com/kong/kubernetes-telemetry v0.1.0/go.mod h1:YYG7TkKnWlHov0+pSgK0XFsg85q0EzsYWXBl6Kehnjo=
 github.com/kong/kubernetes-testing-framework v0.31.1 h1:Btj4EYFnoqmE7bnMHgP2JCMDrokRu6/STT56NS2nNTk=
 github.com/kong/kubernetes-testing-framework v0.31.1/go.mod h1:fHywqkfFE6KVNogM/79mkspA1br/k0Uf8rbGuJGoVQM=
 github.com/kong/semver/v4 v4.0.1 h1:DIcNR8W3gfx0KabFBADPalxxsp+q/5COwIFkkhrFQ2Y=

@@ -13,7 +13,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.4
 	github.com/go-logr/logr v1.2.4
 	github.com/google/uuid v1.3.0
-	github.com/kong/kubernetes-telemetry v0.0.6
+	github.com/kong/kubernetes-telemetry v0.1.0
 	github.com/kong/kubernetes-testing-framework v0.31.1
 	github.com/kong/semver/v4 v4.0.1
 	github.com/samber/lo v1.38.1
