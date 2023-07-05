@@ -8,7 +8,7 @@ spec:
     deployment:
       pods:
         containerImage: kong
-        version: "3.2"
+        version: "3.3"
     services:
       proxy:
         annotations:

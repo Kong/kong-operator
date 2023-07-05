@@ -8,7 +8,7 @@ spec:
   deployment:
     pods:
       containerImage: kong/kubernetes-ingress-controller
-      version: "2.9"
+      version: "2.10"
       labels:
         controlplane-pod-label: example
     resources:

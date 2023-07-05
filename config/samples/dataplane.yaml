@@ -6,7 +6,7 @@ spec:
   deployment:
     pods:
       containerImage: kong
-      version: "3.2"
+      version: "3.3"
       labels:
         dataplane-pod-label: example
       env:
