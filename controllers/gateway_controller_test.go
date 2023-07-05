@@ -319,11 +319,10 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				}
 				if gatewaySubResource.GetName() == "test-controlplane" {
 					controlplane := gatewaySubResource.(*operatorv1alpha1.ControlPlane)
-					_, err := setControlPlaneDefaults(&controlplane.Spec.ControlPlaneOptions, map[string]struct{}{}, false, controlPlaneDefaultsArgs{
+					_ = setControlPlaneDefaults(&controlplane.Spec.ControlPlaneOptions, map[string]struct{}{}, controlPlaneDefaultsArgs{
 						namespace:                 "test-namespace",
 						dataplaneProxyServiceName: "test-proxy-service",
 					})
-					require.NoError(t, err)
 					for _, controlplaneSubResource := range tc.controlplaneSubResources {
 						k8sutils.SetOwnerForObject(controlplaneSubResource, gatewaySubResource)
 						addLabelForControlPlane(controlplaneSubResource)

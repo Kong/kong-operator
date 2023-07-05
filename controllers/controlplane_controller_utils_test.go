@@ -270,13 +270,12 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		index := i
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			changed, err := setControlPlaneDefaults(tc.spec, map[string]struct{}{}, false, controlPlaneDefaultsArgs{
+			changed := setControlPlaneDefaults(tc.spec, map[string]struct{}{}, controlPlaneDefaultsArgs{
 				dataPlanePodIP:            "1.2.3.4",
 				namespace:                 tc.namespace,
 				dataplaneProxyServiceName: tc.dataplaneProxyServiceName,
 				dataplaneAdminServiceName: "kong-admin",
 			})
-			require.NoError(t, err)
 			require.Equalf(t, tc.changed, changed,
 				"should return the same value for test case %d:%s", index, tc.name)
 			for _, env := range tc.newSpec.Deployment.Pods.Env {
