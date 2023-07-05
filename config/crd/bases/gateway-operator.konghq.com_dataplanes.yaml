@@ -3090,10 +3090,32 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              ready:
+                default: false
+                description: Ready indicates whether the DataPlane is ready. It there
+                  are multiple replicas then all have to be ready for this flag to
+                  be set to true.
+                type: boolean
+              readyReplicas:
+                default: 0
+                description: ReadyReplicas indicates how many replicas have reported
+                  to be ready.
+                format: int32
+                type: integer
+              replicas:
+                default: 0
+                description: Replicas indicates how many replicas have been set for
+                  the DataPlane.
+                format: int32
+                type: integer
               service:
                 description: Service indicates the Service that exposes the DataPlane's
                   configured routes
                 type: string
+            required:
+            - ready
+            - readyReplicas
+            - replicas
             type: object
         type: object
     served: true

@@ -174,15 +174,18 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	if dataplaneDeployment.Status.Replicas == 0 || dataplaneDeployment.Status.AvailableReplicas < dataplaneDeployment.Status.Replicas {
 		trace(log, "deployment for DataPlane not ready yet", dataplane)
+
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
 			k8sutils.NewCondition(k8sutils.ReadyType, metav1.ConditionFalse, k8sutils.WaitingToBecomeReadyReason, k8sutils.WaitingToBecomeReadyMessage),
 			dataplane,
 		)
+		r.ensureReadinessStatus(dataplane, dataplaneDeployment)
 		return ctrl.Result{}, r.patchStatus(ctx, log, dataplane)
 	}
 
 	r.ensureIsMarkedProvisioned(dataplane)
+	r.ensureReadinessStatus(dataplane, dataplaneDeployment)
 
 	if err = r.patchStatus(ctx, log, dataplane); err != nil {
 		debug(log, "unable to reconcile the DataPlane resource", dataplane)
@@ -202,7 +205,7 @@ func (r *DataPlaneReconciler) patchStatus(ctx context.Context, log logr.Logger, 
 		return err
 	}
 
-	if k8sutils.NeedsUpdate(current, updated) || addressesChanged(current, updated) {
+	if k8sutils.NeedsUpdate(current, updated) || addressesChanged(current, updated) || readinessChanged(current, updated) {
 		debug(log, "patching DataPlane status", updated, "status", updated.Status)
 		return r.Client.Status().Patch(ctx, updated, client.MergeFrom(current))
 	}
@@ -214,4 +217,10 @@ func (r *DataPlaneReconciler) patchStatus(ctx context.Context, log logr.Logger, 
 // DataPlane stauses differ.
 func addressesChanged(current, updated *operatorv1alpha1.DataPlane) bool {
 	return !cmp.Equal(current.Status.Addresses, updated.Status.Addresses)
+}
+
+func readinessChanged(current, updated *operatorv1alpha1.DataPlane) bool {
+	return current.Status.Ready != updated.Status.Ready ||
+		current.Status.ReadyReplicas != updated.Status.ReadyReplicas ||
+		current.Status.Replicas != updated.Status.Replicas
 }

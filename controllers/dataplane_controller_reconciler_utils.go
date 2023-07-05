@@ -58,6 +58,17 @@ func (r *DataPlaneReconciler) ensureIsMarkedProvisioned(
 	k8sutils.SetReady(dataplane, dataplane.Generation)
 }
 
+func (r *DataPlaneReconciler) ensureReadinessStatus(
+	dataplane *operatorv1alpha1.DataPlane,
+	dataplaneDeployment *appsv1.Deployment,
+) {
+	readyCond, ok := k8sutils.GetCondition(k8sutils.ReadyType, dataplane)
+	dataplane.Status.Ready = ok && readyCond.Status == metav1.ConditionTrue
+
+	dataplane.Status.Replicas = dataplaneDeployment.Status.Replicas
+	dataplane.Status.ReadyReplicas = dataplaneDeployment.Status.ReadyReplicas
+}
+
 func addressOf[T any](v T) *T {
 	return &v
 }

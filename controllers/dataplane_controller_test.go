@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -478,6 +479,141 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						SourceType: operatorv1alpha1.PrivateIPAddressSourceType,
 					},
 				}, dp.Status.Addresses)
+			},
+		},
+		{
+			name: "dataplane status has its ready field set",
+			dataplaneReq: reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "dataplane-kong",
+					Namespace: "default",
+				},
+			},
+			dataplane: &operatorv1alpha1.DataPlane{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					Kind:       "DataPlane",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "dataplane-kong",
+					Namespace: "default",
+					UID:       types.UID(uuid.NewString()),
+				},
+				Spec: operatorv1alpha1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DeploymentOptions{
+							Pods: operatorv1alpha1.PodsOptions{
+								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+							},
+						},
+					},
+				},
+				Status: operatorv1alpha1.DataPlaneStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(DataPlaneConditionTypeProvisioned),
+							Status: metav1.ConditionTrue,
+						},
+					},
+				},
+			},
+			dataplaneSubResources: []controllerruntimeclient.Object{
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-dataplane-deployment",
+						Namespace: "default",
+					},
+					Status: appsv1.DeploymentStatus{
+						AvailableReplicas: 1,
+						ReadyReplicas:     1,
+						Replicas:          1,
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-admin-service",
+						Namespace: "default",
+						Labels: map[string]string{
+							"app":                            "test-dataplane",
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: corev1.ClusterIPNone,
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-proxy-service",
+						Namespace: "default",
+						Labels: map[string]string{
+							"app":                            "test-dataplane",
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneProxyServiceLabelValue),
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP:  "10.0.0.1",
+						ClusterIPs: []string{"10.0.0.1"},
+					},
+					Status: corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{
+								{
+									IP: "6.7.8.9",
+								},
+							},
+						},
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-dataplane-tls-secret-2",
+						Namespace: "default",
+					},
+					Data: helpers.TLSSecretData(t, ca,
+						helpers.CreateCert(t, "*.test-admin-service.default.svc", ca.Cert, ca.Key),
+					),
+				},
+			},
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request) {
+				ctx := context.Background()
+
+				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				// The second reconcile is needed because the first one would only get to marking
+				// the DataPlane as Scheduled.
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				// The third reconcile is needed because the second one will only ensure
+				// the service is deployed for the DataPlane.
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				// The fourth reconcile is needed to ensure the service name in the dataplane status
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				dp := &operatorv1alpha1.DataPlane{}
+				nn := types.NamespacedName{Namespace: "default", Name: "dataplane-kong"}
+				err = reconciler.Client.Get(ctx, nn, dp)
+				require.NoError(t, err)
+				assert.False(t, dp.Status.Ready, "DataPlane shouldn't be ready just yet")
+				assert.EqualValues(t, 0, dp.Status.ReadyReplicas)
+				assert.EqualValues(t, 0, dp.Status.Replicas)
+
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				err = reconciler.Client.Get(ctx, nn, dp)
+				require.NoError(t, err)
+				assert.True(t, dp.Status.Ready, "DataPlane should be ready at this point")
+				assert.EqualValues(t, 1, dp.Status.ReadyReplicas)
+				assert.EqualValues(t, 1, dp.Status.Replicas)
 			},
 		},
 	}

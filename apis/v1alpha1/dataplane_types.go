@@ -134,6 +134,23 @@ type DataPlaneStatus struct {
 	//
 	// +optional
 	Addresses []Address `json:"addresses,omitempty"`
+
+	// Ready indicates whether the DataPlane is ready.
+	// It there are multiple replicas then all have to be ready for this flag
+	// to be set to true.
+	//
+	// +kubebuilder:default=false
+	Ready bool `json:"ready"`
+
+	// ReadyReplicas indicates how many replicas have reported to be ready.
+	//
+	// +kubebuilder:default=0
+	ReadyReplicas int32 `json:"readyReplicas"`
+
+	// Replicas indicates how many replicas have been set for the DataPlane.
+	//
+	// +kubebuilder:default=0
+	Replicas int32 `json:"replicas"`
 }
 
 // Address describes an address which can be either an IP address or a hostname.
