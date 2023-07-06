@@ -75,12 +75,13 @@ func addressOf[T any](v T) *T {
 
 func (r *DataPlaneReconciler) ensureDataPlaneServiceStatus(
 	ctx context.Context,
+	log logr.Logger,
 	dataplane *operatorv1alpha1.DataPlane,
 	dataplaneServiceName string,
 ) (bool, error) {
 	if dataplane.Status.Service != dataplaneServiceName {
 		dataplane.Status.Service = dataplaneServiceName
-		return true, r.Status().Update(ctx, dataplane)
+		return true, r.patchStatus(ctx, log, dataplane)
 	}
 	return false, nil
 }
@@ -122,6 +123,7 @@ func isSameDataPlaneCondition(condition1, condition2 metav1.Condition) bool {
 
 func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
 	ctx context.Context,
+	log logr.Logger,
 	dataplane *operatorv1alpha1.DataPlane,
 	reason k8sutils.ConditionReason, message string,
 ) error {
@@ -155,7 +157,7 @@ func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
 	}
 
 	if shouldUpdate {
-		return r.Status().Update(ctx, dataplane)
+		return r.patchStatus(ctx, log, dataplane)
 	}
 	return nil
 }

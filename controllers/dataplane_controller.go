@@ -97,7 +97,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err != nil {
 		info(log, "failed to validate dataplane: "+err.Error(), dataplane)
 		r.eventRecorder.Event(dataplane, "Warning", "ValidationFailed", err.Error())
-		markErr := r.ensureDataPlaneIsMarkedNotProvisioned(ctx, dataplane,
+		markErr := r.ensureDataPlaneIsMarkedNotProvisioned(ctx, log, dataplane,
 			DataPlaneConditionValidationFailed, err.Error())
 		return ctrl.Result{}, markErr
 	}
@@ -108,7 +108,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 	if createdOrUpdated {
-		debug(log, "DataPlane admin service created/updated", dataplane, "service", dataplaneAdminService)
+		debug(log, "DataPlane admin service created/updated", dataplane, "service", dataplaneAdminService.Name)
 		return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
 	}
 
@@ -118,11 +118,11 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 	if createdOrUpdated {
-		debug(log, "DataPlane proxy service created/updated", dataplane, "service", dataplaneProxyService)
+		debug(log, "DataPlane proxy service created/updated", dataplane, "service", dataplaneProxyService.Name)
 		return ctrl.Result{}, nil
 	}
 
-	dataplaneServiceChanged, err := r.ensureDataPlaneServiceStatus(ctx, dataplane, dataplaneProxyService.Name)
+	dataplaneServiceChanged, err := r.ensureDataPlaneServiceStatus(ctx, log, dataplane, dataplaneProxyService.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -205,7 +205,11 @@ func (r *DataPlaneReconciler) patchStatus(ctx context.Context, log logr.Logger, 
 		return err
 	}
 
-	if k8sutils.NeedsUpdate(current, updated) || addressesChanged(current, updated) || readinessChanged(current, updated) {
+	if k8sutils.NeedsUpdate(current, updated) ||
+		addressesChanged(current, updated) ||
+		readinessChanged(current, updated) ||
+		current.Status.Service != updated.Status.Service {
+
 		debug(log, "patching DataPlane status", updated, "status", updated.Status)
 		return r.Client.Status().Patch(ctx, updated, client.MergeFrom(current))
 	}
