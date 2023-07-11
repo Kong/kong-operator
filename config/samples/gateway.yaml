@@ -9,10 +9,11 @@ spec:
       pods:
         containerImage: kong
         version: "3.3"
-    services:
-      proxy:
-        annotations:
-          foo: bar
+    network:
+      services:
+        ingress:
+          annotations:
+            foo: bar
   controlPlaneOptions:
     deployment:
       pods:
