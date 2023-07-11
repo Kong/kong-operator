@@ -248,10 +248,17 @@ func (r *GatewayReconciler) ensureDataPlaneHasNetworkPolicy(
 		existingPolicy := &networkPolicies[0]
 		updated, existingPolicy.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingPolicy.ObjectMeta, generatedPolicy.ObjectMeta)
 		if updated {
-			return true, r.Client.Update(ctx, existingPolicy)
+			if err := r.Client.Update(ctx, existingPolicy); err != nil {
+				return false, fmt.Errorf("failed updating DataPlane's NetworkPolicy %s: %w", existingPolicy.Name, err)
+			}
+
+			return true, nil
 		}
 		if needsUpdate, updatedPolicy := k8sresources.NetworkPolicyNeedsUpdate(existingPolicy, generatedPolicy); needsUpdate {
-			return true, r.Client.Update(ctx, updatedPolicy)
+			if err := r.Client.Update(ctx, updatedPolicy); err != nil {
+				return false, fmt.Errorf("failed updating DataPlane's NetworkPolicy %s: %w", updatedPolicy.Name, err)
+			}
+			return true, nil
 		}
 		return false, nil
 	}

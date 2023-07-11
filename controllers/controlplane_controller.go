@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -170,7 +171,10 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		string(ControlPlaneFinalizerCleanupClusterRoleBinding))
 	if finalizersChanged {
 		trace(log, "update metadata of control plane to set finalizer", controlplane)
-		return ctrl.Result{}, r.Client.Update(ctx, controlplane)
+		if err := r.Client.Update(ctx, controlplane); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane's finalizers : %w", err)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	k8sutils.InitReady(controlplane)
@@ -242,8 +246,9 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				debug(log, "conflict found when updating ControlPlane resource, retrying", controlplane)
 				return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 			}
+			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane: %w", err)
 		}
-		return ctrl.Result{}, err // no need to requeue, the update will trigger.
+		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
 	trace(log, "validating that the ControlPlane's DataPlane configuration is up to date", controlplane)

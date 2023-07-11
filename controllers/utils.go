@@ -216,7 +216,10 @@ func maybeCreateCertificateSecret(
 	var updated bool
 	updated, existingSecret.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingSecret.ObjectMeta, generatedSecret.ObjectMeta)
 	if updated {
-		return true, existingSecret, k8sClient.Update(ctx, existingSecret)
+		if err := k8sClient.Update(ctx, existingSecret); err != nil {
+			return false, existingSecret, fmt.Errorf("failed updating secret %s: %w", existingSecret.Name, err)
+		}
+		return true, existingSecret, nil
 	}
 	return false, existingSecret, nil
 }

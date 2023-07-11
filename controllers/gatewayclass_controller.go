@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,7 +63,10 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				Message:            "the gatewayclass has been accepted by the operator",
 			}
 			k8sutils.SetCondition(acceptedCondition, gwc)
-			return ctrl.Result{}, r.Status().Update(ctx, gwc.GatewayClass)
+			if err := r.Status().Update(ctx, gwc.GatewayClass); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed updating GatewayClass: %w", err)
+			}
+			return ctrl.Result{}, nil
 		}
 	}
 

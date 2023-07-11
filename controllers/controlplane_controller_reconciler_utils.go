@@ -112,7 +112,10 @@ func (r *ControlPlaneReconciler) ensureDataPlaneConfiguration(
 		dataplaneServiceName,
 	)
 	if changed {
-		return r.Client.Update(ctx, controlplane)
+		if err := r.Client.Update(ctx, controlplane); err != nil {
+			return fmt.Errorf("failed updating ControlPlane's DataPlane: %w", err)
+		}
+		return nil
 	}
 	return nil
 }
@@ -281,7 +284,10 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		}
 
 		if updated {
-			return true, existingDeployment, r.Client.Update(ctx, existingDeployment)
+			if err := r.Client.Update(ctx, existingDeployment); err != nil {
+				return true, existingDeployment, fmt.Errorf("failed updating ControlPlane's Deployment %s: %w", existingDeployment.Name, err)
+			}
+			return true, existingDeployment, nil
 		}
 
 		return false, existingDeployment, nil
@@ -327,7 +333,10 @@ func (r *ControlPlaneReconciler) ensureServiceAccountForControlPlane(
 		existingServiceAccount := &serviceAccounts[0]
 		updated, existingServiceAccount.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingServiceAccount.ObjectMeta, generatedServiceAccount.ObjectMeta)
 		if updated {
-			return true, existingServiceAccount, r.Client.Update(ctx, existingServiceAccount)
+			if err := r.Client.Update(ctx, existingServiceAccount); err != nil {
+				return false, existingServiceAccount, fmt.Errorf("failed updating ControlPlane's ServiceAccount %s: %w", existingServiceAccount.Name, err)
+			}
+			return true, existingServiceAccount, nil
 		}
 		return false, existingServiceAccount, nil
 	}
@@ -371,7 +380,10 @@ func (r *ControlPlaneReconciler) ensureClusterRoleForControlPlane(
 		existingClusterRole := &clusterRoles[0]
 		updated, existingClusterRole.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingClusterRole.ObjectMeta, generatedClusterRole.ObjectMeta)
 		if updated {
-			return true, existingClusterRole, r.Client.Update(ctx, existingClusterRole)
+			if err := r.Client.Update(ctx, existingClusterRole); err != nil {
+				return false, existingClusterRole, fmt.Errorf("failed updating ControlPlane's ClusterRole %s: %w", existingClusterRole.Name, err)
+			}
+			return true, existingClusterRole, nil
 		}
 		return false, existingClusterRole, nil
 	}
@@ -414,7 +426,10 @@ func (r *ControlPlaneReconciler) ensureClusterRoleBindingForControlPlane(
 		existingClusterRoleBinding := &clusterRoleBindings[0]
 		updated, existingClusterRoleBinding.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingClusterRoleBinding.ObjectMeta, generatedClusterRoleBinding.ObjectMeta)
 		if updated {
-			return true, existingClusterRoleBinding, r.Client.Update(ctx, existingClusterRoleBinding)
+			if err := r.Client.Update(ctx, existingClusterRoleBinding); err != nil {
+				return true, existingClusterRoleBinding, fmt.Errorf("failed updating ControlPlane's ClusterRoleBinding %s: %w", existingClusterRoleBinding.Name, err)
+			}
+			return true, existingClusterRoleBinding, nil
 		}
 		return false, existingClusterRoleBinding, nil
 	}

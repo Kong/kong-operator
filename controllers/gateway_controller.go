@@ -186,7 +186,10 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	)
 	if finalizersChanged {
 		trace(log, "update metadata of gateway to set finalizer", gateway)
-		return ctrl.Result{}, r.Client.Update(ctx, &gateway)
+		if err := r.Client.Update(ctx, &gateway); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed updating Gateway's finalizers: %w", err)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	trace(log, "checking gatewayclass", gateway)

@@ -342,7 +342,10 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 		}
 
 		if updated {
-			return Updated, existingDeployment, r.Client.Update(ctx, existingDeployment)
+			if err := r.Client.Update(ctx, existingDeployment); err != nil {
+				return Noop, existingDeployment, fmt.Errorf("failed updating DataPlane Deployment %s: %w", existingDeployment.Name, err)
+			}
+			return Updated, existingDeployment, nil
 		}
 		return Noop, existingDeployment, nil
 	}
@@ -443,7 +446,10 @@ func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
 		}
 
 		if updated {
-			return true, existingService, r.Client.Update(ctx, existingService)
+			if err := r.Client.Update(ctx, existingService); err != nil {
+				return false, existingService, fmt.Errorf("failed updating DataPlane Service %s: %w", existingService.Name, err)
+			}
+			return true, existingService, nil
 		}
 		return false, existingService, nil
 	}
@@ -486,7 +492,10 @@ func (r *DataPlaneReconciler) ensureAdminServiceForDataPlane(
 		existingService := &services[0]
 		updated, existingService.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingService.ObjectMeta, generatedService.ObjectMeta)
 		if updated {
-			return true, existingService, r.Client.Update(ctx, existingService)
+			if err := r.Client.Update(ctx, existingService); err != nil {
+				return false, existingService, fmt.Errorf("failed updating DataPlane Service %s: %w", existingService.Name, err)
+			}
+			return true, existingService, nil
 		}
 		return false, existingService, nil
 	}

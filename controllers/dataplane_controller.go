@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -87,7 +88,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 				debug(log, "conflict found when updating DataPlane resource, retrying", dataplane)
 				return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 			}
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("failed updating DataPlane's environment variables: %w", err)
 		}
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
