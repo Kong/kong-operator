@@ -83,23 +83,25 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Volumes: []corev1.Volume{
-									{
-										Name: "test-volume",
-										VolumeSource: corev1.VolumeSource{
-											Secret: &corev1.SecretVolumeSource{
-												SecretName: "test-secret",
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Volumes: []corev1.Volume{
+										{
+											Name: "test-volume",
+											VolumeSource: corev1.VolumeSource{
+												Secret: &corev1.SecretVolumeSource{
+													SecretName: "test-secret",
+												},
 											},
 										},
 									},
-								},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      "test-volume",
-										MountPath: "/var/test/",
-										ReadOnly:  true,
+									VolumeMounts: []corev1.VolumeMount{
+										{
+											Name:      "test-volume",
+											MountPath: "/var/test/",
+											ReadOnly:  true,
+										},
 									},
 								},
 							},
@@ -161,16 +163,18 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Resources: &corev1.ResourceRequirements{
-									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("2"),
-										corev1.ResourceMemory: resource.MustParse("1237Mi"),
-									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("3"),
-										corev1.ResourceMemory: resource.MustParse("1237Mi"),
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Resources: &corev1.ResourceRequirements{
+										Requests: corev1.ResourceList{
+											corev1.ResourceCPU:    resource.MustParse("2"),
+											corev1.ResourceMemory: resource.MustParse("1237Mi"),
+										},
+										Limits: corev1.ResourceList{
+											corev1.ResourceCPU:    resource.MustParse("3"),
+											corev1.ResourceMemory: resource.MustParse("1237Mi"),
+										},
 									},
 								},
 							},
@@ -211,9 +215,11 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Resources: defaultDataPlaneResources,
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Resources: defaultDataPlaneResources,
+								},
 							},
 						},
 					},
@@ -245,20 +251,22 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Affinity: &corev1.Affinity{
-									PodAntiAffinity: &corev1.PodAntiAffinity{
-										PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-											{
-												PodAffinityTerm: corev1.PodAffinityTerm{
-													TopologyKey: "kubernetes.io/hostname",
-													LabelSelector: &metav1.LabelSelector{
-														MatchLabels: map[string]string{
-															"workload-type": "dataplane",
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Affinity: &corev1.Affinity{
+										PodAntiAffinity: &corev1.PodAntiAffinity{
+											PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+												{
+													PodAffinityTerm: corev1.PodAffinityTerm{
+														TopologyKey: "kubernetes.io/hostname",
+														LabelSelector: &metav1.LabelSelector{
+															MatchLabels: map[string]string{
+																"workload-type": "dataplane",
+															},
 														},
+														NamespaceSelector: &metav1.LabelSelector{},
 													},
-													NamespaceSelector: &metav1.LabelSelector{},
 												},
 											},
 										},
@@ -302,9 +310,11 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Affinity: &corev1.Affinity{},
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Affinity: &corev1.Affinity{},
+								},
 							},
 						},
 					},

@@ -60,10 +60,21 @@ type DataPlaneSpec struct {
 // deploy the DataPlane.
 type DataPlaneOptions struct {
 	// +optional
-	Deployment DeploymentOptions `json:"deployment"`
+	Deployment DataPlaneDeploymentOptions `json:"deployment"`
 
 	// +optional
 	Network DataPlaneNetworkOptions `json:"network"`
+}
+
+// DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
+// resource "Deployment") which are created and managed for the DataPlane resource.
+type DataPlaneDeploymentOptions struct {
+	// Rollout describes a custom rollout strategy.
+	//
+	// +optional
+	Rollout *Rollout `json:"rollout,omitempty"`
+
+	DeploymentOptions `json:",inline"`
 }
 
 // DataPlaneNetworkOptions defines network related options for a DataPlane.

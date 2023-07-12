@@ -79,10 +79,12 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+								},
 							},
 						},
 					},
@@ -176,10 +178,12 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								ContainerImage: pointer.String("kong"),
-								Version:        pointer.String("3.0"),
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									ContainerImage: pointer.String("kong"),
+									Version:        pointer.String("3.0"),
+								},
 							},
 						},
 					},
@@ -256,10 +260,12 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								ContainerImage: pointer.String("kong"),
-								Version:        pointer.String("1.0"),
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									ContainerImage: pointer.String("kong"),
+									Version:        pointer.String("1.0"),
+								},
 							},
 						},
 					},
@@ -355,10 +361,12 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+								},
 							},
 						},
 					},
@@ -501,10 +509,12 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+								},
 							},
 						},
 					},

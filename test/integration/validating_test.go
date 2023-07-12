@@ -78,13 +78,15 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Env: []corev1.EnvVar{
-									{Name: "KONG_DATABASE", Value: "postgres"},
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Env: []corev1.EnvVar{
+										{Name: "KONG_DATABASE", Value: "postgres"},
+									},
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -103,13 +105,15 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Env: []corev1.EnvVar{
-									{Name: "KONG_DATABASE", Value: "xxx"},
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Env: []corev1.EnvVar{
+										{Name: "KONG_DATABASE", Value: "xxx"},
+									},
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -127,21 +131,23 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Env: []corev1.EnvVar{
-									{
-										Name: "KONG_DATABASE",
-										ValueFrom: &corev1.EnvVarSource{
-											ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-												LocalObjectReference: corev1.LocalObjectReference{Name: "dataplane-configs"},
-												Key:                  "database1",
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Env: []corev1.EnvVar{
+										{
+											Name: "KONG_DATABASE",
+											ValueFrom: &corev1.EnvVarSource{
+												ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+													LocalObjectReference: corev1.LocalObjectReference{Name: "dataplane-configs"},
+													Key:                  "database1",
+												},
 											},
 										},
 									},
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -234,10 +240,12 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Env: []corev1.EnvVar{
-									{Name: "KONG_DATABASE", Value: "postgres"},
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Env: []corev1.EnvVar{
+										{Name: "KONG_DATABASE", Value: "postgres"},
+									},
 								},
 							},
 						},
@@ -255,10 +263,12 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Env: []corev1.EnvVar{
-									{Name: "KONG_DATABASE", Value: "xxx"},
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Env: []corev1.EnvVar{
+										{Name: "KONG_DATABASE", Value: "xxx"},
+									},
 								},
 							},
 						},
@@ -276,15 +286,17 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Env: []corev1.EnvVar{
-									{
-										Name: "KONG_DATABASE",
-										ValueFrom: &corev1.EnvVarSource{
-											ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-												LocalObjectReference: corev1.LocalObjectReference{Name: "dataplane-configs"},
-												Key:                  "database1",
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Env: []corev1.EnvVar{
+										{
+											Name: "KONG_DATABASE",
+											ValueFrom: &corev1.EnvVarSource{
+												ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+													LocalObjectReference: corev1.LocalObjectReference{Name: "dataplane-configs"},
+													Key:                  "database1",
+												},
 											},
 										},
 									},

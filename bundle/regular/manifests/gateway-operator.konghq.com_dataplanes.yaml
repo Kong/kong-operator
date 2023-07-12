@@ -49,12 +49,9 @@ spec:
             description: DataPlaneSpec defines the desired state of DataPlane
             properties:
               deployment:
-                description: DeploymentOptions is a shared type used on objects to
-                  indicate that their configuration results in a Deployment which
-                  is managed by the Operator and includes options for managing Deployments
-                  such as the the number of replicas or pod options like container
-                  image and resource requirements. version, as well as Env variable
-                  overrides.
+                description: DataPlaneDeploymentOptions specifies options for the
+                  Deployments (as in the Kubernetes resource "Deployment") which are
+                  created and managed for the DataPlane resource.
                 properties:
                   pods:
                     description: Pods defines the Deployment's pods.
@@ -2940,6 +2937,43 @@ spec:
                       details on ControlPlane scaling please see https://github.com/Kong/gateway-operator/issues/736.
                     format: int32
                     type: integer
+                  rollout:
+                    description: Rollout describes a custom rollout strategy.
+                    properties:
+                      strategy:
+                        description: Strategy contains the deployment strategy for
+                          rollout.
+                        properties:
+                          blueGreen:
+                            description: BlueGreen holds the options specific for
+                              Blue Green Deployments.
+                            properties:
+                              promotion:
+                                description: Promotion defines how the operator handles
+                                  promotion of resources.
+                                properties:
+                                  strategy:
+                                    default: BreakBeforePromotion
+                                    description: Strategy indicates how you want the
+                                      operator to handle the promotion of the preview
+                                      (green) resources (Deployments and Services)
+                                      after all workflows and tests succeed, OR if
+                                      you even want it to break before performing
+                                      the promotion to allow manual inspection.
+                                    enum:
+                                    - AutomaticPromotion
+                                    - BreakBeforePromotion
+                                    type: string
+                                required:
+                                - strategy
+                                type: object
+                            required:
+                            - promotion
+                            type: object
+                        type: object
+                    required:
+                    - strategy
+                    type: object
                 type: object
               network:
                 description: DataPlaneNetworkOptions defines network related options

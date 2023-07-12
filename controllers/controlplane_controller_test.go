@@ -113,10 +113,12 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								ContainerImage: pointer.String("kong"),
-								Version:        pointer.String("3.0"),
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									ContainerImage: pointer.String("kong"),
+									Version:        pointer.String("3.0"),
+								},
 							},
 						},
 					},
@@ -274,10 +276,12 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								ContainerImage: pointer.String("kong"),
-								Version:        pointer.String("3.0"),
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									ContainerImage: pointer.String("kong"),
+									Version:        pointer.String("3.0"),
+								},
 							},
 						},
 					},

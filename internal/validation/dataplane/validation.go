@@ -27,7 +27,7 @@ func NewValidator(c client.Client) *Validator {
 
 // Validate validates a DataPlane object and return the first validation error found.
 func (v *Validator) Validate(dataplane *operatorv1alpha1.DataPlane) error {
-	err := v.ValidateDeploymentOptions(dataplane.Namespace, &dataplane.Spec.Deployment)
+	err := v.ValidateDataPlaneDeploymentOptions(dataplane.Namespace, &dataplane.Spec.Deployment)
 	if err != nil {
 		return err
 	}
@@ -35,8 +35,8 @@ func (v *Validator) Validate(dataplane *operatorv1alpha1.DataPlane) error {
 	return nil
 }
 
-// ValidateDeploymentOptions validates the DeploymentOptions field of DataPlane object.
-func (v *Validator) ValidateDeploymentOptions(namespace string, opts *operatorv1alpha1.DeploymentOptions) error {
+// ValidateDataPlaneDeploymentOptions validates the DeploymentOptions field of DataPlane object.
+func (v *Validator) ValidateDataPlaneDeploymentOptions(namespace string, opts *operatorv1alpha1.DataPlaneDeploymentOptions) error {
 	// Until https://github.com/Kong/gateway-operator/issues/20 is resolved we
 	// require DataPlanes that they are provided with image and version set.
 	// Related: https://github.com/Kong/gateway-operator/issues/754.

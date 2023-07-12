@@ -74,6 +74,7 @@ func addAnnotationsForDataplaneProxyService(obj client.Object, dataplane operato
 // -----------------------------------------------------------------------------
 
 func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1alpha1.DataPlaneOptions) bool {
-	return deploymentOptionsDeepEqual(&spec1.Deployment, &spec2.Deployment) &&
+	// TODO: Doesn't take .Rollout field into account.
+	return deploymentOptionsDeepEqual(&spec1.Deployment.DeploymentOptions, &spec2.Deployment.DeploymentOptions) &&
 		servicesOptionsDeepEqual(&spec1.Network, &spec2.Network)
 }

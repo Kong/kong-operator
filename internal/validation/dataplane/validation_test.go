@@ -64,16 +64,18 @@ func TestValidateDeployOptions(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Env: []corev1.EnvVar{
-									{
-										Name:  consts.EnvVarKongDatabase,
-										Value: "off",
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Env: []corev1.EnvVar{
+										{
+											Name:  consts.EnvVarKongDatabase,
+											Value: "off",
+										},
 									},
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -90,16 +92,18 @@ func TestValidateDeployOptions(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Env: []corev1.EnvVar{
-									{
-										Name:  consts.EnvVarKongDatabase,
-										Value: "",
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Env: []corev1.EnvVar{
+										{
+											Name:  consts.EnvVarKongDatabase,
+											Value: "",
+										},
 									},
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -116,16 +120,18 @@ func TestValidateDeployOptions(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Env: []corev1.EnvVar{
-									{
-										Name:  consts.EnvVarKongDatabase,
-										Value: "postgres",
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Env: []corev1.EnvVar{
+										{
+											Name:  consts.EnvVarKongDatabase,
+											Value: "postgres",
+										},
 									},
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -143,16 +149,18 @@ func TestValidateDeployOptions(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Env: []corev1.EnvVar{
-									{
-										Name:  consts.EnvVarKongDatabase,
-										Value: "xxx",
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Env: []corev1.EnvVar{
+										{
+											Name:  consts.EnvVarKongDatabase,
+											Value: "xxx",
+										},
 									},
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -170,21 +178,23 @@ func TestValidateDeployOptions(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Env: []corev1.EnvVar{
-									{
-										Name: consts.EnvVarKongDatabase,
-										ValueFrom: &corev1.EnvVarSource{
-											ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-												LocalObjectReference: corev1.LocalObjectReference{Name: "test-cm"},
-												Key:                  "off",
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Env: []corev1.EnvVar{
+										{
+											Name: consts.EnvVarKongDatabase,
+											ValueFrom: &corev1.EnvVarSource{
+												ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+													LocalObjectReference: corev1.LocalObjectReference{Name: "test-cm"},
+													Key:                  "off",
+												},
 											},
 										},
 									},
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -201,21 +211,23 @@ func TestValidateDeployOptions(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Env: []corev1.EnvVar{
-									{
-										Name: consts.EnvVarKongDatabase,
-										ValueFrom: &corev1.EnvVarSource{
-											SecretKeyRef: &corev1.SecretKeySelector{
-												LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"},
-												Key:                  "postgres",
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Env: []corev1.EnvVar{
+										{
+											Name: consts.EnvVarKongDatabase,
+											ValueFrom: &corev1.EnvVarSource{
+												SecretKeyRef: &corev1.SecretKeySelector{
+													LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"},
+													Key:                  "postgres",
+												},
 											},
 										},
 									},
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -233,18 +245,20 @@ func TestValidateDeployOptions(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								EnvFrom: []corev1.EnvFromSource{
-									{
-										Prefix: "",
-										ConfigMapRef: &corev1.ConfigMapEnvSource{
-											LocalObjectReference: corev1.LocalObjectReference{Name: "test-cm-2"},
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									EnvFrom: []corev1.EnvFromSource{
+										{
+											Prefix: "",
+											ConfigMapRef: &corev1.ConfigMapEnvSource{
+												LocalObjectReference: corev1.LocalObjectReference{Name: "test-cm-2"},
+											},
 										},
 									},
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},
@@ -262,18 +276,20 @@ func TestValidateDeployOptions(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								EnvFrom: []corev1.EnvFromSource{
-									{
-										Prefix: "KONG_",
-										SecretRef: &corev1.SecretEnvSource{
-											LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret-2"},
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									EnvFrom: []corev1.EnvFromSource{
+										{
+											Prefix: "KONG_",
+											SecretRef: &corev1.SecretEnvSource{
+												LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret-2"},
+											},
 										},
 									},
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},

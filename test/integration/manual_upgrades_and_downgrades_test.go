@@ -58,10 +58,12 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 				},
 			},
 			DataPlaneOptions: &operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: pointer.String(originalDataPlaneImageName),
-						Version:        pointer.String(originalDataPlaneImageVersion),
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Pods: operatorv1alpha1.PodsOptions{
+							ContainerImage: pointer.String(originalDataPlaneImageName),
+							Version:        pointer.String(originalDataPlaneImageVersion),
+						},
 					},
 				},
 			},

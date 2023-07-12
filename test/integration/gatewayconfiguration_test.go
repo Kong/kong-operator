@@ -52,21 +52,23 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		},
 		Spec: operatorv1alpha1.GatewayConfigurationSpec{
 			DataPlaneOptions: &operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
-					Pods: operatorv1alpha1.PodsOptions{
-						Env: []corev1.EnvVar{
-							{
-								Name:  testEnvVar,
-								Value: testEnvVal,
-							},
-							{
-								Name: testEnvVarFromName,
-								ValueFrom: &corev1.EnvVarSource{
-									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: configMap.Name,
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Pods: operatorv1alpha1.PodsOptions{
+							Env: []corev1.EnvVar{
+								{
+									Name:  testEnvVar,
+									Value: testEnvVal,
+								},
+								{
+									Name: testEnvVarFromName,
+									ValueFrom: &corev1.EnvVarSource{
+										ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: configMap.Name,
+											},
+											Key: testEnvVarFromKV,
 										},
-										Key: testEnvVarFromKV,
 									},
 								},
 							},

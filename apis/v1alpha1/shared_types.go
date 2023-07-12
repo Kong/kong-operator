@@ -25,6 +25,51 @@ type DeploymentOptions struct {
 	Pods PodsOptions `json:"pods,omitempty"`
 }
 
+// Rollout defines options for rollouts.
+type Rollout struct {
+	// Strategy contains the deployment strategy for rollout.
+	Strategy RolloutStrategy `json:"strategy"`
+}
+
+// RolloutStrategy holds the rollout strategy options.
+type RolloutStrategy struct {
+	// BlueGreen holds the options specific for Blue Green Deployments.
+	//
+	// +optional
+	BlueGreen *BlueGreenStrategy `json:"blueGreen,omitempty"`
+}
+
+// BlueGreenStrategy defines the Blue Green deployment strategy.
+type BlueGreenStrategy struct {
+	// Promotion defines how the operator handles promotion of resources.
+	Promotion Promotion `json:"promotion"`
+}
+
+type Promotion struct {
+	// Strategy indicates how you want the operator to handle the promotion of
+	// the preview (green) resources (Deployments and Services) after all workflows
+	// and tests succeed, OR if you even want it to break before performing
+	// the promotion to allow manual inspection.
+	//
+	// +kubebuilder:validation:Enum=AutomaticPromotion;BreakBeforePromotion
+	// +kubebuilder:default=BreakBeforePromotion
+	Strategy PromotionStrategy `json:"strategy"`
+}
+
+type PromotionStrategy string
+
+const (
+	// AutomaticPromotion indicates that once all workflows and tests have completed successfully,
+	// the new resources should be promoted and replace the previous resources.
+	AutomaticPromotion PromotionStrategy = "AutomaticPromotion"
+
+	// BreakBeforePromotion is the same as AutomaticPromotion but with an added breakpoint
+	// to enable manual inspection.
+	// The user must indicate manually when they want the promotion to continue.
+	// TODO: finalizer/annotation?
+	BreakBeforePromotion PromotionStrategy = "BreakBeforePromotion"
+)
+
 // PodOptions is a shared type defining options on Pods deployed as part of
 // Deployments managed by the Operator.
 type PodsOptions struct {

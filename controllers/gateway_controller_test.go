@@ -443,11 +443,13 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 			name:  "no providing any options",
 			input: operatorv1alpha1.DataPlaneOptions{},
 			expected: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
-					Replicas: lo.ToPtr(int32(1)),
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Replicas: lo.ToPtr(int32(1)),
+						Pods: operatorv1alpha1.PodsOptions{
+							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						},
 					},
 				},
 			},
@@ -455,16 +457,20 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 		{
 			name: "providing only replicas",
 			input: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
-					Replicas: lo.ToPtr(int32(10)),
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Replicas: lo.ToPtr(int32(10)),
+					},
 				},
 			},
 			expected: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
-					Replicas: lo.ToPtr(int32(10)),
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Replicas: lo.ToPtr(int32(10)),
+						Pods: operatorv1alpha1.PodsOptions{
+							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						},
 					},
 				},
 			},
@@ -472,16 +478,20 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 		{
 			name: "providing only replicas that are equal to default",
 			input: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
-					Replicas: lo.ToPtr(int32(1)),
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Replicas: lo.ToPtr(int32(1)),
+					},
 				},
 			},
 			expected: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
-					Replicas: lo.ToPtr(int32(1)),
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Replicas: lo.ToPtr(int32(1)),
+						Pods: operatorv1alpha1.PodsOptions{
+							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						},
 					},
 				},
 			},
@@ -489,20 +499,24 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 		{
 			name: "providing more options",
 			input: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
-					Replicas: lo.ToPtr(int32(10)),
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr("image"),
-						Version:        lo.ToPtr("version"),
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Replicas: lo.ToPtr(int32(10)),
+						Pods: operatorv1alpha1.PodsOptions{
+							ContainerImage: lo.ToPtr("image"),
+							Version:        lo.ToPtr("version"),
+						},
 					},
 				},
 			},
 			expected: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
-					Replicas: lo.ToPtr(int32(10)),
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr("image"),
-						Version:        lo.ToPtr("version"),
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Replicas: lo.ToPtr(int32(10)),
+						Pods: operatorv1alpha1.PodsOptions{
+							ContainerImage: lo.ToPtr("image"),
+							Version:        lo.ToPtr("version"),
+						},
 					},
 				},
 			},

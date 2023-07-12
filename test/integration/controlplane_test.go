@@ -65,10 +65,12 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 		},
 		Spec: operatorv1alpha1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Pods: operatorv1alpha1.PodsOptions{
+							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						},
 					},
 				},
 			},
@@ -140,10 +142,12 @@ func TestControlPlaneEssentials(t *testing.T) {
 		},
 		Spec: operatorv1alpha1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Pods: operatorv1alpha1.PodsOptions{
+							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						},
 					},
 				},
 			},
@@ -318,10 +322,12 @@ func TestControlPlaneUpdate(t *testing.T) {
 		},
 		Spec: operatorv1alpha1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Pods: operatorv1alpha1.PodsOptions{
+							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						},
 					},
 				},
 			},

@@ -49,13 +49,15 @@ func TestDataplaneValidatingWebhook(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Env: []corev1.EnvVar{
-									{Name: "KONG_DATABASE", Value: "postgres"},
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Env: []corev1.EnvVar{
+										{Name: "KONG_DATABASE", Value: "postgres"},
+									},
+									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
-								ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-								Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 							},
 						},
 					},

@@ -57,14 +57,16 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Resources: &corev1.ResourceRequirements{
-									Requests: corev1.ResourceList{
-										corev1.ResourceCPU: resource.MustParse("100m"),
-									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceCPU: resource.MustParse("1"),
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Resources: &corev1.ResourceRequirements{
+										Requests: corev1.ResourceList{
+											corev1.ResourceCPU: resource.MustParse("100m"),
+										},
+										Limits: corev1.ResourceList{
+											corev1.ResourceCPU: resource.MustParse("1"),
+										},
 									},
 								},
 							},
@@ -103,14 +105,16 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Resources: &corev1.ResourceRequirements{
-									Requests: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("256Mi"),
-									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("1024Mi"),
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Resources: &corev1.ResourceRequirements{
+										Requests: corev1.ResourceList{
+											corev1.ResourceMemory: resource.MustParse("256Mi"),
+										},
+										Limits: corev1.ResourceList{
+											corev1.ResourceMemory: resource.MustParse("1024Mi"),
+										},
 									},
 								},
 							},
@@ -149,18 +153,20 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
-							Pods: operatorv1alpha1.PodsOptions{
-								Resources: &corev1.ResourceRequirements{
-									Requests: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("256Mi"),
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Resources: &corev1.ResourceRequirements{
+										Requests: corev1.ResourceList{
+											corev1.ResourceMemory: resource.MustParse("256Mi"),
+										},
+										Limits: corev1.ResourceList{
+											corev1.ResourceMemory: resource.MustParse("1024Mi"),
+										},
 									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("1024Mi"),
+									Labels: map[string]string{
+										"label-a": "value-a",
 									},
-								},
-								Labels: map[string]string{
-									"label-a": "value-a",
 								},
 							},
 						},

@@ -36,24 +36,25 @@ func TestDataplaneEssentials(t *testing.T) {
 			Name:      dataplaneName.Name,
 		},
 		Spec: v1alpha1.DataPlaneSpec{
-			DataPlaneOptions: v1alpha1.DataPlaneOptions{
-				Deployment: v1alpha1.DeploymentOptions{
-					Pods: operatorv1alpha1.PodsOptions{
-						Labels: map[string]string{
-							"label-a": "value-a",
-							"label-x": "value-x",
+			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Pods: operatorv1alpha1.PodsOptions{
+							Labels: map[string]string{
+								"label-a": "value-a",
+								"label-x": "value-x",
+							},
+							Env: []corev1.EnvVar{
+								{Name: "TEST_ENV", Value: "test"},
+							},
+							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 						},
-						Env: []corev1.EnvVar{
-							{Name: "TEST_ENV", Value: "test"},
-						},
-						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 					},
 				},
 				Network: operatorv1alpha1.DataPlaneNetworkOptions{
 					Services: &operatorv1alpha1.DataPlaneServices{
 						Ingress: &operatorv1alpha1.ServiceOptions{
-
 							Annotations: map[string]string{
 								"foo": "bar",
 							},
@@ -204,14 +205,16 @@ func TestDataPlaneUpdate(t *testing.T) {
 		},
 		Spec: v1alpha1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
-					Pods: operatorv1alpha1.PodsOptions{
-						Env: []corev1.EnvVar{
-							{Name: "TEST_ENV", Value: "before_update"},
-							{Name: consts.EnvVarKongDatabase, Value: "off"},
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Pods: operatorv1alpha1.PodsOptions{
+							Env: []corev1.EnvVar{
+								{Name: "TEST_ENV", Value: "before_update"},
+								{Name: consts.EnvVarKongDatabase, Value: "off"},
+							},
+							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 						},
-						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 					},
 				},
 			},
@@ -345,12 +348,14 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 			Name:      dataplaneName.Name,
 		},
 		Spec: v1alpha1.DataPlaneSpec{
-			DataPlaneOptions: v1alpha1.DataPlaneOptions{
-				Deployment: v1alpha1.DeploymentOptions{
-					Replicas: lo.ToPtr(int32(2)),
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Replicas: lo.ToPtr(int32(2)),
+						Pods: operatorv1alpha1.PodsOptions{
+							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						},
 					},
 				},
 			},
@@ -411,27 +416,29 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 		},
 		Spec: operatorv1alpha1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
-					Pods: operatorv1alpha1.PodsOptions{
-						Volumes: []corev1.Volume{
-							{
-								Name: "test-volume",
-								VolumeSource: corev1.VolumeSource{
-									Secret: &corev1.SecretVolumeSource{
-										SecretName: secret.Name,
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						Pods: operatorv1alpha1.PodsOptions{
+							Volumes: []corev1.Volume{
+								{
+									Name: "test-volume",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName: secret.Name,
+										},
 									},
 								},
 							},
-						},
-						VolumeMounts: []corev1.VolumeMount{
-							{
-								Name:      "test-volume",
-								MountPath: "/var/test",
-								ReadOnly:  true,
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "test-volume",
+									MountPath: "/var/test",
+									ReadOnly:  true,
+								},
 							},
+							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
+							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 						},
-						ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 					},
 				},
 			},
