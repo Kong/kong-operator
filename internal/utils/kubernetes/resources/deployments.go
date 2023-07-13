@@ -50,6 +50,7 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: serviceAccountName,
+					Affinity:           controlplane.Spec.Deployment.Pods.Affinity,
 					Volumes: []corev1.Volume{
 						{
 							Name: "cluster-certificate",
@@ -179,7 +180,8 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, da
 					},
 				},
 				Spec: corev1.PodSpec{
-					Volumes: generateDataplaneDeploymentVolumes(dataplane, certSecretName),
+					Volumes:  generateDataplaneDeploymentVolumes(dataplane, certSecretName),
+					Affinity: dataplane.Spec.Deployment.Pods.Affinity,
 					Containers: []corev1.Container{{
 						Name:            consts.DataPlaneProxyContainerName,
 						VolumeMounts:    generateDataplaneDeploymentVolumeMounts(dataplane),

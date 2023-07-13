@@ -183,6 +183,72 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 				)
 			},
 		},
+		{
+			name: "with Affinity specified",
+			dataplane: &operatorv1alpha1.DataPlane{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					Kind:       "DataPlane",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "dataplane-name",
+					Namespace: "test-namespace",
+				},
+				Spec: operatorv1alpha1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
+						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+								Pods: operatorv1alpha1.PodsOptions{
+									Affinity: &corev1.Affinity{
+										NodeAffinity: &corev1.NodeAffinity{
+											RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+												NodeSelectorTerms: []corev1.NodeSelectorTerm{
+													{
+														MatchFields: []corev1.NodeSelectorRequirement{
+															{
+																Key:      "topology.kubernetes.io/zone",
+																Operator: corev1.NodeSelectorOpIn,
+																Values: []string{
+																	"europe-west-1",
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			testFunc: func(t *testing.T, deploymentSpec *appsv1.DeploymentSpec) {
+				require.Equal(t,
+					&corev1.Affinity{
+						NodeAffinity: &corev1.NodeAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+								NodeSelectorTerms: []corev1.NodeSelectorTerm{
+									{
+										MatchFields: []corev1.NodeSelectorRequirement{
+											{
+												Key:      "topology.kubernetes.io/zone",
+												Operator: corev1.NodeSelectorOpIn,
+												Values: []string{
+													"europe-west-1",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					deploymentSpec.Template.Spec.Affinity,
+				)
+			},
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
