@@ -2,7 +2,7 @@
 # Debug image
 # ------------------------------------------------------------------------------
 
-FROM golang:1.20.5 as debug
+FROM golang:1.20.6 as debug
 
 ARG TAG
 ARG NAME="Kong Gateway Operator"
