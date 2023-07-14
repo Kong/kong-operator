@@ -9,7 +9,7 @@ require (
 	gotest.tools/gotestsum v1.10.1
 	k8s.io/code-generator v0.27.3
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220715194349-88234a8fc9ad
-	sigs.k8s.io/controller-tools v0.12.0
+	sigs.k8s.io/controller-tools v0.12.1
 	sigs.k8s.io/kustomize/kustomize/v4 v4.5.7
 )
 
