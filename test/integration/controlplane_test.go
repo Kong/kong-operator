@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -43,9 +42,15 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 		Spec: operatorv1alpha1.ControlPlaneSpec{
 			ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr(consts.DefaultControlPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultControlPlaneTag),
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: consts.DefaultControlPlaneImage,
+								},
+							},
+						},
 					},
 				},
 				DataPlane: nil,
@@ -67,9 +72,15 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-						Pods: operatorv1alpha1.PodsOptions{
-							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: consts.DefaultDataPlaneImage,
+									},
+								},
+							},
 						},
 					},
 				},
@@ -144,9 +155,15 @@ func TestControlPlaneEssentials(t *testing.T) {
 			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-						Pods: operatorv1alpha1.PodsOptions{
-							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: consts.DefaultDataPlaneImage,
+									},
+								},
+							},
 						},
 					},
 				},
@@ -166,16 +183,27 @@ func TestControlPlaneEssentials(t *testing.T) {
 		Spec: operatorv1alpha1.ControlPlaneSpec{
 			ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Pods: operatorv1alpha1.PodsOptions{
-						Labels: map[string]string{
-							"label-a": "value-a",
-							"label-x": "value-x",
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"label-a": "value-a",
+								"label-x": "value-x",
+							},
 						},
-						Env: []corev1.EnvVar{
-							{Name: "TEST_ENV", Value: "test"},
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Env: []corev1.EnvVar{
+										{
+											Name:  "TEST_ENV",
+											Value: "test",
+										},
+									},
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: consts.DefaultControlPlaneImage,
+								},
+							},
 						},
-						ContainerImage: lo.ToPtr(consts.DefaultControlPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultControlPlaneTag),
 					},
 				},
 				DataPlane: &dataplane.Name,
@@ -324,9 +352,15 @@ func TestControlPlaneUpdate(t *testing.T) {
 			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-						Pods: operatorv1alpha1.PodsOptions{
-							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: consts.DefaultDataPlaneImage,
+									},
+								},
+							},
 						},
 					},
 				},
@@ -346,14 +380,20 @@ func TestControlPlaneUpdate(t *testing.T) {
 		Spec: operatorv1alpha1.ControlPlaneSpec{
 			ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Pods: operatorv1alpha1.PodsOptions{
-						Env: []corev1.EnvVar{
-							{
-								Name: "TEST_ENV", Value: "before_update",
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Env: []corev1.EnvVar{
+										{
+											Name: "TEST_ENV", Value: "before_update",
+										},
+									},
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: consts.DefaultControlPlaneImage,
+								},
 							},
 						},
-						ContainerImage: lo.ToPtr(consts.DefaultControlPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultControlPlaneTag),
 					},
 				},
 				DataPlane: &dataplane.Name,
@@ -401,7 +441,9 @@ func TestControlPlaneUpdate(t *testing.T) {
 	t.Logf("updating controlplane resource")
 	controlplane, err = controlplaneClient.Get(ctx, controlplaneName.Name, metav1.GetOptions{})
 	require.NoError(t, err)
-	controlplane.Spec.Deployment.Pods.Env = []corev1.EnvVar{
+	container = k8sutils.GetPodContainerByName(&controlplane.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+	require.NotNil(t, container)
+	container.Env = []corev1.EnvVar{
 		{
 			Name: "TEST_ENV", Value: "after_update",
 		},

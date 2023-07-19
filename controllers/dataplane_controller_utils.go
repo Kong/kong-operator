@@ -8,6 +8,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/internal/versions"
 )
 
@@ -16,21 +17,22 @@ import (
 // -----------------------------------------------------------------------------
 
 func generateDataPlaneImage(dataplane *operatorv1alpha1.DataPlane, validators ...versions.VersionValidationOption) (string, error) {
-	if dataplane.Spec.Deployment.Pods.ContainerImage != nil {
-		dataplaneImage := *dataplane.Spec.Deployment.Pods.ContainerImage
-		if dataplane.Spec.Deployment.Pods.Version != nil {
-			dataplaneImage = fmt.Sprintf("%s:%s", dataplaneImage, *dataplane.Spec.Deployment.Pods.Version)
-		}
+	if dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec == nil {
+		return consts.DefaultDataPlaneImage, nil // TODO: https://github.com/Kong/gateway-operator/issues/20
+	}
+
+	container := k8sutils.GetPodContainerByName(&dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+	if container != nil && container.Image != "" {
 		for _, v := range validators {
-			supported, err := v(dataplaneImage)
+			supported, err := v(container.Image)
 			if err != nil {
 				return "", err
 			}
 			if !supported {
-				return "", fmt.Errorf("unsupported DataPlane image %s", dataplaneImage)
+				return "", fmt.Errorf("unsupported DataPlane image %s", container.Image)
 			}
 		}
-		return dataplaneImage, nil
+		return container.Image, nil
 	}
 
 	if relatedKongImage := os.Getenv("RELATED_IMAGE_KONG"); relatedKongImage != "" {
@@ -75,6 +77,10 @@ func addAnnotationsForDataplaneProxyService(obj client.Object, dataplane operato
 
 func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1alpha1.DataPlaneOptions) bool {
 	// TODO: Doesn't take .Rollout field into account.
-	return deploymentOptionsDeepEqual(&spec1.Deployment.DeploymentOptions, &spec2.Deployment.DeploymentOptions) &&
-		servicesOptionsDeepEqual(&spec1.Network, &spec2.Network)
+	if !deploymentOptionsDeepEqual(&spec1.Deployment.DeploymentOptions, &spec2.Deployment.DeploymentOptions) ||
+		!servicesOptionsDeepEqual(&spec1.Network, &spec2.Network) {
+		return false
+	}
+
+	return true
 }

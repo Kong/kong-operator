@@ -1,6 +1,7 @@
 package versions
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -27,15 +28,17 @@ var (
 	semverKongEnterpriseRE         = regexp.MustCompile(`^([0-9]+\.[0-9]+)(\.[0-9]+)?(\.[0-9]+)?(-.+)?$`)
 )
 
-// versionFromImage takes a container image in the format "<image>:<version>"
+var ErrExpectedSemverVersion = errors.New(`expected "<image>:<tag>" format`)
+
+// FromImage takes a container image in the format "<image>:<version>"
 // and returns a semver instance of the version.
 // It supports semver with the extension of enterprise segment, being an additional
 // forth segment on top the standard 3 segment supported by semver.
 // This also supports flavour suffixes which can be supplied after "-" character.
-func versionFromImage(image string) (semver.Version, error) {
+func FromImage(image string) (semver.Version, error) {
 	splitImage := strings.Split(image, ":")
 	if len(splitImage) != 2 {
-		return semver.Version{}, fmt.Errorf(`expected "<image>:<tag>" format, got: %s`, image)
+		return semver.Version{}, fmt.Errorf(`%w, got: %s`, ErrExpectedSemverVersion, image)
 	}
 
 	rawVersion := strings.TrimPrefix(splitImage[1], "v")

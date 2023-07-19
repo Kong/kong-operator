@@ -12,19 +12,19 @@ func TestResourceRequirementsEqual(t *testing.T) {
 	tests := []struct {
 		name string
 		a    corev1.ResourceRequirements
-		b    *corev1.ResourceRequirements
+		b    corev1.ResourceRequirements
 		want bool
 	}{
 		{
-			name: "empty requirements are equal to nil",
+			name: "empty requirements are equal",
 			a:    corev1.ResourceRequirements{},
-			b:    nil,
+			b:    corev1.ResourceRequirements{},
 			want: true,
 		},
 		{
 			name: "nil requirements are not equal requirements with CPU limit",
 			a:    corev1.ResourceRequirements{},
-			b: &corev1.ResourceRequirements{
+			b: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU: resource.MustParse(DefaultControlPlaneCPURequest),
 				},
@@ -38,7 +38,7 @@ func TestResourceRequirementsEqual(t *testing.T) {
 					corev1.ResourceCPU: resource.MustParse(DefaultControlPlaneCPURequest),
 				},
 			},
-			b:    nil,
+			b:    corev1.ResourceRequirements{},
 			want: false,
 		},
 		{
@@ -53,7 +53,7 @@ func TestResourceRequirementsEqual(t *testing.T) {
 					corev1.ResourceMemory: resource.MustParse(DefaultControlPlaneMemoryLimit),
 				},
 			},
-			b: &corev1.ResourceRequirements{
+			b: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse(DefaultControlPlaneCPURequest),
 					corev1.ResourceMemory: resource.MustParse(DefaultControlPlaneMemoryRequest),

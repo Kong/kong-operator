@@ -6,15 +6,21 @@ spec:
   dataplane: dataplane-example
   gatewayClass: kong
   deployment:
-    pods:
-      containerImage: kong/kubernetes-ingress-controller
-      version: "2.10"
-      labels:
-        controlplane-pod-label: example
-    resources:
-      requests:
-        memory: "64Mi"
-        cpu: "250m"
-      limits:
-        memory: "1024Mi"
-        cpu: "1000m"
+    podTemplateSpec:
+      metadata:
+        labels:
+          controlplane-pod-label: example
+      spec:
+        containers:
+        - name: controller
+          image: kong/kubernetes-ingress-controller:2.10
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 3
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"

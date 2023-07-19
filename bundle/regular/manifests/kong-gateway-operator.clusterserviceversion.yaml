@@ -13,21 +13,33 @@ metadata:
           "spec": {
             "dataplane": "dataplane-example",
             "deployment": {
-              "pods": {
-                "containerImage": "kong/kubernetes-ingress-controller",
-                "labels": {
-                  "controlplane-pod-label": "example"
+              "podTemplateSpec": {
+                "metadata": {
+                  "labels": {
+                    "controlplane-pod-label": "example"
+                  }
                 },
-                "version": "2.10"
-              },
-              "resources": {
-                "limits": {
-                  "cpu": "1000m",
-                  "memory": "1024Mi"
-                },
-                "requests": {
-                  "cpu": "250m",
-                  "memory": "64Mi"
+                "spec": {
+                  "containers": [
+                    {
+                      "image": "kong/kubernetes-ingress-controller:2.10",
+                      "name": "controller",
+                      "readinessProbe": {
+                        "initialDelaySeconds": 1,
+                        "periodSeconds": 3
+                      },
+                      "resources": {
+                        "limits": {
+                          "cpu": "1000m",
+                          "memory": "1024Mi"
+                        },
+                        "requests": {
+                          "cpu": "250m",
+                          "memory": "64Mi"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             },
@@ -42,28 +54,43 @@ metadata:
           },
           "spec": {
             "deployment": {
-              "pods": {
-                "containerImage": "kong",
-                "env": [
-                  {
-                    "name": "KONG_LOG_LEVEL",
-                    "value": "debug"
-                  }
-                ],
-                "labels": {
-                  "dataplane-pod-label": "example"
-                },
-                "resources": {
-                  "limits": {
-                    "cpu": "1000m",
-                    "memory": "1024Mi"
+              "podTemplateSpec": {
+                "metadata": {
+                  "annotations": {
+                    "dataplane-pod-annotation": "example"
                   },
-                  "requests": {
-                    "cpu": "250m",
-                    "memory": "64Mi"
+                  "labels": {
+                    "dataplane-pod-label": "example"
                   }
                 },
-                "version": "3.3"
+                "spec": {
+                  "containers": [
+                    {
+                      "env": [
+                        {
+                          "name": "KONG_LOG_LEVEL",
+                          "value": "debug"
+                        }
+                      ],
+                      "image": "kong:3.3",
+                      "name": "proxy",
+                      "readinessProbe": {
+                        "initialDelaySeconds": 1,
+                        "periodSeconds": 1
+                      },
+                      "resources": {
+                        "limits": {
+                          "cpu": "1000m",
+                          "memory": "1024Mi"
+                        },
+                        "requests": {
+                          "cpu": "250m",
+                          "memory": "64Mi"
+                        }
+                      }
+                    }
+                  ]
+                }
               }
             },
             "network": {
@@ -87,21 +114,46 @@ metadata:
           "spec": {
             "controlPlaneOptions": {
               "deployment": {
-                "pods": {
-                  "env": [
-                    {
-                      "name": "CONTROLLER_LOG_LEVEL",
-                      "value": "debug"
-                    }
-                  ]
+                "podTemplateSpec": {
+                  "spec": {
+                    "containers": [
+                      {
+                        "env": [
+                          {
+                            "name": "CONTROLLER_LOG_LEVEL",
+                            "value": "debug"
+                          }
+                        ],
+                        "name": "controller"
+                      }
+                    ]
+                  }
                 }
               }
             },
             "dataPlaneOptions": {
               "deployment": {
-                "pods": {
-                  "containerImage": "kong",
-                  "version": "3.3"
+                "podTemplateSpec": {
+                  "metadata": {
+                    "annotations": {
+                      "dataplane-pod-annotation": "example"
+                    },
+                    "labels": {
+                      "dataplane-pod-label": "example"
+                    }
+                  },
+                  "spec": {
+                    "containers": [
+                      {
+                        "image": "kong:3.3",
+                        "name": "proxy",
+                        "readinessProbe": {
+                          "initialDelaySeconds": 1,
+                          "periodSeconds": 1
+                        }
+                      }
+                    ]
+                  }
                 }
               },
               "network": {

@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 )
 
 func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
@@ -39,13 +40,13 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 				require.Len(t, deploymentSpec.Template.Spec.Containers, 1)
 				container := deploymentSpec.Template.Spec.Containers[0]
 				expectedResources := *DefaultDataPlaneResources()
-				if !ResourceRequirementsEqual(expectedResources, &container.Resources) {
+				if !ResourceRequirementsEqual(expectedResources, container.Resources) {
 					require.Equal(t, expectedResources, container.Resources)
 				}
 			},
 		},
 		{
-			name: "with CPU resources specified",
+			name: "with CPU resources specified we get merged resources",
 			dataplane: &operatorv1alpha1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway-operator.konghq.com/v1alpha1",
@@ -59,14 +60,19 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Resources: &corev1.ResourceRequirements{
-										Requests: corev1.ResourceList{
-											corev1.ResourceCPU: resource.MustParse("100m"),
-										},
-										Limits: corev1.ResourceList{
-											corev1.ResourceCPU: resource.MustParse("1"),
-										},
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{{
+											Name: consts.DataPlaneProxyContainerName,
+											Resources: corev1.ResourceRequirements{
+												Requests: corev1.ResourceList{
+													corev1.ResourceCPU: resource.MustParse("100m"),
+												},
+												Limits: corev1.ResourceList{
+													corev1.ResourceCPU: resource.MustParse("1000m"),
+												},
+											},
+										}},
 									},
 								},
 							},
@@ -77,17 +83,13 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 			testFunc: func(t *testing.T, deploymentSpec *appsv1.DeploymentSpec) {
 				require.Len(t, deploymentSpec.Template.Spec.Containers, 1)
 				container := deploymentSpec.Template.Spec.Containers[0]
-				expectedResources := corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("100m"),
-						corev1.ResourceMemory: resource.MustParse(DefaultDataPlaneMemoryRequest),
-					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("1"),
-						corev1.ResourceMemory: resource.MustParse(DefaultDataPlaneMemoryLimit),
-					},
-				}
-				if !ResourceRequirementsEqual(expectedResources, &container.Resources) {
+				expectedResources := *DefaultDataPlaneResources()
+
+				// templated data gets merged on top of the defaults, verify that
+				expectedResources.Requests["cpu"] = resource.MustParse("100m")
+				expectedResources.Limits["cpu"] = resource.MustParse("1000m")
+
+				if !ResourceRequirementsEqual(expectedResources, container.Resources) {
 					require.Equal(t, expectedResources, container.Resources)
 				}
 			},
@@ -107,14 +109,19 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Resources: &corev1.ResourceRequirements{
-										Requests: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("256Mi"),
-										},
-										Limits: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("1024Mi"),
-										},
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{{
+											Name: consts.DataPlaneProxyContainerName,
+											Resources: corev1.ResourceRequirements{
+												Requests: corev1.ResourceList{
+													corev1.ResourceMemory: resource.MustParse("2Gi"),
+												},
+												Limits: corev1.ResourceList{
+													corev1.ResourceMemory: resource.MustParse("4Gi"),
+												},
+											},
+										}},
 									},
 								},
 							},
@@ -125,21 +132,20 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 			testFunc: func(t *testing.T, deploymentSpec *appsv1.DeploymentSpec) {
 				require.Len(t, deploymentSpec.Template.Spec.Containers, 1)
 				container := deploymentSpec.Template.Spec.Containers[0]
-				expectedResources := corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse(DefaultDataPlaneCPURequest),
-						corev1.ResourceMemory: resource.MustParse("256Mi"),
-					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse(DefaultDataPlaneCPULimit),
-						corev1.ResourceMemory: resource.MustParse("1024Mi"),
-					},
-				}
-				if !ResourceRequirementsEqual(expectedResources, &container.Resources) {
+				expectedResources := *DefaultDataPlaneResources()
+
+				// templated data gets merged on top of the defaults, verify that
+				expectedResources.Requests["memory"] = resource.MustParse("2Gi")
+				expectedResources.Limits["memory"] = resource.MustParse("4Gi")
+
+				if !ResourceRequirementsEqual(expectedResources, container.Resources) {
 					require.Equal(t, expectedResources, container.Resources)
 				}
 			},
 		},
+		// NOTE: Currently, the generation code doesn't code doesn't apply any
+		// patches. This is now handled in &StrategicMergePatchPodTemplateSpec()
+		// hence the tests here are mostly unnecessary. Leaving one as a sanity check.
 		{
 			name: "with Pod labels specified",
 			dataplane: &operatorv1alpha1.DataPlane{
@@ -155,17 +161,23 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Resources: &corev1.ResourceRequirements{
-										Requests: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("256Mi"),
-										},
-										Limits: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("1024Mi"),
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									ObjectMeta: metav1.ObjectMeta{
+										Labels: map[string]string{
+											"label-a": "value-a",
 										},
 									},
-									Labels: map[string]string{
-										"label-a": "value-a",
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{{
+											Resources: corev1.ResourceRequirements{
+												Requests: corev1.ResourceList{
+													corev1.ResourceMemory: resource.MustParse("256Mi"),
+												},
+												Limits: corev1.ResourceList{
+													corev1.ResourceMemory: resource.MustParse("1024Mi"),
+												},
+											},
+										}},
 									},
 								},
 							},
@@ -198,18 +210,20 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Affinity: &corev1.Affinity{
-										NodeAffinity: &corev1.NodeAffinity{
-											RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-												NodeSelectorTerms: []corev1.NodeSelectorTerm{
-													{
-														MatchFields: []corev1.NodeSelectorRequirement{
-															{
-																Key:      "topology.kubernetes.io/zone",
-																Operator: corev1.NodeSelectorOpIn,
-																Values: []string{
-																	"europe-west-1",
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Affinity: &corev1.Affinity{
+											NodeAffinity: &corev1.NodeAffinity{
+												RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+													NodeSelectorTerms: []corev1.NodeSelectorTerm{
+														{
+															MatchFields: []corev1.NodeSelectorRequirement{
+																{
+																	Key:      "topology.kubernetes.io/zone",
+																	Operator: corev1.NodeSelectorOpIn,
+																	Values: []string{
+																		"europe-west-1",
+																	},
 																},
 															},
 														},
@@ -225,19 +239,17 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 				},
 			},
 			testFunc: func(t *testing.T, deploymentSpec *appsv1.DeploymentSpec) {
-				require.Equal(t,
-					&corev1.Affinity{
-						NodeAffinity: &corev1.NodeAffinity{
-							RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-								NodeSelectorTerms: []corev1.NodeSelectorTerm{
-									{
-										MatchFields: []corev1.NodeSelectorRequirement{
-											{
-												Key:      "topology.kubernetes.io/zone",
-												Operator: corev1.NodeSelectorOpIn,
-												Values: []string{
-													"europe-west-1",
-												},
+				expected := &corev1.Affinity{
+					NodeAffinity: &corev1.NodeAffinity{
+						RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+							NodeSelectorTerms: []corev1.NodeSelectorTerm{
+								{
+									MatchFields: []corev1.NodeSelectorRequirement{
+										{
+											Key:      "topology.kubernetes.io/zone",
+											Operator: corev1.NodeSelectorOpIn,
+											Values: []string{
+												"europe-west-1",
 											},
 										},
 									},
@@ -245,15 +257,17 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 							},
 						},
 					},
-					deploymentSpec.Template.Spec.Affinity,
-				)
+				}
+				actual := deploymentSpec.Template.Spec.Affinity
+				require.Equal(t, expected, actual)
 			},
 		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			deployment := GenerateNewDeploymentForDataPlane(tt.dataplane, dataplaneImage, certSecretName)
+			deployment, err := GenerateNewDeploymentForDataPlane(tt.dataplane, dataplaneImage, certSecretName)
+			require.NoError(t, err)
 			tt.testFunc(t, &deployment.Spec)
 		})
 	}

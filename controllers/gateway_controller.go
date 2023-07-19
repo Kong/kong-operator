@@ -536,11 +536,26 @@ func (r *GatewayReconciler) provisionControlPlane(
 // setControlPlaneOptionsDefaults sets the default ControlPlane options not overriding
 // what's been provided only filling in those fields that were unset or empty.
 func setControlPlaneOptionsDefaults(opts *operatorv1alpha1.ControlPlaneOptions) {
-	if opts.Deployment.Pods.ContainerImage == nil || len(*opts.Deployment.Pods.ContainerImage) == 0 {
-		opts.Deployment.Pods.ContainerImage = lo.ToPtr(consts.DefaultControlPlaneBaseImage)
+	if opts.Deployment.PodTemplateSpec == nil {
+		opts.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}
-	if opts.Deployment.Pods.Version == nil || len(*opts.Deployment.Pods.Version) == 0 {
-		opts.Deployment.Pods.Version = lo.ToPtr(consts.DefaultControlPlaneTag)
+
+	container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+	if container != nil {
+		if container.Image == "" {
+			container.Image = consts.DefaultControlPlaneImage
+		}
+	} else {
+		// Because we currently require image to be specified for ControlPlanes
+		// we need to add it here. After #20 gets resolved this won't be needed
+		// anymore.
+		// Related:
+		// - https://github.com/Kong/gateway-operator/issues/20
+		// - https://github.com/Kong/gateway-operator/issues/754
+		opts.Deployment.PodTemplateSpec.Spec.Containers = append(opts.Deployment.PodTemplateSpec.Spec.Containers, corev1.Container{
+			Name:  consts.ControlPlaneControllerContainerName,
+			Image: consts.DefaultControlPlaneImage,
+		})
 	}
 
 	if opts.Deployment.Replicas == nil {
@@ -551,11 +566,26 @@ func setControlPlaneOptionsDefaults(opts *operatorv1alpha1.ControlPlaneOptions) 
 // setDataPlaneOptionsDefaults sets the default DataPlane options not overriding
 // what's been provided only filling in those fields that were unset or empty.
 func setDataPlaneOptionsDefaults(opts *operatorv1alpha1.DataPlaneOptions) {
-	if opts.Deployment.Pods.ContainerImage == nil || len(*opts.Deployment.Pods.ContainerImage) == 0 {
-		opts.Deployment.Pods.ContainerImage = lo.ToPtr(consts.DefaultDataPlaneBaseImage)
+	if opts.Deployment.PodTemplateSpec == nil {
+		opts.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}
-	if opts.Deployment.Pods.Version == nil || len(*opts.Deployment.Pods.Version) == 0 {
-		opts.Deployment.Pods.Version = lo.ToPtr(consts.DefaultDataPlaneTag)
+
+	container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+	if container != nil {
+		if container.Image == "" {
+			container.Image = consts.DefaultDataPlaneImage
+		}
+	} else {
+		// Because we currently require image to be specified for DataPlanes
+		// we need to add it here. After #20 gets resolved this won't be needed
+		// anymore.
+		// Related:
+		// - https://github.com/Kong/gateway-operator/issues/20
+		// - https://github.com/Kong/gateway-operator/issues/754
+		opts.Deployment.PodTemplateSpec.Spec.Containers = append(opts.Deployment.PodTemplateSpec.Spec.Containers, corev1.Container{
+			Name:  consts.DataPlaneProxyContainerName,
+			Image: consts.DefaultDataPlaneImage,
+		})
 	}
 
 	if opts.Deployment.Replicas == nil {

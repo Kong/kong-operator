@@ -17,7 +17,7 @@ var minimumDataPlaneVersion = semver.MustParse("3.0.0")
 // The image is expected to follow the format "<image>:<tag>" and only supports
 // a provided "<tag>" if it is a semver compatible version.
 func IsDataPlaneImageVersionSupported(image string) (bool, error) {
-	imageVersion, err := versionFromImage(image)
+	imageVersion, err := FromImage(image)
 	if err != nil {
 		return false, err
 	}

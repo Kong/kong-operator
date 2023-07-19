@@ -11,7 +11,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
-	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -54,8 +54,21 @@ func setControlPlaneDefaults(
 			FieldPath:  "metadata.namespace",
 		},
 	}
-	if !reflect.DeepEqual(envSourceMetadataNamespace, envVarSourceByName(spec.Deployment.Pods.Env, "POD_NAMESPACE")) {
-		spec.Deployment.Pods.Env = updateEnvSource(spec.Deployment.Pods.Env, "POD_NAMESPACE", envSourceMetadataNamespace)
+	if spec.Deployment.PodTemplateSpec == nil {
+		spec.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
+	}
+
+	podSpec := &spec.Deployment.PodTemplateSpec.Spec
+	container := k8sutils.GetPodContainerByName(podSpec, consts.ControlPlaneControllerContainerName)
+	if container == nil {
+		container = &corev1.Container{
+			Name: consts.ControlPlaneControllerContainerName,
+		}
+		podSpec.Containers = append(podSpec.Containers, *container)
+	}
+
+	if !reflect.DeepEqual(envSourceMetadataNamespace, envVarSourceByName(container.Env, "POD_NAMESPACE")) {
+		container.Env = updateEnvSource(container.Env, "POD_NAMESPACE", envSourceMetadataNamespace)
 		changed = true
 	}
 
@@ -66,21 +79,21 @@ func setControlPlaneDefaults(
 			FieldPath:  "metadata.name",
 		},
 	}
-	if !reflect.DeepEqual(envSourceMetadataName, envVarSourceByName(spec.Deployment.Pods.Env, "POD_NAME")) {
-		spec.Deployment.Pods.Env = updateEnvSource(spec.Deployment.Pods.Env, "POD_NAME", envSourceMetadataName)
+	if !reflect.DeepEqual(envSourceMetadataName, envVarSourceByName(container.Env, "POD_NAME")) {
+		container.Env = updateEnvSource(container.Env, "POD_NAME", envSourceMetadataName)
 		changed = true
 	}
 
-	if envValueByName(spec.Deployment.Pods.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME") != vars.ControllerName() {
-		spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME", vars.ControllerName())
+	if envValueByName(container.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME") != vars.ControllerName() {
+		container.Env = updateEnv(container.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME", vars.ControllerName())
 		changed = true
 	}
 
 	if args.namespace != "" && args.dataplaneProxyServiceName != "" {
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_PUBLISH_SERVICE"]; !isOverrideDisabled {
 			publishService := controllerPublishService(args.dataplaneProxyServiceName, args.namespace)
-			if envValueByName(spec.Deployment.Pods.Env, "CONTROLLER_PUBLISH_SERVICE") != publishService {
-				spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_PUBLISH_SERVICE", controllerPublishService(args.dataplaneProxyServiceName, args.namespace))
+			if envValueByName(container.Env, "CONTROLLER_PUBLISH_SERVICE") != publishService {
+				container.Env = updateEnv(container.Env, "CONTROLLER_PUBLISH_SERVICE", controllerPublishService(args.dataplaneProxyServiceName, args.namespace))
 				changed = true
 			}
 		}
@@ -89,21 +102,21 @@ func setControlPlaneDefaults(
 	if args.dataPlanePodIP != "" && args.dataplaneAdminServiceName != "" {
 		adminURL := controllerKongAdminURL(args.dataPlanePodIP, args.dataplaneAdminServiceName, args.namespace)
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_URL"]; !isOverrideDisabled {
-			if envValueByName(spec.Deployment.Pods.Env, "CONTROLLER_KONG_ADMIN_URL") != adminURL {
-				spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_KONG_ADMIN_URL", adminURL)
+			if envValueByName(container.Env, "CONTROLLER_KONG_ADMIN_URL") != adminURL {
+				container.Env = updateEnv(container.Env, "CONTROLLER_KONG_ADMIN_URL", adminURL)
 				changed = true
 			}
 		}
 	}
 
 	if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE"]; !isOverrideDisabled {
-		spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE", "/var/cluster-certificate/tls.crt")
+		container.Env = updateEnv(container.Env, "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE", "/var/cluster-certificate/tls.crt")
 	}
 	if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE"]; !isOverrideDisabled {
-		spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE", "/var/cluster-certificate/tls.key")
+		container.Env = updateEnv(container.Env, "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE", "/var/cluster-certificate/tls.key")
 	}
 	if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_CA_CERT_FILE"]; !isOverrideDisabled {
-		spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_KONG_ADMIN_CA_CERT_FILE", "/var/cluster-certificate/ca.crt")
+		container.Env = updateEnv(container.Env, "CONTROLLER_KONG_ADMIN_CA_CERT_FILE", "/var/cluster-certificate/ca.crt")
 	}
 
 	return changed
@@ -117,15 +130,16 @@ func setControlPlaneEnvOnDataPlaneChange(
 	var changed bool
 
 	dataplaneIsSet := spec.DataPlane != nil && *spec.DataPlane != ""
+	container := k8sutils.GetPodContainerByName(&spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
 	if dataplaneIsSet {
 		newPublishServiceValue := controllerPublishService(dataplaneServiceName, namespace)
-		if envValueByName(spec.Deployment.Pods.Env, "CONTROLLER_PUBLISH_SERVICE") != newPublishServiceValue {
-			spec.Deployment.Pods.Env = updateEnv(spec.Deployment.Pods.Env, "CONTROLLER_PUBLISH_SERVICE", newPublishServiceValue)
+		if envValueByName(container.Env, "CONTROLLER_PUBLISH_SERVICE") != newPublishServiceValue {
+			container.Env = updateEnv(container.Env, "CONTROLLER_PUBLISH_SERVICE", newPublishServiceValue)
 			changed = true
 		}
 	} else {
-		if envValueByName(spec.Deployment.Pods.Env, "CONTROLLER_PUBLISH_SERVICE") != "" {
-			spec.Deployment.Pods.Env = rejectEnvByName(spec.Deployment.Pods.Env, "CONTROLLER_PUBLISH_SERVICE")
+		if envValueByName(container.Env, "CONTROLLER_PUBLISH_SERVICE") != "" {
+			container.Env = rejectEnvByName(container.Env, "CONTROLLER_PUBLISH_SERVICE")
 			changed = true
 		}
 	}
@@ -135,7 +149,7 @@ func setControlPlaneEnvOnDataPlaneChange(
 
 func controllerKongAdminURL(podIP, adminServiceName, podNamespace string) string {
 	return fmt.Sprintf("https://%s.%s.%s.svc:%d",
-		strings.ReplaceAll(podIP, ".", "-"), adminServiceName, podNamespace, dataplaneutils.DefaultKongAdminPort)
+		strings.ReplaceAll(podIP, ".", "-"), adminServiceName, podNamespace, consts.DataPlaneAdminAPIPort)
 }
 
 func controllerPublishService(dataplaneName, dataplaneNamespace string) string {
@@ -210,21 +224,18 @@ func rejectEnvByName(envVars []corev1.EnvVar, name string) []corev1.EnvVar {
 }
 
 func generateControlPlaneImage(opts *operatorv1alpha1.ControlPlaneOptions, validators ...versions.VersionValidationOption) (string, error) {
-	if opts.Deployment.Pods.ContainerImage != nil {
-		controlplaneImage := *opts.Deployment.Pods.ContainerImage
-		if opts.Deployment.Pods.Version != nil {
-			controlplaneImage = fmt.Sprintf("%s:%s", controlplaneImage, *opts.Deployment.Pods.Version)
-		}
+	container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+	if container.Image != "" {
 		for _, v := range validators {
-			supported, err := v(controlplaneImage)
+			supported, err := v(container.Image)
 			if err != nil {
 				return "", err
 			}
 			if !supported {
-				return "", fmt.Errorf("unsupported ControlPlane image %s", controlplaneImage)
+				return "", fmt.Errorf("unsupported ControlPlane image %s", container.Image)
 			}
 		}
-		return controlplaneImage, nil
+		return container.Image, nil
 	}
 
 	if relatedKongControllerImage := os.Getenv("RELATED_IMAGE_KONG_CONTROLLER"); relatedKongControllerImage != "" {
@@ -254,11 +265,8 @@ func addLabelForControlPlane(obj client.Object) {
 // -----------------------------------------------------------------------------
 
 func controlplaneSpecDeepEqual(spec1, spec2 *operatorv1alpha1.ControlPlaneOptions, envVarsToIgnore ...string) bool {
-	if !deploymentOptionsDeepEqual(&spec1.Deployment, &spec2.Deployment, envVarsToIgnore...) {
-		return false
-	}
-
-	if !reflect.DeepEqual(spec1.DataPlane, spec2.DataPlane) {
+	if !deploymentOptionsDeepEqual(&spec1.Deployment, &spec2.Deployment, envVarsToIgnore...) ||
+		!reflect.DeepEqual(spec1.DataPlane, spec2.DataPlane) {
 		return false
 	}
 

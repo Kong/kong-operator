@@ -264,7 +264,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowMetricsIngress.Rule)
 
 	t.Log("verifying DataPlane's NetworkPolicies get updated after customizing kong proxy listen port through GatewayConfiguration")
-	setGatewayConfigurationEnvProxyPort(gatewayConfiguration, 8005, 8999)
+	setGatewayConfigurationEnvProxyPort(t, gatewayConfiguration, 8005, 8999)
 	gatewayConfiguration, err = clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Update(ctx, gatewayConfiguration, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
@@ -284,7 +284,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 		testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying DataPlane's NetworkPolicies ingress rules get updated with configured admin listen port")
-	setGatewayConfigurationEnvAdminAPIPort(gatewayConfiguration, 8555)
+	setGatewayConfigurationEnvAdminAPIPort(t, gatewayConfiguration, 8555)
 	_, err = clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Update(ctx, gatewayConfiguration, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	var expectedUpdatedLimitedAdminAPI networkPolicyIngressRuleDecorator
@@ -313,17 +313,25 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	require.Eventually(t, testutils.Not(testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients)), time.Minute, time.Second)
 }
 
-func setGatewayConfigurationEnvProxyPort(gatewayConfiguration *operatorv1alpha1.GatewayConfiguration, proxyPort int, proxySSLPort int) {
+func setGatewayConfigurationEnvProxyPort(t *testing.T, gatewayConfiguration *operatorv1alpha1.GatewayConfiguration, proxyPort int, proxySSLPort int) {
+	t.Helper()
+
 	dpOptions := gatewayConfiguration.Spec.DataPlaneOptions
 	if dpOptions == nil {
 		dpOptions = &operatorv1alpha1.DataPlaneOptions{}
 	}
+	if dpOptions.Deployment.PodTemplateSpec == nil {
+		dpOptions.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
+	}
 
-	dpOptions.Deployment.Pods.Env = setEnvValueByName(dpOptions.Deployment.Pods.Env,
+	container := k8sutils.GetPodContainerByName(&dpOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+	require.NotNil(t, container)
+
+	container.Env = setEnvValueByName(container.Env,
 		"KONG_PROXY_LISTEN",
 		fmt.Sprintf("0.0.0.0:%d reuseport backlog=16384, 0.0.0.0:%d http2 ssl reuseport backlog=16384", proxyPort, proxySSLPort),
 	)
-	dpOptions.Deployment.Pods.Env = setEnvValueByName(dpOptions.Deployment.Pods.Env,
+	container.Env = setEnvValueByName(container.Env,
 		"KONG_PORT_MAPS",
 		fmt.Sprintf("80:%d, 443:%d", proxyPort, proxySSLPort),
 	)
@@ -331,13 +339,18 @@ func setGatewayConfigurationEnvProxyPort(gatewayConfiguration *operatorv1alpha1.
 	gatewayConfiguration.Spec.DataPlaneOptions = dpOptions
 }
 
-func setGatewayConfigurationEnvAdminAPIPort(gatewayConfiguration *operatorv1alpha1.GatewayConfiguration, adminAPIPort int) {
+func setGatewayConfigurationEnvAdminAPIPort(t *testing.T, gatewayConfiguration *operatorv1alpha1.GatewayConfiguration, adminAPIPort int) {
+	t.Helper()
+
 	dpOptions := gatewayConfiguration.Spec.DataPlaneOptions
 	if dpOptions == nil {
 		dpOptions = &operatorv1alpha1.DataPlaneOptions{}
 	}
 
-	dpOptions.Deployment.Pods.Env = setEnvValueByName(dpOptions.Deployment.Pods.Env,
+	container := k8sutils.GetPodContainerByName(&dpOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+	require.NotNil(t, container)
+
+	container.Env = setEnvValueByName(container.Env,
 		"KONG_ADMIN_LISTEN",
 		fmt.Sprintf("0.0.0.0:%d ssl reuseport backlog=16384", adminAPIPort),
 	)

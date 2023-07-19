@@ -360,9 +360,15 @@ func Test_setControlPlaneOptionsDefaults(t *testing.T) {
 			expected: operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					Replicas: lo.ToPtr(int32(1)),
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr(consts.DefaultControlPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultControlPlaneTag),
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: consts.DefaultControlPlaneImage,
+								},
+							},
+						},
 					},
 				},
 			},
@@ -377,9 +383,15 @@ func Test_setControlPlaneOptionsDefaults(t *testing.T) {
 			expected: operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					Replicas: lo.ToPtr(int32(10)),
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr(consts.DefaultControlPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultControlPlaneTag),
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: consts.DefaultControlPlaneImage,
+								},
+							},
+						},
 					},
 				},
 			},
@@ -394,9 +406,15 @@ func Test_setControlPlaneOptionsDefaults(t *testing.T) {
 			expected: operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					Replicas: lo.ToPtr(int32(1)),
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr(consts.DefaultControlPlaneBaseImage),
-						Version:        lo.ToPtr(consts.DefaultControlPlaneTag),
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: consts.DefaultControlPlaneImage,
+								},
+							},
+						},
 					},
 				},
 			},
@@ -406,18 +424,30 @@ func Test_setControlPlaneOptionsDefaults(t *testing.T) {
 			input: operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					Replicas: lo.ToPtr(int32(10)),
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr("image"),
-						Version:        lo.ToPtr("version"),
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: "image:v1.0",
+								},
+							},
+						},
 					},
 				},
 			},
 			expected: operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					Replicas: lo.ToPtr(int32(10)),
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: lo.ToPtr("image"),
-						Version:        lo.ToPtr("version"),
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: "image:v1.0",
+								},
+							},
+						},
 					},
 				},
 			},
@@ -446,9 +476,15 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
 						Replicas: lo.ToPtr(int32(1)),
-						Pods: operatorv1alpha1.PodsOptions{
-							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: consts.DefaultDataPlaneImage,
+									},
+								},
+							},
 						},
 					},
 				},
@@ -467,9 +503,15 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
 						Replicas: lo.ToPtr(int32(10)),
-						Pods: operatorv1alpha1.PodsOptions{
-							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: consts.DefaultDataPlaneImage,
+									},
+								},
+							},
 						},
 					},
 				},
@@ -488,9 +530,15 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
 						Replicas: lo.ToPtr(int32(1)),
-						Pods: operatorv1alpha1.PodsOptions{
-							ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-							Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: consts.DefaultDataPlaneImage,
+									},
+								},
+							},
 						},
 					},
 				},
@@ -502,9 +550,15 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
 						Replicas: lo.ToPtr(int32(10)),
-						Pods: operatorv1alpha1.PodsOptions{
-							ContainerImage: lo.ToPtr("image"),
-							Version:        lo.ToPtr("version"),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: "image:v1",
+									},
+								},
+							},
 						},
 					},
 				},
@@ -513,9 +567,15 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
 						Replicas: lo.ToPtr(int32(10)),
-						Pods: operatorv1alpha1.PodsOptions{
-							ContainerImage: lo.ToPtr("image"),
-							Version:        lo.ToPtr("version"),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: "image:v1",
+									},
+								},
+							},
 						},
 					},
 				},

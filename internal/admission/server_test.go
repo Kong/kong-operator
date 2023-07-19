@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -78,15 +77,21 @@ func TestHandleDataplaneValidation(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Env: []corev1.EnvVar{
-										{
-											Name:  consts.EnvVarKongDatabase,
-											Value: "off",
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+												Env: []corev1.EnvVar{
+													{
+														Name:  consts.EnvVarKongDatabase,
+														Value: "off",
+													},
+												},
+												Image: consts.DefaultDataPlaneImage,
+											},
 										},
 									},
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
 							},
 						},
@@ -106,15 +111,21 @@ func TestHandleDataplaneValidation(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Env: []corev1.EnvVar{
-										{
-											Name:  consts.EnvVarKongDatabase,
-											Value: "",
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+												Env: []corev1.EnvVar{
+													{
+														Name:  consts.EnvVarKongDatabase,
+														Value: "",
+													},
+												},
+												Image: consts.DefaultDataPlaneImage,
+											},
 										},
 									},
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
 							},
 						},
@@ -134,15 +145,21 @@ func TestHandleDataplaneValidation(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Env: []corev1.EnvVar{
-										{
-											Name:  consts.EnvVarKongDatabase,
-											Value: "postgres",
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+												Env: []corev1.EnvVar{
+													{
+														Name:  consts.EnvVarKongDatabase,
+														Value: "postgres",
+													},
+												},
+												Image: consts.DefaultDataPlaneImage,
+											},
 										},
 									},
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
 							},
 						},
@@ -150,7 +167,7 @@ func TestHandleDataplaneValidation(t *testing.T) {
 				},
 			},
 			hasError: true,
-			errMsg:   "database backend postgres of dataplane not supported currently",
+			errMsg:   "database backend postgres of DataPlane not supported currently",
 		},
 		{
 			name: "validate_error:database=xxx",
@@ -163,15 +180,21 @@ func TestHandleDataplaneValidation(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Env: []corev1.EnvVar{
-										{
-											Name:  consts.EnvVarKongDatabase,
-											Value: "xxx",
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+												Env: []corev1.EnvVar{
+													{
+														Name:  consts.EnvVarKongDatabase,
+														Value: "xxx",
+													},
+												},
+												Image: consts.DefaultDataPlaneImage,
+											},
 										},
 									},
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
 							},
 						},
@@ -179,7 +202,7 @@ func TestHandleDataplaneValidation(t *testing.T) {
 				},
 			},
 			hasError: true,
-			errMsg:   "database backend xxx of dataplane not supported currently",
+			errMsg:   "database backend xxx of DataPlane not supported currently",
 		},
 		{
 			name: "validate_ok:db=off_in_configmap",
@@ -192,20 +215,26 @@ func TestHandleDataplaneValidation(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Env: []corev1.EnvVar{
-										{
-											Name: consts.EnvVarKongDatabase,
-											ValueFrom: &corev1.EnvVarSource{
-												ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-													LocalObjectReference: corev1.LocalObjectReference{Name: "test-cm"},
-													Key:                  "off",
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+												Env: []corev1.EnvVar{
+													{
+														Name: consts.EnvVarKongDatabase,
+														ValueFrom: &corev1.EnvVarSource{
+															ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+																LocalObjectReference: corev1.LocalObjectReference{Name: "test-cm"},
+																Key:                  "off",
+															},
+														},
+													},
 												},
+												Image: consts.DefaultDataPlaneImage,
 											},
 										},
 									},
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
 							},
 						},
@@ -225,20 +254,26 @@ func TestHandleDataplaneValidation(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Env: []corev1.EnvVar{
-										{
-											Name: consts.EnvVarKongDatabase,
-											ValueFrom: &corev1.EnvVarSource{
-												SecretKeyRef: &corev1.SecretKeySelector{
-													LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"},
-													Key:                  "postgres",
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+												Env: []corev1.EnvVar{
+													{
+														Name: consts.EnvVarKongDatabase,
+														ValueFrom: &corev1.EnvVarSource{
+															SecretKeyRef: &corev1.SecretKeySelector{
+																LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"},
+																Key:                  "postgres",
+															},
+														},
+													},
 												},
+												Image: consts.DefaultDataPlaneImage,
 											},
 										},
 									},
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
 							},
 						},
@@ -246,7 +281,7 @@ func TestHandleDataplaneValidation(t *testing.T) {
 				},
 			},
 			hasError: true,
-			errMsg:   "database backend postgres of dataplane not supported currently",
+			errMsg:   "database backend postgres of DataPlane not supported currently",
 		},
 		{
 			name: "validate_error:db=xxx_in_cm_envFrom",
@@ -259,17 +294,23 @@ func TestHandleDataplaneValidation(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									EnvFrom: []corev1.EnvFromSource{
-										{
-											Prefix: "",
-											ConfigMapRef: &corev1.ConfigMapEnvSource{
-												LocalObjectReference: corev1.LocalObjectReference{Name: "test-cm-2"},
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+												EnvFrom: []corev1.EnvFromSource{
+													{
+														Prefix: "",
+														ConfigMapRef: &corev1.ConfigMapEnvSource{
+															LocalObjectReference: corev1.LocalObjectReference{Name: "test-cm-2"},
+														},
+													},
+												},
+												Image: consts.DefaultDataPlaneImage,
 											},
 										},
 									},
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
 							},
 						},
@@ -277,7 +318,7 @@ func TestHandleDataplaneValidation(t *testing.T) {
 				},
 			},
 			hasError: true,
-			errMsg:   "database backend xxx of dataplane not supported currently",
+			errMsg:   "database backend xxx of DataPlane not supported currently",
 		},
 		{
 			name: "validate_ok:db=off_in_secret_envfrom",
@@ -290,17 +331,23 @@ func TestHandleDataplaneValidation(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									EnvFrom: []corev1.EnvFromSource{
-										{
-											Prefix: "KONG_",
-											SecretRef: &corev1.SecretEnvSource{
-												LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret-2"},
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+												EnvFrom: []corev1.EnvFromSource{
+													{
+														Prefix: "KONG_",
+														SecretRef: &corev1.SecretEnvSource{
+															LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret-2"},
+														},
+													},
+												},
+												Image: consts.DefaultDataPlaneImage,
 											},
 										},
 									},
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
 							},
 						},
@@ -308,7 +355,7 @@ func TestHandleDataplaneValidation(t *testing.T) {
 				},
 			},
 			hasError: true,
-			errMsg:   "database backend xxx of dataplane not supported currently",
+			errMsg:   "database backend xxx of DataPlane not supported currently",
 		},
 		{
 			name: "validate_error:missing_container_image",
@@ -321,8 +368,14 @@ func TestHandleDataplaneValidation(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Version: lo.ToPtr(consts.DefaultDataPlaneTag),
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+											},
+										},
+									},
 								},
 							},
 						},
@@ -330,29 +383,7 @@ func TestHandleDataplaneValidation(t *testing.T) {
 				},
 			},
 			hasError: true,
-			errMsg:   "DataPlanes requires a containerImage",
-		},
-		{
-			name: "validate_error:missing_container_version",
-			dataplane: &operatorv1alpha1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-db-off-in-secret",
-					Namespace: "default",
-				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-								},
-							},
-						},
-					},
-				},
-			},
-			hasError: true,
-			errMsg:   "DataPlanes requires a version",
+			errMsg:   "DataPlane requires an image",
 		},
 	}
 

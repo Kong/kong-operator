@@ -3,14 +3,15 @@
 package integration
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -51,18 +52,30 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		Spec: operatorv1alpha1.GatewayConfigurationSpec{
 			ControlPlaneOptions: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Pods: operatorv1alpha1.PodsOptions{
-						ContainerImage: pointer.String(originalControlPlaneImageName),
-						Version:        pointer.String(originalControlPlaneImageVersion),
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: fmt.Sprintf("%s:%s", originalControlPlaneImageName, originalControlPlaneImageVersion),
+								},
+							},
+						},
 					},
 				},
 			},
 			DataPlaneOptions: &operatorv1alpha1.DataPlaneOptions{
 				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-						Pods: operatorv1alpha1.PodsOptions{
-							ContainerImage: pointer.String(originalDataPlaneImageName),
-							Version:        pointer.String(originalDataPlaneImageVersion),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: fmt.Sprintf("%s:%s", originalDataPlaneImageName, originalDataPlaneImageVersion),
+									},
+								},
+							},
 						},
 					},
 				},
@@ -121,10 +134,12 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		if len(controlplanes) != 1 {
 			return false
 		}
-		return controlplanes[0].Spec.Deployment.Pods.ContainerImage != nil &&
-			controlplanes[0].Spec.Deployment.Pods.Version != nil &&
-			*controlplanes[0].Spec.Deployment.Pods.ContainerImage == originalControlPlaneImageName &&
-			*controlplanes[0].Spec.Deployment.Pods.Version == originalControlPlaneImageVersion
+
+		container := k8sutils.GetPodContainerByName(&controlplanes[0].Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+		if container == nil {
+			return false
+		}
+		return container.Image == fmt.Sprintf("%s:%s", originalControlPlaneImageName, originalControlPlaneImageVersion)
 	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
 
 	t.Log("verifying that the DataPlane receives the configuration override")
@@ -136,10 +151,11 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		if len(dataplanes) != 1 {
 			return false
 		}
-		return dataplanes[0].Spec.Deployment.Pods.ContainerImage != nil &&
-			dataplanes[0].Spec.Deployment.Pods.Version != nil &&
-			*dataplanes[0].Spec.Deployment.Pods.ContainerImage == originalDataPlaneImageName &&
-			*dataplanes[0].Spec.Deployment.Pods.Version == originalDataPlaneImageVersion
+		container := k8sutils.GetPodContainerByName(&dataplanes[0].Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+		if container == nil {
+			return false
+		}
+		return container.Image == fmt.Sprintf("%s:%s", originalDataPlaneImageName, originalDataPlaneImageVersion)
 	}, testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying initial pod images for Gateway")
@@ -162,10 +178,11 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		if len(controlplanes) != 1 {
 			return false
 		}
-		return controlplanes[0].Spec.Deployment.Pods.ContainerImage != nil &&
-			controlplanes[0].Spec.Deployment.Pods.Version != nil &&
-			*controlplanes[0].Spec.Deployment.Pods.ContainerImage == originalControlPlaneImageName &&
-			*controlplanes[0].Spec.Deployment.Pods.Version == newControlPlaneImageVersion
+		container := k8sutils.GetPodContainerByName(&controlplanes[0].Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+		if container == nil {
+			return false
+		}
+		return container.Image == fmt.Sprintf("%s:%s", originalControlPlaneImageName, newControlPlaneImageVersion)
 	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
 
 	t.Log("verifying upgraded ControlPlane Pod images for Gateway")
@@ -188,10 +205,11 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		if len(dataplanes) != 1 {
 			return false
 		}
-		return dataplanes[0].Spec.Deployment.Pods.ContainerImage != nil &&
-			dataplanes[0].Spec.Deployment.Pods.Version != nil &&
-			*dataplanes[0].Spec.Deployment.Pods.ContainerImage == originalDataPlaneImageName &&
-			*dataplanes[0].Spec.Deployment.Pods.Version == newDataPlaneImageVersion
+		container := k8sutils.GetPodContainerByName(&dataplanes[0].Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+		if container == nil {
+			return false
+		}
+		return container.Image == fmt.Sprintf("%s:%s", originalDataPlaneImageName, newDataPlaneImageVersion)
 	}, testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying upgraded DataPlane Pod images for Gateway")
@@ -214,10 +232,11 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		if len(controlplanes) != 1 {
 			return false
 		}
-		return controlplanes[0].Spec.Deployment.Pods.ContainerImage != nil &&
-			controlplanes[0].Spec.Deployment.Pods.Version != nil &&
-			*controlplanes[0].Spec.Deployment.Pods.ContainerImage == originalControlPlaneImageName &&
-			*controlplanes[0].Spec.Deployment.Pods.Version == originalControlPlaneImageVersion
+		container := k8sutils.GetPodContainerByName(&controlplanes[0].Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+		if container == nil {
+			return false
+		}
+		return container.Image == fmt.Sprintf("%s:%s", originalControlPlaneImageName, originalControlPlaneImageVersion)
 	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
 
 	t.Log("verifying downgraded ControlPlane Pod images for Gateway")
@@ -240,10 +259,11 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		if len(dataplanes) != 1 {
 			return false
 		}
-		return dataplanes[0].Spec.Deployment.Pods.ContainerImage != nil &&
-			dataplanes[0].Spec.Deployment.Pods.Version != nil &&
-			*dataplanes[0].Spec.Deployment.Pods.ContainerImage == originalDataPlaneImageName &&
-			*dataplanes[0].Spec.Deployment.Pods.Version == originalDataPlaneImageVersion
+		container := k8sutils.GetPodContainerByName(&dataplanes[0].Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+		if container == nil {
+			return false
+		}
+		return container.Image == fmt.Sprintf("%s:%s", originalDataPlaneImageName, originalDataPlaneImageVersion)
 	}, testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying downgraded DataPlane Pod images for Gateway")
@@ -346,8 +366,11 @@ func changeControlPlaneImage(
 		return err
 	}
 
-	gcfg.Spec.ControlPlaneOptions.Deployment.Pods.ContainerImage = &controlPlaneImageName
-	gcfg.Spec.ControlPlaneOptions.Deployment.Pods.Version = &controlPlaneImageVersion
+	container := k8sutils.GetPodContainerByName(&gcfg.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+	if container == nil {
+		return errors.New("container is nil in GatewayConfiguration ControlPlane options")
+	}
+	container.Image = fmt.Sprintf("%s:%s", controlPlaneImageName, controlPlaneImageVersion)
 
 	_, err = clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(gcfg.Namespace).Update(ctx, gcfg, metav1.UpdateOptions{})
 	return err
@@ -366,8 +389,11 @@ func changeDataPlaneImage(
 		return err
 	}
 
-	gcfg.Spec.DataPlaneOptions.Deployment.Pods.ContainerImage = &dataPlaneImageName
-	gcfg.Spec.DataPlaneOptions.Deployment.Pods.Version = &dataPlaneImageVersion
+	container := k8sutils.GetPodContainerByName(&gcfg.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+	if container == nil {
+		return errors.New("container is nil in GatewayConfiguration DataPlane options")
+	}
+	container.Image = fmt.Sprintf("%s:%s", dataPlaneImageName, dataPlaneImageVersion)
 
 	_, err = clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(gcfg.Namespace).Update(ctx, gcfg, metav1.UpdateOptions{})
 	return err

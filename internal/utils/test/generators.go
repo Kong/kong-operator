@@ -2,11 +2,13 @@ package test
 
 import (
 	"github.com/google/uuid"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -49,6 +51,38 @@ func GenerateGatewayConfiguration(gatewayConfigurationNSN types.NamespacedName) 
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: gatewayConfigurationNSN.Namespace,
 			Name:      gatewayConfigurationNSN.Name,
+		},
+		Spec: operatorv1alpha1.GatewayConfigurationSpec{
+			ControlPlaneOptions: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: consts.DefaultControlPlaneImage,
+								},
+							},
+						},
+					},
+				},
+			},
+			DataPlaneOptions: &operatorv1alpha1.DataPlaneOptions{
+				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: consts.DefaultDataPlaneImage,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }

@@ -19,10 +19,10 @@ type DeploymentOptions struct {
 	// +kubebuilder:default=1
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// Pods defines the Deployment's pods.
+	// PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
 	//
 	// +optional
-	Pods PodsOptions `json:"pods,omitempty"`
+	PodTemplateSpec *corev1.PodTemplateSpec `json:"podTemplateSpec,omitempty"`
 }
 
 // Rollout defines options for rollouts.

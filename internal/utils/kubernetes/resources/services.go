@@ -9,7 +9,6 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
-	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
 )
 
 // -----------------------------------------------------------------------------
@@ -58,14 +57,14 @@ func GenerateNewProxyServiceForDataplane(dataplane *operatorv1alpha1.DataPlane) 
 				{
 					Name:       "http",
 					Protocol:   corev1.ProtocolTCP,
-					Port:       dataplaneutils.DefaultHTTPPort,
-					TargetPort: intstr.FromInt(dataplaneutils.DefaultKongHTTPPort),
+					Port:       consts.DefaultHTTPPort,
+					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
 				},
 				{
 					Name:       "https",
 					Protocol:   corev1.ProtocolTCP,
-					Port:       dataplaneutils.DefaultHTTPSPort,
-					TargetPort: intstr.FromInt(dataplaneutils.DefaultKongHTTPSPort),
+					Port:       consts.DefaultHTTPSPort,
+					TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
 				},
 			},
 		},
@@ -102,7 +101,7 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1alpha1.DataPlane) 
 					Name:       "admin",
 					Protocol:   corev1.ProtocolTCP,
 					Port:       int32(consts.DataPlaneAdminAPIPort),
-					TargetPort: intstr.FromInt(dataplaneutils.DefaultKongAdminPort),
+					TargetPort: intstr.FromInt(consts.DataPlaneAdminAPIPort),
 				},
 			},
 		},

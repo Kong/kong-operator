@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -13,9 +15,12 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -194,7 +199,15 @@ func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gwtype
 		*gatewayConfig.Spec.ControlPlaneOptions.DataPlane == "" {
 		gatewayConfig.Spec.ControlPlaneOptions.DataPlane = &dataplaneName
 	}
-	for _, env := range gatewayConfig.Spec.ControlPlaneOptions.Deployment.Pods.Env {
+
+	if gatewayConfig.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec == nil {
+		gatewayConfig.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
+	}
+	container := k8sutils.GetPodContainerByName(&gatewayConfig.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+	if container == nil {
+		container = lo.ToPtr(resources.GenerateControlPlaneContainer(""))
+	}
+	for _, env := range container.Env {
 		dontOverride[env.Name] = struct{}{}
 	}
 

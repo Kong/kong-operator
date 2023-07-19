@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -196,7 +195,6 @@ const (
 
 func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 	ctx context.Context,
-	log logr.Logger,
 	dataplane *operatorv1alpha1.DataPlane,
 	certSecretName string,
 ) (res CreatedUpdatedOrNoop, deploy *appsv1.Deployment, err error) {
@@ -229,115 +227,47 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 	if err != nil {
 		return Noop, nil, err
 	}
-	generatedDeployment := k8sresources.GenerateNewDeploymentForDataPlane(dataplane, dataplaneImage, certSecretName)
+	generatedDeployment, err := k8sresources.GenerateNewDeploymentForDataPlane(dataplane, dataplaneImage, certSecretName)
+	if err != nil {
+		return Noop, nil, err
+	}
 	k8sutils.SetOwnerForObject(generatedDeployment, dataplane)
 	addLabelForDataplane(generatedDeployment)
 
 	if count == 1 {
 		var updated bool
 		existingDeployment := &deployments[0]
+
+		// ensure that object metadata is up to date
 		updated, existingDeployment.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingDeployment.ObjectMeta, generatedDeployment.ObjectMeta)
 
-		// update cluster certiifcate if needed.
-		if r.deploymentSpecVolumesNeedsUpdate(&existingDeployment.Spec, &generatedDeployment.Spec) {
-			existingDeployment.Spec.Template.Spec.Volumes = generatedDeployment.Spec.Template.Spec.Volumes
+		// some custom comparison rules are needed for some PodTemplateSpec sub-attributes, in particular
+		// resources and affinity.
+		opts := []cmp.Option{
+			cmp.Comparer(func(a, b corev1.ResourceRequirements) bool { return k8sresources.ResourceRequirementsEqual(a, b) }),
+		}
+
+		// ensure that PodTemplateSpec is up to date
+		// TODO: this is currently relying on us pre-empting API server defaults (by setting them ourselves).
+		// This could in theory lead to situations of incompatibility with newer Kubernetes versions down the
+		// road, the tradeoff was made due to a time crunch of a matter of hours. We should consider other options
+		// to verify whether there are changes staged.
+		//
+		// See: https://github.com/Kong/gateway-operator/issues/904
+		if !cmp.Equal(existingDeployment.Spec.Template, generatedDeployment.Spec.Template, opts...) {
+			existingDeployment.Spec.Template = generatedDeployment.Spec.Template
 			updated = true
 		}
 
-		// We do not want to permit direct edits of the Deployment environment. Any user-supplied values should be set
-		// in the DataPlane. If the actual Deployment.Pods.Environment does not match the generated environment, either
-		// something requires an update or there was a manual edit we want to purge.
-		container := k8sutils.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
-		if container == nil {
-			// someone has deleted the main container from the Deployment for ??? reasons. we can't fathom why they
-			// would do this, but don't allow it and replace the container set entirely
-			existingDeployment.Spec.Template.Spec.Containers = generatedDeployment.Spec.Template.Spec.Containers
-			updated = true
-			container = k8sutils.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
-		}
-		if !reflect.DeepEqual(container.Env, dataplane.Spec.Deployment.Pods.Env) {
-			trace(log, "DataPlane Deployment.Pods.Env needs updating", dataplane)
-			container.Env = dataplane.Spec.Deployment.Pods.Env
-			updated = true
-		}
-
-		if !reflect.DeepEqual(container.EnvFrom, dataplane.Spec.Deployment.Pods.EnvFrom) {
-			trace(log, "DataPlane Deployment.Pods.EnvFrom needs updating", dataplane)
-			container.EnvFrom = dataplane.Spec.Deployment.Pods.EnvFrom
-			updated = true
-		}
-
-		// check for volume mounts.
-		generatedContainer := k8sutils.GetPodContainerByName(&generatedDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
-		if containerVolumeMountNeedsUpdate(generatedContainer, container) {
-			container.VolumeMounts = generatedContainer.VolumeMounts
-			updated = true
-		}
-
-		if dataplane.Spec.Deployment.Pods.Affinity != nil {
-			// DataPlane pod affinity is set.
-			// Check if existing deployment already has its affinity set per DataPlane spec.
-			dataPlaneAffinity := dataplane.Spec.Deployment.Pods.Affinity
-			if !reflect.DeepEqual(existingDeployment.Spec.Template.Spec.Affinity, dataPlaneAffinity) {
-				trace(log, "DataPlane deployment Affinity needs to be set as per DataPlane spec",
-					dataplane, "dataplane.affinity", dataPlaneAffinity,
-				)
-				existingDeployment.Spec.Template.Spec.Affinity = dataPlaneAffinity
-				updated = true
-			}
-		} else {
-			if existingDeployment.Spec.Template.Spec.Affinity != nil {
-				trace(log, "DataPlane deployment Affinity needs to be unset",
-					dataplane, "dataplane.affinity", nil,
-				)
-				existingDeployment.Spec.Template.Spec.Affinity = nil
-				updated = true
-			}
-		}
-
-		if dataplane.Spec.Deployment.Pods.Resources != nil {
-			// DataPlane deployment resources are set.
-			// Check if existing container already has its resources set per DataPlane spec.
-			dataPlaneResources := dataplane.Spec.Deployment.Pods.Resources
-			if !k8sresources.ResourceRequirementsEqual(container.Resources, dataPlaneResources) {
-				trace(log, "DataPlane deployment Resources needs to be set as per DataPlane spec",
-					dataplane, "dataplane.resources", dataPlaneResources,
-				)
-				container.Resources = *dataPlaneResources
-				updated = true
-			}
-		} else {
-			// DataPlane deployment resources are unset.
-			// Check if existing container already has defaults set.
-			defaults := k8sresources.DefaultDataPlaneResources()
-			if !k8sresources.ResourceRequirementsEqual(container.Resources, defaults) {
-				trace(log, "DataPlane deployment Resources need to be set to defaults", dataplane)
-				container.Resources = *defaults
-				updated = true
-			}
-		}
-
-		if !reflect.DeepEqual(existingDeployment.Spec.Strategy, generatedDeployment.Spec.Strategy) {
+		// ensure that rollout strategy is up to date
+		if !cmp.Equal(existingDeployment.Spec.Strategy, generatedDeployment.Spec.Strategy) {
 			existingDeployment.Spec.Strategy = generatedDeployment.Spec.Strategy
 			updated = true
 		}
 
-		if !reflect.DeepEqual(existingDeployment.Spec.Replicas, generatedDeployment.Spec.Replicas) {
+		// ensure that replication strategy is up to date
+		if !cmp.Equal(existingDeployment.Spec.Replicas, generatedDeployment.Spec.Replicas) {
 			existingDeployment.Spec.Replicas = generatedDeployment.Spec.Replicas
-			updated = true
-		}
-
-		if !reflect.DeepEqual(existingDeployment.Spec.Template.Labels, generatedDeployment.Spec.Template.Labels) {
-			existingDeployment.Spec.Template.Labels = generatedDeployment.Spec.Template.Labels
-			updated = true
-		}
-
-		// update the container image or image version if needed
-		imageUpdated, err := ensureContainerImageUpdated(container, dataplane.Spec.Deployment.Pods.ContainerImage, dataplane.Spec.Deployment.Pods.Version)
-		if err != nil {
-			return Noop, nil, err
-		}
-		if imageUpdated {
 			updated = true
 		}
 
@@ -351,43 +281,6 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 	}
 
 	return Created, generatedDeployment, r.Client.Create(ctx, generatedDeployment)
-}
-
-func (r *DataPlaneReconciler) deploymentSpecVolumesNeedsUpdate(
-	existingDeploymentSpec *appsv1.DeploymentSpec,
-	generatedDeploymentSpec *appsv1.DeploymentSpec,
-) bool {
-	generatedClusterCertVolume := k8sutils.GetPodVolumeByName(&generatedDeploymentSpec.Template.Spec, consts.ClusterCertificateVolume)
-	existingClusterCertVolume := k8sutils.GetPodVolumeByName(&existingDeploymentSpec.Template.Spec, consts.ClusterCertificateVolume)
-	// check for cluster certificate volume.
-	if generatedClusterCertVolume == nil || existingClusterCertVolume == nil {
-		return true
-	}
-
-	if generatedClusterCertVolume.Secret == nil || existingClusterCertVolume.Secret == nil {
-		return true
-	}
-
-	if generatedClusterCertVolume.Secret.SecretName != existingClusterCertVolume.Secret.SecretName {
-		return true
-	}
-
-	// check for other volumes.
-	for _, generatedVolume := range generatedDeploymentSpec.Template.Spec.Volumes {
-		// skip already checked cluster-certificate volume.
-		if generatedVolume.Name == consts.ClusterCertificateVolume {
-			continue
-		}
-		existingVolume := k8sutils.GetPodVolumeByName(&existingDeploymentSpec.Template.Spec, generatedVolume.Name)
-		if existingVolume == nil {
-			return true
-		}
-		if !k8sutils.HasSameVolumeSource(&generatedVolume.VolumeSource, &existingVolume.VolumeSource) {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
@@ -501,23 +394,4 @@ func (r *DataPlaneReconciler) ensureAdminServiceForDataPlane(
 	}
 
 	return true, generatedService, r.Client.Create(ctx, generatedService)
-}
-
-func containerVolumeMountNeedsUpdate(
-	generatedContainer *corev1.Container,
-	existingContainer *corev1.Container,
-) bool {
-	for _, generatedVolumeMount := range generatedContainer.VolumeMounts {
-		existingVolumeMount := k8sutils.GetContainerVolumeMountByMountPath(existingContainer, generatedVolumeMount.MountPath)
-		if existingVolumeMount == nil {
-			return true
-		}
-		if !(generatedVolumeMount.Name == existingVolumeMount.Name) ||
-			!(generatedVolumeMount.ReadOnly == existingVolumeMount.ReadOnly) ||
-			!(generatedVolumeMount.SubPath == existingVolumeMount.SubPath) {
-			return true
-		}
-	}
-
-	return false
 }

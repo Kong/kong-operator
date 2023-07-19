@@ -4,36 +4,13 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
-)
-
-// -----------------------------------------------------------------------------
-// Dataplane Utils - Config Vars & Consts
-// -----------------------------------------------------------------------------
-
-const (
-	// DefaultHTTPPort is the default port used for HTTP ingress network traffic
-	// from outside clusters.
-	DefaultHTTPPort = 80
-
-	// DefaultHTTPSPort is the default port used for HTTPS ingress network traffic
-	// from outside clusters.
-	DefaultHTTPSPort = 443
-
-	// DefaultKongHTTPPort is the Kong proxy's default port used for HTTP traffic
-	DefaultKongHTTPPort = 8000
-
-	// DefaultKongHTTPSPort is the Kong proxy's default port used for HTTPS traffic
-	DefaultKongHTTPSPort = 8443
-
-	// DefaultKongHTTPSPort is the default port used for Kong Admin API traffic
-	DefaultKongAdminPort = 8444
-
-	// DefaultKongStatusPort is the default port used for Kong proxy status
-	DefaultKongStatusPort = 8100
+	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
 // KongDefaults are the baseline Kong proxy configuration options needed for
@@ -52,11 +29,11 @@ var KongDefaults = map[string]string{
 	"KONG_PORT_MAPS":              "80:8000, 443:8443",
 	"KONG_PROXY_ACCESS_LOG":       "/dev/stdout",
 	"KONG_PROXY_ERROR_LOG":        "/dev/stderr",
-	"KONG_PROXY_LISTEN":           fmt.Sprintf("0.0.0.0:%d reuseport backlog=16384, 0.0.0.0:%d http2 ssl reuseport backlog=16384", DefaultKongHTTPPort, DefaultKongHTTPSPort),
-	"KONG_STATUS_LISTEN":          fmt.Sprintf("0.0.0.0:%d", DefaultKongStatusPort),
+	"KONG_PROXY_LISTEN":           fmt.Sprintf("0.0.0.0:%d reuseport backlog=16384, 0.0.0.0:%d http2 ssl reuseport backlog=16384", consts.DataPlaneProxyPort, consts.DataPlaneProxySSLPort),
+	"KONG_STATUS_LISTEN":          fmt.Sprintf("0.0.0.0:%d", consts.DataPlaneStatusPort),
 
 	// TODO: reconfigure following https://github.com/Kong/gateway-operator/issues/7
-	"KONG_ADMIN_LISTEN": fmt.Sprintf("0.0.0.0:%d ssl reuseport backlog=16384", DefaultKongAdminPort),
+	"KONG_ADMIN_LISTEN": fmt.Sprintf("0.0.0.0:%d ssl reuseport backlog=16384", consts.DataPlaneAdminAPIPort),
 
 	// MTLS
 	"KONG_ADMIN_SSL_CERT":                     "/var/cluster-certificate/tls.crt",
@@ -75,14 +52,28 @@ var KongDefaults = map[string]string{
 // lexographically as a side effect.
 // returns true if new envs are actually appended.
 func SetDataPlaneDefaults(spec *operatorv1alpha1.DataPlaneOptions) bool {
+	if spec.Deployment.PodTemplateSpec == nil {
+		spec.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
+	}
+
+	dataplaneContainer := k8sutils.GetPodContainerByName(&spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+	generated := false
+	if dataplaneContainer == nil {
+		dataplaneContainer = lo.ToPtr(resources.GenerateDataPlaneContainer(""))
+		generated = true
+	}
+
 	updated := false
 	for k, v := range KongDefaults {
 		envVar := corev1.EnvVar{Name: k, Value: v}
-		if !k8sutils.IsEnvVarPresent(envVar, spec.Deployment.Pods.Env) {
-			spec.Deployment.Pods.Env = append(spec.Deployment.Pods.Env, envVar)
+		if !k8sutils.IsEnvVarPresent(envVar, dataplaneContainer.Env) {
+			dataplaneContainer.Env = append(dataplaneContainer.Env, envVar)
 			updated = true
 		}
 	}
-	sort.Sort(k8sutils.SortableEnvVars(spec.Deployment.Pods.Env))
+	sort.Sort(k8sutils.SortableEnvVars(dataplaneContainer.Env))
+	if generated {
+		spec.Deployment.PodTemplateSpec.Spec.Containers = append(spec.Deployment.PodTemplateSpec.Spec.Containers, *dataplaneContainer)
+	}
 	return updated
 }

@@ -59,7 +59,6 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 	defer closeControllerLogFile() //nolint:errcheck
 
-	var skipClusterCleanup bool
 	fmt.Println("INFO: configuring cluster for testing environment")
 	// NOTE: We run the conformance tests on a cluster without a CNI that enforces
 	// resources like NetworkPolicy.
@@ -128,7 +127,7 @@ func TestMain(m *testing.M) {
 // -----------------------------------------------------------------------------
 
 func exitOnErr(err error) {
-	if !skipClusterCleanup && err != nil {
+	if !skipClusterCleanup && existingCluster == "" && err != nil {
 		if env != nil {
 			env.Cleanup(ctx) //nolint:errcheck
 		}

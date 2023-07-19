@@ -170,7 +170,7 @@ func createEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 	require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
 
 	t.Log("deploying operator to test cluster via kustomize")
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizationDir))
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizationDir, "--server-side", "-v5"))
 
 	t.Log("waiting for operator deployment to complete")
 	require.NoError(t, waitForOperatorDeployment(ctx, clients.K8sClient))

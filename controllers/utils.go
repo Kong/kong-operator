@@ -21,6 +21,8 @@ import (
 	"github.com/cloudflare/cfssl/signer"
 	"github.com/cloudflare/cfssl/signer/local"
 	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
+	"github.com/samber/lo"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +36,6 @@ import (
 	"github.com/kong/gateway-operator/internal/manager/logging"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
-	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
@@ -393,61 +394,28 @@ func deploymentOptionsDeepEqual(o1, o2 *operatorv1alpha1.DeploymentOptions, envV
 		return false
 	}
 
-	var (
-		opts1 = o1.Pods
-		opts2 = o2.Pods
-	)
-
-	if (opts1.Resources != nil && opts2.Resources == nil) || (opts1.Resources == nil && opts2.Resources != nil) {
-		return false
-	}
-	if opts1.Resources != nil && opts2.Resources != nil && !resources.ResourceRequirementsEqual(*opts1.Resources, opts2.Resources) {
+	if !reflect.DeepEqual(o1.Replicas, o2.Replicas) {
 		return false
 	}
 
-	if !reflect.DeepEqual(opts1.ContainerImage, opts2.ContainerImage) {
-		return false
-	}
+	opts := []cmp.Option{
+		cmp.Comparer(func(a, b corev1.ResourceRequirements) bool {
+			return k8sresources.ResourceRequirementsEqual(a, b)
+		}),
+		cmp.Comparer(func(a, b []corev1.EnvVar) bool {
+			// Throw out env vars that we ignore.
+			a = lo.Filter(a, func(e corev1.EnvVar, _ int) bool {
+				return !lo.Contains(envVarsToIgnore, e.Name)
+			})
+			b = lo.Filter(b, func(e corev1.EnvVar, _ int) bool {
+				return !lo.Contains(envVarsToIgnore, e.Name)
+			})
 
-	if !reflect.DeepEqual(opts1.Version, opts2.Version) {
-		return false
+			// And compare.
+			return reflect.DeepEqual(a, b)
+		}),
 	}
-
-	if !reflect.DeepEqual(opts1.EnvFrom, opts2.EnvFrom) {
-		return false
-	}
-
-	if !reflect.DeepEqual(opts1.Labels, opts2.Labels) {
-		return false
-	}
-
-	// envVarsToIgnore contains all the env vars to not consider when checking the opts equality
-	if len(opts1.Env) != len(opts2.Env)+len(envVarsToIgnore) {
-		return false
-	}
-	env2i := 0
-	for _, env1 := range opts1.Env {
-		ignored := false
-		for _, envIgn := range envVarsToIgnore {
-			if envIgn == env1.Name {
-				ignored = true
-				break
-			}
-		}
-		if ignored {
-			continue
-		}
-		if env1.Name != opts2.Env[env2i].Name || env1.Value != opts2.Env[env2i].Value {
-			return false
-		}
-		env2i += 1
-	}
-
-	if !reflect.DeepEqual(o1.Replicas, o2.Replicas) { //nolint:gosimple
-		return false
-	}
-
-	return true
+	return cmp.Equal(&o1.PodTemplateSpec, &o2.PodTemplateSpec, opts...)
 }
 
 // -----------------------------------------------------------------------------
@@ -503,14 +471,18 @@ func addLabelForOwner(obj client.Object, owner client.Object) {
 // configured with a container image consistent with the image and
 // image version provided. The image and version can be provided as
 // nil when not wanted.
-func ensureContainerImageUpdated(container *corev1.Container, image *string, version *string) (updated bool, err error) {
+func ensureContainerImageUpdated(container *corev1.Container, imageVersionStr string) (updated bool, err error) {
+	// Can't update a with an empty image.
+	if imageVersionStr == "" {
+		return false, fmt.Errorf("can't update container image with an empty image")
+	}
+
 	imageParts := strings.Split(container.Image, ":")
 	if len(imageParts) > 3 {
 		err = fmt.Errorf("invalid container image found: %s", container.Image)
 		return
 	}
 
-	containerImageURL := imageParts[0]
 	// This is a special case for registries that specify a non default port,
 	// e.g. localhost:5000 or myregistry.io:8000. We do look for '/' since the
 	// contianer.Image will contain it as a separator between the registry+image
@@ -520,51 +492,19 @@ func ensureContainerImageUpdated(container *corev1.Container, image *string, ver
 			return false, fmt.Errorf("invalid container image found: %s", container.Image)
 		}
 
-		containerImageURL = imageParts[0] + imageParts[1]
+		containerImageURL := imageParts[0] + imageParts[1]
 		u, err := url.Parse(containerImageURL)
 		if err != nil {
 			return false, fmt.Errorf("invalid registry URL %s: %w", containerImageURL, err)
 		}
 		containerImageURL = u.String()
+		container.Image = containerImageURL + ":" + imageParts[2]
+		updated = true
 	}
 
-	switch {
-	// if both the image and the version were provided, we expect the
-	// container's image to match exactly.
-	case image != nil && *image != "" && version != nil && *version != "":
-		expectedImageAndVersion := fmt.Sprintf("%s:%s", *image, *version)
-		if container.Image != expectedImageAndVersion {
-			container.Image = expectedImageAndVersion
-			updated = true
-		}
-	// if only the image was provided we expect the image to match but we don't
-	// worry about what the version is.
-	case image != nil && *image != "":
-		expectedImage := *image
-		if len(imageParts) == 2 {
-			if containerImageURL != expectedImage {
-				container.Image = fmt.Sprintf("%s:%s", expectedImage, imageParts[1])
-				updated = true
-			}
-		} else {
-			if container.Image != expectedImage {
-				container.Image = expectedImage
-				updated = true
-			}
-		}
-	// if only the image version was provided we expect the tag to match but we
-	// don't worry about what the base image is.
-	case version != nil && *version != "":
-		expectedVersion := *version
-		if len(imageParts) == 2 {
-			if imageParts[1] != expectedVersion {
-				container.Image = fmt.Sprintf("%s:%s", containerImageURL, expectedVersion)
-				updated = true
-			}
-		} else {
-			container.Image = fmt.Sprintf("%s:%s", containerImageURL, expectedVersion)
-			updated = true
-		}
+	if imageVersionStr != container.Image {
+		container.Image = imageVersionStr
+		updated = true
 	}
 
 	return

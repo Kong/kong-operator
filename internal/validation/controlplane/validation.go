@@ -6,6 +6,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
 // Validator validates ControlPlane objects.
@@ -28,21 +30,34 @@ func (v *Validator) Validate(controlplane *operatorv1alpha1.ControlPlane) error 
 
 // ValidateDeploymentOptions validates the DeploymentOptions field of ControlPlane object.
 func (v *Validator) ValidateDeploymentOptions(opts *operatorv1alpha1.DeploymentOptions) error {
+	if opts == nil || opts.PodTemplateSpec == nil {
+		// Can't use empty DeploymentOptions because we still require users
+		// to provide an image
+		// Related: https://github.com/Kong/gateway-operator/issues/754.
+		return errors.New("ControlPlane requires an image")
+	}
+
 	// Ref: https://github.com/Kong/gateway-operator/issues/736
 	if opts.Replicas != nil && *opts.Replicas != 1 {
-		return errors.New("ControlPlanes only support replicas of 1")
+		return errors.New("ControlPlane only supports replicas of 1")
 	}
-	// Ref: https://github.com/Kong/gateway-operator/issues/740
-	if len(opts.Pods.Volumes) > 0 || len(opts.Pods.VolumeMounts) > 0 {
-		return errors.New("ControlPlanes does not support custom volumes and volume mounts")
+
+	container := k8sutils.GetPodContainerByName(&opts.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+	if container == nil {
+		// We need the controller container for e.g. specifying an image which
+		// is still required.
+		// Ref: https://github.com/Kong/gateway-operator/issues/754.
+		return errors.New("no controller container found in ControlPlane spec")
 	}
 
 	// Ref: https://github.com/Kong/gateway-operator/issues/754.
-	if opts.Pods.ContainerImage == nil || len(*opts.Pods.ContainerImage) == 0 {
-		return errors.New("ControlPlanes requires a containerImage")
+	if container.Image == "" {
+		return errors.New("ControlPlane requires an image")
 	}
-	if opts.Pods.Version == nil || len(*opts.Pods.Version) == 0 {
-		return errors.New("ControlPlanes requires a version")
+
+	// Ref: https://github.com/Kong/gateway-operator/issues/740
+	if len(container.VolumeMounts) > 0 || len(opts.PodTemplateSpec.Spec.Volumes) > 0 {
+		return errors.New("ControlPlane does not support custom volumes and volume mounts")
 	}
 
 	return nil

@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -16,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -81,9 +79,15 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+											},
+										},
+									},
 								},
 							},
 						},
@@ -180,9 +184,15 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									ContainerImage: pointer.String("kong"),
-									Version:        pointer.String("3.0"),
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: "kong:3.0",
+											},
+										},
+									},
 								},
 							},
 						},
@@ -262,9 +272,15 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									ContainerImage: pointer.String("kong"),
-									Version:        pointer.String("1.0"),
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: "kong:1.0",
+											},
+										},
+									},
 								},
 							},
 						},
@@ -363,9 +379,15 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+											},
+										},
+									},
 								},
 							},
 						},
@@ -511,9 +533,15 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneBaseImage + ":3.2",
+											},
+										},
+									},
 								},
 							},
 						},

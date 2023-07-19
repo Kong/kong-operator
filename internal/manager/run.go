@@ -30,7 +30,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -134,13 +133,14 @@ func Run(cfg Config) error {
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     cfg.MetricsAddr,
-		Port:                   cfg.WebhookPort,
-		HealthProbeBindAddress: cfg.ProbeAddr,
-		LeaderElection:         cfg.LeaderElection,
-		LeaderElectionID:       "a7feedc84.konghq.com",
-		NewClient:              cfg.NewClientFunc,
+		Scheme:                  scheme,
+		MetricsBindAddress:      cfg.MetricsAddr,
+		Port:                    cfg.WebhookPort,
+		HealthProbeBindAddress:  cfg.ProbeAddr,
+		LeaderElection:          cfg.LeaderElection,
+		LeaderElectionNamespace: "kong-system",
+		LeaderElectionID:        "a7feedc84.konghq.com",
+		NewClient:               cfg.NewClientFunc,
 	})
 	if err != nil {
 		return err
@@ -336,7 +336,7 @@ func setupAnonymousReports(cfg Config) (func(), error) {
 	setupLog.Info("starting anonymous reports")
 	restConfig, err := getKubeconfig(cfg.APIServerPath, cfg.KubeconfigPath)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get kubeconfig")
+		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 	}
 
 	telemetryPayload := telemetry.Payload{
@@ -345,11 +345,11 @@ func setupAnonymousReports(cfg Config) (func(), error) {
 
 	tMgr, err := telemetry.CreateManager(telemetry.SignalPing, restConfig, setupLog, telemetryPayload)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create anonymous reports manager")
+		return nil, fmt.Errorf("failed to create anonymous reports manager: %w", err)
 	}
 
 	if err := tMgr.Start(); err != nil {
-		return nil, errors.Wrapf(err, "anonymous reports failed to start")
+		return nil, fmt.Errorf("anonymous reports failed to start: %w", err)
 	}
 
 	if err := tMgr.TriggerExecute(context.Background(), telemetry.SignalStart); err != nil {

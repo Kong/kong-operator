@@ -10,7 +10,10 @@ manifests:
     paths:
     - config/default
 deploy:
-  kubectl: {}
+  kubectl:
+    flags:
+      apply:
+        - --server-side
 profiles:
 - name: default
   manifests:

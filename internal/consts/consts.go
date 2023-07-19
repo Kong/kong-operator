@@ -12,10 +12,6 @@ const (
 	// were created by this operator.
 	GatewayOperatorControlledLabel = "konghq.com/gateway-operator"
 
-	// DataPlaneManagedLabelValue indicates that an object's lifecycle is managed
-	// by the dataplane controller.
-	DataPlaneManagedLabelValue = "dataplane"
-
 	// ControlPlaneManagedLabelValue indicates that an object's lifecycle is managed
 	// by the controlplane controller.
 	ControlPlaneManagedLabelValue = "controlplane"
@@ -23,18 +19,6 @@ const (
 	// GatewayManagedLabelValue indicates that the object's lifecycle is managed by
 	// the gateway controller.
 	GatewayManagedLabelValue = "gateway"
-
-	// DataPlaneServiceTypeLabel is the labels that is used for the services created by
-	// the DataPlane controller to expose the DataPlane deployment.
-	DataPlaneServiceTypeLabel = "konghq.com/dataplane-service-type"
-
-	// DataPlaneAdminServiceLabelValue indicates that the service is intended to expose the
-	// DataPlane admin API.
-	DataPlaneAdminServiceLabelValue ServiceType = "admin"
-
-	// DataPlaneProxyServiceLabelValue indicates that the service is inteded to expose the
-	// DataPlane proxy.
-	DataPlaneProxyServiceLabelValue ServiceType = "proxy"
 )
 
 // -----------------------------------------------------------------------------
@@ -42,8 +26,6 @@ const (
 // -----------------------------------------------------------------------------
 
 const (
-	// DataPlanePrefix is used as a name prefix to generate dataplane-owned objects' name
-	DataPlanePrefix = "dataplane"
 
 	// ControlPlanePrefix is used as a name prefix to generate controlplane-owned objects' name
 	ControlPlanePrefix = "controlplane"
@@ -54,23 +36,6 @@ const (
 // -----------------------------------------------------------------------------
 
 const (
-	// DefaultDataPlaneBaseImage is the base container image that can be used
-	// by default for a DataPlane resource if all other attempts to dynamically
-	// decide an image fail.
-	DefaultDataPlaneBaseImage = "kong"
-
-	// DefaultDataPlaneEnterpriseImage is the enterprise base container image.
-	DefaultDataPlaneEnterpriseImage = "kong/kong-gateway"
-
-	// DefaultDataPlaneTag is the base container image tag that can be used
-	// by default for a DataPlane resource if all other attempts to dynamically
-	// decide an image tag fail.
-	DefaultDataPlaneTag = "3.3.0" // TODO: automatic PR updates https://github.com/Kong/gateway-operator/issues/209
-
-	// DefaultDataPlaneImage is the default container image that can be used if
-	// all other attempts to dynamically decide the default image fail.
-	DefaultDataPlaneImage = DefaultDataPlaneBaseImage + ":" + DefaultDataPlaneTag
-
 	// DefaultControlPlaneBaseImage is the base container image that can be used
 	// by default for a ControlPlane resource if all other attempts to dynamically
 	// decide an image fail.
@@ -87,27 +52,6 @@ const (
 
 	// ControlPlaneControllerContainerName is the name of the ingress controller container in a ControlPlane Deployment
 	ControlPlaneControllerContainerName = "controller"
-
-	// DataPlaneProxyContainerName is the name of the Kong proxy container
-	DataPlaneProxyContainerName = "proxy"
-)
-
-// -----------------------------------------------------------------------------
-// Consts - DataPlane exposed ports
-// -----------------------------------------------------------------------------
-
-const (
-	// DataPlaneHTTPSPort is the port that the dataplane uses for Admin API.
-	DataPlaneAdminAPIPort = 8444
-
-	// DataPlaneHTTPSPort is the port that the dataplane uses for HTTP.
-	DataPlaneProxyPort = 8000
-
-	// DataPlaneHTTPSPort is the port that the dataplane uses for HTTPS.
-	DataPlaneProxySSLPort = 8443
-
-	// DataPlaneHTTPSPort is the port that the dataplane uses for metrics.
-	DataPlaneMetricsPort = 8100
 )
 
 // -----------------------------------------------------------------------------
@@ -116,17 +60,6 @@ const (
 
 const (
 	ClusterCertificateVolume = "cluster-certificate"
-)
-
-// -----------------------------------------------------------------------------
-// Consts - Environment Variable Names
-// -----------------------------------------------------------------------------
-
-const (
-	// EnvVarKongDatabase is the environment variable name to specify database
-	// backend used for dataplane(Kong gateway). Currently only DBLess mode
-	// (empty, or "off") is supported.
-	EnvVarKongDatabase = "KONG_DATABASE"
 )
 
 // -----------------------------------------------------------------------------

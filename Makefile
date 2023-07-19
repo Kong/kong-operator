@@ -296,9 +296,11 @@ check.rbacs: kic-role-generator
 # Build - Manifests
 # ------------------------------------------------------------------------------
 
+CRD_OPTIONS ?= "+crd:generateEmbeddedObjectMeta=true"
+
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./controllers/...;./$(APIS_DIR)/..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./controllers/...;./$(APIS_DIR)/..." +output:crd:artifacts:config=config/crd/bases
 
 # ------------------------------------------------------------------------------
 # Build - Container Images
@@ -464,22 +466,15 @@ GATEWAY_API_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(GATEWAY_API_PACK
 GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)/config/crd
 GATEWAY_API_REPO ?= kubernetes-sigs/gateway-api
 GATEWAY_API_RAW_REPO ?= https://raw.githubusercontent.com/$(GATEWAY_API_REPO)
-GATEWAY_API_CRDS_URL = github.com/$(GATEWAY_API_REPO)/config/crd/$(GATEWAY_API_RELEASE_CHANNEL)?ref=$(GATEWAY_API_VERSION)
+GATEWAY_API_CRDS_STANDARD_URL = github.com/$(GATEWAY_API_REPO)/config/crd/standard?ref=$(GATEWAY_API_VERSION)
+GATEWAY_API_CRDS_EXPERIMENTAL_URL = github.com/$(GATEWAY_API_REPO)/config/crd/experimental?ref=$(GATEWAY_API_VERSION)
 GATEWAY_API_RAW_REPO_URL = $(GATEWAY_API_RAW_REPO)/$(GATEWAY_API_VERSION)
-
-.PHONY: print-gateway-api-crds-url
-print-gateway-api-crds-url:
-	@echo $(GATEWAY_API_CRDS_URL)
-
-.PHONY: print-gateway-api-raw-repo-url
-print-gateway-api-raw-repo-url:
-	@echo $(GATEWAY_API_RAW_REPO_URL)
 
 .PHONY: generate.gateway-api-urls
 generate.gateway-api-urls:
-	CRDS_STANDARD_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="" $(MAKE) print-gateway-api-crds-url)\
-		CRDS_EXPERIMENTAL_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="experimental" $(MAKE) print-gateway-api-crds-url) \
-		RAW_REPO_URL=$(shell $(MAKE) print-gateway-api-raw-repo-url) \
+	CRDS_STANDARD_URL="$(GATEWAY_API_CRDS_STANDARD_URL)" \
+		CRDS_EXPERIMENTAL_URL="$(GATEWAY_API_CRDS_EXPERIMENTAL_URL)" \
+		RAW_REPO_URL="$(GATEWAY_API_RAW_REPO_URL)" \
 		INPUT=$(shell pwd)/internal/utils/cmd/generate-gateway-api-urls/gateway_consts.tmpl \
 		OUTPUT=$(shell pwd)/internal/utils/test/zz_generated_gateway_api.go \
 		go generate -tags=generate_gateway_api_urls ./internal/utils/cmd/generate-gateway-api-urls
@@ -533,10 +528,18 @@ _run:
 		-zap-time-encoding iso8601 \
 		-zap-log-level 2
 
+SKAFFOLD_RUN_PROFILE ?= dev
+
+.PHONY: _skaffold
+_skaffold: skaffold
+	$(SKAFFOLD) $(CMD) --port-forward=pods --profile=$(SKAFFOLD_PROFILE) $(SKAFFOLD_FLAGS)
+
 .PHONY: run.skaffold
-run.skaffold: _ensure-kong-system-namespace
-	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
-		$(SKAFFOLD) dev --port-forward=pods --profile=dev
+run.skaffold:
+	TAG=$(TAG) REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
+		CMD=dev \
+		SKAFFOLD_PROFILE=$(SKAFFOLD_RUN_PROFILE) \
+		$(MAKE) _skaffold
 
 .PHONY: debug
 debug: webhook-certs-dir manifests generate install _ensure-kong-system-namespace
@@ -558,7 +561,7 @@ debug.skaffold.continuous: _ensure-kong-system-namespace
 # Install CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install
 install: manifests kustomize
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
 
 # Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.

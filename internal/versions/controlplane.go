@@ -41,7 +41,7 @@ var RoleVersionsForKICVersions = map[string]string{
 // The image is expected to follow the format "<image>:<tag>" and only supports
 // a provided "<tag>" if it is a semver compatible version.
 func IsControlPlaneImageVersionSupported(image string) (bool, error) {
-	imageVersion, err := versionFromImage(image)
+	imageVersion, err := FromImage(image)
 	if err != nil {
 		return false, err
 	}

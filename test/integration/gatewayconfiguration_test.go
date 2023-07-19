@@ -13,8 +13,10 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -54,20 +56,28 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			DataPlaneOptions: &operatorv1alpha1.DataPlaneOptions{
 				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-						Pods: operatorv1alpha1.PodsOptions{
-							Env: []corev1.EnvVar{
-								{
-									Name:  testEnvVar,
-									Value: testEnvVal,
-								},
-								{
-									Name: testEnvVarFromName,
-									ValueFrom: &corev1.EnvVarSource{
-										ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: configMap.Name,
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: consts.DefaultDataPlaneImage,
+										Env: []corev1.EnvVar{
+											{
+												Name:  testEnvVar,
+												Value: testEnvVal,
 											},
-											Key: testEnvVarFromKV,
+											{
+												Name: testEnvVarFromName,
+												ValueFrom: &corev1.EnvVarSource{
+													ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+														LocalObjectReference: corev1.LocalObjectReference{
+															Name: configMap.Name,
+														},
+														Key: testEnvVarFromKV,
+													},
+												},
+											},
 										},
 									},
 								},
@@ -78,20 +88,28 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			},
 			ControlPlaneOptions: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Pods: operatorv1alpha1.PodsOptions{
-						Env: []corev1.EnvVar{
-							{
-								Name:  testEnvVar,
-								Value: testEnvVal,
-							},
-							{
-								Name: testEnvVarFromName,
-								ValueFrom: &corev1.EnvVarSource{
-									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: configMap.Name,
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: consts.DefaultControlPlaneImage,
+									Env: []corev1.EnvVar{
+										{
+											Name:  testEnvVar,
+											Value: testEnvVal,
 										},
-										Key: testEnvVarFromKV,
+										{
+											Name: testEnvVarFromName,
+											ValueFrom: &corev1.EnvVarSource{
+												ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+													LocalObjectReference: corev1.LocalObjectReference{
+														Name: configMap.Name,
+													},
+													Key: testEnvVarFromKV,
+												},
+											},
+										},
 									},
 								},
 							},
@@ -152,7 +170,12 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		if len(dataplanes) != 1 {
 			return false
 		}
-		for _, envVar := range dataplanes[0].Spec.Deployment.Pods.Env {
+		dp := dataplanes[0]
+		container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+		if container == nil {
+			return false
+		}
+		for _, envVar := range container.Env {
 			if envVar.Name == testEnvVar && envVar.Value == testEnvVal {
 				return true
 			}
@@ -169,7 +192,12 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		if len(controlplanes) != 1 {
 			return false
 		}
-		for _, envVar := range controlplanes[0].Spec.Deployment.Pods.Env {
+		cp := controlplanes[0]
+		container := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+		if container == nil {
+			return false
+		}
+		for _, envVar := range container.Env {
 			if envVar.Name == testEnvVar && envVar.Value == testEnvVal {
 				return true
 			}
@@ -186,7 +214,13 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		if len(dataplanes) != 1 {
 			return false
 		}
-		for _, envVar := range dataplanes[0].Spec.Deployment.Pods.Env {
+		dp := dataplanes[0]
+		container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+		if container == nil {
+			return false
+		}
+
+		for _, envVar := range container.Env {
 			if envVar.Name == testEnvVarFromName && envVar.ValueFrom.ConfigMapKeyRef.Key == testEnvVarFromKV {
 				return true
 			}
@@ -203,7 +237,12 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		if len(controlplanes) != 1 {
 			return false
 		}
-		for _, envVar := range controlplanes[0].Spec.Deployment.Pods.Env {
+		cp := controlplanes[0]
+		container := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+		if container == nil {
+			return false
+		}
+		for _, envVar := range container.Env {
 			if envVar.Name == testEnvVarFromName && envVar.ValueFrom.ConfigMapKeyRef.Key == testEnvVarFromKV {
 				return true
 			}
@@ -232,7 +271,13 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		if len(dataplanes) != 1 {
 			return false
 		}
-		for _, envVar := range dataplanes[0].Spec.Deployment.Pods.Env {
+		dp := dataplanes[0]
+		container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+		if container == nil {
+			return false
+		}
+
+		for _, envVar := range container.Env {
 			if envVar.Name == testEnvVarFromName && envVar.ValueFrom.ConfigMapKeyRef.Key == testEnvVarFromKV {
 				return false
 			}
@@ -252,7 +297,12 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		if len(controlplanes) != 1 {
 			return false
 		}
-		for _, envVar := range controlplanes[0].Spec.Deployment.Pods.Env {
+		cp := controlplanes[0]
+		container := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+		if container == nil {
+			return false
+		}
+		for _, envVar := range container.Env {
 			if envVar.Name == testEnvVarFromName && envVar.ValueFrom.ConfigMapKeyRef.Key == testEnvVarFromKV {
 				return false
 			}

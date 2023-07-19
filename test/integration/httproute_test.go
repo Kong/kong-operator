@@ -15,6 +15,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/internal/consts"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -33,9 +34,20 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 		Spec: operatorv1alpha1.GatewayConfigurationSpec{
 			ControlPlaneOptions: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
-					Pods: operatorv1alpha1.PodsOptions{
-						Env: []corev1.EnvVar{
-							{Name: "CONTROLLER_LOG_LEVEL", Value: "trace"},
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: consts.DefaultControlPlaneImage,
+									Env: []corev1.EnvVar{
+										{
+											Name:  "CONTROLLER_LOG_LEVEL",
+											Value: "trace",
+										},
+									},
+								},
+							},
 						},
 					},
 				},

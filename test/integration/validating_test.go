@@ -3,24 +3,23 @@
 package integration
 
 import (
+	"fmt"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/controllers"
 	"github.com/kong/gateway-operator/internal/consts"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
-func TestDataplaneValidation(t *testing.T) {
+func TestDataPlaneValidation(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
@@ -67,8 +66,9 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				},
 			},
 			validatingOK:     false,
-			conditionMessage: "DataPlanes requires a containerImage",
+			conditionMessage: "DataPlane requires an image",
 		},
+
 		{
 			name: "reconciler:database_postgres_not_supported",
 			dataplane: &operatorv1alpha1.DataPlane{
@@ -80,12 +80,21 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Env: []corev1.EnvVar{
-										{Name: "KONG_DATABASE", Value: "postgres"},
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+												Env: []corev1.EnvVar{
+													{
+														Name:  "KONG_DATABASE",
+														Value: "postgres",
+													},
+												},
+											},
+										},
 									},
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
 							},
 						},
@@ -93,7 +102,7 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				},
 			},
 			validatingOK:     false,
-			conditionMessage: "database backend postgres of dataplane not supported currently",
+			conditionMessage: "database backend postgres of DataPlane not supported currently",
 		},
 
 		{
@@ -107,12 +116,21 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Env: []corev1.EnvVar{
-										{Name: "KONG_DATABASE", Value: "xxx"},
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+												Env: []corev1.EnvVar{
+													{
+														Name:  "KONG_DATABASE",
+														Value: "xxx",
+													},
+												},
+											},
+										},
 									},
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
 							},
 						},
@@ -120,7 +138,7 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				},
 			},
 			validatingOK:     false,
-			conditionMessage: "database backend xxx of dataplane not supported currently",
+			conditionMessage: "database backend xxx of DataPlane not supported currently",
 		},
 		{
 			name: "reconciler:validator_ok_with_db=off_from_configmap",
@@ -133,20 +151,26 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Env: []corev1.EnvVar{
-										{
-											Name: "KONG_DATABASE",
-											ValueFrom: &corev1.EnvVarSource{
-												ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-													LocalObjectReference: corev1.LocalObjectReference{Name: "dataplane-configs"},
-													Key:                  "database1",
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+												Env: []corev1.EnvVar{
+													{
+														Name: "KONG_DATABASE",
+														ValueFrom: &corev1.EnvVarSource{
+															ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+																LocalObjectReference: corev1.LocalObjectReference{Name: "dataplane-configs"},
+																Key:                  "database1",
+															},
+														},
+													},
 												},
 											},
 										},
 									},
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
 							},
 						},
@@ -163,48 +187,76 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 		t.Run(tc.name, func(t *testing.T) {
 			dataplane, err := dataplaneClient.Create(ctx, tc.dataplane, metav1.CreateOptions{})
 			require.NoErrorf(t, err, "should not return error when create dataplane for case %s", tc.name)
-			require.Eventually(t, func() bool {
-				dataplane, err = clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name).Get(ctx, dataplane.Name, metav1.GetOptions{})
-				require.NoError(t, err)
-				isScheduled := false
-				for _, condition := range dataplane.Status.Conditions {
-					if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) {
-						isScheduled = true
-					}
-				}
-				return isScheduled
-			}, time.Minute, time.Second)
-
-			var provisionCondition metav1.Condition
-			for _, condition := range dataplane.Status.Conditions {
-				if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) {
-					provisionCondition = condition
-					break
-				}
-			}
 
 			if tc.validatingOK {
-				t.Log("verifying deployments managed by the dataplane")
-				require.Eventually(t, func() bool {
-					deployments, err := k8sutils.ListDeploymentsForOwner(
-						ctx,
-						clients.MgrClient,
-						dataplane.Namespace,
-						dataplane.UID,
-						client.MatchingLabels{
-							consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-						},
-					)
-					require.NoError(t, err)
-					return len(deployments) == 1 && deployments[0].Status.AvailableReplicas >= deployments[0].Status.ReadyReplicas
-				}, time.Minute, time.Second)
+				t.Logf("%s: verifying deployments managed by the dataplane", t.Name())
+				w, err := clients.K8sClient.AppsV1().Deployments(namespace.Name).Watch(ctx, metav1.ListOptions{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Deployment",
+						APIVersion: "apps/v1",
+					},
+					LabelSelector: fmt.Sprintf("%s=%s", consts.GatewayOperatorControlledLabel, consts.DataPlaneManagedLabelValue),
+				})
+				require.NoError(t, err)
+				t.Cleanup(func() { w.Stop() })
+				for {
+					select {
+					case <-ctx.Done():
+						t.Fatalf("context expired: %v", ctx.Err())
+					case event := <-w.ResultChan():
+						deployment, ok := event.Object.(*appsv1.Deployment)
+						require.True(t, ok)
+						if deployment.Status.AvailableReplicas < deployment.Status.ReadyReplicas {
+							continue
+						}
+						if !lo.ContainsBy(deployment.OwnerReferences, func(or metav1.OwnerReference) bool {
+							return or.UID == dataplane.UID
+						}) {
+							continue
+						}
 
+						return
+					}
+				}
 			} else {
-				t.Log("verifying conditions of invalid dataplanes")
-				require.Equalf(t, metav1.ConditionFalse, provisionCondition.Status,
-					"provision condition status should be false in case %s", tc.name)
-				require.Equalf(t, tc.conditionMessage, provisionCondition.Message,
-					"provision condition message should be the same as expected in case %s", tc.name)
+				t.Logf("%s: verifying DataPlane conditions", t.Name())
+				w, err := dataplaneClient.Watch(ctx, metav1.ListOptions{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "DataPlane",
+						APIVersion: operatorv1alpha1.SchemeGroupVersion.String(),
+					},
+					FieldSelector: "metadata.name=" + tc.dataplane.Name,
+				})
+				require.NoError(t, err)
+				t.Cleanup(func() { w.Stop() })
+				for {
+					select {
+					case <-ctx.Done():
+						t.Fatalf("context expired: %v", ctx.Err())
+					case event := <-w.ResultChan():
+						dataplane, ok := event.Object.(*operatorv1alpha1.DataPlane)
+						require.True(t, ok)
+
+						var provisionCondition metav1.Condition
+						for _, condition := range dataplane.Status.Conditions {
+							if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) {
+								provisionCondition = condition
+								break
+							}
+						}
+						t.Log("verifying conditions of invalid dataplanes")
+						if provisionCondition.Status != metav1.ConditionFalse {
+							t.Logf("provision condition status should be false")
+							continue
+						}
+						if provisionCondition.Message != tc.conditionMessage {
+							t.Logf("provision condition message should be the same as expected")
+							continue
+						}
+
+						return
+					}
+				}
 			}
 		})
 	}
@@ -242,9 +294,20 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Env: []corev1.EnvVar{
-										{Name: "KONG_DATABASE", Value: "postgres"},
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+												Env: []corev1.EnvVar{
+													{
+														Name:  "KONG_DATABASE",
+														Value: "postgres",
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -252,7 +315,7 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 					},
 				},
 			},
-			errMsg: "database backend postgres of dataplane not supported currently",
+			errMsg: "database backend postgres of DataPlane not supported currently",
 		},
 		{
 			name: "webhook:database_xxx_not_supported",
@@ -265,9 +328,20 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Env: []corev1.EnvVar{
-										{Name: "KONG_DATABASE", Value: "xxx"},
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+												Env: []corev1.EnvVar{
+													{
+														Name:  "KONG_DATABASE",
+														Value: "xxx",
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -275,7 +349,7 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 					},
 				},
 			},
-			errMsg: "database backend xxx of dataplane not supported currently",
+			errMsg: "database backend xxx of DataPlane not supported currently",
 		},
 		{
 			name: "webhook:validator_ok_with_db=off_from_configmap",
@@ -288,14 +362,22 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Env: []corev1.EnvVar{
-										{
-											Name: "KONG_DATABASE",
-											ValueFrom: &corev1.EnvVarSource{
-												ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-													LocalObjectReference: corev1.LocalObjectReference{Name: "dataplane-configs"},
-													Key:                  "database1",
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+												Env: []corev1.EnvVar{
+													{
+														Name: "KONG_DATABASE",
+														ValueFrom: &corev1.EnvVarSource{
+															ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+																LocalObjectReference: corev1.LocalObjectReference{Name: "dataplane-configs"},
+																Key:                  "database1",
+															},
+														},
+													},
 												},
 											},
 										},

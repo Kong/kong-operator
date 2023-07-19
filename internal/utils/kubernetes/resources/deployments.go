@@ -20,6 +20,13 @@ const (
 
 	DefaultControlPlaneMemoryRequest = "20Mi"
 	DefaultControlPlaneMemoryLimit   = "100Mi"
+
+	ClusterCertificateVolumeName = "cluster-certificate"
+)
+
+var (
+	terminationGracePeriodSeconds = int64(corev1.DefaultTerminationGracePeriodSeconds)
+	defaultMode                   = corev1.DownwardAPIVolumeSourceDefaultMode
 )
 
 // GenerateNewDeploymentForControlPlane generates a new Deployment for the ControlPlane
@@ -27,7 +34,7 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 	controlplaneImage,
 	serviceAccountName,
 	certSecretName string,
-) *appsv1.Deployment {
+) (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    controlplane.Namespace,
@@ -44,19 +51,26 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: metav1.Time{},
 					Labels: map[string]string{
 						"app": controlplane.Name,
 					},
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: serviceAccountName,
-					Affinity:           controlplane.Spec.Deployment.Pods.Affinity,
+					SecurityContext:               &corev1.PodSecurityContext{},
+					RestartPolicy:                 corev1.RestartPolicyAlways,
+					TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
+					ServiceAccountName:            serviceAccountName,
+					DeprecatedServiceAccount:      serviceAccountName,
+					DNSPolicy:                     corev1.DNSClusterFirst,
+					SchedulerName:                 corev1.DefaultSchedulerName,
 					Volumes: []corev1.Volume{
 						{
-							Name: "cluster-certificate",
+							Name: ClusterCertificateVolumeName,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: certSecretName,
+									SecretName:  certSecretName,
+									DefaultMode: &defaultMode,
 									Items: []corev1.KeyToPath{
 										{
 											Key:  "tls.crt",
@@ -75,64 +89,76 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 							},
 						},
 					},
-					Containers: []corev1.Container{{
-						Name:            consts.ControlPlaneControllerContainerName,
-						Env:             controlplane.Spec.Deployment.Pods.Env,
-						EnvFrom:         controlplane.Spec.Deployment.Pods.EnvFrom,
-						Image:           controlplaneImage,
-						ImagePullPolicy: corev1.PullIfNotPresent,
-						VolumeMounts: []corev1.VolumeMount{
-							{
-								Name:      "cluster-certificate",
-								ReadOnly:  true,
-								MountPath: "/var/cluster-certificate",
-							},
-						},
-						Ports: []corev1.ContainerPort{
-							{
-								Name:          "health",
-								ContainerPort: 10254,
-								Protocol:      corev1.ProtocolTCP,
-							},
-						},
-						LivenessProbe: &corev1.Probe{
-							FailureThreshold:    3,
-							InitialDelaySeconds: 5,
-							PeriodSeconds:       10,
-							SuccessThreshold:    1,
-							TimeoutSeconds:      1,
-							ProbeHandler: corev1.ProbeHandler{
-								HTTPGet: &corev1.HTTPGetAction{
-									Path:   "/healthz",
-									Port:   intstr.FromInt(10254),
-									Scheme: corev1.URISchemeHTTP,
-								},
-							},
-						},
-						ReadinessProbe: &corev1.Probe{
-							FailureThreshold:    3,
-							InitialDelaySeconds: 5,
-							PeriodSeconds:       10,
-							SuccessThreshold:    1,
-							TimeoutSeconds:      1,
-							ProbeHandler: corev1.ProbeHandler{
-								HTTPGet: &corev1.HTTPGetAction{
-									Path:   "/readyz",
-									Port:   intstr.FromInt(10254),
-									Scheme: corev1.URISchemeHTTP,
-								},
-							},
-						},
-						Resources: getResourceRequirements(controlplane.Spec),
-					}},
+					Containers: []corev1.Container{
+						GenerateControlPlaneContainer(controlplaneImage),
+					},
 				},
 			},
 		},
 	}
 
-	addLabelForDeploymentPods(deployment, controlplane.Spec.Deployment.Pods.Labels)
+	if controlplane.Spec.Deployment.PodTemplateSpec != nil {
+		patchedPodTemplateSpec, err := StrategicMergePatchPodTemplateSpec(&deployment.Spec.Template, controlplane.Spec.Deployment.PodTemplateSpec)
+		if err != nil {
+			return nil, err
+		}
+		deployment.Spec.Template = *patchedPodTemplateSpec
+	}
 
-	return deployment
+	return deployment, nil
+}
+
+func GenerateControlPlaneContainer(image string) corev1.Container {
+	return corev1.Container{
+		Name:                     consts.ControlPlaneControllerContainerName,
+		Image:                    image,
+		ImagePullPolicy:          corev1.PullIfNotPresent,
+		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      ClusterCertificateVolumeName,
+				ReadOnly:  true,
+				MountPath: "/var/cluster-certificate",
+			},
+		},
+		Ports: []corev1.ContainerPort{
+			{
+				Name:          "health",
+				ContainerPort: 10254,
+				Protocol:      corev1.ProtocolTCP,
+			},
+		},
+		LivenessProbe: &corev1.Probe{
+			FailureThreshold:    3,
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       10,
+			SuccessThreshold:    1,
+			TimeoutSeconds:      1,
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/healthz",
+					Port:   intstr.FromInt(10254),
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+		},
+		ReadinessProbe: &corev1.Probe{
+			FailureThreshold:    3,
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       10,
+			SuccessThreshold:    1,
+			TimeoutSeconds:      1,
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/readyz",
+					Port:   intstr.FromInt(10254),
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+		},
+		Resources: *DefaultControlPlaneResources(),
+	}
 }
 
 const (
@@ -144,7 +170,8 @@ const (
 )
 
 // GenerateNewDeploymentForDataPlane generates a new Deployment for the DataPlane
-func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, dataplaneImage, certSecretName string) *appsv1.Deployment {
+func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, dataplaneImage, certSecretName string) (*appsv1.Deployment, error) {
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,
@@ -175,18 +202,21 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, da
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: metav1.Time{},
 					Labels: map[string]string{
 						"app": dataplane.Name,
 					},
 				},
 				Spec: corev1.PodSpec{
-					Volumes:  generateDataplaneDeploymentVolumes(dataplane, certSecretName),
-					Affinity: dataplane.Spec.Deployment.Pods.Affinity,
+					SecurityContext:               &corev1.PodSecurityContext{},
+					Volumes:                       generateDataplaneDeploymentVolumes(certSecretName),
+					RestartPolicy:                 corev1.RestartPolicyAlways,
+					TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
+					DNSPolicy:                     corev1.DNSClusterFirst,
+					SchedulerName:                 corev1.DefaultSchedulerName,
 					Containers: []corev1.Container{{
 						Name:            consts.DataPlaneProxyContainerName,
-						VolumeMounts:    generateDataplaneDeploymentVolumeMounts(dataplane),
-						Env:             dataplane.Spec.Deployment.Pods.Env,
-						EnvFrom:         dataplane.Spec.Deployment.Pods.EnvFrom,
+						VolumeMounts:    generateDataplaneDeploymentVolumeMounts(),
 						Image:           dataplaneImage,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Lifecycle: &corev1.Lifecycle{
@@ -200,6 +230,8 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, da
 								},
 							},
 						},
+						TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 						Ports: []corev1.ContainerPort{
 							{
 								Name:          "proxy",
@@ -236,46 +268,91 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, da
 								},
 							},
 						},
-						Resources: getResourceRequirements(dataplane.Spec),
+						Resources: *DefaultDataPlaneResources(),
 					}},
 				},
 			},
 		},
 	}
 
-	addLabelForDeploymentPods(deployment, dataplane.Spec.Deployment.Pods.Labels)
-
-	return deployment
-}
-
-func addLabelForDeploymentPods(deployment *appsv1.Deployment, labels map[string]string) {
-	if deployment.Spec.Template.Labels == nil && len(labels) > 0 {
-		deployment.Spec.Template.Labels = make(map[string]string)
+	if dataplane.Spec.Deployment.PodTemplateSpec != nil {
+		patchedPodTemplateSpec, err := StrategicMergePatchPodTemplateSpec(&deployment.Spec.Template, dataplane.Spec.Deployment.PodTemplateSpec)
+		if err != nil {
+			return nil, err
+		}
+		deployment.Spec.Template = *patchedPodTemplateSpec
 	}
 
-	for k, v := range labels {
-		ev, ok := deployment.Spec.Template.Labels[k]
-		if ok {
-			continue
-		}
-		if v == ev {
-			continue
-		}
+	return deployment, nil
+}
 
-		deployment.Spec.Template.Labels[k] = v
+func GenerateDataPlaneContainer(image string) corev1.Container {
+	return corev1.Container{
+		Name:            consts.DataPlaneProxyContainerName,
+		VolumeMounts:    generateDataplaneDeploymentVolumeMounts(),
+		Image:           image,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Lifecycle: &corev1.Lifecycle{
+			PreStop: &corev1.LifecycleHandler{
+				Exec: &corev1.ExecAction{
+					Command: []string{
+						"/bin/sh",
+						"-c",
+						"kong quit",
+					},
+				},
+			},
+		},
+		Ports: []corev1.ContainerPort{
+			{
+				Name:          "proxy",
+				ContainerPort: consts.DataPlaneProxyPort,
+				Protocol:      corev1.ProtocolTCP,
+			},
+			{
+				Name:          "proxy-ssl",
+				ContainerPort: consts.DataPlaneProxySSLPort,
+				Protocol:      corev1.ProtocolTCP,
+			},
+			{
+				Name:          "metrics",
+				ContainerPort: consts.DataPlaneMetricsPort,
+				Protocol:      corev1.ProtocolTCP,
+			},
+			{
+				Name:          "admin-ssl",
+				ContainerPort: consts.DataPlaneAdminAPIPort,
+				Protocol:      corev1.ProtocolTCP,
+			},
+		},
+		ReadinessProbe: &corev1.Probe{
+			FailureThreshold:    3,
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       10,
+			SuccessThreshold:    1,
+			TimeoutSeconds:      1,
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/status",
+					Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+		},
+		Resources: *DefaultDataPlaneResources(),
 	}
 }
 
 // generateDataplaneDeploymentVolumes generates volumes in pods containing cluster certificate for mTLS
-// between control plane (KIC) and data plane,
-// and also other specified secret volumes in deployment options.
-func generateDataplaneDeploymentVolumes(dataplane *operatorv1alpha1.DataPlane, certSecretName string) []corev1.Volume {
+// between control plane (KIC) and data plane.
+func generateDataplaneDeploymentVolumes(certSecretName string) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
-			Name: "cluster-certificate",
+			Name: ClusterCertificateVolumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: certSecretName,
+					DefaultMode: &defaultMode,
+					SecretName:  certSecretName,
 					Items: []corev1.KeyToPath{
 						{
 							Key:  "tls.crt",
@@ -294,24 +371,18 @@ func generateDataplaneDeploymentVolumes(dataplane *operatorv1alpha1.DataPlane, c
 			},
 		},
 	}
-	for _, volume := range dataplane.Spec.Deployment.Pods.Volumes {
-		volumes = append(volumes, *volume.DeepCopy())
-	}
+
 	return volumes
 }
 
-// generateDataplaneDeploymentVolumeMounts generates volume mounts in containers.
-func generateDataplaneDeploymentVolumeMounts(dataplane *operatorv1alpha1.DataPlane) []corev1.VolumeMount {
+// generateDataplaneDeploymentVolumeMounts generates volume mounts in DataPlane container.
+func generateDataplaneDeploymentVolumeMounts() []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
-			Name:      "cluster-certificate",
+			Name:      ClusterCertificateVolumeName,
 			ReadOnly:  true,
 			MountPath: "/var/cluster-certificate",
 		},
-	}
-
-	for _, mount := range dataplane.Spec.Deployment.Pods.VolumeMounts {
-		volumeMounts = append(volumeMounts, *mount.DeepCopy())
 	}
 
 	return volumeMounts
@@ -355,46 +426,4 @@ func DefaultControlPlaneResources() *corev1.ResourceRequirements {
 		}
 	})
 	return _controlPlaneDefaultResources.DeepCopy()
-}
-
-func getResourceRequirements[
-	targetT interface {
-		operatorv1alpha1.DataPlaneSpec |
-			operatorv1alpha1.ControlPlaneSpec
-	},
-](
-	spec targetT,
-) corev1.ResourceRequirements {
-	var (
-		ret       *corev1.ResourceRequirements
-		requested *corev1.ResourceRequirements
-	)
-
-	switch s := any(spec).(type) {
-	case operatorv1alpha1.DataPlaneSpec:
-		ret = DefaultDataPlaneResources()
-		requested = s.Deployment.Pods.Resources
-	case operatorv1alpha1.ControlPlaneSpec:
-		ret = DefaultControlPlaneResources()
-		requested = s.Deployment.Pods.Resources
-	}
-	if requested == nil {
-		return *ret
-	}
-
-	if v, ok := requested.Limits[corev1.ResourceCPU]; ok {
-		ret.Limits[corev1.ResourceCPU] = v
-	}
-	if v, ok := requested.Limits[corev1.ResourceMemory]; ok {
-		ret.Limits[corev1.ResourceMemory] = v
-	}
-
-	if v, ok := requested.Requests[corev1.ResourceCPU]; ok {
-		ret.Requests[corev1.ResourceCPU] = v
-	}
-	if v, ok := requested.Requests[corev1.ResourceMemory]; ok {
-		ret.Requests[corev1.ResourceMemory] = v
-	}
-
-	return *ret
 }

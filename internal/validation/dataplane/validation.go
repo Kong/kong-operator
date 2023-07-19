@@ -13,6 +13,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
 // Validator validates DataPlane objects.
@@ -37,25 +38,34 @@ func (v *Validator) Validate(dataplane *operatorv1alpha1.DataPlane) error {
 
 // ValidateDataPlaneDeploymentOptions validates the DeploymentOptions field of DataPlane object.
 func (v *Validator) ValidateDataPlaneDeploymentOptions(namespace string, opts *operatorv1alpha1.DataPlaneDeploymentOptions) error {
+	if opts == nil || opts.PodTemplateSpec == nil {
+		// Can't use empty DeploymentOptions because we still require users
+		// to provide an image
+		// Related: https://github.com/Kong/gateway-operator/issues/754.
+		return errors.New("DataPlane requires an image")
+	}
+
 	// Until https://github.com/Kong/gateway-operator/issues/20 is resolved we
 	// require DataPlanes that they are provided with image and version set.
 	// Related: https://github.com/Kong/gateway-operator/issues/754.
-	if opts.Pods.ContainerImage == nil || len(*opts.Pods.ContainerImage) == 0 {
-		return errors.New("DataPlanes requires a containerImage")
+	container := k8sutils.GetPodContainerByName(&opts.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+	if container == nil {
+		return fmt.Errorf("couldn't find proxy container in DataPlane spec")
 	}
-	if opts.Pods.Version == nil || len(*opts.Pods.Version) == 0 {
-		return errors.New("DataPlanes requires a version")
+
+	if container.Image == "" {
+		return errors.New("DataPlane requires an image")
 	}
 
 	// validate db mode.
-	dbMode, dbModeFound, err := v.getDBModeFromEnv(namespace, opts.Pods.Env)
+	dbMode, dbModeFound, err := v.getDBModeFromEnv(namespace, container.Env)
 	if err != nil {
 		return err
 	}
 
 	// if dbMode not found in envVar, search for it in EnvVarFrom.
 	if !dbModeFound {
-		dbMode, _, err = v.getDBModeFromEnvFrom(namespace, opts.Pods.EnvFrom)
+		dbMode, _, err = v.getDBModeFromEnvFrom(namespace, container.EnvFrom)
 		if err != nil {
 			return err
 		}
@@ -63,8 +73,9 @@ func (v *Validator) ValidateDataPlaneDeploymentOptions(namespace string, opts *o
 
 	// only support dbless mode.
 	if dbMode != "" && dbMode != "off" {
-		return fmt.Errorf("database backend %s of dataplane not supported currently", dbMode)
+		return fmt.Errorf("database backend %s of DataPlane not supported currently", dbMode)
 	}
+
 	return nil
 }
 

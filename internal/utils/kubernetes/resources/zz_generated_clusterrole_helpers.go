@@ -20,20 +20,23 @@ import (
 // GenerateNewClusterRoleForControlPlane is a helper function that extract
 // the version from the tag, and returns the ClusterRole with all the needed
 // permissions.
-func GenerateNewClusterRoleForControlPlane(controlplaneName string, image, tag *string) (*rbacv1.ClusterRole, error) {
+func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string) (*rbacv1.ClusterRole, error) {
 	versionToUse := consts.DefaultControlPlaneTag
 	imageToUse := consts.DefaultControlPlaneImage
 	var constraint *semver.Constraints
 
-	if image != nil && *image != "" && tag != nil && *tag != "" {
-		askedImage := fmt.Sprintf("%s:%s", *image, *tag)
-		supported, err := versions.IsControlPlaneImageVersionSupported(askedImage)
+	if image != "" {
+		v, err := versions.FromImage(image)
+		if err != nil {
+			return nil, err
+		}
+		supported, err := versions.IsControlPlaneImageVersionSupported(image)
 		if err != nil {
 			return nil, err
 		}
 		if supported {
-			imageToUse = askedImage
-			versionToUse = *tag
+			imageToUse = image
+			versionToUse = v.String()
 		}
 	}
 

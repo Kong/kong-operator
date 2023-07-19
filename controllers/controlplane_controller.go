@@ -214,7 +214,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 
 		trace(log, "retrieving the newest DataPlane pod", controlplane)
-		dataPlanePod, err := r.getDataPlanePod(ctx, dataplane.Name, dataplane.Namespace)
+		dataPlanePod, err := getDataPlanePod(ctx, r.Client, dataplane.Name, dataplane.Namespace)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -313,7 +313,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	trace(log, "looking for existing Deployments for ControlPlane resource", controlplane)
-	createdOrUpdated, controlplaneDeployment, err := r.ensureDeploymentForControlPlane(ctx, log, controlplane, controlplaneServiceAccount.Name, certSecret.Name)
+	createdOrUpdated, controlplaneDeployment, err := r.ensureDeploymentForControlPlane(ctx, controlplane, controlplaneServiceAccount.Name, certSecret.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

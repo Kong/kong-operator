@@ -123,7 +123,7 @@ func TestMain(m *testing.M) {
 // -----------------------------------------------------------------------------
 
 func exitOnErr(err error) {
-	if !skipClusterCleanup && err != nil {
+	if !skipClusterCleanup && existingCluster == "" && err != nil {
 		if env != nil {
 			env.Cleanup(ctx) //nolint:errcheck
 		}

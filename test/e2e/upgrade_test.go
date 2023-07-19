@@ -73,7 +73,7 @@ func testManifestsUpgrade(
 
 	kustomizationDir := prepareKustomizeDir(t, testParams.toImage)
 	t.Logf("deploying operator %q to test cluster %q via kustomize", testParams.toImage, e.Environment.Name())
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, e.Environment.Cluster(), kustomizationDir))
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, e.Environment.Cluster(), kustomizationDir, "--server-side", "-v5"))
 	t.Log("waiting for operator deployment to complete")
 	require.NoError(t, waitForOperatorDeployment(ctx, e.Clients.K8sClient,
 		DeploymentAssertConditions(

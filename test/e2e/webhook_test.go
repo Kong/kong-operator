@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,7 +37,7 @@ func TestDataplaneValidatingWebhook(t *testing.T) {
 					Name:      uuid.NewString(),
 				},
 			},
-			errMsg: "DataPlanes requires a containerImage",
+			errMsg: "DataPlane requires an image",
 		},
 		{
 			name: "database_postgres_not_supported",
@@ -51,12 +50,21 @@ func TestDataplaneValidatingWebhook(t *testing.T) {
 					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
 						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
-								Pods: operatorv1alpha1.PodsOptions{
-									Env: []corev1.EnvVar{
-										{Name: "KONG_DATABASE", Value: "postgres"},
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+												Env: []corev1.EnvVar{
+													{
+														Name:  "KONG_DATABASE",
+														Value: "postgres",
+													},
+												},
+												Image: consts.DefaultDataPlaneImage,
+											},
+										},
 									},
-									ContainerImage: lo.ToPtr(consts.DefaultDataPlaneBaseImage),
-									Version:        lo.ToPtr(consts.DefaultDataPlaneTag),
 								},
 							},
 						},
@@ -64,7 +72,7 @@ func TestDataplaneValidatingWebhook(t *testing.T) {
 				},
 			},
 
-			errMsg: "database backend postgres of dataplane not supported currently",
+			errMsg: "database backend postgres of DataPlane not supported currently",
 		},
 	}
 

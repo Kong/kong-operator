@@ -4,9 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 
-	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +21,6 @@ import (
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
-	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/internal/versions"
 )
@@ -129,7 +127,6 @@ func (r *ControlPlaneReconciler) ensureDataPlaneConfiguration(
 // corresponding dataplane is set.
 func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	ctx context.Context,
-	log logr.Logger,
 	controlplane *operatorv1alpha1.ControlPlane,
 	serviceAccountName, certSecretName string,
 ) (bool, *appsv1.Deployment, error) {
@@ -163,7 +160,10 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	if err != nil {
 		return false, nil, err
 	}
-	generatedDeployment := k8sresources.GenerateNewDeploymentForControlPlane(controlplane, controlplaneImage, serviceAccountName, certSecretName)
+	generatedDeployment, err := k8sresources.GenerateNewDeploymentForControlPlane(controlplane, controlplaneImage, serviceAccountName, certSecretName)
+	if err != nil {
+		return false, nil, err
+	}
 
 	k8sutils.SetOwnerForObject(generatedDeployment, controlplane)
 	addLabelForControlPlane(generatedDeployment)
@@ -171,116 +171,45 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	if count == 1 {
 		var updated bool
 		existingDeployment := &deployments[0]
+
+		// ensure that object metadata is up to date
 		updated, existingDeployment.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingDeployment.ObjectMeta, generatedDeployment.ObjectMeta)
-		container := k8sutils.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
-		if container == nil {
-			// someone has deleted the main container from the Deployment for ??? reasons. we can't fathom why they
-			// would do this, but don't allow it and replace the container set entirely
-			existingDeployment.Spec.Template.Spec.Containers = generatedDeployment.Spec.Template.Spec.Containers
-			updated = true
-			container = k8sutils.GetPodContainerByName(&existingDeployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
+
+		// some custom comparison rules are needed for some PodTemplateSpec sub-attributes, in particular
+		// resources and affinity.
+		opts := []cmp.Option{
+			cmp.Comparer(func(a, b corev1.ResourceRequirements) bool { return k8sresources.ResourceRequirementsEqual(a, b) }),
 		}
 
-		replicas := existingDeployment.Spec.Replicas
+		// ensure that PodTemplateSpec is up to date
+		// TODO: this is currently relying on us pre-empting API server defaults (by setting them ourselves).
+		// This could in theory lead to situations of incompatibility with newer Kubernetes versions down the
+		// road, the tradeoff was made due to a time crunch of a matter of hours. We should consider other options
+		// to verify whether there are changes staged.
+		//
+		// See: https://github.com/Kong/gateway-operator/issues/904
+		if !cmp.Equal(existingDeployment.Spec.Template, generatedDeployment.Spec.Template, opts...) {
+			existingDeployment.Spec.Template = generatedDeployment.Spec.Template
+			updated = true
+		}
+
+		// ensure that replication strategy is up to date
+		replicas := controlplane.Spec.ControlPlaneOptions.Deployment.Replicas
 		switch {
-
-		// Dataplane was just unset, so we need to scale down the Deployment.
 		case !dataplaneIsSet && (replicas == nil || *replicas != numReplicasWhenNoDataplane):
-			existingDeployment.Spec.Replicas = pointer.Int32(numReplicasWhenNoDataplane)
-			updated = true
-
-		// Dataplane was just set, so we need to scale up the Deployment
-		// and ensure the env variables that might have been changed in
-		// deployment are updated.
-		case dataplaneIsSet && (replicas != nil && *replicas == numReplicasWhenNoDataplane):
-			existingDeployment.Spec.Replicas = nil
-			if len(container.Env) > 0 {
-				container.Env = controlplane.Spec.Deployment.Pods.Env
-			}
-			updated = true
-		}
-
-		// update cluster certificate volumes if needed.
-		if r.deploymentSpecVolumesNeedsUpdate(&generatedDeployment.Spec, &existingDeployment.Spec) {
-			existingDeployment.Spec.Template.Spec.Volumes = generatedDeployment.Spec.Template.Spec.Volumes
-			updated = true
-		}
-
-		// update service account name if needed.
-		if generatedDeployment.Spec.Template.Spec.ServiceAccountName != existingDeployment.Spec.Template.Spec.ServiceAccountName {
-			existingDeployment.Spec.Template.Spec.ServiceAccountName = generatedDeployment.Spec.Template.Spec.ServiceAccountName
-			updated = true
-		}
-
-		// We do not want to permit direct edits of the Deployment environment. Any user-supplied values should be set
-		// in the ControlPlane. If the actual Deployment environment does not match the generated environment, either
-		// something requires an update (e.g. the associated DataPlane Service changed and value generation changed the
-		// publish service configuration) or there was a manual edit we want to purge.
-		if !reflect.DeepEqual(container.Env, controlplane.Spec.Deployment.Pods.Env) {
-			container.Env = controlplane.Spec.Deployment.Pods.Env
-			updated = true
-		}
-
-		if !reflect.DeepEqual(container.EnvFrom, controlplane.Spec.Deployment.Pods.EnvFrom) {
-			container.EnvFrom = controlplane.Spec.Deployment.Pods.EnvFrom
-			updated = true
-		}
-
-		if controlplane.Spec.Deployment.Pods.Affinity != nil {
-			// ControlPlane pod affinity is set.
-			// Check if existing deployment already has its affinity set per ControlPlane spec.
-			controlPlaneAffiity := controlplane.Spec.Deployment.Pods.Affinity
-			if !reflect.DeepEqual(existingDeployment.Spec.Template.Spec.Affinity, controlPlaneAffiity) {
-				trace(log, "ControlPlane deployment Affinity needs to be set as per ControlPlane spec",
-					controlplane, "controlplane.affinity", controlPlaneAffiity,
-				)
-				existingDeployment.Spec.Template.Spec.Affinity = controlPlaneAffiity
+			// Dataplane was just unset, so we need to scale down the Deployment.
+			if !cmp.Equal(existingDeployment.Spec.Replicas, pointer.Int32(numReplicasWhenNoDataplane)) {
+				existingDeployment.Spec.Replicas = pointer.Int32(numReplicasWhenNoDataplane)
 				updated = true
 			}
-		} else {
-			if existingDeployment.Spec.Template.Spec.Affinity != nil {
-				trace(log, "ControlPlane deployment Affinity needs to be unset",
-					controlplane, "controplane.affinity", nil,
-				)
-				existingDeployment.Spec.Template.Spec.Affinity = nil
+		case dataplaneIsSet && (replicas != nil && *replicas != numReplicasWhenNoDataplane):
+			// Dataplane was just set, so we need to scale up the Deployment
+			// and ensure the env variables that might have been changed in
+			// deployment are updated.
+			if !cmp.Equal(existingDeployment.Spec.Replicas, replicas) {
+				existingDeployment.Spec.Replicas = replicas
 				updated = true
 			}
-		}
-
-		if controlplane.Spec.Deployment.Pods.Resources != nil {
-			// ControlPlane deployment resources are set.
-			// Check if existing container already has its resources set per ControlPlane spec.
-			controlPlaneResources := controlplane.Spec.Deployment.Pods.Resources
-			if !resources.ResourceRequirementsEqual(container.Resources, controlPlaneResources) {
-				trace(log, "ControlPlane deployment Resources needs to be set as per ControlPlane spec",
-					controlplane, "controlplane.resources", controlPlaneResources,
-				)
-				container.Resources = *controlPlaneResources
-				updated = true
-			}
-		} else {
-			// ControlPlane deployment resources are unset.
-			// Check if existing container already has defaults set.
-			defaults := k8sresources.DefaultControlPlaneResources()
-			if !resources.ResourceRequirementsEqual(container.Resources, defaults) {
-				trace(log, "ControlPlane deployment Resources need to be set to defaults", controlplane)
-				container.Resources = *defaults
-				updated = true
-			}
-		}
-
-		if !reflect.DeepEqual(existingDeployment.Spec.Template.Labels, generatedDeployment.Spec.Template.Labels) {
-			existingDeployment.Spec.Template.Labels = generatedDeployment.Spec.Template.Labels
-			updated = true
-		}
-
-		// update the container image or image version if needed
-		imageUpdated, err := ensureContainerImageUpdated(container, controlplane.Spec.Deployment.Pods.ContainerImage, controlplane.Spec.Deployment.Pods.Version)
-		if err != nil {
-			return false, nil, err
-		}
-		if imageUpdated {
-			updated = true
 		}
 
 		if updated {
@@ -368,7 +297,8 @@ func (r *ControlPlaneReconciler) ensureClusterRoleForControlPlane(
 		return false, nil, errors.New("number of clusterRoles reduced")
 	}
 
-	generatedClusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane(controlplane.Name, controlplane.Spec.Deployment.Pods.ContainerImage, controlplane.Spec.Deployment.Pods.Version)
+	controlplaneContainer := k8sutils.GetPodContainerByName(&controlplane.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+	generatedClusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane(controlplane.Name, controlplaneContainer.Image)
 	if err != nil {
 		return false, nil, err
 	}
@@ -524,34 +454,10 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRoleBindingsDeleted(
 	return deleted, errors.Join(errs...)
 }
 
-// deploymentSpecVolumesNeedsUpdate returns true if the volumes in deployment
-// for controlplane needs to be updated.
-func (r *ControlPlaneReconciler) deploymentSpecVolumesNeedsUpdate(
-	generatedDeploymentSpec *appsv1.DeploymentSpec,
-	existingDeploymentSpec *appsv1.DeploymentSpec,
-) bool {
-	generatedClusterCertVolume := k8sutils.GetPodVolumeByName(&generatedDeploymentSpec.Template.Spec, consts.ClusterCertificateVolume)
-	existingClusterCertVolume := k8sutils.GetPodVolumeByName(&existingDeploymentSpec.Template.Spec, consts.ClusterCertificateVolume)
-	// check for cluster certificate volume.
-	if generatedClusterCertVolume == nil || existingClusterCertVolume == nil {
-		return true
-	}
-
-	if generatedClusterCertVolume.Secret == nil || existingClusterCertVolume.Secret == nil {
-		return true
-	}
-
-	if generatedClusterCertVolume.Secret.SecretName != existingClusterCertVolume.Secret.SecretName {
-		return true
-	}
-
-	return false
-}
-
 // getDataPlanePod returns the IP of the newest DataPlane pod.
-func (r *ControlPlaneReconciler) getDataPlanePod(ctx context.Context, dataplaneName, namespace string) (*corev1.Pod, error) {
+func getDataPlanePod(ctx context.Context, cl client.Reader, dataplaneName, namespace string) (*corev1.Pod, error) {
 	podList := corev1.PodList{}
-	if err := r.Client.List(ctx, &podList, client.InNamespace(namespace), client.MatchingLabels{
+	if err := cl.List(ctx, &podList, client.InNamespace(namespace), client.MatchingLabels{
 		"app": dataplaneName,
 	}); err != nil {
 		return nil, err

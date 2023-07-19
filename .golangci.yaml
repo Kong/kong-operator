@@ -20,6 +20,7 @@ linters:
   - gci
   - gofmt
   - goimports
+  - gomodguard
   - gosec
   - gosimple
   - govet
@@ -72,6 +73,13 @@ linters-settings:
         disabled: true
   exhaustive:
     default-signifies-exhaustive: true
+  gomodguard:
+    blocked:
+      modules:
+      - github.com/pkg/errors:
+          recommendations:
+          - fmt
+          - errors
 issues:
   max-same-issues: 0
   fix: true

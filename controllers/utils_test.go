@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/pointer"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -22,98 +22,92 @@ func Test_ensureContainerImageUpdated(t *testing.T) {
 	for _, tt := range []struct {
 		name          string
 		originalImage string
-		newImage      *string
-		newVersion    *string
+		newImage      string
 		expectedImage string
 		updated       bool
 		wantErr       string
 	}{
 		{
 			name:          "invalid images produce an error",
-			originalImage: "fake:invalid:image",
-			wantErr:       "invalid container image found: fake:invalid:image",
+			originalImage: "fake:invalid:image:2.7.0",
+			newImage:      "kong/kong:2.7.0",
+			wantErr:       "invalid container image found: fake:invalid:image:2.7.0",
 		},
 		{
 			name:          "setting new image when existing is local with port is allowed",
 			originalImage: "localhost:5000/kic:2.7.0",
-			newImage:      pointer.String("kong/kong"),
-			newVersion:    pointer.String("2.7.0"),
+			newImage:      "kong/kong:2.7.0",
 			expectedImage: "kong/kong:2.7.0",
 			updated:       true,
 		},
 		{
 			name:          "setting new local image is allowed",
 			originalImage: "kong/kong:2.7.0",
-			newImage:      pointer.String("localhost:5000/kong"),
-			newVersion:    pointer.String("2.7.0"),
+			newImage:      "localhost:5000/kong:2.7.0",
 			expectedImage: "localhost:5000/kong:2.7.0",
 			updated:       true,
 		},
 		{
-			name:          "empty image and version makes no changes",
-			originalImage: "kong/kong:2.7.0",
-			expectedImage: "kong/kong:2.7.0",
-			updated:       false,
-		},
-		{
 			name:          "same image and version makes no changes",
 			originalImage: "kong/kong:2.7.0",
-			newImage:      pointer.String("kong/kong"),
-			newVersion:    pointer.String("2.7.0"),
+			newImage:      "kong/kong:2.7.0",
 			expectedImage: "kong/kong:2.7.0",
 			updated:       false,
 		},
 		{
 			name:          "version added when not originally present",
 			originalImage: "kong/kong",
-			newImage:      pointer.String("kong/kong"),
-			newVersion:    pointer.String("2.7.0"),
+			newImage:      "kong/kong:2.7.0",
 			expectedImage: "kong/kong:2.7.0",
 			updated:       true,
 		},
 		{
 			name:          "version is changed when a new one is provided",
 			originalImage: "kong/kong:2.7.0",
-			newImage:      pointer.String("kong/kong"),
-			newVersion:    pointer.String("3.0.0"),
+			newImage:      "kong/kong:3.0.0",
 			expectedImage: "kong/kong:3.0.0",
 			updated:       true,
 		},
 		{
 			name:          "image is added when not originally present",
 			originalImage: "",
-			newImage:      pointer.String("kong/kong"),
+			newImage:      "kong/kong",
 			expectedImage: "kong/kong",
 			updated:       true,
 		},
 		{
 			name:          "image is changed when a new one is provided",
 			originalImage: "kong/kong",
-			newImage:      pointer.String("kong/kong-gateway"),
+			newImage:      "kong/kong-gateway",
 			expectedImage: "kong/kong-gateway",
 			updated:       true,
 		},
 		{
 			name:          "image and version are added when not originally present",
 			originalImage: "",
-			newImage:      pointer.String("kong/kong-gateway"),
-			newVersion:    pointer.String("3.0.0"),
+			newImage:      "kong/kong-gateway:3.0.0",
 			expectedImage: "kong/kong-gateway:3.0.0",
 			updated:       true,
 		},
 		{
 			name:          "image and version are changed when new ones are provided",
 			originalImage: "kong/kong:2.7.0",
-			newImage:      pointer.String("kong/kong-gateway"),
-			newVersion:    pointer.String("3.0.0"),
+			newImage:      "kong/kong-gateway:3.0.0",
 			expectedImage: "kong/kong-gateway:3.0.0",
+			updated:       true,
+		},
+		{
+			name:          "image and version are changed when new ones are provided with local registry",
+			originalImage: "kong/kong:2.7.0",
+			newImage:      "localhost:5000/kong-gateway:3.0.0",
+			expectedImage: "localhost:5000/kong-gateway:3.0.0",
 			updated:       true,
 		},
 	} {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			container := generators.NewContainer("test", tt.originalImage, 80)
-			updated, err := ensureContainerImageUpdated(&container, tt.newImage, tt.newVersion)
+			updated, err := ensureContainerImageUpdated(&container, tt.newImage)
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				assert.Equal(t, tt.wantErr, err.Error())
@@ -171,6 +165,10 @@ func TestLog(t *testing.T) {
 }
 
 func TestDeploymentOptionsDeepEqual(t *testing.T) {
+	const (
+		containerName = "controller"
+	)
+
 	testcases := []struct {
 		name         string
 		o1, o2       *operatorv1alpha1.DeploymentOptions
@@ -190,29 +188,43 @@ func TestDeploymentOptionsDeepEqual(t *testing.T) {
 		{
 			name: "different resource requirements implies different deployment options",
 			o1: &operatorv1alpha1.DeploymentOptions{
-				Pods: operatorv1alpha1.PodsOptions{
-					Resources: &corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: containerName,
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+								},
+							},
 						},
 					},
 				},
 			},
 			o2: &operatorv1alpha1.DeploymentOptions{
-				Pods: operatorv1alpha1.PodsOptions{
-					Resources: &corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1001m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: containerName,
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("256Mi"),
+									},
+								},
+							},
 						},
 					},
 				},
@@ -222,32 +234,48 @@ func TestDeploymentOptionsDeepEqual(t *testing.T) {
 		{
 			name: "different pod labels implies different deployment options",
 			o1: &operatorv1alpha1.DeploymentOptions{
-				Pods: operatorv1alpha1.PodsOptions{
-					Labels: map[string]string{
-						"a": "v",
-					},
-					Resources: &corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"a": "v",
 						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: containerName,
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("256Mi"),
+									},
+								},
+							},
 						},
 					},
 				},
 			},
 			o2: &operatorv1alpha1.DeploymentOptions{
-				Pods: operatorv1alpha1.PodsOptions{
-					Resources: &corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: containerName,
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("256Mi"),
+									},
+								},
+							},
 						},
 					},
 				},
@@ -255,65 +283,46 @@ func TestDeploymentOptionsDeepEqual(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "different version implies different deployment options",
+			name: "different image implies different deployment options",
 			o1: &operatorv1alpha1.DeploymentOptions{
-				Pods: operatorv1alpha1.PodsOptions{
-					Version: lo.ToPtr("1.0"),
-					Resources: &corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  containerName,
+								Image: "image:v1.0",
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("256Mi"),
+									},
+								},
+							},
 						},
 					},
 				},
 			},
 			o2: &operatorv1alpha1.DeploymentOptions{
-				Pods: operatorv1alpha1.PodsOptions{
-					Resources: &corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-					},
-				},
-			},
-			expect: false,
-		},
-		{
-			name: "different container image implies different deployment options",
-			o1: &operatorv1alpha1.DeploymentOptions{
-				Pods: operatorv1alpha1.PodsOptions{
-					ContainerImage: lo.ToPtr("kong/custom"),
-					Resources: &corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-					},
-				},
-			},
-			o2: &operatorv1alpha1.DeploymentOptions{
-				Pods: operatorv1alpha1.PodsOptions{
-					Resources: &corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: containerName,
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("256Mi"),
+									},
+								},
+							},
 						},
 					},
 				},
@@ -323,35 +332,50 @@ func TestDeploymentOptionsDeepEqual(t *testing.T) {
 		{
 			name: "different env var implies different deployment options",
 			o1: &operatorv1alpha1.DeploymentOptions{
-				Pods: operatorv1alpha1.PodsOptions{
-					Env: []corev1.EnvVar{
-						{
-							Name:  "KONG_TEST_VAR",
-							Value: "VALUE1",
-						},
-					},
-					Resources: &corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  containerName,
+								Image: "image:v1.0",
+								Env: []corev1.EnvVar{
+									{
+										Name:  "KONG_TEST_VAR",
+										Value: "VALUE1",
+									},
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("256Mi"),
+									},
+								},
+							},
 						},
 					},
 				},
 			},
 			o2: &operatorv1alpha1.DeploymentOptions{
-				Pods: operatorv1alpha1.PodsOptions{
-					Resources: &corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: containerName,
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("256Mi"),
+									},
+								},
+							},
 						},
 					},
 				},
@@ -361,51 +385,67 @@ func TestDeploymentOptionsDeepEqual(t *testing.T) {
 		{
 			name: "the same",
 			o1: &operatorv1alpha1.DeploymentOptions{
-				Pods: operatorv1alpha1.PodsOptions{
-					Labels: map[string]string{
-						"a": "v",
-					},
-					Version:        lo.ToPtr("1.0"),
-					ContainerImage: lo.ToPtr("kong/custom"),
-					Env: []corev1.EnvVar{
-						{
-							Name:  "KONG_TEST_VAR",
-							Value: "VALUE1",
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"a": "1",
 						},
 					},
-					Resources: &corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  containerName,
+								Image: "image:v1.0",
+								Env: []corev1.EnvVar{
+									{
+										Name:  "KONG_TEST_VAR",
+										Value: "VALUE1",
+									},
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("256Mi"),
+									},
+								},
+							},
 						},
 					},
 				},
 			},
 			o2: &operatorv1alpha1.DeploymentOptions{
-				Pods: operatorv1alpha1.PodsOptions{
-					Labels: map[string]string{
-						"a": "v",
-					},
-					Version:        lo.ToPtr("1.0"),
-					ContainerImage: lo.ToPtr("kong/custom"),
-					Env: []corev1.EnvVar{
-						{
-							Name:  "KONG_TEST_VAR",
-							Value: "VALUE1",
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"a": "1",
 						},
 					},
-					Resources: &corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  containerName,
+								Image: "image:v1.0",
+								Env: []corev1.EnvVar{
+									{
+										Name:  "KONG_TEST_VAR",
+										Value: "VALUE1",
+									},
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("256Mi"),
+									},
+								},
+							},
 						},
 					},
 				},
@@ -416,34 +456,169 @@ func TestDeploymentOptionsDeepEqual(t *testing.T) {
 			name: "different replicas implies different deployment options",
 			o1: &operatorv1alpha1.DeploymentOptions{
 				Replicas: lo.ToPtr(int32(1)),
-				Pods: operatorv1alpha1.PodsOptions{
-					Resources: &corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: containerName,
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("256Mi"),
+									},
+								},
+							},
 						},
 					},
 				},
 			},
 			o2: &operatorv1alpha1.DeploymentOptions{
-				Pods: operatorv1alpha1.PodsOptions{
-					Resources: &corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("128Mi"),
+				Replicas: lo.ToPtr(int32(3)),
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: containerName,
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1000m"),
+										corev1.ResourceMemory: resource.MustParse("256Mi"),
+									},
+								},
+							},
 						},
 					},
 				},
 			},
 			expect: false,
+		},
+		{
+			name: "different env vars but included in the vars to ignore implies equal opts",
+			o1: &operatorv1alpha1.DeploymentOptions{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: containerName,
+								Env: []corev1.EnvVar{
+									{
+										Name:  "KONG_TEST_VAR",
+										Value: "VALUE1",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			o2: &operatorv1alpha1.DeploymentOptions{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: containerName,
+							},
+						},
+					},
+				},
+			},
+			envsToIgnore: []string{"KONG_TEST_VAR"},
+			expect:       true,
+		},
+		{
+			name: "different env vars with 1 one them included in the vars to ignore implies unequal opts",
+			o1: &operatorv1alpha1.DeploymentOptions{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: containerName,
+								Env: []corev1.EnvVar{
+									{
+										Name:  "KONG_TEST_VAR",
+										Value: "VALUE1",
+									},
+									{
+										Name:  "KONG_TEST_VAR_2",
+										Value: "VALUE2",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			o2: &operatorv1alpha1.DeploymentOptions{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: containerName,
+							},
+						},
+					},
+				},
+			},
+			envsToIgnore: []string{"KONG_TEST_VAR"},
+			expect:       false,
+		},
+		{
+			name: "different labels unequal opts",
+			o1: &operatorv1alpha1.DeploymentOptions{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"a": "a",
+						},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: containerName,
+								Env: []corev1.EnvVar{
+									{
+										Name:  "KONG_TEST_VAR",
+										Value: "VALUE1",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			o2: &operatorv1alpha1.DeploymentOptions{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"a": "a",
+							"b": "b",
+						},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: containerName,
+								Env: []corev1.EnvVar{
+									{
+										Name:  "KONG_TEST_VAR",
+										Value: "VALUE1",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			envsToIgnore: []string{"KONG_TEST_VAR"},
+			expect:       false,
 		},
 	}
 
