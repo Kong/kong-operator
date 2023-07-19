@@ -19,6 +19,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
@@ -71,7 +72,7 @@ func TestGatewayEssentials(t *testing.T) {
 	t.Log("verifying connectivity to the Gateway")
 	require.Eventually(t, expect404WithNoRouteFunc(t, ctx, "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
 
-	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
+	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
 	controlplaneClient := clients.OperatorClient.ApisV1alpha1().ControlPlanes(namespace.Name)
 	controlplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: controlplane.Name}
@@ -149,7 +150,7 @@ func TestGatewayEssentials(t *testing.T) {
 
 	t.Log("verifying that DataPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
-		_, err := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name).Get(ctx, dataplane.Name, metav1.GetOptions{})
+		_, err := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name).Get(ctx, dataplane.Name, metav1.GetOptions{})
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
@@ -318,7 +319,7 @@ func setGatewayConfigurationEnvProxyPort(t *testing.T, gatewayConfiguration *ope
 
 	dpOptions := gatewayConfiguration.Spec.DataPlaneOptions
 	if dpOptions == nil {
-		dpOptions = &operatorv1alpha1.DataPlaneOptions{}
+		dpOptions = &operatorv1beta1.DataPlaneOptions{}
 	}
 	if dpOptions.Deployment.PodTemplateSpec == nil {
 		dpOptions.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
@@ -344,7 +345,7 @@ func setGatewayConfigurationEnvAdminAPIPort(t *testing.T, gatewayConfiguration *
 
 	dpOptions := gatewayConfiguration.Spec.DataPlaneOptions
 	if dpOptions == nil {
-		dpOptions = &operatorv1alpha1.DataPlaneOptions{}
+		dpOptions = &operatorv1beta1.DataPlaneOptions{}
 	}
 
 	container := k8sutils.GetPodContainerByName(&dpOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)

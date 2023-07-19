@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 )
 
@@ -40,7 +40,7 @@ func GenerateNewServiceForCertificateConfig(namespace, name string) *corev1.Serv
 }
 
 // GenerateNewProxyServiceForDataplane is a helper to generate the dataplane proxy service
-func GenerateNewProxyServiceForDataplane(dataplane *operatorv1alpha1.DataPlane) *corev1.Service {
+func GenerateNewProxyServiceForDataplane(dataplane *operatorv1beta1.DataPlane) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,
@@ -73,7 +73,7 @@ func GenerateNewProxyServiceForDataplane(dataplane *operatorv1alpha1.DataPlane) 
 
 const DefaultDataPlaneProxyServiceType = corev1.ServiceTypeLoadBalancer
 
-func getDataPlaneIngressServiceType(dataplane *operatorv1alpha1.DataPlane) corev1.ServiceType {
+func getDataPlaneIngressServiceType(dataplane *operatorv1beta1.DataPlane) corev1.ServiceType {
 	if dataplane == nil || dataplane.Spec.Network.Services == nil {
 		return DefaultDataPlaneProxyServiceType
 	}
@@ -82,7 +82,7 @@ func getDataPlaneIngressServiceType(dataplane *operatorv1alpha1.DataPlane) corev
 }
 
 // GenerateNewAdminServiceForDataPlane is a helper to generate the headless dataplane admin service
-func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1alpha1.DataPlane) *corev1.Service {
+func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,

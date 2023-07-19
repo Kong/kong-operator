@@ -7,7 +7,7 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
@@ -51,7 +51,7 @@ var KongDefaults = map[string]string{
 // DataPlane. No configuration is overridden. EnvVars are sorted
 // lexographically as a side effect.
 // returns true if new envs are actually appended.
-func SetDataPlaneDefaults(spec *operatorv1alpha1.DataPlaneOptions) bool {
+func SetDataPlaneDefaults(spec *operatorv1beta1.DataPlaneOptions) bool {
 	if spec.Deployment.PodTemplateSpec == nil {
 		spec.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}

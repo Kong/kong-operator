@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -70,7 +71,7 @@ func (r *ControlPlaneReconciler) ensureIsMarkedProvisioned(
 // Information about the missing dataplane is stored in the controlplane status.
 func (r *ControlPlaneReconciler) ensureDataPlaneStatus(
 	controlplane *operatorv1alpha1.ControlPlane,
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 ) (dataplaneIsSet bool) {
 	dataplaneIsSet = controlplane.Spec.DataPlane != nil && *controlplane.Spec.DataPlane == dataplane.Name
 	condition, present := k8sutils.GetCondition(ControlPlaneConditionTypeProvisioned, controlplane)

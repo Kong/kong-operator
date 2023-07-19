@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
@@ -84,7 +85,7 @@ func MustListNetworkPoliciesForGateway(t *testing.T, ctx context.Context, gatewa
 
 // MustListServices is a helper function for tests that
 // conveniently lists all proxy services managed by a given dataplane.
-func MustListDataPlaneProxyServices(t *testing.T, ctx context.Context, dataplane *operatorv1alpha1.DataPlane, mgrClient client.Client) []corev1.Service {
+func MustListDataPlaneProxyServices(t *testing.T, ctx context.Context, dataplane *operatorv1beta1.DataPlane, mgrClient client.Client) []corev1.Service {
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
 		mgrClient,
@@ -101,7 +102,7 @@ func MustListDataPlaneProxyServices(t *testing.T, ctx context.Context, dataplane
 
 // mustListDataPlaneDeployments is a helper function for tests that
 // conveniently lists all deployments managed by a given controlplane.
-func MustListDataPlaneDeployments(t *testing.T, ctx context.Context, dataplane *operatorv1alpha1.DataPlane, clients K8sClients) []appsv1.Deployment {
+func MustListDataPlaneDeployments(t *testing.T, ctx context.Context, dataplane *operatorv1beta1.DataPlane, clients K8sClients) []appsv1.Deployment {
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
 		clients.MgrClient,
@@ -117,7 +118,7 @@ func MustListDataPlaneDeployments(t *testing.T, ctx context.Context, dataplane *
 
 // MustListDataPlanesForGateway is a helper function for tests that
 // conveniently lists all dataplanes managed by a given gateway.
-func MustListDataPlanesForGateway(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) []operatorv1alpha1.DataPlane {
+func MustListDataPlanesForGateway(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) []operatorv1beta1.DataPlane {
 	dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, clients.MgrClient, gateway)
 	require.NoError(t, err)
 	return dataplanes

@@ -22,6 +22,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -49,7 +50,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&gwtypes.Gateway{},
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayHasMatchingGatewayClass))).
 		// watch for changes in dataplanes created by the gateway controller
-		Owns(&operatorv1alpha1.DataPlane{}).
+		Owns(&operatorv1beta1.DataPlane{}).
 		// watch for changes in controlplanes created by the gateway controller
 		Owns(&operatorv1alpha1.ControlPlane{}).
 		// watch for changes in networkpolicies created by the gateway controller
@@ -339,7 +340,7 @@ func (r *GatewayReconciler) provisionDataPlane(
 	log logr.Logger,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
-) *operatorv1alpha1.DataPlane {
+) *operatorv1beta1.DataPlane {
 	log = log.WithName("dataplaneProvisioning")
 
 	r.setDataplaneGatewayConfigDefaults(gatewayConfig)
@@ -389,7 +390,7 @@ func (r *GatewayReconciler) provisionDataPlane(
 	trace(log, "ensuring dataplane config is up to date", gateway)
 	// compare deployment option of dataplane with dataplane deployment option of gatewayconfiguration.
 	// if not configured in gatewayconfiguration, compare deployment option of dataplane with an empty one.
-	expectedDataplaneOptions := &operatorv1alpha1.DataPlaneOptions{}
+	expectedDataplaneOptions := &operatorv1beta1.DataPlaneOptions{}
 	if gatewayConfig.Spec.DataPlaneOptions != nil {
 		expectedDataplaneOptions = gatewayConfig.Spec.DataPlaneOptions
 	}
@@ -437,7 +438,7 @@ func (r *GatewayReconciler) provisionControlPlane(
 	gatewayClass *gatewayv1beta1.GatewayClass,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 	services []corev1.Service,
 ) *operatorv1alpha1.ControlPlane {
 	log = log.WithName("controlplaneProvisioning")
@@ -565,7 +566,7 @@ func setControlPlaneOptionsDefaults(opts *operatorv1alpha1.ControlPlaneOptions) 
 
 // setDataPlaneOptionsDefaults sets the default DataPlane options not overriding
 // what's been provided only filling in those fields that were unset or empty.
-func setDataPlaneOptionsDefaults(opts *operatorv1alpha1.DataPlaneOptions) {
+func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions) {
 	if opts.Deployment.PodTemplateSpec == nil {
 		opts.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}

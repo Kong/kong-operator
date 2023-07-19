@@ -21,6 +21,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -33,6 +34,10 @@ func init() {
 	}
 	if err := operatorv1alpha1.AddToScheme(scheme.Scheme); err != nil {
 		fmt.Println("error while adding operatorv1alpha1 scheme")
+		os.Exit(1)
+	}
+	if err := operatorv1beta1.AddToScheme(scheme.Scheme); err != nil {
+		fmt.Println("error while adding operatorv1beta1 scheme")
 		os.Exit(1)
 	}
 }
@@ -53,7 +58,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 	testCases := []struct {
 		name                  string
 		dataplaneReq          reconcile.Request
-		dataplane             *operatorv1alpha1.DataPlane
+		dataplane             *operatorv1beta1.DataPlane
 		dataplaneSubResources []controllerruntimeclient.Object
 		testBody              func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request)
 	}{
@@ -65,9 +70,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Name:      "test-dataplane",
 				},
 			},
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "DataPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -75,10 +80,10 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Namespace: "test-namespace",
 					UID:       types.UID(uuid.NewString()),
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -93,7 +98,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						},
 					},
 				},
-				Status: operatorv1alpha1.DataPlaneStatus{
+				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:   string(DataPlaneConditionTypeProvisioned),
@@ -170,9 +175,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Name:      "test-dataplane",
 				},
 			},
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "DataPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -180,10 +185,10 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Namespace: "test-namespace",
 					UID:       types.UID(uuid.NewString()),
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -198,7 +203,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						},
 					},
 				},
-				Status: operatorv1alpha1.DataPlaneStatus{
+				Status: operatorv1beta1.DataPlaneStatus{
 					Service: "svc-proxy-to-delete",
 					Conditions: []metav1.Condition{
 						{
@@ -258,9 +263,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "DataPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -268,10 +273,10 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Namespace: "default",
 					UID:       types.UID(uuid.NewString()),
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -286,7 +291,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						},
 					},
 				},
-				Status: operatorv1alpha1.DataPlaneStatus{
+				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:   string(DataPlaneConditionTypeProvisioned),
@@ -365,9 +370,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "DataPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -375,10 +380,10 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Namespace: "default",
 					UID:       types.UID(uuid.NewString()),
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -393,7 +398,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						},
 					},
 				},
-				Status: operatorv1alpha1.DataPlaneStatus{
+				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:   string(DataPlaneConditionTypeProvisioned),
@@ -482,11 +487,11 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
-				dp := &operatorv1alpha1.DataPlane{}
+				dp := &operatorv1beta1.DataPlane{}
 				err = reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "default", Name: "dataplane-kong"}, dp)
 				require.NoError(t, err)
 				require.Equal(t, "test-proxy-service", dp.Status.Service)
-				require.Equal(t, []operatorv1alpha1.Address{
+				require.Equal(t, []operatorv1beta1.Address{
 					// This currently assumes that we sort the addresses in a way
 					// such that LoadBalancer IPs, then LoadBalancer hostnames are added
 					// and then ClusterIPs follow.
@@ -494,19 +499,19 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					// has been agreed in https://github.com/Kong/gateway-operator/issues/281
 					// then no action has to be taken. Otherwise this might need to be changed.
 					{
-						Type:       addressOf(operatorv1alpha1.IPAddressType),
+						Type:       addressOf(operatorv1beta1.IPAddressType),
 						Value:      "6.7.8.9",
-						SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
+						SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 					},
 					{
-						Type:       addressOf(operatorv1alpha1.HostnameAddressType),
+						Type:       addressOf(operatorv1beta1.HostnameAddressType),
 						Value:      "mycustomhostname.com",
-						SourceType: operatorv1alpha1.PublicLoadBalancerAddressSourceType,
+						SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 					},
 					{
-						Type:       addressOf(operatorv1alpha1.IPAddressType),
+						Type:       addressOf(operatorv1beta1.IPAddressType),
 						Value:      "10.0.0.1",
-						SourceType: operatorv1alpha1.PrivateIPAddressSourceType,
+						SourceType: operatorv1beta1.PrivateIPAddressSourceType,
 					},
 				}, dp.Status.Addresses)
 			},
@@ -519,9 +524,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "DataPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -529,10 +534,10 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Namespace: "default",
 					UID:       types.UID(uuid.NewString()),
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -547,7 +552,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						},
 					},
 				},
-				Status: operatorv1alpha1.DataPlaneStatus{
+				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:   string(DataPlaneConditionTypeProvisioned),
@@ -632,7 +637,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
-				dp := &operatorv1alpha1.DataPlane{}
+				dp := &operatorv1beta1.DataPlane{}
 				nn := types.NamespacedName{Namespace: "default", Name: "dataplane-kong"}
 				err = reconciler.Client.Get(ctx, nn, dp)
 				require.NoError(t, err)

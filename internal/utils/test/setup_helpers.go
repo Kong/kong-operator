@@ -77,7 +77,7 @@ func WaitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Cli
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			_, err := operatorClient.ApisV1alpha1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{})
+			_, err := operatorClient.ApisV1beta1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{})
 			if err == nil {
 				ready = true
 			}

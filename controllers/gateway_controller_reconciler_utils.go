@@ -18,6 +18,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -41,7 +42,7 @@ func (r *GatewayReconciler) createDataPlane(ctx context.Context,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 ) error {
-	dataplane := &operatorv1alpha1.DataPlane{
+	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    gateway.Namespace,
 			GenerateName: fmt.Sprintf("%s-", gateway.Name),
@@ -87,7 +88,7 @@ func (r *GatewayReconciler) createControlPlane(
 
 func (r *GatewayReconciler) getGatewayAddresses(
 	ctx context.Context,
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 ) ([]gwtypes.GatewayAddress, error) {
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
@@ -220,7 +221,7 @@ func (r *GatewayReconciler) ensureDataPlaneHasNetworkPolicy(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (createdOrUpdate bool, err error) {
 	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway)
@@ -269,7 +270,7 @@ func (r *GatewayReconciler) ensureDataPlaneHasNetworkPolicy(
 func generateDataPlaneNetworkPolicy(
 	namespace string,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (*networkingv1.NetworkPolicy, error) {
 	var (

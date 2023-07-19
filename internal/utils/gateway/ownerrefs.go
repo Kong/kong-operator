@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -25,12 +26,12 @@ func ListDataPlanesForGateway(
 	ctx context.Context,
 	c client.Client,
 	gateway *gwtypes.Gateway,
-) ([]operatorv1alpha1.DataPlane, error) {
+) ([]operatorv1beta1.DataPlane, error) {
 	if gateway.Namespace == "" {
 		return nil, fmt.Errorf("can't list dataplanes for gateway: gateway resource was missing namespace")
 	}
 
-	dataplaneList := &operatorv1alpha1.DataPlaneList{}
+	dataplaneList := &operatorv1beta1.DataPlaneList{}
 
 	err := c.List(
 		ctx,
@@ -42,7 +43,7 @@ func ListDataPlanesForGateway(
 		return nil, err
 	}
 
-	dataplanes := make([]operatorv1alpha1.DataPlane, 0)
+	dataplanes := make([]operatorv1beta1.DataPlane, 0)
 	for _, dataplane := range dataplaneList.Items {
 		if k8sutils.IsOwnedByRefUID(&dataplane.ObjectMeta, gateway.UID) {
 			dataplanes = append(dataplanes, dataplane)
@@ -90,12 +91,12 @@ func GetDataPlaneForControlPlane(
 	ctx context.Context,
 	c client.Client,
 	controlplane *operatorv1alpha1.ControlPlane,
-) (*operatorv1alpha1.DataPlane, error) {
+) (*operatorv1beta1.DataPlane, error) {
 	if controlplane.Spec.DataPlane == nil || *controlplane.Spec.DataPlane == "" {
 		return nil, fmt.Errorf("%w, controlplane = %s/%s", operatorerrors.ErrDataPlaneNotSet, controlplane.Namespace, controlplane.Name)
 	}
 
-	dataplane := operatorv1alpha1.DataPlane{}
+	dataplane := operatorv1beta1.DataPlane{}
 	if err := c.Get(ctx, types.NamespacedName{Namespace: controlplane.Namespace, Name: *controlplane.Spec.DataPlane}, &dataplane); err != nil {
 		return nil, err
 	}
@@ -107,7 +108,7 @@ func GetDataPlaneForControlPlane(
 func GetDataplaneServiceName(
 	ctx context.Context,
 	c client.Client,
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 	serviceTypeLabelValue consts.ServiceType,
 ) (string, error) {
 	services, err := k8sutils.ListServicesForOwner(ctx,

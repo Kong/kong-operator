@@ -13,8 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/gateway-operator/apis/v1alpha1"
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/apis/v1beta1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
@@ -30,15 +30,15 @@ func TestDataplaneEssentials(t *testing.T) {
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	dataplane := &operatorv1alpha1.DataPlane{
+	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dataplaneName.Namespace,
 			Name:      dataplaneName.Name,
 		},
-		Spec: v1alpha1.DataPlaneSpec{
-			DataPlaneOptions: v1alpha1.DataPlaneOptions{
-				Deployment: v1alpha1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{
 								Labels: map[string]string{
@@ -63,9 +63,9 @@ func TestDataplaneEssentials(t *testing.T) {
 						},
 					},
 				},
-				Network: operatorv1alpha1.DataPlaneNetworkOptions{
-					Services: &operatorv1alpha1.DataPlaneServices{
-						Ingress: &operatorv1alpha1.ServiceOptions{
+				Network: operatorv1beta1.DataPlaneNetworkOptions{
+					Services: &operatorv1beta1.DataPlaneServices{
+						Ingress: &operatorv1beta1.ServiceOptions{
 							Annotations: map[string]string{
 								"foo": "bar",
 							},
@@ -76,7 +76,7 @@ func TestDataplaneEssentials(t *testing.T) {
 		},
 	}
 
-	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
+	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 	dataplane, err := dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
@@ -177,7 +177,7 @@ func TestDataplaneEssentials(t *testing.T) {
 
 	t.Log("updating dataplane spec with proxy service type of ClusterIP")
 	require.Eventually(t,
-		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1alpha1.DataPlane) {
+		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
 			dp.Spec.Network.Services.Ingress.Type = corev1.ServiceTypeClusterIP
 		}),
 		time.Minute, time.Second)
@@ -203,21 +203,21 @@ func TestDataPlaneUpdate(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
-	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
+	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 	t.Log("deploying dataplane resource")
 	dataplaneName := types.NamespacedName{
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	dataplane := &v1alpha1.DataPlane{
+	dataplane := &v1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dataplaneName.Namespace,
 			Name:      dataplaneName.Name,
 		},
-		Spec: v1alpha1.DataPlaneSpec{
-			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+		Spec: v1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -302,8 +302,8 @@ func TestDataPlaneUpdate(t *testing.T) {
 		return testEnv == "after_update"
 	}, testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
 
-	dataPlaneConditionPredicate := func(c *metav1.Condition) func(dataplane *v1alpha1.DataPlane) bool {
-		return func(dataplane *v1alpha1.DataPlane) bool {
+	dataPlaneConditionPredicate := func(c *metav1.Condition) func(dataplane *v1beta1.DataPlane) bool {
+		return func(dataplane *v1beta1.DataPlane) bool {
 			for _, condition := range dataplane.Status.Conditions {
 				if condition.Type == c.Type && condition.Status == c.Status {
 					return true
@@ -367,15 +367,15 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	dataplane := &v1alpha1.DataPlane{
+	dataplane := &v1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dataplaneName.Namespace,
 			Name:      dataplaneName.Name,
 		},
-		Spec: v1alpha1.DataPlaneSpec{
-			DataPlaneOptions: v1alpha1.DataPlaneOptions{
-				Deployment: v1alpha1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+		Spec: v1beta1.DataPlaneSpec{
+			DataPlaneOptions: v1beta1.DataPlaneOptions{
+				Deployment: v1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						Replicas: lo.ToPtr(int32(2)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
@@ -393,7 +393,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 		},
 	}
 
-	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
+	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 
 	dataplane, err := dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -410,7 +410,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 
 	t.Log("changing replicas in dataplane spec to 1 should scale down the deployment back to 1")
 	require.Eventually(t,
-		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1alpha1.DataPlane) { dp.Spec.Deployment.Replicas = lo.ToPtr(int32(1)) }),
+		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) { dp.Spec.Deployment.Replicas = lo.ToPtr(int32(1)) }),
 		time.Minute, time.Second)
 
 	t.Log("verifying that dataplane has indeed 1 ready replica after scaling down")
@@ -443,15 +443,15 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	dataplane := &operatorv1alpha1.DataPlane{
+	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dataplaneName.Namespace,
 			Name:      dataplaneName.Name,
 		},
-		Spec: operatorv1alpha1.DataPlaneSpec{
-			DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Volumes: []corev1.Volume{
@@ -485,7 +485,7 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 			},
 		},
 	}
-	dataplane, err = clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name).Create(ctx, dataplane, metav1.CreateOptions{})
+	dataplane, err = clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name).Create(ctx, dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 

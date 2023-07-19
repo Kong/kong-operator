@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 )
 
@@ -62,21 +62,21 @@ func TestHandleDataplaneValidation(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		dataplane *operatorv1alpha1.DataPlane
+		dataplane *operatorv1beta1.DataPlane
 		hasError  bool
 		errMsg    string
 	}{
 		{
 			name: "validate_ok:dbmode=off",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-db-off",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -102,15 +102,15 @@ func TestHandleDataplaneValidation(t *testing.T) {
 		},
 		{
 			name: "validate_ok:dbmode=empty",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-db-off",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -136,15 +136,15 @@ func TestHandleDataplaneValidation(t *testing.T) {
 		},
 		{
 			name: "validate_error:database=postgres",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-db-postgres",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -171,15 +171,15 @@ func TestHandleDataplaneValidation(t *testing.T) {
 		},
 		{
 			name: "validate_error:database=xxx",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-db-xxx",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -206,15 +206,15 @@ func TestHandleDataplaneValidation(t *testing.T) {
 		},
 		{
 			name: "validate_ok:db=off_in_configmap",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-db-off-in-cm",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -245,15 +245,15 @@ func TestHandleDataplaneValidation(t *testing.T) {
 		},
 		{
 			name: "validate_error:db=postgres_in_secret",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-db-postgres-in-secret",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -285,15 +285,15 @@ func TestHandleDataplaneValidation(t *testing.T) {
 		},
 		{
 			name: "validate_error:db=xxx_in_cm_envFrom",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-db-xxx-in-cm",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -322,15 +322,15 @@ func TestHandleDataplaneValidation(t *testing.T) {
 		},
 		{
 			name: "validate_ok:db=off_in_secret_envfrom",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-db-off-in-secret",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -359,15 +359,15 @@ func TestHandleDataplaneValidation(t *testing.T) {
 		},
 		{
 			name: "validate_error:missing_container_image",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-db-off-in-secret",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -394,8 +394,8 @@ func TestHandleDataplaneValidation(t *testing.T) {
 				Request: &admissionv1.AdmissionRequest{
 					UID: "",
 					Kind: metav1.GroupVersionKind{
-						Group:   operatorv1alpha1.SchemeGroupVersion.Group,
-						Version: operatorv1alpha1.SchemeGroupVersion.Version,
+						Group:   operatorv1beta1.SchemeGroupVersion.Group,
+						Version: operatorv1beta1.SchemeGroupVersion.Version,
 						Kind:    "dataplanes",
 					},
 					Resource:  dataPlaneGVResource,

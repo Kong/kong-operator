@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	"github.com/kong/gateway-operator/internal/manager/logging"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -385,7 +386,40 @@ func getLogger(ctx context.Context, controllerName string, developmentMode bool)
 // DeploymentOptions - Private Functions - Equality Checks
 // -----------------------------------------------------------------------------
 
-func deploymentOptionsDeepEqual(o1, o2 *operatorv1alpha1.DeploymentOptions, envVarsToIgnore ...string) bool {
+func alphaDeploymentOptionsDeepEqual(o1, o2 *operatorv1alpha1.DeploymentOptions, envVarsToIgnore ...string) bool {
+	if o1 == nil && o2 == nil {
+		return true
+	}
+
+	if (o1 == nil && o2 != nil) || (o1 != nil && o2 == nil) {
+		return false
+	}
+
+	if !reflect.DeepEqual(o1.Replicas, o2.Replicas) {
+		return false
+	}
+
+	opts := []cmp.Option{
+		cmp.Comparer(func(a, b corev1.ResourceRequirements) bool {
+			return k8sresources.ResourceRequirementsEqual(a, b)
+		}),
+		cmp.Comparer(func(a, b []corev1.EnvVar) bool {
+			// Throw out env vars that we ignore.
+			a = lo.Filter(a, func(e corev1.EnvVar, _ int) bool {
+				return !lo.Contains(envVarsToIgnore, e.Name)
+			})
+			b = lo.Filter(b, func(e corev1.EnvVar, _ int) bool {
+				return !lo.Contains(envVarsToIgnore, e.Name)
+			})
+
+			// And compare.
+			return reflect.DeepEqual(a, b)
+		}),
+	}
+	return cmp.Equal(&o1.PodTemplateSpec, &o2.PodTemplateSpec, opts...)
+}
+
+func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVarsToIgnore ...string) bool {
 	if o1 == nil && o2 == nil {
 		return true
 	}
@@ -422,7 +456,7 @@ func deploymentOptionsDeepEqual(o1, o2 *operatorv1alpha1.DeploymentOptions, envV
 // ServicesOptions - Private Functions - Equality Checks
 // -----------------------------------------------------------------------------
 
-func servicesOptionsDeepEqual(opts1, opts2 *operatorv1alpha1.DataPlaneNetworkOptions) bool {
+func servicesOptionsDeepEqual(opts1, opts2 *operatorv1beta1.DataPlaneNetworkOptions) bool {
 	return reflect.DeepEqual(opts1.Services, opts2.Services)
 }
 
@@ -434,7 +468,7 @@ func getPrefixForOwner(owner client.Object) string {
 	switch owner.(type) {
 	case *operatorv1alpha1.ControlPlane:
 		return consts.ControlPlanePrefix
-	case *operatorv1alpha1.DataPlane:
+	case *operatorv1beta1.DataPlane:
 		return consts.DataPlanePrefix
 	}
 	return ""
@@ -444,7 +478,7 @@ func getManagedLabelForOwner(owner client.Object) (key string, value string) {
 	switch owner.(type) {
 	case *operatorv1alpha1.ControlPlane:
 		return consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue
-	case *operatorv1alpha1.DataPlane:
+	case *operatorv1beta1.DataPlane:
 		return consts.GatewayOperatorControlledLabel, consts.DataPlaneManagedLabelValue
 	}
 	return "", ""
@@ -458,7 +492,7 @@ func addLabelForOwner(obj client.Object, owner client.Object) {
 	switch owner.(type) {
 	case *operatorv1alpha1.ControlPlane:
 		addLabelForControlPlane(obj)
-	case *operatorv1alpha1.DataPlane:
+	case *operatorv1beta1.DataPlane:
 		addLabelForDataplane(obj)
 	}
 }

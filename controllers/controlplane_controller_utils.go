@@ -265,7 +265,7 @@ func addLabelForControlPlane(obj client.Object) {
 // -----------------------------------------------------------------------------
 
 func controlplaneSpecDeepEqual(spec1, spec2 *operatorv1alpha1.ControlPlaneOptions, envVarsToIgnore ...string) bool {
-	if !deploymentOptionsDeepEqual(&spec1.Deployment, &spec2.Deployment, envVarsToIgnore...) ||
+	if !alphaDeploymentOptionsDeepEqual(&spec1.Deployment, &spec2.Deployment, envVarsToIgnore...) ||
 		!reflect.DeepEqual(spec1.DataPlane, spec2.DataPlane) {
 		return false
 	}

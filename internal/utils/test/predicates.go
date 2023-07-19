@@ -17,6 +17,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
@@ -47,10 +48,10 @@ func DataPlanePredicate(
 	t *testing.T,
 	ctx context.Context,
 	dataplaneName types.NamespacedName,
-	predicate func(dataplane *operatorv1alpha1.DataPlane) bool,
+	predicate func(dataplane *operatorv1beta1.DataPlane) bool,
 	operatorClient *clientset.Clientset,
 ) func() bool {
-	dataPlaneClient := operatorClient.ApisV1alpha1().DataPlanes(dataplaneName.Namespace)
+	dataPlaneClient := operatorClient.ApisV1beta1().DataPlanes(dataplaneName.Namespace)
 	return func() bool {
 		dataplane, err := dataPlaneClient.Get(ctx, dataplaneName.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -76,7 +77,7 @@ func ControlPlaneIsScheduled(t *testing.T, ctx context.Context, controlplane typ
 // that can be used to check if a DataPlane was provisioned.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneIsProvisioned(t *testing.T, ctx context.Context, dataplane types.NamespacedName, operatorClient *clientset.Clientset) func() bool {
-	return DataPlanePredicate(t, ctx, dataplane, func(c *operatorv1alpha1.DataPlane) bool {
+	return DataPlanePredicate(t, ctx, dataplane, func(c *operatorv1beta1.DataPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) && condition.Status == metav1.ConditionTrue {
 				return true
@@ -194,7 +195,7 @@ func ControlPlaneHasNReadyPods(t *testing.T, ctx context.Context, controlplaneNa
 // that can be used to check if a DataPlane has an active deployment.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasActiveDeployment(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients) func() bool {
-	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1alpha1.DataPlane) bool {
+	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients)
 		return len(deployments) == 1 &&
 			*deployments[0].Spec.Replicas > 0 &&
@@ -203,7 +204,7 @@ func DataPlaneHasActiveDeployment(t *testing.T, ctx context.Context, dataplaneNa
 }
 
 func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, n int) func() bool {
-	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1alpha1.DataPlane) bool {
+	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients)
 		return len(deployments) == 1 &&
 			*deployments[0].Spec.Replicas == int32(n) &&
@@ -215,7 +216,7 @@ func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName typ
 // that can be used to check if a DataPlane has a service created.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasService(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients) func() bool {
-	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1alpha1.DataPlane) bool {
+	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		services := MustListDataPlaneProxyServices(t, ctx, dataplane, clients.MgrClient)
 		return len(services) == 1
 	}, clients.OperatorClient)
@@ -225,7 +226,7 @@ func DataPlaneHasService(t *testing.T, ctx context.Context, dataplaneName types.
 // that can be used to check if a DataPlane has an active proxy service.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, ret *corev1.Service, clients K8sClients) func() bool {
-	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1alpha1.DataPlane) bool {
+	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		services := MustListDataPlaneProxyServices(t, ctx, dataplane, clients.MgrClient)
 		if len(services) == 1 {
 			if ret != nil {
@@ -243,7 +244,7 @@ func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName 
 // - a list of addreses of its backing service in its .Addresses status field
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasServiceAndAddressesInStatus(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients) func() bool {
-	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1alpha1.DataPlane) bool {
+	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		services := MustListDataPlaneProxyServices(t, ctx, dataplane, clients.MgrClient)
 		if len(services) != 1 {
 			return false
@@ -293,9 +294,9 @@ func DataPlaneHasServiceAndAddressesInStatus(t *testing.T, ctx context.Context, 
 // DataPlaneUpdateEventually is a helper function for tests that returns a function
 // that can be used to update the DataPlane.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func DataPlaneUpdateEventually(t *testing.T, ctx context.Context, dataplaneNN types.NamespacedName, clients K8sClients, updateFunc func(*operatorv1alpha1.DataPlane)) func() bool {
+func DataPlaneUpdateEventually(t *testing.T, ctx context.Context, dataplaneNN types.NamespacedName, clients K8sClients, updateFunc func(*operatorv1beta1.DataPlane)) func() bool {
 	return func() bool {
-		cl := clients.OperatorClient.ApisV1alpha1().DataPlanes(dataplaneNN.Namespace)
+		cl := clients.OperatorClient.ApisV1beta1().DataPlanes(dataplaneNN.Namespace)
 		dp, err := cl.Get(ctx, dataplaneNN.Name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting dataplane: %v", err)

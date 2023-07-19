@@ -25,7 +25,7 @@ spec:
         displayName: Data Plane
         kind: DataPlane
         name: dataplanes.gateway-operator.konghq.com
-        version: v1alpha1
+        version: v1beta1
       - description: GatewayConfiguration is the Schema for the gatewayconfigurations API
         displayName: Gateway Configuration
         kind: GatewayConfiguration

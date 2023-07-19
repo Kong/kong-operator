@@ -1,4 +1,4 @@
-apiVersion: gateway-operator.konghq.com/v1alpha1
+apiVersion: gateway-operator.konghq.com/v1beta1
 kind: DataPlane
 metadata:
   name: dataplane-example

@@ -21,6 +21,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
@@ -36,6 +37,10 @@ func init() {
 	}
 	if err := operatorv1alpha1.AddToScheme(scheme.Scheme); err != nil {
 		fmt.Println("error while adding operatorv1alpha1 scheme")
+		os.Exit(1)
+	}
+	if err := operatorv1beta1.AddToScheme(scheme.Scheme); err != nil {
+		fmt.Println("error while adding operatorv1beta1 scheme")
 		os.Exit(1)
 	}
 }
@@ -94,13 +99,13 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			gatewaySubResources: []controllerruntimeclient.Object{
-				&operatorv1alpha1.DataPlane{
+				&operatorv1beta1.DataPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-dataplane",
 						Namespace: "test-namespace",
 						UID:       types.UID(uuid.NewString()),
 					},
-					Status: operatorv1alpha1.DataPlaneStatus{
+					Status: operatorv1beta1.DataPlaneStatus{
 						Conditions: []metav1.Condition{
 							k8sutils.NewCondition(k8sutils.ReadyType, metav1.ConditionTrue, k8sutils.ResourceReadyReason, ""),
 						},
@@ -309,7 +314,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				k8sutils.SetOwnerForObject(gatewaySubResource, tc.gateway)
 				gatewayutils.LabelObjectAsGatewayManaged(gatewaySubResource)
 				if gatewaySubResource.GetName() == "test-dataplane" {
-					dataplane := gatewaySubResource.(*operatorv1alpha1.DataPlane)
+					dataplane := gatewaySubResource.(*operatorv1beta1.DataPlane)
 					dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneOptions)
 					for _, dataplaneSubresource := range tc.dataplaneSubResources {
 						k8sutils.SetOwnerForObject(dataplaneSubresource, gatewaySubResource)
@@ -466,15 +471,15 @@ func Test_setControlPlaneOptionsDefaults(t *testing.T) {
 func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 	testcases := []struct {
 		name     string
-		input    operatorv1alpha1.DataPlaneOptions
-		expected operatorv1alpha1.DataPlaneOptions
+		input    operatorv1beta1.DataPlaneOptions
+		expected operatorv1beta1.DataPlaneOptions
 	}{
 		{
 			name:  "no providing any options",
-			input: operatorv1alpha1.DataPlaneOptions{},
-			expected: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			input: operatorv1beta1.DataPlaneOptions{},
+			expected: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						Replicas: lo.ToPtr(int32(1)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
@@ -492,16 +497,16 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 		},
 		{
 			name: "providing only replicas",
-			input: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			input: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						Replicas: lo.ToPtr(int32(10)),
 					},
 				},
 			},
-			expected: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			expected: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						Replicas: lo.ToPtr(int32(10)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
@@ -519,16 +524,16 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 		},
 		{
 			name: "providing only replicas that are equal to default",
-			input: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			input: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						Replicas: lo.ToPtr(int32(1)),
 					},
 				},
 			},
-			expected: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			expected: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						Replicas: lo.ToPtr(int32(1)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
@@ -546,9 +551,9 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 		},
 		{
 			name: "providing more options",
-			input: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			input: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						Replicas: lo.ToPtr(int32(10)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
@@ -563,9 +568,9 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 					},
 				},
 			},
-			expected: operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			expected: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						Replicas: lo.ToPtr(int32(10)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{

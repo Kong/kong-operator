@@ -48,64 +48,6 @@ metadata:
         },
         {
           "apiVersion": "gateway-operator.konghq.com/v1alpha1",
-          "kind": "DataPlane",
-          "metadata": {
-            "name": "dataplane-example"
-          },
-          "spec": {
-            "deployment": {
-              "podTemplateSpec": {
-                "metadata": {
-                  "annotations": {
-                    "dataplane-pod-annotation": "example"
-                  },
-                  "labels": {
-                    "dataplane-pod-label": "example"
-                  }
-                },
-                "spec": {
-                  "containers": [
-                    {
-                      "env": [
-                        {
-                          "name": "KONG_LOG_LEVEL",
-                          "value": "debug"
-                        }
-                      ],
-                      "image": "kong:3.3",
-                      "name": "proxy",
-                      "readinessProbe": {
-                        "initialDelaySeconds": 1,
-                        "periodSeconds": 1
-                      },
-                      "resources": {
-                        "limits": {
-                          "cpu": "1000m",
-                          "memory": "1024Mi"
-                        },
-                        "requests": {
-                          "cpu": "250m",
-                          "memory": "64Mi"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            },
-            "network": {
-              "services": {
-                "ingress": {
-                  "annotations": {
-                    "foo": "bar"
-                  }
-                }
-              }
-            }
-          }
-        },
-        {
-          "apiVersion": "gateway-operator.konghq.com/v1alpha1",
           "kind": "GatewayConfiguration",
           "metadata": {
             "name": "kong",
@@ -167,6 +109,64 @@ metadata:
               }
             }
           }
+        },
+        {
+          "apiVersion": "gateway-operator.konghq.com/v1beta1",
+          "kind": "DataPlane",
+          "metadata": {
+            "name": "dataplane-example"
+          },
+          "spec": {
+            "deployment": {
+              "podTemplateSpec": {
+                "metadata": {
+                  "annotations": {
+                    "dataplane-pod-annotation": "example"
+                  },
+                  "labels": {
+                    "dataplane-pod-label": "example"
+                  }
+                },
+                "spec": {
+                  "containers": [
+                    {
+                      "env": [
+                        {
+                          "name": "KONG_LOG_LEVEL",
+                          "value": "debug"
+                        }
+                      ],
+                      "image": "kong:3.3",
+                      "name": "proxy",
+                      "readinessProbe": {
+                        "initialDelaySeconds": 1,
+                        "periodSeconds": 1
+                      },
+                      "resources": {
+                        "limits": {
+                          "cpu": "1000m",
+                          "memory": "1024Mi"
+                        },
+                        "requests": {
+                          "cpu": "250m",
+                          "memory": "64Mi"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "network": {
+              "services": {
+                "ingress": {
+                  "annotations": {
+                    "foo": "bar"
+                  }
+                }
+              }
+            }
+          }
         }
       ]
     capabilities: Basic Install
@@ -193,7 +193,7 @@ spec:
       displayName: Data Plane
       kind: DataPlane
       name: dataplanes.gateway-operator.konghq.com
-      version: v1alpha1
+      version: v1beta1
     - description: GatewayConfiguration is the Schema for the gatewayconfigurations
         API
       displayName: Gateway Configuration

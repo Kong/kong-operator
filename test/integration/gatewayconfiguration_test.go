@@ -13,6 +13,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
@@ -53,9 +54,9 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			Name:      uuid.NewString(),
 		},
 		Spec: operatorv1alpha1.GatewayConfigurationSpec{
-			DataPlaneOptions: &operatorv1alpha1.DataPlaneOptions{
-				Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+			DataPlaneOptions: &operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{

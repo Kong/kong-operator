@@ -28,7 +28,7 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Provisioned')].status
       name: Provisioned
       type: string
-    name: v1alpha1
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: DataPlane is the Schema for the dataplanes API

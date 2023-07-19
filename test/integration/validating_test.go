@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers"
 	"github.com/kong/gateway-operator/internal/consts"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -53,13 +54,13 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 
 	testCases := []struct {
 		name             string
-		dataplane        *operatorv1alpha1.DataPlane
+		dataplane        *operatorv1beta1.DataPlane
 		validatingOK     bool
 		conditionMessage string
 	}{
 		{
 			name: "reconciler:validating_error_with_empty_deplyoptions",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace.Name,
 					Name:      uuid.NewString(),
@@ -71,15 +72,15 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 
 		{
 			name: "reconciler:database_postgres_not_supported",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace.Name,
 					Name:      uuid.NewString(),
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -107,15 +108,15 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 
 		{
 			name: "reconciler:database_xxx_not_supported",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace.Name,
 					Name:      uuid.NewString(),
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -142,15 +143,15 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 		},
 		{
 			name: "reconciler:validator_ok_with_db=off_from_configmap",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace.Name,
 					Name:      uuid.NewString(),
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -181,7 +182,7 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 		},
 	}
 
-	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
+	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
@@ -234,7 +235,7 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 					case <-ctx.Done():
 						t.Fatalf("context expired: %v", ctx.Err())
 					case event := <-w.ResultChan():
-						dataplane, ok := event.Object.(*operatorv1alpha1.DataPlane)
+						dataplane, ok := event.Object.(*operatorv1beta1.DataPlane)
 						require.True(t, ok)
 
 						var provisionCondition metav1.Condition
@@ -269,13 +270,13 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 
 	testCases := []struct {
 		name      string
-		dataplane *operatorv1alpha1.DataPlane
+		dataplane *operatorv1beta1.DataPlane
 		// empty if expect no error,
 		errMsg string
 	}{
 		{
 			name: "webhook:validating_ok",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace.Name,
 					Name:      uuid.NewString(),
@@ -285,15 +286,15 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 		},
 		{
 			name: "webhook:database_postgres_not_supported",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace.Name,
 					Name:      uuid.NewString(),
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -319,15 +320,15 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 		},
 		{
 			name: "webhook:database_xxx_not_supported",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace.Name,
 					Name:      uuid.NewString(),
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -353,15 +354,15 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 		},
 		{
 			name: "webhook:validator_ok_with_db=off_from_configmap",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace.Name,
 					Name:      uuid.NewString(),
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -392,7 +393,7 @@ func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 		},
 	}
 
-	dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(namespace.Name)
+	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {

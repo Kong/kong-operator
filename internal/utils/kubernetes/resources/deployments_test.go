@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 )
 
@@ -21,12 +21,12 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		dataplane *operatorv1alpha1.DataPlane
+		dataplane *operatorv1beta1.DataPlane
 		testFunc  func(t *testing.T, deploymentSpec *appsv1.DeploymentSpec)
 	}{
 		{
 			name: "without resources specified we get the defaults",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway-operator.konghq.com/v1alpha1",
 					Kind:       "DataPlane",
@@ -47,7 +47,7 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 		},
 		{
 			name: "with CPU resources specified we get merged resources",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway-operator.konghq.com/v1alpha1",
 					Kind:       "DataPlane",
@@ -56,10 +56,10 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 					Name:      "1",
 					Namespace: "test-namespace",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{{
@@ -96,7 +96,7 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 		},
 		{
 			name: "with Memory resources specified",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway-operator.konghq.com/v1alpha1",
 					Kind:       "DataPlane",
@@ -105,10 +105,10 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 					Name:      "1",
 					Namespace: "test-namespace",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{{
@@ -148,7 +148,7 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 		// hence the tests here are mostly unnecessary. Leaving one as a sanity check.
 		{
 			name: "with Pod labels specified",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway-operator.konghq.com/v1alpha1",
 					Kind:       "DataPlane",
@@ -157,10 +157,10 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 					Name:      "dataplane-name",
 					Namespace: "test-namespace",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									ObjectMeta: metav1.ObjectMeta{
 										Labels: map[string]string{
@@ -197,7 +197,7 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 		},
 		{
 			name: "with Affinity specified",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway-operator.konghq.com/v1alpha1",
 					Kind:       "DataPlane",
@@ -206,10 +206,10 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 					Name:      "dataplane-name",
 					Namespace: "test-namespace",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Affinity: &corev1.Affinity{

@@ -15,7 +15,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	dataplanevalidation "github.com/kong/gateway-operator/internal/validation/dataplane"
@@ -41,7 +41,7 @@ func (r *DataPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		// watch Dataplane objects
-		For(&operatorv1alpha1.DataPlane{}).
+		For(&operatorv1beta1.DataPlane{}).
 		// watch for changes in Secrets created by the dataplane controller
 		Owns(&corev1.Secret{}).
 		// watch for changes in Services created by the dataplane controller
@@ -60,7 +60,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	log := getLogger(ctx, "dataplane", r.DevelopmentMode)
 
 	trace(log, "reconciling DataPlane resource", req)
-	dataplane := new(operatorv1alpha1.DataPlane)
+	dataplane := new(operatorv1beta1.DataPlane)
 	if err := r.Client.Get(ctx, req.NamespacedName, dataplane); err != nil {
 		if k8serrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -198,8 +198,8 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 }
 
 // patchStatus Patches the resource status only when there are changes in the Conditions
-func (r *DataPlaneReconciler) patchStatus(ctx context.Context, log logr.Logger, updated *operatorv1alpha1.DataPlane) error {
-	current := &operatorv1alpha1.DataPlane{}
+func (r *DataPlaneReconciler) patchStatus(ctx context.Context, log logr.Logger, updated *operatorv1beta1.DataPlane) error {
+	current := &operatorv1beta1.DataPlane{}
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)
 	if err != nil && !k8serrors.IsNotFound(err) {
@@ -220,11 +220,11 @@ func (r *DataPlaneReconciler) patchStatus(ctx context.Context, log logr.Logger, 
 
 // addressesChanged returns a boolean indicating whether the addresses in provided
 // DataPlane stauses differ.
-func addressesChanged(current, updated *operatorv1alpha1.DataPlane) bool {
+func addressesChanged(current, updated *operatorv1beta1.DataPlane) bool {
 	return !cmp.Equal(current.Status.Addresses, updated.Status.Addresses)
 }
 
-func readinessChanged(current, updated *operatorv1alpha1.DataPlane) bool {
+func readinessChanged(current, updated *operatorv1beta1.DataPlane) bool {
 	return current.Status.Ready != updated.Status.Ready ||
 		current.Status.ReadyReplicas != updated.Status.ReadyReplicas ||
 		current.Status.Replicas != updated.Status.Replicas

@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 )
 
@@ -26,12 +26,12 @@ func TestDataplaneValidatingWebhook(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		dataplane *operatorv1alpha1.DataPlane
+		dataplane *operatorv1beta1.DataPlane
 		errMsg    string
 	}{
 		{
 			name: "validating_error",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace.Name,
 					Name:      uuid.NewString(),
@@ -41,15 +41,15 @@ func TestDataplaneValidatingWebhook(t *testing.T) {
 		},
 		{
 			name: "database_postgres_not_supported",
-			dataplane: &operatorv1alpha1.DataPlane{
+			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace.Name,
 					Name:      uuid.NewString(),
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -79,7 +79,7 @@ func TestDataplaneValidatingWebhook(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			dataplaneClient := clients.OperatorClient.ApisV1alpha1().DataPlanes(testNamespace.Name)
+			dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(testNamespace.Name)
 			_, err := dataplaneClient.Create(ctx, tc.dataplane, metav1.CreateOptions{})
 			if tc.errMsg == "" {
 				require.NoErrorf(t, err, "test case %s: should not return error when creating dataplane", tc.name)

@@ -184,7 +184,7 @@ func TestOperatorLogs(t *testing.T) {
 		t.Log("verifying the DataPlane sub-resource is deleted")
 		if len(dataplanes) != 0 {
 			assert.Eventually(t, func() bool {
-				_, err := clients.OperatorClient.ApisV1alpha1().DataPlanes(testNamespace.Name).Get(ctx, dataplanes[0].Name, metav1.GetOptions{})
+				_, err := clients.OperatorClient.ApisV1beta1().DataPlanes(testNamespace.Name).Get(ctx, dataplanes[0].Name, metav1.GetOptions{})
 				return errors.IsNotFound(err)
 			}, time.Minute, time.Second)
 		}

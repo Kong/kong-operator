@@ -6,7 +6,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/internal/versions"
@@ -16,7 +16,7 @@ import (
 // DataPlane - Private Functions - Generators
 // -----------------------------------------------------------------------------
 
-func generateDataPlaneImage(dataplane *operatorv1alpha1.DataPlane, validators ...versions.VersionValidationOption) (string, error) {
+func generateDataPlaneImage(dataplane *operatorv1beta1.DataPlane, validators ...versions.VersionValidationOption) (string, error) {
 	if dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec == nil {
 		return consts.DefaultDataPlaneImage, nil // TODO: https://github.com/Kong/gateway-operator/issues/20
 	}
@@ -57,7 +57,7 @@ func addLabelForDataplane(obj client.Object) {
 	obj.SetLabels(labels)
 }
 
-func addAnnotationsForDataplaneProxyService(obj client.Object, dataplane operatorv1alpha1.DataPlane) {
+func addAnnotationsForDataplaneProxyService(obj client.Object, dataplane operatorv1beta1.DataPlane) {
 	if dataplane.Spec.Network.Services == nil || dataplane.Spec.Network.Services.Ingress.Annotations == nil {
 		return
 	}
@@ -75,7 +75,7 @@ func addAnnotationsForDataplaneProxyService(obj client.Object, dataplane operato
 // DataPlane - Private Functions - Equality Checks
 // -----------------------------------------------------------------------------
 
-func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1alpha1.DataPlaneOptions) bool {
+func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1beta1.DataPlaneOptions) bool {
 	// TODO: Doesn't take .Rollout field into account.
 	if !deploymentOptionsDeepEqual(&spec1.Deployment.DeploymentOptions, &spec2.Deployment.DeploymentOptions) ||
 		!servicesOptionsDeepEqual(&spec1.Network, &spec2.Network) {

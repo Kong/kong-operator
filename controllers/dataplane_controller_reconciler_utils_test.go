@@ -17,6 +17,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
@@ -31,6 +32,10 @@ func init() {
 	}
 	if err := operatorv1alpha1.AddToScheme(scheme.Scheme); err != nil {
 		fmt.Println("error while adding operatorv1alpha1 scheme")
+		os.Exit(1)
+	}
+	if err := operatorv1beta1.AddToScheme(scheme.Scheme); err != nil {
+		fmt.Println("error while adding operatorv1beta1 scheme")
 		os.Exit(1)
 	}
 }
@@ -52,20 +57,20 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 
 	testCases := []struct {
 		name           string
-		dataPlane      *operatorv1alpha1.DataPlane
+		dataPlane      *operatorv1beta1.DataPlane
 		certSecretName string
-		testBody       func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string)
+		testBody       func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string)
 	}{
 		{
 			name: "no existing DataPlane deployment",
-			dataPlane: &operatorv1alpha1.DataPlane{
+			dataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "default",
 				},
 			},
 			certSecretName: "certificate",
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 				res, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, dataPlane, certSecretName)
 				require.NoError(t, err)
@@ -75,15 +80,15 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 		},
 		{
 			name: "new DataPlane with custom secret",
-			dataPlane: &operatorv1alpha1.DataPlane{
+			dataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-secret-volume",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Volumes: []corev1.Volume{
@@ -123,7 +128,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 			},
 			certSecretName: "certificate",
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 				createdOrUpdated, deployment, err := reconciler.ensureDeploymentForDataPlane(ctx, dataPlane, certSecretName)
 				require.NoError(t, err)
@@ -143,14 +148,14 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 		},
 		{
 			name: "existing DataPlane deployment gets updated with expected spec.Strategy",
-			dataPlane: &operatorv1alpha1.DataPlane{
+			dataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "default",
 				},
 			},
 			certSecretName: "certificate",
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				require.NoError(t, err)
@@ -173,15 +178,15 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 		},
 		{
 			name: "existing DataPlane deployment does get updated when it doesn't have the resources equal to defaults",
-			dataPlane: &operatorv1alpha1.DataPlane{
+			dataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -207,7 +212,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 			},
 			certSecretName: "certificate",
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				require.NoError(t, err)
@@ -233,15 +238,15 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 		},
 		{
 			name: "existing DataPlane deployment does not get updated when already has expected spec.Strategy and resources equal to defaults",
-			dataPlane: &operatorv1alpha1.DataPlane{
+			dataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -259,7 +264,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 			},
 			certSecretName: "certificate",
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				require.NoError(t, err)
@@ -278,15 +283,15 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 		},
 		{
 			name: "existing DataPlane deployment does get updated when it doesn't have the affinity set",
-			dataPlane: &operatorv1alpha1.DataPlane{
+			dataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Affinity: &corev1.Affinity{
@@ -319,7 +324,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 			},
 			certSecretName: "certificate",
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				// generateDataPlaneImage will set deployment's containers resources
@@ -345,15 +350,15 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 		},
 		{
 			name: "existing DataPlane deployment does get updated when affinity is unset in the spec but set in the deployment",
-			dataPlane: &operatorv1alpha1.DataPlane{
+			dataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1alpha1.DataPlaneOptions{
-						Deployment: operatorv1alpha1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Affinity: &corev1.Affinity{},
@@ -365,7 +370,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 			},
 			certSecretName: "certificate",
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1alpha1.DataPlane, certSecretName string) {
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				// generateDataPlaneImage will set deployment's containers resources

@@ -625,7 +625,7 @@ func TestDeploymentOptionsDeepEqual(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			ret := deploymentOptionsDeepEqual(tc.o1, tc.o2, tc.envsToIgnore...)
+			ret := alphaDeploymentOptionsDeepEqual(tc.o1, tc.o2, tc.envsToIgnore...)
 			if tc.expect {
 				require.True(t, ret)
 			} else {

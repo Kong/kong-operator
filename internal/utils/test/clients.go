@@ -9,6 +9,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	operatorclient "github.com/kong/gateway-operator/pkg/clientset"
 )
 
@@ -52,6 +53,10 @@ func NewK8sClients(env environments.Environment) (K8sClients, error) {
 	}
 
 	if err := operatorv1alpha1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
+		return clients, err
+	}
+
+	if err := operatorv1beta1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
 		return clients, err
 	}
 

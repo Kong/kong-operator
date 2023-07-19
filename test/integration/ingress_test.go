@@ -23,6 +23,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers"
 	"github.com/kong/gateway-operator/internal/annotations"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -86,7 +87,7 @@ func TestIngressEssentials(t *testing.T) {
 	}, testutils.DefaultIngressWait, time.Second)
 
 	t.Log("verifying that the DataPlane becomes provisioned")
-	var dataplane *operatorv1alpha1.DataPlane
+	var dataplane *operatorv1beta1.DataPlane
 	require.Eventually(t, func() bool {
 		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, clients.MgrClient, gateway)
 		if err != nil {

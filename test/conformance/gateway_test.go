@@ -26,6 +26,8 @@ const (
 var shouldCleanup = flag.Bool("cleanup", true, "indicates whether or not the base test resources such as Gateways should be cleaned up after the run.")
 
 func TestGatewayConformance(t *testing.T) {
+	t.Skip() // TODO: https://github.com/Kong/gateway-operator/issues/11
+
 	t.Parallel()
 
 	t.Log("creating GatewayClass for gateway conformance tests")

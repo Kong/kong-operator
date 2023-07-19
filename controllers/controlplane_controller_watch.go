@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -141,7 +142,7 @@ func (r *ControlPlaneReconciler) getControlPlanesFromDataPlaneDeployment(ctx con
 
 	var dataPlaneOwnerName string
 	for _, ownRef := range deployment.OwnerReferences {
-		if ownRef.APIVersion == operatorv1alpha1.SchemeGroupVersion.String() && ownRef.Kind == "DataPlane" {
+		if ownRef.APIVersion == operatorv1beta1.SchemeGroupVersion.String() && ownRef.Kind == "DataPlane" {
 			dataPlaneOwnerName = ownRef.Name
 			break
 		}
@@ -150,7 +151,7 @@ func (r *ControlPlaneReconciler) getControlPlanesFromDataPlaneDeployment(ctx con
 		return
 	}
 
-	dataPlane := &operatorv1alpha1.DataPlane{}
+	dataPlane := &operatorv1beta1.DataPlane{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: deployment.Namespace, Name: dataPlaneOwnerName}, dataPlane); err != nil {
 		if !k8serrors.IsNotFound(err) {
 			log.FromContext(ctx).Error(err, "failed to map ControlPlane on DataPlane Deployment")
@@ -161,7 +162,7 @@ func (r *ControlPlaneReconciler) getControlPlanesFromDataPlaneDeployment(ctx con
 }
 
 func (r *ControlPlaneReconciler) getControlPlanesFromDataPlane(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
-	dataplane, ok := obj.(*operatorv1alpha1.DataPlane)
+	dataplane, ok := obj.(*operatorv1beta1.DataPlane)
 	if !ok {
 		log.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,

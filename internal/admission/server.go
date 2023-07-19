@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/validation/dataplane"
 )
 
@@ -44,7 +45,7 @@ func AddNewWebhookServerToManager(mgr ctrl.Manager, logger logr.Logger, webhookP
 // Validator is the interface of validating
 type Validator interface {
 	ValidateControlPlane(context.Context, operatorv1alpha1.ControlPlane) error
-	ValidateDataPlane(context.Context, operatorv1alpha1.DataPlane) error
+	ValidateDataPlane(context.Context, operatorv1beta1.DataPlane) error
 }
 
 // RequestHandler handles the requests of validating objects.
@@ -114,8 +115,8 @@ var (
 		Resource: "controlplanes",
 	}
 	dataPlaneGVResource = metav1.GroupVersionResource{
-		Group:    operatorv1alpha1.SchemeGroupVersion.Group,
-		Version:  operatorv1alpha1.SchemeGroupVersion.Version,
+		Group:    operatorv1beta1.SchemeGroupVersion.Group,
+		Version:  operatorv1beta1.SchemeGroupVersion.Version,
 		Resource: "dataplanes",
 	}
 )
@@ -157,7 +158,7 @@ func (h *RequestHandler) handleValidation(ctx context.Context, req *admissionv1.
 			}
 		}
 	case dataPlaneGVResource:
-		dataPlane := operatorv1alpha1.DataPlane{}
+		dataPlane := operatorv1beta1.DataPlane{}
 		if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
 			_, _, err := deserializer.Decode(req.Object.Raw, nil, &dataPlane)
 			if err != nil {

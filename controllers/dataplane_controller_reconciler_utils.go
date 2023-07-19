@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
@@ -27,7 +27,7 @@ import (
 // -----------------------------------------------------------------------------
 
 func (r *DataPlaneReconciler) ensureIsMarkedScheduled(
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 ) bool {
 	_, present := k8sutils.GetCondition(DataPlaneConditionTypeProvisioned, dataplane)
 	if !present {
@@ -45,7 +45,7 @@ func (r *DataPlaneReconciler) ensureIsMarkedScheduled(
 }
 
 func (r *DataPlaneReconciler) ensureIsMarkedProvisioned(
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 ) {
 	condition := k8sutils.NewCondition(
 		DataPlaneConditionTypeProvisioned,
@@ -58,7 +58,7 @@ func (r *DataPlaneReconciler) ensureIsMarkedProvisioned(
 }
 
 func (r *DataPlaneReconciler) ensureReadinessStatus(
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 	dataplaneDeployment *appsv1.Deployment,
 ) {
 	readyCond, ok := k8sutils.GetCondition(k8sutils.ReadyType, dataplane)
@@ -75,7 +75,7 @@ func addressOf[T any](v T) *T {
 func (r *DataPlaneReconciler) ensureDataPlaneServiceStatus(
 	ctx context.Context,
 	log logr.Logger,
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 	dataplaneServiceName string,
 ) (bool, error) {
 	if dataplane.Status.Service != dataplaneServiceName {
@@ -92,7 +92,7 @@ func (r *DataPlaneReconciler) ensureDataPlaneServiceStatus(
 func (r *DataPlaneReconciler) ensureDataPlaneAddressesStatus(
 	ctx context.Context,
 	log logr.Logger,
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 	dataplaneService *corev1.Service,
 ) (bool, error) {
 	addresses, err := addressesFromService(dataplaneService)
@@ -123,7 +123,7 @@ func isSameDataPlaneCondition(condition1, condition2 metav1.Condition) bool {
 func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
 	ctx context.Context,
 	log logr.Logger,
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 	reason k8sutils.ConditionReason, message string,
 ) error {
 	notProvisionedCondition := metav1.Condition{
@@ -167,7 +167,7 @@ func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
 
 func (r *DataPlaneReconciler) ensureCertificate(
 	ctx context.Context,
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 	adminServiceName string,
 ) (bool, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
@@ -195,7 +195,7 @@ const (
 
 func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 	ctx context.Context,
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 	certSecretName string,
 ) (res CreatedUpdatedOrNoop, deploy *appsv1.Deployment, err error) {
 	deployments, err := k8sutils.ListDeploymentsForOwner(
@@ -285,7 +285,7 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 
 func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
 	ctx context.Context,
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 ) (createdOrUpdated bool, svc *corev1.Service, err error) {
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
@@ -352,7 +352,7 @@ func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
 
 func (r *DataPlaneReconciler) ensureAdminServiceForDataPlane(
 	ctx context.Context,
-	dataplane *operatorv1alpha1.DataPlane,
+	dataplane *operatorv1beta1.DataPlane,
 ) (createdOrUpdated bool, svc *corev1.Service, err error) {
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,

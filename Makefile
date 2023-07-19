@@ -276,6 +276,7 @@ generate.clientsets: client-gen
 		--clientset-name clientset \
 		--input-base '' \
 		--input $(REPO)/$(APIS_DIR)/v1alpha1 \
+		--input $(REPO)/$(APIS_DIR)/v1beta1 \
 		--output-base pkg/ \
 		--output-package $(REPO)/pkg/ \
 		--trim-path-prefix pkg/$(REPO)/

@@ -29,6 +29,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/clientset"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -159,6 +160,7 @@ func createEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 
 	require.NoError(t, gatewayv1beta1.AddToScheme(clients.MgrClient.Scheme()))
 	require.NoError(t, operatorv1alpha1.AddToScheme(clients.MgrClient.Scheme()))
+	require.NoError(t, operatorv1beta1.AddToScheme(clients.MgrClient.Scheme()))
 
 	t.Logf("deploying Gateway APIs CRDs from %s", testutils.GatewayExperimentalCRDsKustomizeURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), testutils.GatewayExperimentalCRDsKustomizeURL))

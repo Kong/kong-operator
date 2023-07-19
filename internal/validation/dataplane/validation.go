@@ -11,7 +11,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
@@ -27,7 +27,7 @@ func NewValidator(c client.Client) *Validator {
 }
 
 // Validate validates a DataPlane object and return the first validation error found.
-func (v *Validator) Validate(dataplane *operatorv1alpha1.DataPlane) error {
+func (v *Validator) Validate(dataplane *operatorv1beta1.DataPlane) error {
 	err := v.ValidateDataPlaneDeploymentOptions(dataplane.Namespace, &dataplane.Spec.Deployment)
 	if err != nil {
 		return err
@@ -37,7 +37,7 @@ func (v *Validator) Validate(dataplane *operatorv1alpha1.DataPlane) error {
 }
 
 // ValidateDataPlaneDeploymentOptions validates the DeploymentOptions field of DataPlane object.
-func (v *Validator) ValidateDataPlaneDeploymentOptions(namespace string, opts *operatorv1alpha1.DataPlaneDeploymentOptions) error {
+func (v *Validator) ValidateDataPlaneDeploymentOptions(namespace string, opts *operatorv1beta1.DataPlaneDeploymentOptions) error {
 	if opts == nil || opts.PodTemplateSpec == nil {
 		// Can't use empty DeploymentOptions because we still require users
 		// to provide an image

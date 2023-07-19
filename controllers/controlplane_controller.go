@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
@@ -80,7 +81,7 @@ func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(r.getControlplaneForClusterRoleBinding),
 			builder.WithPredicates(clusterRoleBindingPredicate)).
 		Watches(
-			&operatorv1alpha1.DataPlane{},
+			&operatorv1beta1.DataPlane{},
 			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlane)).
 		// watch for changes in the DataPlane deployments, as we want to be aware of all
 		// the DataPlane pod changes (every time a new pod gets ready, the deployment

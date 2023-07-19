@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 )
 
@@ -170,7 +171,7 @@ const (
 )
 
 // GenerateNewDeploymentForDataPlane generates a new Deployment for the DataPlane
-func GenerateNewDeploymentForDataPlane(dataplane *operatorv1alpha1.DataPlane, dataplaneImage, certSecretName string) (*appsv1.Deployment, error) {
+func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dataplaneImage, certSecretName string) (*appsv1.Deployment, error) {
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{

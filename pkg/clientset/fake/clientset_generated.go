@@ -22,6 +22,8 @@ import (
 	clientset "github.com/kong/gateway-operator/pkg/clientset"
 	apisv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1alpha1"
 	fakeapisv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1alpha1/fake"
+	apisv1beta1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1beta1"
+	fakeapisv1beta1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1beta1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -82,4 +84,9 @@ var (
 // ApisV1alpha1 retrieves the ApisV1alpha1Client
 func (c *Clientset) ApisV1alpha1() apisv1alpha1.ApisV1alpha1Interface {
 	return &fakeapisv1alpha1.FakeApisV1alpha1{Fake: &c.Fake}
+}
+
+// ApisV1beta1 retrieves the ApisV1beta1Client
+func (c *Clientset) ApisV1beta1() apisv1beta1.ApisV1beta1Interface {
+	return &fakeapisv1beta1.FakeApisV1beta1{Fake: &c.Fake}
 }

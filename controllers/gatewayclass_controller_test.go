@@ -16,6 +16,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -26,6 +27,10 @@ func init() {
 	}
 	if err := operatorv1alpha1.AddToScheme(scheme.Scheme); err != nil {
 		fmt.Println("error while adding operatorv1alpha1 scheme")
+		os.Exit(1)
+	}
+	if err := operatorv1beta1.AddToScheme(scheme.Scheme); err != nil {
+		fmt.Println("error while adding operatorv1beta1 scheme")
 		os.Exit(1)
 	}
 }
