@@ -104,13 +104,28 @@ func setupControllers(mgr manager.Manager, c *Config) []ControllerDef {
 		},
 		// DataPlane controller
 		{
-			Enabled: c.DataPlaneControllerEnabled,
+			Enabled: c.DataPlaneControllerEnabled && !c.DataPlaneBlueGreenControllerEnabled,
 			Controller: &controllers.DataPlaneReconciler{
 				Client:                   mgr.GetClient(),
 				Scheme:                   mgr.GetScheme(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				DevelopmentMode:          c.DevelopmentMode,
+			},
+		},
+		// DataPlaneBlueGreen controller
+		{
+			Enabled: c.DataPlaneBlueGreenControllerEnabled,
+			Controller: &controllers.DataPlaneBlueGreenReconciler{
+				Client:          mgr.GetClient(),
+				DevelopmentMode: c.DevelopmentMode,
+				DataPlaneReconciler: &controllers.DataPlaneReconciler{
+					Client:                   mgr.GetClient(),
+					Scheme:                   mgr.GetScheme(),
+					ClusterCASecretName:      c.ClusterCASecretName,
+					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+					DevelopmentMode:          c.DevelopmentMode,
+				},
 			},
 		},
 	}

@@ -6,8 +6,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,15 +37,7 @@ type DataPlaneReconciler struct {
 func (r *DataPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.eventRecorder = mgr.GetEventRecorderFor("dataplane")
 
-	return ctrl.NewControllerManagedBy(mgr).
-		// watch Dataplane objects
-		For(&operatorv1beta1.DataPlane{}).
-		// watch for changes in Secrets created by the dataplane controller
-		Owns(&corev1.Secret{}).
-		// watch for changes in Services created by the dataplane controller
-		Owns(&corev1.Service{}).
-		// watch for changes in Deployments created by the dataplane controller
-		Owns(&appsv1.Deployment{}).
+	return DataPlaneWatchBuilder(mgr).
 		Complete(r)
 }
 

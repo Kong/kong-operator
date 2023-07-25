@@ -28,21 +28,22 @@ import (
 
 func main() {
 	var (
-		metricsAddr                  string
-		probeAddr                    string
-		disableLeaderElection        bool
-		controllerName               string
-		anonymousReports             bool
-		apiServerHost                string
-		kubeconfigPath               string
-		clusterCASecret              string
-		clusterCASecretNamespace     string
-		enableControllerGateway      bool
-		enableControllerControlPlane bool
-		enableControllerDataPlane    bool
-		enableValidatingWebhook      bool
-		version                      bool
-		controllerNamespace          string
+		metricsAddr                        string
+		probeAddr                          string
+		disableLeaderElection              bool
+		controllerName                     string
+		anonymousReports                   bool
+		apiServerHost                      string
+		kubeconfigPath                     string
+		clusterCASecret                    string
+		clusterCASecretNamespace           string
+		enableControllerGateway            bool
+		enableControllerControlPlane       bool
+		enableControllerDataPlane          bool
+		enableControllerDataPlaneBlueGreen bool
+		enableValidatingWebhook            bool
+		version                            bool
+		controllerNamespace                string
 	)
 
 	flagSet := flag.NewFlagSet("", flag.ExitOnError)
@@ -62,6 +63,7 @@ func main() {
 	flagSet.BoolVar(&enableControllerGateway, "enable-controller-gateway", true, "Enable the Gateway controller.")
 	flagSet.BoolVar(&enableControllerControlPlane, "enable-controller-controlplane", true, "Enable the ControlPlane controller.")
 	flagSet.BoolVar(&enableControllerDataPlane, "enable-controller-dataplane", true, "Enable the DataPlane controller.")
+	flagSet.BoolVar(&enableControllerDataPlaneBlueGreen, "enable-controller-dataplane-bluegreen", false, "Enable the DataPlane BlueGreen controller. Mutually exclusive with DataPlane controller.")
 	flagSet.BoolVar(&enableValidatingWebhook, "enable-validating-webhook", true, "Enable the validating webhook.")
 
 	flagSet.BoolVar(&version, "version", false, "Print version information")
@@ -132,24 +134,25 @@ func main() {
 	}
 
 	cfg := manager.Config{
-		DevelopmentMode:               developmentModeEnabled,
-		MetricsAddr:                   metricsAddr,
-		ProbeAddr:                     probeAddr,
-		LeaderElection:                leaderElection,
-		ControllerName:                controllerName,
-		ControllerNamespace:           controllerNamespace,
-		AnonymousReports:              anonymousReports,
-		APIServerPath:                 apiServerHost,
-		KubeconfigPath:                kubeconfigPath,
-		ClusterCASecretName:           clusterCASecret,
-		ClusterCASecretNamespace:      clusterCASecretNamespace,
-		GatewayControllerEnabled:      enableControllerGateway,
-		ControlPlaneControllerEnabled: enableControllerControlPlane,
-		DataPlaneControllerEnabled:    enableControllerDataPlane,
-		ValidatingWebhookEnabled:      enableValidatingWebhook,
-		LoggerOpts:                    loggerOpts,
-		WebhookCertDir:                webhookCertDir,
-		WebhookPort:                   manager.DefaultConfig().WebhookPort,
+		DevelopmentMode:                     developmentModeEnabled,
+		MetricsAddr:                         metricsAddr,
+		ProbeAddr:                           probeAddr,
+		LeaderElection:                      leaderElection,
+		ControllerName:                      controllerName,
+		ControllerNamespace:                 controllerNamespace,
+		AnonymousReports:                    anonymousReports,
+		APIServerPath:                       apiServerHost,
+		KubeconfigPath:                      kubeconfigPath,
+		ClusterCASecretName:                 clusterCASecret,
+		ClusterCASecretNamespace:            clusterCASecretNamespace,
+		GatewayControllerEnabled:            enableControllerGateway,
+		ControlPlaneControllerEnabled:       enableControllerControlPlane,
+		DataPlaneControllerEnabled:          enableControllerDataPlane,
+		DataPlaneBlueGreenControllerEnabled: enableControllerDataPlaneBlueGreen,
+		ValidatingWebhookEnabled:            enableValidatingWebhook,
+		LoggerOpts:                          loggerOpts,
+		WebhookCertDir:                      webhookCertDir,
+		WebhookPort:                         manager.DefaultConfig().WebhookPort,
 	}
 
 	if err := manager.Run(cfg); err != nil {
