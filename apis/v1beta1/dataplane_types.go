@@ -162,6 +162,48 @@ type DataPlaneStatus struct {
 	//
 	// +kubebuilder:default=0
 	Replicas int32 `json:"replicas"`
+
+	// RolloutStatus contains information about the rollout.
+	// It is set only if a rollout strategy was configured in the spec.
+	//
+	// +optional
+	RolloutStatus *DataPlaneRolloutStatus `json:"rollout,omitempty"`
+}
+
+// DataPlaneRolloutStatus describes the DataPlane rollout status.
+type DataPlaneRolloutStatus struct {
+	// Services contain the information about the services which are available
+	// through which user can access the preview deployment.
+	Services *DataPlaneRolloutStatusServices `json:"services,omitempty"`
+
+	// Status contains the status information about the rollout.
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=8
+	Status []metav1.Condition `json:"status,omitempty"`
+}
+
+// DataPlaneRolloutStatusServices describes the status of the services during
+// DataPlane rollout.
+type DataPlaneRolloutStatusServices struct {
+	// Proxy contains the name and the address of the preview service for proxy.
+	// Using this service users can send requests that will hit the preview deployment.
+	Proxy *RolloutStatusService `json:"proxy,omitempty"`
+
+	// Proxy contains the name and the address of the preview service for Admin API.
+	// Using this service users can send requests to configure the DataPlane's preview deployment.
+	AdminAPI *RolloutStatusService `json:"adminAPI,omitempty"`
+}
+
+type RolloutStatusService struct {
+	// Name indicates the name of the service.
+	Name string `json:"name"`
+
+	// Addresses contains the addresses of a Service.
+	// +optional
+	// +kubebuilder:validation:MaxItems=16
+	Addresses []Address `json:"addresses,omitempty"`
 }
 
 // Address describes an address which can be either an IP address or a hostname.
