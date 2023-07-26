@@ -77,6 +77,7 @@ type Config struct {
 	WebhookCertDir           string
 	WebhookPort              int
 	LeaderElection           bool
+	LeaderElectionNamespace  string
 	DevelopmentMode          bool
 	Out                      *os.File
 	NewClientFunc            client.NewClientFunc
@@ -101,18 +102,22 @@ type Config struct {
 }
 
 func DefaultConfig() Config {
+	const (
+		defaultNamespace               = "kong-system"
+		defaultLeaderElectionNamespace = defaultNamespace
+	)
+
 	return Config{
-		MetricsAddr:         ":8080",
-		ProbeAddr:           ":8081",
-		WebhookCertDir:      defaultWebhookCertDir,
-		WebhookPort:         9443,
-		DevelopmentMode:     false,
-		LeaderElection:      true,
-		ClusterCASecretName: "kong-operator-ca",
-		// TODO: Extract this into a named const and use it in all the placed where
-		// "kong-system" is used verbatim: https://github.com/Kong/gateway-operator/pull/149.
-		ClusterCASecretNamespace:      "kong-system",
-		ControllerNamespace:           "kong-system",
+		MetricsAddr:                   ":8080",
+		ProbeAddr:                     ":8081",
+		WebhookCertDir:                defaultWebhookCertDir,
+		WebhookPort:                   9443,
+		DevelopmentMode:               false,
+		LeaderElection:                true,
+		LeaderElectionNamespace:       defaultLeaderElectionNamespace,
+		ClusterCASecretName:           "kong-operator-ca",
+		ClusterCASecretNamespace:      defaultNamespace,
+		ControllerNamespace:           defaultNamespace,
 		LoggerOpts:                    zap.Options{},
 		GatewayControllerEnabled:      true,
 		ControlPlaneControllerEnabled: true,
@@ -141,7 +146,7 @@ func Run(cfg Config) error {
 		Port:                    cfg.WebhookPort,
 		HealthProbeBindAddress:  cfg.ProbeAddr,
 		LeaderElection:          cfg.LeaderElection,
-		LeaderElectionNamespace: "kong-system",
+		LeaderElectionNamespace: cfg.LeaderElectionNamespace,
 		LeaderElectionID:        "a7feedc84.konghq.com",
 		NewClient:               cfg.NewClientFunc,
 	})

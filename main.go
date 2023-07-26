@@ -138,6 +138,7 @@ func main() {
 		MetricsAddr:                         metricsAddr,
 		ProbeAddr:                           probeAddr,
 		LeaderElection:                      leaderElection,
+		LeaderElectionNamespace:             controllerNamespace,
 		ControllerName:                      controllerName,
 		ControllerNamespace:                 controllerNamespace,
 		AnonymousReports:                    anonymousReports,
