@@ -14,7 +14,7 @@ require (
 	github.com/go-logr/logr v1.2.4
 	github.com/google/uuid v1.3.0
 	github.com/kong/kubernetes-telemetry v0.1.0
-	github.com/kong/kubernetes-testing-framework v0.33.0
+	github.com/kong/kubernetes-testing-framework v0.34.0
 	github.com/kong/semver/v4 v4.0.1
 	github.com/samber/lo v1.38.1
 	github.com/stretchr/testify v1.8.4
