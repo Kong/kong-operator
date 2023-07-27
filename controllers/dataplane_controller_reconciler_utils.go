@@ -309,7 +309,10 @@ func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
 		return false, nil, errors.New("number of dataplane proxy services reduced")
 	}
 
-	generatedService := k8sresources.GenerateNewProxyServiceForDataplane(dataplane)
+	generatedService, err := k8sresources.GenerateNewProxyServiceForDataplane(dataplane)
+	if err != nil {
+		return false, nil, err
+	}
 	addLabelForDataplane(generatedService)
 	addAnnotationsForDataplaneProxyService(generatedService, *dataplane)
 	k8sutils.SetOwnerForObject(generatedService, dataplane)
@@ -335,6 +338,10 @@ func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
 
 		if existingService.Spec.Type != generatedService.Spec.Type {
 			existingService.Spec.Type = generatedService.Spec.Type
+			updated = true
+		}
+		if !cmp.Equal(existingService.Spec.Selector, generatedService.Spec.Selector) {
+			existingService.Spec.Selector = generatedService.Spec.Selector
 			updated = true
 		}
 
@@ -376,7 +383,10 @@ func (r *DataPlaneReconciler) ensureAdminServiceForDataPlane(
 		return false, nil, errors.New("number of services reduced")
 	}
 
-	generatedService := k8sresources.GenerateNewAdminServiceForDataPlane(dataplane)
+	generatedService, err := k8sresources.GenerateNewAdminServiceForDataPlane(dataplane)
+	if err != nil {
+		return false, nil, err
+	}
 	addLabelForDataplane(generatedService)
 	k8sutils.SetOwnerForObject(generatedService, dataplane)
 
@@ -384,6 +394,16 @@ func (r *DataPlaneReconciler) ensureAdminServiceForDataPlane(
 		var updated bool
 		existingService := &services[0]
 		updated, existingService.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingService.ObjectMeta, generatedService.ObjectMeta)
+
+		if existingService.Spec.Type != generatedService.Spec.Type {
+			existingService.Spec.Type = generatedService.Spec.Type
+			updated = true
+		}
+		if !cmp.Equal(existingService.Spec.Selector, generatedService.Spec.Selector) {
+			existingService.Spec.Selector = generatedService.Spec.Selector
+			updated = true
+		}
+
 		if updated {
 			if err := r.Client.Update(ctx, existingService); err != nil {
 				return false, existingService, fmt.Errorf("failed updating DataPlane Service %s: %w", existingService.Name, err)

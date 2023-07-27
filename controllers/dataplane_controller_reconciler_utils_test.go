@@ -20,7 +20,6 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
-	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/internal/versions"
 )
@@ -253,7 +252,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 											{
 												Name:      consts.DataPlaneProxyContainerName,
 												Image:     consts.DefaultDataPlaneImage,
-												Resources: *resources.DefaultDataPlaneResources(),
+												Resources: *k8sresources.DefaultDataPlaneResources(),
 											},
 										},
 									},

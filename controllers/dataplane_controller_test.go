@@ -137,6 +137,8 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					},
 					Spec: corev1.ServiceSpec{
 						ClusterIP: corev1.ClusterIPNone,
+						Type:      corev1.ServiceTypeClusterIP,
+						Selector:  map[string]string{"app": "test-dataplane"},
 					},
 				},
 				&corev1.Service{
@@ -225,6 +227,8 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					},
 					Spec: corev1.ServiceSpec{
 						ClusterIP: corev1.ClusterIPNone,
+						Type:      corev1.ServiceTypeClusterIP,
+						Selector:  map[string]string{"app": "test-dataplane"},
 					},
 				},
 				&corev1.Service{
@@ -312,6 +316,8 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					},
 					Spec: corev1.ServiceSpec{
 						ClusterIP: corev1.ClusterIPNone,
+						Type:      corev1.ServiceTypeClusterIP,
+						Selector:  map[string]string{"app": "test-dataplane"},
 					},
 				},
 				&corev1.Service{

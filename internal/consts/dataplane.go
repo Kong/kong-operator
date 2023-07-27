@@ -41,6 +41,16 @@ const (
 	// DataPlane proxy.
 	DataPlaneProxyServiceLabelValue ServiceType = "proxy"
 
+	// ServiceSelectorOverrideAnnotation is used on the dataplane to override the Selector
+	// of both the admin and proxy services.
+	// The value of such an annotation is to be intended as a comma-separated list of
+	// key=value selectors, so that it is possible to add multiple selectors to the same
+	// service.
+	//
+	// Example:
+	// gateway-operator.konghq.com/service-selector-override: "key1=value,key2=value2"
+	ServiceSelectorOverrideAnnotation = "gateway-operator.konghq.com/service-selector-override"
+
 	// DataPlaneProxyContainerName is the name of the Kong proxy container
 	DataPlaneProxyContainerName = "proxy"
 )
