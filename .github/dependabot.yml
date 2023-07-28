@@ -7,6 +7,12 @@ updates:
   labels:
   - dependencies
 - package-ecosystem: gomod
+  directory: /hack/generators/
+  schedule:
+    interval: daily
+  labels:
+  - dependencies
+- package-ecosystem: gomod
   directory: /third_party/
   schedule:
     interval: daily

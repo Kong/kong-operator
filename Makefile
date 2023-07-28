@@ -101,7 +101,7 @@ envtest: ## Download envtest-setup locally if necessary.
 KIC_ROLE_GENERATOR = $(PROJECT_DIR)/bin/kic-role-generator
 .PHONY: kic-role-generator
 kic-role-generator: submodule
-	go build -o $(KIC_ROLE_GENERATOR) ./hack/generators/kic-role-generator
+	( cd ./hack/generators/kic-role-generator && go build -o $(KIC_ROLE_GENERATOR) . )
 
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
 .PHONY: controller-gen
@@ -266,13 +266,13 @@ generate: controller-gen generate.apis generate.clientsets generate.rbacs genera
 
 .PHONY: generate.apis
 generate.apis:
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./$(APIS_DIR)/..."
+	$(CONTROLLER_GEN) object:headerFile="hack/generators/boilerplate.go.txt" paths="./$(APIS_DIR)/..."
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 .PHONY: generate.clientsets
 generate.clientsets: client-gen
 	$(CLIENT_GEN) \
-		--go-header-file ./hack/boilerplate.go.txt \
+		--go-header-file ./hack/generators/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base '' \
 		--input $(REPO)/$(APIS_DIR)/v1alpha1 \
