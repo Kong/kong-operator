@@ -172,7 +172,6 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v3
         with:
-          submodules: true
           fetch-depth: 0
 
       - name: setup golang

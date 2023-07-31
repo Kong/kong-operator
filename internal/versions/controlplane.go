@@ -5,8 +5,9 @@ import (
 )
 
 const (
-	// LatestClusterRoleVersion is the version of the ClusterRole that will be used for unversioned KIC
-	LatestClusterRoleVersion = "2.10.1"
+	// DefaultControlPlaneVersion is the default version of the ControlPlane to use.
+	// TODO: automatic PR updates https://github.com/Kong/gateway-operator/issues/210
+	DefaultControlPlaneVersion = "2.10.4"
 )
 
 // minimumControlPlaneVersion indicates the bare minimum version of the

@@ -1,24 +1,18 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"flag"
 	"fmt"
-	"os"
-	"path"
+	"io"
 	"strings"
 
 	"github.com/Masterminds/semver"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/hashicorp/go-retryablehttp"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kicversions "github.com/kong/gateway-operator/internal/versions"
 )
-
-const gitClonePath = "./kubernetes-ingress-controller"
 
 var clusterRoleRelativePaths = []string{
 	"config/rbac/role.yaml",
@@ -50,71 +44,23 @@ func init() {
 }
 
 func main() {
-	gatewayRepo, err := git.PlainOpen(".")
-	exitOnErr(err, "failed opening '.'")
-
-	gatewayWorktree, err := gatewayRepo.Worktree()
-	exitOnErr(err, "failed getting gateway operator's work tree")
-
-	kicSubmodule, err := gatewayWorktree.Submodule("kubernetes-ingress-controller")
-	exitOnErr(err, "failed getting KIC's submodule")
-	kicStatus, err := kicSubmodule.Status()
-	exitOnErr(err, "failed getting KIC's submodule status")
-	if !kicStatus.IsClean() {
-		exitOnErr(
-			fmt.Errorf("status of kubernetes-ingress-controller submodule is not clean: %s", kicStatus))
-	}
-	prevHead := kicStatus.Current
-
-	err = kicSubmodule.Init()
-	if err != nil && !errors.Is(err, git.ErrSubmoduleAlreadyInitialized) {
-		exitOnErr(err, "failed initializing KIC's submodule")
-	}
-
-	err = kicSubmodule.UpdateContext(context.Background(),
-		&git.SubmoduleUpdateOptions{
-			Init:    false,
-			NoFetch: true,
-		},
-	)
-	exitOnErr(err, "failed updating KIC's submodule")
-
-	kicRepo, err := kicSubmodule.Repository()
-	exitOnErr(err, "failed getting KIC's repository")
-
-	err = kicRepo.FetchContext(context.Background(), &git.FetchOptions{})
-	if err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
-		exitOnErr(err, "failed fetching for KIC's submodule repo")
-	}
-
-	kicWorktree, err := kicRepo.Worktree()
-	exitOnErr(err, "failed getting KIC's work tree")
-
 	if force {
 		exitOnErr(rmDirs(controllerRBACPath, kicRBACPath))
 	}
 
-	// defer reverting KIC's submodule back to status from before.
-	defer checkout(kicWorktree, prevHead)
 	for versionConstraint, rbacVersion := range kicversions.RoleVersionsForKICVersions {
 		fmt.Printf("INFO: checking and generating code for constraint %s with version %s\n", versionConstraint, rbacVersion)
 		// ensure the version has the "v" prefix
-		version := semver.MustParse(rbacVersion).String()
-		if !strings.HasPrefix(version, "v") {
-			version = fmt.Sprintf("v%s", version)
+		kicVersion := semver.MustParse(rbacVersion).String()
+		if !strings.HasPrefix(kicVersion, "v") {
+			kicVersion = fmt.Sprintf("v%s", kicVersion)
 		}
-		fmt.Printf("INFO: checking out tag %s\n", version)
-		exitOnErr(gitCheckoutTag(kicRepo, kicWorktree, version))
 
-		fmt.Printf("INFO: parsing clusterRole for KIC version %s\n", version)
+		fmt.Printf("INFO: parsing clusterRole for KIC version %s\n", kicVersion)
 		clusterRoles := []*rbacv1.ClusterRole{}
 		for _, rolePath := range clusterRoleRelativePaths {
 			// Here we try to merge all the rules from all known cluster roles.
-			rolePath := path.Join(gitClonePath, rolePath)
-			if _, err = os.Stat(rolePath); errors.Is(err, os.ErrNotExist) {
-				continue
-			}
-			newRole, err := parseRole(rolePath)
+			newRole, err := getRoleFromKICRepository(rolePath, kicVersion)
 			exitOnErr(err)
 			clusterRoles = append(clusterRoles, newRole)
 		}
@@ -198,18 +144,31 @@ func main() {
 	}
 }
 
-func checkout(workTree *git.Worktree, hash plumbing.Hash) {
-	err := workTree.Checkout(&git.CheckoutOptions{
-		Hash: hash,
-		Keep: false,
-	})
+func getRoleFromKICRepository(filePath, version string) (*rbacv1.ClusterRole, error) {
+	file, err := getFileFromKICRepository(filePath, version)
 	if err != nil {
-		fmt.Printf(
-			"ERROR: failed to revert back kubernetes-ingress-controller submodule to %v: %v\n",
-			hash, err,
-		)
+		return nil, fmt.Errorf("failed to get %s from KIC repository: %w", filePath, err)
 	}
-	fmt.Printf("INFO: restored kubernetes-ingress-controller submodule back to %s\n", hash)
+	defer file.Close()
+
+	role, err := parseRole(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse role (%s) from KIC repository: %w", filePath, err)
+	}
+
+	return role, nil
+}
+
+func getFileFromKICRepository(filePath, version string) (io.ReadCloser, error) {
+	const baseKICRepoURLTemplate = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%s/%s"
+
+	url := fmt.Sprintf(baseKICRepoURLTemplate, version, filePath)
+	resp, err := retryablehttp.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get %s from KIC repository: %w", url, err)
+	}
+
+	return resp.Body, nil
 }
 
 func generatefile(

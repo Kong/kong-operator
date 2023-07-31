@@ -21,7 +21,7 @@ import (
 // the version from the tag, and returns the ClusterRole with all the needed
 // permissions.
 func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string) (*rbacv1.ClusterRole, error) {
-	versionToUse := consts.DefaultControlPlaneTag
+	versionToUse := versions.DefaultControlPlaneVersion
 	imageToUse := consts.DefaultControlPlaneImage
 	var constraint *semver.Constraints
 

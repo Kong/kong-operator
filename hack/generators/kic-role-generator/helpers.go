@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"go/format"
+	"io"
 	"os"
 	"path"
 	"strings"
@@ -21,20 +22,21 @@ func gitCheckoutTag(repo *git.Repository, workTree *git.Worktree, version string
 	ref := plumbing.NewTagReferenceName(version)
 	reference, err := repo.Reference(ref, true)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed getting reference for tag %s: %w", ref.String(), err)
 	}
 	if err = workTree.Checkout(&git.CheckoutOptions{
-		Hash: plumbing.NewHash(reference.Hash().String()),
+		Hash:  plumbing.NewHash(reference.Hash().String()),
+		Force: true,
 	}); err != nil {
-		return err
+		return fmt.Errorf("failed checking out tag %s (%s): %w", version, reference.Hash(), err)
 	}
 
 	return nil
 }
 
 // parseRole unmarshals the config clusterrole file from the cloned kic repository
-func parseRole(filePath string) (*rbacv1.ClusterRole, error) {
-	b, err := os.ReadFile(filePath)
+func parseRole(file io.Reader) (*rbacv1.ClusterRole, error) {
+	b, err := io.ReadAll(file)
 	if err != nil {
 		return nil, err
 	}

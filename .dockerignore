@@ -2,6 +2,3 @@
 # Ignore build and test binaries.
 bin/
 testbin/
-
-# Ignore KIC's submodule
-kubernetes-ingress-controller/

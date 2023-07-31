@@ -1,3 +1,0 @@
-[submodule "kubernetes-ingress-controller"]
-	path = kubernetes-ingress-controller
-	url = https://github.com/Kong/kubernetes-ingress-controller.git

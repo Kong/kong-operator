@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/networking"
+	"github.com/kong/semver/v4"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,6 +32,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
+	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/clientset"
 	"github.com/kong/gateway-operator/test/helpers"
 )
@@ -165,8 +167,9 @@ func createEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 	t.Logf("deploying Gateway APIs CRDs from %s", testutils.GatewayExperimentalCRDsKustomizeURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), testutils.GatewayExperimentalCRDsKustomizeURL))
 
-	t.Logf("deploying KIC CRDs from %s", "./../../kubernetes-ingress-controller/config/crd/")
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "./../../kubernetes-ingress-controller/config/crd/"))
+	kicCRDsKustomizeURL := getCRDsKustomizeURLForKIC(t, versions.DefaultControlPlaneVersion)
+	t.Logf("deploying KIC CRDs from %s", kicCRDsKustomizeURL)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kicCRDsKustomizeURL))
 
 	t.Log("creating system namespaces and serviceaccounts")
 	require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
@@ -189,6 +192,14 @@ func createEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 		Cleaner:     cleaner,
 		Environment: env,
 	}
+}
+
+// getCRDsKustomizeURLForKIC returns the Kubernetes Ingress Controller CRDs Kustomization URL for a given version.
+func getCRDsKustomizeURLForKIC(t *testing.T, version string) string {
+	v, err := semver.Parse(version)
+	require.NoError(t, err)
+	const kicCRDsKustomizeURLTemplate = "https://github.com/Kong/kubernetes-ingress-controller/config/crd?ref=v%s"
+	return fmt.Sprintf(kicCRDsKustomizeURLTemplate, v)
 }
 
 func cleanupEnvironment(t *testing.T, ctx context.Context, env environments.Environment, kustomizePath string) {
