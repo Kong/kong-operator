@@ -18,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
+	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/internal/versions"
 )
@@ -165,9 +166,11 @@ func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
 // DataPlaneReconciler - Owned Resource Management
 // -----------------------------------------------------------------------------
 
-func (r *DataPlaneReconciler) ensureCertificate(
+func ensureCertificate(
 	ctx context.Context,
+	cl client.Client,
 	dataplane *operatorv1beta1.DataPlane,
+	clusterCASecretNN types.NamespacedName,
 	adminServiceName string,
 ) (bool, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
@@ -177,12 +180,10 @@ func (r *DataPlaneReconciler) ensureCertificate(
 	return maybeCreateCertificateSecret(ctx,
 		dataplane,
 		fmt.Sprintf("*.%s.%s.svc", adminServiceName, dataplane.Namespace),
-		types.NamespacedName{
-			Namespace: r.ClusterCASecretNamespace,
-			Name:      r.ClusterCASecretName,
-		},
+		clusterCASecretNN,
 		usages,
-		r.Client)
+		cl,
+	)
 }
 
 type CreatedUpdatedOrNoop byte
@@ -195,8 +196,9 @@ const (
 
 func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 	ctx context.Context,
+	log logr.Logger, //nolint:unparam
 	dataplane *operatorv1beta1.DataPlane,
-	certSecretName string,
+	opts ...resources.DeploymentOpt,
 ) (res CreatedUpdatedOrNoop, deploy *appsv1.Deployment, err error) {
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
@@ -227,7 +229,7 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 	if err != nil {
 		return Noop, nil, err
 	}
-	generatedDeployment, err := k8sresources.GenerateNewDeploymentForDataPlane(dataplane, dataplaneImage, certSecretName)
+	generatedDeployment, err := k8sresources.GenerateNewDeploymentForDataPlane(dataplane, dataplaneImage, opts...)
 	if err != nil {
 		return Noop, nil, err
 	}
@@ -237,6 +239,7 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 	if count == 1 {
 		var updated bool
 		existingDeployment := &deployments[0]
+		oldExistingDeployment := existingDeployment.DeepCopy()
 
 		// ensure that object metadata is up to date
 		updated, existingDeployment.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingDeployment.ObjectMeta, generatedDeployment.ObjectMeta)
@@ -272,8 +275,8 @@ func (r *DataPlaneReconciler) ensureDeploymentForDataPlane(
 		}
 
 		if updated {
-			if err := r.Client.Update(ctx, existingDeployment); err != nil {
-				return Noop, existingDeployment, fmt.Errorf("failed updating DataPlane Deployment %s: %w", existingDeployment.Name, err)
+			if err := r.Client.Patch(ctx, existingDeployment, client.MergeFrom(oldExistingDeployment)); err != nil {
+				return Noop, existingDeployment, fmt.Errorf("failed patching DataPlane Deployment %s: %w", existingDeployment.Name, err)
 			}
 			return Updated, existingDeployment, nil
 		}
@@ -357,35 +360,59 @@ func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
 	return true, generatedService, r.Client.Create(ctx, generatedService)
 }
 
-func (r *DataPlaneReconciler) ensureAdminServiceForDataPlane(
+func matchingLabelsToServiceOpt(ml client.MatchingLabels) k8sresources.ServiceOpt {
+	return func(s *corev1.Service) {
+		if s.Labels == nil {
+			s.Labels = make(map[string]string)
+		}
+		for k, v := range ml {
+			s.Labels[k] = v
+		}
+	}
+}
+
+func ensureAdminServiceForDataPlane(
 	ctx context.Context,
+	cl client.Client,
 	dataplane *operatorv1beta1.DataPlane,
-) (createdOrUpdated bool, svc *corev1.Service, err error) {
+	additionalServiceLabels client.MatchingLabels,
+	opts ...k8sresources.ServiceOpt,
+) (res CreatedUpdatedOrNoop, svc *corev1.Service, err error) {
+	matchingLabels := client.MatchingLabels{
+		"app":                                 dataplane.Name,
+		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
+		consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
+	}
+	for k, v := range additionalServiceLabels {
+		matchingLabels[k] = v
+	}
+
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
-		r.Client,
+		cl,
 		dataplane.Namespace,
 		dataplane.UID,
-		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-		},
+		matchingLabels,
 	)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, fmt.Errorf("failed listing Admin API Services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 
 	count := len(services)
 	if count > 1 {
-		if err := k8sreduce.ReduceServices(ctx, r.Client, services); err != nil {
-			return false, nil, err
+		if err := k8sreduce.ReduceServices(ctx, cl, services); err != nil {
+			return Noop, nil, err
 		}
-		return false, nil, errors.New("number of services reduced")
+		return Noop, nil, errors.New("number of DataPlane Admin API services reduced")
 	}
 
-	generatedService, err := k8sresources.GenerateNewAdminServiceForDataPlane(dataplane)
+	if len(additionalServiceLabels) > 0 {
+		opts = append(opts, matchingLabelsToServiceOpt(additionalServiceLabels))
+	}
+
+	generatedService, err := k8sresources.GenerateNewAdminServiceForDataPlane(dataplane, opts...)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, err
 	}
 	addLabelForDataplane(generatedService)
 	k8sutils.SetOwnerForObject(generatedService, dataplane)
@@ -403,15 +430,19 @@ func (r *DataPlaneReconciler) ensureAdminServiceForDataPlane(
 			existingService.Spec.Selector = generatedService.Spec.Selector
 			updated = true
 		}
+		if !cmp.Equal(existingService.Labels, generatedService.Labels) {
+			existingService.Labels = generatedService.Labels
+			updated = true
+		}
 
 		if updated {
-			if err := r.Client.Update(ctx, existingService); err != nil {
-				return false, existingService, fmt.Errorf("failed updating DataPlane Service %s: %w", existingService.Name, err)
+			if err := cl.Update(ctx, existingService); err != nil {
+				return Noop, existingService, fmt.Errorf("failed updating DataPlane Service %s: %w", existingService.Name, err)
 			}
-			return true, existingService, nil
+			return Updated, existingService, nil
 		}
-		return false, existingService, nil
+		return Noop, existingService, nil
 	}
 
-	return true, generatedService, r.Client.Create(ctx, generatedService)
+	return Created, generatedService, cl.Create(ctx, generatedService)
 }

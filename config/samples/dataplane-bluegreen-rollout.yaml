@@ -1,0 +1,22 @@
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: bluegreen
+spec:
+  deployment:
+    rollout:
+      strategy:
+        blueGreen:
+          promotion:
+            strategy: BreakBeforePromotion
+    podTemplateSpec:
+      spec:
+        containers:
+        - name: proxy
+          image: kong:3.3
+          env:
+          - name: KONG_LOG_LEVEL
+            value: debug
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 1

@@ -59,7 +59,7 @@ func SetDataPlaneDefaults(spec *operatorv1beta1.DataPlaneOptions) bool {
 	dataplaneContainer := k8sutils.GetPodContainerByName(&spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 	generated := false
 	if dataplaneContainer == nil {
-		dataplaneContainer = lo.ToPtr(resources.GenerateDataPlaneContainer(""))
+		dataplaneContainer = lo.ToPtr(resources.GenerateDataPlaneContainer(spec.Deployment.DeploymentOptions.PodTemplateSpec, ""))
 		generated = true
 	}
 

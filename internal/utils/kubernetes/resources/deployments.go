@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -13,6 +14,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
 const (
@@ -25,10 +27,7 @@ const (
 	ClusterCertificateVolumeName = "cluster-certificate"
 )
 
-var (
-	terminationGracePeriodSeconds = int64(corev1.DefaultTerminationGracePeriodSeconds)
-	defaultMode                   = corev1.DownwardAPIVolumeSourceDefaultMode
-)
+var terminationGracePeriodSeconds = int64(corev1.DefaultTerminationGracePeriodSeconds)
 
 // GenerateNewDeploymentForControlPlane generates a new Deployment for the ControlPlane
 func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.ControlPlane,
@@ -71,7 +70,7 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  certSecretName,
-									DefaultMode: &defaultMode,
+									DefaultMode: lo.ToPtr(corev1.DownwardAPIVolumeSourceDefaultMode),
 									Items: []corev1.KeyToPath{
 										{
 											Key:  "tls.crt",
@@ -170,9 +169,59 @@ const (
 	DefaultDataPlaneMemoryLimit   = "1000Mi"
 )
 
-// GenerateNewDeploymentForDataPlane generates a new Deployment for the DataPlane
-func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dataplaneImage, certSecretName string) (*appsv1.Deployment, error) {
+type DeploymentOpt func(*appsv1.Deployment)
 
+// WithTLSVolumeFromSecret returns a DelpoymentOpt which adds a TLS Volume
+// to Deployment's PodSpec using the provided volume name and secret name to reference.
+func WithTLSVolumeFromSecret(name string, secretName string) DeploymentOpt {
+	return func(d *appsv1.Deployment) {
+		d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: name,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName:  secretName,
+						DefaultMode: lo.ToPtr(corev1.DownwardAPIVolumeSourceDefaultMode),
+						Items: []corev1.KeyToPath{
+							{
+								Key:  "tls.crt",
+								Path: "tls.crt",
+							},
+							{
+								Key:  "tls.key",
+								Path: "tls.key",
+							},
+							{
+								Key:  "ca.crt",
+								Path: "ca.crt",
+							},
+						},
+					},
+				},
+			},
+		)
+	}
+}
+
+// WithClusterCertificateMount returns a DelpoymentOpt which adds a cluster
+// certificate Volume mount to Deployment's PodSpec using the provided volume name.
+func WithClusterCertificateMount(name string) DeploymentOpt {
+	return func(d *appsv1.Deployment) {
+		if len(d.Spec.Template.Spec.Containers) == 0 {
+			return
+		}
+		d.Spec.Template.Spec.Containers[0].VolumeMounts = append(d.Spec.Template.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{
+				Name:      name,
+				ReadOnly:  true,
+				MountPath: "/var/cluster-certificate",
+			},
+		)
+	}
+}
+
+// GenerateNewDeploymentForDataPlane generates a new Deployment for the DataPlane
+func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dataplaneImage string, opts ...DeploymentOpt) (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,
@@ -210,14 +259,14 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dat
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext:               &corev1.PodSecurityContext{},
-					Volumes:                       generateDataplaneDeploymentVolumes(certSecretName),
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					SchedulerName:                 corev1.DefaultSchedulerName,
+					Volumes:                       generateDeploymentVolumes(dataplane.Spec.Deployment.PodTemplateSpec),
 					Containers: []corev1.Container{{
 						Name:            consts.DataPlaneProxyContainerName,
-						VolumeMounts:    generateDataplaneDeploymentVolumeMounts(),
+						VolumeMounts:    generateDeploymentVolumeMounts(dataplane.Spec.Deployment.PodTemplateSpec, consts.DataPlaneProxyContainerName),
 						Image:           dataplaneImage,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Lifecycle: &corev1.Lifecycle{
@@ -284,13 +333,17 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dat
 		deployment.Spec.Template = *patchedPodTemplateSpec
 	}
 
+	for _, opt := range opts {
+		opt(deployment)
+	}
+
 	return deployment, nil
 }
 
-func GenerateDataPlaneContainer(image string) corev1.Container {
+func GenerateDataPlaneContainer(dpPodTemplateSpec *corev1.PodTemplateSpec, image string) corev1.Container {
 	return corev1.Container{
 		Name:            consts.DataPlaneProxyContainerName,
-		VolumeMounts:    generateDataplaneDeploymentVolumeMounts(),
+		VolumeMounts:    generateDeploymentVolumeMounts(dpPodTemplateSpec, consts.DataPlaneProxyContainerName),
 		Image:           image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Lifecycle: &corev1.Lifecycle{
@@ -344,46 +397,34 @@ func GenerateDataPlaneContainer(image string) corev1.Container {
 	}
 }
 
-// generateDataplaneDeploymentVolumes generates volumes in pods containing cluster certificate for mTLS
-// between control plane (KIC) and data plane.
-func generateDataplaneDeploymentVolumes(certSecretName string) []corev1.Volume {
-	volumes := []corev1.Volume{
-		{
-			Name: ClusterCertificateVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &defaultMode,
-					SecretName:  certSecretName,
-					Items: []corev1.KeyToPath{
-						{
-							Key:  "tls.crt",
-							Path: "tls.crt",
-						},
-						{
-							Key:  "tls.key",
-							Path: "tls.key",
-						},
-						{
-							Key:  "ca.crt",
-							Path: "ca.crt",
-						},
-					},
-				},
-			},
-		},
+// generateDeploymentVolumes generates volumes based on the provided PodTemplateSpec.
+func generateDeploymentVolumes(pts *corev1.PodTemplateSpec) []corev1.Volume {
+	if pts == nil {
+		return nil
 	}
 
+	volumes := make([]corev1.Volume, 0, len(pts.Spec.Volumes))
+	for _, volume := range pts.Spec.Volumes {
+		volumes = append(volumes, *volume.DeepCopy())
+	}
 	return volumes
 }
 
-// generateDataplaneDeploymentVolumeMounts generates volume mounts in DataPlane container.
-func generateDataplaneDeploymentVolumeMounts() []corev1.VolumeMount {
-	volumeMounts := []corev1.VolumeMount{
-		{
-			Name:      ClusterCertificateVolumeName,
-			ReadOnly:  true,
-			MountPath: "/var/cluster-certificate",
-		},
+// generateDeploymentVolumeMounts generates volume mounts in container - specified
+// by name - based on the provided PodTemplateSpec.
+func generateDeploymentVolumeMounts(pts *corev1.PodTemplateSpec, containerName string) []corev1.VolumeMount {
+	if pts == nil {
+		return nil
+	}
+
+	container := k8sutils.GetPodContainerByName(&pts.Spec, containerName)
+	if container == nil {
+		return nil
+	}
+
+	volumeMounts := make([]corev1.VolumeMount, 0, len(container.VolumeMounts))
+	for _, mount := range container.VolumeMounts {
+		volumeMounts = append(volumeMounts, *mount.DeepCopy())
 	}
 
 	return volumeMounts

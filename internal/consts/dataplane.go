@@ -31,7 +31,21 @@ const (
 
 	// DataPlaneServiceTypeLabel is the labels that is used for the services created by
 	// the DataPlane controller to expose the DataPlane deployment.
-	DataPlaneServiceTypeLabel = "konghq.com/dataplane-service-type"
+	DataPlaneServiceTypeLabel = "gateway-operator.konghq.com/dataplane-service-type"
+
+	// DataPlaneServiceStateLabel indicates the state of a DataPlane service.
+	// Useful for progressive rollouts.
+	DataPlaneServiceStateLabel = "gateway-operator.konghq.com/dataplane-service-state"
+
+	// DataPlaneServiceStatePreview indicates that a service is a preview service.
+	// This is used in the "preview" service that is available to access the "preview"
+	// DataPlane Pods.
+	DataPlaneServiceStatePreview = "preview"
+
+	// DataPlaneServiceStateLive indicates that a service is a live service.
+	// This is used in the long-lived "live" service that is readily available
+	// long-term, in order to access "live" DataPlane Pods.
+	DataPlaneServiceStateLive = "live"
 
 	// DataPlaneAdminServiceLabelValue indicates that the service is intended to expose the
 	// DataPlane admin API.

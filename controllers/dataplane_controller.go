@@ -9,13 +9,16 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/internal/consts"
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	dataplanevalidation "github.com/kong/gateway-operator/internal/validation/dataplane"
 )
 
@@ -94,13 +97,19 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	trace(log, "exposing DataPlane deployment admin API via headless service", dataplane)
-	createdOrUpdated, dataplaneAdminService, err := r.ensureAdminServiceForDataPlane(ctx, dataplane)
+	res, dataplaneAdminService, err := ensureAdminServiceForDataPlane(ctx, r.Client, dataplane,
+		client.MatchingLabels{
+			consts.DataPlaneServiceStateLabel: consts.DataPlaneServiceStateLive,
+		},
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if createdOrUpdated {
+	switch res {
+	case Created, Updated:
 		debug(log, "DataPlane admin service created/updated", dataplane, "service", dataplaneAdminService.Name)
 		return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
+	case Noop:
 	}
 
 	trace(log, "exposing DataPlane deployment proxy via service", dataplane)
@@ -123,7 +132,13 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	trace(log, "ensuring mTLS certificate", dataplane)
-	createdOrUpdated, certSecret, err := r.ensureCertificate(ctx, dataplane, dataplaneAdminService.Name)
+	createdOrUpdated, certSecret, err := ensureCertificate(ctx, r.Client, dataplane,
+		types.NamespacedName{
+			Namespace: r.ClusterCASecretNamespace,
+			Name:      r.ClusterCASecretName,
+		},
+		dataplaneAdminService.Name,
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -145,8 +160,10 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	trace(log, "looking for existing deployments for DataPlane resource", dataplane)
-	res, dataplaneDeployment, err := r.ensureDeploymentForDataPlane(ctx, dataplane, certSecret.Name)
+	res, dataplaneDeployment, err := r.ensureDeploymentForDataPlane(ctx, log, dataplane,
+		k8sresources.WithTLSVolumeFromSecret("cluster-certificate", certSecret.Name),
+		k8sresources.WithClusterCertificateMount("cluster-certificate"),
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

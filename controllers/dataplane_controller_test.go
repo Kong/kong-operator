@@ -113,6 +113,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "svc-proxy-to-keep",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
+							"app":                            "test-dataplane",
 							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneProxyServiceLabelValue),
 						},
 					},
@@ -131,8 +132,10 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-admin-service",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							"app":                            "test-dataplane",
-							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
+							"app":                                 "test-dataplane",
+							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
+							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneServiceStateLive),
+							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -310,8 +313,10 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-admin-service",
 						Namespace: "default",
 						Labels: map[string]string{
-							"app":                            "test-dataplane",
-							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
+							"app":                                 "test-dataplane",
+							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
+							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneServiceStateLive),
+							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -428,8 +433,10 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-admin-service",
 						Namespace: "default",
 						Labels: map[string]string{
-							"app":                            "test-dataplane",
-							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
+							"app":                                 "test-dataplane",
+							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
+							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneServiceStateLive),
+							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -490,6 +497,8 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
@@ -584,8 +593,10 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-admin-service",
 						Namespace: "default",
 						Labels: map[string]string{
-							"app":                            "test-dataplane",
-							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
+							"app":                                 "test-dataplane",
+							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
+							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneServiceStateLive),
+							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -651,6 +662,8 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				assert.EqualValues(t, 0, dp.Status.ReadyReplicas)
 				assert.EqualValues(t, 0, dp.Status.Replicas)
 
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)

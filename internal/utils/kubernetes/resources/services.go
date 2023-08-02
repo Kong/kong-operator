@@ -92,12 +92,23 @@ func getDataPlaneIngressServiceType(dataplane *operatorv1beta1.DataPlane) corev1
 	return dataplane.Spec.Network.Services.Ingress.Type
 }
 
+type ServiceOpt func(*corev1.Service)
+
+func ServiceWithLabel(k, v string) func(s *corev1.Service) {
+	return func(s *corev1.Service) {
+		if s.Labels == nil {
+			s.Labels = make(map[string]string)
+		}
+		s.Labels[k] = v
+	}
+}
+
 // GenerateNewAdminServiceForDataPlane is a helper to generate the headless dataplane admin service
-func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane) (*corev1.Service, error) {
+func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, opts ...ServiceOpt) (*corev1.Service, error) {
 	adminService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,
-			GenerateName: fmt.Sprintf("%s-admin-%s-", consts.DataPlanePrefix, dataplane.Name),
+			GenerateName: dataPlaneAdminServiceGenerateName(dataplane),
 			Labels: map[string]string{
 				"app":                            dataplane.Name,
 				consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
@@ -125,6 +136,10 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane) (
 		adminService.Spec.Selector = newSelector
 	}
 
+	for _, opt := range opts {
+		opt(adminService)
+	}
+
 	return adminService, nil
 }
 
@@ -143,4 +158,8 @@ func getSelectorOverrides(overrideAnnotation string) (map[string]string, error) 
 		selector[annotationParts[0]] = annotationParts[1]
 	}
 	return selector, nil
+}
+
+func dataPlaneAdminServiceGenerateName(dataplane *operatorv1beta1.DataPlane) string {
+	return fmt.Sprintf("%s-admin-%s-", consts.DataPlanePrefix, dataplane.Name)
 }

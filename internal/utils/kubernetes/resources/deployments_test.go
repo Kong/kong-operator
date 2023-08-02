@@ -266,7 +266,7 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			deployment, err := GenerateNewDeploymentForDataPlane(tt.dataplane, dataplaneImage, certSecretName)
+			deployment, err := GenerateNewDeploymentForDataPlane(tt.dataplane, dataplaneImage)
 			require.NoError(t, err)
 			tt.testFunc(t, &deployment.Spec)
 		})

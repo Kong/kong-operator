@@ -300,13 +300,13 @@ func generateTLSDataSecret(
 		return false, nil, err
 	}
 
-	generatedSecret.StringData = map[string]string{
-		"ca.crt":  string(ca.Data["tls.crt"]),
-		"tls.crt": string(signed),
-		"tls.key": string(pem.EncodeToMemory(&pem.Block{
+	generatedSecret.Data = map[string][]byte{
+		"ca.crt":  ca.Data["tls.crt"],
+		"tls.crt": signed,
+		"tls.key": pem.EncodeToMemory(&pem.Block{
 			Type:  "EC PRIVATE KEY",
 			Bytes: privDer,
-		})),
+		}),
 	}
 
 	err = k8sClient.Create(ctx, generatedSecret)
