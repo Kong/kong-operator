@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -380,6 +381,109 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 
 		t.Run(tc.name, func(t *testing.T) {
 			tc.testBody(t, reconciler, tc.dataPlane, tc.certSecretName)
+		})
+	}
+}
+
+func TestDataPlaneProxyServiceIsReady(t *testing.T) {
+	dataPlaneWithIngressServiceType := func(t corev1.ServiceType) *operatorv1beta1.DataPlane {
+		return &operatorv1beta1.DataPlane{
+			Spec: operatorv1beta1.DataPlaneSpec{
+				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+					Network: operatorv1beta1.DataPlaneNetworkOptions{
+						Services: &operatorv1beta1.DataPlaneServices{
+							Ingress: &operatorv1beta1.ServiceOptions{
+								Type: t,
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	withLoadBalancerIngressStatus := func(lb corev1.LoadBalancerIngress) func(*corev1.Service) {
+		return func(s *corev1.Service) {
+			s.Status.LoadBalancer.Ingress = append(s.Status.LoadBalancer.Ingress, lb)
+		}
+	}
+
+	proxyService := func(opts ...func(*corev1.Service)) *corev1.Service {
+		s := &corev1.Service{}
+		for _, opt := range opts {
+			opt(s)
+		}
+		return s
+	}
+
+	testCases := []struct {
+		name                  string
+		dataPlane             *operatorv1beta1.DataPlane
+		dataPlaneProxyService *corev1.Service
+		expected              bool
+	}{
+		{
+			name:                  "returns true when DataPlane not have a Load Balancer Ingress Service set",
+			dataPlane:             dataPlaneWithIngressServiceType(corev1.ServiceTypeClusterIP),
+			dataPlaneProxyService: proxyService(),
+			expected:              true,
+		},
+		{
+			name:      "returns true when DataPlane has a Load Balancer Ingress Service set with an IP",
+			dataPlane: dataPlaneWithIngressServiceType(corev1.ServiceTypeLoadBalancer),
+			dataPlaneProxyService: proxyService(
+				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{
+					IP: "10.0.0.1",
+				}),
+			),
+			expected: true,
+		},
+		{
+			name:      "returns true when DataPlane has a Load Balancer Ingress Service set with a Hostname",
+			dataPlane: dataPlaneWithIngressServiceType(corev1.ServiceTypeLoadBalancer),
+			dataPlaneProxyService: proxyService(
+				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{
+					Hostname: "random-hostname.example.com",
+				}),
+			),
+			expected: true,
+		},
+		{
+			name:      "returns true when DataPlane has a Load Balancer Ingress Service set with an IP and Hostname",
+			dataPlane: dataPlaneWithIngressServiceType(corev1.ServiceTypeLoadBalancer),
+			dataPlaneProxyService: proxyService(
+				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{
+					IP:       "10.0.0.1",
+					Hostname: "random-hostname.example.com",
+				}),
+			),
+			expected: true,
+		},
+		{
+			name:                  "returns false when DataPlane has a Load Balancer Ingress Service set without an IP or Hostname",
+			dataPlane:             dataPlaneWithIngressServiceType(corev1.ServiceTypeLoadBalancer),
+			dataPlaneProxyService: proxyService(),
+			expected:              false,
+		},
+		{
+			name:      "returns true when DataPlane has a Load Balancer Ingress Service set with 2 status and only the second one having an IP",
+			dataPlane: dataPlaneWithIngressServiceType(corev1.ServiceTypeLoadBalancer),
+			dataPlaneProxyService: proxyService(
+				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{}), // Shouldn't really happen though
+				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{
+					IP: "10.0.0.1",
+				}),
+			),
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			res := dataPlaneProxyServiceIsReady(tc.dataPlane, tc.dataPlaneProxyService)
+			assert.Equal(t, tc.expected, res)
 		})
 	}
 }

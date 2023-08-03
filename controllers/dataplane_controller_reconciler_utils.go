@@ -446,3 +446,30 @@ func ensureAdminServiceForDataPlane(
 
 	return Created, generatedService, cl.Create(ctx, generatedService)
 }
+
+// dataPlaneProxyServiceIsReady returns:
+//   - true for DataPlanes that do not have the Ingress Service type set as LoadBalancer
+//   - true for DataPlanes that have the Ingress Service type set as LoadBalancer and
+//     which have at least one IP or Hostname in their Ingress Service Status
+//   - false otherwise.
+func dataPlaneProxyServiceIsReady(dataplane *operatorv1beta1.DataPlane, dataplaneProxyService *corev1.Service) bool {
+	// If the DataPlane doesn't have a LoadBalancer set for its Ingress Service
+	// return true.
+	if dataplane.Spec.Network.Services == nil ||
+		dataplane.Spec.Network.Services.Ingress == nil ||
+		dataplane.Spec.Network.Services.Ingress.Type != corev1.ServiceTypeLoadBalancer {
+		return true
+	}
+
+	ingressStatuses := dataplaneProxyService.Status.LoadBalancer.Ingress
+	// If there are ingress statuses attached to the ingress Service, check
+	// if there are IPs of Hostnames specified.
+	// If that's the case, the DataPlane is Ready.
+	for _, ingressStatus := range ingressStatuses {
+		if ingressStatus.Hostname != "" || ingressStatus.IP != "" {
+			return true
+		}
+	}
+	// Otherwise the DataPlane is not Ready.
+	return false
+}

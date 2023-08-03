@@ -180,7 +180,9 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	trace(log, "checking readiness of DataPlane deployments", dataplane)
 
-	if dataplaneDeployment.Status.Replicas == 0 || dataplaneDeployment.Status.AvailableReplicas < dataplaneDeployment.Status.Replicas {
+	if dataplaneDeployment.Status.Replicas == 0 ||
+		dataplaneDeployment.Status.AvailableReplicas < dataplaneDeployment.Status.Replicas ||
+		!dataPlaneProxyServiceIsReady(dataplane, dataplaneProxyService) {
 		trace(log, "deployment for DataPlane not ready yet", dataplane)
 
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
