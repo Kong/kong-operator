@@ -134,7 +134,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Labels: map[string]string{
 							"app":                                 "test-dataplane",
 							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneServiceStateLive),
+							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneStateLabelValueLive),
 							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
@@ -315,7 +315,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Labels: map[string]string{
 							"app":                                 "test-dataplane",
 							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneServiceStateLive),
+							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneStateLabelValueLive),
 							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
@@ -360,6 +360,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err)
 
 				// second reconcile loop to allow the reconciler to set the service name in the dataplane status
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
@@ -435,7 +438,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Labels: map[string]string{
 							"app":                                 "test-dataplane",
 							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneServiceStateLive),
+							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneStateLabelValueLive),
 							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
@@ -581,6 +584,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-dataplane-deployment",
 						Namespace: "default",
+						Labels: map[string]string{
+							consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
+						},
 					},
 					Status: appsv1.DeploymentStatus{
 						AvailableReplicas: 1,
@@ -595,7 +601,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Labels: map[string]string{
 							"app":                                 "test-dataplane",
 							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneServiceStateLive),
+							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneStateLabelValueLive),
 							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},

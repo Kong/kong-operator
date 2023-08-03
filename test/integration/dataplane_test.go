@@ -505,12 +505,12 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	require.NotNil(t, proxyContainer)
 
 	t.Log("verifying dataplane has default cluster-certificate volume")
-	vol := getVolumeByName(deployment.Spec.Template.Spec.Volumes, consts.ClusterCertificateVolume)
+	vol := getVolumeByName(deployment.Spec.Template.Spec.Volumes, consts.DataPlaneClusterCertificateVolumeName)
 	require.NotNil(t, vol, "dataplane pod should have the cluster-certificate volume")
 	require.NotNil(t, vol.Secret, "cluster-certificate volume should come from secret")
 
 	t.Log("verifying Kong proxy container has mounted  default cluster-certificate volume")
-	volMounts := getVolumeMountsByVolumeName(proxyContainer.VolumeMounts, consts.ClusterCertificateVolume)
+	volMounts := getVolumeMountsByVolumeName(proxyContainer.VolumeMounts, consts.DataPlaneClusterCertificateVolumeName)
 	require.Len(t, volMounts, 1, "proxy container should mount cluster-certificate volume")
 	require.Equal(t, volMounts[0].MountPath, "/var/cluster-certificate", "proxy container should mount cluster-certificate volume to path /var/cluster-certificate")
 	require.True(t, volMounts[0].ReadOnly, "proxy container should mount cluster-certificate volume in read only mode")

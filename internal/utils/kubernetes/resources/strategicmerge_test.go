@@ -88,7 +88,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						{
 							// NOTE: we need to provide the existing entry in the slice
 							// to prevent merging the provided new entry with existing entries.
-							Name: "cluster-certificate",
+							Name: consts.DataPlaneClusterCertificateVolumeName,
 						},
 						{
 							Name: "volume1",
@@ -106,7 +106,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 								{
 									// NOTE: we need to provide the existing entry in the slice
 									// to prevent merging the provided new entry with existing entries.
-									Name:      "cluster-certificate",
+									Name:      consts.DataPlaneClusterCertificateVolumeName,
 									MountPath: "/var/cluster-certificate",
 								},
 								{
@@ -216,7 +216,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						{
 							// NOTE: we need to provide the existing entry in the slice
 							// to prevent merging the provided new entry with existing entries.
-							Name: "cluster-certificate",
+							Name: consts.DataPlaneClusterCertificateVolumeName,
 						},
 						{
 							Name: "new_volume",

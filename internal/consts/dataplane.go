@@ -37,15 +37,23 @@ const (
 	// Useful for progressive rollouts.
 	DataPlaneServiceStateLabel = "gateway-operator.konghq.com/dataplane-service-state"
 
-	// DataPlaneServiceStatePreview indicates that a service is a preview service.
-	// This is used in the "preview" service that is available to access the "preview"
-	// DataPlane Pods.
-	DataPlaneServiceStatePreview = "preview"
+	// DataPlaneDeploymentStateLabel indicates the state of a DataPlane deployment.
+	// Useful for progressive rollouts.
+	DataPlaneDeploymentStateLabel = "gateway-operator.konghq.com/dataplane-deployment-state"
 
-	// DataPlaneServiceStateLive indicates that a service is a live service.
-	// This is used in the long-lived "live" service that is readily available
-	// long-term, in order to access "live" DataPlane Pods.
-	DataPlaneServiceStateLive = "live"
+	// DataPlaneStateLabelValuePreview indicates that a DataPlane resource is
+	// a "preview" resource.
+	// This is used in:
+	// - the "preview" Service that is available to access the "preview" DataPlane Pods.
+	// - the "preview" Deployment wraps the "preview" DataPlane Pods.
+	DataPlaneStateLabelValuePreview = "preview"
+
+	// DataPlaneStateLabelValueLive indicates that a DataPlane resource is
+	// a "live" resource.
+	// This is used in:
+	// - the "live" Service that is available to access the "live" DataPlane Pods.
+	// - the "live" Deployment wraps the "live" DataPlane Pods.
+	DataPlaneStateLabelValueLive = "live"
 
 	// DataPlaneAdminServiceLabelValue indicates that the service is intended to expose the
 	// DataPlane admin API.
@@ -107,4 +115,14 @@ const (
 	// backend used for dataplane(Kong gateway). Currently only DBLess mode
 	// (empty, or "off") is supported.
 	EnvVarKongDatabase = "KONG_DATABASE"
+)
+
+// -----------------------------------------------------------------------------
+// Consts - Volumes
+// -----------------------------------------------------------------------------
+
+const (
+	// DataPlaneClusterCertificateVolumeName is the name of the volume that
+	// contains the DataPlane certificate.
+	DataPlaneClusterCertificateVolumeName = "cluster-certificate"
 )

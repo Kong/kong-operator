@@ -154,17 +154,24 @@ func maybeCreateCertificateSecret(
 	mtlsCASecretNN types.NamespacedName,
 	usages []certificatesv1.KeyUsage,
 	k8sClient client.Client,
+	additionalMatchingLabels ...client.MatchingLabels,
 ) (bool, *corev1.Secret, error) {
 	setCALogger(ctrlruntimelog.Log)
 
 	selectorKey, selectorValue := getManagedLabelForOwner(owner)
+	matchingLabels := client.MatchingLabels{
+		selectorKey: selectorValue,
+	}
+	for _, ml := range additionalMatchingLabels {
+		for k, v := range ml {
+			matchingLabels[k] = v
+		}
+	}
 	secrets, err := k8sutils.ListSecretsForOwner(
 		ctx,
 		k8sClient,
 		owner.GetUID(),
-		client.MatchingLabels{
-			selectorKey: selectorValue,
-		},
+		matchingLabels,
 	)
 	if err != nil {
 		return false, nil, err
@@ -178,8 +185,10 @@ func maybeCreateCertificateSecret(
 		return false, nil, errors.New("number of secrets reduced")
 	}
 
+	serviceOpts := matchingLabelsToSecretOpt(matchingLabels)
+
 	ownerPrefix := getPrefixForOwner(owner)
-	generatedSecret := k8sresources.GenerateNewTLSSecret(owner.GetNamespace(), owner.GetName(), ownerPrefix)
+	generatedSecret := k8sresources.GenerateNewTLSSecret(owner.GetNamespace(), owner.GetName(), ownerPrefix, serviceOpts)
 	k8sutils.SetOwnerForObject(generatedSecret, owner)
 	addLabelForOwner(generatedSecret, owner)
 
@@ -482,6 +491,12 @@ func getManagedLabelForOwner(owner client.Object) (key string, value string) {
 		return consts.GatewayOperatorControlledLabel, consts.DataPlaneManagedLabelValue
 	}
 	return "", ""
+}
+
+func getManagedLabelForServiceSecret(svcNN types.NamespacedName) client.MatchingLabels {
+	return client.MatchingLabels{
+		consts.ServiceSecretLabel: svcNN.Name,
+	}
 }
 
 // -----------------------------------------------------------------------------

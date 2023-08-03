@@ -23,8 +23,6 @@ const (
 
 	DefaultControlPlaneMemoryRequest = "20Mi"
 	DefaultControlPlaneMemoryLimit   = "100Mi"
-
-	ClusterCertificateVolumeName = "cluster-certificate"
 )
 
 var terminationGracePeriodSeconds = int64(corev1.DefaultTerminationGracePeriodSeconds)
@@ -66,7 +64,7 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					Volumes: []corev1.Volume{
 						{
-							Name: ClusterCertificateVolumeName,
+							Name: consts.DataPlaneClusterCertificateVolumeName,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  certSecretName,
@@ -117,7 +115,7 @@ func GenerateControlPlaneContainer(image string) corev1.Container {
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 		VolumeMounts: []corev1.VolumeMount{
 			{
-				Name:      ClusterCertificateVolumeName,
+				Name:      consts.DataPlaneClusterCertificateVolumeName,
 				ReadOnly:  true,
 				MountPath: "/var/cluster-certificate",
 			},

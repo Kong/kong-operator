@@ -21,6 +21,10 @@ const (
 	// GatewayManagedLabelValue indicates that the object's lifecycle is managed by
 	// the gateway controller.
 	GatewayManagedLabelValue = "gateway"
+
+	// ServiceSecretLabel is a label that is added to operator related Service
+	// Secrets to designate which Service this particular Secret it used by.
+	ServiceSecretLabel = "gateway-operator.konghq.com/service-secret"
 )
 
 // -----------------------------------------------------------------------------

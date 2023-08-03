@@ -99,7 +99,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	trace(log, "exposing DataPlane deployment admin API via headless service", dataplane)
 	res, dataplaneAdminService, err := ensureAdminServiceForDataPlane(ctx, r.Client, dataplane,
 		client.MatchingLabels{
-			consts.DataPlaneServiceStateLabel: consts.DataPlaneServiceStateLive,
+			consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
 		},
 	)
 	if err != nil {
@@ -107,7 +107,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 	switch res {
 	case Created, Updated:
-		debug(log, "DataPlane admin service created/updated", dataplane, "service", dataplaneAdminService.Name)
+		debug(log, "DataPlane admin service modified", dataplane, "service", dataplaneAdminService.Name, "reason", res)
 		return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
 	case Noop:
 	}
@@ -137,7 +137,10 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			Namespace: r.ClusterCASecretNamespace,
 			Name:      r.ClusterCASecretName,
 		},
-		dataplaneAdminService.Name,
+		types.NamespacedName{
+			Namespace: dataplaneAdminService.Namespace,
+			Name:      dataplaneAdminService.Name,
+		},
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -160,20 +163,20 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	res, dataplaneDeployment, err := r.ensureDeploymentForDataPlane(ctx, log, dataplane,
-		k8sresources.WithTLSVolumeFromSecret("cluster-certificate", certSecret.Name),
-		k8sresources.WithClusterCertificateMount("cluster-certificate"),
+	res, dataplaneDeployment, err := ensureDeploymentForDataPlane(ctx, r.Client, log, r.DevelopmentMode, dataplane,
+		client.MatchingLabels{
+			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
+		},
+		k8sresources.WithTLSVolumeFromSecret(consts.DataPlaneClusterCertificateVolumeName, certSecret.Name),
+		k8sresources.WithClusterCertificateMount(consts.DataPlaneClusterCertificateVolumeName),
 	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	switch res {
-	case Created:
-		debug(log, "deployment created", dataplane)
+	case Created, Updated:
+		debug(log, "deployment modified", dataplane, "reason", res)
 		return ctrl.Result{}, nil // requeue will be triggered by the creation of the owned object
-	case Updated:
-		debug(log, "deployment updated", dataplane)
-		return ctrl.Result{}, nil // requeue will be triggered by the update of the owned object
 	default:
 		debug(log, "no need for deployment update", dataplane)
 	}

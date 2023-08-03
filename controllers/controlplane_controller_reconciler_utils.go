@@ -386,7 +386,8 @@ func (r *ControlPlaneReconciler) ensureCertificate(
 			Name:      r.ClusterCASecretName,
 		},
 		usages,
-		r.Client)
+		r.Client,
+	)
 }
 
 // ensureOwnedClusterRolesDeleted removes all the owned ClusterRoles of the controlplane.

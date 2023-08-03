@@ -9,6 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -16,6 +17,7 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
 // -----------------------------------------------------------------------------
@@ -82,7 +84,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// DataPlane is ready and we can proceed with deploying preview resources.
 	res, dataplaneAdminService, err := ensureAdminServiceForDataPlane(ctx, r.Client, &dataplane,
 		client.MatchingLabels{
-			consts.DataPlaneServiceStateLabel: consts.DataPlaneServiceStatePreview,
+			consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 		},
 	)
 	if err != nil {
@@ -90,7 +92,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 	switch res {
 	case Created, Updated:
-		debug(log, "DataPlane preview admin service created/updated", dataplane, "service", dataplaneAdminService.Name)
+		debug(log, "DataPlane preview admin service modified", dataplane, "service", dataplaneAdminService.Name, "reason", res)
 		return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
 	case Noop:
 	}
@@ -99,6 +101,43 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, fmt.Errorf("failed updating rollout status with preview Admin API service addresses: %w", err)
 	} else if updated {
 		return ctrl.Result{}, nil
+	}
+
+	trace(log, "ensuring mTLS certificate", dataplane)
+	createdOrUpdated, certSecret, err := ensureCertificate(ctx, r.Client, &dataplane,
+		types.NamespacedName{
+			Namespace: r.ClusterCASecretNamespace,
+			Name:      r.ClusterCASecretName,
+		},
+		types.NamespacedName{
+			Namespace: dataplaneAdminService.Namespace,
+			Name:      dataplaneAdminService.Name,
+		},
+	)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if createdOrUpdated {
+		debug(log, "mTLS certificate created", dataplane)
+		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+	}
+
+	res, _, err = ensureDeploymentForDataPlane(ctx, r.Client, log, r.DevelopmentMode, &dataplane,
+		client.MatchingLabels{
+			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,
+		},
+		k8sresources.WithTLSVolumeFromSecret(consts.DataPlaneClusterCertificateVolumeName, certSecret.Name),
+		k8sresources.WithClusterCertificateMount(consts.DataPlaneClusterCertificateVolumeName),
+	)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", err)
+	}
+	switch res {
+	case Created, Updated:
+		debug(log, "deployment modified", dataplane, "reason", res)
+		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+	default:
+		debug(log, "no need for deployment update", dataplane)
 	}
 
 	// TODO: ensure that the preview resources are all ready.
@@ -117,6 +156,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	debug(log, "BlueGreen reconciliation complete for DataPlane resource", dataplane)
+
 	return ctrl.Result{}, nil
 }
 
