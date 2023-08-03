@@ -101,6 +101,22 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, nil
 	}
 
+	// TODO: ensure that the preview resources are all ready.
+	// https://github.com/Kong/gateway-operator/issues/899
+	// https://github.com/Kong/gateway-operator/issues/900
+	// https://github.com/Kong/gateway-operator/issues/901
+
+	proceedWithPromotion, err := canProceedWithPromotion(dataplane)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed checking if DataPlane %s/%s can be promoted: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+	if !proceedWithPromotion {
+		debug(log, "DataPlane preview resources cannot be promoted yet", dataplane,
+			"promotion_strategy", dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen.Promotion.Strategy)
+		return ctrl.Result{}, nil
+	}
+
+	debug(log, "BlueGreen reconciliation complete for DataPlane resource", dataplane)
 	return ctrl.Result{}, nil
 }
 
@@ -154,4 +170,22 @@ func (r *DataPlaneBlueGreenReconciler) patchRolloutStatus(ctx context.Context, l
 
 func rolloutStatusChanged(old, updated *operatorv1beta1.DataPlane) bool {
 	return !cmp.Equal(old.Status.RolloutStatus, updated.Status.RolloutStatus)
+}
+
+// canProceedWithPromotion verifies whether a DataPlane preview resources can be promoted. It assumes that all the
+// preview resources are ready.
+func canProceedWithPromotion(dataplane operatorv1beta1.DataPlane) (bool, error) {
+	promotionStrategy := dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen.Promotion.Strategy
+	switch promotionStrategy {
+	case operatorv1beta1.BreakBeforePromotion:
+		// If the promotion strategy is BreakBeforePromotion then we need to wait for the user to explicitly
+		// mark the DataPlane with the promote-when-ready annotation.
+		return dataplane.Annotations[operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey] ==
+			operatorv1beta1.DataPlanePromoteWhenReadyAnnotationTrue, nil
+	case operatorv1beta1.AutomaticPromotion:
+		// If the promotion strategy is AutomaticPromotion, we can proceed with promotion straight away.
+		return true, nil
+	default:
+		return false, fmt.Errorf("unknown promotion strategy %q", promotionStrategy)
+	}
 }

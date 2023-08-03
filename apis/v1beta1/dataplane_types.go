@@ -25,13 +25,13 @@ func init() {
 	SchemeBuilder.Register(&DataPlane{}, &DataPlaneList{})
 }
 
-//+genclient
-//+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:resource:shortName=kdp,categories=kong;all
-//+kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
-//+kubebuilder:printcolumn:name="Provisioned",description="The Resource is provisioned",type=string,JSONPath=`.status.conditions[?(@.type=='Provisioned')].status`
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=kdp,categories=kong;all
+// +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
+// +kubebuilder:printcolumn:name="Provisioned",description="The Resource is provisioned",type=string,JSONPath=`.status.conditions[?(@.type=='Provisioned')].status`
 
 // DataPlane is the Schema for the dataplanes API
 type DataPlane struct {
@@ -42,7 +42,7 @@ type DataPlane struct {
 	Status DataPlaneStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // DataPlaneList contains a list of DataPlane
 type DataPlaneList struct {
@@ -233,7 +233,7 @@ type Address struct {
 type AddressType string
 
 const (
-	// A textual representation of a numeric IP address. IPv4
+	// IPAddressType is a textual representation of a numeric IP address. IPv4
 	// addresses must be in dotted-decimal form. IPv6 addresses
 	// must be in a standard IPv6 text representation
 	// (see [RFC 5952](https://tools.ietf.org/html/rfc5952)).
@@ -243,7 +243,7 @@ const (
 	// IPAddress).
 	IPAddressType AddressType = "IPAddress"
 
-	// A Hostname represents a DNS based ingress point. This is similar to the
+	// HostnameAddressType represents a DNS based ingress point. This is similar to the
 	// corresponding hostname field in Kubernetes load balancer status. For
 	// example, this concept may be used for cloud load balancers where a DNS
 	// name is used to expose a load balancer.

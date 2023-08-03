@@ -6,7 +6,7 @@ import (
 
 // DeploymentOptions is a shared type used on objects to indicate that their
 // configuration results in a Deployment which is managed by the Operator and
-// includes options for managing Deployments such as the the number of replicas
+// includes options for managing Deployments such as the number of replicas
 // or pod options like container image and resource requirements.
 // version, as well as Env variable overrides.
 type DeploymentOptions struct {
@@ -66,7 +66,8 @@ const (
 	// BreakBeforePromotion is the same as AutomaticPromotion but with an added breakpoint
 	// to enable manual inspection.
 	// The user must indicate manually when they want the promotion to continue.
-	// TODO: finalizer/annotation?
+	// That can be done by annotating the DataPlane object with
+	// `"gateway-operator.konghq.com/promote-when-ready": "true"`.
 	BreakBeforePromotion PromotionStrategy = "BreakBeforePromotion"
 )
 
@@ -82,4 +83,18 @@ const (
 	// GatewayConfigurationTargetKindGatewayClass is a target kind which indicates
 	// that a GatewayClass resource is the target.
 	GatewayConfigurationTargetKindGatewayClass GatewayConfigurationTargetKind = "GatewayClass"
+)
+
+const (
+	// DataPlanePromoteWhenReadyAnnotationKey is the annotation key which can be used
+	// to annotate a DataPlane object to signal that the live resources should be
+	// promoted and replace the preview resources. It is used in conjunction with
+	// the BreakBeforePromotion promotion strategy.
+	// It has to be set to `true` to take effect. Once the operator detects the annotation, it will proceed with the
+	// promotion and remove the annotation.
+	DataPlanePromoteWhenReadyAnnotationKey = "gateway-operator.konghq.com/promote-when-ready"
+
+	// DataPlanePromoteWhenReadyAnnotationTrue is the annotation value that needs to be set to the DataPlane's
+	// DataPlanePromoteWhenReadyAnnotationKey annotation to signal that the new resources should be promoted.
+	DataPlanePromoteWhenReadyAnnotationTrue = "true"
 )
