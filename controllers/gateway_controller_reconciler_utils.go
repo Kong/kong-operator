@@ -511,8 +511,9 @@ func (g *gatewayConditionsAwareT) InitReadyAndProgrammed() {
 // Furthermore, it sets the supportedKinds and initializes the readiness to true with reason
 // Ready or false with reason Invalid for each Gateway listener.
 func (g *gatewayConditionsAwareT) SetReadyAndProgrammed() {
-	k8sutils.SetReady(g, g.Generation)
-	k8sutils.SetProgrammed(g, g.Generation)
+	k8sutils.SetReady(g)
+	k8sutils.SetProgrammed(g)
+
 	listenersStatus := []gatewayv1beta1.ListenerStatus{}
 	for _, listener := range g.Spec.Listeners {
 		supportedKinds, resolvedRefsCondition := getSupportedKindsWithCondition(g.Generation, listener)

@@ -53,19 +53,6 @@ func (r *ControlPlaneReconciler) ensureIsMarkedScheduled(
 	return false
 }
 
-func (r *ControlPlaneReconciler) ensureIsMarkedProvisioned(
-	controlplane *operatorv1alpha1.ControlPlane,
-) {
-	condition := k8sutils.NewCondition(
-		ControlPlaneConditionTypeProvisioned,
-		metav1.ConditionTrue,
-		ControlPlaneConditionReasonPodsReady,
-		"pods for all Deployments are ready",
-	)
-	k8sutils.SetCondition(condition, controlplane)
-	k8sutils.SetReady(controlplane, controlplane.Generation)
-}
-
 // ensureDataPlaneStatus ensures that the dataplane is in the correct state
 // to carry on with the controlplane deployments reconciliation.
 // Information about the missing dataplane is stored in the controlplane status.

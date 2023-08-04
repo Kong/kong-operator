@@ -190,15 +190,22 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
-			k8sutils.NewCondition(k8sutils.ReadyType, metav1.ConditionFalse, k8sutils.WaitingToBecomeReadyReason, k8sutils.WaitingToBecomeReadyMessage),
+			k8sutils.NewConditionWithGeneration(
+				k8sutils.ReadyType,
+				metav1.ConditionFalse,
+				k8sutils.WaitingToBecomeReadyReason,
+				k8sutils.WaitingToBecomeReadyMessage,
+				dataplane.Generation,
+			),
 			dataplane,
 		)
-		r.ensureReadinessStatus(dataplane, dataplaneDeployment)
+		ensureReadinessStatus(dataplane, dataplaneDeployment)
 		return ctrl.Result{}, r.patchStatus(ctx, log, dataplane)
 	}
 
-	r.ensureIsMarkedProvisioned(dataplane)
-	r.ensureReadinessStatus(dataplane, dataplaneDeployment)
+	markAsProvisioned(dataplane)
+	k8sutils.SetReady(dataplane)
+	ensureReadinessStatus(dataplane, dataplaneDeployment)
 
 	if err = r.patchStatus(ctx, log, dataplane); err != nil {
 		debug(log, "unable to reconcile the DataPlane resource", dataplane)

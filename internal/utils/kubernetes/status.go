@@ -55,6 +55,7 @@ const (
 // ConditionsAware represents a CRD type that has been enabled with metav1.Conditions,
 // it can then benefit of a series of utility methods.
 type ConditionsAware interface {
+	GetGeneration() int64
 	GetConditions() []metav1.Condition
 	SetConditions(conditions []metav1.Condition)
 }
@@ -105,11 +106,11 @@ func InitProgrammed(resource ConditionsAware) {
 }
 
 // SetReady evaluates all the existing conditions and sets the Ready status accordingly
-func SetReady(resource ConditionsAware, generation int64) {
+func SetReady(resource ConditionsAware) {
 	ready := metav1.Condition{
 		Type:               string(ReadyType),
 		LastTransitionTime: metav1.Now(),
-		ObservedGeneration: generation,
+		ObservedGeneration: resource.GetGeneration(),
 	}
 
 	if areAllConditionsHaveTrueStatus(resource) {
@@ -124,11 +125,11 @@ func SetReady(resource ConditionsAware, generation int64) {
 }
 
 // SetProgrammed evaluates all the existing conditions and sets the Programmed status accordingly
-func SetProgrammed(resource ConditionsAware, generation int64) {
+func SetProgrammed(resource ConditionsAware) {
 	ready := metav1.Condition{
 		Type:               string(gatewayv1beta1.GatewayConditionProgrammed),
 		LastTransitionTime: metav1.Now(),
-		ObservedGeneration: generation,
+		ObservedGeneration: resource.GetGeneration(),
 	}
 
 	if areAllConditionsHaveTrueStatus(resource) {

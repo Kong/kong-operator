@@ -8,6 +8,7 @@ import (
 )
 
 type TestResource struct {
+	Generation int64
 	Conditions []metav1.Condition
 }
 
@@ -17,6 +18,10 @@ func (r *TestResource) GetConditions() []metav1.Condition {
 
 func (r *TestResource) SetConditions(conditions []metav1.Condition) {
 	r.Conditions = conditions
+}
+
+func (r *TestResource) GetGeneration() int64 {
+	return r.Generation
 }
 
 func TestGetCondition(t *testing.T) {
@@ -328,7 +333,6 @@ func TestIsValidCondition(t *testing.T) {
 	} {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-
 			current := IsValidCondition(ConditionType(tt.input), resource)
 			assert.Equal(t, current, tt.expected)
 		})
@@ -384,7 +388,7 @@ func TestIsReady(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			resource := &TestResource{
-				tt.conditions,
+				Conditions: tt.conditions,
 			}
 			current := IsReady(resource)
 			assert.Equal(t, current, tt.expected)
@@ -489,9 +493,9 @@ func TestSetReady(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			resource := &TestResource{
-				tt.conditions,
+				Conditions: tt.conditions,
 			}
-			SetReady(resource, 0)
+			SetReady(resource)
 			current := IsReady(resource)
 			assert.Equal(t, current, tt.expected)
 		})
@@ -632,11 +636,14 @@ func TestNeedsUpdate(t *testing.T) {
 	} {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			current := &TestResource{tt.current}
-			updated := &TestResource{tt.updated}
+			current := &TestResource{
+				Conditions: tt.current,
+			}
+			updated := &TestResource{
+				Conditions: tt.updated,
+			}
 			assert.Equal(t, tt.expected, NeedsUpdate(current, updated))
 			assert.Equal(t, tt.expected, NeedsUpdate(updated, current))
 		})
 	}
-
 }

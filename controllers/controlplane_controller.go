@@ -342,7 +342,8 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, r.patchStatus(ctx, log, controlplane)
 	}
 
-	r.ensureIsMarkedProvisioned(controlplane)
+	markAsProvisioned(controlplane)
+	k8sutils.SetReady(controlplane)
 
 	if err = r.patchStatus(ctx, log, controlplane); err != nil {
 		debug(log, "unable to reconcile the ControlPlane resource", controlplane)

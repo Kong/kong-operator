@@ -28,11 +28,12 @@ func (r *DataPlaneReconciler) ensureIsMarkedScheduled(
 ) bool {
 	_, present := k8sutils.GetCondition(DataPlaneConditionTypeProvisioned, dataplane)
 	if !present {
-		condition := k8sutils.NewCondition(
+		condition := k8sutils.NewConditionWithGeneration(
 			DataPlaneConditionTypeProvisioned,
 			metav1.ConditionFalse,
 			DataPlaneConditionReasonPodsNotReady,
 			"DataPlane resource is scheduled for provisioning",
+			dataplane.Generation,
 		)
 
 		k8sutils.SetCondition(condition, dataplane)
@@ -41,20 +42,8 @@ func (r *DataPlaneReconciler) ensureIsMarkedScheduled(
 	return false
 }
 
-func (r *DataPlaneReconciler) ensureIsMarkedProvisioned(
-	dataplane *operatorv1beta1.DataPlane,
-) {
-	condition := k8sutils.NewCondition(
-		DataPlaneConditionTypeProvisioned,
-		metav1.ConditionTrue,
-		DataPlaneConditionReasonPodsReady,
-		"pods for all Deployments are ready",
-	)
-	k8sutils.SetCondition(condition, dataplane)
-	k8sutils.SetReady(dataplane, dataplane.Generation)
-}
-
-func (r *DataPlaneReconciler) ensureReadinessStatus(
+// ensureReadinessStatus ensures the readiness Status fields of DataPlane are set.
+func ensureReadinessStatus(
 	dataplane *operatorv1beta1.DataPlane,
 	dataplaneDeployment *appsv1.Deployment,
 ) {
