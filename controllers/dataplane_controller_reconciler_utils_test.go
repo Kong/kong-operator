@@ -403,22 +403,6 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 }
 
 func TestDataPlaneProxyServiceIsReady(t *testing.T) {
-	dataPlaneWithIngressServiceType := func(t corev1.ServiceType) *operatorv1beta1.DataPlane {
-		return &operatorv1beta1.DataPlane{
-			Spec: operatorv1beta1.DataPlaneSpec{
-				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
-					Network: operatorv1beta1.DataPlaneNetworkOptions{
-						Services: &operatorv1beta1.DataPlaneServices{
-							Ingress: &operatorv1beta1.ServiceOptions{
-								Type: t,
-							},
-						},
-					},
-				},
-			},
-		}
-	}
-
 	withLoadBalancerIngressStatus := func(lb corev1.LoadBalancerIngress) func(*corev1.Service) {
 		return func(s *corev1.Service) {
 			s.Status.LoadBalancer.Ingress = append(s.Status.LoadBalancer.Ingress, lb)
@@ -441,13 +425,13 @@ func TestDataPlaneProxyServiceIsReady(t *testing.T) {
 	}{
 		{
 			name:                  "returns true when DataPlane not have a Load Balancer Ingress Service set",
-			dataPlane:             dataPlaneWithIngressServiceType(corev1.ServiceTypeClusterIP),
+			dataPlane:             NewTestDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeClusterIP).Build(),
 			dataPlaneProxyService: proxyService(),
 			expected:              true,
 		},
 		{
 			name:      "returns true when DataPlane has a Load Balancer Ingress Service set with an IP",
-			dataPlane: dataPlaneWithIngressServiceType(corev1.ServiceTypeLoadBalancer),
+			dataPlane: NewTestDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
 			dataPlaneProxyService: proxyService(
 				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{
 					IP: "10.0.0.1",
@@ -457,7 +441,7 @@ func TestDataPlaneProxyServiceIsReady(t *testing.T) {
 		},
 		{
 			name:      "returns true when DataPlane has a Load Balancer Ingress Service set with a Hostname",
-			dataPlane: dataPlaneWithIngressServiceType(corev1.ServiceTypeLoadBalancer),
+			dataPlane: NewTestDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
 			dataPlaneProxyService: proxyService(
 				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{
 					Hostname: "random-hostname.example.com",
@@ -467,7 +451,7 @@ func TestDataPlaneProxyServiceIsReady(t *testing.T) {
 		},
 		{
 			name:      "returns true when DataPlane has a Load Balancer Ingress Service set with an IP and Hostname",
-			dataPlane: dataPlaneWithIngressServiceType(corev1.ServiceTypeLoadBalancer),
+			dataPlane: NewTestDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
 			dataPlaneProxyService: proxyService(
 				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{
 					IP:       "10.0.0.1",
@@ -478,13 +462,13 @@ func TestDataPlaneProxyServiceIsReady(t *testing.T) {
 		},
 		{
 			name:                  "returns false when DataPlane has a Load Balancer Ingress Service set without an IP or Hostname",
-			dataPlane:             dataPlaneWithIngressServiceType(corev1.ServiceTypeLoadBalancer),
+			dataPlane:             NewTestDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
 			dataPlaneProxyService: proxyService(),
 			expected:              false,
 		},
 		{
 			name:      "returns true when DataPlane has a Load Balancer Ingress Service set with 2 status and only the second one having an IP",
-			dataPlane: dataPlaneWithIngressServiceType(corev1.ServiceTypeLoadBalancer),
+			dataPlane: NewTestDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
 			dataPlaneProxyService: proxyService(
 				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{}), // Shouldn't really happen though
 				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{
@@ -501,6 +485,118 @@ func TestDataPlaneProxyServiceIsReady(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			res := dataPlaneProxyServiceIsReady(tc.dataPlane, tc.dataPlaneProxyService)
 			assert.Equal(t, tc.expected, res)
+		})
+	}
+}
+
+func TestEnsureProxyServiceForDataPlane(t *testing.T) {
+	testCases := []struct {
+		name                    string
+		dataplane               *operatorv1beta1.DataPlane
+		existingServiceModifier func(*testing.T, context.Context, client.Client, *corev1.Service)
+		shouldBeUpdated         bool
+		expectedServiceType     corev1.ServiceType
+		expectedAnnotations     map[string]string
+	}{
+		{
+			name: "should create a new service if service does not exist",
+			dataplane: NewTestDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "dp-1",
+			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
+			existingServiceModifier: func(t *testing.T, ctx context.Context, c client.Client, svc *corev1.Service) {
+				require.NoError(t, c.Delete(ctx, svc))
+			},
+			shouldBeUpdated:     true,
+			expectedServiceType: corev1.ServiceTypeLoadBalancer,
+		},
+		{
+			name: "should not update when a service exists",
+			dataplane: NewTestDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "dp-1",
+			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
+			shouldBeUpdated:     false,
+			expectedServiceType: corev1.ServiceTypeLoadBalancer,
+		},
+		{
+			name: "should add annotations to existing service",
+			dataplane: NewTestDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "dp-1",
+			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+				WithIngressServiceAnnotations(map[string]string{"foo": "bar"}).Build(),
+			existingServiceModifier: func(t *testing.T, ctx context.Context, c client.Client, svc *corev1.Service) {
+				svc.Annotations = nil
+				require.NoError(t, c.Update(ctx, svc))
+			},
+			shouldBeUpdated:     true,
+			expectedServiceType: corev1.ServiceTypeLoadBalancer,
+			expectedAnnotations: map[string]string{
+				"foo": "bar",
+				// should be annotated with last applied annotations
+				consts.AnnotationLastAppliedAnnotations: `{"foo":"bar"}`,
+			},
+		},
+		{
+			name: "should remove outdated annotations",
+			existingServiceModifier: func(t *testing.T, ctx context.Context, c client.Client, svc *corev1.Service) {
+				svc.Annotations = map[string]string{
+					"foo":                                   "bar",
+					"foo2":                                  "bar2",
+					"added-by-other-controller":             "just-preserve-it",
+					consts.AnnotationLastAppliedAnnotations: `{"foo":"bar","foo2":"bar2"}`,
+				}
+				require.NoError(t, c.Update(ctx, svc))
+			},
+			dataplane: NewTestDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "dp-1",
+			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+				WithIngressServiceAnnotations(map[string]string{"foo": "bar"}).Build(),
+			shouldBeUpdated:     true,
+			expectedServiceType: corev1.ServiceTypeLoadBalancer,
+			expectedAnnotations: map[string]string{
+				"foo": "bar",
+				// "foo2":                      "bar2", // this one should be removed
+				"added-by-other-controller": "just-preserve-it",
+				// should be annotated with last applied annotations
+				consts.AnnotationLastAppliedAnnotations: `{"foo":"bar"}`,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			fakeClient := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				Build()
+
+			reconciler := DataPlaneReconciler{
+				Client: fakeClient,
+			}
+			ctx := context.Background()
+			existingSvc, err := k8sresources.GenerateNewProxyServiceForDataplane(tc.dataplane)
+			require.NoError(t, err)
+			k8sutils.SetOwnerForObject(existingSvc, tc.dataplane)
+			addLabelForDataplane(existingSvc)
+			err = fakeClient.Create(ctx, existingSvc)
+			require.NoError(t, err)
+			if tc.existingServiceModifier != nil {
+				tc.existingServiceModifier(t, ctx, fakeClient, existingSvc)
+			}
+			// create dataplane resource.
+			err = fakeClient.Create(ctx, tc.dataplane)
+			require.NoError(t, err, "should create dataplane successfully")
+			updated, svc, err := reconciler.ensureProxyServiceForDataPlane(ctx, tc.dataplane)
+			require.NoError(t, err)
+			require.Equal(t, tc.shouldBeUpdated, updated)
+			// check service type.
+			require.Equal(t, tc.expectedServiceType, svc.Spec.Type, "should have the same service type")
+			// check service annotations.
+			require.Equal(t, tc.expectedAnnotations, svc.Annotations, "should have the same annotations")
 		})
 	}
 }

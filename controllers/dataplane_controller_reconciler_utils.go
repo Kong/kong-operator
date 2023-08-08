@@ -64,8 +64,13 @@ func (r *DataPlaneReconciler) ensureDataPlaneServiceStatus(
 	dataplane *operatorv1beta1.DataPlane,
 	dataplaneServiceName string,
 ) (bool, error) {
+	shouldUpdate := false
 	if dataplane.Status.Service != dataplaneServiceName {
 		dataplane.Status.Service = dataplaneServiceName
+		shouldUpdate = true
+	}
+
+	if shouldUpdate {
 		return true, r.patchStatus(ctx, log, dataplane)
 	}
 	return false, nil
@@ -151,6 +156,8 @@ func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
 	ctx context.Context,
 	dataplane *operatorv1beta1.DataPlane,
 ) (createdOrUpdated bool, svc *corev1.Service, err error) {
+	log := getLogger(ctx, "dataplane_proxy_service", r.DevelopmentMode)
+
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
 		r.Client,
@@ -187,16 +194,16 @@ func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
 		updated, existingService.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingService.ObjectMeta, generatedService.ObjectMeta,
 			// enforce all the annotations provided through the dataplane API
 			func(existingMeta metav1.ObjectMeta, generatedMeta metav1.ObjectMeta) (bool, metav1.ObjectMeta) {
-				var metaToUpdate bool
-				if existingMeta.Annotations == nil && generatedMeta.Annotations != nil {
-					existingMeta.Annotations = map[string]string{}
+				metaToUpdate, updatedAnnotations, err := ensureDataPlaneIngressServiceAnnotationsUpdated(
+					dataplane, existingMeta.Annotations, generatedMeta.Annotations,
+				)
+				if err != nil {
+					log.Error(err, "failed to update annotations of existing ingress service for dataplane",
+						"dataplane", fmt.Sprintf("%s/%s", dataplane.Namespace, dataplane.Name),
+						"ingress_service", fmt.Sprintf("%s/%s", existingService.Namespace, existingService.Name))
+					return true, existingMeta
 				}
-				for k, v := range generatedMeta.Annotations {
-					if existingMeta.Annotations[k] != v {
-						existingMeta.Annotations[k] = v
-						metaToUpdate = true
-					}
-				}
+				existingMeta.Annotations = updatedAnnotations
 				return metaToUpdate, existingMeta
 			})
 
@@ -219,6 +226,39 @@ func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
 	}
 
 	return true, generatedService, r.Client.Create(ctx, generatedService)
+}
+
+// ensureDataPlaneIngressServiceAnnotationsUpdated updates annotations of existing ingress service
+// owned by the `DataPlane`. It first removes outdated annotations and then update annotations
+// in current spec of `DataPlane`.
+func ensureDataPlaneIngressServiceAnnotationsUpdated(
+	dataplane *operatorv1beta1.DataPlane, existingAnnotations map[string]string, generatedAnnotations map[string]string,
+) (bool, map[string]string, error) {
+	// Remove annotations applied from previous version of DataPlane but removed in the current version.
+	// Should be done before updating new annotations, because the updating process will overwrite the annotation
+	// to save last applied annotations.
+	outdatedAnnotations, err := extractOutdatedDataPlaneIngressServiceAnnotations(dataplane, existingAnnotations)
+	if err != nil {
+		return true, existingAnnotations, fmt.Errorf("failed to extract outdated annotations: %w", err)
+	}
+	var shouldUpdate bool
+	for k := range outdatedAnnotations {
+		if _, ok := existingAnnotations[k]; ok {
+			delete(existingAnnotations, k)
+			shouldUpdate = true
+		}
+	}
+	if generatedAnnotations != nil && existingAnnotations == nil {
+		existingAnnotations = map[string]string{}
+	}
+	// set annotations by current specified ingress service annotations.
+	for k, v := range generatedAnnotations {
+		if existingAnnotations[k] != v {
+			existingAnnotations[k] = v
+			shouldUpdate = true
+		}
+	}
+	return shouldUpdate, existingAnnotations, nil
 }
 
 // dataPlaneProxyServiceIsReady returns:

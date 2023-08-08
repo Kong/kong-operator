@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -58,17 +59,61 @@ func addLabelForDataplane(obj client.Object) {
 }
 
 func addAnnotationsForDataplaneProxyService(obj client.Object, dataplane operatorv1beta1.DataPlane) {
-	if dataplane.Spec.Network.Services == nil || dataplane.Spec.Network.Services.Ingress.Annotations == nil {
+	specAnnotations := extractDataPlaneIngressServiceAnnotations(&dataplane)
+	if specAnnotations == nil {
 		return
 	}
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
-	for k, v := range dataplane.Spec.Network.Services.Ingress.Annotations {
+	for k, v := range specAnnotations {
 		annotations[k] = v
 	}
+	encodedSpecAnnotations, err := json.Marshal(specAnnotations)
+	if err == nil {
+		annotations[consts.AnnotationLastAppliedAnnotations] = string(encodedSpecAnnotations)
+	}
 	obj.SetAnnotations(annotations)
+}
+
+func extractDataPlaneIngressServiceAnnotations(dataplane *operatorv1beta1.DataPlane) map[string]string {
+	if dataplane.Spec.DataPlaneOptions.Network.Services == nil ||
+		dataplane.Spec.DataPlaneOptions.Network.Services.Ingress == nil ||
+		dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.Annotations == nil {
+		return nil
+	}
+
+	anns := dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.Annotations
+	return anns
+}
+
+// extractOutdatedDataPlaneIngressServiceAnnotations returns the last applied annotations
+// of ingress service from `DataPlane` spec but disappeared in current `DataPlane` spec.
+func extractOutdatedDataPlaneIngressServiceAnnotations(
+	dataplane *operatorv1beta1.DataPlane, existingAnnotations map[string]string,
+) (map[string]string, error) {
+	if existingAnnotations == nil {
+		return nil, nil
+	}
+	lastAppliedAnnotationsEncoded, ok := existingAnnotations[consts.AnnotationLastAppliedAnnotations]
+	if !ok {
+		return nil, nil
+	}
+	outdatedAnnotations := map[string]string{}
+	err := json.Unmarshal([]byte(lastAppliedAnnotationsEncoded), &outdatedAnnotations)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode last applied annotations: %w", err)
+	}
+	// If an annotation is present in last applied annotations but not in current spec of annotations,
+	// the annotation is outdated and should be removed.
+	// So we remove the annotations present in current spec in last applied annotations,
+	// the remaining annotations are outdated and should be removed.
+	currentSpecifiedAnnotations := extractDataPlaneIngressServiceAnnotations(dataplane)
+	for k := range currentSpecifiedAnnotations {
+		delete(outdatedAnnotations, k)
+	}
+	return outdatedAnnotations, nil
 }
 
 // -----------------------------------------------------------------------------

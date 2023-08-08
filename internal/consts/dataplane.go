@@ -41,6 +41,12 @@ const (
 	// Useful for progressive rollouts.
 	DataPlaneDeploymentStateLabel = "gateway-operator.konghq.com/dataplane-deployment-state"
 
+	// AnnotationLastAppliedAnnotations is the annotation key to store the last annotations
+	// of a DataPlane-owned object (e.g. Ingress `Service`) applied by the DataPlane controller.
+	// It allows the controller to decide which annotations are outdated compared to the DataPlane spec and
+	// shall be removed. This guarantees no interference with annotations from other sources (e.g. users).
+	AnnotationLastAppliedAnnotations = "gateway-operator.konghq.com/last-applied-annotations"
+
 	// DataPlaneStateLabelValuePreview indicates that a DataPlane resource is
 	// a "preview" resource.
 	// This is used in:
