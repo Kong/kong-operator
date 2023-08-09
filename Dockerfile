@@ -2,7 +2,7 @@
 # Builder
 # ------------------------------------------------------------------------------
 
-FROM golang:1.20.7 as builder
+FROM golang:1.21.0 as builder
 
 WORKDIR /workspace
 COPY go.mod go.mod
