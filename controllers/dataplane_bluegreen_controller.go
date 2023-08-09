@@ -16,6 +16,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
+	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
@@ -79,6 +80,21 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if !k8sutils.IsReady(&dataplane) {
 		debug(log, "DataPlane is not ready yet to proceed with BlueGreen rollout, delegating to DataPlaneReconciler", req)
 		return r.DataPlaneController.Reconcile(ctx, req)
+	}
+
+	{
+		oldDataPlane := dataplane.DeepCopy()
+		if updated := dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneOptions); updated {
+			trace(log, "setting default ENVs", dataplane)
+			if err := r.Client.Patch(ctx, &dataplane, client.MergeFrom(oldDataPlane)); err != nil {
+				if k8serrors.IsConflict(err) {
+					debug(log, "conflict found when patching DataPlane, retrying", dataplane)
+					return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+				}
+				return ctrl.Result{}, fmt.Errorf("failed patching DataPlane's environment variables: %w", err)
+			}
+			return ctrl.Result{}, nil // no need to requeue, the patch will trigger.
+		}
 	}
 
 	// DataPlane is ready and we can proceed with deploying preview resources.

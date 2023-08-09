@@ -72,21 +72,22 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err // requeue will be triggered by the creation or update of the owned object
 	}
 
-	trace(log, "validating DataPlane configuration", dataplane)
-	updated := dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneOptions)
-	if updated {
-		trace(log, "setting default ENVs", dataplane)
-		if err := r.Client.Update(ctx, dataplane); err != nil {
-			if k8serrors.IsConflict(err) {
-				debug(log, "conflict found when updating DataPlane resource, retrying", dataplane)
-				return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+	{
+		oldDataPlane := dataplane.DeepCopy()
+		if updated := dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneOptions); updated {
+			trace(log, "setting default ENVs", dataplane)
+			if err := r.Client.Patch(ctx, dataplane, client.MergeFrom(oldDataPlane)); err != nil {
+				if k8serrors.IsConflict(err) {
+					debug(log, "conflict found when patching DataPlane, retrying", dataplane)
+					return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+				}
+				return ctrl.Result{}, fmt.Errorf("failed patching DataPlane's environment variables: %w", err)
 			}
-			return ctrl.Result{}, fmt.Errorf("failed updating DataPlane's environment variables: %w", err)
+			return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 		}
-		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	// validate dataplane
+	trace(log, "validating DataPlane configuration", dataplane)
 	err := dataplanevalidation.NewValidator(r.Client).Validate(dataplane)
 	if err != nil {
 		info(log, "failed to validate dataplane: "+err.Error(), dataplane)
