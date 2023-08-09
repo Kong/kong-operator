@@ -146,6 +146,14 @@ type DataPlaneStatus struct {
 	// +optional
 	Addresses []Address `json:"addresses,omitempty"`
 
+	// Selector contains a unique DataPlane identifier used as a deterministic
+	// label selector that is used throughout its dependent resources.
+	// This is used e.g. as a label selector for DataPlane's Services and Deployments.
+	//
+	// +kubebuilder:validation:MaxLength=512
+	// +kubebuilder:validation:MinLength=8
+	Selector string `json:"selector,omitempty"`
+
 	// Ready indicates whether the DataPlane is ready.
 	// It there are multiple replicas then all have to be ready for this flag
 	// to be set to true.
@@ -176,6 +184,9 @@ type DataPlaneRolloutStatus struct {
 	// through which user can access the preview deployment.
 	Services *DataPlaneRolloutStatusServices `json:"services,omitempty"`
 
+	// Deployment contains the information about the preview deployment.
+	Deployment *DataPlaneRolloutStatusDeployment `json:"deployment,omitempty"`
+
 	// Status contains the status information about the rollout.
 	// +listType=map
 	// +listMapKey=type
@@ -194,6 +205,18 @@ type DataPlaneRolloutStatusServices struct {
 	// Proxy contains the name and the address of the preview service for Admin API.
 	// Using this service users can send requests to configure the DataPlane's preview deployment.
 	AdminAPI *RolloutStatusService `json:"adminAPI,omitempty"`
+}
+
+// DataPlaneRolloutStatusDeployment is a rollout status field which contains
+// fields specific for Deployments during the rollout.
+type DataPlaneRolloutStatusDeployment struct {
+	// Selector is a stable label selector value assigned to a DataPlane rollout
+	// status which is used throughout the rollout as a deterministic labels selector
+	// for Services and Deployments.
+	//
+	// +kubebuilder:validation:MaxLength=512
+	// +kubebuilder:validation:MinLength=8
+	Selector string `json:"selector,omitempty"`
 }
 
 type RolloutStatusService struct {

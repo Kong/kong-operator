@@ -186,7 +186,6 @@ func (r *DataPlaneReconciler) ensureProxyServiceForDataPlane(
 	}
 	addLabelForDataplane(generatedService)
 	addAnnotationsForDataplaneProxyService(generatedService, *dataplane)
-	k8sutils.SetOwnerForObject(generatedService, dataplane)
 
 	if count == 1 {
 		var updated bool

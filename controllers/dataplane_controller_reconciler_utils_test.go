@@ -22,7 +22,6 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/internal/versions"
 )
@@ -176,7 +175,6 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 					Type:   intstr.Int,
 					IntVal: 5,
 				}
-				k8sutils.SetOwnerForObject(existingDeployment, dataPlane)
 				addLabelForDataplane(existingDeployment)
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
@@ -236,7 +234,6 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				// expected behavior in reconciler's ensureDeploymentForDataPlane().reconciler.Client,
 				dataPlane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Resources.Limits[corev1.ResourceCPU] = resource.MustParse("4")
 
-				k8sutils.SetOwnerForObject(existingDeployment, dataPlane)
 				addLabelForDataplane(existingDeployment)
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
@@ -304,7 +301,6 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 
 				dataPlane.Spec.Deployment.PodTemplateSpec.Spec.Affinity = &corev1.Affinity{}
 
-				k8sutils.SetOwnerForObject(existingDeployment, dataPlane)
 				addLabelForDataplane(existingDeployment)
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
@@ -367,7 +363,6 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 					},
 				}
 
-				k8sutils.SetOwnerForObject(existingDeployment, dataPlane)
 				addLabelForDataplane(existingDeployment)
 				require.NoError(t, reconciler.Client.Update(ctx, existingDeployment))
 
@@ -580,7 +575,6 @@ func TestEnsureProxyServiceForDataPlane(t *testing.T) {
 			ctx := context.Background()
 			existingSvc, err := k8sresources.GenerateNewProxyServiceForDataplane(tc.dataplane)
 			require.NoError(t, err)
-			k8sutils.SetOwnerForObject(existingSvc, tc.dataplane)
 			addLabelForDataplane(existingSvc)
 			err = fakeClient.Create(ctx, existingSvc)
 			require.NoError(t, err)

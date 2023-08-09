@@ -92,11 +92,11 @@ func ensureDeploymentForDataPlane(
 	if err != nil {
 		return Noop, nil, err
 	}
+
 	generatedDeployment, err := k8sresources.GenerateNewDeploymentForDataPlane(dataplane, dataplaneImage, opts...)
 	if err != nil {
 		return Noop, nil, err
 	}
-	k8sutils.SetOwnerForObject(generatedDeployment, dataplane)
 	addLabelForDataplane(generatedDeployment)
 
 	if count == 1 {
@@ -146,7 +146,11 @@ func ensureDeploymentForDataPlane(
 		return Noop, existingDeployment, nil
 	}
 
-	return Created, generatedDeployment, cl.Create(ctx, generatedDeployment)
+	if err = cl.Create(ctx, generatedDeployment); err != nil {
+		return Noop, nil, fmt.Errorf("failed creating Deployment for DataPlane %s: %w", dataplane.Name, err)
+	}
+
+	return Created, generatedDeployment, nil
 }
 
 func matchingLabelsToServiceOpt(ml client.MatchingLabels) k8sresources.ServiceOpt {
@@ -226,7 +230,6 @@ func ensureAdminServiceForDataPlane(
 		return Noop, nil, err
 	}
 	addLabelForDataplane(generatedService)
-	k8sutils.SetOwnerForObject(generatedService, dataplane)
 
 	if count == 1 {
 		var updated bool
@@ -255,5 +258,9 @@ func ensureAdminServiceForDataPlane(
 		return Noop, existingService, nil
 	}
 
-	return Created, generatedService, cl.Create(ctx, generatedService)
+	if err = cl.Create(ctx, generatedService); err != nil {
+		return Noop, nil, fmt.Errorf("failed creating Admin API Service for DataPlane %s: %w", dataplane.Name, err)
+	}
+
+	return Created, generatedService, nil
 }

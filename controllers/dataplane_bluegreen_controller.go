@@ -7,6 +7,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/uuid"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -97,11 +99,16 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 	}
 
+	if err := r.initSelectorInRolloutStatus(ctx, &dataplane); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed updating DataPlane with selector in Rollout Status: %w", err)
+	}
+
 	// DataPlane is ready and we can proceed with deploying preview resources.
 	res, dataplaneAdminService, err := ensureAdminServiceForDataPlane(ctx, r.Client, &dataplane,
 		client.MatchingLabels{
 			consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 		},
+		labelSelectorFromDataPlaneRolloutStatusSelectorServiceOpt(&dataplane),
 	)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed ensuring that preview Admin API Service exists for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
@@ -144,6 +151,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		},
 		k8sresources.WithTLSVolumeFromSecret(consts.DataPlaneClusterCertificateVolumeName, certSecret.Name),
 		k8sresources.WithClusterCertificateMount(consts.DataPlaneClusterCertificateVolumeName),
+		labelSelectorFromDataPlaneRolloutStatusSelectorDeploymentOpt(&dataplane),
 	)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", err)
@@ -176,6 +184,53 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, nil
 }
 
+// labelSelectorFromDataPlaneRolloutStatusSelectorDeploymentOpt returns a DeploymentOpt
+// function which will set Deployment's selector and spec template labels, based
+// on provided DataPlane's Rollout Status selector field.
+func labelSelectorFromDataPlaneRolloutStatusSelectorDeploymentOpt(dataplane *operatorv1beta1.DataPlane) func(s *appsv1.Deployment) {
+	return func(d *appsv1.Deployment) {
+		if dataplane.Status.RolloutStatus != nil &&
+			dataplane.Status.RolloutStatus.Deployment != nil &&
+			dataplane.Status.RolloutStatus.Deployment.Selector != "" {
+			d.Spec.Selector.MatchLabels[consts.OperatorLabelSelector] = dataplane.Status.RolloutStatus.Deployment.Selector
+			d.Spec.Template.Labels[consts.OperatorLabelSelector] = dataplane.Status.RolloutStatus.Deployment.Selector
+		}
+	}
+}
+
+// labelSelectorFromDataPlaneRolloutStatusSelectorServiceOpt returns a ServiceOpt
+// function which will set Service's selector based on provided DataPlane's Rollout
+// Status selector field.
+func labelSelectorFromDataPlaneRolloutStatusSelectorServiceOpt(dataplane *operatorv1beta1.DataPlane) func(s *corev1.Service) {
+	return func(s *corev1.Service) {
+		if dataplane.Status.RolloutStatus != nil &&
+			dataplane.Status.RolloutStatus.Deployment != nil &&
+			dataplane.Status.RolloutStatus.Deployment.Selector != "" {
+			s.Spec.Selector[consts.OperatorLabelSelector] = dataplane.Status.RolloutStatus.Deployment.Selector
+		}
+	}
+}
+
+func (r *DataPlaneBlueGreenReconciler) initSelectorInRolloutStatus(ctx context.Context, dataplane *operatorv1beta1.DataPlane) error {
+	if dataplane.Status.RolloutStatus != nil && dataplane.Status.RolloutStatus.Deployment != nil && dataplane.Status.RolloutStatus.Deployment.Selector != "" {
+		return nil
+	}
+
+	oldDataplane := dataplane.DeepCopy()
+	if dataplane.Status.RolloutStatus == nil {
+		dataplane.Status.RolloutStatus = &operatorv1beta1.DataPlaneRolloutStatus{
+			Deployment: &operatorv1beta1.DataPlaneRolloutStatusDeployment{},
+		}
+	} else if dataplane.Status.RolloutStatus.Deployment == nil {
+		dataplane.Status.RolloutStatus.Deployment = &operatorv1beta1.DataPlaneRolloutStatusDeployment{}
+	}
+	dataplane.Status.RolloutStatus.Deployment.Selector = uuid.New().String()
+	if err := r.Client.Status().Patch(ctx, dataplane, client.MergeFrom(oldDataplane)); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *DataPlaneBlueGreenReconciler) ensureDataPlaneAdminAPIInRolloutStatus(
 	ctx context.Context,
 	log logr.Logger,
@@ -206,6 +261,10 @@ func (r *DataPlaneBlueGreenReconciler) ensureDataPlaneAdminAPIInRolloutStatus(
 			Services: &operatorv1beta1.DataPlaneRolloutStatusServices{
 				AdminAPI: &operatorv1beta1.RolloutStatusService{},
 			},
+		}
+	} else if dataplane.Status.RolloutStatus.Services == nil {
+		dataplane.Status.RolloutStatus.Services = &operatorv1beta1.DataPlaneRolloutStatusServices{
+			AdminAPI: &operatorv1beta1.RolloutStatusService{},
 		}
 	}
 

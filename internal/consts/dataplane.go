@@ -47,6 +47,10 @@ const (
 	// shall be removed. This guarantees no interference with annotations from other sources (e.g. users).
 	AnnotationLastAppliedAnnotations = "gateway-operator.konghq.com/last-applied-annotations"
 
+	// DataPlanePodStateLabel indicates the state of a DataPlane Pod.
+	// Useful for progressive rollouts.
+	DataPlanePodStateLabel = "gateway-operator.konghq.com/dataplane-pod-state"
+
 	// DataPlaneStateLabelValuePreview indicates that a DataPlane resource is
 	// a "preview" resource.
 	// This is used in:

@@ -11,6 +11,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------
@@ -79,6 +80,7 @@ func GenerateNewProxyServiceForDataplane(dataplane *operatorv1beta1.DataPlane) (
 		proxyService.Spec.Selector = newSelector
 	}
 
+	k8sutils.SetOwnerForObject(proxyService, dataplane)
 	return proxyService, nil
 }
 
@@ -117,7 +119,9 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, o
 		Spec: corev1.ServiceSpec{
 			Type:      corev1.ServiceTypeClusterIP,
 			ClusterIP: corev1.ClusterIPNone,
-			Selector:  map[string]string{"app": dataplane.Name},
+			Selector: map[string]string{
+				"app": dataplane.Name,
+			},
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "admin",
@@ -128,6 +132,7 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, o
 			},
 		},
 	}
+
 	if selectorOverride, ok := dataplane.Annotations[consts.ServiceSelectorOverrideAnnotation]; ok {
 		newSelector, err := getSelectorOverrides(selectorOverride)
 		if err != nil {
@@ -140,6 +145,7 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, o
 		opt(adminService)
 	}
 
+	k8sutils.SetOwnerForObject(adminService, dataplane)
 	return adminService, nil
 }
 

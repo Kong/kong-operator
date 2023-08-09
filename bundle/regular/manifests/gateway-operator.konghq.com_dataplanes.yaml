@@ -8162,6 +8162,19 @@ spec:
                 description: RolloutStatus contains information about the rollout.
                   It is set only if a rollout strategy was configured in the spec.
                 properties:
+                  deployment:
+                    description: Deployment contains the information about the preview
+                      deployment.
+                    properties:
+                      selector:
+                        description: Selector is a stable label selector value assigned
+                          to a DataPlane rollout status which is used throughout the
+                          rollout as a deterministic labels selector for Services
+                          and Deployments.
+                        maxLength: 512
+                        minLength: 8
+                        type: string
+                    type: object
                   services:
                     description: Services contain the information about the services
                       which are available through which user can access the preview
@@ -8327,6 +8340,14 @@ spec:
                     - type
                     x-kubernetes-list-type: map
                 type: object
+              selector:
+                description: Selector contains a unique DataPlane identifier used
+                  as a deterministic label selector that is used throughout its dependent
+                  resources. This is used e.g. as a label selector for DataPlane's
+                  Services and Deployments.
+                maxLength: 512
+                minLength: 8
+                type: string
               service:
                 description: Service indicates the Service that exposes the DataPlane's
                   configured routes

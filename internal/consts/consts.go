@@ -25,6 +25,11 @@ const (
 	// ServiceSecretLabel is a label that is added to operator related Service
 	// Secrets to designate which Service this particular Secret it used by.
 	ServiceSecretLabel = "gateway-operator.konghq.com/service-secret"
+
+	// OperatorLabelSelector is a label name that is used for operator resources
+	// as a label selector key.
+	// Used with e.g. DataPlane's status.selector field.
+	OperatorLabelSelector = "gateway-operator.konghq.com/selector"
 )
 
 // -----------------------------------------------------------------------------

@@ -6,6 +6,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -62,6 +65,9 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	k8sutils.InitReady(dataplane)
+	if err := r.initSelectorInStatus(ctx, dataplane); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed updating DataPlane with selector in Status: %w", err)
+	}
 
 	trace(log, "validating DataPlane resource conditions", dataplane)
 	if r.ensureIsMarkedScheduled(dataplane) {
@@ -102,6 +108,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		client.MatchingLabels{
 			consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
 		},
+		labelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane),
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -170,6 +177,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		},
 		k8sresources.WithTLSVolumeFromSecret(consts.DataPlaneClusterCertificateVolumeName, certSecret.Name),
 		k8sresources.WithClusterCertificateMount(consts.DataPlaneClusterCertificateVolumeName),
+		labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -215,6 +223,42 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	debug(log, "reconciliation complete for DataPlane resource", dataplane)
 	return ctrl.Result{}, nil
+}
+
+func (r *DataPlaneReconciler) initSelectorInStatus(ctx context.Context, dataplane *operatorv1beta1.DataPlane) error {
+	if dataplane.Status.Selector != "" {
+		return nil
+	}
+
+	oldDataplane := dataplane.DeepCopy()
+	dataplane.Status.Selector = uuid.New().String()
+	if err := r.Client.Status().Patch(ctx, dataplane, client.MergeFrom(oldDataplane)); err != nil {
+		return err
+	}
+	return nil
+}
+
+// labelSelectorFromDataPlaneStatusSelectorDeploymentOpt returns a DeploymentOpt
+// function which will set Deployment's selector and spec template labels, based
+// on provided DataPlane's Status selector field.
+func labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane *operatorv1beta1.DataPlane) func(s *appsv1.Deployment) {
+	return func(d *appsv1.Deployment) {
+		if dataplane.Status.Selector != "" {
+			d.Spec.Selector.MatchLabels[consts.OperatorLabelSelector] = dataplane.Status.Selector
+			d.Spec.Template.Labels[consts.OperatorLabelSelector] = dataplane.Status.Selector
+		}
+	}
+}
+
+// labelSelectorFromDataPlaneStatusSelectorServiceOpt returns a ServiceOpt function
+// which will set Service's selector based on provided DataPlane's Status selector
+// field.
+func labelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane *operatorv1beta1.DataPlane) func(s *corev1.Service) {
+	return func(s *corev1.Service) {
+		if dataplane.Status.Selector != "" {
+			s.Spec.Selector[consts.OperatorLabelSelector] = dataplane.Status.Selector
+		}
+	}
 }
 
 // patchStatus Patches the resource status only when there are changes in the Conditions

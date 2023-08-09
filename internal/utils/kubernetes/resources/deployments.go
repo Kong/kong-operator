@@ -262,62 +262,9 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dat
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					Volumes:                       generateDeploymentVolumes(dataplane.Spec.Deployment.PodTemplateSpec),
-					Containers: []corev1.Container{{
-						Name:            consts.DataPlaneProxyContainerName,
-						VolumeMounts:    generateDeploymentVolumeMounts(dataplane.Spec.Deployment.PodTemplateSpec, consts.DataPlaneProxyContainerName),
-						Image:           dataplaneImage,
-						ImagePullPolicy: corev1.PullIfNotPresent,
-						Lifecycle: &corev1.Lifecycle{
-							PreStop: &corev1.LifecycleHandler{
-								Exec: &corev1.ExecAction{
-									Command: []string{
-										"/bin/sh",
-										"-c",
-										"kong quit",
-									},
-								},
-							},
-						},
-						TerminationMessagePath:   corev1.TerminationMessagePathDefault,
-						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-						Ports: []corev1.ContainerPort{
-							{
-								Name:          "proxy",
-								ContainerPort: consts.DataPlaneProxyPort,
-								Protocol:      corev1.ProtocolTCP,
-							},
-							{
-								Name:          "proxy-ssl",
-								ContainerPort: consts.DataPlaneProxySSLPort,
-								Protocol:      corev1.ProtocolTCP,
-							},
-							{
-								Name:          "metrics",
-								ContainerPort: consts.DataPlaneMetricsPort,
-								Protocol:      corev1.ProtocolTCP,
-							},
-							{
-								Name:          "admin-ssl",
-								ContainerPort: consts.DataPlaneAdminAPIPort,
-								Protocol:      corev1.ProtocolTCP,
-							},
-						},
-						ReadinessProbe: &corev1.Probe{
-							FailureThreshold:    3,
-							InitialDelaySeconds: 5,
-							PeriodSeconds:       10,
-							SuccessThreshold:    1,
-							TimeoutSeconds:      1,
-							ProbeHandler: corev1.ProbeHandler{
-								HTTPGet: &corev1.HTTPGetAction{
-									Path:   "/status",
-									Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
-									Scheme: corev1.URISchemeHTTP,
-								},
-							},
-						},
-						Resources: *DefaultDataPlaneResources(),
-					}},
+					Containers: []corev1.Container{
+						GenerateDataPlaneContainer(dataplane.Spec.Deployment.PodTemplateSpec, dataplaneImage),
+					},
 				},
 			},
 		},
@@ -335,6 +282,7 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dat
 		opt(deployment)
 	}
 
+	k8sutils.SetOwnerForObject(deployment, dataplane)
 	return deployment, nil
 }
 
@@ -355,6 +303,8 @@ func GenerateDataPlaneContainer(dpPodTemplateSpec *corev1.PodTemplateSpec, image
 				},
 			},
 		},
+		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          "proxy",

@@ -42,6 +42,14 @@ func init() {
 	}
 }
 
+// TODO: This test requires a rewrite to get rid of the mystical .Reconcile()
+// calls which tests writers each time have to guess how many of those will be
+// necessary.
+// There's an open issue to rewrite that into e.g. envtest based test(s) so that
+// test writers will be able to rely on the reconciler running against an apiserver
+// and just asserting on the actual desired effect.
+//
+// Ref: https://github.com/Kong/gateway-operator/issues/933
 func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 	ca := helpers.CreateCA(t)
 	mtlsSecret := &corev1.Secret{
@@ -160,6 +168,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 
 				// first reconcile loop to allow the reconciler to set the dataplane defaults
 				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
@@ -360,6 +371,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err)
 
 				// second reconcile loop to allow the reconciler to set the service name in the dataplane status
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
