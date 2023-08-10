@@ -193,8 +193,8 @@ func (in *DataPlaneRolloutStatus) DeepCopyInto(out *DataPlaneRolloutStatus) {
 		*out = new(DataPlaneRolloutStatusDeployment)
 		**out = **in
 	}
-	if in.Status != nil {
-		in, out := &in.Status, &out.Status
+	if in.Conditions != nil {
+		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

@@ -11,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -84,6 +85,18 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return r.DataPlaneController.Reconcile(ctx, req)
 	}
 
+	if err := r.initSelectorInRolloutStatus(ctx, &dataplane); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed updating DataPlane with selector in Rollout Status: %w", err)
+	}
+
+	c, ok := k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
+	if !ok || c.ObservedGeneration != dataplane.Generation {
+		err := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutProgressing, consts.DataPlaneConditionMessageRolledOutRolloutInitialied)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	{
 		oldDataPlane := dataplane.DeepCopy()
 		if updated := dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneOptions); updated {
@@ -97,10 +110,6 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 			}
 			return ctrl.Result{}, nil // no need to requeue, the patch will trigger.
 		}
-	}
-
-	if err := r.initSelectorInRolloutStatus(ctx, &dataplane); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed updating DataPlane with selector in Rollout Status: %w", err)
 	}
 
 	// DataPlane is ready and we can proceed with deploying preview resources.
@@ -145,7 +154,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
-	res, _, err = ensureDeploymentForDataPlane(ctx, r.Client, log, r.DevelopmentMode, &dataplane,
+	res, deployment, err := ensureDeploymentForDataPlane(ctx, r.Client, log, r.DevelopmentMode, &dataplane,
 		client.MatchingLabels{
 			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,
 		},
@@ -165,23 +174,65 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	// TODO: ensure that the preview resources are all ready.
-	// https://github.com/Kong/gateway-operator/issues/899
-	// https://github.com/Kong/gateway-operator/issues/900
 	// https://github.com/Kong/gateway-operator/issues/901
 
-	proceedWithPromotion, err := canProceedWithPromotion(dataplane)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed checking if DataPlane %s/%s can be promoted: %w", dataplane.Namespace, dataplane.Name, err)
+	// TODO: check if the preview service is available.
+	if deployment.Status.Replicas == 0 ||
+		deployment.Status.AvailableReplicas != deployment.Status.Replicas ||
+		deployment.Status.ReadyReplicas != deployment.Status.Replicas {
+		trace(log, "preview deployment for DataPlane not ready yet", dataplane)
+		err := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutProgressing, consts.DataPlaneConditionMessageRolledOutPreviewDeploymentNotYetReady)
+		return ctrl.Result{}, err
 	}
-	if !proceedWithPromotion {
+
+	if proceedWithPromotion, err := canProceedWithPromotion(dataplane); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed checking if DataPlane %s/%s can be promoted: %w", dataplane.Namespace, dataplane.Name, err)
+	} else if !proceedWithPromotion {
 		debug(log, "DataPlane preview resources cannot be promoted yet", dataplane,
 			"promotion_strategy", dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen.Promotion.Strategy)
-		return ctrl.Result{}, nil
+
+		err := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutAwaitingPromotion, "")
+		return ctrl.Result{}, err
+	}
+
+	// Perform the promotion.
+	// TODO: https://github.com/Kong/gateway-operator/issues/924
+
+	if err = r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutPromotionInProgress, ""); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	debug(log, "BlueGreen reconciliation complete for DataPlane resource", dataplane)
 
 	return ctrl.Result{}, nil
+}
+
+// ensureRolledOutCondition ensures that DataPlane rollout status contains RolledOut
+// Condition with provided status, reason and message.
+func (r *DataPlaneBlueGreenReconciler) ensureRolledOutCondition(
+	ctx context.Context,
+	log logr.Logger,
+	dataplane *operatorv1beta1.DataPlane,
+	status metav1.ConditionStatus, //nolint:unparam
+	reason k8sutils.ConditionReason,
+	message string,
+) error {
+	c, ok := k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
+	if ok && c.ObservedGeneration == dataplane.Generation && c.Status == status && c.Reason == string(reason) && c.Message == message {
+		// DataPlane rollout status already contains this condition.
+		return nil
+	}
+
+	oldDataPlane := dataplane.DeepCopy()
+	k8sutils.SetCondition(
+		k8sutils.NewConditionWithGeneration(consts.DataPlaneConditionTypeRolledOut, status, reason, message, dataplane.Generation),
+		dataplane.Status.RolloutStatus,
+	)
+	_, err := r.patchRolloutStatus(ctx, log, oldDataPlane, dataplane)
+	if err != nil {
+		return fmt.Errorf("failed patching Rollout Status Conditions for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+	return nil
 }
 
 // labelSelectorFromDataPlaneRolloutStatusSelectorDeploymentOpt returns a DeploymentOpt
@@ -270,17 +321,19 @@ func (r *DataPlaneBlueGreenReconciler) ensureDataPlaneAdminAPIInRolloutStatus(
 
 	dataplane.Status.RolloutStatus.Services.AdminAPI.Addresses = addresses
 	dataplane.Status.RolloutStatus.Services.AdminAPI.Name = dataplaneAdminAPIService.Name
-	return true, r.patchRolloutStatus(ctx, log, old, dataplane)
+	return r.patchRolloutStatus(ctx, log, old, dataplane)
 }
 
-// patchRolloutStatus Patches the resource status only when there are changes in the Conditions
-func (r *DataPlaneBlueGreenReconciler) patchRolloutStatus(ctx context.Context, log logr.Logger, old, updated *operatorv1beta1.DataPlane) error {
+// patchRolloutStatus Patches the resource status only when there are changes
+// between the provided old and updated DataPlanes' rollout statuses.
+// It returns a bool flag indicating that the status has been patched and an error.
+func (r *DataPlaneBlueGreenReconciler) patchRolloutStatus(ctx context.Context, log logr.Logger, old, updated *operatorv1beta1.DataPlane) (bool, error) {
 	if rolloutStatusChanged(old, updated) {
 		debug(log, "patching DataPlane status", updated, "status", updated.Status)
-		return r.Client.Status().Patch(ctx, updated, client.MergeFrom(old))
+		return true, r.Client.Status().Patch(ctx, updated, client.MergeFrom(old))
 	}
 
-	return nil
+	return false, nil
 }
 
 func rolloutStatusChanged(old, updated *operatorv1beta1.DataPlane) bool {

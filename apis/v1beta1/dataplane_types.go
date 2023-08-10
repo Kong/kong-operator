@@ -187,12 +187,29 @@ type DataPlaneRolloutStatus struct {
 	// Deployment contains the information about the preview deployment.
 	Deployment *DataPlaneRolloutStatusDeployment `json:"deployment,omitempty"`
 
-	// Status contains the status information about the rollout.
+	// Conditions contains the status conditions about the rollout.
+	//
 	// +listType=map
 	// +listMapKey=type
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=8
-	Status []metav1.Condition `json:"status,omitempty"`
+	Conditions []metav1.Condition `json:"status,omitempty"`
+}
+
+// GetConditions retrieves the DataPlane Status Conditions
+func (d *DataPlaneRolloutStatus) GetConditions() []metav1.Condition {
+	if d == nil {
+		return nil
+	}
+	return d.Conditions
+}
+
+// SetConditions sets the DataPlane Status Conditions
+func (d *DataPlaneRolloutStatus) SetConditions(conditions []metav1.Condition) {
+	if d == nil {
+		return
+	}
+	d.Conditions = conditions
 }
 
 // DataPlaneRolloutStatusServices describes the status of the services during

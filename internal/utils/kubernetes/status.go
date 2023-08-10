@@ -52,10 +52,14 @@ const (
 	ResourceUpdatedMessage = "Resource has been updated"
 )
 
-// ConditionsAware represents a CRD type that has been enabled with metav1.Conditions,
+// ConditionsAndGenerationAware represents a CRD type that has been enabled with metav1.Conditions,
 // it can then benefit of a series of utility methods.
-type ConditionsAware interface {
+type ConditionsAndGenerationAware interface {
 	GetGeneration() int64
+	ConditionsAware
+}
+
+type ConditionsAware interface {
 	GetConditions() []metav1.Condition
 	SetConditions(conditions []metav1.Condition)
 }
@@ -106,7 +110,7 @@ func InitProgrammed(resource ConditionsAware) {
 }
 
 // SetReady evaluates all the existing conditions and sets the Ready status accordingly
-func SetReady(resource ConditionsAware) {
+func SetReady(resource ConditionsAndGenerationAware) {
 	ready := metav1.Condition{
 		Type:               string(ReadyType),
 		LastTransitionTime: metav1.Now(),
@@ -125,7 +129,7 @@ func SetReady(resource ConditionsAware) {
 }
 
 // SetProgrammed evaluates all the existing conditions and sets the Programmed status accordingly
-func SetProgrammed(resource ConditionsAware) {
+func SetProgrammed(resource ConditionsAndGenerationAware) {
 	ready := metav1.Condition{
 		Type:               string(gatewayv1beta1.GatewayConditionProgrammed),
 		LastTransitionTime: metav1.Now(),

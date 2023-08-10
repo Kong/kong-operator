@@ -8262,7 +8262,7 @@ spec:
                         type: object
                     type: object
                   status:
-                    description: Status contains the status information about the
+                    description: Conditions contains the status conditions about the
                       rollout.
                     items:
                       description: "Condition contains details for one aspect of the
