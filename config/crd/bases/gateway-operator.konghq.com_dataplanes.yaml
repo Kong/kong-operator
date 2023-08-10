@@ -8181,8 +8181,8 @@ spec:
                       deployment.
                     properties:
                       adminAPI:
-                        description: Proxy contains the name and the address of the
-                          preview service for Admin API. Using this service users
+                        description: AdminAPI contains the name and the address of
+                          the preview service for Admin API. Using this service users
                           can send requests to configure the DataPlane's preview deployment.
                         properties:
                           addresses:
@@ -8220,10 +8220,10 @@ spec:
                         required:
                         - name
                         type: object
-                      proxy:
-                        description: Proxy contains the name and the address of the
-                          preview service for proxy. Using this service users can
-                          send requests that will hit the preview deployment.
+                      ingress:
+                        description: Ingress contains the name and the address of
+                          the preview service for ingress. Using this service users
+                          can send requests that will hit the preview deployment.
                         properties:
                           addresses:
                             description: Addresses contains the addresses of a Service.

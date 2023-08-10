@@ -97,7 +97,7 @@ type DataPlaneServices struct {
 	Ingress *ServiceOptions `json:"ingress,omitempty"`
 }
 
-// ServiceOptions is used to includes options to customize the proxy service,
+// ServiceOptions is used to includes options to customize the ingress service,
 // such as the annotations.
 type ServiceOptions struct {
 	// Type determines how the Service is exposed.
@@ -198,11 +198,11 @@ type DataPlaneRolloutStatus struct {
 // DataPlaneRolloutStatusServices describes the status of the services during
 // DataPlane rollout.
 type DataPlaneRolloutStatusServices struct {
-	// Proxy contains the name and the address of the preview service for proxy.
+	// Ingress contains the name and the address of the preview service for ingress.
 	// Using this service users can send requests that will hit the preview deployment.
-	Proxy *RolloutStatusService `json:"proxy,omitempty"`
+	Ingress *RolloutStatusService `json:"ingress,omitempty"`
 
-	// Proxy contains the name and the address of the preview service for Admin API.
+	// AdminAPI contains the name and the address of the preview service for Admin API.
 	// Using this service users can send requests to configure the DataPlane's preview deployment.
 	AdminAPI *RolloutStatusService `json:"adminAPI,omitempty"`
 }
