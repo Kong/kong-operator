@@ -133,6 +133,11 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, o
 		},
 	}
 
+	for _, opt := range opts {
+		opt(adminService)
+	}
+
+	// Service selector override via annotation takes precedence over provided options.
 	if selectorOverride, ok := dataplane.Annotations[consts.ServiceSelectorOverrideAnnotation]; ok {
 		newSelector, err := getSelectorOverrides(selectorOverride)
 		if err != nil {
@@ -141,11 +146,8 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, o
 		adminService.Spec.Selector = newSelector
 	}
 
-	for _, opt := range opts {
-		opt(adminService)
-	}
-
 	k8sutils.SetOwnerForObject(adminService, dataplane)
+
 	return adminService, nil
 }
 
