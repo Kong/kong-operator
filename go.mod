@@ -14,7 +14,7 @@ require (
 	github.com/go-logr/logr v1.2.4
 	github.com/google/uuid v1.3.0
 	github.com/kong/kubernetes-telemetry v0.1.0
-	github.com/kong/kubernetes-testing-framework v0.35.0
+	github.com/kong/kubernetes-testing-framework v0.36.0
 	github.com/kong/semver/v4 v4.0.1
 	github.com/samber/lo v1.38.1
 	github.com/stretchr/testify v1.8.4
@@ -33,12 +33,12 @@ require (
 	github.com/google/s2a-go v0.1.4 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/tools v0.9.1 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20230706204954-ccb25ca9f130 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230720185612-659f7aaaa771 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20230803162519-f966b187b2e5 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230807174057-1744710a1577 // indirect
 )
 
 require (
-	cloud.google.com/go/compute v1.20.1 // indirect
+	cloud.google.com/go/compute v1.23.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/container v1.24.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -63,9 +63,9 @@ require (
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
 	golang.org/x/crypto v0.12.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	google.golang.org/api v0.134.0 // indirect
-	google.golang.org/genproto v0.0.0-20230706204954-ccb25ca9f130 // indirect
-	google.golang.org/grpc v1.56.2 // indirect
+	google.golang.org/api v0.136.0 // indirect
+	google.golang.org/genproto v0.0.0-20230803162519-f966b187b2e5 // indirect
+	google.golang.org/grpc v1.57.0 // indirect
 	sigs.k8s.io/kind v0.20.0 // indirect
 	sigs.k8s.io/kustomize/api v0.13.4
 	sigs.k8s.io/kustomize/kyaml v0.14.2
