@@ -10,6 +10,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -263,4 +264,94 @@ func ensureAdminServiceForDataPlane(
 	}
 
 	return Created, generatedService, nil
+}
+
+// ensureProxyServiceForDataPlane ensures ingress service with metadata and spec
+// generated from the dataplane.
+func ensureProxyServiceForDataPlane(
+	ctx context.Context,
+	log logr.Logger,
+	cl client.Client,
+	dataplane *operatorv1beta1.DataPlane,
+	additionalServiceLabels client.MatchingLabels,
+	opts ...k8sresources.ServiceOpt,
+) (CreatedUpdatedOrNoop, *corev1.Service, error) {
+
+	matchingLabels := client.MatchingLabels{
+		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneProxyServiceLabelValue),
+	}
+	for k, v := range additionalServiceLabels {
+		matchingLabels[k] = v
+	}
+	services, err := k8sutils.ListServicesForOwner(
+		ctx,
+		cl,
+		dataplane.Namespace,
+		dataplane.UID,
+		matchingLabels,
+	)
+	if err != nil {
+		return Noop, nil, fmt.Errorf("failed to list proxy services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+
+	count := len(services)
+	if count > 1 {
+		if err := k8sreduce.ReduceServices(ctx, cl, services); err != nil {
+			return Noop, nil, err
+		}
+		return Noop, nil, errors.New("number of DataPlane proxy services reduced")
+	}
+
+	if len(additionalServiceLabels) > 0 {
+		opts = append(opts, matchingLabelsToServiceOpt(additionalServiceLabels))
+	}
+
+	generatedService, err := k8sresources.GenerateNewProxyServiceForDataplane(dataplane, opts...)
+	if err != nil {
+		return Noop, nil, err
+	}
+	addLabelForDataplane(generatedService)
+	addAnnotationsForDataplaneProxyService(generatedService, *dataplane)
+	k8sutils.SetOwnerForObject(generatedService, dataplane)
+
+	if count == 1 {
+		var updated bool
+		existingService := &services[0]
+		updated, existingService.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingService.ObjectMeta, generatedService.ObjectMeta,
+			// enforce all the annotations provided through the dataplane API
+			func(existingMeta metav1.ObjectMeta, generatedMeta metav1.ObjectMeta) (bool, metav1.ObjectMeta) {
+				metaToUpdate, updatedAnnotations, err := ensureDataPlaneIngressServiceAnnotationsUpdated(
+					dataplane, existingMeta.Annotations, generatedMeta.Annotations,
+				)
+				if err != nil {
+					log.Error(err, "failed to update annotations of existing ingress service for dataplane",
+						"dataplane", fmt.Sprintf("%s/%s", dataplane.Namespace, dataplane.Name),
+						"ingress_service", fmt.Sprintf("%s/%s", existingService.Namespace, existingService.Name))
+					return true, existingMeta
+				}
+				existingMeta.Annotations = updatedAnnotations
+				return metaToUpdate, existingMeta
+			})
+
+		if existingService.Spec.Type != generatedService.Spec.Type {
+			existingService.Spec.Type = generatedService.Spec.Type
+			updated = true
+		}
+		if !cmp.Equal(existingService.Spec.Selector, generatedService.Spec.Selector) {
+			existingService.Spec.Selector = generatedService.Spec.Selector
+			updated = true
+		}
+
+		if updated {
+			if err := cl.Update(ctx, existingService); err != nil {
+				return Noop, existingService, fmt.Errorf("failed updating DataPlane Service %s: %w", existingService.Name, err)
+			}
+			return Updated, existingService, nil
+		}
+		return Noop, existingService, nil
+	}
+
+	return Created, generatedService, cl.Create(ctx, generatedService)
+
 }

@@ -43,7 +43,7 @@ func GenerateNewServiceForCertificateConfig(namespace, name string) *corev1.Serv
 }
 
 // GenerateNewProxyServiceForDataplane is a helper to generate the dataplane proxy service
-func GenerateNewProxyServiceForDataplane(dataplane *operatorv1beta1.DataPlane) (*corev1.Service, error) {
+func GenerateNewProxyServiceForDataplane(dataplane *operatorv1beta1.DataPlane, opts ...ServiceOpt) (*corev1.Service, error) {
 	proxyService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,
@@ -72,6 +72,11 @@ func GenerateNewProxyServiceForDataplane(dataplane *operatorv1beta1.DataPlane) (
 			},
 		},
 	}
+
+	for _, opt := range opts {
+		opt(proxyService)
+	}
+
 	if selectorOverride, ok := dataplane.Annotations[consts.ServiceSelectorOverrideAnnotation]; ok {
 		newSelector, err := getSelectorOverrides(selectorOverride)
 		if err != nil {
@@ -81,6 +86,7 @@ func GenerateNewProxyServiceForDataplane(dataplane *operatorv1beta1.DataPlane) (
 	}
 
 	k8sutils.SetOwnerForObject(proxyService, dataplane)
+
 	return proxyService, nil
 }
 

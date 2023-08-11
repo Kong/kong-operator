@@ -121,11 +121,21 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	trace(log, "exposing DataPlane deployment proxy via service", dataplane)
-	createdOrUpdated, dataplaneProxyService, err := r.ensureProxyServiceForDataPlane(ctx, dataplane)
+	additionalServiceLabels := map[string]string{
+		consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
+	}
+	serviceRes, dataplaneProxyService, err := ensureProxyServiceForDataPlane(
+		ctx,
+		getLogger(ctx, "dataplane_proxy_service", r.DevelopmentMode),
+		r.Client,
+		dataplane,
+		additionalServiceLabels,
+		labelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane),
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if createdOrUpdated {
+	if serviceRes == Created || serviceRes == Updated {
 		debug(log, "DataPlane proxy service created/updated", dataplane, "service", dataplaneProxyService.Name)
 		return ctrl.Result{}, nil
 	}
@@ -140,7 +150,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	trace(log, "ensuring mTLS certificate", dataplane)
-	createdOrUpdated, certSecret, err := ensureCertificate(ctx, r.Client, dataplane,
+	certCreatedOrUpdated, certSecret, err := ensureCertificate(ctx, r.Client, dataplane,
 		types.NamespacedName{
 			Namespace: r.ClusterCASecretNamespace,
 			Name:      r.ClusterCASecretName,
@@ -153,7 +163,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if createdOrUpdated {
+	if certCreatedOrUpdated {
 		debug(log, "mTLS certificate created", dataplane)
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}

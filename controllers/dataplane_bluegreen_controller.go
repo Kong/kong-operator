@@ -113,12 +113,9 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	// DataPlane is ready and we can proceed with deploying preview resources.
-	res, dataplaneAdminService, err := ensureAdminServiceForDataPlane(ctx, r.Client, &dataplane,
-		client.MatchingLabels{
-			consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
-		},
-		labelSelectorFromDataPlaneRolloutStatusSelectorServiceOpt(&dataplane),
-	)
+
+	// Ensure "preview" Admin API service.
+	res, dataplaneAdminService, err := r.ensurePreviewAdminAPIService(ctx, &dataplane)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed ensuring that preview Admin API Service exists for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
@@ -127,6 +124,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		debug(log, "DataPlane preview admin service modified", dataplane, "service", dataplaneAdminService.Name, "reason", res)
 		return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
 	case Noop:
+		debug(log, "no need for preview Admin API service update", dataplane)
 	}
 
 	if updated, err := r.ensureDataPlaneAdminAPIInRolloutStatus(ctx, log, &dataplane, dataplaneAdminService); err != nil {
@@ -154,6 +152,25 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
+	// Ensure "preview" Ingress service.
+	res, previewIngressService, err := r.ensurePreviewIngressService(ctx, log, &dataplane)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed ensuring preview Ingress service for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+	switch res {
+	case Created, Updated:
+		debug(log, "preview ingress service modified", dataplane, "reason", res)
+		return ctrl.Result{}, nil
+	default:
+		debug(log, "no need for preview ingress service update", dataplane)
+	}
+	// ensure status of "preview" service is updated in status.rollout.services.
+	if updated, err := r.ensureDataPlaneRolloutIngressServiceStatus(ctx, log, &dataplane, previewIngressService); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed updating rollout status with preview ingress service addresses: %w", err)
+	} else if updated {
+		return ctrl.Result{}, nil
+	}
+
 	res, deployment, err := ensureDeploymentForDataPlane(ctx, r.Client, log, r.DevelopmentMode, &dataplane,
 		client.MatchingLabels{
 			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,
@@ -172,9 +189,6 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	default:
 		debug(log, "no need for deployment update", dataplane)
 	}
-
-	// TODO: ensure that the preview resources are all ready.
-	// https://github.com/Kong/gateway-operator/issues/901
 
 	// TODO: check if the preview service is available.
 	if deployment.Status.Replicas == 0 ||
@@ -292,7 +306,6 @@ func (r *DataPlaneBlueGreenReconciler) ensureDataPlaneAdminAPIInRolloutStatus(
 	if err != nil {
 		return false, fmt.Errorf("failed getting addresses for Admin API service %s: %w", dataplaneAdminAPIService, err)
 	}
-	rolloutStatus := dataplane.Status.RolloutStatus
 
 	// If there's nothing to update then bail.
 	if len(addresses) == 0 && (dataplaneAdminAPIService == nil || dataplaneAdminAPIService.Name == "") {
@@ -300,24 +313,15 @@ func (r *DataPlaneBlueGreenReconciler) ensureDataPlaneAdminAPIInRolloutStatus(
 	}
 
 	// If the status is already in place and is as expected then don't update.
-	if rolloutStatus != nil && rolloutStatus.Services != nil && rolloutStatus.Services.AdminAPI != nil &&
-		cmp.Equal(addresses, rolloutStatus.Services.AdminAPI.Addresses, cmpopts.EquateEmpty()) &&
-		dataplaneAdminAPIService.Name == rolloutStatus.Services.AdminAPI.Name {
+	rolloutStatusServiceAdmin := extractRolloutStatusServiceAdmin(dataplane)
+	if rolloutStatusServiceAdmin != nil &&
+		cmp.Equal(addresses, rolloutStatusServiceAdmin.Addresses, cmpopts.EquateEmpty()) &&
+		dataplaneAdminAPIService.Name == rolloutStatusServiceAdmin.Name {
 		return false, nil
 	}
 
 	old := dataplane.DeepCopy()
-	if dataplane.Status.RolloutStatus == nil {
-		dataplane.Status.RolloutStatus = &operatorv1beta1.DataPlaneRolloutStatus{
-			Services: &operatorv1beta1.DataPlaneRolloutStatusServices{
-				AdminAPI: &operatorv1beta1.RolloutStatusService{},
-			},
-		}
-	} else if dataplane.Status.RolloutStatus.Services == nil {
-		dataplane.Status.RolloutStatus.Services = &operatorv1beta1.DataPlaneRolloutStatusServices{
-			AdminAPI: &operatorv1beta1.RolloutStatusService{},
-		}
-	}
+	dataplane = initDataPlaneStatusRolloutServicesAdmin(dataplane)
 
 	dataplane.Status.RolloutStatus.Services.AdminAPI.Addresses = addresses
 	dataplane.Status.RolloutStatus.Services.AdminAPI.Name = dataplaneAdminAPIService.Name
@@ -356,4 +360,126 @@ func canProceedWithPromotion(dataplane operatorv1beta1.DataPlane) (bool, error) 
 	default:
 		return false, fmt.Errorf("unknown promotion strategy %q", promotionStrategy)
 	}
+}
+
+// ensurePreviewAdminAPIService ensures the "preview" Admin API Service is available.
+func (r *DataPlaneBlueGreenReconciler) ensurePreviewAdminAPIService(
+	ctx context.Context,
+	dataplane *operatorv1beta1.DataPlane,
+) (CreatedUpdatedOrNoop, *corev1.Service, error) {
+	additionalServiceLabels := map[string]string{
+		consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
+	}
+
+	return ensureAdminServiceForDataPlane(
+		ctx,
+		r.Client,
+		dataplane,
+		additionalServiceLabels,
+		labelSelectorFromDataPlaneRolloutStatusSelectorServiceOpt(dataplane),
+	)
+}
+
+// ensurePreviewIngressService ensures the "preview" ingress service to access the Kong routes
+// in the "preview" version of Kong gateway.
+func (r *DataPlaneBlueGreenReconciler) ensurePreviewIngressService(
+	ctx context.Context,
+	log logr.Logger,
+	dataplane *operatorv1beta1.DataPlane,
+) (CreatedUpdatedOrNoop, *corev1.Service, error) {
+	additionalServiceLabels := map[string]string{
+		consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
+	}
+	return ensureProxyServiceForDataPlane(
+		ctx,
+		log,
+		r.Client,
+		dataplane,
+		additionalServiceLabels,
+		labelSelectorFromDataPlaneRolloutStatusSelectorServiceOpt(dataplane),
+	)
+}
+
+// ensureDataPlaneRolloutIngressServiceStatus ensures status.rollout.service.ingress
+// contains the name and addresses of "preview" ingress service.
+func (r *DataPlaneBlueGreenReconciler) ensureDataPlaneRolloutIngressServiceStatus(
+	ctx context.Context,
+	log logr.Logger,
+	dataplane *operatorv1beta1.DataPlane,
+	ingressService *corev1.Service,
+) (bool, error) {
+	addresses, err := addressesFromService(ingressService)
+	if err != nil {
+		return true, err
+	}
+
+	// If there's nothing to update then bail.
+	if len(addresses) == 0 && (ingressService == nil || ingressService.Name == "") {
+		return false, nil
+	}
+
+	// If the status is already in place and is as expected then don't update.
+	rolloutStatusServiceIngress := extractRolloutStatusServiceIngress(dataplane)
+	if rolloutStatusServiceIngress != nil &&
+		cmp.Equal(addresses, rolloutStatusServiceIngress.Addresses, cmpopts.EquateEmpty()) &&
+		ingressService.Name == rolloutStatusServiceIngress.Name {
+		return false, nil
+	}
+
+	// Updating on status.rollout.ingress is needed, we patch the rollout status.
+	old := dataplane.DeepCopy()
+	dataplane = initDataPlaneStatusRolloutServicesIngress(dataplane)
+	dataplane.Status.RolloutStatus.Services.Ingress.Name = ingressService.Name
+	dataplane.Status.RolloutStatus.Services.Ingress.Addresses = addresses
+	return r.patchRolloutStatus(ctx, log, old, dataplane)
+}
+
+// -------------------------------------------------------------------------------
+// utility functions to operate pointer fields in rollout status of dataplane
+// TODO: find a method to automatically generate the extract* and init* functions
+// --------------------------------------------------------------------------------
+
+func extractRolloutStatusServiceAdmin(dataplane *operatorv1beta1.DataPlane) *operatorv1beta1.RolloutStatusService {
+	if dataplane.Status.RolloutStatus == nil || dataplane.Status.RolloutStatus.Services == nil {
+		return nil
+	}
+	return dataplane.Status.RolloutStatus.Services.AdminAPI
+}
+
+func extractRolloutStatusServiceIngress(dataplane *operatorv1beta1.DataPlane) *operatorv1beta1.RolloutStatusService {
+	if dataplane.Status.RolloutStatus == nil || dataplane.Status.RolloutStatus.Services == nil {
+		return nil
+	}
+	return dataplane.Status.RolloutStatus.Services.Ingress
+}
+
+func initDataPlaneStatusRollout(dataplane *operatorv1beta1.DataPlane) *operatorv1beta1.DataPlane {
+	if dataplane.Status.RolloutStatus == nil {
+		dataplane.Status.RolloutStatus = &operatorv1beta1.DataPlaneRolloutStatus{}
+	}
+	return dataplane
+}
+
+func initDataPlaneStatusRolloutServices(dataplane *operatorv1beta1.DataPlane) *operatorv1beta1.DataPlane {
+	dataplane = initDataPlaneStatusRollout(dataplane)
+	if dataplane.Status.RolloutStatus.Services == nil {
+		dataplane.Status.RolloutStatus.Services = &operatorv1beta1.DataPlaneRolloutStatusServices{}
+	}
+	return dataplane
+}
+
+func initDataPlaneStatusRolloutServicesAdmin(dataplane *operatorv1beta1.DataPlane) *operatorv1beta1.DataPlane {
+	dataplane = initDataPlaneStatusRolloutServices(dataplane)
+	if dataplane.Status.RolloutStatus.Services.AdminAPI == nil {
+		dataplane.Status.RolloutStatus.Services.AdminAPI = &operatorv1beta1.RolloutStatusService{}
+	}
+	return dataplane
+}
+
+func initDataPlaneStatusRolloutServicesIngress(dataplane *operatorv1beta1.DataPlane) *operatorv1beta1.DataPlane {
+	dataplane = initDataPlaneStatusRolloutServices(dataplane)
+	if dataplane.Status.RolloutStatus.Services.Ingress == nil {
+		dataplane.Status.RolloutStatus.Services.Ingress = &operatorv1beta1.RolloutStatusService{}
+	}
+	return dataplane
 }
