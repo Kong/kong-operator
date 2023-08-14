@@ -173,7 +173,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	trace(log, "ensuring DataPlane has service addesses in status", dataplaneProxyService)
+	trace(log, "ensuring DataPlane has service addresses in status", dataplaneProxyService)
 	if updated, err := r.ensureDataPlaneAddressesStatus(ctx, log, dataplane, dataplaneProxyService); err != nil {
 		return ctrl.Result{}, err
 	} else if updated {
@@ -254,6 +254,7 @@ func (r *DataPlaneReconciler) initSelectorInStatus(ctx context.Context, dataplan
 func labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane *operatorv1beta1.DataPlane) func(s *appsv1.Deployment) {
 	return func(d *appsv1.Deployment) {
 		if dataplane.Status.Selector != "" {
+			d.Labels[consts.OperatorLabelSelector] = dataplane.Status.Selector
 			d.Spec.Selector.MatchLabels[consts.OperatorLabelSelector] = dataplane.Status.Selector
 			d.Spec.Template.Labels[consts.OperatorLabelSelector] = dataplane.Status.Selector
 		}

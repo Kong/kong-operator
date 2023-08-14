@@ -9,7 +9,7 @@ const (
 )
 
 const (
-	// DataPlaneConditionReasonRolloutAwaitingPromtion is a reason which indicates a DataPlane
+	// DataPlaneConditionReasonRolloutAwaitingPromotion is a reason which indicates a DataPlane
 	// preview has been deployed successfully and is awaiting promotion.
 	// If this Reason is present and no automated rollout is disabled, user can
 	// use the preview services and deployment to inspect the state of those
@@ -27,6 +27,9 @@ const (
 	// DataPlaneConditionReasonRolloutPromotionInProgress is a reason which
 	// indicates that a promotion is in progress.
 	DataPlaneConditionReasonRolloutPromotionInProgress k8sutils.ConditionReason = "PromotionInProgress"
+
+	// DataPlaneConditionReasonRolloutPromotionDone is a reason which indicates that a promotion is done.
+	DataPlaneConditionReasonRolloutPromotionDone k8sutils.ConditionReason = "PromotionDone"
 )
 
 const (
@@ -35,7 +38,7 @@ const (
 	// and the DataPlane has initiated a rollout.
 	DataPlaneConditionMessageRolledOutRolloutInitialied = "Rollout initialized"
 
-	// DataPlaneConditionMessageRolledOutRolloutInitialied contains the message
+	// DataPlaneConditionMessageRolledOutPreviewDeploymentNotYetReady contains the message
 	// that is set for the RolledOut Condition when Reason is Progressing
 	// and the operator is waiting for preview Deployment to be ready.
 	DataPlaneConditionMessageRolledOutPreviewDeploymentNotYetReady = "Preview Deployment not yet ready"

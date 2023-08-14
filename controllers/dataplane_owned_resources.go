@@ -276,7 +276,6 @@ func ensureProxyServiceForDataPlane(
 	additionalServiceLabels client.MatchingLabels,
 	opts ...k8sresources.ServiceOpt,
 ) (CreatedUpdatedOrNoop, *corev1.Service, error) {
-
 	matchingLabels := client.MatchingLabels{
 		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
 		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneProxyServiceLabelValue),
@@ -353,5 +352,4 @@ func ensureProxyServiceForDataPlane(
 	}
 
 	return Created, generatedService, cl.Create(ctx, generatedService)
-
 }

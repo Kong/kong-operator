@@ -2,12 +2,15 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -83,6 +86,10 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if !k8sutils.IsReady(&dataplane) {
 		debug(log, "DataPlane is not ready yet to proceed with BlueGreen rollout, delegating to DataPlaneReconciler", req)
 		return r.DataPlaneController.Reconcile(ctx, req)
+	}
+
+	if err := r.reduceLiveDeployments(ctx, log, &dataplane); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to reduce live deployments: %w", err)
 	}
 
 	if err := r.initSelectorInRolloutStatus(ctx, &dataplane); err != nil {
@@ -171,6 +178,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, nil
 	}
 
+	// Ensure "preview" Deployment.
 	res, deployment, err := ensureDeploymentForDataPlane(ctx, r.Client, log, r.DevelopmentMode, &dataplane,
 		client.MatchingLabels{
 			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,
@@ -199,6 +207,9 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	// TODO: Perform promotion condition checks to verify we can proceed
+	// Ref: https://github.com/Kong/gateway-operator/issues/974
+
 	if proceedWithPromotion, err := canProceedWithPromotion(dataplane); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed checking if DataPlane %s/%s can be promoted: %w", dataplane.Namespace, dataplane.Name, err)
 	} else if !proceedWithPromotion {
@@ -209,16 +220,131 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	// Perform the promotion.
-	// TODO: https://github.com/Kong/gateway-operator/issues/924
-
 	if err = r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutPromotionInProgress, ""); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	debug(log, "BlueGreen reconciliation complete for DataPlane resource", dataplane)
+	// Ensure that the live deployment selector is equal to the preview deployment selector to trigger the promotion.
+	if updated, err := r.ensurePreviewSelectorOverridesLive(ctx, &dataplane); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to update DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	} else if updated {
+		debug(log, "preview deployment selector assigned to a live selector, promotion in progress", dataplane)
+		return ctrl.Result{}, nil
+	}
 
+	// Wait until the live services have the expected selector - current preview deployment selector.
+	expectedLiveSelector := map[string]string{
+		"app":                        dataplane.Name,
+		consts.OperatorLabelSelector: dataplane.Status.RolloutStatus.Deployment.Selector,
+	}
+	for _, serviceType := range []consts.ServiceType{
+		consts.DataPlaneProxyServiceLabelValue,
+		consts.DataPlaneAdminServiceLabelValue,
+	} {
+		if ok, err := r.waitForLiveServiceSelectorsPropagation(ctx,
+			&dataplane,
+			serviceType,
+			expectedLiveSelector,
+		); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed waiting for live %q service to have the expected selector: %w", serviceType, err)
+		} else if !ok {
+			debug(log, fmt.Sprintf("%q live service do not have the expected selector yet, delegating to DP controller", serviceType), dataplane)
+			return r.DataPlaneController.Reconcile(ctx, req)
+		}
+	}
+
+	{
+		// Promotion is effectively done (live services point to the preview).
+
+		// Let's label the preview deployment as live so that it's easily retrievable.
+		previewDeploymentSelector := dataplane.Status.RolloutStatus.Deployment.Selector
+		if updated, err := r.ensurePreviewDeploymentLabeledLive(ctx, log, &dataplane, previewDeploymentSelector); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to ensure preview deployment becomes live %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		} else if updated {
+			trace(log, "preview deployment labeled as live", dataplane)
+		}
+
+		// We can clear the selector in RolloutStatus which will cause next
+		// reconciliation to create new preview.
+		old := dataplane.DeepCopy()
+		dataplane.Status.RolloutStatus.Deployment.Selector = ""
+		if err := r.Client.Status().Patch(ctx, &dataplane, client.MergeFrom(old)); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed updating DataPlane's RolloutStatus: %w", err)
+		}
+	}
+
+	// TODO: Even if we set the condition to true here, it will shortly be set to false in the next reconcile loop.
+	// It is so because we trigger another rollout cycle despite no changes in the DataPlane spec.
+	// We might consider changing the logic to not trigger a rollout cycle if there are no changes in the spec.
+	if err = r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionTrue, consts.DataPlaneConditionReasonRolloutPromotionDone, ""); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := r.resetPromoteWhenReadyAnnotation(ctx, &dataplane); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed resetting promote-when-ready annotation: %w", err)
+	}
+
+	debug(log, "BlueGreen reconciliation complete for DataPlane resource", dataplane)
 	return ctrl.Result{}, nil
+}
+
+// resetPromoteWhenReadyAnnotation resets promote-when-ready DataPlane annotation.
+// This makes the DataPlane ready for the next rollout cycle and prevents unintentional promotion.
+func (r *DataPlaneBlueGreenReconciler) resetPromoteWhenReadyAnnotation(
+	ctx context.Context,
+	dataplane *operatorv1beta1.DataPlane,
+) error {
+	oldDp := dataplane.DeepCopy()
+	delete(dataplane.Annotations, operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey)
+	if err := r.Client.Patch(ctx, dataplane, client.MergeFrom(oldDp)); err != nil {
+		return fmt.Errorf("failed resetting promote-when-ready annotation: %w", err)
+	}
+	return nil
+}
+
+// reduceLiveDeployments reduces the number of live deployments to 1 by deleting the oldest ones.
+// It's used to reduce the number of live deployments that are not being used anymore after promotion (the old live
+// deployment gets "replaced" by the preview deployment).
+func (r *DataPlaneBlueGreenReconciler) reduceLiveDeployments(
+	ctx context.Context,
+	log logr.Logger,
+	dataplane *operatorv1beta1.DataPlane,
+) error {
+	matchingLabels := client.MatchingLabels{
+		"app":                                dataplane.Name,
+		consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
+	}
+	deployments, err := k8sutils.ListDeploymentsForOwner(
+		ctx,
+		r.Client,
+		dataplane.Namespace,
+		dataplane.UID,
+		matchingLabels,
+	)
+	if err != nil {
+		return fmt.Errorf("failed listing live deployments: %w", err)
+	}
+
+	// If there's only one or no deployments, there's nothing to do.
+	if len(deployments) < 2 {
+		return nil
+	}
+
+	// Sort deployments by creation timestamp, so that we can delete the oldest ones.
+	sort.Slice(deployments, func(i, j int) bool {
+		return deployments[i].CreationTimestamp.Before(&deployments[j].CreationTimestamp)
+	})
+	// Delete all but the last deployment.
+	for _, deployment := range deployments[:len(deployments)-1] {
+		deployment := deployment
+		debug(log, "reducing live deployment", dataplane,
+			"deployment", fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name))
+
+		if err := r.Client.Delete(ctx, &deployment); err != nil {
+			return fmt.Errorf("failed deleting live deployment %s/%s: %w", deployment.Namespace, deployment.Name, err)
+		}
+	}
+	return nil
 }
 
 // ensureRolledOutCondition ensures that DataPlane rollout status contains RolledOut
@@ -227,7 +353,7 @@ func (r *DataPlaneBlueGreenReconciler) ensureRolledOutCondition(
 	ctx context.Context,
 	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
-	status metav1.ConditionStatus, //nolint:unparam
+	status metav1.ConditionStatus,
 	reason k8sutils.ConditionReason,
 	message string,
 ) error {
@@ -257,6 +383,7 @@ func labelSelectorFromDataPlaneRolloutStatusSelectorDeploymentOpt(dataplane *ope
 		if dataplane.Status.RolloutStatus != nil &&
 			dataplane.Status.RolloutStatus.Deployment != nil &&
 			dataplane.Status.RolloutStatus.Deployment.Selector != "" {
+			d.Labels[consts.OperatorLabelSelector] = dataplane.Status.RolloutStatus.Deployment.Selector
 			d.Spec.Selector.MatchLabels[consts.OperatorLabelSelector] = dataplane.Status.RolloutStatus.Deployment.Selector
 			d.Spec.Template.Labels[consts.OperatorLabelSelector] = dataplane.Status.RolloutStatus.Deployment.Selector
 		}
@@ -290,6 +417,7 @@ func (r *DataPlaneBlueGreenReconciler) initSelectorInRolloutStatus(ctx context.C
 		dataplane.Status.RolloutStatus.Deployment = &operatorv1beta1.DataPlaneRolloutStatusDeployment{}
 	}
 	dataplane.Status.RolloutStatus.Deployment.Selector = uuid.New().String()
+
 	if err := r.Client.Status().Patch(ctx, dataplane, client.MergeFrom(oldDataplane)); err != nil {
 		return err
 	}
@@ -432,6 +560,113 @@ func (r *DataPlaneBlueGreenReconciler) ensureDataPlaneRolloutIngressServiceStatu
 	dataplane.Status.RolloutStatus.Services.Ingress.Name = ingressService.Name
 	dataplane.Status.RolloutStatus.Services.Ingress.Addresses = addresses
 	return r.patchRolloutStatus(ctx, log, old, dataplane)
+}
+
+// ensurePreviewSelectorOverridesLive ensures that the current preview deployment selector overrides the live one.
+// That will make the DataPlane controller modify its live services to point to the preview deployment.
+func (r *DataPlaneBlueGreenReconciler) ensurePreviewSelectorOverridesLive(
+	ctx context.Context,
+	dataplane *operatorv1beta1.DataPlane,
+) (updated bool, err error) {
+	previewSelector := dataplane.Status.RolloutStatus.Deployment.Selector
+	liveSelector := dataplane.Status.Selector
+	// If the live selector is already equal to the preview one, there's nothing to do.
+	if liveSelector == previewSelector {
+		return false, nil
+	}
+
+	oldDp := dataplane.DeepCopy()
+	dataplane.Status.Selector = previewSelector
+	if err := r.Client.Status().Patch(ctx, dataplane, client.MergeFrom(oldDp)); err != nil {
+		return false, fmt.Errorf("failed to change live deployment selector to preview: %w", err)
+	}
+	return true, nil
+}
+
+// waitForLiveServiceSelectorsPropagation waits for a live service of a given type to have the expected selector.
+// It's used to wait for the Admin and Ingress services to have the selector of the preview deployment during promotion.
+func (r *DataPlaneBlueGreenReconciler) waitForLiveServiceSelectorsPropagation(
+	ctx context.Context,
+	dataplane *operatorv1beta1.DataPlane,
+	serviceType consts.ServiceType,
+	expectedSelector map[string]string,
+) (ok bool, err error) {
+	matchingLabels := client.MatchingLabels{
+		"app":                                 dataplane.Name,
+		consts.DataPlaneServiceTypeLabel:      string(serviceType),
+		consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValueLive,
+		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+	}
+
+	services, err := k8sutils.ListServicesForOwner(
+		ctx,
+		r.Client,
+		dataplane.Namespace,
+		dataplane.UID,
+		matchingLabels,
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed listing live Admin API services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+
+	svc, ok := lo.Find(services, func(svc corev1.Service) bool {
+		return cmp.Equal(svc.Spec.Selector, expectedSelector)
+	})
+	_ = svc
+	return ok, nil
+}
+
+// ensurePreviewDeploymentLabeledLive ensures that the preview deployment with a given selector is labeled as live.
+// It's used to mark the preview deployment as live during promotion.
+func (r *DataPlaneBlueGreenReconciler) ensurePreviewDeploymentLabeledLive(
+	ctx context.Context,
+	log logr.Logger,
+	dataplane *operatorv1beta1.DataPlane,
+	selector string,
+) (updated bool, err error) {
+	matchingLabels := client.MatchingLabels{
+		"app":                        dataplane.Name,
+		consts.OperatorLabelSelector: selector,
+	}
+	deployments, err := k8sutils.ListDeploymentsForOwner(
+		ctx,
+		r.Client,
+		dataplane.Namespace,
+		dataplane.UID,
+		matchingLabels,
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed listing preview deployments: %w", err)
+	}
+	if len(deployments) == 0 {
+		return false, errors.New("no preview deployments found")
+	}
+
+	// If there are multiple preview deployments, we will label live only the first one.
+	// It shouldn't happen in practice, but we'll log it just in case.
+	if len(deployments) > 1 {
+		ds := lo.Map(deployments, func(d appsv1.Deployment, _ int) string { return fmt.Sprintf("%s/%s", d.Namespace, d.Name) })
+		info(log, "found multiple preview deployments, expected one, will label live only the first one",
+			dataplane, "deployments", ds)
+	}
+
+	deployment := deployments[0]
+
+	// If the deployment is already labeled as live, we don't need to do anything.
+	if deployment.Labels != nil && deployment.Labels[consts.DataPlaneDeploymentStateLabel] == consts.DataPlaneStateLabelValueLive {
+		return false, nil
+	}
+
+	old := deployment.DeepCopy()
+	if deployment.Labels == nil {
+		deployment.Labels = map[string]string{}
+	}
+	deployment.Labels[consts.DataPlaneDeploymentStateLabel] = consts.DataPlaneStateLabelValueLive
+	if err := r.Client.Patch(ctx, &deployment, client.MergeFrom(old)); err != nil {
+		return false, fmt.Errorf("failed labeling preview deployment %q as live: %w",
+			fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name), err)
+	}
+	return true, nil
 }
 
 // -------------------------------------------------------------------------------
