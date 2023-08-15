@@ -35,6 +35,7 @@ var (
 	webhookCertDir       = ""
 	webhookServerIP      = os.Getenv("GATEWAY_OPERATOR_WEBHOOK_IP")
 	webhookServerPort    = 9443
+	disableCalicoCNI     = strings.ToLower(os.Getenv("KONG_TEST_DISABLE_CALICO")) == "true"
 )
 
 // -----------------------------------------------------------------------------
@@ -67,7 +68,11 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: configuring cluster for testing environment")
 	env, err = testutils.BuildEnvironment(ctx, existingCluster,
-		func(b *environments.Builder) { b.WithCalicoCNI() },
+		func(b *environments.Builder) {
+			if !disableCalicoCNI {
+				b.WithCalicoCNI()
+			}
+		},
 	)
 	exitOnErr(err)
 
