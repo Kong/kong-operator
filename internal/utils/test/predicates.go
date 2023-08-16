@@ -217,7 +217,7 @@ func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName typ
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasService(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		services := MustListDataPlaneProxyServices(t, ctx, dataplane, clients.MgrClient)
+		services := MustListDataPlaneIngressServices(t, ctx, dataplane, clients.MgrClient)
 		return len(services) == 1
 	}, clients.OperatorClient)
 }
@@ -227,7 +227,7 @@ func DataPlaneHasService(t *testing.T, ctx context.Context, dataplaneName types.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, ret *corev1.Service, clients K8sClients) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		services := MustListDataPlaneProxyServices(t, ctx, dataplane, clients.MgrClient)
+		services := MustListDataPlaneIngressServices(t, ctx, dataplane, clients.MgrClient)
 		if len(services) == 1 {
 			if ret != nil {
 				*ret = services[0]
@@ -245,7 +245,7 @@ func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName 
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasServiceAndAddressesInStatus(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		services := MustListDataPlaneProxyServices(t, ctx, dataplane, clients.MgrClient)
+		services := MustListDataPlaneIngressServices(t, ctx, dataplane, clients.MgrClient)
 		if len(services) != 1 {
 			return false
 		}

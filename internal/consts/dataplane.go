@@ -69,9 +69,9 @@ const (
 	// DataPlane admin API.
 	DataPlaneAdminServiceLabelValue ServiceType = "admin"
 
-	// DataPlaneProxyServiceLabelValue indicates that the service is inteded to expose the
+	// DataPlaneIngressServiceLabelValue indicates that the service is inteded to expose the
 	// DataPlane proxy.
-	DataPlaneProxyServiceLabelValue ServiceType = "proxy"
+	DataPlaneIngressServiceLabelValue ServiceType = "ingress"
 
 	// ServiceSelectorOverrideAnnotation is used on the dataplane to override the Selector
 	// of both the admin and proxy services.

@@ -238,7 +238,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		consts.OperatorLabelSelector: dataplane.Status.RolloutStatus.Deployment.Selector,
 	}
 	for _, serviceType := range []consts.ServiceType{
-		consts.DataPlaneProxyServiceLabelValue,
+		consts.DataPlaneIngressServiceLabelValue,
 		consts.DataPlaneAdminServiceLabelValue,
 	} {
 		if ok, err := r.waitForLiveServiceSelectorsPropagation(ctx,
@@ -518,7 +518,7 @@ func (r *DataPlaneBlueGreenReconciler) ensurePreviewIngressService(
 	additionalServiceLabels := map[string]string{
 		consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 	}
-	return ensureProxyServiceForDataPlane(
+	return ensureIngressServiceForDataPlane(
 		ctx,
 		log,
 		r.Client,

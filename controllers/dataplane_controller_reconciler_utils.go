@@ -180,12 +180,12 @@ func ensureDataPlaneIngressServiceAnnotationsUpdated(
 	return shouldUpdate, existingAnnotations, nil
 }
 
-// dataPlaneProxyServiceIsReady returns:
+// dataPlaneIngressServiceIsReady returns:
 //   - true for DataPlanes that do not have the Ingress Service type set as LoadBalancer
 //   - true for DataPlanes that have the Ingress Service type set as LoadBalancer and
 //     which have at least one IP or Hostname in their Ingress Service Status
 //   - false otherwise.
-func dataPlaneProxyServiceIsReady(dataplane *operatorv1beta1.DataPlane, dataplaneProxyService *corev1.Service) bool {
+func dataPlaneIngressServiceIsReady(dataplane *operatorv1beta1.DataPlane, dataplaneIngressService *corev1.Service) bool {
 	// If the DataPlane doesn't have a LoadBalancer set for its Ingress Service
 	// return true.
 	if dataplane.Spec.Network.Services == nil ||
@@ -194,7 +194,7 @@ func dataPlaneProxyServiceIsReady(dataplane *operatorv1beta1.DataPlane, dataplan
 		return true
 	}
 
-	ingressStatuses := dataplaneProxyService.Status.LoadBalancer.Ingress
+	ingressStatuses := dataplaneIngressService.Status.LoadBalancer.Ingress
 	// If there are ingress statuses attached to the ingress Service, check
 	// if there are IPs of Hostnames specified.
 	// If that's the case, the DataPlane is Ready.

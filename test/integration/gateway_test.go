@@ -126,7 +126,7 @@ func TestGatewayEssentials(t *testing.T) {
 
 	t.Log("verifying services managed by the dataplane after deletion")
 	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService, clients), time.Minute, time.Second)
-	services := testutils.MustListDataPlaneProxyServices(t, ctx, &dataplane, clients.MgrClient)
+	services := testutils.MustListDataPlaneIngressServices(t, ctx, &dataplane, clients.MgrClient)
 	require.Len(t, services, 1)
 	service := services[0]
 

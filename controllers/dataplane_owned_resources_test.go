@@ -18,7 +18,7 @@ import (
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
-func TestEnsureProxyServiceForDataPlane(t *testing.T) {
+func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 	testCases := []struct {
 		name                     string
 		dataplane                *operatorv1beta1.DataPlane
@@ -123,7 +123,7 @@ func TestEnsureProxyServiceForDataPlane(t *testing.T) {
 				Build()
 
 			ctx := context.Background()
-			existingSvc, err := k8sresources.GenerateNewProxyServiceForDataplane(tc.dataplane)
+			existingSvc, err := k8sresources.GenerateNewIngressServiceForDataplane(tc.dataplane)
 			require.NoError(t, err)
 			k8sutils.SetOwnerForObject(existingSvc, tc.dataplane)
 			addLabelForDataplane(existingSvc)
@@ -135,7 +135,7 @@ func TestEnsureProxyServiceForDataPlane(t *testing.T) {
 			// create dataplane resource.
 			err = fakeClient.Create(ctx, tc.dataplane)
 			require.NoError(t, err, "should create dataplane successfully")
-			res, svc, err := ensureProxyServiceForDataPlane(
+			res, svc, err := ensureIngressServiceForDataPlane(
 				ctx,
 				logr.Discard(),
 				fakeClient,

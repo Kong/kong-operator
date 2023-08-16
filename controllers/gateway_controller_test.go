@@ -150,10 +150,10 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				},
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-proxy-service",
+						Name:      "test-ingress-service",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneProxyServiceLabelValue),
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneIngressServiceLabelValue),
 						},
 					},
 				},
@@ -193,7 +193,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 
 				t.Log("adding a ClusterIP to the dataplane service")
 				dataplaneService := &corev1.Service{}
-				require.NoError(t, reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "test-proxy-service"}, dataplaneService))
+				require.NoError(t, reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "test-ingress-service"}, dataplaneService))
 				dataplaneService.Spec = corev1.ServiceSpec{
 					ClusterIP: clusterIP,
 					Type:      corev1.ServiceTypeClusterIP,
@@ -325,8 +325,8 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				if gatewaySubResource.GetName() == "test-controlplane" {
 					controlplane := gatewaySubResource.(*operatorv1alpha1.ControlPlane)
 					_ = setControlPlaneDefaults(&controlplane.Spec.ControlPlaneOptions, map[string]struct{}{}, controlPlaneDefaultsArgs{
-						namespace:                 "test-namespace",
-						dataplaneProxyServiceName: "test-proxy-service",
+						namespace:                   "test-namespace",
+						dataplaneIngressServiceName: "test-ingress-service",
 					})
 					for _, controlplaneSubResource := range tc.controlplaneSubResources {
 						k8sutils.SetOwnerForObject(controlplaneSubResource, gatewaySubResource)

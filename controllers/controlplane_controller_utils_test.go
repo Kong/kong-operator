@@ -15,12 +15,12 @@ import (
 
 func TestSetControlPlaneDefaults(t *testing.T) {
 	testCases := []struct {
-		name                      string
-		spec                      *operatorv1alpha1.ControlPlaneOptions
-		namespace                 string
-		dataplaneProxyServiceName string
-		changed                   bool
-		newSpec                   *operatorv1alpha1.ControlPlaneOptions
+		name                        string
+		spec                        *operatorv1alpha1.ControlPlaneOptions
+		namespace                   string
+		dataplaneIngressServiceName string
+		changed                     bool
+		newSpec                     *operatorv1alpha1.ControlPlaneOptions
 	}{
 		/* FIXME - we've broken the defaults
 		{
@@ -67,7 +67,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			spec:                      &operatorv1alpha1.ControlPlaneOptions{},
 			changed:                   true,
 			namespace:                 "test-ns",
-			dataplaneProxyServiceName: "kong-proxy",
+			dataplaneIngressServiceName: "kong-proxy",
 			newSpec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -146,9 +146,9 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 					},
 				},
 			},
-			changed:                   true,
-			namespace:                 "test-ns",
-			dataplaneProxyServiceName: "kong-proxy",
+			changed:                     true,
+			namespace:                   "test-ns",
+			dataplaneIngressServiceName: "kong-proxy",
 			newSpec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -261,9 +261,9 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 					},
 				},
 			},
-			namespace:                 "test-ns",
-			dataplaneProxyServiceName: "kong-proxy",
-			changed:                   false,
+			namespace:                   "test-ns",
+			dataplaneIngressServiceName: "kong-proxy",
+			changed:                     false,
 			newSpec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -326,10 +326,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			changed := setControlPlaneDefaults(tc.spec, map[string]struct{}{}, controlPlaneDefaultsArgs{
-				dataPlanePodIP:            "1.2.3.4",
-				namespace:                 tc.namespace,
-				dataplaneProxyServiceName: tc.dataplaneProxyServiceName,
-				dataplaneAdminServiceName: "kong-admin",
+				dataPlanePodIP:              "1.2.3.4",
+				namespace:                   tc.namespace,
+				dataplaneIngressServiceName: tc.dataplaneIngressServiceName,
+				dataplaneAdminServiceName:   "kong-admin",
 			})
 			require.Equalf(t, tc.changed, changed,
 				"should return the same value for test case %d:%s", index, tc.name)

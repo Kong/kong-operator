@@ -208,7 +208,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-proxy-service",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneProxyServiceLabelValue),
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneIngressServiceLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -383,7 +383,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-proxy-service",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneProxyServiceLabelValue),
+							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneIngressServiceLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{

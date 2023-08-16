@@ -18,10 +18,10 @@ import (
 
 // controlPlaneDefaultsArgs contains the parameters to pass to setControlPlaneDefaults
 type controlPlaneDefaultsArgs struct {
-	namespace                 string
-	dataPlanePodIP            string
-	dataplaneProxyServiceName string
-	dataplaneAdminServiceName string
+	namespace                   string
+	dataPlanePodIP              string
+	dataplaneIngressServiceName string
+	dataplaneAdminServiceName   string
 }
 
 // -----------------------------------------------------------------------------
@@ -89,11 +89,11 @@ func setControlPlaneDefaults(
 		changed = true
 	}
 
-	if args.namespace != "" && args.dataplaneProxyServiceName != "" {
+	if args.namespace != "" && args.dataplaneIngressServiceName != "" {
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_PUBLISH_SERVICE"]; !isOverrideDisabled {
-			publishService := controllerPublishService(args.dataplaneProxyServiceName, args.namespace)
+			publishService := controllerPublishService(args.dataplaneIngressServiceName, args.namespace)
 			if envValueByName(container.Env, "CONTROLLER_PUBLISH_SERVICE") != publishService {
-				container.Env = updateEnv(container.Env, "CONTROLLER_PUBLISH_SERVICE", controllerPublishService(args.dataplaneProxyServiceName, args.namespace))
+				container.Env = updateEnv(container.Env, "CONTROLLER_PUBLISH_SERVICE", controllerPublishService(args.dataplaneIngressServiceName, args.namespace))
 				changed = true
 			}
 		}

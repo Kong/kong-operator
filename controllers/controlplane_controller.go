@@ -194,7 +194,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	trace(log, "retrieving connected dataplane", controlplane)
 	dataplane, err := gatewayutils.GetDataPlaneForControlPlane(ctx, r.Client, controlplane)
-	var dataplaneProxyServiceName, dataplaneAdminServiceName string
+	var dataplaneIngressServiceName, dataplaneAdminServiceName string
 	var dataPlanePodIP string
 	if err != nil {
 		if !errors.Is(err, operatorerrors.ErrDataPlaneNotSet) {
@@ -202,9 +202,9 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		debug(log, "no existing dataplane for controlplane", controlplane, "error", err)
 	} else {
-		dataplaneProxyServiceName, err = gatewayutils.GetDataplaneServiceName(ctx, r.Client, dataplane, consts.DataPlaneProxyServiceLabelValue)
+		dataplaneIngressServiceName, err = gatewayutils.GetDataplaneServiceName(ctx, r.Client, dataplane, consts.DataPlaneIngressServiceLabelValue)
 		if err != nil {
-			debug(log, "no existing dataplane proxy service for controlplane", controlplane, "error", err)
+			debug(log, "no existing dataplane ingress service for controlplane", controlplane, "error", err)
 			return ctrl.Result{}, err
 		}
 
@@ -234,10 +234,10 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		&controlplane.Spec.ControlPlaneOptions,
 		nil,
 		controlPlaneDefaultsArgs{
-			dataPlanePodIP:            dataPlanePodIP,
-			namespace:                 controlplane.Namespace,
-			dataplaneProxyServiceName: dataplaneProxyServiceName,
-			dataplaneAdminServiceName: dataplaneAdminServiceName,
+			dataPlanePodIP:              dataPlanePodIP,
+			namespace:                   controlplane.Namespace,
+			dataplaneIngressServiceName: dataplaneIngressServiceName,
+			dataplaneAdminServiceName:   dataplaneAdminServiceName,
 		})
 	if changed {
 		debug(log, "updating ControlPlane resource after defaults are set since resource has changed", controlplane)
@@ -253,7 +253,7 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	trace(log, "validating that the ControlPlane's DataPlane configuration is up to date", controlplane)
-	if err = r.ensureDataPlaneConfiguration(ctx, controlplane, dataplaneProxyServiceName); err != nil {
+	if err = r.ensureDataPlaneConfiguration(ctx, controlplane, dataplaneIngressServiceName); err != nil {
 		if k8serrors.IsConflict(err) {
 			debug(
 				log,

@@ -122,7 +122,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Namespace: "test-namespace",
 						Labels: map[string]string{
 							"app":                             "test-dataplane",
-							consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneProxyServiceLabelValue),
+							consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
 							consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
 						},
 					},
@@ -160,7 +160,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Labels: map[string]string{
 							"app":                             "test-dataplane",
 							consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
-							consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneProxyServiceLabelValue),
+							consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
 						},
 					},
 				},
@@ -176,7 +176,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err)
 
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
-				require.EqualError(t, err, "number of DataPlane proxy services reduced")
+				require.EqualError(t, err, "number of DataPlane ingress services reduced")
 
 				svcToBeDeleted, svcToBeKept := &corev1.Service{}, &corev1.Service{}
 				err = reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "svc-proxy-to-delete"}, svcToBeDeleted)
@@ -254,7 +254,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Labels: map[string]string{
 							"app":                             "test-dataplane",
 							consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
-							consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneProxyServiceLabelValue),
+							consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
 						},
 					},
 				},
@@ -346,7 +346,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Labels: map[string]string{
 							"app":                             "test-dataplane",
 							consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
-							consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneProxyServiceLabelValue),
+							consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -471,7 +471,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Labels: map[string]string{
 							"app":                             "test-dataplane",
 							consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
-							consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneProxyServiceLabelValue),
+							consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -635,7 +635,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Labels: map[string]string{
 							"app":                             "test-dataplane",
 							consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
-							consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneProxyServiceLabelValue),
+							consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{

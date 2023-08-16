@@ -265,9 +265,9 @@ func ensureAdminServiceForDataPlane(
 	return Created, generatedService, nil
 }
 
-// ensureProxyServiceForDataPlane ensures ingress service with metadata and spec
+// ensureIngressServiceForDataPlane ensures ingress service with metadata and spec
 // generated from the dataplane.
-func ensureProxyServiceForDataPlane(
+func ensureIngressServiceForDataPlane(
 	ctx context.Context,
 	log logr.Logger,
 	cl client.Client,
@@ -277,7 +277,7 @@ func ensureProxyServiceForDataPlane(
 ) (CreatedUpdatedOrNoop, *corev1.Service, error) {
 	matchingLabels := client.MatchingLabels{
 		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneProxyServiceLabelValue),
+		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
 	}
 	for k, v := range additionalServiceLabels {
 		matchingLabels[k] = v
@@ -290,7 +290,7 @@ func ensureProxyServiceForDataPlane(
 		matchingLabels,
 	)
 	if err != nil {
-		return Noop, nil, fmt.Errorf("failed to list proxy services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		return Noop, nil, fmt.Errorf("failed to list ingress services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 
 	count := len(services)
@@ -298,19 +298,19 @@ func ensureProxyServiceForDataPlane(
 		if err := k8sreduce.ReduceServices(ctx, cl, services); err != nil {
 			return Noop, nil, err
 		}
-		return Noop, nil, errors.New("number of DataPlane proxy services reduced")
+		return Noop, nil, errors.New("number of DataPlane ingress services reduced")
 	}
 
 	if len(additionalServiceLabels) > 0 {
 		opts = append(opts, matchingLabelsToServiceOpt(additionalServiceLabels))
 	}
 
-	generatedService, err := k8sresources.GenerateNewProxyServiceForDataplane(dataplane, opts...)
+	generatedService, err := k8sresources.GenerateNewIngressServiceForDataplane(dataplane, opts...)
 	if err != nil {
 		return Noop, nil, err
 	}
 	addLabelForDataplane(generatedService)
-	addAnnotationsForDataplaneProxyService(generatedService, *dataplane)
+	addAnnotationsForDataplaneIngressService(generatedService, *dataplane)
 	k8sutils.SetOwnerForObject(generatedService, dataplane)
 
 	if count == 1 {

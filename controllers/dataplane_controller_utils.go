@@ -58,7 +58,7 @@ func addLabelForDataplane(obj client.Object) {
 	obj.SetLabels(labels)
 }
 
-func addAnnotationsForDataplaneProxyService(obj client.Object, dataplane operatorv1beta1.DataPlane) {
+func addAnnotationsForDataplaneIngressService(obj client.Object, dataplane operatorv1beta1.DataPlane) {
 	specAnnotations := extractDataPlaneIngressServiceAnnotations(&dataplane)
 	if specAnnotations == nil {
 		return

@@ -261,7 +261,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		dataplane.UID,
 		client.MatchingLabels{
 			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneProxyServiceLabelValue),
+			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
 		},
 	)
 	if err != nil {

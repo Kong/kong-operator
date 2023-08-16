@@ -93,7 +93,7 @@ func (r *GatewayReconciler) getGatewayAddresses(
 		dataplane.UID,
 		client.MatchingLabels{
 			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneProxyServiceLabelValue),
+			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
 		},
 	)
 	if err != nil {

@@ -42,15 +42,15 @@ func GenerateNewServiceForCertificateConfig(namespace, name string) *corev1.Serv
 	}
 }
 
-// GenerateNewProxyServiceForDataplane is a helper to generate the dataplane proxy service
-func GenerateNewProxyServiceForDataplane(dataplane *operatorv1beta1.DataPlane, opts ...ServiceOpt) (*corev1.Service, error) {
-	proxyService := &corev1.Service{
+// GenerateNewIngressServiceForDataplane is a helper to generate the dataplane ingress service
+func GenerateNewIngressServiceForDataplane(dataplane *operatorv1beta1.DataPlane, opts ...ServiceOpt) (*corev1.Service, error) {
+	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,
-			GenerateName: fmt.Sprintf("%s-proxy-%s-", consts.DataPlanePrefix, dataplane.Name),
+			GenerateName: fmt.Sprintf("%s-ingress-%s-", consts.DataPlanePrefix, dataplane.Name),
 			Labels: map[string]string{
 				"app":                            dataplane.Name,
-				consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneProxyServiceLabelValue),
+				consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneIngressServiceLabelValue),
 			},
 		},
 		Spec: corev1.ServiceSpec{
@@ -74,7 +74,7 @@ func GenerateNewProxyServiceForDataplane(dataplane *operatorv1beta1.DataPlane, o
 	}
 
 	for _, opt := range opts {
-		opt(proxyService)
+		opt(svc)
 	}
 
 	if selectorOverride, ok := dataplane.Annotations[consts.ServiceSelectorOverrideAnnotation]; ok {
@@ -82,19 +82,19 @@ func GenerateNewProxyServiceForDataplane(dataplane *operatorv1beta1.DataPlane, o
 		if err != nil {
 			return nil, err
 		}
-		proxyService.Spec.Selector = newSelector
+		svc.Spec.Selector = newSelector
 	}
 
-	k8sutils.SetOwnerForObject(proxyService, dataplane)
+	k8sutils.SetOwnerForObject(svc, dataplane)
 
-	return proxyService, nil
+	return svc, nil
 }
 
-const DefaultDataPlaneProxyServiceType = corev1.ServiceTypeLoadBalancer
+const DefaultDataPlaneIngressServiceType = corev1.ServiceTypeLoadBalancer
 
 func getDataPlaneIngressServiceType(dataplane *operatorv1beta1.DataPlane) corev1.ServiceType {
 	if dataplane == nil || dataplane.Spec.Network.Services == nil {
-		return DefaultDataPlaneProxyServiceType
+		return DefaultDataPlaneIngressServiceType
 	}
 
 	return dataplane.Spec.Network.Services.Ingress.Type

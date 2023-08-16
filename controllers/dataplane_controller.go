@@ -120,13 +120,13 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	case Noop:
 	}
 
-	trace(log, "exposing DataPlane deployment proxy via service", dataplane)
+	trace(log, "exposing DataPlane deployment via service", dataplane)
 	additionalServiceLabels := map[string]string{
 		consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
 	}
-	serviceRes, dataplaneProxyService, err := ensureProxyServiceForDataPlane(
+	serviceRes, dataplaneIngressService, err := ensureIngressServiceForDataPlane(
 		ctx,
-		getLogger(ctx, "dataplane_proxy_service", r.DevelopmentMode),
+		getLogger(ctx, "dataplane_ingress_service", r.DevelopmentMode),
 		r.Client,
 		dataplane,
 		additionalServiceLabels,
@@ -136,16 +136,16 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 	if serviceRes == Created || serviceRes == Updated {
-		debug(log, "DataPlane proxy service created/updated", dataplane, "service", dataplaneProxyService.Name)
+		debug(log, "DataPlane ingress service created/updated", dataplane, "service", dataplaneIngressService.Name)
 		return ctrl.Result{}, nil
 	}
 
-	dataplaneServiceChanged, err := r.ensureDataPlaneServiceStatus(ctx, log, dataplane, dataplaneProxyService.Name)
+	dataplaneServiceChanged, err := r.ensureDataPlaneServiceStatus(ctx, log, dataplane, dataplaneIngressService.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if dataplaneServiceChanged {
-		debug(log, "proxy service updated in the dataplane status", dataplane)
+		debug(log, "ingress service updated in the dataplane status", dataplane)
 		return ctrl.Result{}, nil // dataplane status update will trigger reconciliation
 	}
 
@@ -168,13 +168,13 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
-	trace(log, "checking readiness of DataPlane service", dataplaneProxyService)
-	if dataplaneProxyService.Spec.ClusterIP == "" {
+	trace(log, "checking readiness of DataPlane service", dataplaneIngressService)
+	if dataplaneIngressService.Spec.ClusterIP == "" {
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	trace(log, "ensuring DataPlane has service addresses in status", dataplaneProxyService)
-	if updated, err := r.ensureDataPlaneAddressesStatus(ctx, log, dataplane, dataplaneProxyService); err != nil {
+	trace(log, "ensuring DataPlane has service addesses in status", dataplaneIngressService)
+	if updated, err := r.ensureDataPlaneAddressesStatus(ctx, log, dataplane, dataplaneIngressService); err != nil {
 		return ctrl.Result{}, err
 	} else if updated {
 		debug(log, "dataplane status.Addresses updated", dataplane)
@@ -204,7 +204,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	if dataplaneDeployment.Status.Replicas == 0 ||
 		dataplaneDeployment.Status.AvailableReplicas < dataplaneDeployment.Status.Replicas ||
-		!dataPlaneProxyServiceIsReady(dataplane, dataplaneProxyService) {
+		!dataPlaneIngressServiceIsReady(dataplane, dataplaneIngressService) {
 		trace(log, "deployment for DataPlane not ready yet", dataplane)
 
 		// Set Ready to false for dataplane as the underlying deployment is not ready.

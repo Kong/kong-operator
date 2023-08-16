@@ -85,7 +85,7 @@ func MustListNetworkPoliciesForGateway(t *testing.T, ctx context.Context, gatewa
 
 // MustListServices is a helper function for tests that
 // conveniently lists all proxy services managed by a given dataplane.
-func MustListDataPlaneProxyServices(t *testing.T, ctx context.Context, dataplane *operatorv1beta1.DataPlane, mgrClient client.Client) []corev1.Service {
+func MustListDataPlaneIngressServices(t *testing.T, ctx context.Context, dataplane *operatorv1beta1.DataPlane, mgrClient client.Client) []corev1.Service {
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
 		mgrClient,
@@ -93,7 +93,7 @@ func MustListDataPlaneProxyServices(t *testing.T, ctx context.Context, dataplane
 		dataplane.UID,
 		client.MatchingLabels{
 			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneProxyServiceLabelValue),
+			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
 		},
 	)
 	require.NoError(t, err)
