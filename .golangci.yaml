@@ -65,6 +65,28 @@ linters-settings:
         alias: gwtypes
   revive:
     rules:
+      - name: errorf
+        severity: warning
+        disabled: false
+      - name: error-strings
+        severity: warning
+        disabled: false
+      - name: error-naming
+        severity: warning
+        disabled: false
+      - name: duplicated-imports
+        severity: warning
+        disabled: false
+      - name: empty-block
+        severity: warning
+        disabled: false
+      - name: exported
+        severity: warning
+        disabled: false
+        arguments:
+          - "checkPrivateReceivers"
+          # TODO: enable this when ready to refactor exported types that stutter at call site.
+          - "disableStutteringCheck"
       - name: context-as-argument
         # TODO: re-add this rule after https://github.com/golangci/golangci-lint/issues/3280
         # is resolved and released.
@@ -83,3 +105,11 @@ linters-settings:
 issues:
   max-same-issues: 0
   fix: true
+  include:
+    - EXC0012
+  exclude-rules:
+    # Exclude checking exported comments in internal/ which cannot be used from outside.
+    - path: internal/
+      linters:
+        - revive
+      text: "exported: exported"

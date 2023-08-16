@@ -18,7 +18,6 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
-	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/internal/versions"
 )
@@ -53,7 +52,7 @@ func ensureDeploymentForDataPlane(
 	developmentMode bool,
 	dataplane *operatorv1beta1.DataPlane,
 	additionalDeploymentLabels client.MatchingLabels,
-	opts ...resources.DeploymentOpt,
+	opts ...k8sresources.DeploymentOpt,
 ) (res CreatedUpdatedOrNoop, deploy *appsv1.Deployment, err error) {
 	matchingLabels := client.MatchingLabels{
 		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,

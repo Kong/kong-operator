@@ -3,9 +3,11 @@ package controllers
 import (
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 )
@@ -14,12 +16,12 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 	testcases := []struct {
 		Name            string
 		KongProxyListen string
-		Expected        KongListenConfig
+		Expected        kongListenConfig
 	}{
 		{
 			Name:            "basic http",
 			KongProxyListen: "0.0.0.0:8001 reuseport backlog=16384",
-			Expected: KongListenConfig{
+			Expected: kongListenConfig{
 				Endpoint: &proxyListenEndpoint{
 					Address: "0.0.0.0",
 					Port:    8001,
@@ -29,7 +31,7 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 		{
 			Name:            "basic https",
 			KongProxyListen: "0.0.0.0:8443 http2 ssl reuseport backlog=16384",
-			Expected: KongListenConfig{
+			Expected: kongListenConfig{
 				SSLEndpoint: &proxyListenEndpoint{
 					Address: "0.0.0.0",
 					Port:    8443,
@@ -39,7 +41,7 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 		{
 			Name:            "basic http + https",
 			KongProxyListen: "0.0.0.0:8001 reuseport backlog=16384, 0.0.0.0:8443 http2 ssl reuseport backlog=16384",
-			Expected: KongListenConfig{
+			Expected: kongListenConfig{
 				Endpoint: &proxyListenEndpoint{
 					Address: "0.0.0.0",
 					Port:    8001,
@@ -81,7 +83,7 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			addresses: []gwtypes.GatewayAddress{
 				{
 					Value: "198.51.100.1",
-					Type:  &IPAddressType,
+					Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
 				},
 			},
 			wantErr: false,
@@ -119,11 +121,11 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			addresses: []gwtypes.GatewayAddress{
 				{
 					Value: "203.0.113.1",
-					Type:  &IPAddressType,
+					Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
 				},
 				{
 					Value: "203.0.113.2",
-					Type:  &IPAddressType,
+					Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
 				},
 			},
 			wantErr: false,
@@ -151,11 +153,11 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			addresses: []gwtypes.GatewayAddress{
 				{
 					Value: "one.example.net",
-					Type:  &HostnameAddressType,
+					Type:  lo.ToPtr(gatewayv1beta1.HostnameAddressType),
 				},
 				{
 					Value: "two.example.net",
-					Type:  &HostnameAddressType,
+					Type:  lo.ToPtr(gatewayv1beta1.HostnameAddressType),
 				},
 			},
 			wantErr: false,
@@ -184,15 +186,15 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			addresses: []gwtypes.GatewayAddress{
 				{
 					Value: "203.0.113.1",
-					Type:  &IPAddressType,
+					Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
 				},
 				{
 					Value: "one.example.net",
-					Type:  &HostnameAddressType,
+					Type:  lo.ToPtr(gatewayv1beta1.HostnameAddressType),
 				},
 				{
 					Value: "two.example.net",
-					Type:  &HostnameAddressType,
+					Type:  lo.ToPtr(gatewayv1beta1.HostnameAddressType),
 				},
 			},
 			wantErr: false,

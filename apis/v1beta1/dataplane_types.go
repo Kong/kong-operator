@@ -85,6 +85,7 @@ type DataPlaneNetworkOptions struct {
 	Services *DataPlaneServices `json:"services,omitempty"`
 }
 
+// DataPlaneServices contains Services related DataPlane configuration.
 type DataPlaneServices struct {
 	// Ingress is the Kubernetes Service that will be used to expose ingress
 	// traffic for the DataPlane. Here you can determine whether the DataPlane
@@ -236,6 +237,8 @@ type DataPlaneRolloutStatusDeployment struct {
 	Selector string `json:"selector,omitempty"`
 }
 
+// RolloutStatusService is a struct which contains status information about
+// services that are exposed as part of the rollout.
 type RolloutStatusService struct {
 	// Name indicates the name of the service.
 	Name string `json:"name"`

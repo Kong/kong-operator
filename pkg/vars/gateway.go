@@ -26,12 +26,14 @@ const (
 	ControllerNameOverrideVar = "KONG_CONTROLLER_NAME"
 )
 
+// ControllerName returns the currently set controller name.
 func ControllerName() string {
 	_controllerNameLock.RLock()
 	defer _controllerNameLock.RUnlock()
 	return _controllerName
 }
 
+// SetControllerName sets the controller name.
 func SetControllerName(name string) {
 	_controllerNameLock.Lock()
 	defer _controllerNameLock.Unlock()

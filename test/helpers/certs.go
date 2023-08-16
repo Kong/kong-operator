@@ -19,6 +19,7 @@ import (
 // Certificate test helper functions and types
 // -----------------------------------------------------------------------------
 
+// Cert represents a TLS certificate that can be used for testing purposes.
 type Cert struct {
 	Cert    *x509.Certificate
 	CertPEM *bytes.Buffer

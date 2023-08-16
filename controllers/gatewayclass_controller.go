@@ -78,10 +78,12 @@ type gatewayClassDecorator struct {
 	*gatewayv1beta1.GatewayClass
 }
 
+// GetConditions returns status conditions.
 func (gwc *gatewayClassDecorator) GetConditions() []metav1.Condition {
 	return gwc.Status.Conditions
 }
 
+// SetConditions sets status conditions.
 func (gwc *gatewayClassDecorator) SetConditions(conditions []metav1.Condition) {
 	gwc.Status.Conditions = conditions
 }

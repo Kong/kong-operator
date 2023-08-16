@@ -55,12 +55,23 @@ type loggerShim struct {
 	logger logr.Logger
 }
 
-func (l loggerShim) Debug(msg string)   { l.logger.V(logging.DebugLevel.Value()).Info(msg) }
-func (l loggerShim) Info(msg string)    { l.logger.V(logging.DebugLevel.Value()).Info(msg) }
+// Debug logs on debug level.
+func (l loggerShim) Debug(msg string) { l.logger.V(logging.DebugLevel.Value()).Info(msg) }
+
+// Info logs on info level.
+func (l loggerShim) Info(msg string) { l.logger.V(logging.DebugLevel.Value()).Info(msg) }
+
+// Warning logs on warning level.
 func (l loggerShim) Warning(msg string) { l.logger.V(logging.InfoLevel.Value()).Info(msg) }
-func (l loggerShim) Err(msg string)     { l.logger.V(logging.InfoLevel.Value()).Info(msg) }
-func (l loggerShim) Crit(msg string)    { l.logger.V(logging.InfoLevel.Value()).Info(msg) }
-func (l loggerShim) Emerg(msg string)   { l.logger.V(logging.InfoLevel.Value()).Info(msg) }
+
+// Err logs on error level.
+func (l loggerShim) Err(msg string) { l.logger.V(logging.InfoLevel.Value()).Info(msg) }
+
+// Crit logs on critical level.
+func (l loggerShim) Crit(msg string) { l.logger.V(logging.InfoLevel.Value()).Info(msg) }
+
+// Emerg logs on emergency level.
+func (l loggerShim) Emerg(msg string) { l.logger.V(logging.InfoLevel.Value()).Info(msg) }
 
 var caLoggerInit sync.Once
 

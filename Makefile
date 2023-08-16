@@ -217,7 +217,7 @@ build: generate
 
 .PHONY: lint
 lint: golangci-lint
-	$(GOLANGCI_LINT) run -v
+	$(GOLANGCI_LINT) run -v --config .golangci.yaml
 
 .PHONY: verify
 verify: verify.generators verify.manifests verify.bundle

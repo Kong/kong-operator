@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -27,11 +28,6 @@ import (
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
-)
-
-var (
-	IPAddressType       = gatewayv1beta1.IPAddressType
-	HostnameAddressType = gatewayv1beta1.HostnameAddressType
 )
 
 // -----------------------------------------------------------------------------
@@ -126,13 +122,13 @@ func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayAddress, 
 			if serviceAddr.IP != "" {
 				addresses = append(addresses, gwtypes.GatewayAddress{
 					Value: serviceAddr.IP,
-					Type:  &IPAddressType,
+					Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
 				})
 			}
 			if serviceAddr.Hostname != "" {
 				addresses = append(addresses, gwtypes.GatewayAddress{
 					Value: serviceAddr.Hostname,
-					Type:  &HostnameAddressType,
+					Type:  lo.ToPtr(gatewayv1beta1.HostnameAddressType),
 				})
 			}
 		}
@@ -144,7 +140,7 @@ func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayAddress, 
 		}
 		addresses = append(addresses, gwtypes.GatewayAddress{
 			Value: svc.Spec.ClusterIP,
-			Type:  &IPAddressType,
+			Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
 		})
 	}
 
@@ -455,10 +451,12 @@ func gatewayConditionsAware(gw *gwtypes.Gateway) gatewayConditionsAwareT {
 	}
 }
 
+// GetConditions returns the status conditions.
 func (g gatewayConditionsAwareT) GetConditions() []metav1.Condition {
 	return g.Status.Conditions
 }
 
+// SetConditions sets the status conditions.
 func (g gatewayConditionsAwareT) SetConditions(conditions []metav1.Condition) {
 	g.Status.Conditions = conditions
 }
@@ -587,7 +585,7 @@ type proxyListenEndpoint struct {
 	Port    int
 }
 
-type KongListenConfig struct {
+type kongListenConfig struct {
 	Endpoint    *proxyListenEndpoint
 	SSLEndpoint *proxyListenEndpoint
 }
@@ -599,8 +597,8 @@ type KongListenConfig struct {
 // One can find more information about the kong listen format at:
 // - https://docs.konghq.com/gateway/3.0.x/reference/configuration/#admin_listen
 // - https://docs.konghq.com/gateway/3.0.x/reference/configuration/#proxy_listen
-func parseKongListenEnv(str string) (KongListenConfig, error) {
-	kongListenConfig := KongListenConfig{}
+func parseKongListenEnv(str string) (kongListenConfig, error) {
+	kongListenConfig := kongListenConfig{}
 
 	for _, s := range strings.Split(str, ",") {
 		s = strings.TrimPrefix(s, " ")

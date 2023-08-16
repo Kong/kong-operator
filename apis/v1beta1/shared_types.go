@@ -45,6 +45,8 @@ type BlueGreenStrategy struct {
 	Promotion Promotion `json:"promotion"`
 }
 
+// Promotion is contains the fields that define how the operator handles
+// promotion of resources.
 type Promotion struct {
 	// Strategy indicates how you want the operator to handle the promotion of
 	// the preview (green) resources (Deployments and Services) after all workflows
@@ -56,6 +58,7 @@ type Promotion struct {
 	Strategy PromotionStrategy `json:"strategy"`
 }
 
+// PromotionStrategy is the type of promotion strategy consts.
 type PromotionStrategy string
 
 const (

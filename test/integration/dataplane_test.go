@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/gateway-operator/apis/v1beta1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -209,12 +208,12 @@ func TestDataPlaneUpdate(t *testing.T) {
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	dataplane := &v1beta1.DataPlane{
+	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dataplaneName.Namespace,
 			Name:      dataplaneName.Name,
 		},
-		Spec: v1beta1.DataPlaneSpec{
+		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
@@ -302,8 +301,8 @@ func TestDataPlaneUpdate(t *testing.T) {
 		return testEnv == "after_update"
 	}, testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
 
-	dataPlaneConditionPredicate := func(c *metav1.Condition) func(dataplane *v1beta1.DataPlane) bool {
-		return func(dataplane *v1beta1.DataPlane) bool {
+	dataPlaneConditionPredicate := func(c *metav1.Condition) func(dataplane *operatorv1beta1.DataPlane) bool {
+		return func(dataplane *operatorv1beta1.DataPlane) bool {
 			for _, condition := range dataplane.Status.Conditions {
 				if condition.Type == c.Type && condition.Status == c.Status {
 					return true
@@ -367,14 +366,14 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	dataplane := &v1beta1.DataPlane{
+	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dataplaneName.Namespace,
 			Name:      dataplaneName.Name,
 		},
-		Spec: v1beta1.DataPlaneSpec{
-			DataPlaneOptions: v1beta1.DataPlaneOptions{
-				Deployment: v1beta1.DataPlaneDeploymentOptions{
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						Replicas: lo.ToPtr(int32(2)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
