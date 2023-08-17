@@ -1,6 +1,6 @@
 //go:build third_party
 
-package third_party
+package kustomize
 
 import (
 	_ "sigs.k8s.io/kustomize/kustomize/v4"

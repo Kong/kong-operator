@@ -95,7 +95,7 @@ controller-gen: ## Download controller-gen locally if necessary.
 KUSTOMIZE = $(PROJECT_DIR)/bin/kustomize
 .PHONY: kustomize
 kustomize: ## Download kustomize locally if necessary.
-	@$(MAKE) _download_tool TOOL=kustomize
+	@$(MAKE) _download_tool_own TOOL=kustomize
 
 CLIENT_GEN = $(PROJECT_DIR)/bin/client-gen
 .PHONY: client-gen
