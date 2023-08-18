@@ -390,18 +390,28 @@ test.unit.pretty:
 
 .PHONY: _test.integration
 _test.integration: gotestsum
-	GOFLAGS="-tags=integration_tests" \
+	GOFLAGS=$(GOFLAGS) \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-race \
-		-coverprofile=coverage.integration.out \
+		-coverprofile=$(COVERPROFILE) \
 		./test/integration/...
 
 .PHONY: test.integration
 test.integration:
 	@$(MAKE) _test.integration \
-		GOTESTFLAGS="$(GOTESTFLAGS)"
+		GOTESTFLAGS="$(GOTESTFLAGS)" \
+		COVERPROFILE="coverage.integration.out" \
+		GOFLAGS="-tags=integration_tests"
+
+.PHONY: test.integration_bluegreen
+test.integration_bluegreen:
+	@$(MAKE) _test.integration \
+		GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER="true" \
+		GOTESTFLAGS="$(GOTESTFLAGS)" \
+		COVERPROFILE="coverage.integration-bluegreen.out" \
+		GOFLAGS="-tags=integration_tests_bluegreen"
 
 .PHONY: _test.e2e
 _test.e2e: gotestsum

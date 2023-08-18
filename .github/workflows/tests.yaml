@@ -168,6 +168,46 @@ jobs:
         name: tests-report
         path: integration-tests.xml
 
+  integration-tests-bluegreen:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: setup golang
+      uses: actions/setup-go@v4
+      with:
+        go-version: '^1.19'
+
+    - name: run integration tests
+      run: make test.integration_bluegreen
+      env:
+        KONG_CONTROLLER_OUT: stdout
+        GOTESTSUM_JUNITFILE: "integration-tests-bluegreen.xml"
+
+    - name: upload diagnostics
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
+    - name: collect test coverage
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage
+        path: coverage.integration-bluegreen.out
+
+    - name: collect test report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: integration-tests-bluegreen-.xml
+
   e2e-tests:
     runs-on: ubuntu-latest
     steps:

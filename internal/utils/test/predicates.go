@@ -14,11 +14,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers"
+	"github.com/kong/gateway-operator/internal/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -194,9 +196,9 @@ func ControlPlaneHasNReadyPods(t *testing.T, ctx context.Context, controlplaneNa
 // DataPlaneHasActiveDeployment is a helper function for tests that returns a function
 // that can be used to check if a DataPlane has an active deployment.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func DataPlaneHasActiveDeployment(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients) func() bool {
+func DataPlaneHasActiveDeployment(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, matchingLabels client.MatchingLabels) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients)
+		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, matchingLabels)
 		return len(deployments) == 1 &&
 			*deployments[0].Spec.Replicas > 0 &&
 			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
@@ -205,7 +207,9 @@ func DataPlaneHasActiveDeployment(t *testing.T, ctx context.Context, dataplaneNa
 
 func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, n int) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients)
+		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		})
 		return len(deployments) == 1 &&
 			*deployments[0].Spec.Replicas == int32(n) &&
 			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
@@ -217,7 +221,10 @@ func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName typ
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasService(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		services := MustListDataPlaneIngressServices(t, ctx, dataplane, clients.MgrClient)
+		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
+		})
 		return len(services) == 1
 	}, clients.OperatorClient)
 }
@@ -225,9 +232,9 @@ func DataPlaneHasService(t *testing.T, ctx context.Context, dataplaneName types.
 // DataPlaneHasActiveService is a helper function for tests that returns a function
 // that can be used to check if a DataPlane has an active proxy service.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, ret *corev1.Service, clients K8sClients) func() bool {
+func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, ret *corev1.Service, clients K8sClients, matchingLabels client.MatchingLabels) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		services := MustListDataPlaneIngressServices(t, ctx, dataplane, clients.MgrClient)
+		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, matchingLabels)
 		if len(services) == 1 {
 			if ret != nil {
 				*ret = services[0]
@@ -238,6 +245,24 @@ func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName 
 	}, clients.OperatorClient)
 }
 
+// DataPlaneServiceHasActiveEndpoints is a helper function for tests that returns a function
+// that can be used to check if a Service has an active endpoint.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func DataPlaneServiceHasActiveEndpoints(t *testing.T, ctx context.Context, serviceName types.NamespacedName, clients K8sClients) func() bool {
+	return func() bool {
+		endpointSlices := MustListServiceEndpointSlices(
+			t,
+			ctx,
+			serviceName,
+			clients.MgrClient,
+		)
+		if len(endpointSlices) != 1 {
+			return false
+		}
+		return len(endpointSlices[0].Endpoints) == 1
+	}
+}
+
 // DataPlaneHasServiceAndAddressesInStatus is a helper function for tests that returns
 // a function that can be used to check if a DataPlane has:
 // - a backing service name in its .Service status field
@@ -245,7 +270,10 @@ func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName 
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasServiceAndAddressesInStatus(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		services := MustListDataPlaneIngressServices(t, ctx, dataplane, clients.MgrClient)
+		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
+		})
 		if len(services) != 1 {
 			return false
 		}

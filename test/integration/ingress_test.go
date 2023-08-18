@@ -26,6 +26,7 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers"
 	"github.com/kong/gateway-operator/internal/annotations"
+	"github.com/kong/gateway-operator/internal/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
@@ -128,7 +129,10 @@ func TestIngressEssentials(t *testing.T) {
 	require.Eventually(t, expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s", gatewayIP)), testutils.DefaultIngressWait, time.Second)
 
 	t.Log("retrieving the kong-proxy url")
-	services := testutils.MustListDataPlaneIngressServices(t, ctx, dataplane, clients.MgrClient)
+	services := testutils.MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, client.MatchingLabels{
+		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
+	})
 	require.Len(t, services, 1)
 	proxyURL, err := urlForService(ctx, env.Cluster(), types.NamespacedName{Namespace: services[0].Namespace, Name: services[0].Name}, testutils.DefaultHTTPPort)
 	require.NoError(t, err)

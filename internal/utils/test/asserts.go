@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,16 +86,13 @@ func MustListNetworkPoliciesForGateway(t *testing.T, ctx context.Context, gatewa
 
 // MustListServices is a helper function for tests that
 // conveniently lists all proxy services managed by a given dataplane.
-func MustListDataPlaneIngressServices(t *testing.T, ctx context.Context, dataplane *operatorv1beta1.DataPlane, mgrClient client.Client) []corev1.Service {
+func MustListDataPlaneServices(t *testing.T, ctx context.Context, dataplane *operatorv1beta1.DataPlane, mgrClient client.Client, matchingLabels client.MatchingLabels) []corev1.Service {
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
 		mgrClient,
 		dataplane.Namespace,
 		dataplane.UID,
-		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-		},
+		matchingLabels,
 	)
 	require.NoError(t, err)
 	return services
@@ -102,18 +100,27 @@ func MustListDataPlaneIngressServices(t *testing.T, ctx context.Context, datapla
 
 // mustListDataPlaneDeployments is a helper function for tests that
 // conveniently lists all deployments managed by a given controlplane.
-func MustListDataPlaneDeployments(t *testing.T, ctx context.Context, dataplane *operatorv1beta1.DataPlane, clients K8sClients) []appsv1.Deployment {
+func MustListDataPlaneDeployments(t *testing.T, ctx context.Context, dataplane *operatorv1beta1.DataPlane, clients K8sClients, matchinglabels client.MatchingLabels) []appsv1.Deployment {
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
 		clients.MgrClient,
 		dataplane.Namespace,
 		dataplane.UID,
-		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		},
+		matchinglabels,
 	)
 	require.NoError(t, err)
 	return deployments
+}
+
+// MustListServiceEndpointSlices is a helper function for tests that
+// conveniently lists all endpointSlices related to a specific service.
+func MustListServiceEndpointSlices(t *testing.T, ctx context.Context, serviceName types.NamespacedName, mgrClient client.Client) []discoveryv1.EndpointSlice {
+	epSliceList := &discoveryv1.EndpointSliceList{}
+	err := mgrClient.List(ctx, epSliceList, client.InNamespace(serviceName.Namespace), client.MatchingLabels{
+		discoveryv1.LabelServiceName: serviceName.Name,
+	})
+	require.NoError(t, err)
+	return epSliceList.Items
 }
 
 // MustListDataPlanesForGateway is a helper function for tests that

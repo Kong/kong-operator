@@ -1,4 +1,4 @@
-//go:build integration_tests
+//go:build integration_tests || integration_tests_bluegreen
 
 package integration
 
@@ -34,6 +34,7 @@ var (
 	runWebhookTests      = false
 	webhookCertDir       = ""
 	webhookServerIP      = os.Getenv("GATEWAY_OPERATOR_WEBHOOK_IP")
+	bluegreenController  = strings.ToLower(os.Getenv("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER")) == "true"
 	webhookServerPort    = 9443
 	disableCalicoCNI     = strings.ToLower(os.Getenv("KONG_TEST_DISABLE_CALICO")) == "true"
 )
@@ -149,6 +150,7 @@ func startControllerManager() <-chan struct{} {
 	cfg.GatewayControllerEnabled = true
 	cfg.ControlPlaneControllerEnabled = true
 	cfg.DataPlaneControllerEnabled = true
+	cfg.DataPlaneBlueGreenControllerEnabled = bluegreenController
 	cfg.ValidatingWebhookEnabled = false
 	cfg.AnonymousReports = false
 	cfg.StartedCh = make(chan struct{})
