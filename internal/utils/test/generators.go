@@ -5,6 +5,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
@@ -62,6 +63,20 @@ func GenerateGatewayConfiguration(gatewayConfigurationNSN types.NamespacedName) 
 								{
 									Name:  consts.ControlPlaneControllerContainerName,
 									Image: consts.DefaultControlPlaneImage,
+									ReadinessProbe: &corev1.Probe{
+										FailureThreshold:    3,
+										InitialDelaySeconds: 0,
+										PeriodSeconds:       1,
+										SuccessThreshold:    1,
+										TimeoutSeconds:      1,
+										ProbeHandler: corev1.ProbeHandler{
+											HTTPGet: &corev1.HTTPGetAction{
+												Path:   "/readyz",
+												Port:   intstr.FromInt(10254),
+												Scheme: corev1.URISchemeHTTP,
+											},
+										},
+									},
 								},
 							},
 						},
@@ -77,6 +92,20 @@ func GenerateGatewayConfiguration(gatewayConfigurationNSN types.NamespacedName) 
 									{
 										Name:  consts.DataPlaneProxyContainerName,
 										Image: consts.DefaultDataPlaneImage,
+										ReadinessProbe: &corev1.Probe{
+											FailureThreshold:    3,
+											InitialDelaySeconds: 0,
+											PeriodSeconds:       1,
+											SuccessThreshold:    1,
+											TimeoutSeconds:      1,
+											ProbeHandler: corev1.ProbeHandler{
+												HTTPGet: &corev1.HTTPGetAction{
+													Path:   "/status",
+													Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+													Scheme: corev1.URISchemeHTTP,
+												},
+											},
+										},
 									},
 								},
 							},
