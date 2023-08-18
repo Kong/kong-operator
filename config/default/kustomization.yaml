@@ -5,7 +5,6 @@ namespace: kong-system
 namePrefix: gateway-operator-
 
 resources:
-- ../crd
 - ../rbac
 - ../manager
 

@@ -5,6 +5,7 @@ kind: Kustomization
 # used to generate the 'manifests/' directory in a bundle.
 resources:
 - bases/kong-gateway-operator.clusterserviceversion.yaml
+- ../crd
 - ../default
 - ../samples
 - ../scorecard

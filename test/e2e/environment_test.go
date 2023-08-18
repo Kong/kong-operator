@@ -174,8 +174,11 @@ func createEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 	t.Log("creating system namespaces and serviceaccounts")
 	require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
 
+	t.Log("deploying operator CRDs to test cluster via kustomize")
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "../../config/crd", "--server-side"))
+
 	t.Log("deploying operator to test cluster via kustomize")
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizationDir, "--server-side", "-v5"))
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizationDir, "--server-side"))
 
 	t.Log("waiting for operator deployment to complete")
 	require.NoError(t, waitForOperatorDeployment(ctx, clients.K8sClient))
