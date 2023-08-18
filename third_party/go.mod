@@ -9,7 +9,7 @@ require (
 	gotest.tools/gotestsum v1.10.1
 	k8s.io/code-generator v0.28.0
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220715194349-88234a8fc9ad
-	sigs.k8s.io/controller-tools v0.12.1
+	sigs.k8s.io/controller-tools v0.13.0
 )
 
 require (
@@ -189,7 +189,7 @@ require (
 	github.com/nishanths/predeclared v0.2.2 // indirect
 	github.com/nunnatsa/ginkgolinter v0.13.3 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
-	github.com/onsi/gomega v1.27.6 // indirect
+	github.com/onsi/gomega v1.27.10 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.3-0.20220114050600-8b9d41f48198 // indirect
 	github.com/operator-framework/api v0.17.4-0.20230223191600-0131a6301e42 // indirect
