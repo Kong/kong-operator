@@ -1,10 +1,14 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 
+	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -114,6 +118,114 @@ func extractOutdatedDataPlaneIngressServiceAnnotations(
 		delete(outdatedAnnotations, k)
 	}
 	return outdatedAnnotations, nil
+}
+
+// ensureDataPlaneReadyStatus ensures that the provided DataPlane gets an up to
+// date Ready status condition.
+// It sets the condition based on the readiness of DataPlane's Deployment and
+// its ingress Service receiving an address.
+func ensureDataPlaneReadyStatus(
+	ctx context.Context,
+	cl client.Client,
+	log logr.Logger,
+	dataplane *operatorv1beta1.DataPlane,
+) (ctrl.Result, error) {
+	deployments, err := k8sutils.ListDeploymentsForOwner(ctx,
+		cl,
+		dataplane.Namespace,
+		dataplane.UID,
+		client.MatchingLabels{
+			"app":                                dataplane.Name,
+			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
+		},
+	)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed listing deployments for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+	if len(deployments) != 1 {
+		info(log, "expected only 1 Deployment for DataPlane", dataplane)
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	deployment := deployments[0]
+	// We check if the Deployment is not Ready.
+	// This is the case when status has replicas set to 0 or status.availableReplicas
+	// in status is less than status.replicas.
+	// The second condition takes into account the time when new version (ReplicaSet)
+	// is being rolled out by Deployment controller and there might be more available
+	// replicas than specified in spec.replicas but we don't consider it fully ready
+	// until it stabilized to be equal to status.replicas.
+	// If any of those conditions is specified we mark the DataPlane as not ready yet.
+	if deployment.Status.Replicas == 0 || deployment.Status.AvailableReplicas < deployment.Status.Replicas {
+		debug(log, "Deployment for DataPlane not ready yet", dataplane)
+
+		// Set Ready to false for dataplane as the underlying deployment is not ready.
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(
+				k8sutils.ReadyType,
+				metav1.ConditionFalse,
+				k8sutils.WaitingToBecomeReadyReason,
+				k8sutils.WaitingToBecomeReadyMessage,
+				dataplane.Generation,
+			),
+			dataplane,
+		)
+		ensureDataPlaneReadinessStatus(dataplane, &deployment)
+		if err = patchDataPlaneStatus(ctx, cl, log, dataplane); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed patching status (Deployment not ready) for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		}
+		return ctrl.Result{}, nil
+	}
+
+	services, err := k8sutils.ListServicesForOwner(ctx,
+		cl,
+		dataplane.Namespace,
+		dataplane.UID,
+		client.MatchingLabels{
+			"app":                             dataplane.Name,
+			consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
+			consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
+		},
+	)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed listing ingress services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+	if len(services) != 1 {
+		info(log, "expected only 1 ingress Service for DataPlane", dataplane)
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	ingressService := services[0]
+	if !dataPlaneIngressServiceIsReady(dataplane, &ingressService) {
+		debug(log, "Ingress Service for DataPlane not ready yet", dataplane)
+
+		// Set Ready to false for dataplane as the underlying deployment is not ready.
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(
+				k8sutils.ReadyType,
+				metav1.ConditionFalse,
+				k8sutils.WaitingToBecomeReadyReason,
+				k8sutils.WaitingToBecomeReadyMessage,
+				dataplane.Generation,
+			),
+			dataplane,
+		)
+		ensureDataPlaneReadinessStatus(dataplane, &deployment)
+		if err = patchDataPlaneStatus(ctx, cl, log, dataplane); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed patching status (ingress Service not ready) for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		}
+		return ctrl.Result{}, nil
+	}
+
+	markAsProvisioned(dataplane)
+	k8sutils.SetReady(dataplane)
+	ensureDataPlaneReadinessStatus(dataplane, &deployment)
+
+	if err = patchDataPlaneStatus(ctx, cl, log, dataplane); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed patching status for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+
+	return ctrl.Result{}, nil
 }
 
 // -----------------------------------------------------------------------------

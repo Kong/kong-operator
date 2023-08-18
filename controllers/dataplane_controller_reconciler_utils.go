@@ -8,7 +8,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -37,8 +39,8 @@ func (r *DataPlaneReconciler) ensureIsMarkedScheduled(
 	return false
 }
 
-// ensureReadinessStatus ensures the readiness Status fields of DataPlane are set.
-func ensureReadinessStatus(
+// ensureDataPlaneReadinessStatus ensures the readiness Status fields of DataPlane are set.
+func ensureDataPlaneReadinessStatus(
 	dataplane *operatorv1beta1.DataPlane,
 	dataplaneDeployment *appsv1.Deployment,
 ) {
@@ -66,7 +68,7 @@ func (r *DataPlaneReconciler) ensureDataPlaneServiceStatus(
 	}
 
 	if shouldUpdate {
-		return true, r.patchStatus(ctx, log, dataplane)
+		return true, patchDataPlaneStatus(ctx, r.Client, log, dataplane)
 	}
 	return false, nil
 }
@@ -91,7 +93,7 @@ func (r *DataPlaneReconciler) ensureDataPlaneAddressesStatus(
 	if len(addresses) != len(dataplane.Status.Addresses) ||
 		!cmp.Equal(addresses, dataplane.Status.Addresses) {
 		dataplane.Status.Addresses = addresses
-		return true, r.patchStatus(ctx, log, dataplane)
+		return true, patchDataPlaneStatus(ctx, r.Client, log, dataplane)
 	}
 
 	return false, nil
@@ -142,7 +144,7 @@ func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
 	}
 
 	if shouldUpdate {
-		return r.patchStatus(ctx, log, dataplane)
+		return patchDataPlaneStatus(ctx, r.Client, log, dataplane)
 	}
 	return nil
 }
@@ -205,4 +207,26 @@ func dataPlaneIngressServiceIsReady(dataplane *operatorv1beta1.DataPlane, datapl
 	}
 	// Otherwise the DataPlane is not Ready.
 	return false
+}
+
+// patchDataPlaneStatus patches the resource status only when there are changes
+// that requires it.
+func patchDataPlaneStatus(ctx context.Context, cl client.Client, log logr.Logger, updated *operatorv1beta1.DataPlane) error {
+	current := &operatorv1beta1.DataPlane{}
+
+	err := cl.Get(ctx, client.ObjectKeyFromObject(updated), current)
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return err
+	}
+
+	if k8sutils.NeedsUpdate(current, updated) ||
+		addressesChanged(current, updated) ||
+		readinessChanged(current, updated) ||
+		current.Status.Service != updated.Status.Service {
+
+		debug(log, "patching DataPlane status", updated, "status", updated.Status)
+		return cl.Status().Patch(ctx, updated, client.MergeFrom(current))
+	}
+
+	return nil
 }

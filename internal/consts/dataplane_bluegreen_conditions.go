@@ -33,10 +33,10 @@ const (
 )
 
 const (
-	// DataPlaneConditionMessageRolledOutRolloutInitialied contains the message
+	// DataPlaneConditionMessageRolledOutRolloutInitialized contains the message
 	// that is set for the RolledOut Condition when Reason is Progressing
 	// and the DataPlane has initiated a rollout.
-	DataPlaneConditionMessageRolledOutRolloutInitialied = "Rollout initialized"
+	DataPlaneConditionMessageRolledOutRolloutInitialized = "Rollout initialized"
 
 	// DataPlaneConditionMessageRolledOutPreviewDeploymentNotYetReady contains the message
 	// that is set for the RolledOut Condition when Reason is Progressing

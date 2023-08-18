@@ -210,7 +210,7 @@ func NeedsUpdate(current, updated ConditionsAware) bool {
 		if !exists {
 			return true
 		}
-		if u.Reason != c.Reason || u.Message != c.Message || u.Status != c.Status {
+		if u.Reason != c.Reason || u.Message != c.Message || u.Status != c.Status || u.ObservedGeneration != c.ObservedGeneration {
 			return true
 		}
 	}

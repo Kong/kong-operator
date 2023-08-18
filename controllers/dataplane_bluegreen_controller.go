@@ -88,17 +88,24 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return r.DataPlaneController.Reconcile(ctx, req)
 	}
 
-	if err := r.reduceLiveDeployments(ctx, log, &dataplane); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to reduce live deployments: %w", err)
-	}
-
 	if err := r.initSelectorInRolloutStatus(ctx, &dataplane); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed updating DataPlane with selector in Rollout Status: %w", err)
 	}
 
 	c, ok := k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
-	if !ok || c.ObservedGeneration != dataplane.Generation {
-		err := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutProgressing, consts.DataPlaneConditionMessageRolledOutRolloutInitialied)
+	if ok && c.ObservedGeneration == dataplane.Generation && c.Reason == string(consts.DataPlaneConditionReasonRolloutPromotionDone) {
+		// If we've just completed the promotion and the RolledOut condition is up to date then we
+		// can update the Ready status condition of the DataPlane.
+		if res, err := ensureDataPlaneReadyStatus(ctx, r.Client, log, &dataplane); err != nil {
+			return ctrl.Result{}, err
+		} else if res.Requeue {
+			return res, nil
+		}
+	} else if !ok || c.ObservedGeneration != dataplane.Generation {
+		// Otherwise we either don't have the RolledOut condition set yet or the
+		// DataPlane generation has progressed so set the RolledOut condition
+		// to "Rollout initialized"
+		err := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutProgressing, consts.DataPlaneConditionMessageRolledOutRolloutInitialized)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -282,6 +289,10 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	if err := r.resetPromoteWhenReadyAnnotation(ctx, &dataplane); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed resetting promote-when-ready annotation: %w", err)
+	}
+
+	if err := r.reduceLiveDeployments(ctx, log, &dataplane); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to reduce live deployments: %w", err)
 	}
 
 	debug(log, "BlueGreen reconciliation complete for DataPlane resource", dataplane)

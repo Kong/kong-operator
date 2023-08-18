@@ -4,13 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -71,7 +69,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	trace(log, "validating DataPlane resource conditions", dataplane)
 	if r.ensureIsMarkedScheduled(dataplane) {
-		err := r.patchStatus(ctx, log, dataplane)
+		err := patchDataPlaneStatus(ctx, r.Client, log, dataplane)
 		if err != nil {
 			debug(log, "unable to update DataPlane resource", dataplane)
 		}
@@ -181,7 +179,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	res, dataplaneDeployment, err := ensureDeploymentForDataPlane(ctx, r.Client, log, r.DevelopmentMode, dataplane,
+	res, _, err = ensureDeploymentForDataPlane(ctx, r.Client, log, r.DevelopmentMode, dataplane,
 		client.MatchingLabels{
 			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
 		},
@@ -202,33 +200,10 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	trace(log, "checking readiness of DataPlane deployments", dataplane)
 
-	if dataplaneDeployment.Status.Replicas == 0 ||
-		dataplaneDeployment.Status.AvailableReplicas < dataplaneDeployment.Status.Replicas ||
-		!dataPlaneIngressServiceIsReady(dataplane, dataplaneIngressService) {
-		trace(log, "deployment for DataPlane not ready yet", dataplane)
-
-		// Set Ready to false for dataplane as the underlying deployment is not ready.
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				k8sutils.ReadyType,
-				metav1.ConditionFalse,
-				k8sutils.WaitingToBecomeReadyReason,
-				k8sutils.WaitingToBecomeReadyMessage,
-				dataplane.Generation,
-			),
-			dataplane,
-		)
-		ensureReadinessStatus(dataplane, dataplaneDeployment)
-		return ctrl.Result{}, r.patchStatus(ctx, log, dataplane)
-	}
-
-	markAsProvisioned(dataplane)
-	k8sutils.SetReady(dataplane)
-	ensureReadinessStatus(dataplane, dataplaneDeployment)
-
-	if err = r.patchStatus(ctx, log, dataplane); err != nil {
-		debug(log, "unable to reconcile the DataPlane resource", dataplane)
+	if res, err := ensureDataPlaneReadyStatus(ctx, r.Client, log, dataplane); err != nil {
 		return ctrl.Result{}, err
+	} else if res.Requeue {
+		return res, nil
 	}
 
 	debug(log, "reconciliation complete for DataPlane resource", dataplane)
@@ -270,27 +245,6 @@ func labelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane *operatorv1bet
 			s.Spec.Selector[consts.OperatorLabelSelector] = dataplane.Status.Selector
 		}
 	}
-}
-
-// patchStatus Patches the resource status only when there are changes in the Conditions
-func (r *DataPlaneReconciler) patchStatus(ctx context.Context, log logr.Logger, updated *operatorv1beta1.DataPlane) error {
-	current := &operatorv1beta1.DataPlane{}
-
-	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)
-	if err != nil && !k8serrors.IsNotFound(err) {
-		return err
-	}
-
-	if k8sutils.NeedsUpdate(current, updated) ||
-		addressesChanged(current, updated) ||
-		readinessChanged(current, updated) ||
-		current.Status.Service != updated.Status.Service {
-
-		debug(log, "patching DataPlane status", updated, "status", updated.Status)
-		return r.Client.Status().Patch(ctx, updated, client.MergeFrom(current))
-	}
-
-	return nil
 }
 
 // addressesChanged returns a boolean indicating whether the addresses in provided

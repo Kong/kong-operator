@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -315,16 +316,26 @@ func TestDataPlaneUpdate(t *testing.T) {
 		}
 	}
 
-	var correctReadinessProbePath string
 	t.Run("dataplane is not Ready when the underlying deployment changes state to not Ready", func(t *testing.T) {
-		deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients)
-		require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
-		deployment := &deployments[0]
-		require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
-		container := &deployment.Spec.Template.Spec.Containers[0]
-		correctReadinessProbePath = container.ReadinessProbe.HTTPGet.Path
-		container.ReadinessProbe.HTTPGet.Path = "/status_which_will_always_return_404"
-		_, err = env.Cluster().Client().AppsV1().Deployments(namespace.Name).Update(ctx, deployment, metav1.UpdateOptions{})
+		dataplane, err = dataplaneClient.Get(ctx, dataplane.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+		require.NotNil(t, container)
+		container.ReadinessProbe = &corev1.Probe{
+			InitialDelaySeconds: 0,
+			PeriodSeconds:       1,
+			FailureThreshold:    3,
+			SuccessThreshold:    1,
+			TimeoutSeconds:      1,
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/status_which_will_always_return_404",
+					Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+		}
+		_, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		isNotReady := dataPlaneConditionPredicate(&metav1.Condition{
@@ -337,13 +348,25 @@ func TestDataPlaneUpdate(t *testing.T) {
 		)
 	})
 	t.Run("dataplane gets Ready when the underlying deployment changes state to Ready", func(t *testing.T) {
-		deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients)
-		require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
-		deployment := &deployments[0]
-		container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+		dataplane, err = dataplaneClient.Get(ctx, dataplane.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 		require.NotNil(t, container)
-		container.ReadinessProbe.HTTPGet.Path = correctReadinessProbePath
-		_, err = env.Cluster().Client().AppsV1().Deployments(namespace.Name).Update(ctx, deployment, metav1.UpdateOptions{})
+		container.ReadinessProbe = &corev1.Probe{
+			InitialDelaySeconds: 0,
+			PeriodSeconds:       1,
+			FailureThreshold:    3,
+			SuccessThreshold:    1,
+			TimeoutSeconds:      1,
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/status",
+					Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+		}
+		_, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(&metav1.Condition{

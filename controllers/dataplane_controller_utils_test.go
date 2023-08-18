@@ -1,0 +1,415 @@
+package controllers
+
+import (
+	"context"
+	"testing"
+
+	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/internal/consts"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+)
+
+func TestEnsureDataPlaneReadyStatus(t *testing.T) {
+	testCases := []struct {
+		name                    string
+		objectLists             []client.ObjectList
+		expectedError           bool
+		expectedResult          reconcile.Result
+		expectedDataPlaneStatus operatorv1beta1.DataPlaneStatus
+		dataPlane               *operatorv1beta1.DataPlane
+	}{
+		{
+			name: "not all replicas are ready",
+			dataPlane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:        "test-uid",
+					Name:       "test",
+					Namespace:  "default",
+					Generation: 102,
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			objectLists: []client.ObjectList{
+				&appsv1.DeploymentList{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "DeploymentList",
+						APIVersion: "apps/v1",
+					},
+					Items: []appsv1.Deployment{
+						{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "Deployment",
+								APIVersion: "apps/v1",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "dataplane-deployment-1",
+								Namespace: "default",
+								Labels: map[string]string{
+									"app":                                "test",
+									consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
+								},
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "gateway-operator.konghq.com/v1beta1",
+										Kind:       "DataPlane",
+										UID:        "test-uid",
+									},
+								},
+							},
+							Spec: appsv1.DeploymentSpec{},
+							Status: appsv1.DeploymentStatus{
+								Replicas:          2,
+								ReadyReplicas:     1,
+								AvailableReplicas: 1,
+							},
+						},
+					},
+				},
+			},
+			expectedError:  false,
+			expectedResult: ctrl.Result{},
+			expectedDataPlaneStatus: operatorv1beta1.DataPlaneStatus{
+				Conditions: []metav1.Condition{
+					k8sutils.NewConditionWithGeneration(
+						k8sutils.ReadyType,
+						metav1.ConditionFalse,
+						k8sutils.WaitingToBecomeReadyReason,
+						k8sutils.WaitingToBecomeReadyMessage,
+						102,
+					),
+				},
+				Replicas:      2,
+				ReadyReplicas: 1,
+			},
+		},
+		{
+			name: "all replicas are ready but ingress service of type LoadBalancer doesn't have an IP",
+			dataPlane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:        "test-uid",
+					Name:       "test",
+					Namespace:  "default",
+					Generation: 102,
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.ServiceOptions{
+									Type: corev1.ServiceTypeLoadBalancer,
+								},
+							},
+						},
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			objectLists: []client.ObjectList{
+				&appsv1.DeploymentList{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "DeploymentList",
+						APIVersion: "apps/v1",
+					},
+					Items: []appsv1.Deployment{
+						{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "Deployment",
+								APIVersion: "apps/v1",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "dataplane-deployment-1",
+								Namespace: "default",
+								Labels: map[string]string{
+									"app":                                "test",
+									consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
+								},
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "gateway-operator.konghq.com/v1beta1",
+										Kind:       "DataPlane",
+										UID:        "test-uid",
+									},
+								},
+							},
+							Spec: appsv1.DeploymentSpec{},
+							Status: appsv1.DeploymentStatus{
+								Replicas:          1,
+								ReadyReplicas:     1,
+								AvailableReplicas: 1,
+							},
+						},
+					},
+				},
+				&corev1.ServiceList{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "DeploymentList",
+						APIVersion: "apps/v1",
+					},
+					Items: []corev1.Service{
+						{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "Service",
+								APIVersion: "v1",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "dataplane-service-1",
+								Namespace: "default",
+								Labels: map[string]string{
+									"app":                             "test",
+									consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
+									consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
+								},
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "gateway-operator.konghq.com/v1beta1",
+										Kind:       "DataPlane",
+										UID:        "test-uid",
+									},
+								},
+							},
+							Spec:   corev1.ServiceSpec{},
+							Status: corev1.ServiceStatus{
+								// Empty to cause Ready condition False
+							},
+						},
+					},
+				},
+			},
+			expectedError:  false,
+			expectedResult: ctrl.Result{},
+			expectedDataPlaneStatus: operatorv1beta1.DataPlaneStatus{
+				Conditions: []metav1.Condition{
+					k8sutils.NewConditionWithGeneration(
+						k8sutils.ReadyType,
+						metav1.ConditionFalse,
+						k8sutils.WaitingToBecomeReadyReason,
+						k8sutils.WaitingToBecomeReadyMessage,
+						102,
+					),
+				},
+				Replicas:      1,
+				ReadyReplicas: 1,
+			},
+		},
+		{
+			name: "all replicas are ready and ingress service of type load balancer has an IP",
+			dataPlane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:        "test-uid",
+					Name:       "test",
+					Namespace:  "default",
+					Generation: 102,
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.ServiceOptions{
+									Type: corev1.ServiceTypeLoadBalancer,
+								},
+							},
+						},
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			objectLists: []client.ObjectList{
+				&appsv1.DeploymentList{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "DeploymentList",
+						APIVersion: "apps/v1",
+					},
+					Items: []appsv1.Deployment{
+						{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "Deployment",
+								APIVersion: "apps/v1",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "dataplane-deployment-1",
+								Namespace: "default",
+								Labels: map[string]string{
+									"app":                                "test",
+									consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
+								},
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "gateway-operator.konghq.com/v1beta1",
+										Kind:       "DataPlane",
+										UID:        "test-uid",
+									},
+								},
+							},
+							Spec: appsv1.DeploymentSpec{},
+							Status: appsv1.DeploymentStatus{
+								Replicas:          1,
+								ReadyReplicas:     1,
+								AvailableReplicas: 1,
+							},
+						},
+					},
+				},
+				&corev1.ServiceList{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "DeploymentList",
+						APIVersion: "apps/v1",
+					},
+					Items: []corev1.Service{
+						{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "Service",
+								APIVersion: "v1",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "dataplane-service-1",
+								Namespace: "default",
+								Labels: map[string]string{
+									"app":                             "test",
+									consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
+									consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
+								},
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "gateway-operator.konghq.com/v1beta1",
+										Kind:       "DataPlane",
+										UID:        "test-uid",
+									},
+								},
+							},
+							Spec: corev1.ServiceSpec{},
+							Status: corev1.ServiceStatus{
+								LoadBalancer: corev1.LoadBalancerStatus{
+									Ingress: []corev1.LoadBalancerIngress{
+										{
+											IP: "3.3.3.3",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedError:  false,
+			expectedResult: ctrl.Result{},
+			expectedDataPlaneStatus: operatorv1beta1.DataPlaneStatus{
+				Conditions: []metav1.Condition{
+					k8sutils.NewConditionWithGeneration(
+						DataPlaneConditionTypeProvisioned,
+						metav1.ConditionTrue,
+						DataPlaneConditionReasonPodsReady,
+						"pods for all Deployments are ready",
+						102,
+					),
+					k8sutils.NewConditionWithGeneration(
+						k8sutils.ReadyType,
+						metav1.ConditionTrue,
+						"Ready",
+						"",
+						102,
+					),
+				},
+				Ready:         true,
+				Replicas:      1,
+				ReadyReplicas: 1,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+
+			require.NoError(t, corev1.AddToScheme(scheme))
+			require.NoError(t, appsv1.AddToScheme(scheme))
+			require.NoError(t, operatorv1beta1.AddToScheme(scheme))
+			require.NoError(t, gatewayv1beta1.AddToScheme(scheme))
+
+			fakeClient := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithStatusSubresource(tc.dataPlane).
+				WithScheme(scheme).
+				WithObjects(tc.dataPlane).
+				WithLists(tc.objectLists...).
+				Build()
+
+			res, err := ensureDataPlaneReadyStatus(context.Background(), fakeClient, logr.Discard(), tc.dataPlane)
+			if tc.expectedError {
+				assert.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedResult, res)
+			opts := []cmp.Option{
+				cmp.FilterPath(
+					func(p cmp.Path) bool { return p.String() == "Conditions.LastTransitionTime" },
+					cmp.Ignore(),
+				),
+			}
+			if !cmp.Equal(tc.expectedDataPlaneStatus, tc.dataPlane.Status, opts...) {
+				d := cmp.Diff(tc.expectedDataPlaneStatus, tc.dataPlane.Status, opts...)
+				assert.FailNowf(t, "unexpected DataPlane status", "got :\n%#v\ndiff:\n%s\n", tc.dataPlane.Status, d)
+			}
+		})
+	}
+}
