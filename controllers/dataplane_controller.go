@@ -254,7 +254,6 @@ func addressesChanged(current, updated *operatorv1beta1.DataPlane) bool {
 }
 
 func readinessChanged(current, updated *operatorv1beta1.DataPlane) bool {
-	return current.Status.Ready != updated.Status.Ready ||
-		current.Status.ReadyReplicas != updated.Status.ReadyReplicas ||
+	return current.Status.ReadyReplicas != updated.Status.ReadyReplicas ||
 		current.Status.Replicas != updated.Status.Replicas
 }

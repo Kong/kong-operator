@@ -155,13 +155,6 @@ type DataPlaneStatus struct {
 	// +kubebuilder:validation:MinLength=8
 	Selector string `json:"selector,omitempty"`
 
-	// Ready indicates whether the DataPlane is ready.
-	// It there are multiple replicas then all have to be ready for this flag
-	// to be set to true.
-	//
-	// +kubebuilder:default=false
-	Ready bool `json:"ready"`
-
 	// ReadyReplicas indicates how many replicas have reported to be ready.
 	//
 	// +kubebuilder:default=0

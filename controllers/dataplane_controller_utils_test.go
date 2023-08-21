@@ -366,7 +366,6 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 						102,
 					),
 				},
-				Ready:         true,
 				Replicas:      1,
 				ReadyReplicas: 1,
 			},

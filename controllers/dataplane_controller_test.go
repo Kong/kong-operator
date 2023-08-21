@@ -684,7 +684,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				nn := types.NamespacedName{Namespace: "default", Name: "dataplane-kong"}
 				err = reconciler.Client.Get(ctx, nn, dp)
 				require.NoError(t, err)
-				assert.False(t, dp.Status.Ready, "DataPlane shouldn't be ready just yet")
+				c, ok := k8sutils.GetCondition(k8sutils.ReadyType, dp)
+				require.True(t, ok, "DataPlane should have a Ready condition set")
+				assert.Equal(t, c.Status, metav1.ConditionFalse, "DataPlane shouldn't be ready just yet")
 				assert.EqualValues(t, 0, dp.Status.ReadyReplicas)
 				assert.EqualValues(t, 0, dp.Status.Replicas)
 
@@ -700,7 +702,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				err = reconciler.Client.Get(ctx, nn, dp)
 				require.NoError(t, err)
 				t.Log(dp.Status)
-				assert.True(t, dp.Status.Ready, "DataPlane should be ready at this point")
+				c, ok = k8sutils.GetCondition(k8sutils.ReadyType, dp)
+				require.True(t, ok, "DataPlane should have a Ready condition set")
+				assert.Equal(t, c.Status, metav1.ConditionTrue, "DataPlane should be ready at this point")
 				assert.EqualValues(t, 1, dp.Status.ReadyReplicas)
 				assert.EqualValues(t, 1, dp.Status.Replicas)
 			},
