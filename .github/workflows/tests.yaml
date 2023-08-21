@@ -64,6 +64,34 @@ jobs:
         max_attempts: 3
         command: make verify.generators
 
+  install-with-kustomize:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Setup go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '^1.19'
+
+    - name: Create k8s KinD Cluster
+      uses: helm/kind-action@v1.8.0
+
+    - name: Verify installing CRDs via kustomize works
+      run: make install
+
+    - name: Verify deploying operator via kustomize works
+      run: make deploy
+
+    - name: Verify that undeploying operator via kustomize works
+      run: make undeploy
+
+    - name: Verify that uninstalling operator CRDs via kustomize works
+      run: make uninstall
+
   unit-tests:
     runs-on: ubuntu-latest
     steps:

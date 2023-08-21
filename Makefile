@@ -565,13 +565,15 @@ uninstall: manifests kustomize
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 # Deploy controller to the K8s cluster specified in ~/.kube/config.
+# This will wait for operator's Deployment to get Available.
 .PHONY: deploy
 deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	kubectl wait deploy -n kong-system gateway-operator-controller-manager --for=condition=Available=true
 
 # Undeploy controller from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: undeploy
 undeploy:
-	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+	$(KUSTOMIZE) build config/default | kubectl delete --wait=false --ignore-not-found=$(ignore-not-found) -f -
