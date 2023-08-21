@@ -18,6 +18,7 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 IMG ?= ghcr.io/kong/gateway-operator
+KUSTOMIZE_IMG_NAME = ghcr.io/kong/gateway-operator
 RHTAG ?= latest-redhat
 
 # ------------------------------------------------------------------------------
@@ -314,7 +315,7 @@ docker.push:
 .PHONY: _bundle
 _bundle: manifests kustomize operator-sdk yq
 	$(OPERATOR_SDK) generate kustomize manifests --apis-dir=$(APIS_DIR)/
-	cd config/manager && $(KUSTOMIZE) edit set image $(IMG)=$(IMG):$(VERSION)
+	cd config/manager && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
 	$(YQ) -i e '.metadata.annotations.containerImage |= "$(IMG):$(VERSION)"' \
 		 config/manifests/bases/kong-gateway-operator.clusterserviceversion.yaml
 	$(KUSTOMIZE) build $(KUSTOMIZE_DIR) | $(OPERATOR_SDK) generate bundle --output-dir=$(BUNDLE_DIR) $(BUNDLE_GEN_FLAGS)
@@ -566,10 +567,14 @@ uninstall: manifests kustomize
 
 # Deploy controller to the K8s cluster specified in ~/.kube/config.
 # This will wait for operator's Deployment to get Available.
+# This uses a temporary directory becuase "kustomize edit set image" would introduce
+# a change in current work tree which we do not want.
 .PHONY: deploy
 deploy: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(eval TMP := $(shell mktemp -d))
+	cp -R config $(TMP)
+	cd $(TMP)/config/manager && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
+	cd $(TMP)/config/default && $(KUSTOMIZE) build . | kubectl apply -f -
 	kubectl wait deploy -n kong-system gateway-operator-controller-manager --for=condition=Available=true
 
 # Undeploy controller from the K8s cluster specified in ~/.kube/config.
