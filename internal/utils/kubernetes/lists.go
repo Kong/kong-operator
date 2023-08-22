@@ -36,7 +36,8 @@ func ListDeploymentsForOwner(
 
 	deployments := make([]appsv1.Deployment, 0)
 	for _, deployment := range deploymentList.Items {
-		if IsOwnedByRefUID(&deployment.ObjectMeta, uid) {
+		deployment := deployment
+		if IsOwnedByRefUID(&deployment, uid) {
 			deployments = append(deployments, deployment)
 		}
 	}
@@ -70,7 +71,8 @@ func ListServicesForOwner(
 
 	services := make([]corev1.Service, 0)
 	for _, service := range serviceList.Items {
-		if IsOwnedByRefUID(&service.ObjectMeta, uid) {
+		service := service
+		if IsOwnedByRefUID(&service, uid) {
 			services = append(services, service)
 		}
 	}
@@ -104,11 +106,10 @@ func ListServiceAccountsForOwner(
 
 	serviceAccounts := make([]corev1.ServiceAccount, 0)
 	for _, serviceAccount := range serviceAccountList.Items {
-		for _, ownerRef := range serviceAccount.ObjectMeta.OwnerReferences {
-			if ownerRef.UID == uid {
-				serviceAccounts = append(serviceAccounts, serviceAccount)
-				break
-			}
+		serviceAccount := serviceAccount
+		if IsOwnedByRefUID(&serviceAccount, uid) {
+			serviceAccounts = append(serviceAccounts, serviceAccount)
+			break
 		}
 	}
 
@@ -137,11 +138,10 @@ func ListClusterRolesForOwner(
 
 	clusterRoles := make([]rbacv1.ClusterRole, 0)
 	for _, clusterRole := range clusterRoleList.Items {
-		for _, ownerRef := range clusterRole.ObjectMeta.OwnerReferences {
-			if ownerRef.UID == uid {
-				clusterRoles = append(clusterRoles, clusterRole)
-				break
-			}
+		clusterRole := clusterRole
+		if IsOwnedByRefUID(&clusterRole, uid) {
+			clusterRoles = append(clusterRoles, clusterRole)
+			break
 		}
 	}
 
@@ -170,11 +170,10 @@ func ListClusterRoleBindingsForOwner(
 
 	clusterRoleBindings := make([]rbacv1.ClusterRoleBinding, 0)
 	for _, clusterRoleBinding := range clusterRoleBindingList.Items {
-		for _, ownerRef := range clusterRoleBinding.ObjectMeta.OwnerReferences {
-			if ownerRef.UID == uid {
-				clusterRoleBindings = append(clusterRoleBindings, clusterRoleBinding)
-				break
-			}
+		clusterRoleBinding := clusterRoleBinding
+		if IsOwnedByRefUID(&clusterRoleBinding, uid) {
+			clusterRoleBindings = append(clusterRoleBindings, clusterRoleBinding)
+			break
 		}
 	}
 
@@ -202,11 +201,10 @@ func ListSecretsForOwner(ctx context.Context,
 
 	secrets := make([]corev1.Secret, 0)
 	for _, secret := range secretList.Items {
-		for _, ownerRef := range secret.ObjectMeta.OwnerReferences {
-			if ownerRef.UID == uid {
-				secrets = append(secrets, secret)
-				break
-			}
+		secret := secret
+		if IsOwnedByRefUID(&secret, uid) {
+			secrets = append(secrets, secret)
+			break
 		}
 	}
 

@@ -38,9 +38,13 @@ func SetOwnerForObject(obj, owner client.Object) {
 	}
 }
 
+type GetOwnerReferencer interface {
+	GetOwnerReferences() []metav1.OwnerReference
+}
+
 // IsOwnedBy is a helper function to check if the provided object is owned by
 // the provided ref UID.
-func IsOwnedByRefUID(obj metav1.Object, uid types.UID) bool {
+func IsOwnedByRefUID(obj GetOwnerReferencer, uid types.UID) bool {
 	for _, ref := range obj.GetOwnerReferences() {
 		if ref.UID == uid {
 			return true
