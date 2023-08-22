@@ -20,12 +20,15 @@ import (
 	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
-	dataplanevalidation "github.com/kong/gateway-operator/internal/validation/dataplane"
 )
 
 // -----------------------------------------------------------------------------
 // DataPlaneReconciler
 // -----------------------------------------------------------------------------
+
+type dataPlaneValidator interface {
+	Validate(*operatorv1beta1.DataPlane) error
+}
 
 // DataPlaneReconciler reconciles a DataPlane object
 type DataPlaneReconciler struct {
@@ -35,6 +38,7 @@ type DataPlaneReconciler struct {
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
 	DevelopmentMode          bool
+	Validator                dataPlaneValidator
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -92,7 +96,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	trace(log, "validating DataPlane configuration", dataplane)
-	err := dataplanevalidation.NewValidator(r.Client).Validate(dataplane)
+	err := r.Validator.Validate(dataplane)
 	if err != nil {
 		info(log, "failed to validate dataplane: "+err.Error(), dataplane)
 		r.eventRecorder.Event(dataplane, "Warning", "ValidationFailed", err.Error())

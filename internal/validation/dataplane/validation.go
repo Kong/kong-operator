@@ -28,16 +28,32 @@ func NewValidator(c client.Client) *Validator {
 
 // Validate validates a DataPlane object and return the first validation error found.
 func (v *Validator) Validate(dataplane *operatorv1beta1.DataPlane) error {
-	err := v.ValidateDataPlaneDeploymentOptions(dataplane.Namespace, &dataplane.Spec.Deployment)
+	err := v.ValidateDataPlaneDeploymentOptions(dataplane.Namespace, &dataplane.Spec.Deployment.DeploymentOptions)
 	if err != nil {
 		return err
 	}
+
+	if err := v.ValidateDataPlaneDeploymentRollout(dataplane.Spec.Deployment.Rollout); err != nil {
+		return err
+	}
+
 	// prepared for more validations
 	return nil
 }
 
+// ValidateDataPlaneDeploymentRollout validates the Rollout field of DataPlane object.
+func (v *Validator) ValidateDataPlaneDeploymentRollout(rollout *operatorv1beta1.Rollout) error {
+	if rollout != nil && rollout.Strategy.BlueGreen != nil && rollout.Strategy.BlueGreen.Promotion.Strategy == operatorv1beta1.AutomaticPromotion {
+		// Can't use AutomaticPromotion just yet.
+		// Related: https://github.com/Kong/gateway-operator/issues/1006.
+		return errors.New("DataPlane AutomaticPromotion cannot be used yet")
+	}
+
+	return nil
+}
+
 // ValidateDataPlaneDeploymentOptions validates the DeploymentOptions field of DataPlane object.
-func (v *Validator) ValidateDataPlaneDeploymentOptions(namespace string, opts *operatorv1beta1.DataPlaneDeploymentOptions) error {
+func (v *Validator) ValidateDataPlaneDeploymentOptions(namespace string, opts *operatorv1beta1.DeploymentOptions) error {
 	if opts == nil || opts.PodTemplateSpec == nil {
 		// Can't use empty DeploymentOptions because we still require users
 		// to provide an image

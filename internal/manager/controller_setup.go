@@ -12,6 +12,7 @@ import (
 
 	"github.com/kong/gateway-operator/controllers"
 	"github.com/kong/gateway-operator/internal/utils/index"
+	"github.com/kong/gateway-operator/internal/validation/dataplane"
 )
 
 // -----------------------------------------------------------------------------
@@ -111,6 +112,7 @@ func setupControllers(mgr manager.Manager, c *Config) []ControllerDef {
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				DevelopmentMode:          c.DevelopmentMode,
+				Validator:                dataplane.NewValidator(mgr.GetClient()),
 			},
 		},
 		// DataPlaneBlueGreen controller
@@ -127,6 +129,7 @@ func setupControllers(mgr manager.Manager, c *Config) []ControllerDef {
 					ClusterCASecretName:      c.ClusterCASecretName,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 					DevelopmentMode:          c.DevelopmentMode,
+					Validator:                dataplane.NewValidator(mgr.GetClient()),
 				},
 			},
 		},
