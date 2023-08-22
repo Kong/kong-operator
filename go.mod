@@ -12,7 +12,7 @@ require (
 	github.com/bombsimon/logrusr/v3 v3.1.0
 	github.com/cloudflare/cfssl v1.6.4
 	github.com/go-logr/logr v1.2.4
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/kong/kubernetes-telemetry v0.1.0
 	github.com/kong/kubernetes-testing-framework v0.37.0
 	github.com/kong/semver/v4 v4.0.1
