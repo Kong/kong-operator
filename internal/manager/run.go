@@ -42,6 +42,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
@@ -141,9 +143,15 @@ func Run(cfg Config) error {
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                  scheme,
-		MetricsBindAddress:      cfg.MetricsAddr,
-		Port:                    cfg.WebhookPort,
+		Scheme: scheme,
+		Metrics: server.Options{
+			BindAddress: cfg.MetricsAddr,
+		},
+		WebhookServer: webhook.NewServer(
+			webhook.Options{
+				Port: cfg.WebhookPort,
+			},
+		),
 		HealthProbeBindAddress:  cfg.ProbeAddr,
 		LeaderElection:          cfg.LeaderElection,
 		LeaderElectionNamespace: cfg.LeaderElectionNamespace,
