@@ -48,7 +48,7 @@ func ensureCertificate(
 func ensureDeploymentForDataPlane(
 	ctx context.Context,
 	cl client.Client,
-	log logr.Logger, //nolint:unparam
+	log logr.Logger,
 	developmentMode bool,
 	dataplane *operatorv1beta1.DataPlane,
 	additionalDeploymentLabels client.MatchingLabels,
@@ -141,14 +141,18 @@ func ensureDeploymentForDataPlane(
 			if err := cl.Patch(ctx, existingDeployment, client.MergeFrom(oldExistingDeployment)); err != nil {
 				return Noop, existingDeployment, fmt.Errorf("failed patching DataPlane Deployment %s: %w", existingDeployment.Name, err)
 			}
+			debug(log, "deployment modified", dataplane, "deployment", generatedDeployment.Name, "reason", res)
 			return Updated, existingDeployment, nil
 		}
+
+		trace(log, "no need for deployment update", dataplane, "deployment", existingDeployment.Name, "reason", res)
 		return Noop, existingDeployment, nil
 	}
 
 	if err = cl.Create(ctx, generatedDeployment); err != nil {
 		return Noop, nil, fmt.Errorf("failed creating Deployment for DataPlane %s: %w", dataplane.Name, err)
 	}
+	debug(log, "deployment created", dataplane, "deployment", generatedDeployment.Name, "reason", res)
 
 	return Created, generatedDeployment, nil
 }

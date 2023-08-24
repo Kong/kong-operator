@@ -129,16 +129,12 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// DataPlane is ready and we can proceed with deploying preview resources.
 
 	// Ensure "preview" Admin API service.
-	res, dataplaneAdminService, err := r.ensurePreviewAdminAPIService(ctx, &dataplane)
+	res, dataplaneAdminService, err := r.ensurePreviewAdminAPIService(ctx, log, &dataplane)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed ensuring that preview Admin API Service exists for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
-	}
-	switch res {
-	case Created, Updated:
-		debug(log, "DataPlane preview admin service modified", dataplane, "service", dataplaneAdminService.Name, "reason", res)
+		cErr := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Admin API Service")
+		return ctrl.Result{}, fmt.Errorf("failed ensuring that preview Admin API Service exists for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
+	} else if res == Created || res == Updated {
 		return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
-	case Noop:
-		debug(log, "no need for preview Admin API service update", dataplane)
 	}
 
 	if updated, err := r.ensureDataPlaneAdminAPIInRolloutStatus(ctx, log, &dataplane, dataplaneAdminService); err != nil {
@@ -169,15 +165,12 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// Ensure "preview" Ingress service.
 	res, previewIngressService, err := r.ensurePreviewIngressService(ctx, log, &dataplane)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed ensuring preview Ingress service for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		cErr := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview ingress Service")
+		return ctrl.Result{}, fmt.Errorf("failed ensuring preview Ingress service for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
+	} else if res == Created || res == Updated {
+		return ctrl.Result{}, nil // dataplane ingress service creation/update will trigger reconciliation
 	}
-	switch res {
-	case Created, Updated:
-		debug(log, "preview ingress service modified", dataplane, "reason", res)
-		return ctrl.Result{}, nil
-	default:
-		debug(log, "no need for preview ingress service update", dataplane)
-	}
+
 	// ensure status of "preview" service is updated in status.rollout.services.
 	if updated, err := r.ensureDataPlaneRolloutIngressServiceStatus(ctx, log, &dataplane, previewIngressService); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed updating rollout status with preview ingress service addresses: %w", err)
@@ -195,14 +188,10 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		labelSelectorFromDataPlaneRolloutStatusSelectorDeploymentOpt(&dataplane),
 	)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", err)
-	}
-	switch res {
-	case Created, Updated:
-		debug(log, "deployment modified", dataplane, "reason", res)
-		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
-	default:
-		debug(log, "no need for deployment update", dataplane)
+		cErr := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Deployment")
+		return ctrl.Result{}, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", errors.Join(cErr, err))
+	} else if res == Created || res == Updated {
+		return ctrl.Result{}, nil // dataplane deployment creation/update will trigger reconciliation
 	}
 
 	// TODO: check if the preview service is available.
@@ -220,20 +209,26 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if proceedWithPromotion, err := canProceedWithPromotion(dataplane); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed checking if DataPlane %s/%s can be promoted: %w", dataplane.Namespace, dataplane.Name, err)
 	} else if !proceedWithPromotion {
-		debug(log, "DataPlane preview resources cannot be promoted yet", dataplane,
+		debug(log, "DataPlane preview resources cannot be promoted yet or is awaiting promotion trigger", dataplane,
 			"promotion_strategy", dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen.Promotion.Strategy)
 
 		err := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutAwaitingPromotion, "")
 		return ctrl.Result{}, err
 	}
 
-	if err = r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutPromotionInProgress, ""); err != nil {
-		return ctrl.Result{}, err
+	// If we've failed to promote previously, don't set the RolledOut reason to
+	// PromotionInProgress as the error can reoccur and the status can start flapping.
+	c, ok = k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
+	if !ok || c.Reason != string(consts.DataPlaneConditionReasonRolloutPromotionFailed) {
+		if err = r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutPromotionInProgress, ""); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Ensure that the live deployment selector is equal to the preview deployment selector to trigger the promotion.
 	if updated, err := r.ensurePreviewSelectorOverridesLive(ctx, &dataplane); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to update DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		cErr := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutPromotionFailed, "failed to update DataPlane's selector")
+		return ctrl.Result{}, fmt.Errorf("failed to update DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
 	} else if updated {
 		debug(log, "preview deployment selector assigned to a live selector, promotion in progress", dataplane)
 		return ctrl.Result{}, nil
@@ -266,7 +261,8 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		// Let's label the preview deployment as live so that it's easily retrievable.
 		previewDeploymentSelector := dataplane.Status.RolloutStatus.Deployment.Selector
 		if updated, err := r.ensurePreviewDeploymentLabeledLive(ctx, log, &dataplane, previewDeploymentSelector); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to ensure preview deployment becomes live %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+			cErr := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutPromotionFailed, "failed to label DataPlane's preview Deployment for promotion")
+			return ctrl.Result{}, fmt.Errorf("failed to ensure preview deployment becomes live %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
 		} else if updated {
 			trace(log, "preview deployment labeled as live", dataplane)
 		}
@@ -504,19 +500,31 @@ func canProceedWithPromotion(dataplane operatorv1beta1.DataPlane) (bool, error) 
 // ensurePreviewAdminAPIService ensures the "preview" Admin API Service is available.
 func (r *DataPlaneBlueGreenReconciler) ensurePreviewAdminAPIService(
 	ctx context.Context,
+	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 ) (CreatedUpdatedOrNoop, *corev1.Service, error) {
 	additionalServiceLabels := map[string]string{
 		consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 	}
 
-	return ensureAdminServiceForDataPlane(
+	res, svc, err := ensureAdminServiceForDataPlane(
 		ctx,
 		r.Client,
 		dataplane,
 		additionalServiceLabels,
 		labelSelectorFromDataPlaneRolloutStatusSelectorServiceOpt(dataplane),
 	)
+	if err != nil {
+		return Noop, nil, err
+	}
+
+	switch res {
+	case Created, Updated:
+		debug(log, "preview admin service modified", dataplane, "service", svc.Name, "reason", res)
+	case Noop:
+		trace(log, "no need for preview Admin API service update", dataplane)
+	}
+	return res, svc, nil // dataplane admin service creation/update will trigger reconciliation
 }
 
 // ensurePreviewIngressService ensures the "preview" ingress service to access the Kong routes
@@ -529,7 +537,8 @@ func (r *DataPlaneBlueGreenReconciler) ensurePreviewIngressService(
 	additionalServiceLabels := map[string]string{
 		consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 	}
-	return ensureIngressServiceForDataPlane(
+
+	res, svc, err := ensureIngressServiceForDataPlane(
 		ctx,
 		log,
 		r.Client,
@@ -537,6 +546,18 @@ func (r *DataPlaneBlueGreenReconciler) ensurePreviewIngressService(
 		additionalServiceLabels,
 		labelSelectorFromDataPlaneRolloutStatusSelectorServiceOpt(dataplane),
 	)
+	if err != nil {
+		return Noop, nil, err
+	}
+
+	switch res {
+	case Created, Updated:
+		debug(log, "preview ingress service modified", dataplane, "service", svc.Name, "reason", res)
+	case Noop:
+		trace(log, "no need for preview ingress service update", dataplane)
+	}
+
+	return res, svc, nil
 }
 
 // ensureDataPlaneRolloutIngressServiceStatus ensures status.rollout.service.ingress
