@@ -12,19 +12,23 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	testdynclient "k8s.io/client-go/dynamic/fake"
 	testk8sclient "k8s.io/client-go/kubernetes/fake"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 )
 
 func prepareScheme(t *testing.T) *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	require.NoError(t, testk8sclient.AddToScheme(scheme))
-
+	require.NoError(t, operatorv1beta1.AddToScheme(scheme))
 	return scheme
 }
 
@@ -48,11 +52,31 @@ func TestCreateManager(t *testing.T) {
 			},
 		},
 	}
+
+	dataplanes := []runtime.Object{
+		&operatorv1beta1.DataPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "kong",
+				Name:      "cloud-gateway-0",
+			},
+		},
+	}
+	objsWithDataPlanes := append(objs, dataplanes...)
+
+	restMapper := meta.NewDefaultRESTMapper(nil)
+	restMapper.Add(schema.GroupVersionKind{
+		Group:   operatorv1beta1.SchemeGroupVersion.Group,
+		Version: operatorv1beta1.SchemeGroupVersion.Version,
+		Kind:    "DataPlane",
+	}, meta.RESTScopeNamespace)
+
 	t.Log("create mock kubernetes clients...")
-	k8sclient := testk8sclient.NewSimpleClientset(objs...)
-	ctrlClient := fakeclient.NewClientBuilder().Build()
 	scheme := prepareScheme(t)
-	dyn := testdynclient.NewSimpleDynamicClient(scheme, objs...)
+	// register GVK of dataplanes in REST mapper to let GVR find a match.
+
+	k8sclient := testk8sclient.NewSimpleClientset(objs...)
+	ctrlClient := fakeclient.NewClientBuilder().WithScheme(scheme).WithRESTMapper(restMapper).WithRuntimeObjects(objsWithDataPlanes...).Build()
+	dyn := testdynclient.NewSimpleDynamicClient(scheme, objsWithDataPlanes...)
 
 	d, ok := k8sclient.Discovery().(*fakediscovery.FakeDiscovery)
 	require.True(t, ok)
@@ -93,6 +117,9 @@ func TestCreateManager(t *testing.T) {
 			"k8sv=v1.27.2",
 			"k8s_nodes_count=1",
 			"k8s_pods_count=1",
+			// TODO: check for update of counts
+			// https://github.com/Kong/gateway-operator/issues/1012
+			"k8s_dataplanes_count=1",
 		)
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for report")

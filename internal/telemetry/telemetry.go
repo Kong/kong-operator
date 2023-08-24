@@ -102,6 +102,13 @@ func createManager(
 			return nil, fmt.Errorf("failed to create cluster state workflow: %w", err)
 		}
 
+		// Add dataplane count provider to monitor number of dataplanes in the cluster.
+		p, err := NewDataPlaneCountProvider(dyn, cl.RESTMapper())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create dataplane count provider: %w", err)
+		}
+		w.AddProvider(p)
+
 		m.AddWorkflow(w)
 	}
 	// Add state workflow
