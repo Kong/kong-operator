@@ -58,3 +58,18 @@ func (b *testDataPlaneBuilder) WithIngressServiceAnnotations(anns map[string]str
 	b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.Annotations = anns
 	return b
 }
+
+func (b *testDataPlaneBuilder) initDeploymentRolloutBlueGreen() {
+	if b.dataplane.Spec.Deployment.Rollout == nil {
+		b.dataplane.Spec.Deployment.Rollout = &operatorv1beta1.Rollout{}
+	}
+	if b.dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen == nil {
+		b.dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen = &operatorv1beta1.BlueGreenStrategy{}
+	}
+}
+
+func (b *testDataPlaneBuilder) WithPromotionStrategy(promotionStrategy operatorv1beta1.PromotionStrategy) *testDataPlaneBuilder {
+	b.initDeploymentRolloutBlueGreen()
+	b.dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen.Promotion.Strategy = promotionStrategy
+	return b
+}
