@@ -7,13 +7,13 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -100,7 +100,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 								},
 							},
 						},
-						DataPlane: pointer.String("test-dataplane"),
+						DataPlane: lo.ToPtr("test-dataplane"),
 					},
 				},
 				Status: operatorv1alpha1.ControlPlaneStatus{
@@ -275,7 +275,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 								},
 							},
 						},
-						DataPlane: pointer.String("test-dataplane"),
+						DataPlane: lo.ToPtr("test-dataplane"),
 					},
 				},
 				Status: operatorv1alpha1.ControlPlaneStatus{

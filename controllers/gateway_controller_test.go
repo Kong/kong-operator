@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -119,7 +118,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					},
 					Spec: operatorv1alpha1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
-							DataPlane: pointer.String("test-dataplane"),
+							DataPlane: lo.ToPtr("test-dataplane"),
 						},
 					},
 					Status: operatorv1alpha1.ControlPlaneStatus{
@@ -168,9 +167,6 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				otherBalancerIP := "172.18.1.19"
 				exampleHostname := "host.example.com"
 
-				IPAddressTypePointer := (*gatewayv1beta1.AddressType)(pointer.String(string(gatewayv1beta1.IPAddressType)))
-				HostnameAddressTypePointer := (*gatewayv1beta1.AddressType)(pointer.String(string(gatewayv1beta1.HostnameAddressType)))
-
 				t.Log("first reconciliation, the dataplane has no IP assigned")
 				// the dataplane service starts with no IP assigned, the gateway must be not ready
 				_, err := reconciler.Reconcile(ctx, gatewayReq)
@@ -211,7 +207,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.Equal(t,
 					[]gwtypes.GatewayAddress{
 						{
-							Type:  IPAddressTypePointer,
+							Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
 							Value: clusterIP,
 						},
 					},
@@ -245,11 +241,11 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.Equal(t,
 					[]gwtypes.GatewayAddress{
 						{
-							Type:  IPAddressTypePointer,
+							Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
 							Value: loadBalancerIP,
 						},
 						{
-							Type:  IPAddressTypePointer,
+							Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
 							Value: otherBalancerIP,
 						},
 					},
@@ -277,7 +273,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
 				require.Equal(t, currentGateway.Status.Addresses, []gwtypes.GatewayAddress{
 					{
-						Type:  HostnameAddressTypePointer,
+						Type:  lo.ToPtr(gatewayv1beta1.HostnameAddressType),
 						Value: exampleHostname,
 					},
 				})

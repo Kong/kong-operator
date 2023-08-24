@@ -1,9 +1,9 @@
 package resources
 
 import (
+	"github.com/samber/lo"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 )
 
 // -----------------------------------------------------------------------------
@@ -52,12 +52,12 @@ func GenerateNewValidatingWebhookConfiguration(serviceNamespace, serviceName, we
 					Service: &admissionregistrationv1.ServiceReference{
 						Namespace: serviceNamespace,
 						Name:      serviceName,
-						Path:      pointer.String("/validate"),
+						Path:      lo.ToPtr("/validate"),
 					},
 				},
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				SideEffects:             &sideEffect,
-				TimeoutSeconds:          pointer.Int32(5),
+				TimeoutSeconds:          lo.ToPtr(int32(5)),
 			},
 		},
 	}

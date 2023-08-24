@@ -3,10 +3,10 @@ package resources
 import (
 	"fmt"
 
+	"github.com/samber/lo"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 
 	"github.com/kong/gateway-operator/internal/consts"
 )
@@ -80,8 +80,8 @@ func newWebhookCertificateConfigJobCommon(namespace, serviceAccountName string, 
 					RestartPolicy:      corev1.RestartPolicyOnFailure,
 					ServiceAccountName: serviceAccountName,
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: pointer.Bool(true),
-						RunAsUser:    pointer.Int64(2000),
+						RunAsNonRoot: lo.ToPtr(true),
+						RunAsUser:    lo.ToPtr(int64(2000)),
 					},
 				},
 			},

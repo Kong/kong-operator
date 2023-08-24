@@ -4,12 +4,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 )
 
 func TestFilterSecrets(t *testing.T) {
@@ -330,7 +330,7 @@ func TestFilterServices(t *testing.T) {
 						Endpoints: []discoveryv1.Endpoint{
 							{
 								Conditions: discoveryv1.EndpointConditions{
-									Ready: pointer.Bool(true),
+									Ready: lo.ToPtr(true),
 								},
 							},
 						},

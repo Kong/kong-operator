@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -13,7 +14,6 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
@@ -186,8 +186,8 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		switch {
 		case !dataplaneIsSet && (replicas == nil || *replicas != numReplicasWhenNoDataplane):
 			// Dataplane was just unset, so we need to scale down the Deployment.
-			if !cmp.Equal(existingDeployment.Spec.Replicas, pointer.Int32(numReplicasWhenNoDataplane)) {
-				existingDeployment.Spec.Replicas = pointer.Int32(numReplicasWhenNoDataplane)
+			if !cmp.Equal(existingDeployment.Spec.Replicas, lo.ToPtr(int32(numReplicasWhenNoDataplane))) {
+				existingDeployment.Spec.Replicas = lo.ToPtr(int32(numReplicasWhenNoDataplane))
 				updated = true
 			}
 		case dataplaneIsSet && (replicas != nil && *replicas != numReplicasWhenNoDataplane):
@@ -211,7 +211,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	}
 
 	if !dataplaneIsSet {
-		generatedDeployment.Spec.Replicas = pointer.Int32(numReplicasWhenNoDataplane)
+		generatedDeployment.Spec.Replicas = lo.ToPtr(int32(numReplicasWhenNoDataplane))
 	}
 	return true, generatedDeployment, r.Client.Create(ctx, generatedDeployment)
 }
