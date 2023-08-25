@@ -179,19 +179,14 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	// Ensure "preview" Deployment.
-	res, deployment, err := ensureDeploymentForDataPlane(ctx, r.Client, log, r.DevelopmentMode, &dataplane,
-		client.MatchingLabels{
-			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,
-		},
-		k8sresources.WithTLSVolumeFromSecret(consts.DataPlaneClusterCertificateVolumeName, certSecret.Name),
-		k8sresources.WithClusterCertificateMount(consts.DataPlaneClusterCertificateVolumeName),
-		labelSelectorFromDataPlaneRolloutStatusSelectorDeploymentOpt(&dataplane),
-	)
+	deployment, _, err := r.ensureDeploymentForDataPlane(ctx, log, &dataplane, certSecret)
 	if err != nil {
 		cErr := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Deployment")
 		return ctrl.Result{}, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", errors.Join(cErr, err))
 	} else if res == Created || res == Updated {
 		return ctrl.Result{}, nil // dataplane deployment creation/update will trigger reconciliation
+	} else if replicas := deployment.Spec.Replicas; replicas != nil && *replicas == 0 {
+		return ctrl.Result{}, r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutWaitingForChange, "")
 	}
 
 	// TODO: check if the preview service is available.
@@ -293,6 +288,54 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	debug(log, "BlueGreen reconciliation complete for DataPlane resource", dataplane)
 	return ctrl.Result{}, nil
+}
+
+func (r *DataPlaneBlueGreenReconciler) ensureDeploymentForDataPlane(
+	ctx context.Context,
+	log logr.Logger,
+	dataplane *operatorv1beta1.DataPlane,
+	certSecret *corev1.Secret,
+) (*appsv1.Deployment, CreatedUpdatedOrNoop, error) {
+	deploymentOpts := []k8sresources.DeploymentOpt{
+		k8sresources.WithTLSVolumeFromSecret(consts.DataPlaneClusterCertificateVolumeName, certSecret.Name),
+		k8sresources.WithClusterCertificateMount(consts.DataPlaneClusterCertificateVolumeName),
+		labelSelectorFromDataPlaneRolloutStatusSelectorDeploymentOpt(dataplane),
+	}
+
+	// If we're running the exact same Generation as "live" version is then:
+	// - the rollout resource plan is set to ScaleDownOnPromotionScaleUpOnRollout
+	//   then  scale down the Deployment to 0 replicas.
+	cReady, okReady := k8sutils.GetCondition(k8sutils.ReadyType, dataplane)
+	cRolledOut, okRolledOut := k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
+	if okReady && okRolledOut && cReady.ObservedGeneration == cRolledOut.ObservedGeneration {
+		dPlan := dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen.Resources.Plan.Deployment
+		if dPlan == operatorv1beta1.RolloutResourcePlanDeploymentScaleDownOnPromotionScaleUpOnRollout {
+			deploymentOpts = append(deploymentOpts, func(d *appsv1.Deployment) {
+				d.Spec.Replicas = lo.ToPtr(int32(0))
+			})
+		}
+		// TODO: implemented DeleteOnPromotionRecreateOnRollout
+		// Ref: https://github.com/Kong/gateway-operator/issues/1010
+	}
+	res, deployment, err := ensureDeploymentForDataPlane(ctx, r.Client, log, r.DevelopmentMode, dataplane,
+		client.MatchingLabels{
+			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,
+		},
+		deploymentOpts...,
+	)
+	if err != nil {
+		return nil, Noop, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", err)
+	}
+
+	switch res {
+	case Created, Updated:
+		debug(log, "deployment modified", dataplane, "reason", res)
+		// requeue will be triggered by the creation or update of the owned object
+		return deployment, res, nil
+	default:
+		debug(log, "no need for deployment update", dataplane)
+		return deployment, Noop, nil
+	}
 }
 
 // resetPromoteWhenReadyAnnotation resets promote-when-ready DataPlane annotation.

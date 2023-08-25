@@ -205,6 +205,16 @@ func DataPlaneHasActiveDeployment(t *testing.T, ctx context.Context, dataplaneNa
 	}, clients.OperatorClient)
 }
 
+// DataPlaneHasDeployment is a helper function for tests that returns a function
+// that can be used to check if a DataPlane has a Deployment.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func DataPlaneHasDeployment(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, matchingLabels client.MatchingLabels) func() bool {
+	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
+		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, matchingLabels)
+		return len(deployments) == 1
+	}, clients.OperatorClient)
+}
+
 func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, n int) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
@@ -219,12 +229,9 @@ func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName typ
 // DataPlaneHasService is a helper function for tests that returns a function
 // that can be used to check if a DataPlane has a service created.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func DataPlaneHasService(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients) func() bool {
+func DataPlaneHasService(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, matchingLabels client.MatchingLabels) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-		})
+		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, matchingLabels)
 		return len(services) == 1
 	}, clients.OperatorClient)
 }
@@ -245,10 +252,10 @@ func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName 
 	}, clients.OperatorClient)
 }
 
-// DataPlaneServiceHasActiveEndpoints is a helper function for tests that returns a function
-// that can be used to check if a Service has an active endpoint.
+// DataPlaneServiceHasNActiveEndpoints is a helper function for tests that returns a function
+// that can be used to check if a Service has active endpoints.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func DataPlaneServiceHasActiveEndpoints(t *testing.T, ctx context.Context, serviceName types.NamespacedName, clients K8sClients) func() bool {
+func DataPlaneServiceHasNActiveEndpoints(t *testing.T, ctx context.Context, serviceName types.NamespacedName, clients K8sClients, n int) func() bool {
 	return func() bool {
 		endpointSlices := MustListServiceEndpointSlices(
 			t,
@@ -259,7 +266,7 @@ func DataPlaneServiceHasActiveEndpoints(t *testing.T, ctx context.Context, servi
 		if len(endpointSlices) != 1 {
 			return false
 		}
-		return len(endpointSlices[0].Endpoints) == 1
+		return len(endpointSlices[0].Endpoints) == n
 	}
 }
 

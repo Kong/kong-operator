@@ -70,23 +70,35 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 	t.Log("verifying dataplane gets marked provisioned")
 	require.Eventually(t, testutils.DataPlaneIsProvisioned(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
 
-	t.Log("verifying preview deployment managed by the dataplane")
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients, client.MatchingLabels{
+	t.Log("verifying preview deployment managed by the dataplane is present")
+	require.Eventually(t, testutils.DataPlaneHasDeployment(t, ctx, dataplaneName, clients, client.MatchingLabels{
 		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
 		consts.DataPlaneDeploymentStateLabel:  consts.DataPlaneStateLabelValuePreview,
 	}), time.Minute, time.Second)
 
-	t.Log("verifying preview admin service managed by the dataplane")
-	var dataplaneAdminPreviewService corev1.Service
-	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneAdminPreviewService, clients, client.MatchingLabels{
+	t.Log("verifying preview admin service managed by the dataplane is present")
+	adminServiceLabels := client.MatchingLabels{
 		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
 		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
 		consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValuePreview,
-	}), time.Minute, time.Second)
+	}
+	require.Eventually(t, testutils.DataPlaneHasService(t, ctx, dataplaneName, clients, adminServiceLabels), time.Minute, time.Second)
 
-	t.Log("verifying preview admin service's endpoints")
-	require.Eventually(t, testutils.DataPlaneServiceHasActiveEndpoints(t, ctx, types.NamespacedName{
-		Name:      dataplaneAdminPreviewService.Name,
-		Namespace: dataplaneAdminPreviewService.Namespace,
-	}, clients), time.Minute, time.Second)
+	t.Log("verifying that preview admin service has no active endpoints by default")
+	adminServices := testutils.MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, adminServiceLabels)
+	require.Len(t, adminServices, 1)
+	adminSvcNN := types.NamespacedName{
+		Name:      adminServices[0].Name,
+		Namespace: adminServices[0].Namespace,
+	}
+	require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, ctx, adminSvcNN, clients, 0), time.Minute, time.Second,
+		"with default rollout resource plan for DataPlane, the preview Admin Service shouldn't get an active endpoint")
+
+	t.Log("verifying that preview admin service has active endpoint after a patch")
+	oldDataplane := dataplane.DeepCopy()
+	require.Len(t, dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers, 1)
+	dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Image = "kong:3.1"
+	require.NoError(t, clients.MgrClient.Patch(ctx, dataplane, client.MergeFrom(oldDataplane)))
+	require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, ctx, adminSvcNN, clients, 1), time.Minute, time.Second,
+		"with default rollout resource plan for DataPlane, the preview Admin Service should get an active endpoint after a patch")
 }

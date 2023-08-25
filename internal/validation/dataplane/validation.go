@@ -49,6 +49,13 @@ func (v *Validator) ValidateDataPlaneDeploymentRollout(rollout *operatorv1beta1.
 		return errors.New("DataPlane AutomaticPromotion cannot be used yet")
 	}
 
+	if rollout != nil && rollout.Strategy.BlueGreen != nil &&
+		rollout.Strategy.BlueGreen.Resources.Plan.Deployment == operatorv1beta1.RolloutResourcePlanDeploymentDeleteOnPromotionRecreateOnRollout {
+		// Can't use DeleteOnPromotionRecreateOnRollout just yet.
+		// Related: https://github.com/Kong/gateway-operator/issues/1006.
+		return errors.New("DataPlane Deployment resource plan DeleteOnPromotionRecreateOnRollout cannot be used yet")
+	}
+
 	return nil
 }
 

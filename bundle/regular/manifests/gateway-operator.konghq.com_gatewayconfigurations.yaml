@@ -16884,6 +16884,32 @@ spec:
                                     required:
                                     - strategy
                                     type: object
+                                  resources:
+                                    default:
+                                      plan:
+                                        deployment: ScaleDownOnPromotionScaleUpOnRollout
+                                    description: Resources controls what happens to
+                                      operator managed resources during or after a
+                                      rollout.
+                                    properties:
+                                      plan:
+                                        default:
+                                          deployment: ScaleDownOnPromotionScaleUpOnRollout
+                                        description: Plan defines the resource plan
+                                          for managing resources during and after
+                                          a rollout.
+                                        properties:
+                                          deployment:
+                                            default: ScaleDownOnPromotionScaleUpOnRollout
+                                            description: Deployment describes how
+                                              the operator manages Deployments during
+                                              and after a rollout.
+                                            enum:
+                                            - ScaleDownOnPromotionScaleUpOnRollout
+                                            - DeleteOnPromotionRecreateOnRollout
+                                            type: string
+                                        type: object
+                                    type: object
                                 required:
                                 - promotion
                                 type: object

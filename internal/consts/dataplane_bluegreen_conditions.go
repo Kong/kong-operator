@@ -25,6 +25,10 @@ const (
 	// new version is being rolled out.
 	DataPlaneConditionReasonRolloutProgressing k8sutils.ConditionReason = "Progressing"
 
+	// DataPlaneConditionReasonRolloutWaitingForChange is a reason which indicates a DataPlane
+	// is waiting for a change to trigger new version to be made available before promotion.
+	DataPlaneConditionReasonRolloutWaitingForChange k8sutils.ConditionReason = "WaitingForChange"
+
 	// DataPlaneConditionReasonRolloutPromotionInProgress is a reason which
 	// indicates that a promotion is in progress.
 	DataPlaneConditionReasonRolloutPromotionInProgress k8sutils.ConditionReason = "PromotionInProgress"

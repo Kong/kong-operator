@@ -112,7 +112,10 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	}), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("verifying services managed by the dataplane")
-	require.Eventually(t, testutils.DataPlaneHasService(t, ctx, dataplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+	require.Eventually(t, testutils.DataPlaneHasService(t, ctx, dataplaneName, clients, client.MatchingLabels{
+		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
+	}), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("attaching dataplane to controlplane")
 	controlplane, err = controlplaneClient.Get(ctx, controlplane.Name, metav1.GetOptions{})

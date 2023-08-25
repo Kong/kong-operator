@@ -43,10 +43,17 @@ type RolloutStrategy struct {
 type BlueGreenStrategy struct {
 	// Promotion defines how the operator handles promotion of resources.
 	Promotion Promotion `json:"promotion"`
+
+	// Resources controls what happens to operator managed resources during or
+	// after a rollout.
+	//
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={"plan":{"deployment":"ScaleDownOnPromotionScaleUpOnRollout"}}
+	Resources RolloutResources `json:"resources,omitempty"`
 }
 
-// Promotion is contains the fields that define how the operator handles
-// promotion of resources.
+// Promotion is a type that contains fields that define how the operator handles
+// promotion of resources during a blue/green rollout.
 type Promotion struct {
 	// Strategy indicates how you want the operator to handle the promotion of
 	// the preview (green) resources (Deployments and Services) after all workflows
@@ -72,6 +79,44 @@ const (
 	// That can be done by annotating the DataPlane object with
 	// `"gateway-operator.konghq.com/promote-when-ready": "true"`.
 	BreakBeforePromotion PromotionStrategy = "BreakBeforePromotion"
+)
+
+// RolloutResources is the type which contains the fields which control how the operator
+// manages the resources it manages during or after the rollout concludes.
+type RolloutResources struct {
+	// Plan defines the resource plan for managing resources during and after a rollout.
+	//
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={"deployment":"ScaleDownOnPromotionScaleUpOnRollout"}
+	Plan RolloutResourcePlan `json:"plan,omitempty"`
+}
+
+// RolloutResourcePlan is a type that holds rollout resource plan related fields
+// which control how the operator handles resources during and after a rollout.
+type RolloutResourcePlan struct {
+	// Deployment describes how the operator manages Deployments during and after a rollout.
+	//
+	// +kubebuilder:validation:Enum=ScaleDownOnPromotionScaleUpOnRollout;DeleteOnPromotionRecreateOnRollout
+	// +kubebuilder:default=ScaleDownOnPromotionScaleUpOnRollout
+	Deployment RolloutResourcePlanDeployment `json:"deployment,omitempty"`
+}
+
+// RolloutResourcePlanDeployment is the type that holds the resource plan for
+// managing the Deployment objects during and after a rollout.
+type RolloutResourcePlanDeployment string
+
+const (
+	// RolloutResourcePlanDeploymentScaleDownOnPromotionScaleUpOnRollout is a rollout
+	// resource plan for Deployment which makes the operator scale down
+	// the Deployment to 0 when the rollout is not initiated by a spec change
+	// and then to scale it up when the rollout is initiated (the owner resource
+	// like a DataPlane is patched or updated).
+	RolloutResourcePlanDeploymentScaleDownOnPromotionScaleUpOnRollout RolloutResourcePlanDeployment = "ScaleDownOnPromotionScaleUpOnRollout"
+	// RolloutResourcePlanDeploymentDeleteOnPromotionRecreateOnRollout which makes the operator delete the
+	// Deployment the rollout is not initiated by a spec change and then to
+	// re-create it when the rollout is initiated (the owner resource like
+	// a DataPlane is patched or updated)
+	RolloutResourcePlanDeploymentDeleteOnPromotionRecreateOnRollout RolloutResourcePlanDeployment = "DeleteOnPromotionRecreateOnRollout"
 )
 
 // GatewayConfigurationTargetKind is an object kind that can be targeted for
