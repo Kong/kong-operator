@@ -241,19 +241,16 @@ func (r *GatewayReconciler) ensureDataPlaneHasNetworkPolicy(
 	gatewayutils.LabelObjectAsGatewayManaged(generatedPolicy)
 
 	if count == 1 {
-		var updated bool
-		existingPolicy := &networkPolicies[0]
-		updated, existingPolicy.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingPolicy.ObjectMeta, generatedPolicy.ObjectMeta)
-		if updated {
-			if err := r.Client.Update(ctx, existingPolicy); err != nil {
-				return false, fmt.Errorf("failed updating DataPlane's NetworkPolicy %s: %w", existingPolicy.Name, err)
-			}
+		var (
+			metaUpdated    bool
+			existingPolicy = &networkPolicies[0]
+			old            = existingPolicy.DeepCopy()
+		)
+		metaUpdated, existingPolicy.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingPolicy.ObjectMeta, generatedPolicy.ObjectMeta)
 
-			return true, nil
-		}
-		if needsUpdate, updatedPolicy := k8sresources.NetworkPolicyNeedsUpdate(existingPolicy, generatedPolicy); needsUpdate {
-			if err := r.Client.Update(ctx, updatedPolicy); err != nil {
-				return false, fmt.Errorf("failed updating DataPlane's NetworkPolicy %s: %w", updatedPolicy.Name, err)
+		if k8sresources.EnsureNetworkPolicyIsUpdated(existingPolicy, generatedPolicy) || metaUpdated {
+			if err := r.Client.Patch(ctx, existingPolicy, client.MergeFrom(old)); err != nil {
+				return false, fmt.Errorf("failed updating DataPlane's NetworkPolicy %s: %w", existingPolicy.Name, err)
 			}
 			return true, nil
 		}

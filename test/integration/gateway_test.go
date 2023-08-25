@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +23,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
+	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -274,54 +276,69 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowProxyIngress.Rule)
 	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowMetricsIngress.Rule)
 
-	t.Log("verifying DataPlane's NetworkPolicies get updated after customizing kong proxy listen port through GatewayConfiguration")
-	setGatewayConfigurationEnvProxyPort(t, gatewayConfiguration, 8005, 8999)
-	gatewayConfiguration, err = clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Update(ctx, gatewayConfiguration, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	t.Run("verifying DataPlane's NetworkPolicies get updated after customizing kong proxy listen port through GatewayConfiguration", func(t *testing.T) {
+		gwcClient := clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name)
 
-	t.Log("verifying DataPlane's NetworkPolicies ingress rules get updated with configured proxy listen port")
-	var expectedUpdatedProxyListenPort networkPolicyIngressRuleDecorator
-	expectedUpdatedProxyListenPort.withProtocolPort(corev1.ProtocolTCP, 8005)
-	expectedUpdatedProxyListenPort.withProtocolPort(corev1.ProtocolTCP, 8999)
-	require.Eventually(t,
-		testutils.GatewayNetworkPolicyForGatewayContainsRules(t, ctx, gateway, clients, expectedUpdatedProxyListenPort.Rule),
-		testutils.SubresourceReadinessWait, time.Second)
-	var notExpectedUpdatedProxyListenPort networkPolicyIngressRuleDecorator
-	notExpectedUpdatedProxyListenPort.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneProxyPort)
-	require.Eventually(t,
-		testutils.Not(
-			testutils.GatewayNetworkPolicyForGatewayContainsRules(t, ctx, gateway, clients, notExpectedUpdatedProxyListenPort.Rule),
-		),
-		testutils.SubresourceReadinessWait, time.Second)
+		setGatewayConfigurationEnvProxyPort(t, gatewayConfiguration, 8005, 8999)
+		gatewayConfiguration, err = gwcClient.Update(ctx, gatewayConfiguration, metav1.UpdateOptions{})
+		require.NoError(t, err)
 
-	t.Log("verifying DataPlane's NetworkPolicies ingress rules get updated with configured admin listen port")
-	setGatewayConfigurationEnvAdminAPIPort(t, gatewayConfiguration, 8555)
-	_, err = clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Update(ctx, gatewayConfiguration, metav1.UpdateOptions{})
-	require.NoError(t, err)
-	var expectedUpdatedLimitedAdminAPI networkPolicyIngressRuleDecorator
-	expectedUpdatedLimitedAdminAPI.withProtocolPort(corev1.ProtocolTCP, 8555)
-	expectedUpdatedLimitedAdminAPI.withPeerMatchLabels(
-		map[string]string{"app": controlplane.Name},
-		map[string]string{"kubernetes.io/metadata.name": controlplane.Namespace},
-	)
-	require.Eventually(t,
-		testutils.GatewayNetworkPolicyForGatewayContainsRules(t, ctx, gateway, clients, expectedUpdatedLimitedAdminAPI.Rule),
-		testutils.SubresourceReadinessWait, time.Second)
-	var notExpectedUpdatedLimitedAdminAPI networkPolicyIngressRuleDecorator
-	notExpectedUpdatedLimitedAdminAPI.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneAdminAPIPort)
-	notExpectedUpdatedLimitedAdminAPI.withPeerMatchLabels(
-		map[string]string{"app": controlplane.Name},
-		map[string]string{"kubernetes.io/metadata.name": controlplane.Namespace},
-	)
-	require.Eventually(t,
-		testutils.Not(testutils.GatewayNetworkPolicyForGatewayContainsRules(t, ctx, gateway, clients, notExpectedUpdatedLimitedAdminAPI.Rule)),
-		testutils.SubresourceReadinessWait, time.Second)
+		t.Log("ingress rules get updated with configured proxy listen port")
+		var expectedUpdatedProxyListenPort networkPolicyIngressRuleDecorator
+		expectedUpdatedProxyListenPort.withProtocolPort(corev1.ProtocolTCP, 8005)
+		expectedUpdatedProxyListenPort.withProtocolPort(corev1.ProtocolTCP, 8999)
+		require.Eventually(t,
+			testutils.GatewayNetworkPolicyForGatewayContainsRules(t, ctx, gateway, clients, expectedUpdatedProxyListenPort.Rule),
+			testutils.SubresourceReadinessWait, time.Second)
+		var notExpectedUpdatedProxyListenPort networkPolicyIngressRuleDecorator
+		notExpectedUpdatedProxyListenPort.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneProxyPort)
+		require.Eventually(t,
+			testutils.Not(
+				testutils.GatewayNetworkPolicyForGatewayContainsRules(t, ctx, gateway, clients, notExpectedUpdatedProxyListenPort.Rule),
+			),
+			testutils.SubresourceReadinessWait, time.Second)
 
-	t.Log("deleting Gateway resource")
-	require.NoError(t, clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
+		t.Log("ingress rules get updated with configured admin listen port")
+		setGatewayConfigurationEnvAdminAPIPort(t, gatewayConfiguration, 8555)
+		_, err = gwcClient.Update(ctx, gatewayConfiguration, metav1.UpdateOptions{})
+		require.NoError(t, err)
 
-	t.Log("verifying networkpolicies are deleted")
-	require.Eventually(t, testutils.Not(testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients)), time.Minute, time.Second)
+		var expectedUpdatedLimitedAdminAPI networkPolicyIngressRuleDecorator
+		expectedUpdatedLimitedAdminAPI.withProtocolPort(corev1.ProtocolTCP, 8555)
+		expectedUpdatedLimitedAdminAPI.withPeerMatchLabels(
+			map[string]string{"app": controlplane.Name},
+			map[string]string{"kubernetes.io/metadata.name": controlplane.Namespace},
+		)
+		if !assert.Eventually(t,
+			testutils.GatewayNetworkPolicyForGatewayContainsRules(t, ctx, gateway, clients, expectedUpdatedLimitedAdminAPI.Rule),
+			testutils.SubresourceReadinessWait, time.Second,
+			"NetworkPolicy didn't get updated with port 8555 after a corresponding change to GatewayConfiguration") {
+			networkpolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, clients.MgrClient, gateway)
+			require.NoError(t, err)
+			t.Log("DataPlane's NetworkPolicies")
+			for _, np := range networkpolicies {
+				t.Logf("%# v\n", pretty.Formatter(np))
+			}
+		}
+
+		var notExpectedUpdatedLimitedAdminAPI networkPolicyIngressRuleDecorator
+		notExpectedUpdatedLimitedAdminAPI.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneAdminAPIPort)
+		notExpectedUpdatedLimitedAdminAPI.withPeerMatchLabels(
+			map[string]string{"app": controlplane.Name},
+			map[string]string{"kubernetes.io/metadata.name": controlplane.Namespace},
+		)
+		require.Eventually(t,
+			testutils.Not(testutils.GatewayNetworkPolicyForGatewayContainsRules(t, ctx, gateway, clients, notExpectedUpdatedLimitedAdminAPI.Rule)),
+			testutils.SubresourceReadinessWait, time.Second)
+	})
+
+	t.Run("verifying DataPlane's NetworkPolicies get deleted after Gateway is deleted", func(t *testing.T) {
+		t.Log("deleting Gateway resource")
+		require.NoError(t, clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
+
+		t.Log("verifying networkpolicies are deleted")
+		require.Eventually(t, testutils.Not(testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients)), time.Minute, time.Second)
+	})
 }
 
 func setGatewayConfigurationEnvProxyPort(t *testing.T, gatewayConfiguration *operatorv1alpha1.GatewayConfiguration, proxyPort int, proxySSLPort int) {

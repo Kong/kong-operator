@@ -491,6 +491,8 @@ func GatewayNetworkPolicyForGatewayContainsRules[T ingressRuleT](t *testing.T, c
 				if !networkPolicyRuleSliceContainsRule(netpol.Spec.Egress, r) {
 					return false
 				}
+			default:
+				t.Logf("NetworkPolicy rule has an unknown type %T", rule)
 			}
 		}
 		return true
