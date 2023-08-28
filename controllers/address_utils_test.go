@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 )
@@ -210,6 +211,74 @@ func Test_addressesFromService(t *testing.T) {
 					Type:       addressOf(operatorv1beta1.IPAddressType),
 					Value:      "2001:0db8::1428:57ab",
 					SourceType: operatorv1beta1.PrivateIPAddressSourceType,
+				},
+			},
+		},
+		{
+			name: "service having AWS LB annotation indicating internal LB scheme gets detected as private LB",
+			service: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						serviceAnnotationAWSLoadBalancerSchemeKey: serviceAnnotationAWSLoadBalancerSchemeIternal,
+					},
+				},
+				Status: corev1.ServiceStatus{
+					LoadBalancer: corev1.LoadBalancerStatus{
+						Ingress: []corev1.LoadBalancerIngress{
+							{
+								Hostname: "qwerty.example.com",
+							},
+							{
+								IP: "192.168.1.1",
+							},
+						},
+					},
+				},
+			},
+			want: []operatorv1beta1.Address{
+				{
+					Type:       addressOf(operatorv1beta1.HostnameAddressType),
+					Value:      "qwerty.example.com",
+					SourceType: operatorv1beta1.PrivateLoadBalancerAddressSourceType,
+				},
+				{
+					Type:       addressOf(operatorv1beta1.IPAddressType),
+					Value:      "192.168.1.1",
+					SourceType: operatorv1beta1.PrivateLoadBalancerAddressSourceType,
+				},
+			},
+		},
+		{
+			name: "service having AWS LB annotation indicating internet facing LB scheme gets detected as public LB",
+			service: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						serviceAnnotationAWSLoadBalancerSchemeKey: serviceAnnotationAWSLoadBalancerSchemeInternetFacing,
+					},
+				},
+				Status: corev1.ServiceStatus{
+					LoadBalancer: corev1.LoadBalancerStatus{
+						Ingress: []corev1.LoadBalancerIngress{
+							{
+								Hostname: "qwerty.example.com",
+							},
+							{
+								IP: "3.4.0.1",
+							},
+						},
+					},
+				},
+			},
+			want: []operatorv1beta1.Address{
+				{
+					Type:       addressOf(operatorv1beta1.HostnameAddressType),
+					Value:      "qwerty.example.com",
+					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
+				},
+				{
+					Type:       addressOf(operatorv1beta1.IPAddressType),
+					Value:      "3.4.0.1",
+					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
 			},
 		},

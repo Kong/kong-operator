@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/netip"
 
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -54,7 +55,7 @@ func addressesFromService(service *corev1.Service) ([]operatorv1beta1.Address, e
 
 			addresses = append(addresses,
 				operatorv1beta1.Address{
-					Type:       addressOf(operatorv1beta1.IPAddressType),
+					Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
 					Value:      ingress.IP,
 					SourceType: sourceType,
 				},
@@ -63,13 +64,9 @@ func addressesFromService(service *corev1.Service) ([]operatorv1beta1.Address, e
 		if ingress.Hostname != "" {
 			addresses = append(addresses,
 				operatorv1beta1.Address{
-					Type:  addressOf(operatorv1beta1.HostnameAddressType),
-					Value: ingress.Hostname,
-
-					// Assume that a load balancer with a hostname is public for now. Currently
-					// the operator only creates external load balancers. To determine whether a
-					// hostname is for an external or internal load balancer will require additional metadata.
-					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
+					Type:       lo.ToPtr(operatorv1beta1.HostnameAddressType),
+					Value:      ingress.Hostname,
+					SourceType: deduceAddressSourceTypeFromService(service),
 				},
 			)
 		}
@@ -78,11 +75,35 @@ func addressesFromService(service *corev1.Service) ([]operatorv1beta1.Address, e
 	for _, address := range service.Spec.ClusterIPs {
 		addresses = append(addresses,
 			operatorv1beta1.Address{
-				Type:       addressOf(operatorv1beta1.IPAddressType),
+				Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
 				Value:      address,
 				SourceType: operatorv1beta1.PrivateIPAddressSourceType,
 			},
 		)
 	}
 	return addresses, nil
+}
+
+const (
+	// https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.6/guide/service/annotations/#lb-scheme
+	serviceAnnotationAWSLoadBalancerSchemeKey            = "service.beta.kubernetes.io/aws-load-balancer-scheme"
+	serviceAnnotationAWSLoadBalancerSchemeIternal        = "internal"
+	serviceAnnotationAWSLoadBalancerSchemeInternetFacing = "internet-facing"
+)
+
+// deduceAddressSourceTypeFromService tried to deduce provide Service address
+// source type based on Service metadata like annotations.
+// It returns the deduced address source type.
+func deduceAddressSourceTypeFromService(s *corev1.Service) operatorv1beta1.AddressSourceType {
+	if v, ok := s.Annotations[serviceAnnotationAWSLoadBalancerSchemeKey]; ok {
+		switch v {
+		case serviceAnnotationAWSLoadBalancerSchemeIternal:
+			return operatorv1beta1.PrivateLoadBalancerAddressSourceType
+		case serviceAnnotationAWSLoadBalancerSchemeInternetFacing:
+			return operatorv1beta1.PublicLoadBalancerAddressSourceType
+		}
+	}
+
+	// By default, assume that a load balancer is public.
+	return operatorv1beta1.PublicLoadBalancerAddressSourceType
 }
