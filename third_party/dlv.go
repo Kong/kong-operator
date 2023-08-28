@@ -6,4 +6,4 @@ import (
 	_ "github.com/go-delve/delve/cmd/dlv"
 )
 
-//go:generate go install -modfile go.mod github.com/go-delve/delve/cmd/dlv
+//go:generate go install github.com/go-delve/delve/cmd/dlv

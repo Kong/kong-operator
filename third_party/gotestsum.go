@@ -6,4 +6,4 @@ import (
 	_ "gotest.tools/gotestsum"
 )
 
-//go:generate go install -modfile go.mod gotest.tools/gotestsum
+//go:generate go install gotest.tools/gotestsum

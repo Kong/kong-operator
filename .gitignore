@@ -23,3 +23,5 @@ TODO
 .DS_Store
 .AppleDouble
 .LSOverride
+go.work
+go.work.sum

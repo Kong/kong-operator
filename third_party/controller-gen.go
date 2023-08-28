@@ -21,4 +21,4 @@ import (
 // github.com/kong/gateway-operator/third_party imports
 // sigs.k8s.io/controller-tools: module sigs.k8s.io/controller-tools@latest found (v0.9.2), but does not contain package sigs.k8s.io/controller-tools
 
-//go:generate go install -modfile go.mod sigs.k8s.io/controller-tools/cmd/controller-gen
+//go:generate go install sigs.k8s.io/controller-tools/cmd/controller-gen
