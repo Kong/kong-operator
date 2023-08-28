@@ -16,7 +16,7 @@ import (
 // GenerateNewClusterRoleBindingForControlPlane is a helper to generate a ClusterRoleBinding
 // resource to bind roles to the service account used by the controlplane deployment.
 func GenerateNewClusterRoleBindingForControlPlane(namespace, controlplaneName, serviceAccountName, clusterRoleName string) *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
+	crb := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-%s-", consts.ControlPlanePrefix, controlplaneName),
 			Labels: map[string]string{
@@ -36,6 +36,8 @@ func GenerateNewClusterRoleBindingForControlPlane(namespace, controlplaneName, s
 			},
 		},
 	}
+	LabelObjectAsControlPlaneManaged(crb)
+	return crb
 }
 
 // GenerateNewClusterRoleBindingForCertificateConfig is a helper to generate a ClusterRoleBinding

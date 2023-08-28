@@ -224,7 +224,6 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 				})
 			require.NoError(t, err)
 			k8sutils.SetOwnerForObject(existingSvc, tc.dataplane)
-			addLabelForDataplane(existingSvc)
 			require.NoError(t, fakeClient.Create(ctx, existingSvc))
 			// modify the existing service.
 			tc.existingServiceModifier(t, ctx, fakeClient, existingSvc)

@@ -494,7 +494,7 @@ func getPrefixForOwner(owner client.Object) string {
 	return ""
 }
 
-func getManagedLabelForOwner(owner client.Object) (key string, value string) {
+func getManagedLabelForOwner(owner metav1.Object) (key string, value string) {
 	switch owner.(type) {
 	case *operatorv1alpha1.ControlPlane:
 		return consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue
@@ -517,9 +517,9 @@ func getManagedLabelForServiceSecret(svcNN types.NamespacedName) client.Matching
 func addLabelForOwner(obj client.Object, owner client.Object) {
 	switch owner.(type) {
 	case *operatorv1alpha1.ControlPlane:
-		addLabelForControlPlane(obj)
+		k8sresources.LabelObjectAsControlPlaneManaged(obj)
 	case *operatorv1beta1.DataPlane:
-		addLabelForDataplane(obj)
+		k8sresources.LabelObjectAsDataPlaneManaged(obj)
 	}
 }
 

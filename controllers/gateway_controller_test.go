@@ -140,7 +140,8 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 						Name:      "test-admin-service",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
+							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
+							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -152,7 +153,8 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 						Name:      "test-ingress-service",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneIngressServiceLabelValue),
+							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
+							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 				},
@@ -314,7 +316,6 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneOptions)
 					for _, dataplaneSubresource := range tc.dataplaneSubResources {
 						k8sutils.SetOwnerForObject(dataplaneSubresource, gatewaySubResource)
-						addLabelForDataplane(dataplaneSubresource)
 						ObjectsToAdd = append(ObjectsToAdd, dataplaneSubresource)
 					}
 				}
@@ -326,7 +327,6 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					})
 					for _, controlplaneSubResource := range tc.controlplaneSubResources {
 						k8sutils.SetOwnerForObject(controlplaneSubResource, gatewaySubResource)
-						addLabelForControlPlane(controlplaneSubResource)
 						ObjectsToAdd = append(ObjectsToAdd, controlplaneSubResource)
 					}
 				}

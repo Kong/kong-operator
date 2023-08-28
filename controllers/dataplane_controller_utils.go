@@ -53,15 +53,6 @@ func generateDataPlaneImage(dataplane *operatorv1beta1.DataPlane, validators ...
 // DataPlane - Private Functions - Kubernetes Object Labels and Annotations
 // -----------------------------------------------------------------------------
 
-func addLabelForDataplane(obj client.Object) {
-	labels := obj.GetLabels()
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-	labels[consts.GatewayOperatorControlledLabel] = consts.DataPlaneManagedLabelValue
-	obj.SetLabels(labels)
-}
-
 func addAnnotationsForDataplaneIngressService(obj client.Object, dataplane operatorv1beta1.DataPlane) {
 	specAnnotations := extractDataPlaneIngressServiceAnnotations(&dataplane)
 	if specAnnotations == nil {

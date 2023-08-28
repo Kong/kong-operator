@@ -175,7 +175,6 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 					Type:   intstr.Int,
 					IntVal: 5,
 				}
-				addLabelForDataplane(existingDeployment)
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
 				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, client.MatchingLabels{})
@@ -234,7 +233,6 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				// expected behavior in reconciler's ensureDeploymentForDataPlane().reconciler.Client,
 				dataPlane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Resources.Limits[corev1.ResourceCPU] = resource.MustParse("4")
 
-				addLabelForDataplane(existingDeployment)
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
 				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, client.MatchingLabels{})
@@ -301,7 +299,6 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 
 				dataPlane.Spec.Deployment.PodTemplateSpec.Spec.Affinity = &corev1.Affinity{}
 
-				addLabelForDataplane(existingDeployment)
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
 				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, client.MatchingLabels{})
@@ -363,7 +360,6 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 					},
 				}
 
-				addLabelForDataplane(existingDeployment)
 				require.NoError(t, reconciler.Client.Update(ctx, existingDeployment))
 
 				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane,

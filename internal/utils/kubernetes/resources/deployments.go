@@ -94,6 +94,7 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 			},
 		},
 	}
+	LabelObjectAsControlPlaneManaged(deployment)
 
 	if controlplane.Spec.Deployment.PodTemplateSpec != nil {
 		patchedPodTemplateSpec, err := StrategicMergePatchPodTemplateSpec(&deployment.Spec.Template, controlplane.Spec.Deployment.PodTemplateSpec)
@@ -269,6 +270,7 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dat
 			},
 		},
 	}
+	LabelObjectAsDataPlaneManaged(deployment)
 
 	if dataplane.Spec.Deployment.PodTemplateSpec != nil {
 		patchedPodTemplateSpec, err := StrategicMergePatchPodTemplateSpec(&deployment.Spec.Template, dataplane.Spec.Deployment.PodTemplateSpec)

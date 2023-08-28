@@ -154,7 +154,6 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	}
 
 	k8sutils.SetOwnerForObject(generatedDeployment, controlplane)
-	addLabelForControlPlane(generatedDeployment)
 
 	if count == 1 {
 		var updated bool
@@ -243,7 +242,6 @@ func (r *ControlPlaneReconciler) ensureServiceAccountForControlPlane(
 
 	generatedServiceAccount := k8sresources.GenerateNewServiceAccountForControlPlane(controlplane.Namespace, controlplane.Name)
 	k8sutils.SetOwnerForObject(generatedServiceAccount, controlplane)
-	addLabelForControlPlane(generatedServiceAccount)
 
 	if count == 1 {
 		var updated bool
@@ -291,7 +289,6 @@ func (r *ControlPlaneReconciler) ensureClusterRoleForControlPlane(
 		return false, nil, err
 	}
 	k8sutils.SetOwnerForObject(generatedClusterRole, controlplane)
-	addLabelForControlPlane(generatedClusterRole)
 
 	if count == 1 {
 		var updated bool
@@ -337,7 +334,6 @@ func (r *ControlPlaneReconciler) ensureClusterRoleBindingForControlPlane(
 
 	generatedClusterRoleBinding := k8sresources.GenerateNewClusterRoleBindingForControlPlane(controlplane.Namespace, controlplane.Name, serviceAccountName, clusterRoleName)
 	k8sutils.SetOwnerForObject(generatedClusterRoleBinding, controlplane)
-	addLabelForControlPlane(generatedClusterRoleBinding)
 
 	if count == 1 {
 		var updated bool

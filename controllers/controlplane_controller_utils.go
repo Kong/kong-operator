@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -245,19 +244,6 @@ func generateControlPlaneImage(opts *operatorv1alpha1.ControlPlaneOptions, valid
 	}
 
 	return consts.DefaultControlPlaneImage, nil // TODO: https://github.com/Kong/gateway-operator/issues/20
-}
-
-// -----------------------------------------------------------------------------
-// ControlPlane - Private Functions - Kubernetes Object Labels
-// -----------------------------------------------------------------------------
-
-func addLabelForControlPlane(obj client.Object) {
-	labels := obj.GetLabels()
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-	labels[consts.GatewayOperatorControlledLabel] = consts.ControlPlaneManagedLabelValue
-	obj.SetLabels(labels)
 }
 
 // -----------------------------------------------------------------------------

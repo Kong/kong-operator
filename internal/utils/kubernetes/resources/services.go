@@ -72,6 +72,7 @@ func GenerateNewIngressServiceForDataplane(dataplane *operatorv1beta1.DataPlane,
 			},
 		},
 	}
+	LabelObjectAsDataPlaneManaged(svc)
 
 	for _, opt := range opts {
 		opt(svc)
@@ -138,6 +139,7 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, o
 			},
 		},
 	}
+	LabelObjectAsDataPlaneManaged(adminService)
 
 	for _, opt := range opts {
 		opt(adminService)

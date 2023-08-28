@@ -126,7 +126,6 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 			existingSvc, err := k8sresources.GenerateNewIngressServiceForDataplane(tc.dataplane)
 			require.NoError(t, err)
 			k8sutils.SetOwnerForObject(existingSvc, tc.dataplane)
-			addLabelForDataplane(existingSvc)
 			err = fakeClient.Create(ctx, existingSvc)
 			require.NoError(t, err)
 			if tc.existingServiceModifier != nil {

@@ -16,35 +16,55 @@ func TestClusterroleHelpers(t *testing.T) {
 	testCases := []struct {
 		controlplane        string
 		image               string
-		expectedClusterRole *rbacv1.ClusterRole
+		expectedClusterRole func() *rbacv1.ClusterRole
 		expectedError       error
 	}{
 		{
-			controlplane:        "test_2.10",
-			image:               "kong/kubernetes-ingress-controller:2.10",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10("test_2.10"),
+			controlplane: "test_2.10",
+			image:        "kong/kubernetes-ingress-controller:2.10",
+			expectedClusterRole: func() *rbacv1.ClusterRole {
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10("test_2.10")
+				resources.LabelObjectAsControlPlaneManaged(cr)
+				return cr
+			},
 		},
 		{
-			controlplane:        "test_2.9",
-			image:               "kong/kubernetes-ingress-controller:2.9",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_lt2_10_ge2_9("test_2.9"),
+			controlplane: "test_2.9",
+			image:        "kong/kubernetes-ingress-controller:2.9",
+			expectedClusterRole: func() *rbacv1.ClusterRole {
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_lt2_10_ge2_9("test_2.9")
+				resources.LabelObjectAsControlPlaneManaged(cr)
+				return cr
+			},
 		},
 		{
-			controlplane:        "test_development_untagged",
-			image:               "test/development",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10("test_development_untagged"),
-			expectedError:       versions.ErrExpectedSemverVersion,
+			controlplane: "test_development_untagged",
+			image:        "test/development",
+			expectedClusterRole: func() *rbacv1.ClusterRole {
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10("test_development_untagged")
+				resources.LabelObjectAsControlPlaneManaged(cr)
+				return cr
+			},
+			expectedError: versions.ErrExpectedSemverVersion,
 		},
 		{
-			controlplane:        "test_empty",
-			image:               "kong/kubernetes-ingress-controller",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10("test_empty"),
-			expectedError:       versions.ErrExpectedSemverVersion,
+			controlplane: "test_empty",
+			image:        "kong/kubernetes-ingress-controller",
+			expectedClusterRole: func() *rbacv1.ClusterRole {
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10("test_empty")
+				resources.LabelObjectAsControlPlaneManaged(cr)
+				return cr
+			},
+			expectedError: versions.ErrExpectedSemverVersion,
 		},
 		{
-			controlplane:        "test_unsupported",
-			image:               "kong/kubernetes-ingress-controller:1.0",
-			expectedClusterRole: clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10("test_unsupported"),
+			controlplane: "test_unsupported",
+			image:        "kong/kubernetes-ingress-controller:1.0",
+			expectedClusterRole: func() *rbacv1.ClusterRole {
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10("test_unsupported")
+				resources.LabelObjectAsControlPlaneManaged(cr)
+				return cr
+			},
 		},
 		{
 			controlplane:  "test_invalid_tag",
@@ -61,7 +81,7 @@ func TestClusterroleHelpers(t *testing.T) {
 				require.ErrorIs(t, err, tc.expectedError)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.expectedClusterRole, clusterRole)
+				require.Equal(t, tc.expectedClusterRole(), clusterRole)
 			}
 		})
 	}

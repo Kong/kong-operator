@@ -50,7 +50,9 @@ func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string
 		return nil, err
 	}
 	if constraint.Check(semVersion) {
-		return clusterroles.GenerateNewClusterRoleForControlPlane_lt2_10_ge2_9(controlplaneName), nil
+		cr := clusterroles.GenerateNewClusterRoleForControlPlane_lt2_10_ge2_9(controlplaneName)
+		LabelObjectAsControlPlaneManaged(cr)
+		return cr, nil
 	}
 
 	constraint, err = semver.NewConstraint(">=2.10")
@@ -58,7 +60,9 @@ func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string
 		return nil, err
 	}
 	if constraint.Check(semVersion) {
-		return clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10(controlplaneName), nil
+		cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge2_10(controlplaneName)
+		LabelObjectAsControlPlaneManaged(cr)
+		return cr, nil
 	}
 
 	return nil, fmt.Errorf("version %s not supported", imageToUse)

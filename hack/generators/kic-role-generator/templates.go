@@ -135,7 +135,9 @@ func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string
 		return nil, err
 	}
 	if constraint.Check(semVersion){
-		return clusterroles.GenerateNewClusterRoleForControlPlane_{{$suffix}}(controlplaneName), nil
+		cr := clusterroles.GenerateNewClusterRoleForControlPlane_{{$suffix}}(controlplaneName)
+		LabelObjectAsControlPlaneManaged(cr)
+		return cr, nil
 	}	
 	{{ end}}
 	return nil, fmt.Errorf("version %s not supported", imageToUse)

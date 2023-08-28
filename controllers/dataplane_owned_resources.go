@@ -97,7 +97,6 @@ func ensureDeploymentForDataPlane(
 	if err != nil {
 		return Noop, nil, err
 	}
-	addLabelForDataplane(generatedDeployment)
 
 	if count == 1 {
 		var updated bool
@@ -233,7 +232,6 @@ func ensureAdminServiceForDataPlane(
 	if err != nil {
 		return Noop, nil, err
 	}
-	addLabelForDataplane(generatedService)
 
 	if count == 1 {
 		var updated bool
@@ -313,7 +311,6 @@ func ensureIngressServiceForDataPlane(
 	if err != nil {
 		return Noop, nil, err
 	}
-	addLabelForDataplane(generatedService)
 	addAnnotationsForDataplaneIngressService(generatedService, *dataplane)
 	k8sutils.SetOwnerForObject(generatedService, dataplane)
 
