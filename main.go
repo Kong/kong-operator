@@ -60,8 +60,8 @@ func main() {
 	flagSet.StringVar(&clusterCASecret, "cluster-ca-secret", "kong-operator-ca", "name of the Secret containing the cluster CA certificate")
 	flagSet.StringVar(&clusterCASecretNamespace, "cluster-ca-secret-namespace", "", "name of the namespace for Secret containing the cluster CA certificate")
 
-	flagSet.BoolVar(&enableControllerGateway, "enable-controller-gateway", true, "Enable the Gateway controller.")
-	flagSet.BoolVar(&enableControllerControlPlane, "enable-controller-controlplane", true, "Enable the ControlPlane controller.")
+	flagSet.BoolVar(&enableControllerGateway, "enable-controller-gateway", false, "Enable the Gateway controller.")
+	flagSet.BoolVar(&enableControllerControlPlane, "enable-controller-controlplane", false, "Enable the ControlPlane controller.")
 	flagSet.BoolVar(&enableControllerDataPlane, "enable-controller-dataplane", true, "Enable the DataPlane controller.")
 	flagSet.BoolVar(&enableControllerDataPlaneBlueGreen, "enable-controller-dataplane-bluegreen", false, "Enable the DataPlane BlueGreen controller. Mutually exclusive with DataPlane controller.")
 	flagSet.BoolVar(&enableValidatingWebhook, "enable-validating-webhook", true, "Enable the validating webhook.")

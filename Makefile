@@ -522,6 +522,8 @@ _run:
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		-zap-time-encoding iso8601 \
+		-enable-controller-controlplane \
+		-enable-controller-gateway \
 		-zap-log-level 2
 
 SKAFFOLD_RUN_PROFILE ?= dev
