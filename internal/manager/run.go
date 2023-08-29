@@ -142,6 +142,16 @@ func Run(cfg Config) error {
 		vars.SetControllerName(cfg.ControllerName)
 	}
 
+	if cfg.DevelopmentMode {
+		setupLog.Info("development mode enabled")
+	}
+
+	if cfg.LeaderElection {
+		setupLog.Info("leader election enabled", "namespace", cfg.LeaderElectionNamespace)
+	} else {
+		setupLog.Info("leader election disabled")
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		Metrics: server.Options{

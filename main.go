@@ -70,7 +70,6 @@ func main() {
 
 	developmentModeEnabled := manager.DefaultConfig().DevelopmentMode
 	if v := os.Getenv("CONTROLLER_DEVELOPMENT_MODE"); v == "true" { // TODO: clean env handling https://github.com/Kong/gateway-operator/issues/19
-		fmt.Println("INFO: development mode has been enabled")
 		developmentModeEnabled = true
 	}
 
@@ -114,7 +113,6 @@ func main() {
 
 	leaderElection := manager.DefaultConfig().LeaderElection
 	if disableLeaderElection {
-		fmt.Println("INFO: leader election has been disabled")
 		leaderElection = false
 	}
 
