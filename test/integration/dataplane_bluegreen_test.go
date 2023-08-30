@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -203,14 +204,15 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 
 		t.Run("live deployment", func(t *testing.T) {
 			t.Log("verifying live deployment managed by the dataplane is present and has an available replica using the patched proxy image")
-			require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients, dataplaneLiveDeploymentLabels()), waitTime, tickTime)
 
-			deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, dataplaneLiveDeploymentLabels())
-			require.Len(t, deployments, 1)
-			deployment := deployments[0]
-			proxyContainer := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
-			require.NotNil(t, proxyContainer)
-			require.NotNil(t, dataplaneImageToPatch, proxyContainer.Image)
+			require.Eventually(t,
+				testutils.DataPlaneHasDeployment(t, ctx, dataplaneName, clients, dataplaneLiveDeploymentLabels(),
+					func(d appsv1.Deployment) bool {
+						proxyContainer := k8sutils.GetPodContainerByName(&d.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+						return proxyContainer != nil && dataplaneImageToPatch == proxyContainer.Image
+					},
+				),
+				waitTime, tickTime)
 		})
 
 		t.Run("live ingress service", func(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -207,11 +208,22 @@ func DataPlaneHasActiveDeployment(t *testing.T, ctx context.Context, dataplaneNa
 
 // DataPlaneHasDeployment is a helper function for tests that returns a function
 // that can be used to check if a DataPlane has a Deployment.
+// Optionally the caller can provide a list of assertions that will be checked
+// against the found Deployment.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func DataPlaneHasDeployment(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, matchingLabels client.MatchingLabels) func() bool {
+func DataPlaneHasDeployment(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, matchingLabels client.MatchingLabels, asserts ...func(appsv1.Deployment) bool) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, matchingLabels)
-		return len(deployments) == 1
+		if len(deployments) != 1 {
+			return false
+		}
+		deployment := deployments[0]
+		for _, a := range asserts {
+			if !a(deployment) {
+				return false
+			}
+		}
+		return true
 	}, clients.OperatorClient)
 }
 
