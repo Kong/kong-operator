@@ -93,7 +93,8 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 
 	t.Log("verifying Gateway gets marked as Programmed")
 	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
-	require.Eventually(t, testutils.GatewayListenersAreReady(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	t.Log("verifying Gateway Listeners get marked as Programmed")
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets an IP address")
 	require.Eventually(t, testutils.GatewayIPAddressExist(t, ctx, gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)

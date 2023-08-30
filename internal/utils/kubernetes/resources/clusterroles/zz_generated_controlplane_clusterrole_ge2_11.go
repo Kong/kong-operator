@@ -13,10 +13,10 @@ import (
 // ClusterRole generator
 // -----------------------------------------------------------------------------
 
-// GenerateNewClusterRoleForControlPlane_ge2_10 is a helper to generate a ClusterRole
+// GenerateNewClusterRoleForControlPlane_ge2_11 is a helper to generate a ClusterRole
 // resource with all the permissions needed by the controlplane deployment.
-// It is used for controlplanes that match the semver constraint ">=2.10"
-func GenerateNewClusterRoleForControlPlane_ge2_10(controlplaneName string) *rbacv1.ClusterRole {
+// It is used for controlplanes that match the semver constraint ">=2.11"
+func GenerateNewClusterRoleForControlPlane_ge2_11(controlplaneName string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", controlplaneName),
@@ -120,6 +120,28 @@ func GenerateNewClusterRoleForControlPlane_ge2_10(controlplaneName string) *rbac
 				},
 				Resources: []string{
 					"kongclusterplugins/status",
+				},
+				Verbs: []string{
+					"get", "patch", "update",
+				},
+			},
+			{
+				APIGroups: []string{
+					"configuration.konghq.com",
+				},
+				Resources: []string{
+					"kongconsumergroups",
+				},
+				Verbs: []string{
+					"get", "list", "watch",
+				},
+			},
+			{
+				APIGroups: []string{
+					"configuration.konghq.com",
+				},
+				Resources: []string{
+					"kongconsumergroups/status",
 				},
 				Verbs: []string{
 					"get", "patch", "update",
@@ -280,6 +302,17 @@ func GenerateNewClusterRoleForControlPlane_ge2_10(controlplaneName string) *rbac
 				},
 			},
 
+			{
+				APIGroups: []string{
+					"",
+				},
+				Resources: []string{
+					"namespaces",
+				},
+				Verbs: []string{
+					"get", "list", "watch",
+				},
+			},
 			{
 				APIGroups: []string{
 					"gateway.networking.k8s.io",

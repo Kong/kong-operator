@@ -7,12 +7,12 @@ import (
 const (
 	// DefaultControlPlaneVersion is the default version of the ControlPlane to use.
 	// TODO: automatic PR updates https://github.com/Kong/gateway-operator/issues/210
-	DefaultControlPlaneVersion = "2.10.4"
+	DefaultControlPlaneVersion = "2.11.1"
 )
 
 // minimumControlPlaneVersion indicates the bare minimum version of the
 // ControlPlane that can be used by the operator.
-var minimumControlPlaneVersion = semver.MustParse("2.9.0")
+var minimumControlPlaneVersion = semver.MustParse("2.11.0")
 
 // RoleVersionsForKICVersions is a map that explicitly sets which ClusterRole version to use upon the KIC
 // version. It is used by /hack/generators/kic-role-generator to generate the roles to be used by KIC.
@@ -29,8 +29,7 @@ var minimumControlPlaneVersion = semver.MustParse("2.9.0")
 // the release 5.0, a new entry '">=5.0": "5.0"' should be added to this map, and the previous most
 // updated entry should be limited to "<5.0".
 var RoleVersionsForKICVersions = map[string]string{
-	">=2.10":       "2.10.1",
-	"<2.10, >=2.9": "2.9.3",
+	">=2.11": "2.11.1",
 }
 
 // IsControlPlaneImageVersionSupported is a helper intended to validate the

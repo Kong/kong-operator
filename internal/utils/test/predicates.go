@@ -410,9 +410,9 @@ func GatewayIsProgrammed(t *testing.T, ctx context.Context, gatewayNSN types.Nam
 	}
 }
 
-func GatewayListenersAreReady(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
+func GatewayListenersAreProgrammed(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
-		return gatewayutils.AreListenersReady(MustGetGateway(t, ctx, gatewayNSN, clients))
+		return gatewayutils.AreListenersProgrammed(MustGetGateway(t, ctx, gatewayNSN, clients))
 	}
 }
 

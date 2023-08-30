@@ -488,7 +488,7 @@ func (g *gatewayConditionsAwareT) InitReadyAndProgrammed() {
 			SupportedKinds: supportedKinds,
 			Conditions: []metav1.Condition{
 				{
-					Type:               string(gatewayv1beta1.ListenerConditionReady),
+					Type:               string(gatewayv1beta1.ListenerConditionProgrammed),
 					Status:             metav1.ConditionFalse,
 					Reason:             string(gatewayv1beta1.ListenerReasonPending),
 					ObservedGeneration: g.Generation,
@@ -513,9 +513,9 @@ func (g *gatewayConditionsAwareT) SetReadyAndProgrammed() {
 	for _, listener := range g.Spec.Listeners {
 		supportedKinds, resolvedRefsCondition := getSupportedKindsWithCondition(g.Generation, listener)
 		readyCondition := metav1.Condition{
-			Type:               string(gatewayv1beta1.ListenerConditionReady),
+			Type:               string(gatewayv1beta1.ListenerConditionProgrammed),
 			Status:             metav1.ConditionTrue,
-			Reason:             string(gatewayv1beta1.ListenerReasonReady),
+			Reason:             string(gatewayv1beta1.ListenerReasonProgrammed),
 			ObservedGeneration: g.Generation,
 			LastTransitionTime: metav1.Now(),
 		}
