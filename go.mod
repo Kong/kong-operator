@@ -2,11 +2,6 @@ module github.com/kong/gateway-operator
 
 go 1.20
 
-exclude (
-	sigs.k8s.io/gateway-api v0.7.0
-	sigs.k8s.io/gateway-api v0.7.1
-)
-
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/bombsimon/logrusr/v3 v3.1.0
@@ -24,7 +19,7 @@ require (
 	k8s.io/apimachinery v0.28.1
 	k8s.io/client-go v0.28.1
 	sigs.k8s.io/controller-runtime v0.16.0
-	sigs.k8s.io/gateway-api v0.6.2
+	sigs.k8s.io/gateway-api v0.7.1
 )
 
 require (
@@ -33,6 +28,7 @@ require (
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/s2a-go v0.1.5 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/moby/spdystream v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/tools v0.9.3 // indirect
