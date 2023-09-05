@@ -44,8 +44,8 @@ func AddNewWebhookServerToManager(mgr ctrl.Manager, logger logr.Logger, webhookP
 
 // Validator is the interface of validating
 type Validator interface {
-	ValidateControlPlane(context.Context, operatorv1alpha1.ControlPlane) error
-	ValidateDataPlane(context.Context, operatorv1beta1.DataPlane) error
+	ValidateControlPlane(ctx context.Context, controlplane operatorv1alpha1.ControlPlane) error
+	ValidateDataPlane(ctx context.Context, dataplane operatorv1beta1.DataPlane, old operatorv1beta1.DataPlane, op admissionv1.Operation) error
 }
 
 // RequestHandler handles the requests of validating objects.
@@ -158,13 +158,17 @@ func (h *RequestHandler) handleValidation(ctx context.Context, req *admissionv1.
 			}
 		}
 	case dataPlaneGVResource:
-		dataPlane := operatorv1beta1.DataPlane{}
 		if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
+			dataPlane, old := operatorv1beta1.DataPlane{}, operatorv1beta1.DataPlane{}
 			_, _, err := deserializer.Decode(req.Object.Raw, nil, &dataPlane)
 			if err != nil {
 				return nil, err
 			}
-			err = h.Validator.ValidateDataPlane(ctx, dataPlane)
+			_, _, err = deserializer.Decode(req.OldObject.Raw, nil, &old)
+			if err != nil {
+				return nil, err
+			}
+			err = h.Validator.ValidateDataPlane(ctx, dataPlane, old, req.Operation)
 			if err != nil {
 				ok = false
 				msg = err.Error()

@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -14,39 +15,43 @@ import (
 )
 
 func TestValidateDeployOptions(t *testing.T) {
+	defaultObjects := func() []client.Object {
+		return []client.Object{
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-cm"},
+				Data: map[string]string{
+					"off": "off",
+				},
+			},
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-secret"},
+				// fake client does not encode fields in StringData to Data,
+				// so here we should usebase64 encoded value in Data.
+				Data: map[string][]byte{
+					"postgres": []byte(base64.StdEncoding.EncodeToString([]byte("postgres"))),
+				},
+			},
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-cm-2"},
+				// fake client does not encode fields in StringData to Data,
+				// so here we should usebase64 encoded value in Data.
+				Data: map[string]string{
+					"KONG_DATABASE": "xxx",
+				},
+			},
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-secret-2"},
+				// fake client does not encode fields in StringData to Data,
+				// so here we should usebase64 encoded value in Data.
+				Data: map[string][]byte{
+					"DATABASE": []byte(base64.StdEncoding.EncodeToString([]byte("xxx"))),
+				},
+			},
+		}
+	}
+
 	b := fakeclient.NewClientBuilder()
-	b.WithObjects(
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-cm"},
-			Data: map[string]string{
-				"off": "off",
-			},
-		},
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-secret"},
-			// fake client does not encode fields in StringData to Data,
-			// so here we should usebase64 encoded value in Data.
-			Data: map[string][]byte{
-				"postgres": []byte(base64.StdEncoding.EncodeToString([]byte("postgres"))),
-			},
-		},
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-cm-2"},
-			// fake client does not encode fields in StringData to Data,
-			// so here we should usebase64 encoded value in Data.
-			Data: map[string]string{
-				"KONG_DATABASE": "xxx",
-			},
-		},
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-secret-2"},
-			// fake client does not encode fields in StringData to Data,
-			// so here we should usebase64 encoded value in Data.
-			Data: map[string][]byte{
-				"DATABASE": []byte(base64.StdEncoding.EncodeToString([]byte("xxx"))),
-			},
-		},
-	)
+	b.WithObjects(defaultObjects()...)
 
 	testCases := []struct {
 		msg       string
@@ -358,6 +363,273 @@ func TestValidateDeployOptions(t *testing.T) {
 				require.NoError(t, err, tc.msg)
 			} else {
 				require.EqualError(t, err, tc.errMsg, tc.msg)
+			}
+		})
+	}
+}
+
+func TestValidateUpdate(t *testing.T) {
+	b := fakeclient.NewClientBuilder()
+
+	oldOptions := &operatorv1beta1.DataPlaneOptions{
+		Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+			DeploymentOptions: operatorv1beta1.DeploymentOptions{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: consts.DataPlaneProxyContainerName,
+								Env: []corev1.EnvVar{
+									{
+										Name:  consts.EnvVarKongDatabase,
+										Value: "off",
+									},
+								},
+								Image: consts.DefaultDataPlaneImage,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	options := oldOptions.DeepCopy()
+	options.Deployment.PodTemplateSpec.Spec.Containers = append(options.Deployment.PodTemplateSpec.Spec.Containers,
+		corev1.Container{
+			Name:  "test-container",
+			Image: "test-image",
+		},
+	)
+
+	testCases := []struct {
+		msg          string
+		dataplane    *operatorv1beta1.DataPlane
+		oldDataplane *operatorv1beta1.DataPlane
+		hasError     bool
+		err          error
+	}{
+		{
+			msg: "no promotion in progress",
+			dataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "no-promotion",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: *options,
+				},
+				Status: operatorv1beta1.DataPlaneStatus{
+					RolloutStatus: nil,
+				},
+			},
+			oldDataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "no-promotion",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: *oldOptions,
+				},
+				Status: operatorv1beta1.DataPlaneStatus{
+					RolloutStatus: nil,
+				},
+			},
+			hasError: false,
+		},
+		{
+			msg: "promotion starts",
+			dataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "promotion-in-progress",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: *options,
+				},
+				Status: operatorv1beta1.DataPlaneStatus{
+					RolloutStatus: &operatorv1beta1.DataPlaneRolloutStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(consts.DataPlaneConditionTypeRolledOut),
+								Status: metav1.ConditionFalse,
+								Reason: string(consts.DataPlaneConditionReasonRolloutPromotionInProgress),
+							},
+						},
+					},
+				},
+			},
+			oldDataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "promotion-in-progress",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: *oldOptions,
+				},
+				Status: operatorv1beta1.DataPlaneStatus{
+					RolloutStatus: &operatorv1beta1.DataPlaneRolloutStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(consts.DataPlaneConditionTypeRolledOut),
+								Status: metav1.ConditionFalse,
+								Reason: string(consts.DataPlaneConditionReasonRolloutAwaitingPromotion),
+							},
+						},
+					},
+				},
+			},
+			hasError: true,
+			err:      ErrDataPlaneBlueGreenRolloutFailedToChangeSpecDuringPromotion,
+		},
+		{
+			msg: "promotion in progress but no spec change is applied",
+			dataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "promotion-in-progress",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"new": "value",
+					},
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: *options,
+				},
+				Status: operatorv1beta1.DataPlaneStatus{
+					RolloutStatus: &operatorv1beta1.DataPlaneRolloutStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(consts.DataPlaneConditionTypeRolledOut),
+								Status: metav1.ConditionFalse,
+								Reason: string(consts.DataPlaneConditionReasonRolloutPromotionInProgress),
+							},
+						},
+					},
+				},
+			},
+			oldDataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "promotion-in-progress",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: *options, // The same just being applied
+				},
+				Status: operatorv1beta1.DataPlaneStatus{
+					RolloutStatus: &operatorv1beta1.DataPlaneRolloutStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(consts.DataPlaneConditionTypeRolledOut),
+								Status: metav1.ConditionFalse,
+								Reason: string(consts.DataPlaneConditionReasonRolloutPromotionInProgress),
+							},
+						},
+					},
+				},
+			},
+			hasError: false,
+		},
+		{
+			msg: "promotion in progress",
+			dataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "promotion-in-progress",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: *options,
+				},
+				Status: operatorv1beta1.DataPlaneStatus{
+					RolloutStatus: &operatorv1beta1.DataPlaneRolloutStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(consts.DataPlaneConditionTypeRolledOut),
+								Status: metav1.ConditionFalse,
+								Reason: string(consts.DataPlaneConditionReasonRolloutPromotionInProgress),
+							},
+						},
+					},
+				},
+			},
+			oldDataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "promotion-in-progress",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: *oldOptions,
+				},
+				Status: operatorv1beta1.DataPlaneStatus{
+					RolloutStatus: &operatorv1beta1.DataPlaneRolloutStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(consts.DataPlaneConditionTypeRolledOut),
+								Status: metav1.ConditionFalse,
+								Reason: string(consts.DataPlaneConditionReasonRolloutPromotionInProgress),
+							},
+						},
+					},
+				},
+			},
+			hasError: true,
+			err:      ErrDataPlaneBlueGreenRolloutFailedToChangeSpecDuringPromotion,
+		},
+		{
+			msg: "promotion complete",
+			dataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "promotion-complete",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: *options,
+				},
+				Status: operatorv1beta1.DataPlaneStatus{
+					RolloutStatus: &operatorv1beta1.DataPlaneRolloutStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(consts.DataPlaneConditionTypeRolledOut),
+								Status: metav1.ConditionTrue,
+								Reason: string(consts.DataPlaneConditionReasonRolloutPromotionDone),
+							},
+						},
+					},
+				},
+			},
+			oldDataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "promotion-complete",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: *oldOptions,
+				},
+				Status: operatorv1beta1.DataPlaneStatus{
+					RolloutStatus: &operatorv1beta1.DataPlaneRolloutStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(consts.DataPlaneConditionTypeRolledOut),
+								Status: metav1.ConditionTrue,
+								Reason: string(consts.DataPlaneConditionReasonRolloutPromotionDone),
+							},
+						},
+					},
+				},
+			},
+			hasError: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.msg, func(t *testing.T) {
+			v := &Validator{
+				c: b.Build(),
+			}
+			err := v.ValidateUpdate(tc.dataplane, tc.oldDataplane)
+			if !tc.hasError {
+				require.NoError(t, err, tc.msg)
+			} else {
+				require.ErrorIs(t, err, tc.err)
 			}
 		})
 	}

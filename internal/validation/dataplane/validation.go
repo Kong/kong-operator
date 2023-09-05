@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +27,11 @@ func NewValidator(c client.Client) *Validator {
 	return &Validator{c: c}
 }
 
+// ValidateUpdate validates a DataPlane object change upon an update event.
+func (v *Validator) ValidateUpdate(dataplane, oldDataplane *operatorv1beta1.DataPlane) error {
+	return v.ValidateIfRolloutInProgress(dataplane, oldDataplane)
+}
+
 // Validate validates a DataPlane object and return the first validation error found.
 func (v *Validator) Validate(dataplane *operatorv1beta1.DataPlane) error {
 	err := v.ValidateDataPlaneDeploymentOptions(dataplane.Namespace, &dataplane.Spec.Deployment.DeploymentOptions)
@@ -37,7 +43,6 @@ func (v *Validator) Validate(dataplane *operatorv1beta1.DataPlane) error {
 		return err
 	}
 
-	// prepared for more validations
 	return nil
 }
 
@@ -52,8 +57,29 @@ func (v *Validator) ValidateDataPlaneDeploymentRollout(rollout *operatorv1beta1.
 	if rollout != nil && rollout.Strategy.BlueGreen != nil &&
 		rollout.Strategy.BlueGreen.Resources.Plan.Deployment == operatorv1beta1.RolloutResourcePlanDeploymentDeleteOnPromotionRecreateOnRollout {
 		// Can't use DeleteOnPromotionRecreateOnRollout just yet.
-		// Related: https://github.com/Kong/gateway-operator/issues/1006.
+		// Related: https://github.com/Kong/gateway-operator/issues/1010.
 		return errors.New("DataPlane Deployment resource plan DeleteOnPromotionRecreateOnRollout cannot be used yet")
+	}
+
+	return nil
+}
+
+func (v *Validator) ValidateIfRolloutInProgress(dataplane, oldDataplane *operatorv1beta1.DataPlane) error {
+	if dataplane.Status.RolloutStatus == nil {
+		return nil
+	}
+
+	// If no rollout condition exists, the rollout is not started yet
+	c, exists := k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
+	if !exists {
+		return nil
+	}
+
+	// If the promotion is in progress and the spec is changed in the update
+	// then reject the change.
+	if c.Reason == string(consts.DataPlaneConditionReasonRolloutPromotionInProgress) &&
+		!cmp.Equal(dataplane.Spec, oldDataplane.Spec) {
+		return ErrDataPlaneBlueGreenRolloutFailedToChangeSpecDuringPromotion
 	}
 
 	return nil
