@@ -42,7 +42,7 @@ jobs:
         run: exit 1
 
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -60,7 +60,7 @@ jobs:
     steps:
 
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -149,7 +149,7 @@ jobs:
           - 'v1.24.2'
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -170,7 +170,7 @@ jobs:
           - 'v1.24.2'
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -193,7 +193,7 @@ jobs:
     steps:
 
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -213,7 +213,7 @@ jobs:
       run: make bundle
 
     - name: Checkout k8s-operatorhub/community-operators repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: k8s-operatorhub/community-operators
         path: k8s-operatorhub-community-operators
@@ -286,7 +286,7 @@ jobs:
       # in the release PR. If anything needs to be fixed before a release, it should be
       # done on the main branch.
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: main
@@ -334,7 +334,7 @@ jobs:
           body: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
 
       - name: Checkout to Kong/gateway-operator-docs repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           repository: Kong/gateway-operator-docs

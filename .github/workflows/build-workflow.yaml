@@ -62,7 +62,7 @@ jobs:
       artifact: ${{ steps.set-artifact.outputs.artifact }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Log in to the Container registry
         uses: docker/login-action@v2.2.0
