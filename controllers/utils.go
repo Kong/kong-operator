@@ -158,9 +158,14 @@ func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Se
 // mtlsCASecretNamespace/mtlsCASecretName Secret, or does nothing if a namespace/name Secret is
 // already present. It returns a boolean indicating if it created a Secret and an error indicating
 // any failures it encountered.
-func maybeCreateCertificateSecret(
+func maybeCreateCertificateSecret[
+	T interface {
+		*operatorv1alpha1.ControlPlane | *operatorv1beta1.DataPlane
+		client.Object
+	},
+](
 	ctx context.Context,
-	owner client.Object,
+	owner T,
 	subject string,
 	mtlsCASecretNN types.NamespacedName,
 	usages []certificatesv1.KeyUsage,
@@ -198,10 +203,7 @@ func maybeCreateCertificateSecret(
 
 	serviceOpts := matchingLabelsToSecretOpt(matchingLabels)
 
-	ownerPrefix := getPrefixForOwner(owner)
-	generatedSecret := k8sresources.GenerateNewTLSSecret(owner.GetNamespace(), owner.GetName(), ownerPrefix, serviceOpts)
-	k8sutils.SetOwnerForObject(generatedSecret, owner)
-	addLabelForOwner(generatedSecret, owner)
+	generatedSecret := k8sresources.GenerateNewTLSSecret(owner, serviceOpts)
 
 	// If there are no secrets yet, then create one.
 	if count == 0 {
@@ -484,16 +486,6 @@ func servicesOptionsDeepEqual(opts1, opts2 *operatorv1beta1.DataPlaneNetworkOpti
 // Owner based metadata getters - Private Functions
 // -----------------------------------------------------------------------------
 
-func getPrefixForOwner(owner client.Object) string {
-	switch owner.(type) {
-	case *operatorv1alpha1.ControlPlane:
-		return consts.ControlPlanePrefix
-	case *operatorv1beta1.DataPlane:
-		return consts.DataPlanePrefix
-	}
-	return ""
-}
-
 func getManagedLabelForOwner(owner metav1.Object) (key string, value string) {
 	switch owner.(type) {
 	case *operatorv1alpha1.ControlPlane:
@@ -507,19 +499,6 @@ func getManagedLabelForOwner(owner metav1.Object) (key string, value string) {
 func getManagedLabelForServiceSecret(svcNN types.NamespacedName) client.MatchingLabels {
 	return client.MatchingLabels{
 		consts.ServiceSecretLabel: svcNN.Name,
-	}
-}
-
-// -----------------------------------------------------------------------------
-// Owner based objects mutators - Private Functions
-// -----------------------------------------------------------------------------
-
-func addLabelForOwner(obj client.Object, owner client.Object) {
-	switch owner.(type) {
-	case *operatorv1alpha1.ControlPlane:
-		k8sresources.LabelObjectAsControlPlaneManaged(obj)
-	case *operatorv1beta1.DataPlane:
-		k8sresources.LabelObjectAsDataPlaneManaged(obj)
 	}
 }
 
