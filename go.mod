@@ -1,6 +1,10 @@
 module github.com/kong/gateway-operator
 
-go 1.20
+go 1.21
+
+toolchain go1.21.0
+
+exclude sigs.k8s.io/gateway-api v0.8.0
 
 require (
 	github.com/Masterminds/semver v1.5.0
@@ -9,7 +13,7 @@ require (
 	github.com/go-logr/logr v1.2.4
 	github.com/google/uuid v1.3.1
 	github.com/kong/kubernetes-telemetry v0.1.0
-	github.com/kong/kubernetes-testing-framework v0.38.0
+	github.com/kong/kubernetes-testing-framework v0.39.0
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
 	github.com/samber/lo v1.38.1
@@ -30,8 +34,8 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/moby/spdystream v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
-	golang.org/x/mod v0.10.0 // indirect
-	golang.org/x/tools v0.9.3 // indirect
+	golang.org/x/mod v0.12.0 // indirect
+	golang.org/x/tools v0.12.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230803162519-f966b187b2e5 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230807174057-1744710a1577 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
@@ -127,7 +131,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.28.0 // indirect
+	k8s.io/apiextensions-apiserver v0.28.1 // indirect
 	k8s.io/component-base v0.28.1 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
