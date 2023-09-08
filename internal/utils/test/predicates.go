@@ -197,12 +197,25 @@ func ControlPlaneHasNReadyPods(t *testing.T, ctx context.Context, controlplaneNa
 // DataPlaneHasActiveDeployment is a helper function for tests that returns a function
 // that can be used to check if a DataPlane has an active deployment.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func DataPlaneHasActiveDeployment(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, matchingLabels client.MatchingLabels) func() bool {
+func DataPlaneHasActiveDeployment(
+	t *testing.T,
+	ctx context.Context,
+	dataplaneName types.NamespacedName,
+	ret *appsv1.Deployment,
+	matchingLabels client.MatchingLabels,
+	clients K8sClients,
+) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, matchingLabels)
-		return len(deployments) == 1 &&
+		if len(deployments) == 1 &&
 			*deployments[0].Spec.Replicas > 0 &&
-			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
+			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas {
+			if ret != nil {
+				*ret = deployments[0]
+			}
+			return true
+		}
+		return false
 	}, clients.OperatorClient)
 }
 
@@ -359,6 +372,24 @@ func DataPlaneUpdateEventually(t *testing.T, ctx context.Context, dataplaneNN ty
 		}
 		return true
 	}
+}
+
+func DataPlaneHasServiceSecret(t *testing.T, ctx context.Context, dpNN, usingSvc types.NamespacedName, ret *corev1.Secret, clients K8sClients) func() bool {
+	return DataPlanePredicate(t, ctx, dpNN, func(dp *operatorv1beta1.DataPlane) bool {
+		secrets, err := k8sutils.ListSecretsForOwner(ctx, clients.MgrClient, dp.GetUID(), client.MatchingLabels{
+			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+			consts.ServiceSecretLabel:             usingSvc.Name,
+		})
+		if err != nil {
+			t.Logf("error listing secrets: %v", err)
+			return false
+		}
+		if len(secrets) == 1 {
+			*ret = secrets[0]
+			return true
+		}
+		return false
+	}, clients.OperatorClient)
 }
 
 // GatewayClassIsAccepted is a helper function for tests that returns a function

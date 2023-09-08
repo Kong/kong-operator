@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -41,48 +43,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 			Namespace: dataplaneName.Namespace,
 			Name:      dataplaneName.Name,
 		},
-		Spec: operatorv1beta1.DataPlaneSpec{
-			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
-				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-					Rollout: &operatorv1beta1.Rollout{
-						Strategy: operatorv1beta1.RolloutStrategy{
-							BlueGreen: &operatorv1beta1.BlueGreenStrategy{
-								Promotion: operatorv1beta1.Promotion{
-									Strategy: operatorv1beta1.BreakBeforePromotion,
-								},
-							},
-						},
-					},
-					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						PodTemplateSpec: &corev1.PodTemplateSpec{
-							Spec: corev1.PodSpec{
-								Containers: []corev1.Container{
-									{
-										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
-										// Make the test a bit faster.
-										ReadinessProbe: &corev1.Probe{
-											InitialDelaySeconds: 0,
-											PeriodSeconds:       1,
-											FailureThreshold:    3,
-											SuccessThreshold:    1,
-											TimeoutSeconds:      1,
-											ProbeHandler: corev1.ProbeHandler{
-												HTTPGet: &corev1.HTTPGetAction{
-													Path:   "/status",
-													Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
-													Scheme: corev1.URISchemeHTTP,
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
+		Spec: testBlueGreenDataPlaneSpec(),
 	}
 
 	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
@@ -127,10 +88,10 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 
 	t.Run("after patching", func(t *testing.T) {
 		t.Logf("patching DataPlane with image %q", dataplaneImageToPatch)
-		patchDataPlaneImage(t, dataplane, clients.MgrClient, dataplaneImageToPatch)
+		patchDataPlaneImage(ctx, t, dataplane, clients.MgrClient, dataplaneImageToPatch)
 
 		t.Log("verifying preview deployment managed by the dataplane is present and has AvailableReplicas")
-		require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients, dataplanePreviewDeploymentLabels()), waitTime, tickTime)
+		require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, dataplanePreviewDeploymentLabels(), clients), waitTime, tickTime)
 
 		t.Run("preview Admin API service", func(t *testing.T) {
 			t.Log("verifying preview admin service managed by the dataplane has an active endpoint")
@@ -167,7 +128,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 
 		t.Run("live deployment", func(t *testing.T) {
 			t.Log("verifying live deployment managed by the dataplane is present and has an available replica")
-			require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients, dataplaneLiveDeploymentLabels()), waitTime, tickTime)
+			require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, dataplaneLiveDeploymentLabels(), clients), waitTime, tickTime)
 		})
 	})
 
@@ -240,7 +201,162 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 	})
 }
 
-func patchDataPlaneImage(t *testing.T, dataplane *operatorv1beta1.DataPlane, cl client.Client, image string) {
+func TestDataPlane_ResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T) {
+	const (
+		waitTime = time.Minute
+		tickTime = 100 * time.Millisecond
+	)
+
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+
+	t.Log("deploying dataplane")
+	dataplane := &operatorv1beta1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace.Name,
+			Name:      uuid.NewString(),
+		},
+		Spec: testBlueGreenDataPlaneSpec(),
+	}
+	dataplaneName := client.ObjectKeyFromObject(dataplane)
+
+	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplane, err := dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(dataplane)
+
+	t.Log("ensuring all live dependent resources are created")
+	var (
+		liveIngressService = &corev1.Service{}
+		liveAdminService   = &corev1.Service{}
+		liveDeployment     = &appsv1.Deployment{}
+		liveTLSSecret      = &corev1.Secret{}
+	)
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, liveIngressService, clients, dataplaneIngressLiveServiceLabels()), waitTime, tickTime)
+	require.NotNil(t, liveIngressService)
+
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, liveAdminService, clients, dataplaneAdminLiveServiceLabels()), waitTime, tickTime)
+	require.NotNil(t, liveAdminService)
+
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, liveDeployment, dataplaneLiveDeploymentLabels(), clients), waitTime, tickTime)
+	require.NotNil(t, liveDeployment)
+
+	require.Eventually(t, testutils.DataPlaneHasServiceSecret(t, ctx, dataplaneName, client.ObjectKeyFromObject(liveAdminService), liveTLSSecret, clients), waitTime, tickTime)
+	require.NotNil(t, liveTLSSecret)
+
+	t.Log("patching dataplane with another dataplane image to trigger rollout")
+	const dataplaneImageToPatch = "kong:3.1"
+	patchDataPlaneImage(ctx, t, dataplane, clients.MgrClient, dataplaneImageToPatch)
+
+	t.Log("ensuring all preview dependent resources are created")
+	var (
+		previewIngressService = &corev1.Service{}
+		previewAdminService   = &corev1.Service{}
+		previewDeployment     = &appsv1.Deployment{}
+		previewTLSSecret      = &corev1.Secret{}
+	)
+
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, previewIngressService, clients, dataplaneIngressPreviewServiceLabels()), waitTime, tickTime)
+	require.NotNil(t, previewIngressService)
+
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, previewAdminService, clients, dataplaneAdminPreviewServiceLabels()), waitTime, tickTime)
+	require.NotNil(t, previewAdminService)
+
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, previewDeployment, dataplanePreviewDeploymentLabels(), clients), waitTime, tickTime)
+	require.NotNil(t, previewDeployment)
+
+	require.Eventually(t, testutils.DataPlaneHasServiceSecret(t, ctx, dataplaneName, client.ObjectKeyFromObject(previewAdminService), previewTLSSecret, clients), waitTime, tickTime)
+	require.NotNil(t, previewTLSSecret)
+
+	dependentResources := []client.Object{
+		liveIngressService,
+		liveAdminService,
+		liveDeployment,
+		liveTLSSecret,
+		previewIngressService,
+		previewAdminService,
+		previewDeployment,
+		previewTLSSecret,
+	}
+
+	t.Log("ensuring dataplane owned resources after deletion are not immediately deleted")
+	for _, resource := range dependentResources {
+		require.NoError(t, clients.MgrClient.Delete(ctx, resource))
+
+		require.Eventually(t, func() bool {
+			err := clients.MgrClient.Get(ctx, client.ObjectKeyFromObject(resource), resource)
+			if err != nil {
+				t.Logf("error getting %T: %v", resource, err)
+				return false
+			}
+
+			if resource.GetDeletionTimestamp().IsZero() {
+				t.Logf("%T %q has no deletion timestamp", resource, resource.GetName())
+				return false
+			}
+
+			return true
+		}, waitTime, tickTime, "resource %T %q should not be deleted immediately after dataplane deletion", resource, resource.GetName())
+	}
+
+	t.Log("deleting dataplane and ensuring its owned resources are deleted after that")
+	require.NoError(t, clients.MgrClient.Delete(ctx, dataplane))
+	for _, resource := range dependentResources {
+		require.Eventually(t, func() bool {
+			err := clients.MgrClient.Get(ctx, client.ObjectKeyFromObject(resource), resource)
+			if err != nil && k8serrors.IsNotFound(err) {
+				return true
+			}
+			return false
+		}, waitTime, tickTime, "resource %T %q should be deleted after dataplane deletion", resource, resource.GetName())
+	}
+}
+
+func testBlueGreenDataPlaneSpec() operatorv1beta1.DataPlaneSpec {
+	return operatorv1beta1.DataPlaneSpec{
+		DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+			Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+				Rollout: &operatorv1beta1.Rollout{
+					Strategy: operatorv1beta1.RolloutStrategy{
+						BlueGreen: &operatorv1beta1.BlueGreenStrategy{
+							Promotion: operatorv1beta1.Promotion{
+								Strategy: operatorv1beta1.BreakBeforePromotion,
+							},
+						},
+					},
+				},
+				DeploymentOptions: operatorv1beta1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  consts.DataPlaneProxyContainerName,
+									Image: consts.DefaultDataPlaneImage,
+									// Make the test a bit faster.
+									ReadinessProbe: &corev1.Probe{
+										InitialDelaySeconds: 0,
+										PeriodSeconds:       1,
+										FailureThreshold:    3,
+										SuccessThreshold:    1,
+										TimeoutSeconds:      1,
+										ProbeHandler: corev1.ProbeHandler{
+											HTTPGet: &corev1.HTTPGetAction{
+												Path:   "/status",
+												Port:   intstr.FromInt32(consts.DataPlaneMetricsPort),
+												Scheme: corev1.URISchemeHTTP,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func patchDataPlaneImage(ctx context.Context, t *testing.T, dataplane *operatorv1beta1.DataPlane, cl client.Client, image string) {
 	oldDataplane := dataplane.DeepCopy()
 	require.Len(t, dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers, 1)
 	dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Image = image
@@ -265,6 +381,14 @@ func dataplaneAdminPreviewServiceLabels() client.MatchingLabels {
 		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
 		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
 		consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValuePreview,
+	}
+}
+
+func dataplaneAdminLiveServiceLabels() client.MatchingLabels {
+	return client.MatchingLabels{
+		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
+		consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValueLive,
 	}
 }
 

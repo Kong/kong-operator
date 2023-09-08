@@ -285,6 +285,7 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dat
 	}
 
 	k8sutils.SetOwnerForObject(deployment, dataplane)
+	k8sutils.EnsureFinalizersInMetadata(&deployment.ObjectMeta, consts.DataPlaneOwnedWaitForOwnerFinalizer)
 	return deployment, nil
 }
 

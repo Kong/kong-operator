@@ -195,15 +195,14 @@ func maybeCreateCertificateSecret[
 
 	count := len(secrets)
 	if count > 1 {
-		if err := k8sreduce.ReduceSecrets(ctx, k8sClient, secrets); err != nil {
+		if err := k8sreduce.ReduceSecrets(ctx, k8sClient, secrets, getPreDeleteHooks(owner)...); err != nil {
 			return false, nil, err
 		}
 		return false, nil, errors.New("number of secrets reduced")
 	}
 
-	serviceOpts := matchingLabelsToSecretOpt(matchingLabels)
-
-	generatedSecret := k8sresources.GenerateNewTLSSecret(owner, serviceOpts)
+	secretOpts := append(getSecretOpts(owner), matchingLabelsToSecretOpt(matchingLabels))
+	generatedSecret := k8sresources.GenerateNewTLSSecret(owner, secretOpts...)
 
 	// If there are no secrets yet, then create one.
 	if count == 0 {
@@ -246,6 +245,37 @@ func maybeCreateCertificateSecret[
 		return true, existingSecret, nil
 	}
 	return false, existingSecret, nil
+}
+
+// getPreDeleteHooks returns a list of pre-delete hooks for the given object type.
+func getPreDeleteHooks[T interface {
+	*operatorv1alpha1.ControlPlane | *operatorv1beta1.DataPlane
+	client.Object
+},
+](obj T) []k8sreduce.PreDeleteHook {
+	switch any(obj).(type) {
+	case *operatorv1beta1.DataPlane:
+		return []k8sreduce.PreDeleteHook{DataPlaneOwnedObjectPreDeleteHook}
+	default:
+		return nil
+	}
+}
+
+// getSecretOpts returns a list of SecretOpt for the given object type.
+func getSecretOpts[T interface {
+	*operatorv1alpha1.ControlPlane | *operatorv1beta1.DataPlane
+	client.Object
+},
+](obj T) []k8sresources.SecretOpt {
+	switch any(obj).(type) {
+	case *operatorv1beta1.DataPlane:
+		withDataPlaneOwnedFinalizer := func(s *corev1.Secret) {
+			k8sutils.EnsureFinalizersInMetadata(&s.ObjectMeta, consts.DataPlaneOwnedWaitForOwnerFinalizer)
+		}
+		return []k8sresources.SecretOpt{withDataPlaneOwnedFinalizer}
+	default:
+		return nil
+	}
 }
 
 // generateTLSDataSecret generates a TLS certificate data, fills the provided secret with

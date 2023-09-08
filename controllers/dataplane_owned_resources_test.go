@@ -36,6 +36,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 				Name:      "dp-1",
 			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
 			existingServiceModifier: func(t *testing.T, ctx context.Context, c client.Client, svc *corev1.Service) {
+				require.NoError(t, DataPlaneOwnedObjectPreDeleteHook(ctx, c, svc))
 				require.NoError(t, c.Delete(ctx, svc))
 			},
 			expectedCreatedOrUpdated: Created,

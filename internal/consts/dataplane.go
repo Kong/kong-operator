@@ -136,3 +136,13 @@ const (
 	// contains the DataPlane certificate.
 	DataPlaneClusterCertificateVolumeName = "cluster-certificate"
 )
+
+// -----------------------------------------------------------------------------
+// Consts - Finalizers
+// -----------------------------------------------------------------------------
+
+const (
+	// DataPlaneOwnedWaitForOwnerFinalizer is the finalizer added to resources owned by a DataPlane
+	// to ensure that the resources are not deleted before the DataPlane is deleted.
+	DataPlaneOwnedWaitForOwnerFinalizer = "gateway-operator.konghq.com/wait-for-owner"
+)

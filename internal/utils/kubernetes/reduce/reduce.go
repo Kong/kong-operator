@@ -2,6 +2,7 @@ package reduce
 
 import (
 	"context"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -11,11 +12,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// PreDeleteHook is a function that can be executed before deleting an object.
+type PreDeleteHook func(ctx context.Context, cl client.Client, obj client.Object) error
+
 // ReduceSecrets detects the best secret in the set and deletes all the others.
-func ReduceSecrets(ctx context.Context, k8sClient client.Client, secrets []corev1.Secret) error {
+// It accepts optional preDeleteHooks which are executed before every Secret delete operation.
+func ReduceSecrets(ctx context.Context, k8sClient client.Client, secrets []corev1.Secret, preDeleteHooks ...PreDeleteHook) error {
 	filteredSecrets := filterSecrets(secrets)
 	for _, secret := range filteredSecrets {
 		secret := secret
+		for _, hook := range preDeleteHooks {
+			if err := hook(ctx, k8sClient, &secret); err != nil {
+				return fmt.Errorf("failed to execute pre delete hook: %w", err)
+			}
+		}
 		if err := k8sClient.Delete(ctx, &secret); err != nil {
 			return err
 		}
@@ -60,10 +70,16 @@ func ReduceClusterRoleBindings(ctx context.Context, k8sClient client.Client, clu
 }
 
 // ReduceDeployments detects the best Deployment in the set and deletes all the others.
-func ReduceDeployments(ctx context.Context, k8sClient client.Client, deployments []appsv1.Deployment) error {
+// It accepts optional preDeleteHooks which are executed before every Deployment delete operation.
+func ReduceDeployments(ctx context.Context, k8sClient client.Client, deployments []appsv1.Deployment, preDeleteHooks ...PreDeleteHook) error {
 	filteredDeployments := filterDeployments(deployments)
 	for _, deployment := range filteredDeployments {
 		deployment := deployment
+		for _, hook := range preDeleteHooks {
+			if err := hook(ctx, k8sClient, &deployment); err != nil {
+				return fmt.Errorf("failed to execute pre delete hook: %w", err)
+			}
+		}
 		if err := k8sClient.Delete(ctx, &deployment); err != nil {
 			return err
 		}
@@ -72,7 +88,8 @@ func ReduceDeployments(ctx context.Context, k8sClient client.Client, deployments
 }
 
 // ReduceServices detects the best Service in the set and deletes all the others.
-func ReduceServices(ctx context.Context, k8sClient client.Client, services []corev1.Service) error {
+// It accepts optional preDeleteHooks which are executed before every Service delete operation.
+func ReduceServices(ctx context.Context, k8sClient client.Client, services []corev1.Service, preDeleteHooks ...PreDeleteHook) error {
 	mappedEndpointSlices := make(map[string][]discoveryv1.EndpointSlice)
 	for _, service := range services {
 		endpointSliceList := &discoveryv1.EndpointSliceList{}
@@ -89,6 +106,11 @@ func ReduceServices(ctx context.Context, k8sClient client.Client, services []cor
 	filteredServices := filterServices(services, mappedEndpointSlices)
 	for _, service := range filteredServices {
 		service := service
+		for _, hook := range preDeleteHooks {
+			if err := hook(ctx, k8sClient, &service); err != nil {
+				return fmt.Errorf("failed to execute pre delete hook: %w", err)
+			}
+		}
 		if err := k8sClient.Delete(ctx, &service); err != nil {
 			return err
 		}

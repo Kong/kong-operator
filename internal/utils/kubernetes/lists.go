@@ -109,7 +109,6 @@ func ListServiceAccountsForOwner(
 		serviceAccount := serviceAccount
 		if IsOwnedByRefUID(&serviceAccount, uid) {
 			serviceAccounts = append(serviceAccounts, serviceAccount)
-			break
 		}
 	}
 
@@ -141,7 +140,6 @@ func ListClusterRolesForOwner(
 		clusterRole := clusterRole
 		if IsOwnedByRefUID(&clusterRole, uid) {
 			clusterRoles = append(clusterRoles, clusterRole)
-			break
 		}
 	}
 
@@ -173,7 +171,6 @@ func ListClusterRoleBindingsForOwner(
 		clusterRoleBinding := clusterRoleBinding
 		if IsOwnedByRefUID(&clusterRoleBinding, uid) {
 			clusterRoleBindings = append(clusterRoleBindings, clusterRoleBinding)
-			break
 		}
 	}
 
@@ -204,7 +201,6 @@ func ListSecretsForOwner(ctx context.Context,
 		secret := secret
 		if IsOwnedByRefUID(&secret, uid) {
 			secrets = append(secrets, secret)
-			break
 		}
 	}
 

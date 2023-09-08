@@ -3,6 +3,8 @@ package manager
 import (
 	"reflect"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -132,6 +134,27 @@ func setupControllers(mgr manager.Manager, c *Config) []ControllerDef {
 					Validator:                dataplane.NewValidator(mgr.GetClient()),
 				},
 			},
+		},
+		{
+			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled,
+			Controller: controllers.NewDataPlaneOwnedResourceFinalizerReconciler[corev1.Service](
+				mgr.GetClient(),
+				c.DevelopmentMode,
+			),
+		},
+		{
+			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled,
+			Controller: controllers.NewDataPlaneOwnedResourceFinalizerReconciler[corev1.Secret](
+				mgr.GetClient(),
+				c.DevelopmentMode,
+			),
+		},
+		{
+			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled,
+			Controller: controllers.NewDataPlaneOwnedResourceFinalizerReconciler[appsv1.Deployment](
+				mgr.GetClient(),
+				c.DevelopmentMode,
+			),
 		},
 	}
 

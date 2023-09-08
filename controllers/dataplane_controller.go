@@ -152,7 +152,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	trace(log, "ensuring mTLS certificate", dataplane)
-	certCreatedOrUpdated, certSecret, err := ensureCertificate(ctx, r.Client, dataplane,
+	certCreatedOrUpdated, certSecret, err := ensureDataPlaneCertificate(ctx, r.Client, dataplane,
 		types.NamespacedName{
 			Namespace: r.ClusterCASecretNamespace,
 			Name:      r.ClusterCASecretName,

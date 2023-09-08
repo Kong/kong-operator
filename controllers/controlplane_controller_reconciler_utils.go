@@ -370,6 +370,7 @@ func (r *ControlPlaneReconciler) ensureCertificate(
 		},
 		usages,
 		r.Client,
+		nil,
 	)
 }
 

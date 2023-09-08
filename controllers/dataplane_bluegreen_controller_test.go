@@ -137,6 +137,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 			).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
 				WithPromotionStrategy(v1beta1.AutomaticPromotion).Build(),
 			existingServiceModifier: func(t *testing.T, ctx context.Context, cl client.Client, svc *corev1.Service) {
+				require.NoError(t, DataPlaneOwnedObjectPreDeleteHook(ctx, cl, svc))
 				require.NoError(t, cl.Delete(ctx, svc))
 			},
 			expectedCreatedOrUpdated: Created,

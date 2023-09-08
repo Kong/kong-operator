@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -86,9 +87,9 @@ func TestDataplaneEssentials(t *testing.T) {
 	require.Eventually(t, testutils.DataPlaneIsProvisioned(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-	}), time.Minute, time.Second)
+	}, clients), time.Minute, time.Second)
 
 	t.Logf("verifying that pod labels were set per the provided spec")
 	require.Eventually(t, func() bool {
@@ -163,9 +164,9 @@ func TestDataplaneEssentials(t *testing.T) {
 	require.NoError(t, clients.MgrClient.Delete(ctx, &dataplaneDeployments[0]))
 
 	t.Log("verifying deployments managed by the dataplane after deletion")
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-	}), time.Minute, time.Second)
+	}, clients), time.Minute, time.Second)
 
 	t.Log("deleting the dataplane service")
 	require.NoError(t, clients.MgrClient.Delete(ctx, &dataplaneIngressService))
@@ -272,9 +273,9 @@ func TestDataPlaneUpdate(t *testing.T) {
 
 	t.Log("verifying deployments managed by the dataplane")
 	require.Eventually(t,
-		testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients, client.MatchingLabels{
+		testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		}),
+		}, clients),
 		testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
 	)
 
@@ -451,9 +452,9 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 	require.Eventually(t, testutils.DataPlaneIsProvisioned(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-	}), time.Minute, time.Second)
+	}, clients), time.Minute, time.Second)
 
 	t.Log("verifying that dataplane has indeed 2 ready replicas")
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneName, clients, 2), time.Minute, time.Second)
@@ -543,9 +544,9 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	require.Eventually(t, testutils.DataPlaneIsProvisioned(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-	}), time.Minute, time.Second)
+	}, clients), time.Minute, time.Second)
 
 	t.Log("verifying dataplane deployment volume mounts")
 	deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{

@@ -87,6 +87,7 @@ func GenerateNewIngressServiceForDataplane(dataplane *operatorv1beta1.DataPlane,
 	}
 
 	k8sutils.SetOwnerForObject(svc, dataplane)
+	k8sutils.EnsureFinalizersInMetadata(&svc.ObjectMeta, consts.DataPlaneOwnedWaitForOwnerFinalizer)
 
 	return svc, nil
 }
@@ -155,7 +156,7 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, o
 	}
 
 	k8sutils.SetOwnerForObject(adminService, dataplane)
-
+	k8sutils.EnsureFinalizersInMetadata(&adminService.ObjectMeta, consts.DataPlaneOwnedWaitForOwnerFinalizer)
 	return adminService, nil
 }
 

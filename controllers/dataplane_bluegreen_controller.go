@@ -144,7 +144,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	trace(log, "ensuring mTLS certificate", dataplane)
-	createdOrUpdated, certSecret, err := ensureCertificate(ctx, r.Client, &dataplane,
+	createdOrUpdated, certSecret, err := ensureDataPlaneCertificate(ctx, r.Client, &dataplane,
 		types.NamespacedName{
 			Namespace: r.ClusterCASecretNamespace,
 			Name:      r.ClusterCASecretName,
@@ -390,6 +390,9 @@ func (r *DataPlaneBlueGreenReconciler) reduceLiveDeployments(
 		debug(log, "reducing live deployment", dataplane,
 			"deployment", fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name))
 
+		if err := DataPlaneOwnedObjectPreDeleteHook(ctx, r.Client, &deployment); err != nil {
+			return fmt.Errorf("failed executing pre delete hook: %w", err)
+		}
 		if err := r.Client.Delete(ctx, &deployment); err != nil {
 			return fmt.Errorf("failed deleting live deployment %s/%s: %w", deployment.Namespace, deployment.Name, err)
 		}

@@ -107,9 +107,9 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	cleaner.Add(dataplane)
 
 	t.Log("verifying deployments managed by the dataplane are ready")
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-	}), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+	}, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("verifying services managed by the dataplane")
 	require.Eventually(t, testutils.DataPlaneHasService(t, ctx, dataplaneName, clients, client.MatchingLabels{
@@ -224,9 +224,9 @@ func TestControlPlaneEssentials(t *testing.T) {
 	cleaner.Add(dataplane)
 
 	t.Log("verifying deployments managed by the dataplane are ready")
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-	}), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+	}, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("verifying services managed by the dataplane")
 	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, nil, clients, client.MatchingLabels{
@@ -420,9 +420,9 @@ func TestControlPlaneUpdate(t *testing.T) {
 
 	t.Log("verifying deployments managed by the dataplane are ready")
 	require.Eventually(t,
-		testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, clients, client.MatchingLabels{
+		testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		}),
+		}, clients),
 		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 	)
 

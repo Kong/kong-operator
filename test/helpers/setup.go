@@ -3,6 +3,7 @@ package helpers
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
@@ -24,7 +25,9 @@ func SetupTestEnv(t *testing.T, ctx context.Context, env environments.Environmen
 	t.Log("performing test setup")
 	cleaner := clusters.NewCleaner(env.Cluster())
 	t.Cleanup(func() {
-		assert.NoError(t, cleaner.Cleanup(context.Background()))
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
+		defer cancel()
+		assert.NoError(t, cleaner.Cleanup(ctx))
 	})
 
 	t.Log("creating a testing namespace")

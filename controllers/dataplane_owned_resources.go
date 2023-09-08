@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,9 +23,9 @@ import (
 	"github.com/kong/gateway-operator/internal/versions"
 )
 
-// ensureCertificate ensures that a certificate exists for the given dataplane.
+// ensureDataPlaneCertificate ensures that a certificate exists for the given dataplane.
 // Said certificate is used to secure the Admin API.
-func ensureCertificate(
+func ensureDataPlaneCertificate(
 	ctx context.Context,
 	cl client.Client,
 	dataplane *operatorv1beta1.DataPlane,
@@ -74,7 +75,7 @@ func ensureDeploymentForDataPlane(
 
 	count := len(deployments)
 	if count > 1 {
-		if err := k8sreduce.ReduceDeployments(ctx, cl, deployments); err != nil {
+		if err := k8sreduce.ReduceDeployments(ctx, cl, deployments, DataPlaneOwnedObjectPreDeleteHook); err != nil {
 			return Noop, nil, err
 		}
 		return Updated, nil, errors.New("number of deployments reduced")
@@ -218,7 +219,7 @@ func ensureAdminServiceForDataPlane(
 
 	count := len(services)
 	if count > 1 {
-		if err := k8sreduce.ReduceServices(ctx, cl, services); err != nil {
+		if err := k8sreduce.ReduceServices(ctx, cl, services, DataPlaneOwnedObjectPreDeleteHook); err != nil {
 			return Noop, nil, err
 		}
 		return Noop, nil, errors.New("number of DataPlane Admin API services reduced")
@@ -297,7 +298,7 @@ func ensureIngressServiceForDataPlane(
 
 	count := len(services)
 	if count > 1 {
-		if err := k8sreduce.ReduceServices(ctx, cl, services); err != nil {
+		if err := k8sreduce.ReduceServices(ctx, cl, services, DataPlaneOwnedObjectPreDeleteHook); err != nil {
 			return Noop, nil, err
 		}
 		return Noop, nil, errors.New("number of DataPlane ingress services reduced")
@@ -352,4 +353,25 @@ func ensureIngressServiceForDataPlane(
 	}
 
 	return Created, generatedService, cl.Create(ctx, generatedService)
+}
+
+// DataPlaneOwnedObjectPreDeleteHook is a pre-delete hook for DataPlane-owned objects that ensures that before the
+// operator attempts to delete the object, it removes the finalizer that prevents the object from being deleted
+// accidentally by users.
+func DataPlaneOwnedObjectPreDeleteHook(ctx context.Context, cl client.Client, obj client.Object) error {
+	finalizers := obj.GetFinalizers()
+
+	// If there's no finalizer, we don't need to do anything.
+	if !lo.Contains(finalizers, consts.DataPlaneOwnedWaitForOwnerFinalizer) {
+		return nil
+	}
+
+	// Otherwise, we delete the finalizer and update the object.
+	obj.SetFinalizers(lo.Reject(finalizers, func(s string, _ int) bool {
+		return s == consts.DataPlaneOwnedWaitForOwnerFinalizer
+	}))
+	if err := cl.Update(ctx, obj); err != nil {
+		return fmt.Errorf("failed to remove %q finalizer before deletion: %w", consts.DataPlaneOwnedWaitForOwnerFinalizer, err)
+	}
+	return nil
 }
