@@ -307,6 +307,29 @@ func GenerateNewClusterRoleForControlPlane_ge2_11(controlplaneName string) *rbac
 					"",
 				},
 				Resources: []string{
+					"configmaps",
+				},
+				Verbs: []string{
+					"get", "list", "watch", "create", "update", "patch", "delete",
+				},
+			},
+			{
+				APIGroups: []string{
+					"coordination.k8s.io",
+				},
+				Resources: []string{
+					"leases",
+				},
+				Verbs: []string{
+					"get", "list", "watch", "create", "update", "patch", "delete",
+				},
+			},
+
+			{
+				APIGroups: []string{
+					"",
+				},
+				Resources: []string{
 					"namespaces",
 				},
 				Verbs: []string{
@@ -510,29 +533,6 @@ func GenerateNewClusterRoleForControlPlane_ge2_11(controlplaneName string) *rbac
 				},
 				Verbs: []string{
 					"get", "patch", "update",
-				},
-			},
-
-			{
-				APIGroups: []string{
-					"",
-				},
-				Resources: []string{
-					"configmaps",
-				},
-				Verbs: []string{
-					"get", "list", "watch", "create", "update", "patch", "delete",
-				},
-			},
-			{
-				APIGroups: []string{
-					"coordination.k8s.io",
-				},
-				Resources: []string{
-					"leases",
-				},
-				Verbs: []string{
-					"get", "list", "watch", "create", "update", "patch", "delete",
 				},
 			},
 		},
