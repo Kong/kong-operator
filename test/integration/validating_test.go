@@ -15,8 +15,8 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
-	"github.com/kong/gateway-operator/controllers"
 	"github.com/kong/gateway-operator/internal/consts"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
@@ -238,20 +238,20 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 						dataplane, ok := event.Object.(*operatorv1beta1.DataPlane)
 						require.True(t, ok)
 
-						var provisionCondition metav1.Condition
+						var cond metav1.Condition
 						for _, condition := range dataplane.Status.Conditions {
-							if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) {
-								provisionCondition = condition
+							if condition.Type == string(k8sutils.ReadyType) {
+								cond = condition
 								break
 							}
 						}
 						t.Log("verifying conditions of invalid dataplanes")
-						if provisionCondition.Status != metav1.ConditionFalse {
-							t.Logf("provision condition status should be false")
+						if cond.Status != metav1.ConditionFalse {
+							t.Logf("Ready condition status should be false")
 							continue
 						}
-						if provisionCondition.Message != tc.conditionMessage {
-							t.Logf("provision condition message should be the same as expected")
+						if cond.Message != tc.conditionMessage {
+							t.Logf("Ready condition message should be the same as expected")
 							continue
 						}
 

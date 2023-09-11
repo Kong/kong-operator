@@ -29,6 +29,7 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -87,7 +88,7 @@ func TestIngressEssentials(t *testing.T) {
 		return false
 	}, testutils.DefaultIngressWait, time.Second)
 
-	t.Log("verifying that the DataPlane becomes provisioned")
+	t.Log("verifying that the DataPlane becomes Ready")
 	var dataplane *operatorv1beta1.DataPlane
 	require.Eventually(t, func() bool {
 		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, clients.MgrClient, gateway)
@@ -96,7 +97,7 @@ func TestIngressEssentials(t *testing.T) {
 		}
 		if len(dataplanes) == 1 {
 			for _, condition := range dataplanes[0].Status.Conditions {
-				if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) && condition.Status == metav1.ConditionTrue {
+				if condition.Type == string(k8sutils.ReadyType) && condition.Status == metav1.ConditionTrue {
 					dataplane = &dataplanes[0]
 					return true
 				}

@@ -31,7 +31,6 @@ func init() {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=kdp,categories=kong;all
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
-// +kubebuilder:printcolumn:name="Provisioned",description="The Resource is provisioned",type=string,JSONPath=`.status.conditions[?(@.type=='Provisioned')].status`
 
 // DataPlane is the Schema for the dataplanes API
 type DataPlane struct {

@@ -24,10 +24,6 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Ready
       type: string
-    - description: The Resource is provisioned
-      jsonPath: .status.conditions[?(@.type=='Provisioned')].status
-      name: Provisioned
-      type: string
     name: v1beta1
     schema:
       openAPIV3Schema:

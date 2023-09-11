@@ -84,7 +84,7 @@ func TestDataplaneEssentials(t *testing.T) {
 	cleaner.Add(dataplane)
 
 	t.Log("verifying dataplane gets marked provisioned")
-	require.Eventually(t, testutils.DataPlaneIsProvisioned(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
 	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
@@ -266,7 +266,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	cleaner.Add(dataplane)
 
 	t.Log("verifying that the dataplane gets marked as provisioned")
-	require.Eventually(t, testutils.DataPlaneIsProvisioned(
+	require.Eventually(t, testutils.DataPlaneIsReady(
 		t, ctx, dataplaneName, clients.OperatorClient),
 		testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
 	)
@@ -449,7 +449,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 	cleaner.Add(dataplane)
 
 	t.Log("verifying dataplane gets marked provisioned")
-	require.Eventually(t, testutils.DataPlaneIsProvisioned(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
 	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
@@ -541,7 +541,7 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	cleaner.Add(dataplane)
 
 	t.Log("verifying that the dataplane gets marked as provisioned")
-	require.Eventually(t, testutils.DataPlaneIsProvisioned(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
 	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{

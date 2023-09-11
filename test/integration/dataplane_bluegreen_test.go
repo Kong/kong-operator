@@ -53,7 +53,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 	cleaner.Add(dataplane)
 
 	t.Log("verifying dataplane gets marked provisioned")
-	require.Eventually(t, testutils.DataPlaneIsProvisioned(t, ctx, dataplaneName, clients.OperatorClient), waitTime, tickTime)
+	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, clients.OperatorClient), waitTime, tickTime)
 
 	t.Run("before patching", func(t *testing.T) {
 		t.Log("verifying preview deployment managed by the dataplane is present")

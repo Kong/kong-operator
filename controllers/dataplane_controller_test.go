@@ -110,7 +110,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(DataPlaneConditionTypeProvisioned),
+							Type:   string(k8sutils.ReadyType),
 							Status: metav1.ConditionTrue,
 						},
 					},
@@ -225,7 +225,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Service: "svc-proxy-to-delete",
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(DataPlaneConditionTypeProvisioned),
+							Type:   string(k8sutils.ReadyType),
 							Status: metav1.ConditionTrue,
 						},
 					},
@@ -315,7 +315,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(DataPlaneConditionTypeProvisioned),
+							Type:   string(k8sutils.ReadyType),
 							Status: metav1.ConditionTrue,
 						},
 					},
@@ -431,7 +431,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(DataPlaneConditionTypeProvisioned),
+							Type:   string(k8sutils.ReadyType),
 							Status: metav1.ConditionTrue,
 						},
 					},
@@ -588,14 +588,6 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						},
 					},
 				},
-				Status: operatorv1beta1.DataPlaneStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   string(DataPlaneConditionTypeProvisioned),
-							Status: metav1.ConditionTrue,
-						},
-					},
-				},
 			},
 			dataplaneSubResources: []controllerruntimeclient.Object{
 				&appsv1.Deployment{
@@ -702,7 +694,6 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 
 				err = reconciler.Client.Get(ctx, nn, dp)
 				require.NoError(t, err)
-				t.Log(dp.Status)
 				c, ok = k8sutils.GetCondition(k8sutils.ReadyType, dp)
 				require.True(t, ok, "DataPlane should have a Ready condition set")
 				assert.Equal(t, c.Status, metav1.ConditionTrue, "DataPlane should be ready at this point")

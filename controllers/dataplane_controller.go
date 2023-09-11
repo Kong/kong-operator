@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -65,20 +66,14 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	k8sutils.InitReady(dataplane)
-	if err := r.initSelectorInStatus(ctx, dataplane); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed updating DataPlane with selector in Status: %w", err)
+	if patched, err := patchDataPlaneStatus(ctx, r.Client, log, dataplane); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed initializing DataPlane Ready condition: %w", err)
+	} else if patched {
+		return ctrl.Result{}, nil
 	}
 
-	trace(log, "validating DataPlane resource conditions", dataplane)
-	if r.ensureIsMarkedScheduled(dataplane) {
-		patched, err := patchDataPlaneStatus(ctx, r.Client, log, dataplane)
-		if err != nil {
-			debug(log, "unable to patch DataPlane status", dataplane)
-			return ctrl.Result{}, err // requeue will be triggered by the creation or update of the owned object
-		}
-		if patched {
-			return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
-		}
+	if err := r.initSelectorInStatus(ctx, log, dataplane); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed updating DataPlane with selector in Status: %w", err)
 	}
 
 	trace(log, "validating DataPlane configuration", dataplane)
@@ -86,8 +81,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err != nil {
 		info(log, "failed to validate dataplane: "+err.Error(), dataplane)
 		r.eventRecorder.Event(dataplane, "Warning", "ValidationFailed", err.Error())
-		markErr := r.ensureDataPlaneIsMarkedNotProvisioned(ctx, log, dataplane,
-			DataPlaneConditionValidationFailed, err.Error())
+		markErr := r.ensureDataPlaneIsMarkedNotReady(ctx, log, dataplane, DataPlaneConditionValidationFailed, err.Error())
 		return ctrl.Result{}, markErr
 	}
 
@@ -200,17 +194,14 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	return ctrl.Result{}, nil
 }
 
-func (r *DataPlaneReconciler) initSelectorInStatus(ctx context.Context, dataplane *operatorv1beta1.DataPlane) error {
+func (r *DataPlaneReconciler) initSelectorInStatus(ctx context.Context, log logr.Logger, dataplane *operatorv1beta1.DataPlane) error {
 	if dataplane.Status.Selector != "" {
 		return nil
 	}
 
-	oldDataplane := dataplane.DeepCopy()
 	dataplane.Status.Selector = uuid.New().String()
-	if err := r.Client.Status().Patch(ctx, dataplane, client.MergeFrom(oldDataplane)); err != nil {
-		return err
-	}
-	return nil
+	_, err := patchDataPlaneStatus(ctx, r.Client, log, dataplane)
+	return err
 }
 
 // labelSelectorFromDataPlaneStatusSelectorDeploymentOpt returns a DeploymentOpt

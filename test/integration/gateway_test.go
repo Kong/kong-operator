@@ -61,8 +61,8 @@ func TestGatewayEssentials(t *testing.T) {
 	gateway = testutils.MustGetGateway(t, ctx, gatewayNSN, clients)
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
-	t.Log("verifying that the DataPlane becomes provisioned")
-	require.Eventually(t, testutils.GatewayDataPlaneIsProvisioned(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	t.Log("verifying that the DataPlane becomes Ready")
+	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 	dataplane := testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)[0]
 
 	t.Log("verifying that the ControlPlane becomes provisioned")
@@ -101,7 +101,7 @@ func TestGatewayEssentials(t *testing.T) {
 	controlplane = testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)[0]
 
 	t.Log("verifying that the DataPlane becomes provisioned again")
-	require.Eventually(t, testutils.GatewayDataPlaneIsProvisioned(t, ctx, gateway, clients), 45*time.Second, time.Second)
+	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, ctx, gateway, clients), 45*time.Second, time.Second)
 	dataplane = testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)[0]
 
 	t.Log("verifying Gateway gets marked as Programmed again")
@@ -221,7 +221,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying that the DataPlane becomes provisioned")
-	require.Eventually(t, testutils.GatewayDataPlaneIsProvisioned(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 	dataplane := testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)[0]
 
 	t.Log("verifying that the ControlPlane becomes provisioned")

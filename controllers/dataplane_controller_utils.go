@@ -208,7 +208,6 @@ func ensureDataPlaneReadyStatus(
 		return ctrl.Result{}, nil
 	}
 
-	markAsProvisioned(dataplane)
 	k8sutils.SetReady(dataplane)
 	ensureDataPlaneReadinessStatus(dataplane, &deployment)
 

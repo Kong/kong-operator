@@ -352,13 +352,6 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 			expectedDataPlaneStatus: operatorv1beta1.DataPlaneStatus{
 				Conditions: []metav1.Condition{
 					k8sutils.NewConditionWithGeneration(
-						DataPlaneConditionTypeProvisioned,
-						metav1.ConditionTrue,
-						DataPlaneConditionReasonPodsReady,
-						"pods for all Deployments are ready",
-						102,
-					),
-					k8sutils.NewConditionWithGeneration(
 						k8sutils.ReadyType,
 						metav1.ConditionTrue,
 						"Ready",

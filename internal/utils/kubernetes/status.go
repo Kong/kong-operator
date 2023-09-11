@@ -99,9 +99,17 @@ func IsValidCondition(cType ConditionType, resource ConditionsAware) bool {
 	return false
 }
 
-// InitReady initializes the Ready status to False
-func InitReady(resource ConditionsAware) {
-	SetCondition(NewCondition(ReadyType, metav1.ConditionFalse, DependenciesNotReadyReason, DependenciesNotReadyMessage), resource)
+// InitReady initializes the Ready status to False if Ready condition is not
+// yet set on the resource.
+func InitReady(resource ConditionsAndGenerationAware) {
+	_, ok := GetCondition(ReadyType, resource)
+	if ok {
+		return
+	}
+	SetCondition(
+		NewConditionWithGeneration(ReadyType, metav1.ConditionFalse, DependenciesNotReadyReason, DependenciesNotReadyMessage, resource.GetGeneration()),
+		resource,
+	)
 }
 
 // InitProgrammed initializes the Programmed status to False

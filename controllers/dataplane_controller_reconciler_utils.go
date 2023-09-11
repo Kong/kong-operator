@@ -20,25 +20,6 @@ import (
 // DataPlaneReconciler - Status Management
 // -----------------------------------------------------------------------------
 
-func (r *DataPlaneReconciler) ensureIsMarkedScheduled(
-	dataplane *operatorv1beta1.DataPlane,
-) bool {
-	_, present := k8sutils.GetCondition(DataPlaneConditionTypeProvisioned, dataplane)
-	if !present {
-		condition := k8sutils.NewConditionWithGeneration(
-			DataPlaneConditionTypeProvisioned,
-			metav1.ConditionFalse,
-			DataPlaneConditionReasonPodsNotReady,
-			"DataPlane resource is scheduled for provisioning",
-			dataplane.Generation,
-		)
-
-		k8sutils.SetCondition(condition, dataplane)
-		return true
-	}
-	return false
-}
-
 // ensureDataPlaneReadinessStatus ensures the readiness Status fields of DataPlane are set.
 func ensureDataPlaneReadinessStatus(
 	dataplane *operatorv1beta1.DataPlane,
@@ -107,14 +88,14 @@ func isSameDataPlaneCondition(condition1, condition2 metav1.Condition) bool {
 		condition1.Message == condition2.Message
 }
 
-func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
+func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotReady(
 	ctx context.Context,
 	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 	reason k8sutils.ConditionReason, message string,
 ) error {
-	notProvisionedCondition := metav1.Condition{
-		Type:               string(DataPlaneConditionTypeProvisioned),
+	notReadyCondition := metav1.Condition{
+		Type:               string(k8sutils.ReadyType),
 		Status:             metav1.ConditionFalse,
 		Reason:             string(reason),
 		Message:            message,
@@ -125,20 +106,20 @@ func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
 	conditionFound := false
 	shouldUpdate := false
 	for i, condition := range dataplane.Status.Conditions {
-		// update the condition if condition has type `provisioned`, and the condition is not the same.
-		if condition.Type == string(DataPlaneConditionTypeProvisioned) {
+		// update the condition if condition has type `Ready`, and the condition is not the same.
+		if condition.Type == string(k8sutils.ReadyType) {
 			conditionFound = true
 			// update the slice if the condition is not the same as we expected.
-			if !isSameDataPlaneCondition(notProvisionedCondition, condition) {
-				dataplane.Status.Conditions[i] = notProvisionedCondition
+			if !isSameDataPlaneCondition(notReadyCondition, condition) {
+				dataplane.Status.Conditions[i] = notReadyCondition
 				shouldUpdate = true
 			}
 		}
 	}
 
 	if !conditionFound {
-		// append a new condition if provisioned condition is not found.
-		dataplane.Status.Conditions = append(dataplane.Status.Conditions, notProvisionedCondition)
+		// append a new condition if Ready condition is not found.
+		dataplane.Status.Conditions = append(dataplane.Status.Conditions, notReadyCondition)
 		shouldUpdate = true
 	}
 
@@ -222,7 +203,8 @@ func patchDataPlaneStatus(ctx context.Context, cl client.Client, log logr.Logger
 	if k8sutils.NeedsUpdate(current, updated) ||
 		addressesChanged(current, updated) ||
 		readinessChanged(current, updated) ||
-		current.Status.Service != updated.Status.Service {
+		current.Status.Service != updated.Status.Service ||
+		current.Status.Selector != updated.Status.Selector {
 
 		debug(log, "patching DataPlane status", updated, "status", updated.Status)
 		return true, cl.Status().Patch(ctx, updated, client.MergeFrom(current))

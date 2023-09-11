@@ -143,7 +143,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(DataPlaneConditionTypeProvisioned),
+							Type:   string(k8sutils.ReadyType),
 							Status: metav1.ConditionTrue,
 						},
 					},
@@ -324,7 +324,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(DataPlaneConditionTypeProvisioned),
+							Type:   string(k8sutils.ReadyType),
 							Status: metav1.ConditionTrue,
 						},
 					},

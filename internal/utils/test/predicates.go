@@ -76,13 +76,13 @@ func ControlPlaneIsScheduled(t *testing.T, ctx context.Context, controlplane typ
 	}, operatorClient)
 }
 
-// DataPlaneIsProvisioned is a helper function for tests that returns a function
-// that can be used to check if a DataPlane was provisioned.
+// DataPlaneIsReady is a helper function for tests that returns a function
+// that can be used to check if a DataPlane is ready.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func DataPlaneIsProvisioned(t *testing.T, ctx context.Context, dataplane types.NamespacedName, operatorClient *clientset.Clientset) func() bool {
+func DataPlaneIsReady(t *testing.T, ctx context.Context, dataplane types.NamespacedName, operatorClient *clientset.Clientset) func() bool {
 	return DataPlanePredicate(t, ctx, dataplane, func(c *operatorv1beta1.DataPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) && condition.Status == metav1.ConditionTrue {
+			if condition.Type == string(k8sutils.ReadyType) && condition.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -447,18 +447,18 @@ func GatewayListenersAreProgrammed(t *testing.T, ctx context.Context, gatewayNSN
 	}
 }
 
-func GatewayDataPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) func() bool {
+func GatewayDataPlaneIsReady(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) func() bool {
 	return func() bool {
 		dataplanes := MustListDataPlanesForGateway(t, ctx, gateway, clients)
 
 		if len(dataplanes) == 1 {
 			// if the dataplane DeletionTimestamp is set, the dataplane deletion has been requested.
-			// Hence we cannot consider it as a provisioned valid dataplane.
+			// Hence we cannot consider it as a valid dataplane that's ready.
 			if dataplanes[0].DeletionTimestamp != nil {
 				return false
 			}
 			for _, condition := range dataplanes[0].Status.Conditions {
-				if condition.Type == string(controllers.DataPlaneConditionTypeProvisioned) &&
+				if condition.Type == string(k8sutils.ReadyType) &&
 					condition.Status == metav1.ConditionTrue {
 					return true
 				}
