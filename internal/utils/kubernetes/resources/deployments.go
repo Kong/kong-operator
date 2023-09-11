@@ -14,6 +14,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
+	dputils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
@@ -264,7 +265,7 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dat
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					Volumes:                       generateDeploymentVolumes(dataplane.Spec.Deployment.PodTemplateSpec),
 					Containers: []corev1.Container{
-						GenerateDataPlaneContainer(dataplane.Spec.Deployment.PodTemplateSpec, dataplaneImage),
+						GenerateDataPlaneContainer(dataplane.Spec.Deployment, dataplaneImage),
 					},
 				},
 			},
@@ -280,6 +281,8 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dat
 		deployment.Spec.Template = *patchedPodTemplateSpec
 	}
 
+	dputils.FillDataPlaneProxyContainerEnvs(&deployment.Spec.Template)
+
 	for _, opt := range opts {
 		opt(deployment)
 	}
@@ -289,10 +292,10 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dat
 	return deployment, nil
 }
 
-func GenerateDataPlaneContainer(dpPodTemplateSpec *corev1.PodTemplateSpec, image string) corev1.Container {
+func GenerateDataPlaneContainer(opts operatorv1beta1.DataPlaneDeploymentOptions, image string) corev1.Container {
 	return corev1.Container{
 		Name:            consts.DataPlaneProxyContainerName,
-		VolumeMounts:    generateDeploymentVolumeMounts(dpPodTemplateSpec, consts.DataPlaneProxyContainerName),
+		VolumeMounts:    generateDeploymentVolumeMounts(opts.PodTemplateSpec, consts.DataPlaneProxyContainerName),
 		Image:           image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Lifecycle: &corev1.Lifecycle{

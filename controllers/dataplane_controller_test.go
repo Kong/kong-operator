@@ -176,9 +176,6 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err)
 
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
-				require.NoError(t, err)
-
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.EqualError(t, err, "number of DataPlane ingress services reduced")
 
 				svcToBeDeleted, svcToBeKept := &corev1.Service{}, &corev1.Service{}
@@ -379,9 +376,6 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err)
 
 				// second reconcile loop to allow the reconciler to set the service name in the dataplane status
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
-				require.NoError(t, err)
-
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 

@@ -65,7 +65,8 @@ func (r *DataPlaneReconciler) ensureDataPlaneServiceStatus(
 	}
 
 	if shouldUpdate {
-		return true, patchDataPlaneStatus(ctx, r.Client, log, dataplane)
+		_, err := patchDataPlaneStatus(ctx, r.Client, log, dataplane)
+		return true, err
 	}
 	return false, nil
 }
@@ -90,7 +91,8 @@ func (r *DataPlaneReconciler) ensureDataPlaneAddressesStatus(
 	if len(addresses) != len(dataplane.Status.Addresses) ||
 		!cmp.Equal(addresses, dataplane.Status.Addresses) {
 		dataplane.Status.Addresses = addresses
-		return true, patchDataPlaneStatus(ctx, r.Client, log, dataplane)
+		_, err := patchDataPlaneStatus(ctx, r.Client, log, dataplane)
+		return true, err
 	}
 
 	return false, nil
@@ -141,7 +143,8 @@ func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotProvisioned(
 	}
 
 	if shouldUpdate {
-		return patchDataPlaneStatus(ctx, r.Client, log, dataplane)
+		_, err := patchDataPlaneStatus(ctx, r.Client, log, dataplane)
+		return err
 	}
 	return nil
 }
@@ -208,12 +211,12 @@ func dataPlaneIngressServiceIsReady(dataplane *operatorv1beta1.DataPlane, datapl
 
 // patchDataPlaneStatus patches the resource status only when there are changes
 // that requires it.
-func patchDataPlaneStatus(ctx context.Context, cl client.Client, log logr.Logger, updated *operatorv1beta1.DataPlane) error {
+func patchDataPlaneStatus(ctx context.Context, cl client.Client, log logr.Logger, updated *operatorv1beta1.DataPlane) (bool, error) {
 	current := &operatorv1beta1.DataPlane{}
 
 	err := cl.Get(ctx, client.ObjectKeyFromObject(updated), current)
 	if err != nil && !k8serrors.IsNotFound(err) {
-		return err
+		return false, err
 	}
 
 	if k8sutils.NeedsUpdate(current, updated) ||
@@ -222,8 +225,19 @@ func patchDataPlaneStatus(ctx context.Context, cl client.Client, log logr.Logger
 		current.Status.Service != updated.Status.Service {
 
 		debug(log, "patching DataPlane status", updated, "status", updated.Status)
-		return cl.Status().Patch(ctx, updated, client.MergeFrom(current))
+		return true, cl.Status().Patch(ctx, updated, client.MergeFrom(current))
 	}
 
-	return nil
+	return false, nil
+}
+
+// addressesChanged returns a boolean indicating whether the addresses in provided
+// DataPlane stauses differ.
+func addressesChanged(current, updated *operatorv1beta1.DataPlane) bool {
+	return !cmp.Equal(current.Status.Addresses, updated.Status.Addresses)
+}
+
+func readinessChanged(current, updated *operatorv1beta1.DataPlane) bool {
+	return current.Status.ReadyReplicas != updated.Status.ReadyReplicas ||
+		current.Status.Replicas != updated.Status.Replicas
 }

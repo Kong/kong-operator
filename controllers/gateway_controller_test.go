@@ -23,7 +23,6 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
-	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/vars"
@@ -312,8 +311,6 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				k8sutils.SetOwnerForObject(gatewaySubResource, tc.gateway)
 				gatewayutils.LabelObjectAsGatewayManaged(gatewaySubResource)
 				if gatewaySubResource.GetName() == "test-dataplane" {
-					dataplane := gatewaySubResource.(*operatorv1beta1.DataPlane)
-					dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneOptions)
 					for _, dataplaneSubresource := range tc.dataplaneSubResources {
 						k8sutils.SetOwnerForObject(dataplaneSubresource, gatewaySubResource)
 						ObjectsToAdd = append(ObjectsToAdd, dataplaneSubresource)

@@ -4,13 +4,10 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
-	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
 // KongDefaults are the baseline Kong proxy configuration options needed for
@@ -47,33 +44,30 @@ var KongDefaults = map[string]string{
 // DataPlane Utils - Config
 // -----------------------------------------------------------------------------
 
-// SetDataPlaneDefaults sets any unset default configuration options on the
-// DataPlane. No configuration is overridden. EnvVars are sorted
-// lexographically as a side effect.
-// returns true if new envs are actually appended.
-func SetDataPlaneDefaults(spec *operatorv1beta1.DataPlaneOptions) bool {
-	if spec.Deployment.PodTemplateSpec == nil {
-		spec.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
+// FillDataPlaneProxyContainerEnvs sets any unset default configuration
+// options on the DataPlane. It allows overriding the defaults via the provided
+// PodTemplateSpec.
+// EnvVars are sorted lexographically as a side effect.
+// It also returns the updated EnvVar slice.
+func FillDataPlaneProxyContainerEnvs(podTemplateSpec *corev1.PodTemplateSpec) {
+	if podTemplateSpec == nil {
+		return
 	}
 
-	dataplaneContainer := k8sutils.GetPodContainerByName(&spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
-	generated := false
-	if dataplaneContainer == nil {
-		dataplaneContainer = lo.ToPtr(resources.GenerateDataPlaneContainer(spec.Deployment.DeploymentOptions.PodTemplateSpec, ""))
-		generated = true
+	podSpec := &podTemplateSpec.Spec
+	container := k8sutils.GetPodContainerByName(podSpec, consts.DataPlaneProxyContainerName)
+	if container == nil {
+		return
 	}
 
-	updated := false
 	for k, v := range KongDefaults {
-		envVar := corev1.EnvVar{Name: k, Value: v}
-		if !k8sutils.IsEnvVarPresent(envVar, dataplaneContainer.Env) {
-			dataplaneContainer.Env = append(dataplaneContainer.Env, envVar)
-			updated = true
+		envVar := corev1.EnvVar{
+			Name:  k,
+			Value: v,
+		}
+		if !k8sutils.IsEnvVarPresent(envVar, container.Env) {
+			container.Env = append(container.Env, envVar)
 		}
 	}
-	sort.Sort(k8sutils.SortableEnvVars(dataplaneContainer.Env))
-	if generated {
-		spec.Deployment.PodTemplateSpec.Spec.Containers = append(spec.Deployment.PodTemplateSpec.Spec.Containers, *dataplaneContainer)
-	}
-	return updated
+	sort.Sort(k8sutils.SortableEnvVars(container.Env))
 }

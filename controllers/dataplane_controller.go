@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -17,7 +16,6 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
-	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
@@ -73,25 +71,13 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	trace(log, "validating DataPlane resource conditions", dataplane)
 	if r.ensureIsMarkedScheduled(dataplane) {
-		err := patchDataPlaneStatus(ctx, r.Client, log, dataplane)
+		patched, err := patchDataPlaneStatus(ctx, r.Client, log, dataplane)
 		if err != nil {
-			debug(log, "unable to update DataPlane resource", dataplane)
+			debug(log, "unable to patch DataPlane status", dataplane)
+			return ctrl.Result{}, err // requeue will be triggered by the creation or update of the owned object
 		}
-		return ctrl.Result{}, err // requeue will be triggered by the creation or update of the owned object
-	}
-
-	{
-		oldDataPlane := dataplane.DeepCopy()
-		if updated := dataplaneutils.SetDataPlaneDefaults(&dataplane.Spec.DataPlaneOptions); updated {
-			trace(log, "setting default ENVs", dataplane)
-			if err := r.Client.Patch(ctx, dataplane, client.MergeFrom(oldDataPlane)); err != nil {
-				if k8serrors.IsConflict(err) {
-					debug(log, "conflict found when patching DataPlane, retrying", dataplane)
-					return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
-				}
-				return ctrl.Result{}, fmt.Errorf("failed patching DataPlane's environment variables: %w", err)
-			}
-			return ctrl.Result{}, nil // no need to requeue, the update will trigger.
+		if patched {
+			return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 		}
 	}
 
@@ -249,15 +235,4 @@ func labelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane *operatorv1bet
 			s.Spec.Selector[consts.OperatorLabelSelector] = dataplane.Status.Selector
 		}
 	}
-}
-
-// addressesChanged returns a boolean indicating whether the addresses in provided
-// DataPlane stauses differ.
-func addressesChanged(current, updated *operatorv1beta1.DataPlane) bool {
-	return !cmp.Equal(current.Status.Addresses, updated.Status.Addresses)
-}
-
-func readinessChanged(current, updated *operatorv1beta1.DataPlane) bool {
-	return current.Status.ReadyReplicas != updated.Status.ReadyReplicas ||
-		current.Status.Replicas != updated.Status.Replicas
 }

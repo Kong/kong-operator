@@ -10,14 +10,14 @@ import (
 // Kubernetes Utils - EnvVars
 // -----------------------------------------------------------------------------
 
-// IsEnvVarPresent indicates whether or not a given EnvVar is present in a list
-func IsEnvVarPresent(envVar corev1.EnvVar, envVars []corev1.EnvVar) (found bool) {
+// IsEnvVarPresent indicates whether or not a given EnvVar is present in a list.
+func IsEnvVarPresent(envVar corev1.EnvVar, envVars []corev1.EnvVar) bool {
 	for _, listVar := range envVars {
 		if envVar.Name == listVar.Name {
-			found = true
+			return true
 		}
 	}
-	return
+	return false
 }
 
 // -----------------------------------------------------------------------------

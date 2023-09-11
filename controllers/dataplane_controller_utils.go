@@ -162,7 +162,7 @@ func ensureDataPlaneReadyStatus(
 			dataplane,
 		)
 		ensureDataPlaneReadinessStatus(dataplane, &deployment)
-		if err = patchDataPlaneStatus(ctx, cl, log, dataplane); err != nil {
+		if _, err = patchDataPlaneStatus(ctx, cl, log, dataplane); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed patching status (Deployment not ready) for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 		}
 		return ctrl.Result{}, nil
@@ -202,7 +202,7 @@ func ensureDataPlaneReadyStatus(
 			dataplane,
 		)
 		ensureDataPlaneReadinessStatus(dataplane, &deployment)
-		if err = patchDataPlaneStatus(ctx, cl, log, dataplane); err != nil {
+		if _, err = patchDataPlaneStatus(ctx, cl, log, dataplane); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed patching status (ingress Service not ready) for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 		}
 		return ctrl.Result{}, nil
@@ -212,7 +212,7 @@ func ensureDataPlaneReadyStatus(
 	k8sutils.SetReady(dataplane)
 	ensureDataPlaneReadinessStatus(dataplane, &deployment)
 
-	if err = patchDataPlaneStatus(ctx, cl, log, dataplane); err != nil {
+	if _, err = patchDataPlaneStatus(ctx, cl, log, dataplane); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed patching status for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 

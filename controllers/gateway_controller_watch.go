@@ -19,7 +19,6 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
-	dataplaneutils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
@@ -188,7 +187,6 @@ func (r *GatewayReconciler) setDataplaneGatewayConfigDefaults(gatewayConfig *ope
 	if gatewayConfig.Spec.DataPlaneOptions == nil {
 		gatewayConfig.Spec.DataPlaneOptions = new(operatorv1beta1.DataPlaneOptions)
 	}
-	dataplaneutils.SetDataPlaneDefaults(gatewayConfig.Spec.DataPlaneOptions)
 }
 
 func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gwtypes.Gateway, gatewayConfig *operatorv1alpha1.GatewayConfiguration, dataplaneName, dataplaneIngressServiceName string) error { //nolint:unparam
