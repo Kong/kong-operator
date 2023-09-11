@@ -32,9 +32,27 @@ type DataPlaneOwnedResource interface {
 // implements client.Object interface. It allows us to use it to create a new instance of the object using
 // DataPlaneOwnedResource type param and cast it in compile time to DataPlaneOwnedResourcePointer.
 // See: https://stackoverflow.com/a/69575720/7958339
-type DataPlaneOwnedResourcePointer[T DataPlaneOwnedResource] interface {
+type DataPlaneOwnedResourcePointer[T DataPlaneOwnedResource, PT ClientObjectPointer[T]] interface {
+	// We need DeepCopier part of the type constraint to ensure that we can use
+	// DeepCopy() *T on DataPlaneOwnedResourcePointer objects.
+	DeepCopier[T, PT]
+	// ClientObjectPointer is needed to ensure that we get access to the methods
+	// of T with pointer receivers and to enforce fulfilling the client.Object
+	// interface.
+	ClientObjectPointer[T]
+}
+
+// ClientObjectPointer is a type contraint which enforces client.Object interface
+// and holds *T.
+type ClientObjectPointer[T DataPlaneOwnedResource] interface {
 	*T
 	client.Object
+}
+
+// DeepCopier is a type contraint which allows enforcing DeepCopy() *T method
+// on objects.
+type DeepCopier[T DataPlaneOwnedResource, PT ClientObjectPointer[T]] interface {
+	DeepCopy() PT
 }
 
 // DataPlaneOwnedResourceFinalizerReconciler reconciles DataPlaneOwnedResource objects.
@@ -42,7 +60,7 @@ type DataPlaneOwnedResourcePointer[T DataPlaneOwnedResource] interface {
 // deletion of the DataPlane owned resources.
 // This is a stop gap solution until we implement proper self-healing for the DataPlane resources, see:
 // https://github.com/Kong/gateway-operator/issues/1028
-type DataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT DataPlaneOwnedResourcePointer[T]] struct {
+type DataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT DataPlaneOwnedResourcePointer[T, PT]] struct {
 	Client          client.Client
 	DevelopmentMode bool
 }
@@ -56,7 +74,7 @@ type DataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT Data
 // instead of repeating the type twice as follows:
 //
 //	NewDataPlaneOwnedResourceFinalizerReconciler[corev1.Service, *corev1.Service](...).
-func NewDataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT DataPlaneOwnedResourcePointer[T]](
+func NewDataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT DataPlaneOwnedResourcePointer[T, PT]](
 	client client.Client,
 	developmentMode bool,
 ) *DataPlaneOwnedResourceFinalizerReconciler[T, PT] {
@@ -151,10 +169,11 @@ func (r DataPlaneOwnedResourceFinalizerReconciler[T, PT]) Reconcile(ctx context.
 
 	// Given all above conditions were satisfied, we can remove the finalizer from the object.
 	finalizers := obj.GetFinalizers()
+	old := obj.DeepCopy()
 	obj.SetFinalizers(lo.Reject(finalizers, func(f string, _ int) bool {
 		return f == consts.DataPlaneOwnedWaitForOwnerFinalizer
 	}))
-	if err := r.Client.Update(ctx, obj); err != nil {
+	if err := r.Client.Patch(ctx, obj, client.MergeFrom(old)); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// If the object is already gone, we don't need to do anything.
 			debug(logger, "object is already gone", obj)

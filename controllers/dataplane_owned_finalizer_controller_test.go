@@ -63,7 +63,8 @@ func TestRequestsForDataPlaneOwnedObjects(t *testing.T) {
 			NamespacedName: k8stypes.NamespacedName{
 				Namespace: "test-namespace",
 				Name:      name,
-			}}
+			},
+		}
 	}
 
 	t.Run("service", func(t *testing.T) {
