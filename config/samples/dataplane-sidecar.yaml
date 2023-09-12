@@ -45,7 +45,7 @@ spec:
             initialDelaySeconds: 1
             periodSeconds: 1
         - name: proxy
-          image: kong:3.3
+          image: kong:3.4
           volumeMounts:
           - name: proxy-logs
             mountPath: /etc/kong/log/

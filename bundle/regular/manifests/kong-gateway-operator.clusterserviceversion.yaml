@@ -87,7 +87,7 @@ metadata:
                   "spec": {
                     "containers": [
                       {
-                        "image": "kong:3.3",
+                        "image": "kong:3.4",
                         "name": "proxy",
                         "readinessProbe": {
                           "initialDelaySeconds": 1,
@@ -136,7 +136,7 @@ metadata:
                           "value": "debug"
                         }
                       ],
-                      "image": "kong:3.3",
+                      "image": "kong:3.4",
                       "name": "proxy",
                       "readinessProbe": {
                         "initialDelaySeconds": 1,

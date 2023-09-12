@@ -15,7 +15,7 @@ spec:
         spec:
           containers:
           - name: proxy
-            image: kong:3.3
+            image: kong:3.4
             readinessProbe:
               initialDelaySeconds: 1
               periodSeconds: 1
