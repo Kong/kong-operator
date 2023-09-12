@@ -52,7 +52,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
-	t.Log("verifying dataplane gets marked provisioned")
+	t.Log("verifying dataplane gets marked ready")
 	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, clients.OperatorClient), waitTime, tickTime)
 
 	t.Run("before patching", func(t *testing.T) {
@@ -197,6 +197,39 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 				),
 				waitTime, tickTime,
 			)
+		})
+	})
+
+	t.Run("removing rollout strategy removes preview resources", func(t *testing.T) {
+		t.Logf("patching DataPlane by removing the rollout strategy")
+		old := dataplane.DeepCopy()
+		dataplane.Spec.Deployment.Rollout = nil
+		require.NoError(t, clients.MgrClient.Patch(ctx, dataplane, client.MergeFrom(old)))
+
+		t.Run("preview deployment", func(t *testing.T) {
+			t.Log("verifying that preview deployment managed by the dataplane is removed")
+
+			require.Eventually(t,
+				testutils.Not(
+					testutils.DataPlaneHasDeployment(t, ctx, dataplaneName, clients, dataplanePreviewDeploymentLabels())),
+				waitTime, tickTime)
+		})
+
+		t.Run("preview ingress service", func(t *testing.T) {
+			t.Log("verifying that preview ingress service managed by the dataplane is removed")
+			var previewIngressService corev1.Service
+			require.Eventually(t,
+				testutils.Not(
+					testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &previewIngressService, clients, dataplaneIngressPreviewServiceLabels())),
+				waitTime, tickTime)
+		})
+
+		t.Run("dataplane status rollout should be cleared", func(t *testing.T) {
+			require.Eventually(t,
+				testutils.DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
+					return dataplane.Status.RolloutStatus == nil
+				}, clients.OperatorClient),
+				waitTime, tickTime)
 		})
 	})
 }

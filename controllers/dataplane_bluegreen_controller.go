@@ -78,6 +78,9 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	// Blue Green rollout strategy is not enabled, delegate to DataPlane controller.
 	if dataplane.Spec.Deployment.Rollout == nil || dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen == nil {
+		if err := r.prunePreviewSubresources(ctx, &dataplane); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed pruning preview DataPlane subresources: %w", err)
+		}
 		trace(log, "no Rollout with BlueGreen strategy specified, delegating to DataPlaneReconciler", req)
 		return r.DataPlaneController.Reconcile(ctx, req)
 	}
@@ -274,6 +277,118 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, nil
 }
 
+// prunePreviewSubresources is used to prune DataPlane's preview subresources
+// when they are not necessary anymore, e.g. when rollout strategy is unset.
+func (r *DataPlaneBlueGreenReconciler) prunePreviewSubresources(
+	ctx context.Context,
+	dataplane *operatorv1beta1.DataPlane,
+) error {
+	log := getLogger(ctx, "dataplaneBlueGreen", r.DevelopmentMode)
+
+	deployments, err := k8sutils.ListDeploymentsForOwner(
+		ctx,
+		r.Client,
+		dataplane.Namespace,
+		dataplane.UID,
+		client.MatchingLabels{
+			"app":                                dataplane.Name,
+			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	if len(deployments) > 0 {
+		debug(log, "removing preview Deployments", dataplane)
+		if err := removeObjectSliceWithDataPlaneOwnedFinalizer(ctx, r.Client, deployments); err != nil {
+			return err
+		}
+	}
+
+	services, err := k8sutils.ListServicesForOwner(
+		ctx,
+		r.Client,
+		dataplane.Namespace,
+		dataplane.UID,
+		client.MatchingLabels{
+			"app":                             dataplane.Name,
+			consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	for _, s := range services {
+		s := s
+
+		secrets, err := k8sutils.ListSecretsForOwner(
+			ctx,
+			r.Client,
+			dataplane.UID,
+			client.MatchingLabels{
+				consts.ServiceSecretLabel: s.Name,
+			},
+		)
+		if err != nil {
+			return err
+		}
+
+		debug(log, "removing preview Secrets", dataplane)
+		if err := removeObjectSliceWithDataPlaneOwnedFinalizer(ctx, r.Client, secrets); err != nil {
+			return err
+		}
+	}
+	if len(services) > 0 {
+		debug(log, "removing preview Services", dataplane)
+		if err := removeObjectSliceWithDataPlaneOwnedFinalizer(ctx, r.Client, services); err != nil {
+			return err
+		}
+	}
+
+	if dataplane.Status.RolloutStatus != nil {
+		old := dataplane.DeepCopy()
+		dataplane.Status.RolloutStatus = nil
+		if err := r.Client.Status().Patch(ctx, dataplane, client.MergeFrom(old)); err != nil {
+			return fmt.Errorf("failed patching DataPlane %s/%s to remove rollout status: %w",
+				dataplane.Namespace, dataplane.Name, err)
+		}
+	}
+
+	return nil
+}
+
+func removeObjectSliceWithDataPlaneOwnedFinalizer[
+	T DataPlaneOwnedResource, PT DataPlaneOwnedResourcePointer[T, PT],
+](
+	ctx context.Context, cl client.Client, resources []T,
+) error {
+	for _, s := range resources {
+		s := s
+		service := PT(&s)
+
+		old := service.DeepCopy()
+		service.SetFinalizers(lo.Reject(service.GetFinalizers(), func(f string, _ int) bool {
+			return f == consts.DataPlaneOwnedWaitForOwnerFinalizer
+		}))
+		if err := cl.Patch(ctx, service, client.MergeFrom(old)); err != nil {
+			if k8serrors.IsNotFound(err) {
+				continue
+			}
+			return fmt.Errorf("failed to remove finalizer from %s %s: %w", service.GetObjectKind().GroupVersionKind().Kind, service.GetName(), err)
+		}
+
+		if err := cl.Delete(ctx, service); err != nil {
+			if k8serrors.IsNotFound(err) {
+				continue
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *DataPlaneBlueGreenReconciler) ensureDeploymentForDataPlane(
 	ctx context.Context,
 	log logr.Logger,
@@ -417,14 +532,21 @@ func (r *DataPlaneBlueGreenReconciler) ensureRolledOutCondition(
 // on provided DataPlane's Rollout Status selector field.
 func labelSelectorFromDataPlaneRolloutStatusSelectorDeploymentOpt(dataplane *operatorv1beta1.DataPlane) func(s *appsv1.Deployment) {
 	return func(d *appsv1.Deployment) {
-		if dataplane.Status.RolloutStatus != nil &&
-			dataplane.Status.RolloutStatus.Deployment != nil &&
-			dataplane.Status.RolloutStatus.Deployment.Selector != "" {
-			d.Labels[consts.OperatorLabelSelector] = dataplane.Status.RolloutStatus.Deployment.Selector
-			d.Spec.Selector.MatchLabels[consts.OperatorLabelSelector] = dataplane.Status.RolloutStatus.Deployment.Selector
-			d.Spec.Template.Labels[consts.OperatorLabelSelector] = dataplane.Status.RolloutStatus.Deployment.Selector
+		if ls := getRolloutLabelSelectorFromDataPlane(dataplane); ls != "" {
+			d.Labels[consts.OperatorLabelSelector] = ls
+			d.Spec.Selector.MatchLabels[consts.OperatorLabelSelector] = ls
+			d.Spec.Template.Labels[consts.OperatorLabelSelector] = ls
 		}
 	}
+}
+
+func getRolloutLabelSelectorFromDataPlane(dataplane *operatorv1beta1.DataPlane) string {
+	if dataplane == nil ||
+		dataplane.Status.RolloutStatus == nil ||
+		dataplane.Status.RolloutStatus.Deployment == nil {
+		return ""
+	}
+	return dataplane.Status.RolloutStatus.Deployment.Selector
 }
 
 // labelSelectorFromDataPlaneRolloutStatusSelectorServiceOpt returns a ServiceOpt
@@ -432,10 +554,9 @@ func labelSelectorFromDataPlaneRolloutStatusSelectorDeploymentOpt(dataplane *ope
 // Status selector field.
 func labelSelectorFromDataPlaneRolloutStatusSelectorServiceOpt(dataplane *operatorv1beta1.DataPlane) func(s *corev1.Service) {
 	return func(s *corev1.Service) {
-		if dataplane.Status.RolloutStatus != nil &&
-			dataplane.Status.RolloutStatus.Deployment != nil &&
-			dataplane.Status.RolloutStatus.Deployment.Selector != "" {
-			s.Spec.Selector[consts.OperatorLabelSelector] = dataplane.Status.RolloutStatus.Deployment.Selector
+		ls := getRolloutLabelSelectorFromDataPlane(dataplane)
+		if ls != "" {
+			s.Spec.Selector[consts.OperatorLabelSelector] = ls
 		}
 	}
 }
