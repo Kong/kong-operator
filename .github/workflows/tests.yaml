@@ -30,7 +30,7 @@ jobs:
     - name: Setup go
       uses: actions/setup-go@v4
       with:
-        go-version: '^1.19'
+        go-version-file: go.mod
 
     - name: run lint
       run: make lint
@@ -49,7 +49,7 @@ jobs:
     - name: Setup go
       uses: actions/setup-go@v4
       with:
-        go-version: '^1.19'
+        go-version-file: go.mod
 
     - name: Verify operator-sdk bundle consistency
       run: make verify.bundle
@@ -75,7 +75,7 @@ jobs:
     - name: Setup go
       uses: actions/setup-go@v4
       with:
-        go-version: '^1.19'
+        go-version-file: go.mod
 
     - name: Create k8s KinD Cluster
       uses: helm/kind-action@v1.8.0
@@ -103,7 +103,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v4
       with:
-        go-version: '^1.19'
+        go-version-file: go.mod
 
     - name: run unit tests
       run: make test.unit
@@ -134,7 +134,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v4
       with:
-        go-version: '^1.19'
+        go-version-file: go.mod
 
     - name: run conformance tests
       run: make test.conformance
@@ -167,7 +167,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v4
       with:
-        go-version: '^1.19'
+        go-version-file: go.mod
 
     - name: run integration tests
       run: make test.integration
@@ -207,7 +207,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v4
       with:
-        go-version: '^1.19'
+        go-version-file: go.mod
 
     - name: run integration tests
       run: make test.integration_bluegreen
@@ -247,7 +247,7 @@ jobs:
     - name: setup golang
       uses: actions/setup-go@v4
       with:
-        go-version: '^1.19'
+        go-version-file: go.mod
 
     - name: build docker image
       env:

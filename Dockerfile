@@ -5,9 +5,13 @@
 FROM golang:1.21.1 as builder
 
 WORKDIR /workspace
-COPY go.mod go.mod
-COPY go.sum go.sum
-RUN go mod download
+# Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
+# layers when using COPY instructions for go.mod and go.sum.
+# https://docs.docker.com/build/guide/mounts/
+RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+    --mount=type=bind,source=go.sum,target=go.sum \
+    --mount=type=bind,source=go.mod,target=go.mod \
+    go mod download -x
 
 COPY main.go main.go
 COPY apis/ apis/
@@ -30,7 +34,13 @@ RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
     && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
     && printf "With 'uname -s': $(uname -s) and 'uname -m': $(uname -m)"
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
+# Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
+# layers when using COPY instructions for go.mod and go.sum.
+# https://docs.docker.com/build/guide/mounts/
+RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+    --mount=type=bind,source=go.sum,target=go.sum \
+    --mount=type=bind,source=go.mod,target=go.mod \
+    CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
     TAG="${TAG}" COMMIT="${COMMIT}" REPO_INFO="${REPO_INFO}" \
     make build.operator
 
