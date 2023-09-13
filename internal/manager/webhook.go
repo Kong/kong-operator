@@ -132,7 +132,11 @@ func (m *webhookManager) Start(ctx context.Context) error {
 	}
 
 	// load the Gateway API controllers and start them only after the webhook is in place
-	controllers := setupControllers(m.mgr, m.cfg)
+	controllers, err := setupControllers(m.mgr, m.cfg)
+	if err != nil {
+		return err
+	}
+
 	for _, c := range controllers {
 		if err := c.MaybeSetupWithManager(m.mgr); err != nil {
 			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)

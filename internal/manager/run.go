@@ -211,7 +211,11 @@ func Run(cfg Config) error {
 			}
 		}()
 	} else {
-		controllers := setupControllers(mgr, &cfg)
+		controllers, err := setupControllers(mgr, &cfg)
+		if err != nil {
+			setupLog.Error(err, "failed setting up controllers")
+			return err
+		}
 		for _, c := range controllers {
 			if err := c.MaybeSetupWithManager(mgr); err != nil {
 				return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
