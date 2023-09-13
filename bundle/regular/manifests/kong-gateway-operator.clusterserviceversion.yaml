@@ -22,7 +22,7 @@ metadata:
                 "spec": {
                   "containers": [
                     {
-                      "image": "kong/kubernetes-ingress-controller:2.10",
+                      "image": "kong/kubernetes-ingress-controller:2.11",
                       "name": "controller",
                       "readinessProbe": {
                         "initialDelaySeconds": 1,
