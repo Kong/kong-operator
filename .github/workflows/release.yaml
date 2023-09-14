@@ -197,11 +197,6 @@ jobs:
             echo "type=release" >> $GITHUB_OUTPUT
           fi
 
-      - name: setup golang
-        uses: actions/setup-go@v4
-        with:
-          go-version-file: go.mod
-
       # Use the main branch as a base for the release.
       # Any changes made on the branch that the workflow was triggered on will not be included 
       # in the release PR. If anything needs to be fixed before a release, it should be
@@ -212,6 +207,11 @@ jobs:
           fetch-depth: 0
           ref: main
           token: ${{ secrets.PAT_GITHUB }}
+
+      - name: setup golang
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
 
       # The bumped version file is included in the release PR.
       - name: Ensure version is set
