@@ -1,4 +1,5 @@
 name: release
+run-name: "Release ${{ format('{0}', github.event.inputs.tag) }}"
 
 on:
   workflow_dispatch:
@@ -7,17 +8,13 @@ on:
         description: The version to release (e.g. v1.2.3)
         required: true
       latest:
-        description: Whether to tag this release latest
-        required: true
-        default: 'false'
+        description: Whether to tag this build latest
+        type: boolean
+        default: false
       prerelease:
         description: Whether to make a created release a pre-release
         default: 'true'
         required: true
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   semver:
@@ -54,97 +51,15 @@ jobs:
           version_extractor_regex: 'v(.*)$'
 
   build-push-images:
-    environment: 'Docker Push'
-    needs: semver
-    runs-on: ubuntu-latest
-    steps:
-
-      - name: checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Add standard tags
-        run: |
-          echo 'TAGS_STANDARD<<EOF' >> $GITHUB_ENV
-          echo 'type=raw,value=${{ needs.semver.outputs.fullversion }}' >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
-
-      - name: Add major.minor tag
-        if: ${{ needs.semver.outputs.prerelease == '' }}
-        run: |
-          echo 'TAGS_SUPPLEMENTAL<<EOF' >> $GITHUB_ENV
-          echo "" >> $GITHUB_ENV
-          echo 'type=raw,value=${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}' >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # Setup Golang to use go pkg cache which is utilized in Dockerfile's cache mount.
-      - name: setup golang
-        uses: actions/setup-go@v4
-        with:
-          go-version-file: go.mod
-
-      - name: Cache Docker layers
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3.0.0
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5.0.0
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          flavor: |
-            latest=${{ github.event.inputs.latest == 'true' }}
-          tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
-
-      - name: Build binary
-        id: docker_build_binary
-        uses: docker/build-push-action@v5.0.0
-        with:
-          context: .
-          push: false
-          file: Dockerfile
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-          target: builder
-          platforms: linux/amd64, linux/arm64
-          build-args: |
-            TAG=${{ steps.meta.outputs.version }}
-            COMMIT=${{ github.sha }}
-            REPO_INFO=https://github.com/${{ github.repository }}.git
-
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v5.0.0
-        with:
-          context: .
-          push: true
-          file: Dockerfile
-          tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          target: distroless
-          platforms: linux/amd64, linux/arm64
-          build-args: |
-            TAG=${{ steps.meta.outputs.version }}
-            COMMIT=${{ github.sha }}
-            REPO_INFO=https://github.com/${{ github.repository }}.git
+    uses: ./.github/workflows/__build-workflow.yaml
+    secrets:
+      token: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
+    with:
+      registry: docker.io
+      username: ${{ vars.DOCKERHUB_PUSH_USERNAME  }}
+      image-name: ${{ github.repository }}
+      push: true
+      latest: ${{ inputs.latest }}
 
   test-integration-current-kubernetes:
     runs-on: ubuntu-latest

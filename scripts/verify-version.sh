@@ -1,8 +1,6 @@
 #!/bin/bash
 
 set -o nounset
-set -o pipefail
-# set -x
 
 get_tag() {
   tag="$(git describe --tags --exact-match HEAD 2>/dev/null)"
@@ -47,15 +45,12 @@ RELEASE="$(get_release)"
 EXPECTED_VERSION="{\"release\":\"${RELEASE}\",\"repo\":\"${REPO}\",\"commit\":\"${COMMIT}\"}"
 EXPECTED_VERSION="$(jq --sort-keys <<< ${EXPECTED_VERSION})"
 GOT_VERSION="$(jq --sort-keys <&0)"
-DIFF="$(diff <(echo ${EXPECTED_VERSION}) <(echo ${GOT_VERSION}) )"
 
-if [[ "${DIFF}" != "" ]]; then
-  echo "Versions do not match!"
-  echo "Expected:"
-  echo "${EXPECTED_VERSION}"
-  echo "Got:"
-  echo "${GOT_VERSION}"
-  exit 1
-fi
+echo "received version info: ${GOT_VERSION}"
+echo "${GOT_VERSION}" | jq -e ".commit | test(\"${COMMIT}\")" || (echo "commit doesn't match: ${GOT_VERSION}" && exit 1)
+echo "${GOT_VERSION}" | jq -e ".repo | test(\"${REPO}\")" || (echo "repo doesn't match: ${GOT_VERSION}" && exit 1)
+# We don't check the the .release field because this script will be run with
+# many pseudo tags that are pushed to container registry like v0.8.0-arm64 or sha-1a9b278-amd64.
+echo "${GOT_VERSION}" | jq -e ".release" || (echo "release doesn't exist in provided version info: ${GOT_VERSION}" && exit 1)
 
-echo "Versions match"
+echo "Version information match"

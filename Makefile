@@ -296,6 +296,8 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 _docker.build:
 	docker build -t $(IMG):$(TAG) \
 		--target $(TARGET) \
+		--build-arg GOPATH=$(shell go env GOPATH) \
+		--build-arg GOCACHE=$(shell go env GOCACHE) \
 		--build-arg TAG=$(TAG) \
 		--build-arg COMMIT=$(COMMIT) \
 		--build-arg REPO_INFO=$(REPO_INFO) \

@@ -1,0 +1,229 @@
+name: Reusable build
+
+on:
+  workflow_call:
+    secrets:
+      token:
+        description: Token to use for logging in to the registry when "push" input is set.
+        required: false
+
+    inputs:
+      username:
+        description: Username to use for logging in to the registry when "push" input is set.
+        required: false
+        type: string
+      registry:
+        description: |
+          Registry to use for image(s) naming and pushing.
+          When using docker hub set it to 'docker.io'.
+        required: true
+        type: string
+      image-name:
+        description: Image name to use for image(s) naming and pushing.
+        required: true
+        type: string
+
+      push:
+        description: Indicates whether to push the built image(s) to specified registry.
+        required: true
+        type: boolean
+      file:
+        description: The name of the Dockerfile to use.
+        required: false
+        type: string
+        default: Dockerfile
+      target:
+        description: The target to be built.
+        required: false
+        type: string
+        default: distroless
+      outputs:
+        description: Set outputs for docker/build-push-action.
+        required: false
+        type: string
+      upload-artifact:
+        description: |
+          If a non empty string is provided then this will be used as path for
+          artifact to upload, which will contain the built, exported container image.
+          This artifact will be available for subsequent jobs under the name
+          of "image".
+        required: false
+        type: string
+      latest:
+        description: Whether to tag this build latest
+        type: boolean
+        default: false
+
+    outputs:
+      tags:
+        value: ${{ jobs.build.outputs.tags }}
+      version:
+        value: ${{ jobs.build.outputs.version }}
+      artifact:
+        value: ${{ jobs.build.outputs.artifact }}
+    
+jobs:
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+
+    strategy:
+        # Whatever gets changed here should be changed in the multi-arch job below.
+      matrix:
+        include:
+        - os: linux
+          arch: amd64
+        - os: linux
+          arch: arm64
+
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+      version: ${{ steps.meta.outputs.version }}
+      artifact: ${{ steps.set-artifact.outputs.artifact }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Log in to the Container registry
+        if: ${{ inputs.push }}
+        uses: docker/login-action@v3.0.0
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ inputs.username }}
+          password: ${{ secrets.token }}
+ 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: ${{ matrix.arch }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5.0.0
+        with:
+          images: |
+            ${{ inputs.registry }}/${{ inputs.image-name }}
+          # Generate Docker tags based on the following events/attributes.
+          tags: |
+            type=schedule,pattern=nightly
+            type=schedule,pattern={{date 'YYYYMMDD'}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+          flavor: latest=${{ inputs.latest }},suffix=-${{ matrix.arch  }}
+
+      - uses: docker/setup-buildx-action@v2
+
+      # Setup Golang to use go pkg cache which is utilized in Dockerfile's cache mount.
+      - name: setup golang
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+
+      - run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+      - run: echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_ENV
+
+      - name: Build image
+        id: build
+        uses: docker/build-push-action@v5.0.0
+        with:
+          context: .
+          push: ${{ inputs.push }}
+          # Use load when push is set to false to allow subsequent steps to have
+          # access to this image.
+          # Ref: https://docs.docker.com/build/ci/github-actions/test-before-push/
+          load: ${{ !inputs.push }}
+          file: ${{ inputs.file }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+          target: ${{ inputs.target }}
+          platforms: ${{ matrix.os }}/${{ matrix.arch }}
+          build-args: |
+            TAG=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git
+            GOPATH=${{ env.GOPATH}}
+            GOCACHE=${{ env.GOCACHE}}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: ${{ inputs.outputs }}
+
+      - name: Test the image by running it with -version flag
+        # Why this doesn't work?
+        # ${{inputs.registry}}/${{ inputs.image-name }}@${{ steps.build.outputs.digest }}
+        run: |
+          docker images
+          echo "${{ steps.meta.outputs.tags }}" | xargs -I {} \
+            docker run --rm \
+              --platform ${{ matrix.os }}/${{ matrix.arch }} \
+              {} -version | ./scripts/verify-version.sh ${{ github.repository }}
+
+      - name: Upload artifact
+        if: ${{ inputs.upload-artifact }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: image
+          path: ${{ inputs.upload-artifact }}
+
+      - name: Set artifact output
+        if: ${{ inputs.upload-artifact }}
+        id: set-artifact
+        run: echo "artifact=${{ inputs.upload-artifact }}" >> $GITHUB_OUTPUT
+
+
+  build-multi-arch:
+    name: Build and push multi-arch manifest
+    runs-on: ubuntu-latest
+    if: ${{ inputs.push }}
+
+    needs:
+      - build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5.0.0
+        with:
+          images: |
+            ${{ inputs.registry }}/${{ inputs.image-name }}
+          # Generate Docker tags based on the following events/attributes.
+          tags: |
+            type=schedule,pattern=nightly
+            type=schedule,pattern={{date 'YYYYMMDD'}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+          flavor: latest=${{ inputs.latest }}
+
+      - name: Log in to the Container registry
+        if: ${{ inputs.push }}
+        uses: docker/login-action@v3.0.0
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ inputs.username }}
+          password: ${{ secrets.token }}
+
+      - uses: int128/docker-manifest-create-action@v1
+        with:
+          tags: ${{ steps.meta.outputs.tags }}
+          suffixes: |
+            -amd64
+            -arm64

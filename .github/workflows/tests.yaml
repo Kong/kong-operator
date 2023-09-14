@@ -92,6 +92,21 @@ jobs:
     - name: Verify that uninstalling operator CRDs via kustomize works
       run: make uninstall
 
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: setup golang
+      uses: actions/setup-go@v4
+      with:
+        go-version-file: go.mod
+
+    - run: make build.operator
+
   unit-tests:
     runs-on: ubuntu-latest
     steps:
