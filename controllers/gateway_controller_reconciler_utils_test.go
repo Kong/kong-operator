@@ -69,7 +69,7 @@ func TestGatewayAddressesFromService(t *testing.T) {
 	testCases := []struct {
 		name      string
 		svc       corev1.Service
-		addresses []gwtypes.GatewayAddress
+		addresses []gwtypes.GatewayStatusAddress
 		wantErr   bool
 	}{
 		{
@@ -80,7 +80,7 @@ func TestGatewayAddressesFromService(t *testing.T) {
 					ClusterIP: "198.51.100.1",
 				},
 			},
-			addresses: []gwtypes.GatewayAddress{
+			addresses: []gwtypes.GatewayStatusAddress{
 				{
 					Value: "198.51.100.1",
 					Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
@@ -95,7 +95,7 @@ func TestGatewayAddressesFromService(t *testing.T) {
 					Type: "ClusterIP",
 				},
 			},
-			addresses: []gwtypes.GatewayAddress{},
+			addresses: []gwtypes.GatewayStatusAddress{},
 			wantErr:   true,
 		},
 		{
@@ -118,7 +118,7 @@ func TestGatewayAddressesFromService(t *testing.T) {
 					},
 				},
 			},
-			addresses: []gwtypes.GatewayAddress{
+			addresses: []gwtypes.GatewayStatusAddress{
 				{
 					Value: "203.0.113.1",
 					Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
@@ -150,7 +150,7 @@ func TestGatewayAddressesFromService(t *testing.T) {
 					},
 				},
 			},
-			addresses: []gwtypes.GatewayAddress{
+			addresses: []gwtypes.GatewayStatusAddress{
 				{
 					Value: "one.example.net",
 					Type:  lo.ToPtr(gatewayv1beta1.HostnameAddressType),
@@ -183,7 +183,7 @@ func TestGatewayAddressesFromService(t *testing.T) {
 					},
 				},
 			},
-			addresses: []gwtypes.GatewayAddress{
+			addresses: []gwtypes.GatewayStatusAddress{
 				{
 					Value: "203.0.113.1",
 					Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
@@ -214,7 +214,7 @@ func TestGatewayAddressesFromService(t *testing.T) {
 					},
 				},
 			},
-			addresses: []gwtypes.GatewayAddress{},
+			addresses: []gwtypes.GatewayStatusAddress{},
 			wantErr:   false,
 		},
 		{
@@ -228,7 +228,7 @@ func TestGatewayAddressesFromService(t *testing.T) {
 					LoadBalancer: corev1.LoadBalancerStatus{},
 				},
 			},
-			addresses: []gwtypes.GatewayAddress{},
+			addresses: []gwtypes.GatewayStatusAddress{},
 			wantErr:   false,
 		},
 	}

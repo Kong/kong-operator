@@ -85,7 +85,7 @@ func (r *GatewayReconciler) createControlPlane(
 func (r *GatewayReconciler) getGatewayAddresses(
 	ctx context.Context,
 	dataplane *operatorv1beta1.DataPlane,
-) ([]gwtypes.GatewayAddress, error) {
+) ([]gwtypes.GatewayStatusAddress, error) {
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
 		r.Client,
@@ -97,36 +97,36 @@ func (r *GatewayReconciler) getGatewayAddresses(
 		},
 	)
 	if err != nil {
-		return []gwtypes.GatewayAddress{}, err
+		return []gwtypes.GatewayStatusAddress{}, err
 	}
 
 	count := len(services)
 	// if too many dataplane services are found here, this is a temporary situation.
 	// the number of services will be reduced to 1 by the dataplane controller.
 	if count > 1 {
-		return []gwtypes.GatewayAddress{}, fmt.Errorf("DataPlane %s/%s has multiple Services", dataplane.Namespace, dataplane.Name)
+		return []gwtypes.GatewayStatusAddress{}, fmt.Errorf("DataPlane %s/%s has multiple Services", dataplane.Namespace, dataplane.Name)
 	}
 
 	if count == 0 {
-		return []gwtypes.GatewayAddress{}, fmt.Errorf("no Services found for DataPlane %s/%s", dataplane.Namespace, dataplane.Name)
+		return []gwtypes.GatewayStatusAddress{}, fmt.Errorf("no Services found for DataPlane %s/%s", dataplane.Namespace, dataplane.Name)
 	}
 	return gatewayAddressesFromService(services[0])
 }
 
-func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayAddress, error) {
-	addresses := make([]gwtypes.GatewayAddress, 0, len(svc.Status.LoadBalancer.Ingress))
+func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAddress, error) {
+	addresses := make([]gwtypes.GatewayStatusAddress, 0, len(svc.Status.LoadBalancer.Ingress))
 
 	switch svc.Spec.Type {
 	case corev1.ServiceTypeLoadBalancer:
 		for _, serviceAddr := range svc.Status.LoadBalancer.Ingress {
 			if serviceAddr.IP != "" {
-				addresses = append(addresses, gwtypes.GatewayAddress{
+				addresses = append(addresses, gwtypes.GatewayStatusAddress{
 					Value: serviceAddr.IP,
 					Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
 				})
 			}
 			if serviceAddr.Hostname != "" {
-				addresses = append(addresses, gwtypes.GatewayAddress{
+				addresses = append(addresses, gwtypes.GatewayStatusAddress{
 					Value: serviceAddr.Hostname,
 					Type:  lo.ToPtr(gatewayv1beta1.HostnameAddressType),
 				})
@@ -138,7 +138,7 @@ func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayAddress, 
 		if svc.Spec.ClusterIP == "" {
 			return addresses, fmt.Errorf("service %s doesn't have a ClusterIP yet, not ready", svc.Name)
 		}
-		addresses = append(addresses, gwtypes.GatewayAddress{
+		addresses = append(addresses, gwtypes.GatewayStatusAddress{
 			Value: svc.Spec.ClusterIP,
 			Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
 		})

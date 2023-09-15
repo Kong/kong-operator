@@ -206,7 +206,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
 				require.Equal(t,
-					[]gwtypes.GatewayAddress{
+					[]gwtypes.GatewayStatusAddress{
 						{
 							Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
 							Value: clusterIP,
@@ -240,7 +240,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
 				require.Equal(t,
-					[]gwtypes.GatewayAddress{
+					[]gwtypes.GatewayStatusAddress{
 						{
 							Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
 							Value: loadBalancerIP,
@@ -272,7 +272,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
-				require.Equal(t, currentGateway.Status.Addresses, []gwtypes.GatewayAddress{
+				require.Equal(t, currentGateway.Status.Addresses, []gwtypes.GatewayStatusAddress{
 					{
 						Type:  lo.ToPtr(gatewayv1beta1.HostnameAddressType),
 						Value: exampleHostname,
