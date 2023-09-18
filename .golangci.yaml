@@ -102,6 +102,10 @@ linters-settings:
           recommendations:
           - fmt
           - errors
+      - github.com/sirupsen/logrus:
+          recommendations:
+          - sigs.k8s.io/controller-runtime/pkg/log
+          - go.uber.org/zap/zapcore
 issues:
   max-same-issues: 0
   fix: true

@@ -2,17 +2,17 @@ package controllers
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 
-	"github.com/bombsimon/logrusr/v3"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -131,36 +131,57 @@ func Test_ensureContainerImageUpdated(t *testing.T) {
 
 func TestLog(t *testing.T) {
 	var buf bytes.Buffer
-	logger := logrus.New()
-	logger.SetOutput(&buf)
-	log := logrusr.New(logger)
+	log := ctrlruntimelog.New(func(o *ctrlruntimelog.Options) {
+		o.DestWriter = &buf
+	})
 
-	gw := gwtypes.Gateway{}
+	gw := gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gw",
+			Namespace: "ns",
+		},
+	}
 	t.Run("info logging works both for values and pointers to objects", func(t *testing.T) {
+		t.Cleanup(func() { buf.Reset() })
 		info(log, "message about gw", gw)
 		require.NotContains(t, buf.String(), "unexpected type processed for")
 		buf.Reset()
 		info(log, "message about gw", &gw)
 		require.NotContains(t, buf.String(), "unexpected type processed for")
-		buf.Reset()
 	})
 
 	t.Run("debug logging works both for values and pointers to objects", func(t *testing.T) {
+		t.Cleanup(func() { buf.Reset() })
 		debug(log, "message about gw", gw)
 		require.NotContains(t, buf.String(), "unexpected type processed for")
-		buf.Reset()
 		debug(log, "message about gw", &gw)
 		require.NotContains(t, buf.String(), "unexpected type processed for")
-		buf.Reset()
 	})
 
 	t.Run("trace logging works both for values and pointers to objects", func(t *testing.T) {
+		t.Cleanup(func() { buf.Reset() })
 		trace(log, "message about gw", gw)
 		require.NotContains(t, buf.String(), "unexpected type processed for")
 		buf.Reset()
 		trace(log, "message about gw", &gw)
 		require.NotContains(t, buf.String(), "unexpected type processed for")
 		buf.Reset()
+	})
+
+	t.Run("logging works and prints correct fields", func(t *testing.T) {
+		t.Cleanup(func() { buf.Reset() })
+		info(log, "message about gw", gw)
+		entry := struct {
+			Level     string `json:"level,omitempty"`
+			Msg       string `json:"msg,omitempty"`
+			Name      string `json:"name,omitempty"`
+			Namespace string `json:"namespace,omitempty"`
+		}{}
+		require.NoError(t, json.Unmarshal(buf.Bytes(), &entry))
+		assert.Equal(t, entry.Msg, "message about gw")
+		assert.Equal(t, entry.Level, "info")
+		assert.Equal(t, entry.Name, "gw")
+		assert.Equal(t, entry.Namespace, "ns")
 	})
 }
 

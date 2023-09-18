@@ -8,7 +8,6 @@ exclude sigs.k8s.io/gateway-api v0.8.0
 
 require (
 	github.com/Masterminds/semver v1.5.0
-	github.com/bombsimon/logrusr/v3 v3.1.0
 	github.com/cloudflare/cfssl v1.6.4
 	github.com/go-logr/logr v1.2.4
 	github.com/google/uuid v1.3.1
@@ -28,6 +27,7 @@ require (
 
 require (
 	github.com/avast/retry-go/v4 v4.5.0 // indirect
+	github.com/bombsimon/logrusr/v3 v3.1.0 // indirect
 	github.com/go-task/slim-sprig v2.20.0+incompatible // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/s2a-go v0.1.5 // indirect
@@ -114,7 +114,7 @@ require (
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tidwall/pretty v1.2.1
 	go.uber.org/multierr v1.11.0 // indirect
