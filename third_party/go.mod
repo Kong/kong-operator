@@ -6,7 +6,7 @@ require (
 	github.com/go-delve/delve v1.21.0
 	github.com/golangci/golangci-lint v1.54.2
 	github.com/operator-framework/operator-registry v1.29.0
-	gotest.tools/gotestsum v1.10.1
+	gotest.tools/gotestsum v1.11.0
 	k8s.io/code-generator v0.28.2
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220715194349-88234a8fc9ad
 	sigs.k8s.io/controller-tools v0.13.0
@@ -38,6 +38,7 @@ require (
 	github.com/ashanbrown/forbidigo v1.6.0 // indirect
 	github.com/ashanbrown/makezero v1.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bitfield/gotestdox v0.2.1 // indirect
 	github.com/bkielbasa/cyclop v1.2.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/blizzy78/varnamelen v0.8.0 // indirect
@@ -166,7 +167,7 @@ require (
 	github.com/maratori/testpackage v1.1.1 // indirect
 	github.com/matoous/godox v0.0.0-20230222163458-006bad1f9d26 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.17 // indirect
+	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mattn/go-sqlite3 v1.14.16 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
