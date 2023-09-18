@@ -80,7 +80,7 @@ jobs:
           body: |
             #### Download Kong Gateway Operator ${{ needs.semver.outputs.version }}:
 
-            - [Docker Image](https://github.com/Kong/gateway-operator/pkgs/container/gateway-operator)
+            - [Docker Image](https://hub.docker.com/r/kong/gateway-operator/tags?name=${{ needs.semver.outputs.version }})
             - [Get started](https://github.com/Kong/gateway-operator/blob/main/README.md)
 
             #### Links:
