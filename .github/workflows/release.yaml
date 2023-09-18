@@ -26,7 +26,7 @@ jobs:
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
     runs-on: ubuntu-latest
     steps:
-      - uses: mukunku/tag-exists-action@v1.3.0
+      - uses: mukunku/tag-exists-action@v1.4.0
         id: check-tag
         name: check if tag already exists
         with:
