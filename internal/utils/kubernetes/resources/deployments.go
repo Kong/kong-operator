@@ -65,7 +65,7 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					Volumes: []corev1.Volume{
 						{
-							Name: consts.DataPlaneClusterCertificateVolumeName,
+							Name: consts.ClusterCertificateVolume,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  certSecretName,
@@ -117,9 +117,9 @@ func GenerateControlPlaneContainer(image string) corev1.Container {
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 		VolumeMounts: []corev1.VolumeMount{
 			{
-				Name:      consts.DataPlaneClusterCertificateVolumeName,
+				Name:      consts.ClusterCertificateVolume,
 				ReadOnly:  true,
-				MountPath: "/var/cluster-certificate",
+				MountPath: consts.ClusterCertificateVolumeMountPath,
 			},
 		},
 		Ports: []corev1.ContainerPort{
@@ -171,57 +171,13 @@ const (
 
 type DeploymentOpt func(*appsv1.Deployment)
 
-// WithTLSVolumeFromSecret returns a DelpoymentOpt which adds a TLS Volume
-// to Deployment's PodSpec using the provided volume name and secret name to reference.
-func WithTLSVolumeFromSecret(name string, secretName string) DeploymentOpt {
-	return func(d *appsv1.Deployment) {
-		d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes,
-			corev1.Volume{
-				Name: name,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName:  secretName,
-						DefaultMode: lo.ToPtr(corev1.DownwardAPIVolumeSourceDefaultMode),
-						Items: []corev1.KeyToPath{
-							{
-								Key:  "tls.crt",
-								Path: "tls.crt",
-							},
-							{
-								Key:  "tls.key",
-								Path: "tls.key",
-							},
-							{
-								Key:  "ca.crt",
-								Path: "ca.crt",
-							},
-						},
-					},
-				},
-			},
-		)
-	}
-}
-
-// WithClusterCertificateMount returns a DelpoymentOpt which adds a cluster
-// certificate Volume mount to Deployment's PodSpec using the provided volume name.
-func WithClusterCertificateMount(name string) DeploymentOpt {
-	return func(d *appsv1.Deployment) {
-		if len(d.Spec.Template.Spec.Containers) == 0 {
-			return
-		}
-		d.Spec.Template.Spec.Containers[0].VolumeMounts = append(d.Spec.Template.Spec.Containers[0].VolumeMounts,
-			corev1.VolumeMount{
-				Name:      name,
-				ReadOnly:  true,
-				MountPath: "/var/cluster-certificate",
-			},
-		)
-	}
-}
-
 // GenerateNewDeploymentForDataPlane generates a new Deployment for the DataPlane
-func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dataplaneImage string, opts ...DeploymentOpt) (*appsv1.Deployment, error) {
+func GenerateNewDeploymentForDataPlane(
+	dataplane *operatorv1beta1.DataPlane,
+	dataplaneImage string,
+	certSecretName string,
+	opts ...DeploymentOpt,
+) (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,
@@ -263,7 +219,31 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dat
 					TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					SchedulerName:                 corev1.DefaultSchedulerName,
-					Volumes:                       generateDeploymentVolumes(dataplane.Spec.Deployment.PodTemplateSpec),
+					Volumes: []corev1.Volume{
+						{
+							Name: consts.ClusterCertificateVolume,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  certSecretName,
+									DefaultMode: lo.ToPtr(corev1.DownwardAPIVolumeSourceDefaultMode),
+									Items: []corev1.KeyToPath{
+										{
+											Key:  "tls.crt",
+											Path: "tls.crt",
+										},
+										{
+											Key:  "tls.key",
+											Path: "tls.key",
+										},
+										{
+											Key:  "ca.crt",
+											Path: "ca.crt",
+										},
+									},
+								},
+							},
+						},
+					},
 					Containers: []corev1.Container{
 						GenerateDataPlaneContainer(dataplane.Spec.Deployment, dataplaneImage),
 					},
@@ -294,8 +274,14 @@ func GenerateNewDeploymentForDataPlane(dataplane *operatorv1beta1.DataPlane, dat
 
 func GenerateDataPlaneContainer(opts operatorv1beta1.DataPlaneDeploymentOptions, image string) corev1.Container {
 	return corev1.Container{
-		Name:            consts.DataPlaneProxyContainerName,
-		VolumeMounts:    generateDeploymentVolumeMounts(opts.PodTemplateSpec, consts.DataPlaneProxyContainerName),
+		Name: consts.DataPlaneProxyContainerName,
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      consts.ClusterCertificateVolume,
+				ReadOnly:  true,
+				MountPath: consts.ClusterCertificateVolumeMountPath,
+			},
+		},
 		Image:           image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Lifecycle: &corev1.Lifecycle{
@@ -349,39 +335,6 @@ func GenerateDataPlaneContainer(opts operatorv1beta1.DataPlaneDeploymentOptions,
 		},
 		Resources: *DefaultDataPlaneResources(),
 	}
-}
-
-// generateDeploymentVolumes generates volumes based on the provided PodTemplateSpec.
-func generateDeploymentVolumes(pts *corev1.PodTemplateSpec) []corev1.Volume {
-	if pts == nil {
-		return nil
-	}
-
-	volumes := make([]corev1.Volume, 0, len(pts.Spec.Volumes))
-	for _, volume := range pts.Spec.Volumes {
-		volumes = append(volumes, *volume.DeepCopy())
-	}
-	return volumes
-}
-
-// generateDeploymentVolumeMounts generates volume mounts in container - specified
-// by name - based on the provided PodTemplateSpec.
-func generateDeploymentVolumeMounts(pts *corev1.PodTemplateSpec, containerName string) []corev1.VolumeMount {
-	if pts == nil {
-		return nil
-	}
-
-	container := k8sutils.GetPodContainerByName(&pts.Spec, containerName)
-	if container == nil {
-		return nil
-	}
-
-	volumeMounts := make([]corev1.VolumeMount, 0, len(container.VolumeMounts))
-	for _, mount := range container.VolumeMounts {
-		volumeMounts = append(volumeMounts, *mount.DeepCopy())
-	}
-
-	return volumeMounts
 }
 
 var (

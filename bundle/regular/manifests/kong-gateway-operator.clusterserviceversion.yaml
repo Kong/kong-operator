@@ -167,6 +167,211 @@ metadata:
               }
             }
           }
+        },
+        {
+          "apiVersion": "gateway-operator.konghq.com/v1beta1",
+          "kind": "DataPlane",
+          "metadata": {
+            "name": "konnect-example"
+          },
+          "spec": {
+            "deployment": {
+              "podTemplateSpec": {
+                "metadata": {
+                  "annotations": {
+                    "dataplane-pod-annotation": "example"
+                  },
+                  "labels": {
+                    "dataplane-pod-label": "example"
+                  }
+                },
+                "spec": {
+                  "containers": [
+                    {
+                      "env": [
+                        {
+                          "name": "KONG_ROLE",
+                          "value": "data_plane"
+                        },
+                        {
+                          "name": "KONG_DATABASE",
+                          "value": "off"
+                        },
+                        {
+                          "name": "KONG_CLUSTER_MTLS",
+                          "value": "pki"
+                        },
+                        {
+                          "name": "KONG_CLUSTER_CONTROL_PLANE",
+                          "value": "\u003cYOUR_CP_ID\u003e.cp0.konghq.tech:443"
+                        },
+                        {
+                          "name": "KONG_CLUSTER_SERVER_NAME",
+                          "value": "\u003cYOUR_CP_ID\u003e.cp0.konghq.tech"
+                        },
+                        {
+                          "name": "KONG_CLUSTER_TELEMETRY_ENDPOINT",
+                          "value": "\u003cYOUR_CP_ID\u003e.tp0.konghq.tech:443"
+                        },
+                        {
+                          "name": "KONG_CLUSTER_TELEMETRY_SERVER_NAME",
+                          "value": "\u003cYOUR_CP_ID\u003e.tp0.konghq.tech"
+                        },
+                        {
+                          "name": "KONG_CLUSTER_CERT",
+                          "value": "/etc/secrets/kong-cluster-cert/tls.crt"
+                        },
+                        {
+                          "name": "KONG_CLUSTER_CERT_KEY",
+                          "value": "/etc/secrets/kong-cluster-cert/tls.key"
+                        },
+                        {
+                          "name": "KONG_LUA_SSL_TRUSTED_CERTIFICATE",
+                          "value": "system"
+                        },
+                        {
+                          "name": "KONG_KONNECT_MODE",
+                          "value": "on"
+                        },
+                        {
+                          "name": "KONG_VITALS",
+                          "value": "off"
+                        },
+                        {
+                          "name": "KONG_CLUSTER_DP_LABELS",
+                          "value": "type:k8s"
+                        }
+                      ],
+                      "image": "kong/kong-gateway:3.4",
+                      "name": "proxy",
+                      "readinessProbe": {
+                        "initialDelaySeconds": 1,
+                        "periodSeconds": 1
+                      },
+                      "volumeMounts": [
+                        {
+                          "mountPath": "/var/cluster-certificate",
+                          "name": "cluster-certificate"
+                        },
+                        {
+                          "mountPath": "/etc/secrets/kong-cluster-cert/",
+                          "name": "konnect-client-tls",
+                          "readOnly": true
+                        }
+                      ]
+                    }
+                  ],
+                  "volumes": [
+                    {
+                      "name": "cluster-certificate"
+                    },
+                    {
+                      "name": "konnect-client-tls",
+                      "secret": {
+                        "defaultMode": 420,
+                        "secretName": "konnect-client-tls"
+                      }
+                    }
+                  ]
+                }
+              },
+              "replicas": 3
+            }
+          }
+        },
+        {
+          "apiVersion": "gateway-operator.konghq.com/v1beta1",
+          "kind": "DataPlane",
+          "metadata": {
+            "name": "sidecar-example"
+          },
+          "spec": {
+            "deployment": {
+              "podTemplateSpec": {
+                "metadata": {
+                  "annotations": {
+                    "dataplane-pod-annotation": "example"
+                  },
+                  "labels": {
+                    "dataplane-pod-label": "example"
+                  }
+                },
+                "spec": {
+                  "containers": [
+                    {
+                      "image": "timberio/vector:0.31.0-debian",
+                      "name": "sidecar",
+                      "readinessProbe": {
+                        "initialDelaySeconds": 1,
+                        "periodSeconds": 1
+                      },
+                      "volumeMounts": [
+                        {
+                          "mountPath": "/etc/vector",
+                          "name": "sidecar-vector-config-volume"
+                        },
+                        {
+                          "mountPath": "/etc/kong/log/",
+                          "name": "proxy-logs"
+                        }
+                      ]
+                    },
+                    {
+                      "env": [
+                        {
+                          "name": "KONG_LOG_LEVEL",
+                          "value": "debug"
+                        },
+                        {
+                          "name": "KONG_PROXY_ACCESS_LOG",
+                          "value": "/etc/kong/log/proxy_access.log"
+                        }
+                      ],
+                      "image": "kong:3.4",
+                      "name": "proxy",
+                      "readinessProbe": {
+                        "initialDelaySeconds": 1,
+                        "periodSeconds": 1
+                      },
+                      "resources": {
+                        "limits": {
+                          "cpu": "1000m",
+                          "memory": "1024Mi"
+                        },
+                        "requests": {
+                          "cpu": "250m",
+                          "memory": "64Mi"
+                        }
+                      },
+                      "volumeMounts": [
+                        {
+                          "mountPath": "/etc/kong/log/",
+                          "name": "proxy-logs"
+                        }
+                      ]
+                    }
+                  ],
+                  "volumes": [
+                    {
+                      "name": "cluster-certificate"
+                    },
+                    {
+                      "configMap": {
+                        "name": "sidecar-vector-config"
+                      },
+                      "name": "sidecar-vector-config-volume"
+                    },
+                    {
+                      "emptyDir": {
+                        "sizeLimit": "128Mi"
+                      },
+                      "name": "proxy-logs"
+                    }
+                  ]
+                }
+              }
+            }
+          }
         }
       ]
     capabilities: Basic Install

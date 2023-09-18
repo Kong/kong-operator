@@ -128,16 +128,6 @@ const (
 )
 
 // -----------------------------------------------------------------------------
-// Consts - Volumes
-// -----------------------------------------------------------------------------
-
-const (
-	// DataPlaneClusterCertificateVolumeName is the name of the volume that
-	// contains the DataPlane certificate.
-	DataPlaneClusterCertificateVolumeName = "cluster-certificate"
-)
-
-// -----------------------------------------------------------------------------
 // Consts - Finalizers
 // -----------------------------------------------------------------------------
 

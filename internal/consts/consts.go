@@ -65,7 +65,13 @@ const (
 // -----------------------------------------------------------------------------
 
 const (
+	// ClusterCertificateVolume is the name of the volume that holds the certificate
+	// and keys which are used for serving traffic and  ControlPlane and DataPlane communication.
 	ClusterCertificateVolume = "cluster-certificate"
+
+	// ClusterCertificateVolumeMountPath holds the path where cluster certificate
+	// volume will be mounted.
+	ClusterCertificateVolumeMountPath = "/var/cluster-certificate"
 )
 
 // -----------------------------------------------------------------------------

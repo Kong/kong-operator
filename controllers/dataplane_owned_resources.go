@@ -52,6 +52,7 @@ func ensureDeploymentForDataPlane(
 	log logr.Logger,
 	developmentMode bool,
 	dataplane *operatorv1beta1.DataPlane,
+	certSecretName string,
 	additionalDeploymentLabels client.MatchingLabels,
 	opts ...k8sresources.DeploymentOpt,
 ) (res CreatedUpdatedOrNoop, deploy *appsv1.Deployment, err error) {
@@ -94,7 +95,7 @@ func ensureDeploymentForDataPlane(
 		return Noop, nil, err
 	}
 
-	generatedDeployment, err := k8sresources.GenerateNewDeploymentForDataPlane(dataplane, dataplaneImage, opts...)
+	generatedDeployment, err := k8sresources.GenerateNewDeploymentForDataPlane(dataplane, dataplaneImage, certSecretName, opts...)
 	if err != nil {
 		return Noop, nil, err
 	}
@@ -141,18 +142,18 @@ func ensureDeploymentForDataPlane(
 			if err := cl.Patch(ctx, existingDeployment, client.MergeFrom(oldExistingDeployment)); err != nil {
 				return Noop, existingDeployment, fmt.Errorf("failed patching DataPlane Deployment %s: %w", existingDeployment.Name, err)
 			}
-			debug(log, "deployment modified", dataplane, "deployment", generatedDeployment.Name, "reason", res)
+			debug(log, "deployment modified", dataplane, "deployment", existingDeployment.Name)
 			return Updated, existingDeployment, nil
 		}
 
-		trace(log, "no need for deployment update", dataplane, "deployment", existingDeployment.Name, "reason", res)
+		trace(log, "no need for deployment update", dataplane, "deployment", existingDeployment.Name)
 		return Noop, existingDeployment, nil
 	}
 
 	if err = cl.Create(ctx, generatedDeployment); err != nil {
 		return Noop, nil, fmt.Errorf("failed creating Deployment for DataPlane %s: %w", dataplane.Name, err)
 	}
-	debug(log, "deployment created", dataplane, "deployment", generatedDeployment.Name, "reason", res)
+	debug(log, "deployment created", dataplane, "deployment", generatedDeployment.Name)
 
 	return Created, generatedDeployment, nil
 }

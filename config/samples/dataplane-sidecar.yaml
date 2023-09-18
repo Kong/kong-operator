@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: vector-config
+  name: sidecar-vector-config
 data:
   vector.toml: |
     [sources.proxy_access_log_source]
@@ -15,7 +15,7 @@ data:
 apiVersion: gateway-operator.konghq.com/v1beta1
 kind: DataPlane
 metadata:
-  name: dataplane-sidecar-example
+  name: sidecar-example
 spec:
   deployment:
     podTemplateSpec:
@@ -27,9 +27,9 @@ spec:
       spec:
         volumes:
         - name: cluster-certificate
-        - name: vector-config-volume
+        - name: sidecar-vector-config-volume
           configMap:
-            name: vector-config
+            name: sidecar-vector-config
         - name: proxy-logs
           emptyDir:
             sizeLimit: 128Mi
@@ -37,7 +37,7 @@ spec:
         - name: sidecar
           image: timberio/vector:0.31.0-debian
           volumeMounts:
-          - name: vector-config-volume
+          - name: sidecar-vector-config-volume
             mountPath: /etc/vector
           - name: proxy-logs
             mountPath: /etc/kong/log/

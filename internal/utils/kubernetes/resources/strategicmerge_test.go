@@ -88,7 +88,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						{
 							// NOTE: we need to provide the existing entry in the slice
 							// to prevent merging the provided new entry with existing entries.
-							Name: consts.DataPlaneClusterCertificateVolumeName,
+							Name: consts.ClusterCertificateVolume,
 						},
 						{
 							Name: "volume1",
@@ -106,8 +106,8 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 								{
 									// NOTE: we need to provide the existing entry in the slice
 									// to prevent merging the provided new entry with existing entries.
-									Name:      consts.DataPlaneClusterCertificateVolumeName,
-									MountPath: "/var/cluster-certificate",
+									Name:      consts.ClusterCertificateVolume,
+									MountPath: consts.ClusterCertificateVolumeMountPath,
 								},
 								{
 									Name:      "volume1",
@@ -216,7 +216,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						{
 							// NOTE: we need to provide the existing entry in the slice
 							// to prevent merging the provided new entry with existing entries.
-							Name: consts.DataPlaneClusterCertificateVolumeName,
+							Name: consts.ClusterCertificateVolume,
 						},
 						{
 							Name: "new_volume",
@@ -326,6 +326,66 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					},
 				}
 
+				return d.Spec.Template
+			},
+		},
+		{
+			Name: "append a secret volume and volume mount",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							// NOTE: we need to provide the existing entry in the slice
+							// to prevent merging the provided new entry with existing entries.
+							Name: "controller",
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									// NOTE: we need to provide the existing entry in the slice
+									// to prevent merging the provided new entry with existing entries.
+									Name:      consts.ClusterCertificateVolume,
+									MountPath: consts.ClusterCertificateVolumeMountPath,
+								},
+								{
+									Name:      "new_volume",
+									MountPath: "/new_volume",
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							// NOTE: we need to provide the existing entry in the slice
+							// to prevent merging the provided new entry with existing entries.
+							Name: consts.ClusterCertificateVolume,
+						},
+						{
+							Name: "new_volume",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "secret-1",
+								},
+							},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeControlPlaneDeployment()
+				require.NoError(t, err)
+				d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: "new_volume",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: "secret-1",
+						},
+					},
+				})
+				require.Len(t, d.Spec.Template.Spec.Containers, 1)
+				d.Spec.Template.Spec.Containers[0].VolumeMounts = append(d.Spec.Template.Spec.Containers[0].VolumeMounts,
+					corev1.VolumeMount{
+						Name:      "new_volume",
+						MountPath: "/new_volume",
+					})
 				return d.Spec.Template
 			},
 		},

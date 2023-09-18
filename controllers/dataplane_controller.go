@@ -18,7 +18,6 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
-	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
 // -----------------------------------------------------------------------------
@@ -163,23 +162,17 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	res, _, err = ensureDeploymentForDataPlane(ctx, r.Client, log, r.DevelopmentMode, dataplane,
+	res, _, err = ensureDeploymentForDataPlane(ctx, r.Client, log, r.DevelopmentMode, dataplane, certSecret.Name,
 		client.MatchingLabels{
 			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
 		},
-		k8sresources.WithTLSVolumeFromSecret(consts.DataPlaneClusterCertificateVolumeName, certSecret.Name),
-		k8sresources.WithClusterCertificateMount(consts.DataPlaneClusterCertificateVolumeName),
 		labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),
 	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	switch res {
-	case Created, Updated:
-		debug(log, "deployment modified", dataplane, "reason", res)
-		return ctrl.Result{}, nil // requeue will be triggered by the creation of the owned object
-	default:
-		debug(log, "no need for deployment update", dataplane)
+	if res != Noop {
+		return ctrl.Result{}, nil
 	}
 
 	trace(log, "checking readiness of DataPlane deployments", dataplane)

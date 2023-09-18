@@ -469,9 +469,6 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 }
 
 func TestDataPlaneVolumeMounts(t *testing.T) {
-	// TODO: https://github.com/Kong/gateway-operator/issues/887
-	t.Skip("This test needs fixing: https://github.com/Kong/gateway-operator/issues/887")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
@@ -479,7 +476,7 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
-			Name:      "test-secret",
+			Name:      uuid.NewString(),
 		},
 		StringData: map[string]string{
 			"file-0": "foo",
@@ -507,10 +504,18 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 							Spec: corev1.PodSpec{
 								Volumes: []corev1.Volume{
 									{
+										Name: consts.ClusterCertificateVolume,
+									},
+									{
 										Name: "test-volume",
 										VolumeSource: corev1.VolumeSource{
 											Secret: &corev1.SecretVolumeSource{
 												SecretName: secret.Name,
+												// This is necessary because we're not able to correctly
+												// handle API fields that are filled with default by the
+												// API server.
+												// https://github.com/Kong/gateway-operator/issues/904
+												DefaultMode: lo.ToPtr(corev1.DownwardAPIVolumeSourceDefaultMode),
 											},
 										},
 									},
@@ -519,12 +524,31 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 									{
 										Name:  consts.DataPlaneProxyContainerName,
 										Image: consts.DefaultDataPlaneImage,
-
 										VolumeMounts: []corev1.VolumeMount{
+											{
+												Name:      consts.ClusterCertificateVolume,
+												MountPath: consts.ClusterCertificateVolumeMountPath,
+												ReadOnly:  true,
+											},
 											{
 												Name:      "test-volume",
 												MountPath: "/var/test",
 												ReadOnly:  true,
+											},
+										},
+										// Make the test a bit faster.
+										ReadinessProbe: &corev1.Probe{
+											InitialDelaySeconds: 0,
+											PeriodSeconds:       1,
+											FailureThreshold:    3,
+											SuccessThreshold:    1,
+											TimeoutSeconds:      1,
+											ProbeHandler: corev1.ProbeHandler{
+												HTTPGet: &corev1.HTTPGetAction{
+													Path:   "/status",
+													Port:   intstr.FromInt32(consts.DataPlaneMetricsPort),
+													Scheme: corev1.URISchemeHTTP,
+												},
 											},
 										},
 									},
@@ -540,7 +564,7 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
-	t.Log("verifying that the dataplane gets marked as provisioned")
+	t.Log("verifying that the dataplane gets marked as Ready")
 	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
@@ -559,16 +583,26 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 		&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 	require.NotNil(t, proxyContainer)
 
-	t.Log("verifying dataplane has default cluster-certificate volume")
-	vol := getVolumeByName(deployment.Spec.Template.Spec.Volumes, consts.DataPlaneClusterCertificateVolumeName)
-	require.NotNil(t, vol, "dataplane pod should have the cluster-certificate volume")
-	require.NotNil(t, vol.Secret, "cluster-certificate volume should come from secret")
+	t.Log("verifying dataplane has the default cluster-certificate volume")
+	defaultVol := getVolumeByName(deployment.Spec.Template.Spec.Volumes, consts.ClusterCertificateVolume)
+	require.NotNil(t, defaultVol, "dataplane pod should have the cluster-certificate volume")
 
-	t.Log("verifying Kong proxy container has mounted  default cluster-certificate volume")
-	volMounts := getVolumeMountsByVolumeName(proxyContainer.VolumeMounts, consts.DataPlaneClusterCertificateVolumeName)
-	require.Len(t, volMounts, 1, "proxy container should mount cluster-certificate volume")
-	require.Equal(t, volMounts[0].MountPath, "/var/cluster-certificate", "proxy container should mount cluster-certificate volume to path /var/cluster-certificate")
-	require.True(t, volMounts[0].ReadOnly, "proxy container should mount cluster-certificate volume in read only mode")
+	t.Log("verifying dataplane has the custom test-volume volume")
+	vol := getVolumeByName(deployment.Spec.Template.Spec.Volumes, "test-volume")
+	require.NotNil(t, vol, "dataplane pod should have the test-volume volume")
+	require.NotNil(t, vol.Secret, "test-volume volume should come from secret")
+
+	t.Log("verifying Kong proxy container has mounted the default cluster-certificate volume")
+	defVolumeMounts := getVolumeMountsByVolumeName(proxyContainer.VolumeMounts, consts.ClusterCertificateVolume)
+	require.Len(t, defVolumeMounts, 1, "proxy container should mount cluster-certificate volume")
+	require.Equal(t, defVolumeMounts[0].MountPath, consts.ClusterCertificateVolumeMountPath, "proxy container should mount cluster-certificate volume to path /var/cluster-certificate")
+	require.True(t, defVolumeMounts[0].ReadOnly, "proxy container should mount cluster-certificate volume in read only mode")
+
+	t.Log("verifying Kong proxy container has mounted the custom test-volume volume")
+	volMounts := getVolumeMountsByVolumeName(proxyContainer.VolumeMounts, "test-volume")
+	require.Len(t, volMounts, 1, "proxy container should mount test-volume volume")
+	require.Equal(t, volMounts[0].MountPath, "/var/test", "proxy container should mount test-volume volume to path /var/test")
+	require.True(t, volMounts[0].ReadOnly, "proxy container should mount test-volume volume in read only mode")
 
 	t.Log("verifying dataplane pod has custom secret volume")
 	vol = getVolumeByName(deployment.Spec.Template.Spec.Volumes, "test-volume")
@@ -582,23 +616,19 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	require.Equal(t, volMounts[0].MountPath, "/var/test", "proxy container should mount custom secret volume to path /var/test")
 	require.True(t, volMounts[0].ReadOnly, "proxy container should mount 'test-volume' in read only mode")
 
-	t.Log("updating volumes and volume mounts in dataplane deployment to verify volumes could be reconciled")
-	deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
-		{
-			Name: "test-volume-1",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: secret.Name,
-				},
+	t.Log("updating volumes and volume mounts in dataplane spec to verify volumes could be reconciled")
+	dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Volumes[1] = corev1.Volume{
+		Name: "test-volume-1",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: secret.Name,
 			},
 		},
 	}
-	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
-		{
-			Name:      "test-volume-1",
-			MountPath: "/var/test",
-			ReadOnly:  true,
-		},
+	dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].VolumeMounts[1] = corev1.VolumeMount{
+		Name:      "test-volume-1",
+		MountPath: "/var/test",
+		ReadOnly:  true,
 	}
 	_, err = clients.K8sClient.AppsV1().Deployments(namespace.Name).Update(ctx, deployment, metav1.UpdateOptions{})
 	require.NoError(t, err, "should update deployment successfully")

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -75,12 +76,10 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
-				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane,
+				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName,
 					client.MatchingLabels{
 						consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
 					},
-					k8sresources.WithTLSVolumeFromSecret(consts.DataPlaneClusterCertificateVolumeName, certSecretName),
-					k8sresources.WithClusterCertificateMount(consts.DataPlaneClusterCertificateVolumeName),
 				)
 				require.NoError(t, err)
 				require.Equal(t, Created, res)
@@ -102,6 +101,11 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 									Spec: corev1.PodSpec{
 										Volumes: []corev1.Volume{
 											{
+												// NOTE: we need to provide the existing entry in the slice
+												// to prevent merging the provided new entry with existing entries.
+												Name: consts.ClusterCertificateVolume,
+											},
+											{
 												Name: "test-volume",
 												VolumeSource: corev1.VolumeSource{
 													Secret: &corev1.SecretVolumeSource{
@@ -114,6 +118,10 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 											{
 												Name: consts.DataPlaneProxyContainerName,
 												VolumeMounts: []corev1.VolumeMount{
+													{
+														Name:      consts.ClusterCertificateVolume,
+														MountPath: consts.ClusterCertificateVolumeMountPath,
+													},
 													{
 														Name:      "test-volume",
 														MountPath: "/var/test/",
@@ -133,26 +141,66 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 
-				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane,
+				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName,
 					client.MatchingLabels{
 						consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
 					},
-					k8sresources.WithTLSVolumeFromSecret(consts.DataPlaneClusterCertificateVolumeName, certSecretName),
-					k8sresources.WithClusterCertificateMount(consts.DataPlaneClusterCertificateVolumeName),
 				)
 				require.NoError(t, err)
 				require.Equal(t, Created, res)
 				require.Len(t, deployment.Spec.Template.Spec.Volumes, 2)
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 				require.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
-				require.Contains(t, deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-					Name: "test-volume",
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: "test-secret",
+				require.Equal(t, []corev1.Volume{
+					{
+						Name: consts.ClusterCertificateVolume,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName:  "certificate",
+								DefaultMode: lo.ToPtr(corev1.DownwardAPIVolumeSourceDefaultMode),
+								Items: []corev1.KeyToPath{
+									{
+										Key:  "tls.crt",
+										Path: "tls.crt",
+									},
+									{
+										Key:  "tls.key",
+										Path: "tls.key",
+									},
+									{
+										Key:  "ca.crt",
+										Path: "ca.crt",
+									},
+								},
+							},
 						},
 					},
-				})
+					{
+						Name: "test-volume",
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: "test-secret",
+							},
+						},
+					},
+				},
+					deployment.Spec.Template.Spec.Volumes,
+				)
+
+				require.Equal(t, []corev1.VolumeMount{
+					{
+						Name:      consts.ClusterCertificateVolume,
+						MountPath: consts.ClusterCertificateVolumeMountPath,
+						ReadOnly:  true,
+					},
+					{
+						Name:      "test-volume",
+						MountPath: "/var/test/",
+						ReadOnly:  true,
+					},
+				},
+					deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+				)
 			},
 		},
 		{
@@ -169,7 +217,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				require.NoError(t, err)
 				// generate the DataPlane as it is supposed to be, change the .spec.strategy field, and create it.
-				existingDeployment, err := k8sresources.GenerateNewDeploymentForDataPlane(dataPlane, dataplaneImage)
+				existingDeployment, err := k8sresources.GenerateNewDeploymentForDataPlane(dataPlane, dataplaneImage, certSecretName)
 				require.NoError(t, err)
 				existingDeployment.Spec.Strategy.RollingUpdate.MaxUnavailable = &intstr.IntOrString{
 					Type:   intstr.Int,
@@ -177,7 +225,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				}
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
-				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, client.MatchingLabels{})
+				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName, client.MatchingLabels{})
 				require.NoError(t, err)
 
 				assert.Equal(t, Updated, res, "the DataPlane deployment should be updated with the original strategy")
@@ -225,7 +273,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				require.NoError(t, err)
 				// generate the DataPlane as it is expected to be and create it.
-				existingDeployment, err := k8sresources.GenerateNewDeploymentForDataPlane(dataPlane, dataplaneImage)
+				existingDeployment, err := k8sresources.GenerateNewDeploymentForDataPlane(dataPlane, dataplaneImage, certSecretName)
 				require.NoError(t, err)
 
 				// generateDataPlaneImage will set deployment's containers resources
@@ -235,7 +283,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
-				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, client.MatchingLabels{})
+				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName, client.MatchingLabels{})
 				require.NoError(t, err)
 
 				assert.Equal(t, Updated, res, "the DataPlane deployment should be updated to get the resources set to defaults")
@@ -294,14 +342,14 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				// expected behavior in reconciler's ensureDeploymentForDataPlane()
 				require.NoError(t, err)
 				// generate the DataPlane as it is expected to be and create it.
-				existingDeployment, err := k8sresources.GenerateNewDeploymentForDataPlane(dataPlane, dataplaneImage)
+				existingDeployment, err := k8sresources.GenerateNewDeploymentForDataPlane(dataPlane, dataplaneImage, certSecretName)
 				require.NoError(t, err)
 
 				dataPlane.Spec.Deployment.PodTemplateSpec.Spec.Affinity = &corev1.Affinity{}
 
 				require.NoError(t, reconciler.Client.Create(ctx, existingDeployment))
 
-				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, client.MatchingLabels{})
+				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName, client.MatchingLabels{})
 				require.NoError(t, err)
 
 				assert.Equal(t, Updated, res, "the DataPlane deployment should be updated to get the affinity set to the dataplane's spec")
@@ -334,7 +382,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 
-				res, existingDeployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane,
+				res, existingDeployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName,
 					client.MatchingLabels{
 						consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
 					},
@@ -362,7 +410,71 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 
 				require.NoError(t, reconciler.Client.Update(ctx, existingDeployment))
 
-				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane,
+				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName,
+					client.MatchingLabels{
+						consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
+					},
+				)
+				require.NoError(t, err)
+				assert.Equal(t, Updated, res, "the DataPlane deployment should be updated to get the affinity removed")
+				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
+				require.Equal(t, deployment.Spec.Template.Spec.Affinity, &corev1.Affinity{})
+			},
+		},
+		{
+			name: "DataPlane deployment does get created with specified volumes and volume mounts",
+			dataPlane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Affinity: &corev1.Affinity{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			certSecretName: "certificate",
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
+				ctx := context.Background()
+
+				res, existingDeployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName,
+					client.MatchingLabels{
+						consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
+					},
+				)
+				require.NoError(t, err)
+				require.Equal(t, Created, res)
+
+				existingDeployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
+					PodAntiAffinity: &corev1.PodAntiAffinity{
+						PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+							{
+								PodAffinityTerm: corev1.PodAffinityTerm{
+									TopologyKey: "kubernetes.io/hostname",
+									LabelSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"workload-type": "dataplane",
+										},
+									},
+									NamespaceSelector: &metav1.LabelSelector{},
+								},
+							},
+						},
+					},
+				}
+
+				require.NoError(t, reconciler.Client.Update(ctx, existingDeployment))
+
+				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName,
 					client.MatchingLabels{
 						consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
 					},

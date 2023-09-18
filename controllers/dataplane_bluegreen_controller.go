@@ -396,8 +396,6 @@ func (r *DataPlaneBlueGreenReconciler) ensureDeploymentForDataPlane(
 	certSecret *corev1.Secret,
 ) (*appsv1.Deployment, CreatedUpdatedOrNoop, error) {
 	deploymentOpts := []k8sresources.DeploymentOpt{
-		k8sresources.WithTLSVolumeFromSecret(consts.DataPlaneClusterCertificateVolumeName, certSecret.Name),
-		k8sresources.WithClusterCertificateMount(consts.DataPlaneClusterCertificateVolumeName),
 		labelSelectorFromDataPlaneRolloutStatusSelectorDeploymentOpt(dataplane),
 	}
 
@@ -416,7 +414,7 @@ func (r *DataPlaneBlueGreenReconciler) ensureDeploymentForDataPlane(
 		// TODO: implemented DeleteOnPromotionRecreateOnRollout
 		// Ref: https://github.com/Kong/gateway-operator/issues/1010
 	}
-	res, deployment, err := ensureDeploymentForDataPlane(ctx, r.Client, log, r.DevelopmentMode, dataplane,
+	res, deployment, err := ensureDeploymentForDataPlane(ctx, r.Client, log, r.DevelopmentMode, dataplane, certSecret.Name,
 		client.MatchingLabels{
 			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,
 		},
