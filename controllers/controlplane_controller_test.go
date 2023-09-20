@@ -170,8 +170,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-tls-secret",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							"app":                                 "test-controlplane",
-							consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+							"app":                                "test-controlplane",
+							consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 						},
 					},
 				},
@@ -180,8 +180,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-serviceAccount",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							"app":                                 "test-controlplane",
-							consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+							"app":                                "test-controlplane",
+							consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 						},
 					},
 				},
@@ -190,8 +190,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-clusterRole",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							"app":                                 "test-controlplane",
-							consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+							"app":                                "test-controlplane",
+							consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 						},
 					},
 				},
@@ -200,8 +200,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-clusterRoleBin",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							"app":                                 "test-controlplane",
-							consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+							"app":                                "test-controlplane",
+							consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 						},
 					},
 				},
@@ -212,8 +212,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-proxy-service",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-							consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -225,8 +225,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-admin-service",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-							consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -351,8 +351,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-tls-secret",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							"app":                                 "test-controlplane",
-							consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+							"app":                                "test-controlplane",
+							consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 						},
 					},
 				},
@@ -361,8 +361,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-serviceAccount",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							"app":                                 "test-controlplane",
-							consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+							"app":                                "test-controlplane",
+							consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 						},
 					},
 				},
@@ -371,8 +371,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-clusterRole",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							"app":                                 "test-controlplane",
-							consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+							"app":                                "test-controlplane",
+							consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 						},
 					},
 				},
@@ -381,8 +381,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-clusterRoleBin",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							"app":                                 "test-controlplane",
-							consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+							"app":                                "test-controlplane",
+							consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 						},
 					},
 				},
@@ -393,8 +393,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-proxy-service",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-							consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -406,8 +406,8 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-admin-service",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-							consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 						},
 					},
 					Spec: corev1.ServiceSpec{

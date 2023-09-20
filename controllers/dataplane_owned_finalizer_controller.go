@@ -91,8 +91,16 @@ func (r *DataPlaneOwnedResourceFinalizerReconciler[T, PT]) SetupWithManager(mgr 
 	}
 	objectIsOwnedByDataPlane := func(obj client.Object) bool {
 		ownerRef := metav1.GetControllerOf(obj)
-		managedByDataPlane := obj.GetLabels()[consts.GatewayOperatorControlledLabel] == consts.DataPlaneManagedLabelValue
-		return ownerRef != nil && ownerRef.Kind == "DataPlane" && managedByDataPlane
+		if ownerRef == nil || ownerRef.Kind != "DataPlane" {
+			return false
+		}
+
+		labels := obj.GetLabels()
+		managedByDataPlane := labels[consts.GatewayOperatorManagedByLabel] == consts.DataPlaneManagedLabelValue
+		// TODO: Remove using this label after several versions with the new
+		// managed-by label were released: https://github.com/Kong/gateway-operator/issues/1101
+		managedByDataPlaneLegacyLabel := labels[consts.GatewayOperatorManagedByLabelLegacy] == consts.DataPlaneManagedLabelValue //nolint:staticcheck
+		return managedByDataPlane || managedByDataPlaneLegacyLabel
 	}
 
 	ownedObj := PT(new(T))

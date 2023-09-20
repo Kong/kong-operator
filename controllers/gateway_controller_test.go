@@ -139,8 +139,8 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 						Name:      "test-admin-service",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
+							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -152,8 +152,8 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 						Name:      "test-ingress-service",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
+							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 				},

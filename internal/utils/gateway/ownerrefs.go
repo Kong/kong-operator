@@ -37,7 +37,7 @@ func ListDataPlanesForGateway(
 		ctx,
 		dataplaneList,
 		client.InNamespace(gateway.Namespace),
-		client.MatchingLabels{consts.GatewayOperatorControlledLabel: consts.GatewayManagedLabelValue},
+		client.MatchingLabels{consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue},
 	)
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func ListControlPlanesForGateway(
 		ctx,
 		controlplaneList,
 		client.InNamespace(gateway.Namespace),
-		client.MatchingLabels{consts.GatewayOperatorControlledLabel: consts.GatewayManagedLabelValue},
+		client.MatchingLabels{consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue},
 	)
 	if err != nil {
 		return nil, err
@@ -118,8 +118,8 @@ func GetDataplaneServiceName(
 		dataplane.Namespace,
 		dataplane.UID,
 		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-			consts.DataPlaneServiceTypeLabel:      string(serviceTypeLabelValue),
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+			consts.DataPlaneServiceTypeLabel:     string(serviceTypeLabelValue),
 		},
 	)
 	if err != nil {
@@ -155,7 +155,7 @@ func ListNetworkPoliciesForGateway(
 		ctx,
 		networkPolicyList,
 		client.InNamespace(gateway.Namespace),
-		client.MatchingLabels{consts.GatewayOperatorControlledLabel: consts.GatewayManagedLabelValue},
+		client.MatchingLabels{consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue},
 	)
 	if err != nil {
 		return nil, err

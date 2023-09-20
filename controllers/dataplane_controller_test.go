@@ -122,10 +122,11 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "svc-proxy-to-keep",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							"app":                                 "test-dataplane",
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-							consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValueLive,
-							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
+							"app":                                      "test-dataplane",
+							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
+							consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValueLive,
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
 						},
 					},
 					Status: corev1.ServiceStatus{
@@ -143,10 +144,11 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-admin-service",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							"app":                                 "test-dataplane",
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneStateLabelValueLive),
-							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
+							"app":                                      "test-dataplane",
+							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneAdminServiceLabelValue),
+							consts.DataPlaneServiceStateLabel:          string(consts.DataPlaneStateLabelValueLive),
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -160,10 +162,11 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "svc-proxy-to-delete",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							"app":                                 "test-dataplane",
-							consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValueLive,
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
+							"app":                                      "test-dataplane",
+							consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValueLive,
+							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
 						},
 					},
 				},
@@ -327,10 +330,11 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-admin-service",
 						Namespace: "default",
 						Labels: map[string]string{
-							"app":                                 "test-dataplane",
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneStateLabelValueLive),
-							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
+							"app":                                      "test-dataplane",
+							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneAdminServiceLabelValue),
+							consts.DataPlaneServiceStateLabel:          string(consts.DataPlaneStateLabelValueLive),
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -344,10 +348,11 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-proxy-service",
 						Namespace: "default",
 						Labels: map[string]string{
-							"app":                                 "test-dataplane",
-							consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValueLive,
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
+							"app":                                      "test-dataplane",
+							consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValueLive,
+							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -360,7 +365,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-dataplane-tls-secret",
 						Namespace: "default",
 						Labels: map[string]string{
-							"konghq.com/gateway-operator": "dataplane",
+							consts.GatewayOperatorManagedByLabel: "dataplane",
 						},
 					},
 					Data: helpers.TLSSecretData(t, ca,
@@ -452,10 +457,11 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-admin-service",
 						Namespace: "default",
 						Labels: map[string]string{
-							"app":                                 "test-dataplane",
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneStateLabelValueLive),
-							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
+							"app":                                      "test-dataplane",
+							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneAdminServiceLabelValue),
+							consts.DataPlaneServiceStateLabel:          string(consts.DataPlaneStateLabelValueLive),
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -467,10 +473,11 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-proxy-service",
 						Namespace: "default",
 						Labels: map[string]string{
-							"app":                                 "test-dataplane",
-							consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValueLive,
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
+							"app":                                      "test-dataplane",
+							consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValueLive,
+							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -595,8 +602,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-dataplane-deployment",
 						Namespace: "default",
 						Labels: map[string]string{
-							consts.DataPlaneDeploymentStateLabel:  consts.DataPlaneStateLabelValueLive,
-							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
+							consts.DataPlaneDeploymentStateLabel:       consts.DataPlaneStateLabelValueLive,
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
 						},
 					},
 					Status: appsv1.DeploymentStatus{
@@ -610,10 +618,11 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-admin-service",
 						Namespace: "default",
 						Labels: map[string]string{
-							"app":                                 "test-dataplane",
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-							consts.DataPlaneServiceStateLabel:     string(consts.DataPlaneStateLabelValueLive),
-							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
+							"app":                                      "test-dataplane",
+							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneAdminServiceLabelValue),
+							consts.DataPlaneServiceStateLabel:          string(consts.DataPlaneStateLabelValueLive),
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -625,10 +634,11 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Name:      "test-proxy-service",
 						Namespace: "default",
 						Labels: map[string]string{
-							"app":                                 "test-dataplane",
-							consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValueLive,
-							consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-							consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
+							"app":                                      "test-dataplane",
+							consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValueLive,
+							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
 						},
 					},
 					Spec: corev1.ServiceSpec{

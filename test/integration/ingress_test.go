@@ -131,8 +131,8 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Log("retrieving the kong-proxy url")
 	services := testutils.MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	})
 	require.Len(t, services, 1)
 	proxyURL, err := urlForService(ctx, env.Cluster(), types.NamespacedName{Namespace: services[0].Namespace, Name: services[0].Name}, testutils.DefaultHTTPPort)

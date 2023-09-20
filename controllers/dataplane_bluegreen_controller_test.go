@@ -116,10 +116,11 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 					Namespace:    "default",
 					GenerateName: "dataplane-ingress-dp-0-",
 					Labels: map[string]string{
-						"app":                                 "dp-0",
-						consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-						consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-						consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValuePreview,
+						"app":                                "dp-0",
+						consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+						consts.GatewayOperatorManagedByLabelLegacy: consts.DataPlaneManagedLabelValue, //nolint:staticcheck
+						consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
+						consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValuePreview,
 					},
 				},
 				Spec: corev1.ServiceSpec{
@@ -146,10 +147,11 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 					Namespace:    "default",
 					GenerateName: "dataplane-ingress-dp-1-",
 					Labels: map[string]string{
-						"app":                                 "dp-1",
-						consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-						consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-						consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValuePreview,
+						"app":                                "dp-1",
+						consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+						consts.GatewayOperatorManagedByLabelLegacy: consts.DataPlaneManagedLabelValue, //nolint:staticcheck
+						consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
+						consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValuePreview,
 					},
 				},
 				Spec: corev1.ServiceSpec{
@@ -191,10 +193,11 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 					Namespace:    "default",
 					GenerateName: "dataplane-ingress-dp-1-",
 					Labels: map[string]string{
-						"app":                                 "dp-1",
-						consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-						consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-						consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValuePreview,
+						"app":                                "dp-1",
+						consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+						consts.GatewayOperatorManagedByLabelLegacy: consts.DataPlaneManagedLabelValue, //nolint:staticcheck
+						consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
+						consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValuePreview,
 					},
 				},
 				Spec: corev1.ServiceSpec{

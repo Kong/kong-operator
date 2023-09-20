@@ -12,7 +12,7 @@ import (
 var (
 	// _controllerName is a unique identifier which indicates this operator's name.
 	// This value may be overwritten by ENV vars or via the manager.
-	_controllerName     = "konghq.com/gateway-operator" // TODO: multi-tenancy: https://github.com/Kong/gateway-operator/issues/35
+	_controllerName     = DefaultControllerName // TODO: multi-tenancy: https://github.com/Kong/gateway-operator/issues/35
 	_controllerNameLock sync.RWMutex
 )
 
@@ -21,6 +21,13 @@ var (
 // -----------------------------------------------------------------------------
 
 const (
+	// DefaultControllerName is the default value of controller name that is
+	// used by the operator.
+	//
+	// This has to match the pattern as specified by the Gateway API GatewayController type.
+	// ref: https://github.com/kubernetes-sigs/gateway-api/blob/v0.8.1/apis/v1beta1/shared_types.go#L537-L551
+	DefaultControllerName = "konghq.com/gateway-operator"
+
 	// ControllerNameOverrideVar is the ENV var that can be used to override the
 	// ControllerName at runtime.
 	ControllerNameOverrideVar = "KONG_CONTROLLER_NAME"

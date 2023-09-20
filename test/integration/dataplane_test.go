@@ -88,13 +88,13 @@ func TestDataplaneEssentials(t *testing.T) {
 
 	t.Log("verifying deployments managed by the dataplane")
 	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}, clients), time.Minute, time.Second)
 
 	t.Logf("verifying that pod labels were set per the provided spec")
 	require.Eventually(t, func() bool {
 		deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		})
 		require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
 		deployment := &deployments[0]
@@ -117,7 +117,7 @@ func TestDataplaneEssentials(t *testing.T) {
 
 	t.Log("verifying dataplane Deployment.Pods.Env vars")
 	deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	})
 	require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
 	deployment := &deployments[0]
@@ -136,8 +136,8 @@ func TestDataplaneEssentials(t *testing.T) {
 	t.Log("verifying services managed by the dataplane")
 	var dataplaneIngressService corev1.Service
 	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneIngressService, clients, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	}), time.Minute, time.Second)
 	t.Log("verifying annotations on the proxy service managed by the dataplane")
 	require.Equal(t, dataplaneIngressService.Annotations["foo"], "bar")
@@ -158,14 +158,14 @@ func TestDataplaneEssentials(t *testing.T) {
 
 	t.Log("deleting the dataplane deployment")
 	dataplaneDeployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	})
 	require.Len(t, dataplaneDeployments, 1, "there must be only one dataplane deployment")
 	require.NoError(t, clients.MgrClient.Delete(ctx, &dataplaneDeployments[0]))
 
 	t.Log("verifying deployments managed by the dataplane after deletion")
 	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}, clients), time.Minute, time.Second)
 
 	t.Log("deleting the dataplane service")
@@ -173,8 +173,8 @@ func TestDataplaneEssentials(t *testing.T) {
 
 	t.Log("verifying services managed by the dataplane after deletion")
 	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneIngressService, clients, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	}), time.Minute, time.Second)
 
 	t.Log("verifying dataplane services receive IP addresses after deletion")
@@ -274,7 +274,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	t.Log("verifying deployments managed by the dataplane")
 	require.Eventually(t,
 		testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		}, clients),
 		testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
 	)
@@ -283,14 +283,14 @@ func TestDataPlaneUpdate(t *testing.T) {
 	var dataplaneService corev1.Service
 	require.Eventually(t,
 		testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService, clients, client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+			consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 		}),
 		testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
 	)
 
 	deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	})
 	require.Len(t, deployments, 1, "There must be only one DatePlane deployment")
 	deployment := &deployments[0]
@@ -317,7 +317,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	t.Logf("verifying environment variable TEST_ENV in deployment after update")
 	require.Eventually(t, func() bool {
 		deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		})
 		require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
 		deployment := &deployments[0]
@@ -453,7 +453,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 
 	t.Log("verifying deployments managed by the dataplane")
 	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}, clients), time.Minute, time.Second)
 
 	t.Log("verifying that dataplane has indeed 2 ready replicas")
@@ -569,12 +569,12 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 
 	t.Log("verifying deployments managed by the dataplane")
 	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}, clients), time.Minute, time.Second)
 
 	t.Log("verifying dataplane deployment volume mounts")
 	deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	})
 	require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
 	deployment := &deployments[0]

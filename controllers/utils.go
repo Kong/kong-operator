@@ -174,10 +174,9 @@ func maybeCreateCertificateSecret[
 ) (bool, *corev1.Secret, error) {
 	setCALogger(ctrlruntimelog.Log)
 
-	selectorKey, selectorValue := getManagedLabelForOwner(owner)
-	matchingLabels := client.MatchingLabels{
-		selectorKey: selectorValue,
-	}
+	// TODO: Change this to use non legacy label when
+	// https://github.com/Kong/gateway-operator/issues/1101 is resolved
+	matchingLabels := k8sresources.GetManagedLabelForOwnerLegacy(owner) //nolint:staticcheck
 	for _, ml := range additionalMatchingLabels {
 		for k, v := range ml {
 			matchingLabels[k] = v
@@ -201,6 +200,10 @@ func maybeCreateCertificateSecret[
 		return false, nil, errors.New("number of secrets reduced")
 	}
 
+	// TODO: Remove this when https://github.com/Kong/gateway-operator/issues/1101 is resolved
+	for k, v := range k8sresources.GetManagedLabelForOwner(owner) {
+		matchingLabels[k] = v
+	}
 	secretOpts := append(getSecretOpts(owner), matchingLabelsToSecretOpt(matchingLabels))
 	generatedSecret := k8sresources.GenerateNewTLSSecret(owner, secretOpts...)
 
@@ -252,7 +255,8 @@ func getPreDeleteHooks[T interface {
 	*operatorv1alpha1.ControlPlane | *operatorv1beta1.DataPlane
 	client.Object
 },
-](obj T) []k8sreduce.PreDeleteHook {
+](obj T,
+) []k8sreduce.PreDeleteHook {
 	switch any(obj).(type) {
 	case *operatorv1beta1.DataPlane:
 		return []k8sreduce.PreDeleteHook{DataPlaneOwnedObjectPreDeleteHook}
@@ -266,7 +270,8 @@ func getSecretOpts[T interface {
 	*operatorv1alpha1.ControlPlane | *operatorv1beta1.DataPlane
 	client.Object
 },
-](obj T) []k8sresources.SecretOpt {
+](obj T,
+) []k8sresources.SecretOpt {
 	switch any(obj).(type) {
 	case *operatorv1beta1.DataPlane:
 		withDataPlaneOwnedFinalizer := func(s *corev1.Secret) {
@@ -515,16 +520,6 @@ func servicesOptionsDeepEqual(opts1, opts2 *operatorv1beta1.DataPlaneNetworkOpti
 // -----------------------------------------------------------------------------
 // Owner based metadata getters - Private Functions
 // -----------------------------------------------------------------------------
-
-func getManagedLabelForOwner(owner metav1.Object) (key string, value string) {
-	switch owner.(type) {
-	case *operatorv1alpha1.ControlPlane:
-		return consts.GatewayOperatorControlledLabel, consts.ControlPlaneManagedLabelValue
-	case *operatorv1beta1.DataPlane:
-		return consts.GatewayOperatorControlledLabel, consts.DataPlaneManagedLabelValue
-	}
-	return "", ""
-}
 
 func getManagedLabelForServiceSecret(svcNN types.NamespacedName) client.MatchingLabels {
 	return client.MatchingLabels{

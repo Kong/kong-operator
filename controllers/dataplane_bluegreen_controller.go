@@ -773,10 +773,10 @@ func (r *DataPlaneBlueGreenReconciler) waitForLiveServiceSelectorsPropagation(
 	expectedSelector map[string]string,
 ) (ok bool, err error) {
 	matchingLabels := client.MatchingLabels{
-		"app":                                 dataplane.Name,
-		consts.DataPlaneServiceTypeLabel:      string(serviceType),
-		consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValueLive,
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		"app":                                dataplane.Name,
+		consts.DataPlaneServiceTypeLabel:     string(serviceType),
+		consts.DataPlaneServiceStateLabel:    consts.DataPlaneStateLabelValueLive,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}
 
 	services, err := k8sutils.ListServicesForOwner(

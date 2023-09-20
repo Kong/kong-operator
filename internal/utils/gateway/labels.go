@@ -18,6 +18,6 @@ func LabelObjectAsGatewayManaged(obj client.Object) {
 	if labels == nil {
 		labels = make(map[string]string)
 	}
-	labels[consts.GatewayOperatorControlledLabel] = consts.GatewayManagedLabelValue
+	labels[consts.GatewayOperatorManagedByLabel] = consts.GatewayManagedLabelValue
 	obj.SetLabels(labels)
 }

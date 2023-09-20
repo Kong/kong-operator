@@ -10,9 +10,22 @@ type ServiceType string
 // -----------------------------------------------------------------------------
 
 const (
-	// GatewayOperatorControlledLabel is the label that is used for objects which
+	// OperatorLabelPrefix is the common label prefix used by the operator
+	OperatorLabelPrefix = "gateway-operator.konghq.com/"
+
+	// GatewayOperatorManagedByLabel is the label that is used for objects which
 	// were created by this operator.
-	GatewayOperatorControlledLabel = "konghq.com/gateway-operator"
+	// The value associated with this label indicated what component is controlling
+	// the resource that has this label set.
+	GatewayOperatorManagedByLabel = OperatorLabelPrefix + "managed-by"
+
+	// GatewayOperatorManagedByLabelLegacy is the legacy label used for object
+	// with were created by this operator
+	//
+	// Deprecated: use GatewayOperatorManagedByLabel instead.
+	// TODO: Remove adding this to managed resources after several versions with
+	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/1101
+	GatewayOperatorManagedByLabelLegacy = "konghq.com/gateway-operator"
 
 	// ControlPlaneManagedLabelValue indicates that an object's lifecycle is managed
 	// by the controlplane controller.
@@ -24,12 +37,12 @@ const (
 
 	// ServiceSecretLabel is a label that is added to operator related Service
 	// Secrets to designate which Service this particular Secret it used by.
-	ServiceSecretLabel = "gateway-operator.konghq.com/service-secret"
+	ServiceSecretLabel = OperatorLabelPrefix + "service-secret"
 
 	// OperatorLabelSelector is a label name that is used for operator resources
 	// as a label selector key.
 	// Used with e.g. DataPlane's status.selector field.
-	OperatorLabelSelector = "gateway-operator.konghq.com/selector"
+	OperatorLabelSelector = OperatorLabelPrefix + "selector"
 )
 
 // -----------------------------------------------------------------------------

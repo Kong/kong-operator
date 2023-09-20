@@ -19,14 +19,14 @@ func TestLabelObjForGateway(t *testing.T) {
 		{
 			name: "a dataplane with empty labels receives a gateway managed label",
 			output: map[string]string{
-				consts.GatewayOperatorControlledLabel: consts.GatewayManagedLabelValue,
+				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
 			},
 		},
 		{
 			name:  "a dataplane with no labels receives a gateway managed label",
 			input: make(map[string]string),
 			output: map[string]string{
-				consts.GatewayOperatorControlledLabel: consts.GatewayManagedLabelValue,
+				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
 			},
 		},
 		{
@@ -35,8 +35,8 @@ func TestLabelObjForGateway(t *testing.T) {
 				"url": "konghq.com",
 			},
 			output: map[string]string{
-				"url":                                 "konghq.com",
-				consts.GatewayOperatorControlledLabel: consts.GatewayManagedLabelValue,
+				"url":                                "konghq.com",
+				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
 			},
 		},
 		{
@@ -48,22 +48,22 @@ func TestLabelObjForGateway(t *testing.T) {
 				"test4": "4",
 			},
 			output: map[string]string{
-				"test1":                               "1",
-				"test2":                               "2",
-				"test3":                               "3",
-				"test4":                               "4",
-				consts.GatewayOperatorControlledLabel: consts.GatewayManagedLabelValue,
+				"test1":                              "1",
+				"test2":                              "2",
+				"test3":                              "3",
+				"test4":                              "4",
+				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
 			},
 		},
 		{
 			name: "a dataplane with an existing management label gets updated",
 			input: map[string]string{
-				"test1":                               "1",
-				consts.GatewayOperatorControlledLabel: "other",
+				"test1":                              "1",
+				consts.GatewayOperatorManagedByLabel: "other",
 			},
 			output: map[string]string{
-				"test1":                               "1",
-				consts.GatewayOperatorControlledLabel: consts.GatewayManagedLabelValue,
+				"test1":                              "1",
+				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
 			},
 		},
 	} {

@@ -56,11 +56,11 @@ func ensureDeploymentForDataPlane(
 	additionalDeploymentLabels client.MatchingLabels,
 	opts ...k8sresources.DeploymentOpt,
 ) (res CreatedUpdatedOrNoop, deploy *appsv1.Deployment, err error) {
-	matchingLabels := client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-	}
+	// TODO: Use this when https://github.com/Kong/gateway-operator/pull/1101 is resolved.
+	// matchingLabels := k8sresources.GetManagedLabelForOwner(dataplane)
+	matchingLabelsLegacy := k8sresources.GetManagedLabelForOwnerLegacy(dataplane) //nolint:staticcheck
 	for k, v := range additionalDeploymentLabels {
-		matchingLabels[k] = v
+		matchingLabelsLegacy[k] = v
 	}
 
 	deployments, err := k8sutils.ListDeploymentsForOwner(
@@ -68,7 +68,7 @@ func ensureDeploymentForDataPlane(
 		cl,
 		dataplane.Namespace,
 		dataplane.UID,
-		matchingLabels,
+		matchingLabelsLegacy,
 	)
 	if err != nil {
 		return Noop, nil, fmt.Errorf("failed listing Deployments for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
@@ -198,13 +198,13 @@ func ensureAdminServiceForDataPlane(
 	additionalServiceLabels client.MatchingLabels,
 	opts ...k8sresources.ServiceOpt,
 ) (res CreatedUpdatedOrNoop, svc *corev1.Service, err error) {
-	matchingLabels := client.MatchingLabels{
-		"app":                                 dataplane.Name,
-		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-		consts.GatewayOperatorControlledLabel: string(consts.DataPlaneManagedLabelValue),
-	}
+	matchingLabelsLegacy := k8sresources.GetManagedLabelForOwnerLegacy(dataplane) //nolint:staticcheck
+	// TODO: Use this when https://github.com/Kong/gateway-operator/pull/1101 is resolved.
+	// matchingLabels := k8sresources.GetManagedLabelForOwner(dataplane)
+	matchingLabelsLegacy["app"] = dataplane.Name
+	matchingLabelsLegacy[consts.DataPlaneServiceTypeLabel] = string(consts.DataPlaneAdminServiceLabelValue)
 	for k, v := range additionalServiceLabels {
-		matchingLabels[k] = v
+		matchingLabelsLegacy[k] = v
 	}
 
 	services, err := k8sutils.ListServicesForOwner(
@@ -212,7 +212,7 @@ func ensureAdminServiceForDataPlane(
 		cl,
 		dataplane.Namespace,
 		dataplane.UID,
-		matchingLabels,
+		matchingLabelsLegacy,
 	)
 	if err != nil {
 		return Noop, nil, fmt.Errorf("failed listing Admin API Services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
@@ -279,24 +279,24 @@ func ensureIngressServiceForDataPlane(
 	additionalServiceLabels client.MatchingLabels,
 	opts ...k8sresources.ServiceOpt,
 ) (CreatedUpdatedOrNoop, *corev1.Service, error) {
-	matchingLabels := client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-	}
+	matchingLabelsLegacy := k8sresources.GetManagedLabelForOwnerLegacy(dataplane) //nolint:staticcheck
+	// TODO: Use this when https://github.com/Kong/gateway-operator/pull/1101 is resolved.
+	// matchingLabels := k8sresources.GetManagedLabelForOwner(dataplane)
+	matchingLabelsLegacy[consts.DataPlaneServiceTypeLabel] = string(consts.DataPlaneIngressServiceLabelValue)
+
 	for k, v := range additionalServiceLabels {
-		matchingLabels[k] = v
+		matchingLabelsLegacy[k] = v
 	}
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
 		cl,
 		dataplane.Namespace,
 		dataplane.UID,
-		matchingLabels,
+		matchingLabelsLegacy,
 	)
 	if err != nil {
 		return Noop, nil, fmt.Errorf("failed to list ingress services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
-
 	count := len(services)
 	if count > 1 {
 		if err := k8sreduce.ReduceServices(ctx, cl, services, DataPlaneOwnedObjectPreDeleteHook); err != nil {

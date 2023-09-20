@@ -125,7 +125,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		controlplane.Namespace,
 		controlplane.UID,
 		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		},
 	)
 	if err != nil {
@@ -225,7 +225,7 @@ func (r *ControlPlaneReconciler) ensureServiceAccountForControlPlane(
 		controlplane.Namespace,
 		controlplane.UID,
 		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		},
 	)
 	if err != nil {
@@ -268,7 +268,7 @@ func (r *ControlPlaneReconciler) ensureClusterRoleForControlPlane(
 		r.Client,
 		controlplane.UID,
 		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		},
 	)
 	if err != nil {
@@ -317,7 +317,7 @@ func (r *ControlPlaneReconciler) ensureClusterRoleBindingForControlPlane(
 		r.Client,
 		controlplane.UID,
 		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		},
 	)
 	if err != nil {
@@ -385,7 +385,7 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRolesDeleted(
 		ctx, r.Client,
 		controlplane.UID,
 		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		},
 	)
 	if err != nil {
@@ -418,7 +418,7 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRoleBindingsDeleted(
 		ctx, r.Client,
 		controlplane.UID,
 		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		},
 	)
 	if err != nil {

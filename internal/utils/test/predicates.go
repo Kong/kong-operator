@@ -243,7 +243,7 @@ func DataPlaneHasDeployment(t *testing.T, ctx context.Context, dataplaneName typ
 func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, n int) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		})
 		return len(deployments) == 1 &&
 			*deployments[0].Spec.Replicas == int32(n) &&
@@ -303,8 +303,8 @@ func DataPlaneServiceHasNActiveEndpoints(t *testing.T, ctx context.Context, serv
 func DataPlaneHasServiceAndAddressesInStatus(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-			consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+			consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 		})
 		if len(services) != 1 {
 			return false
@@ -377,8 +377,8 @@ func DataPlaneUpdateEventually(t *testing.T, ctx context.Context, dataplaneNN ty
 func DataPlaneHasServiceSecret(t *testing.T, ctx context.Context, dpNN, usingSvc types.NamespacedName, ret *corev1.Secret, clients K8sClients) func() bool {
 	return DataPlanePredicate(t, ctx, dpNN, func(dp *operatorv1beta1.DataPlane) bool {
 		secrets, err := k8sutils.ListSecretsForOwner(ctx, clients.MgrClient, dp.GetUID(), client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-			consts.ServiceSecretLabel:             usingSvc.Name,
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+			consts.ServiceSecretLabel:            usingSvc.Name,
 		})
 		if err != nil {
 			t.Logf("error listing secrets: %v", err)

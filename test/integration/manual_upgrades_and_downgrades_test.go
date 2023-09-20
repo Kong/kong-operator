@@ -301,7 +301,7 @@ func verifyContainerImageForGateway(gateway *gwtypes.Gateway, controlPlaneImage,
 		controlPlanes[0].Namespace,
 		controlPlanes[0].UID,
 		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		},
 	)
 	if err != nil {
@@ -329,7 +329,7 @@ func verifyContainerImageForGateway(gateway *gwtypes.Gateway, controlPlaneImage,
 		dataPlanes[0].Namespace,
 		dataPlanes[0].UID,
 		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		},
 	)
 	if err != nil {

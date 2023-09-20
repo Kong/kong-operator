@@ -108,13 +108,13 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 
 	t.Log("verifying deployments managed by the dataplane are ready")
 	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("verifying services managed by the dataplane")
 	require.Eventually(t, testutils.DataPlaneHasService(t, ctx, dataplaneName, clients, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	}), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("attaching dataplane to controlplane")
@@ -225,13 +225,13 @@ func TestControlPlaneEssentials(t *testing.T) {
 
 	t.Log("verifying deployments managed by the dataplane are ready")
 	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("verifying services managed by the dataplane")
 	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, nil, clients, client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	}), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("deploying controlplane resource")
@@ -421,7 +421,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 	t.Log("verifying deployments managed by the dataplane are ready")
 	require.Eventually(t,
 		testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		}, clients),
 		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 	)

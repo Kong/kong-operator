@@ -196,7 +196,7 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 						Kind:       "Deployment",
 						APIVersion: "apps/v1",
 					},
-					LabelSelector: fmt.Sprintf("%s=%s", consts.GatewayOperatorControlledLabel, consts.DataPlaneManagedLabelValue),
+					LabelSelector: fmt.Sprintf("%s=%s", consts.GatewayOperatorManagedByLabel, consts.DataPlaneManagedLabelValue),
 				})
 				require.NoError(t, err)
 				t.Cleanup(func() { w.Stop() })

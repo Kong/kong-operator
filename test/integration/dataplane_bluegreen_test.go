@@ -411,46 +411,46 @@ func patchDataPlaneAnnotations(t *testing.T, dataplane *operatorv1beta1.DataPlan
 
 func dataplaneAdminPreviewServiceLabels() client.MatchingLabels {
 	return client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-		consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValuePreview,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
+		consts.DataPlaneServiceStateLabel:    consts.DataPlaneStateLabelValuePreview,
 	}
 }
 
 func dataplaneAdminLiveServiceLabels() client.MatchingLabels {
 	return client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneAdminServiceLabelValue),
-		consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValueLive,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
+		consts.DataPlaneServiceStateLabel:    consts.DataPlaneStateLabelValueLive,
 	}
 }
 
 func dataplaneIngressPreviewServiceLabels() client.MatchingLabels {
 	return client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-		consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValuePreview,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+		consts.DataPlaneServiceStateLabel:    consts.DataPlaneStateLabelValuePreview,
 	}
 }
 
 func dataplaneIngressLiveServiceLabels() client.MatchingLabels {
 	return client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		consts.DataPlaneServiceTypeLabel:      string(consts.DataPlaneIngressServiceLabelValue),
-		consts.DataPlaneServiceStateLabel:     consts.DataPlaneStateLabelValueLive,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+		consts.DataPlaneServiceStateLabel:    consts.DataPlaneStateLabelValueLive,
 	}
 }
 
 func dataplanePreviewDeploymentLabels() client.MatchingLabels {
 	return client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		consts.DataPlaneDeploymentStateLabel:  consts.DataPlaneStateLabelValuePreview,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,
 	}
 }
 
 func dataplaneLiveDeploymentLabels() client.MatchingLabels {
 	return client.MatchingLabels{
-		consts.GatewayOperatorControlledLabel: consts.DataPlaneManagedLabelValue,
-		consts.DataPlaneDeploymentStateLabel:  consts.DataPlaneStateLabelValueLive,
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
 	}
 }

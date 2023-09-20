@@ -31,7 +31,7 @@ func MustListControlPlaneDeployments(t *testing.T, ctx context.Context, controlp
 		controlplane.Namespace,
 		controlplane.UID,
 		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		},
 	)
 	require.NoError(t, err)
@@ -46,7 +46,7 @@ func MustListControlPlaneClusterRoles(t *testing.T, ctx context.Context, control
 		clients.MgrClient,
 		controlplane.UID,
 		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		},
 	)
 	require.NoError(t, err)
@@ -61,7 +61,7 @@ func MustListControlPlaneClusterRoleBindings(t *testing.T, ctx context.Context, 
 		clients.MgrClient,
 		controlplane.UID,
 		client.MatchingLabels{
-			consts.GatewayOperatorControlledLabel: consts.ControlPlaneManagedLabelValue,
+			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		},
 	)
 	require.NoError(t, err)
