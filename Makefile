@@ -76,7 +76,7 @@ _download_tool_own:
 		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
 .PHONY: tools
-tools: envtest kic-role-generator controller-gen kustomize client-gen golangci-lint gotestsum dlv skaffold yq
+tools: envtest kic-role-generator controller-gen kustomize client-gen golangci-lint gotestsum dlv skaffold yq crd-ref-docs
 
 ENVTEST = $(PROJECT_DIR)/bin/setup-envtest
 .PHONY: envtest
@@ -117,6 +117,11 @@ GOTESTSUM = $(PROJECT_DIR)/bin/gotestsum
 .PHONY: gotestsum
 gotestsum: ## Download gotestsum locally if necessary.
 	@$(MAKE) _download_tool TOOL=gotestsum
+
+CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
+.PHONY: crd-ref-docs
+crd-ref-docs: ## Download crd-ref-docs locally if necessary.
+	@$(MAKE) _download_tool TOOL=crd-ref-docs
 
 DLV = $(PROJECT_DIR)/bin/dlv
 .PHONY: dlv
@@ -247,7 +252,7 @@ verify.generators: verify.repo generate verify.diff
 APIS_DIR ?= apis
 
 .PHONY: generate
-generate: controller-gen generate.apis generate.clientsets generate.rbacs generate.gateway-api-urls
+generate: controller-gen generate.apis generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs
 
 .PHONY: generate.apis
 generate.apis:
@@ -269,6 +274,10 @@ generate.clientsets: client-gen
 .PHONY: generate.rbacs
 generate.rbacs: kic-role-generator
 	$(KIC_ROLE_GENERATOR) --force
+
+.PHONY: generate.docs
+generate.docs: crd-ref-docs
+	./scripts/apidocs-gen/generate.sh $(CRD_REF_DOCS)
 
 # ------------------------------------------------------------------------------
 # Files generation checks
