@@ -35,7 +35,7 @@ spec:
             sizeLimit: 128Mi
         containers:
         - name: sidecar
-          image: timberio/vector:0.31.0-debian
+          image: timberio/vector:0.32.1-distroless-static
           volumeMounts:
           - name: sidecar-vector-config-volume
             mountPath: /etc/vector

@@ -299,7 +299,7 @@ metadata:
                 "spec": {
                   "containers": [
                     {
-                      "image": "timberio/vector:0.31.0-debian",
+                      "image": "timberio/vector:0.32.1-distroless-static",
                       "name": "sidecar",
                       "readinessProbe": {
                         "initialDelaySeconds": 1,
