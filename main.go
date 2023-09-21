@@ -63,7 +63,7 @@ func main() {
 	flagSet.BoolVar(&enableControllerGateway, "enable-controller-gateway", false, "Enable the Gateway controller.")
 	flagSet.BoolVar(&enableControllerControlPlane, "enable-controller-controlplane", false, "Enable the ControlPlane controller.")
 	flagSet.BoolVar(&enableControllerDataPlane, "enable-controller-dataplane", true, "Enable the DataPlane controller.")
-	flagSet.BoolVar(&enableControllerDataPlaneBlueGreen, "enable-controller-dataplane-bluegreen", false, "Enable the DataPlane BlueGreen controller. Mutually exclusive with DataPlane controller.")
+	flagSet.BoolVar(&enableControllerDataPlaneBlueGreen, "enable-controller-dataplane-bluegreen", true, "Enable the DataPlane BlueGreen controller. Mutually exclusive with DataPlane controller.")
 	flagSet.BoolVar(&enableValidatingWebhook, "enable-validating-webhook", true, "Enable the validating webhook.")
 
 	flagSet.BoolVar(&version, "version", false, "Print version information")
