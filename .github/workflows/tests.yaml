@@ -292,7 +292,6 @@ jobs:
         path: e2e-tests.xml
 
   buildpulse-report:
-    environment: "Configure ci"
     needs:
       - unit-tests
       - integration-tests

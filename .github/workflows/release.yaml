@@ -13,7 +13,8 @@ on:
         default: false
       prerelease:
         description: Whether to make a created release a pre-release
-        default: 'true'
+        type: boolean
+        default: true
         required: true
 
 jobs:
@@ -64,10 +65,6 @@ jobs:
   test-integration-current-kubernetes:
     runs-on: ubuntu-latest
     needs: build-push-images
-    strategy:
-      matrix:
-        kubernetes-version:
-          - 'v1.24.2'
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -79,16 +76,12 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Kubernetes ${{ matrix.kubernetes_version }} Integration Tests
+      - name: Kubernetes Integration Tests
         run: make test.integration
 
   test-e2e-current-kubernetes:
     runs-on: ubuntu-latest
     needs: build-push-images
-    strategy:
-      matrix:
-        kubernetes-version:
-          - 'v1.24.2'
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -100,7 +93,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Kubernetes ${{ matrix.kubernetes_version }} E2E Tests
+      - name: Kubernetes E2E Tests
         run: make test.e2e
 
   community-operators-push-bundle:
@@ -253,43 +246,3 @@ jobs:
           delete-branch: true
           title: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
           body: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
-
-      - name: Checkout to Kong/gateway-operator-docs repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          repository: Kong/gateway-operator-docs
-          path: gateway-operator-docs
-
-      - name: Update docs repo with new release
-        run: |
-          rm -rf gateway-operator-docs/config
-          cp -r config gateway-operator-docs
-          cp CHANGELOG.md gateway-operator-docs
-
-      - name: GPG sign the commits
-        uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-
-      # Create a PR to update the docs repo with the new release.
-      # PR includes the CHANGELOG and config files.
-      - name: Create a PR to Kong/gateway-operator-docs
-        uses: peter-evans/create-pull-request@153407881ec5c347639a548ade7d8ad1d6740e38
-        with:
-          token: ${{ secrets.PAT_GITHUB }}
-          path: gateway-operator-docs
-          add-paths: |
-            config
-            CHANGELOG.md
-          commit-message: "chore(release): operator kong-gateway-operator (${{ env.VERSION }})"
-          committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
-          author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
-          base: main
-          branch: kong-gateway-operator-${{ github.event.inputs.tag }}
-          delete-branch: true
-          title: operator kong-gateway-operator (${{ env.VERSION }})
-          body: operator kong-gateway-operator (${{ env.VERSION }})
