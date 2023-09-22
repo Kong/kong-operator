@@ -22,7 +22,7 @@ profiles:
       - config/default
   build:
     artifacts:
-    - image: ghcr.io/kong/gateway-operator
+    - image: kong/gateway-operator
       docker:
         dockerfile: Dockerfile
         target: distroless
@@ -37,7 +37,7 @@ profiles:
       - config/dev
   build:
     artifacts:
-    - image: ghcr.io/kong/gateway-operator
+    - image: kong/gateway-operator
       docker:
         dockerfile: Dockerfile
         target: distroless
@@ -52,7 +52,7 @@ profiles:
       - config/debug
   build:
     artifacts:
-    - image: ghcr.io/kong/gateway-operator
+    - image: kong/gateway-operator
       docker:
         dockerfile: debug.Dockerfile
         target: debug

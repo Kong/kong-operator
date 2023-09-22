@@ -13,6 +13,6 @@ configMapGenerator:
   name: manager-config
 
 images:
-- name: ghcr.io/kong/gateway-operator
-  newName: ghcr.io/kong/gateway-operator
+- name: kong/gateway-operator
+  newName: kong/gateway-operator
   newTag: 0.7.0

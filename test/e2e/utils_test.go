@@ -24,11 +24,11 @@ func prepareKustomizeDir(t *testing.T, image string) string {
 
 	const (
 		configDir                                 = "../../config"
-		gatewayOperatorDefaultImage               = "ghcr.io/kong/gateway-operator"
+		gatewayOperatorDefaultImage               = "kong/gateway-operator"
 		gatewayOperatorDefaultTag                 = "main"
 		gatewayOperatorImageKustomizationContents = "\n" +
 			"images:\n" +
-			"- name: ghcr.io/kong/gateway-operator\n" +
+			"- name: kong/gateway-operator\n" +
 			"  newName: %v\n" +
 			"  newTag: '%v'\n"
 	)
