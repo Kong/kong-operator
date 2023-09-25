@@ -19,7 +19,7 @@ on:
         required: true
         type: string
       image-name:
-        description: Image name to use for image(s) naming and pushing.
+        description: Image name to use for image(s) naming and pushing (e.g. kong/gateway-operator).
         required: true
         type: string
 
@@ -53,8 +53,14 @@ on:
         description: Whether to tag this build latest
         type: boolean
         default: false
+      tag:
+        description: Tag used for tagging the image(s)
+        type: string
+        required: false
 
     outputs:
+      full_tag:
+        value: ${{ jobs.build-multi-arch.outputs.full_tag }}
       tags:
         value: ${{ jobs.build.outputs.tags }}
       version:
@@ -63,9 +69,45 @@ on:
         value: ${{ jobs.build.outputs.artifact }}
     
 jobs:
+  semver:
+    runs-on: ubuntu-latest
+    outputs:
+      fullversion: ${{ steps.semver_parser.outputs.fullversion }}
+      major: ${{ steps.semver_parser.outputs.major }}
+      minor: ${{ steps.semver_parser.outputs.minor }}
+      patch: ${{ steps.semver_parser.outputs.patch }}
+      prerelease: ${{ steps.semver_parser.outputs.prerelease }}
+    steps:
+      - uses: mukunku/tag-exists-action@v1.4.0
+        id: check-tag
+        name: check if tag already exists
+        with:
+          tag: ${{ inputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: fail if tag already exists
+        if: ${{ steps.check-tag.outputs.exists == 'true' }}
+        run: exit 1
+
+      - name: checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Parse semver string
+        id: semver_parser
+        uses: booxmedialtd/ws-action-parse-semver@v1.4.7
+        with:
+          input_string: ${{ inputs.tag }}
+          version_extractor_regex: 'v(.*)$'
+
   build:
     name: Build image
     runs-on: ubuntu-latest
+
+    needs:
+    - semver
 
     strategy:
         # Whatever gets changed here should be changed in the multi-arch job below.
@@ -108,6 +150,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Add standard tags
+        if: ${{ inputs.tag != '' }}
+        run: |
+          echo 'TAGS_STANDARD<<EOF' >> $GITHUB_ENV
+          echo 'type=raw,value=${{ needs.semver.outputs.fullversion }}' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+
+      - name: Add major.minor tag
+        if: ${{ inputs.tag != '' && needs.semver.outputs.prerelease == '' }}
+        run: |
+          echo 'TAGS_SUPPLEMENTAL<<EOF' >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo 'type=raw,value=${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5.0.0
@@ -122,6 +179,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=sha
+            ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
           flavor: latest=${{ inputs.latest }},suffix=-${{ matrix.arch  }}
 
       - uses: docker/setup-buildx-action@v3
@@ -182,13 +240,16 @@ jobs:
         id: set-artifact
         run: echo "artifact=${{ inputs.upload-artifact }}" >> $GITHUB_OUTPUT
 
-
   build-multi-arch:
     name: Build and push multi-arch manifest
     runs-on: ubuntu-latest
     if: ${{ inputs.push }}
 
+    outputs:
+      full_tag: ${{ steps.tag.outputs.tag }}
+
     needs:
+      - semver
       - build
 
     steps:
@@ -196,6 +257,21 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Add standard tags
+        if: ${{ inputs.tag != '' }}
+        run: |
+          echo 'TAGS_STANDARD<<EOF' >> $GITHUB_ENV
+          echo 'type=raw,value=${{ needs.semver.outputs.fullversion }}' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+
+      - name: Add major.minor tag
+        if: ${{ inputs.tag != '' && needs.semver.outputs.prerelease == '' }}
+        run: |
+          echo 'TAGS_SUPPLEMENTAL<<EOF' >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo 'type=raw,value=${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
 
       - name: Docker metadata
         id: meta
@@ -211,6 +287,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=sha
+            ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
           flavor: latest=${{ inputs.latest }}
 
       - name: Log in to the Container registry
@@ -227,3 +304,8 @@ jobs:
           suffixes: |
             -amd64
             -arm64
+
+      - name: Set output tag
+        id: tag
+        run: |
+          echo "tag=${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}" >> $GITHUB_OUTPUT

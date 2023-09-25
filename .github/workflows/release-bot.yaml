@@ -39,6 +39,10 @@ jobs:
     if: ${{ needs.look_for_release.outputs.release_found == 'true' }}
     outputs:
       version: ${{ steps.semver_parser.outputs.fullversion }}
+      major: ${{ steps.semver_parser.outputs.major }}
+      minor: ${{ steps.semver_parser.outputs.minor }}
+      patch: ${{ steps.semver_parser.outputs.patch }}
+      prerelease: ${{ steps.semver_parser.outputs.prerelease }}
     runs-on: ubuntu-latest
 
     steps:
@@ -85,7 +89,7 @@ jobs:
 
             #### Links:
 
-            - [Changelog](https://github.com/Kong/gateway-operator/blob/main/CHANGELOG.md#${{ needs.semver.outputs.major }}${{ needs.semver.outputs.minor }}${{ needs.semver.outputs.patch }})
+            - [Changelog](https://github.com/Kong/gateway-operator/blob/main/CHANGELOG.md#v${{ needs.semver.outputs.major }}${{ needs.semver.outputs.minor }}${{ needs.semver.outputs.patch }}${{ needs.semver.outputs.prerelease }}))
 
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: v${{ needs.semver.outputs.version }}

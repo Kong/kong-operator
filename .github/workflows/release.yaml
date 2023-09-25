@@ -1,5 +1,5 @@
 name: release
-run-name: "Release ${{ format('{0}', github.event.inputs.tag) }}"
+run-name: "Release ${{ format('{0} (type: {1})', inputs.tag, inputs.release_type) }} "
 
 on:
   workflow_dispatch:
@@ -11,11 +11,14 @@ on:
         description: Whether to tag this build latest
         type: boolean
         default: false
-      prerelease:
+      release_type:
         description: Whether to make a created release a pre-release
-        type: boolean
-        default: true
         required: true
+        default: 'prerelease'
+        type: choice
+        options:
+        - prerelease
+        - release
 
 jobs:
   semver:
@@ -31,7 +34,7 @@ jobs:
         id: check-tag
         name: check if tag already exists
         with:
-          tag: ${{ github.event.inputs.tag }}
+          tag: ${{ inputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -48,7 +51,7 @@ jobs:
         id: semver_parser
         uses: booxmedialtd/ws-action-parse-semver@v1.4.7
         with:
-          input_string: ${{ github.event.inputs.tag }}
+          input_string: ${{ inputs.tag }}
           version_extractor_regex: 'v(.*)$'
 
   build-push-images:
@@ -58,9 +61,10 @@ jobs:
     with:
       registry: docker.io
       username: ${{ vars.DOCKERHUB_PUSH_USERNAME  }}
-      image-name: ${{ github.repository }}
+      image-name: kong/gateway-operator
       push: true
       latest: ${{ inputs.latest }}
+      tag: ${{ inputs.tag }}
 
   test-integration-current-kubernetes:
     runs-on: ubuntu-latest
@@ -76,12 +80,13 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Kubernetes Integration Tests
+      - name: Integration Tests
         run: make test.integration
 
   test-e2e-current-kubernetes:
     runs-on: ubuntu-latest
-    needs: build-push-images
+    needs:
+      - build-push-images
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -93,8 +98,10 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Kubernetes E2E Tests
+      - name: E2E Tests
         run: make test.e2e
+        env:
+          KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE: ${{ needs.build-push-images.outputs.full_tag }}
 
   community-operators-push-bundle:
     runs-on: ubuntu-latest
@@ -166,7 +173,7 @@ jobs:
         author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
         signoff: true
         base: main
-        branch: kong-gateway-operator-${{ github.event.inputs.tag }}
+        branch: kong-gateway-operator-${{ inputs.tag }}
         delete-branch: true
         title: operator kong-gateway-operator (${{ env.VERSION }})
         body: ${{ env.PR_TEMPLATE }}
@@ -180,16 +187,6 @@ jobs:
       - test-e2e-current-kubernetes
       - community-operators-push-bundle
     steps:
-      - name: determine release type (release, prerelease)
-        id: release_type
-        shell: bash
-        run: |
-          if [[ "${{ github.event.inputs.prerelease }}" == "true" ]]; then
-            echo "type=prerelease" >> $GITHUB_OUTPUT
-          else
-            echo "type=release" >> $GITHUB_OUTPUT
-          fi
-
       # Use the main branch as a base for the release.
       # Any changes made on the branch that the workflow was triggered on will not be included 
       # in the release PR. If anything needs to be fixed before a release, it should be
@@ -217,9 +214,8 @@ jobs:
       # Generated bundles and kustomized config are part of the release PR.
       # This is done locally in this job, to avoid including unintended changes.
       # If anything needs to be fixed before a release, it should be done on the main branch.
-      - name: Generate bundles
-        run: |
-          make bundle
+      - name: Generate bundle
+        run: make bundle
 
       - name: GPG sign the commits
         uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef
@@ -239,10 +235,10 @@ jobs:
             bundle
             config
             VERSION
-          commit-message: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
+          commit-message: "chore(${{ inputs.release_type }}): [bot] ${{ env.VERSION }}"
           committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           signoff: true
           delete-branch: true
-          title: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
-          body: "chore(${{ steps.release_type.outputs.type }}): [bot] ${{ env.VERSION }}"
+          title: "chore(${{ inputs.release_type }}): [bot] ${{ env.VERSION }}"
+          body: "chore(${{ inputs.release_type }}): [bot] ${{ env.VERSION }}"
