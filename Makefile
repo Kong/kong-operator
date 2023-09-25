@@ -17,8 +17,8 @@ endif
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
-IMG ?= kong/gateway-operator
-KUSTOMIZE_IMG_NAME = kong/gateway-operator
+IMG ?= docker.io/kong/gateway-operator
+KUSTOMIZE_IMG_NAME = docker.io/kong/gateway-operator
 
 # ------------------------------------------------------------------------------
 # Configuration - OperatorHub
@@ -35,7 +35,7 @@ DEFAULT_CHANNEL ?= alpha
 BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
-IMAGE_TAG_BASE ?= kong/gateway-operator
+IMAGE_TAG_BASE ?= docker.io/kong/gateway-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:$(VERSION)
 BUNDLE_GEN_FLAGS ?= --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 USE_IMAGE_DIGESTS ?= false

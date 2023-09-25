@@ -13,6 +13,6 @@ configMapGenerator:
   name: manager-config
 
 images:
-- name: kong/gateway-operator
-  newName: kong/gateway-operator
-  newTag: 0.7.0
+- name: docker.io/kong/gateway-operator
+  newName: docker.io/kong/gateway-operator
+  newTag: 1.0.0-rc.0
