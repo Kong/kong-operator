@@ -71,15 +71,18 @@ on:
 jobs:
   semver:
     runs-on: ubuntu-latest
+
     outputs:
       fullversion: ${{ steps.semver_parser.outputs.fullversion }}
       major: ${{ steps.semver_parser.outputs.major }}
       minor: ${{ steps.semver_parser.outputs.minor }}
       patch: ${{ steps.semver_parser.outputs.patch }}
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
+
     steps:
       - uses: mukunku/tag-exists-action@v1.4.0
         id: check-tag
+        if: ${{ inputs.tag != '' }}
         name: check if tag already exists
         with:
           tag: ${{ inputs.tag }}
@@ -87,7 +90,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: fail if tag already exists
-        if: ${{ steps.check-tag.outputs.exists == 'true' }}
+        if: ${{ inputs.tag != '' && steps.check-tag.outputs.exists == 'true' }}
         run: exit 1
 
       - name: checkout repository
@@ -97,6 +100,7 @@ jobs:
 
       - name: Parse semver string
         id: semver_parser
+        if: ${{ inputs.tag != '' }}
         uses: booxmedialtd/ws-action-parse-semver@v1.4.7
         with:
           input_string: ${{ inputs.tag }}
@@ -306,6 +310,7 @@ jobs:
             -arm64
 
       - name: Set output tag
+        if: ${{ inputs.tag != '' }}
         id: tag
         run: |
-          echo "tag=${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}" >> $GITHUB_OUTPUT
+          echo "tag=${{ inputs.registry }}/${{ inputs.image-name }}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
