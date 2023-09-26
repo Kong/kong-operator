@@ -69,7 +69,13 @@ type Promotion struct {
 
 // PromotionStrategy is the type of promotion strategy consts.
 //
-// Currently only `BreakBeforePromotion` is allowed.
+// Allowed values:
+//
+//   - `BreakBeforePromotion` is a promotion strategy which will ensure all new
+//     resources are ready and then break, to enable manual inspection.
+//     The user must indicate manually when they want the promotion to continue.
+//     That can be done by annotating the `DataPlane` object with
+//     `"gateway-operator.konghq.com/promote-when-ready": "true"`.
 type PromotionStrategy string
 
 const (
@@ -108,7 +114,13 @@ type RolloutResourcePlan struct {
 // RolloutResourcePlanDeployment is the type that holds the resource plan for
 // managing the Deployment objects during and after a rollout.
 //
-// Currently only `ScaleDownOnPromotionScaleUpOnRollout` is allowed.
+// Allowed values:
+//
+//   - `ScaleDownOnPromotionScaleUpOnRollout` is a rollout
+//     resource plan for Deployment which makes the operator scale down
+//     the Deployment to 0 when the rollout is not initiated by a spec change
+//     and then to scale it up when the rollout is initiated (the owner resource
+//     like a DataPlane is patched or updated).
 type RolloutResourcePlanDeployment string
 
 const (
