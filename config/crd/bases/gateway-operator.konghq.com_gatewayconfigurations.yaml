@@ -8463,7 +8463,8 @@ spec:
                     properties:
                       podTemplateSpec:
                         description: PodTemplateSpec defines PodTemplateSpec for Deployment's
-                          pods.
+                          pods. It's being applied on top of the generated Deployments
+                          using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch).
                         properties:
                           metadata:
                             description: 'Standard object''s metadata. More info:
@@ -16949,13 +16950,13 @@ spec:
                               type:
                                 default: LoadBalancer
                                 description: "Type determines how the Service is exposed.
-                                  Defaults to LoadBalancer. \n Valid options are LoadBalancer
-                                  and ClusterIP. \n \"ClusterIP\" allocates a cluster-internal
-                                  IP address for load-balancing to endpoints. \n \"LoadBalancer\"
-                                  builds on NodePort and creates an external load-balancer
-                                  (if supported in the current cloud) which routes
-                                  to the same endpoints as the clusterIP. \n More
-                                  info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types"
+                                  Defaults to `LoadBalancer`. \n Valid options are
+                                  `LoadBalancer` and `ClusterIP`. \n `ClusterIP` allocates
+                                  a cluster-internal IP address for load-balancing
+                                  to endpoints. \n `LoadBalancer` builds on NodePort
+                                  and creates an external load-balancer (if supported
+                                  in the current cloud) which routes to the same endpoints
+                                  as the clusterIP. \n More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types"
                                 enum:
                                 - LoadBalancer
                                 - ClusterIP

@@ -20,6 +20,8 @@ type DeploymentOptions struct {
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	// PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
+	// It's being applied on top of the generated Deployments using
+	// [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch).
 	//
 	// +optional
 	PodTemplateSpec *corev1.PodTemplateSpec `json:"podTemplateSpec,omitempty"`
@@ -66,6 +68,8 @@ type Promotion struct {
 }
 
 // PromotionStrategy is the type of promotion strategy consts.
+//
+// Currently only `BreakBeforePromotion` is allowed.
 type PromotionStrategy string
 
 const (
@@ -103,6 +107,8 @@ type RolloutResourcePlan struct {
 
 // RolloutResourcePlanDeployment is the type that holds the resource plan for
 // managing the Deployment objects during and after a rollout.
+//
+// Currently only `ScaleDownOnPromotionScaleUpOnRollout` is allowed.
 type RolloutResourcePlanDeployment string
 
 const (

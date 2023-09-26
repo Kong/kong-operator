@@ -101,14 +101,14 @@ type DataPlaneServices struct {
 // such as the annotations.
 type ServiceOptions struct {
 	// Type determines how the Service is exposed.
-	// Defaults to LoadBalancer.
+	// Defaults to `LoadBalancer`.
 	//
-	// Valid options are LoadBalancer and ClusterIP.
+	// Valid options are `LoadBalancer` and `ClusterIP`.
 	//
-	// "ClusterIP" allocates a cluster-internal IP address for load-balancing
+	// `ClusterIP` allocates a cluster-internal IP address for load-balancing
 	// to endpoints.
 	//
-	// "LoadBalancer" builds on NodePort and creates an external load-balancer
+	// `LoadBalancer` builds on NodePort and creates an external load-balancer
 	// (if supported in the current cloud) which routes to the same endpoints
 	// as the clusterIP.
 	//
@@ -264,6 +264,11 @@ type Address struct {
 
 // AddressType defines how a network address is represented as a text string.
 //
+// Can be one of:
+//
+// * `IPAddress`
+// * `Hostname`
+//
 // +kubebuilder:validation:Pattern=`^IPAddress|Hostname$`
 type AddressType string
 
@@ -287,6 +292,13 @@ const (
 
 // AddressSourceType defines the type of source this address represents.
 //
+// Can be one of:
+//
+// * `PublicLoadBalancer`
+// * `PrivateLoadBalancer`
+// * `PublicIP`
+// * `PrivateIP`
+//
 // +kubebuilder:validation:Pattern=`^PublicLoadBalancer|PrivateLoadBalancer|PublicIP|PrivateIP$`
 type AddressSourceType string
 
@@ -302,7 +314,7 @@ const (
 	// PublicIPAddressSourceType represents an address belonging to a public IP.
 	PublicIPAddressSourceType AddressSourceType = "PublicIP"
 
-	// PrivateIPAddressSourceType  represents an address belonging to a private IP.
+	// PrivateIPAddressSourceType represents an address belonging to a private IP.
 	PrivateIPAddressSourceType AddressSourceType = "PrivateIP"
 )
 
