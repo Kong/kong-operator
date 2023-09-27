@@ -22,7 +22,7 @@ metadata:
                 "spec": {
                   "containers": [
                     {
-                      "image": "kong/kubernetes-ingress-controller:2.11",
+                      "image": "kong/kubernetes-ingress-controller:2.12",
                       "name": "controller",
                       "readinessProbe": {
                         "initialDelaySeconds": 1,
@@ -66,6 +66,7 @@ metadata:
                             "value": "debug"
                           }
                         ],
+                        "image": "kong/kubernetes-ingress-controller:2.12",
                         "name": "controller"
                       }
                     ]
@@ -457,6 +458,13 @@ spec:
           - get
           - patch
           - update
+        - apiGroups:
+          - apiextensions.k8s.io
+          resources:
+          - customresourcedefinitions
+          verbs:
+          - list
+          - watch
         - apiGroups:
           - apps
           resources:

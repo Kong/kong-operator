@@ -14,6 +14,7 @@ import (
 )
 
 var clusterRoleRelativePaths = []string{
+	"config/rbac/crds/role.yaml",
 	"config/rbac/role.yaml",
 	"config/rbac/leader_election_role.yaml",
 	"config/rbac/gateway/role.yaml",

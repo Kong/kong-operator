@@ -30,6 +30,7 @@ spec:
         spec:
           containers:
           - name: controller
+            image: kong/kubernetes-ingress-controller:2.12
             env:
             - name: CONTROLLER_LOG_LEVEL
               value: debug

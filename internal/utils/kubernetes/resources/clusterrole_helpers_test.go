@@ -20,10 +20,19 @@ func TestClusterroleHelpers(t *testing.T) {
 		expectedError       error
 	}{
 		{
+			controlplane: "test_2.12",
+			image:        "kong/kubernetes-ingress-controller:2.12",
+			expectedClusterRole: func() *rbacv1.ClusterRole {
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge2_12("test_2.12")
+				resources.LabelObjectAsControlPlaneManaged(cr)
+				return cr
+			},
+		},
+		{
 			controlplane: "test_2.11",
 			image:        "kong/kubernetes-ingress-controller:2.11",
 			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge2_11("test_2.11")
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_lt2_12_ge2_11("test_2.11")
 				resources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
@@ -32,7 +41,7 @@ func TestClusterroleHelpers(t *testing.T) {
 			controlplane: "test_development_untagged",
 			image:        "test/development",
 			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge2_11("test_development_untagged")
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge2_12("test_development_untagged")
 				resources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
@@ -42,7 +51,7 @@ func TestClusterroleHelpers(t *testing.T) {
 			controlplane: "test_empty",
 			image:        "kong/kubernetes-ingress-controller",
 			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge2_11("test_empty")
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge2_12("test_empty")
 				resources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
@@ -53,7 +62,7 @@ func TestClusterroleHelpers(t *testing.T) {
 			controlplane: "test_unsupported",
 			image:        "kong/kubernetes-ingress-controller:1.0",
 			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge2_11("test_unsupported")
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge2_12("test_unsupported")
 				resources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},

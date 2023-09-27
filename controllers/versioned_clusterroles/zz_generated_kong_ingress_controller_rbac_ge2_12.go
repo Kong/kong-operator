@@ -6,6 +6,8 @@ package controllers
 // Kong Ingress Controller - RBAC
 // -----------------------------------------------------------------------------
 
+//+kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=list;watch
+
 //+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 //+kubebuilder:rbac:groups=core,resources=nodes,verbs=list;watch
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch

@@ -13,10 +13,10 @@ import (
 // ClusterRole generator
 // -----------------------------------------------------------------------------
 
-// GenerateNewClusterRoleForControlPlane_ge2_11 is a helper to generate a ClusterRole
+// GenerateNewClusterRoleForControlPlane_lt2_12_ge2_11 is a helper to generate a ClusterRole
 // resource with all the permissions needed by the controlplane deployment.
-// It is used for controlplanes that match the semver constraint ">=2.11"
-func GenerateNewClusterRoleForControlPlane_ge2_11(controlplaneName string) *rbacv1.ClusterRole {
+// It is used for controlplanes that match the semver constraint "<2.12, >=2.11"
+func GenerateNewClusterRoleForControlPlane_lt2_12_ge2_11(controlplaneName string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", controlplaneName),
@@ -25,6 +25,18 @@ func GenerateNewClusterRoleForControlPlane_ge2_11(controlplaneName string) *rbac
 			},
 		},
 		Rules: []rbacv1.PolicyRule{
+
+			{
+				APIGroups: []string{
+					"apiextensions.k8s.io",
+				},
+				Resources: []string{
+					"customresourcedefinitions",
+				},
+				Verbs: []string{
+					"list", "watch",
+				},
+			},
 
 			{
 				APIGroups: []string{
