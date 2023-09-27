@@ -136,11 +136,11 @@ jobs:
           add-paths: |
             config
             CHANGELOG.md
-          commit-message: "chore(release): operator kong-gateway-operator (${{ env.VERSION }})"
+          commit-message: "chore(release): operator kong-gateway-operator (${{ needs.semver.outputs.version }})"
           committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           base: main
           branch: kong-gateway-operator-${{ github.event.inputs.tag }}
           delete-branch: true
-          title: operator kong-gateway-operator (${{ env.VERSION }})
-          body: operator kong-gateway-operator (${{ env.VERSION }})
+          title: operator kong-gateway-operator (${{ needs.semver.outputs.version }})
+          body: operator kong-gateway-operator (${{ needs.semver.outputs.version }})

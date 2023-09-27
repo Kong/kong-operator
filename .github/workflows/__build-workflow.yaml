@@ -313,4 +313,4 @@ jobs:
         if: ${{ inputs.tag != '' }}
         id: tag
         run: |
-          echo "tag=${{ inputs.registry }}/${{ inputs.image-name }}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          echo "tag=${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}" >> $GITHUB_OUTPUT
