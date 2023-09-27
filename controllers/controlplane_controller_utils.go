@@ -224,6 +224,12 @@ func rejectEnvByName(envVars []corev1.EnvVar, name string) []corev1.EnvVar {
 
 func generateControlPlaneImage(opts *operatorv1alpha1.ControlPlaneOptions, validators ...versions.VersionValidationOption) (string, error) {
 	container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+	if container == nil {
+		// This is just a safegurd against running the operator without an admission webhook
+		// (which would prevent admission of a ControlPlane without an image specified)
+		// to prevent panics.
+		return "", fmt.Errorf("unsupported ControlPlane without image")
+	}
 	if container.Image != "" {
 		for _, v := range validators {
 			supported, err := v(container.Image)

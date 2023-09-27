@@ -105,6 +105,7 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 		deployment.Spec.Template = *patchedPodTemplateSpec
 	}
 
+	k8sutils.SetOwnerForObject(deployment, controlplane)
 	return deployment, nil
 }
 

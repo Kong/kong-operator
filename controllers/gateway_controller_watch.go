@@ -202,9 +202,19 @@ func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gwtype
 	if gatewayConfig.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec == nil {
 		gatewayConfig.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}
-	container := k8sutils.GetPodContainerByName(&gatewayConfig.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+
+	controlPlanePodTemplateSpec := gatewayConfig.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec
+	container := k8sutils.GetPodContainerByName(&controlPlanePodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
 	if container == nil {
-		container = lo.ToPtr(resources.GenerateControlPlaneContainer(""))
+		// We currently do not require an image to be specified for ControlPlanes
+		// hence we need to check if it has been provided.
+		// If it wasn't then add it by appending the generated ControlPlane to
+		// GatewayConfiguration spec.
+		// This change will not be saved in the API server (i.e. user applied resource
+		// will not be changed) - which is the desired behavior - since the caller
+		// only uses the changed GatewayConfiguration to generate ControlPlane resource.
+		container = lo.ToPtr(resources.GenerateControlPlaneContainer(consts.DefaultControlPlaneImage))
+		controlPlanePodTemplateSpec.Spec.Containers = append(controlPlanePodTemplateSpec.Spec.Containers, *container)
 	}
 	for _, env := range container.Env {
 		dontOverride[env.Name] = struct{}{}

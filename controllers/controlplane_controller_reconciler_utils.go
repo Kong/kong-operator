@@ -153,8 +153,6 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		return false, nil, err
 	}
 
-	k8sutils.SetOwnerForObject(generatedDeployment, controlplane)
-
 	if count == 1 {
 		var updated bool
 		existingDeployment := &deployments[0]
