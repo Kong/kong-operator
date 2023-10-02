@@ -35,7 +35,8 @@ jobs:
             }
 
   semver:
-    needs: look_for_release
+    needs:
+      - look_for_release
     if: ${{ needs.look_for_release.outputs.release_found == 'true' }}
     outputs:
       version: ${{ steps.semver_parser.outputs.fullversion }}
@@ -100,6 +101,7 @@ jobs:
     needs:
       - look_for_release
       - publish-release
+      - semver
     if: ${{ needs.look_for_release.outputs.release_found == 'true' }}
     runs-on: ubuntu-latest
     steps:
