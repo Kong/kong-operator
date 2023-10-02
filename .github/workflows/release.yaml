@@ -197,7 +197,6 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
-          token: ${{ secrets.PAT_GITHUB }}
 
       - name: setup golang
         uses: actions/setup-go@v4
