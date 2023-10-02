@@ -45,9 +45,6 @@ endif
 
 BUNDLE_DEFAULT_KUSTOMIZE_MANIFESTS ?= config/manifests
 BUNDLE_DEFAULT_DIR ?= bundle/regular
-BUNDLE_DEFAULT_DOCKERFILE ?= bundle_regular.Dockerfile
-
-OPENSHIFT_SUPPORTED_VERSIONS ?= v4.10-v4.13
 
 # ------------------------------------------------------------------------------
 # Configuration - Tooling

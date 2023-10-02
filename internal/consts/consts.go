@@ -93,7 +93,7 @@ const (
 
 const (
 	// WebhookCertificateConfigBaseImage is the image to use by the certificate config Jobs.
-	WebhookCertificateConfigBaseImage = "registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.1.1"
+	WebhookCertificateConfigBaseImage = "registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.3.0"
 	// WebhookName is the ValidatingWebhookConfiguration name.
 	WebhookName = "gateway-operator-validation.konghq.com"
 	// WebhookCertificateConfigSecretName is the name of the secret containing the webhook certificate.
