@@ -11,7 +11,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.4
 	github.com/go-logr/logr v1.2.4
 	github.com/google/uuid v1.3.1
-	github.com/kong/kubernetes-telemetry v0.1.0
+	github.com/kong/kubernetes-telemetry v0.1.1
 	github.com/kong/kubernetes-testing-framework v0.40.0
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
@@ -58,7 +58,7 @@ require (
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/jmoiron/sqlx v1.3.3 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
-	github.com/puzpuzpuz/xsync/v2 v2.4.1 // indirect
+	github.com/puzpuzpuz/xsync/v2 v2.5.1 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/weppos/publicsuffix-go v0.15.1-0.20210511084619-b1f36a2d6c0b // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
