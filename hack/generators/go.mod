@@ -13,7 +13,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.4
 	github.com/kong/gateway-operator v0.0.0-00010101000000-000000000000
 	k8s.io/api v0.28.2
-	k8s.io/apimachinery v0.28.2
+	k8s.io/apimachinery v0.28.3
 )
 
 require (
