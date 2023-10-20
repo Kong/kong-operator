@@ -22,7 +22,8 @@ const (
 	// GatewayOperatorManagedByLabelLegacy is the legacy label used for object
 	// with were created by this operator
 	//
-	// Deprecated: use GatewayOperatorManagedByLabel instead.
+	// Notice: use GatewayOperatorManagedByLabel instead.
+	//
 	// TODO: Remove adding this to managed resources after several versions with
 	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/1101
 	GatewayOperatorManagedByLabelLegacy = "konghq.com/gateway-operator"

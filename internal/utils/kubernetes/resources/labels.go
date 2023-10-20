@@ -1,7 +1,12 @@
 package resources
 
 import (
+	"fmt"
+
+	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
@@ -20,7 +25,7 @@ func LabelObjectAsDataPlaneManaged(obj metav1.Object) {
 	labels[consts.GatewayOperatorManagedByLabel] = consts.DataPlaneManagedLabelValue
 	// TODO: Remove adding this to managed resources after several versions with
 	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/1101
-	labels[consts.GatewayOperatorManagedByLabelLegacy] = consts.DataPlaneManagedLabelValue //nolint:staticcheck
+	labels[consts.GatewayOperatorManagedByLabelLegacy] = consts.DataPlaneManagedLabelValue
 	obj.SetLabels(labels)
 }
 
@@ -35,7 +40,7 @@ func LabelObjectAsControlPlaneManaged(obj metav1.Object) {
 	labels[consts.GatewayOperatorManagedByLabel] = consts.ControlPlaneManagedLabelValue
 	// TODO: Remove adding this to managed resources after several versions with
 	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/1101
-	labels[consts.GatewayOperatorManagedByLabelLegacy] = consts.ControlPlaneManagedLabelValue //nolint:staticcheck
+	labels[consts.GatewayOperatorManagedByLabelLegacy] = consts.ControlPlaneManagedLabelValue
 	obj.SetLabels(labels)
 }
 
@@ -71,4 +76,28 @@ func GetManagedLabelForOwnerLegacy(owner metav1.Object) client.MatchingLabels {
 		}
 	}
 	return client.MatchingLabels{}
+}
+
+func GetManagedLabelRequirementsForOwnerLegacy(owner metav1.Object) (labels.Requirements, error) {
+	managedByLabelsLegacy := GetManagedLabelForOwnerLegacy(owner)
+	if len(managedByLabelsLegacy) == 0 {
+		return nil, fmt.Errorf("no legacy managed-by labels for owner %s", owner.GetName())
+	}
+	reqLegacy, err := labels.NewRequirement(
+		lo.Keys(managedByLabelsLegacy)[0], selection.Equals, lo.Values(managedByLabelsLegacy),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	managedByLabels := GetManagedLabelForOwner(owner)
+	if len(managedByLabels) == 0 {
+		return nil, fmt.Errorf("no managed-by labels for owner %s", owner.GetName())
+	}
+	req, err := labels.NewRequirement(lo.Keys(managedByLabels)[0], selection.DoesNotExist, []string{})
+	if err != nil {
+		return nil, err
+	}
+
+	return labels.Requirements{*req, *reqLegacy}, nil
 }

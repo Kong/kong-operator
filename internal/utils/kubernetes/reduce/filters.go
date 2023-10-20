@@ -1,11 +1,14 @@
 package reduce
 
 import (
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+
+	"github.com/kong/gateway-operator/internal/consts"
 )
 
 // -----------------------------------------------------------------------------
@@ -106,14 +109,31 @@ func filterClusterRoleBindings(clusterRoleBindings []rbacv1.ClusterRoleBinding) 
 
 // filterDeployments filters out the Deployment to be kept and returns
 // all the Deployments to be deleted.
+//
 // The filtered-out Deployment is decided as follows:
-// 1. number of availableReplicas (higher is better)
-// 2. number of readyReplicas (higher is better)
-// 3. creationTimestamp (older is better)
+// 1. using legacy labels (if present)
+// 2. number of availableReplicas (higher is better)
+// 3. number of readyReplicas (higher is better)
+// 4. creationTimestamp (older is better)
 func filterDeployments(deployments []appsv1.Deployment) []appsv1.Deployment {
 	if len(deployments) < 2 {
 		return []appsv1.Deployment{}
 	}
+
+	legacyDeployments := lo.Filter(deployments, func(d appsv1.Deployment, index int) bool {
+		_, okLegacy := d.Labels[consts.GatewayOperatorManagedByLabelLegacy]
+		_, ok := d.Labels[consts.GatewayOperatorManagedByLabel]
+		return okLegacy && !ok
+	})
+	// If all Deployments are legacy, then remove all but one.
+	// The last one which we won't return for deletion will get updated on the next reconcile.
+	if len(legacyDeployments) == len(deployments) {
+		return legacyDeployments[:len(legacyDeployments)-1]
+		// Otherwise - if not all Deployments are legacy - then remove all legacy Deployments.
+	} else if len(legacyDeployments) > 0 {
+		return legacyDeployments
+	}
+
 	toFilter := 0
 	for i, deployment := range deployments {
 		// check which deployment has more availableReplicas
@@ -133,6 +153,7 @@ func filterDeployments(deployments []appsv1.Deployment) []appsv1.Deployment {
 		// check the older service
 		if deployment.CreationTimestamp.Before(&deployments[toFilter].CreationTimestamp) {
 			toFilter = i
+			continue
 		}
 	}
 
@@ -147,15 +168,32 @@ func filterDeployments(deployments []appsv1.Deployment) []appsv1.Deployment {
 // all the Services to be deleted.
 // The arguments are the slice of Services to apply the logic on, and a map
 // that associates all the Services to the owned EndpointSlices.
+//
 // The filtered-out Service is decided as follows:
-// 1. amount of LoadBalancer Ingresses (higher is better)
-// 2. amount of endpointSlices allocated for the service (higher is better)
-// 3. amount of ready endpoints for the service (higher is better)
-// 4. creationTimestamp (older is better)
+// 1. using legacy labels (if present)
+// 2. amount of LoadBalancer Ingresses (higher is better)
+// 3. amount of endpointSlices allocated for the service (higher is better)
+// 4. amount of ready endpoints for the service (higher is better)
+// 5. creationTimestamp (older is better)
 func filterServices(services []corev1.Service, endpointSlices map[string][]discoveryv1.EndpointSlice) []corev1.Service {
 	if len(services) < 2 {
 		return []corev1.Service{}
 	}
+
+	legacyServices := lo.Filter(services, func(s corev1.Service, index int) bool {
+		_, okLegacy := s.Labels[consts.GatewayOperatorManagedByLabelLegacy]
+		_, ok := s.Labels[consts.GatewayOperatorManagedByLabel]
+		return okLegacy && !ok
+	})
+	// If all services are legacy, then remove all but one.
+	// The last one which we won't return for deletion will get updated on the next reconcile.
+	if len(legacyServices) == len(services) {
+		return legacyServices[:len(legacyServices)-1]
+		// Otherwise - if not all services are legacy - then remove all legacy services.
+	} else if len(legacyServices) > 0 {
+		return legacyServices
+	}
+
 	toFilter, toFilterReadyEndpointsCount := 0, getReadyEndpointsCount(endpointSlices[services[0].Name])
 	for i, service := range services {
 		iReadyEndpointsCount := getReadyEndpointsCount(endpointSlices[service.Name])

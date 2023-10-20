@@ -29,9 +29,13 @@ const (
 	// by the dataplane controller.
 	DataPlaneManagedLabelValue = "dataplane"
 
-	// DataPlaneServiceTypeLabel is the labels that is used for the services created by
+	// DataPlaneServiceTypeLabel is the label that is used for the services created by
 	// the DataPlane controller to expose the DataPlane deployment.
 	DataPlaneServiceTypeLabel = "gateway-operator.konghq.com/dataplane-service-type"
+
+	// DataPlaneServiceTypeLabelLegacy is the legacy label that is used for the services created by
+	// the DataPlane controller to expose the DataPlane deployment.
+	DataPlaneServiceTypeLabelLegacy = "konghq.com/dataplane-service-type"
 
 	// DataPlaneServiceStateLabel indicates the state of a DataPlane service.
 	// Useful for progressive rollouts.
@@ -72,6 +76,10 @@ const (
 	// DataPlaneIngressServiceLabelValue indicates that the service is inteded to expose the
 	// DataPlane proxy.
 	DataPlaneIngressServiceLabelValue ServiceType = "ingress"
+
+	// DataPlaneProxyServiceLabelValue is the legacy label value which indicates
+	// that the service is inteded to expose the DataPlane proxy.
+	DataPlaneProxyServiceLabelValueLegacy ServiceType = "proxy"
 
 	// ServiceSelectorOverrideAnnotation is used on the dataplane to override the Selector
 	// of both the admin and proxy services.

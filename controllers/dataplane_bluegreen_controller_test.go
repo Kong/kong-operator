@@ -118,7 +118,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 					Labels: map[string]string{
 						"app":                                "dp-0",
 						consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
-						consts.GatewayOperatorManagedByLabelLegacy: consts.DataPlaneManagedLabelValue, //nolint:staticcheck
+						consts.GatewayOperatorManagedByLabelLegacy: consts.DataPlaneManagedLabelValue,
 						consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
 						consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValuePreview,
 					},
@@ -149,7 +149,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 					Labels: map[string]string{
 						"app":                                "dp-1",
 						consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
-						consts.GatewayOperatorManagedByLabelLegacy: consts.DataPlaneManagedLabelValue, //nolint:staticcheck
+						consts.GatewayOperatorManagedByLabelLegacy: consts.DataPlaneManagedLabelValue,
 						consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
 						consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValuePreview,
 					},
@@ -195,7 +195,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 					Labels: map[string]string{
 						"app":                                "dp-1",
 						consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
-						consts.GatewayOperatorManagedByLabelLegacy: consts.DataPlaneManagedLabelValue, //nolint:staticcheck
+						consts.GatewayOperatorManagedByLabelLegacy: consts.DataPlaneManagedLabelValue,
 						consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
 						consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValuePreview,
 					},

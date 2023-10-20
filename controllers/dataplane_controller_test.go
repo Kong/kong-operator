@@ -126,7 +126,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
 							consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValueLive,
 							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
-							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Status: corev1.ServiceStatus{
@@ -148,7 +148,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneAdminServiceLabelValue),
 							consts.DataPlaneServiceStateLabel:          string(consts.DataPlaneStateLabelValueLive),
 							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
-							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -166,7 +166,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 							consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValueLive,
 							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
 							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
-							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 				},
@@ -334,7 +334,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneAdminServiceLabelValue),
 							consts.DataPlaneServiceStateLabel:          string(consts.DataPlaneStateLabelValueLive),
 							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
-							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -352,7 +352,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 							consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValueLive,
 							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
 							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
-							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -461,7 +461,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneAdminServiceLabelValue),
 							consts.DataPlaneServiceStateLabel:          string(consts.DataPlaneStateLabelValueLive),
 							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
-							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -477,7 +477,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 							consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValueLive,
 							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
 							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
-							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -604,7 +604,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 						Labels: map[string]string{
 							consts.DataPlaneDeploymentStateLabel:       consts.DataPlaneStateLabelValueLive,
 							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
-							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Status: appsv1.DeploymentStatus{
@@ -622,7 +622,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneAdminServiceLabelValue),
 							consts.DataPlaneServiceStateLabel:          string(consts.DataPlaneStateLabelValueLive),
 							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
-							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -638,7 +638,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 							consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValueLive,
 							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
 							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
-							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue), //nolint:staticcheck
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
