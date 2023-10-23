@@ -6,7 +6,7 @@ require (
 	github.com/elastic/crd-ref-docs v0.0.9
 	github.com/go-delve/delve v1.21.1
 	github.com/golangci/golangci-lint v1.54.2
-	github.com/operator-framework/operator-registry v1.29.0
+	github.com/operator-framework/operator-registry v1.30.0
 	gotest.tools/gotestsum v1.11.0
 	k8s.io/code-generator v0.28.3
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220715194349-88234a8fc9ad
