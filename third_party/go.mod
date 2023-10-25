@@ -6,7 +6,7 @@ require (
 	github.com/elastic/crd-ref-docs v0.0.9
 	github.com/go-delve/delve v1.21.1
 	github.com/golangci/golangci-lint v1.55.0
-	github.com/operator-framework/operator-registry v1.30.0
+	github.com/operator-framework/operator-registry v1.30.1
 	gotest.tools/gotestsum v1.11.0
 	k8s.io/code-generator v0.28.3
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220715194349-88234a8fc9ad
@@ -205,7 +205,7 @@ require (
 	github.com/onsi/gomega v1.28.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b // indirect
-	github.com/operator-framework/api v0.17.7 // indirect
+	github.com/operator-framework/api v0.18.0 // indirect
 	github.com/otiai10/copy v1.11.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
@@ -314,7 +314,7 @@ require (
 	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
-	k8s.io/kubectl v0.27.1 // indirect
+	k8s.io/kubectl v0.27.7 // indirect
 	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
 	mvdan.cc/gofumpt v0.5.0 // indirect
 	mvdan.cc/interfacer v0.0.0-20180901003855-c20040233aed // indirect
