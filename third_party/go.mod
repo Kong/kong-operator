@@ -3,7 +3,7 @@ module github.com/kong/gateway-operator/third_party
 go 1.19
 
 require (
-	github.com/elastic/crd-ref-docs v0.0.9
+	github.com/elastic/crd-ref-docs v0.0.10
 	github.com/go-delve/delve v1.21.1
 	github.com/golangci/golangci-lint v1.55.0
 	github.com/operator-framework/operator-registry v1.30.1
