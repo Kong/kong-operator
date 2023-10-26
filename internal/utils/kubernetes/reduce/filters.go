@@ -24,6 +24,20 @@ func filterSecrets(secrets []corev1.Secret) []corev1.Secret {
 		return []corev1.Secret{}
 	}
 
+	legacySecrets := lo.Filter(secrets, func(s corev1.Secret, index int) bool {
+		_, okLegacy := s.Labels[consts.GatewayOperatorManagedByLabelLegacy]
+		_, ok := s.Labels[consts.GatewayOperatorManagedByLabel]
+		return okLegacy && !ok
+	})
+	// If all Secrets are legacy, then remove all but one.
+	// The last one which we won't return for deletion will get updated on the next reconcile.
+	if len(legacySecrets) == len(secrets) {
+		return legacySecrets[:len(legacySecrets)-1]
+		// Otherwise - if not all Secrets are legacy - then remove all legacy Secrets.
+	} else if len(legacySecrets) > 0 {
+		return legacySecrets
+	}
+
 	toFilter := 0
 	for i, secret := range secrets {
 		if secret.CreationTimestamp.Before(&secrets[toFilter].CreationTimestamp) {

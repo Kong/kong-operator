@@ -26,6 +26,7 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -169,47 +170,61 @@ func maybeCreateCertificateSecret[
 	subject string,
 	mtlsCASecretNN types.NamespacedName,
 	usages []certificatesv1.KeyUsage,
-	k8sClient client.Client,
-	additionalMatchingLabels ...client.MatchingLabels,
-) (bool, *corev1.Secret, error) {
+	cl client.Client,
+	additionalMatchingLabels client.MatchingLabels,
+) (CreatedUpdatedOrNoop, *corev1.Secret, error) {
 	setCALogger(ctrlruntimelog.Log)
 
-	// TODO: Change this to use non legacy label when
-	// https://github.com/Kong/gateway-operator/issues/1101 is resolved
-	matchingLabels := k8sresources.GetManagedLabelForOwnerLegacy(owner) //nolint:staticcheck
-	for _, ml := range additionalMatchingLabels {
-		for k, v := range ml {
-			matchingLabels[k] = v
-		}
+	// TODO: https://github.com/Kong/gateway-operator/pull/1101.
+	// Use only new labels after several minor version of soak time.
+
+	// Below we list both the Secrets with the new labels and the legacy labels
+	// in order to support upgrades from older versions of the operator and perform
+	// the reduction of the Secrets using the older labels.
+
+	// Get the Secrets for the DataPlane using new labels.
+	matchingLabels := k8sresources.GetManagedLabelForOwner(owner)
+	for k, v := range additionalMatchingLabels {
+		matchingLabels[k] = v
 	}
-	secrets, err := k8sutils.ListSecretsForOwner(
+
+	secrets, err := k8sutils.ListSecretsForOwner(ctx, cl, owner.GetUID(), matchingLabels)
+	if err != nil {
+		return Noop, nil, fmt.Errorf("failed listing Secrets for %T %s/%s: %w", owner, owner.GetNamespace(), owner.GetName(), err)
+	}
+
+	// Get the Secrets for the DataPlane using legacy labels.
+	reqLegacyLabels, err := k8sresources.GetManagedLabelRequirementsForOwnerLegacy(owner)
+	if err != nil {
+		return Noop, nil, err
+	}
+	secretsLegacy, err := k8sutils.ListSecretsForOwner(
 		ctx,
-		k8sClient,
+		cl,
 		owner.GetUID(),
-		matchingLabels,
+		&client.ListOptions{
+			LabelSelector: labels.NewSelector().Add(reqLegacyLabels...),
+		},
 	)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, fmt.Errorf("failed listing Secrets for %T %s/%s: %w", owner, owner.GetNamespace(), owner.GetName(), err)
 	}
+	secrets = append(secrets, secretsLegacy...)
 
 	count := len(secrets)
 	if count > 1 {
-		if err := k8sreduce.ReduceSecrets(ctx, k8sClient, secrets, getPreDeleteHooks(owner)...); err != nil {
-			return false, nil, err
+		if err := k8sreduce.ReduceSecrets(ctx, cl, secrets, getPreDeleteHooks(owner)...); err != nil {
+			return Noop, nil, err
 		}
-		return false, nil, errors.New("number of secrets reduced")
+		return Noop, nil, errors.New("number of secrets reduced")
 	}
 
-	// TODO: Remove this when https://github.com/Kong/gateway-operator/issues/1101 is resolved
-	for k, v := range k8sresources.GetManagedLabelForOwner(owner) {
-		matchingLabels[k] = v
-	}
 	secretOpts := append(getSecretOpts(owner), matchingLabelsToSecretOpt(matchingLabels))
 	generatedSecret := k8sresources.GenerateNewTLSSecret(owner, secretOpts...)
 
 	// If there are no secrets yet, then create one.
 	if count == 0 {
-		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, k8sClient)
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl)
 	}
 
 	// Otherwise there is already 1 certificate matching specified selectors.
@@ -220,34 +235,34 @@ func maybeCreateCertificateSecret[
 	block, _ := pem.Decode(existingSecret.Data["tls.crt"])
 	if block == nil {
 		// The existing secret has a broken certificate, delete it and recreate it.
-		if err := k8sClient.Delete(ctx, existingSecret); err != nil {
-			return false, nil, err
+		if err := cl.Delete(ctx, existingSecret); err != nil {
+			return Noop, nil, err
 		}
 
-		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, k8sClient)
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl)
 	}
 
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, err
 	}
 	if cert.Subject.CommonName != subject {
-		if err := k8sClient.Delete(ctx, existingSecret); err != nil {
-			return false, nil, err
+		if err := cl.Delete(ctx, existingSecret); err != nil {
+			return Noop, nil, err
 		}
 
-		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, k8sClient)
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl)
 	}
 
 	var updated bool
 	updated, existingSecret.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingSecret.ObjectMeta, generatedSecret.ObjectMeta)
 	if updated {
-		if err := k8sClient.Update(ctx, existingSecret); err != nil {
-			return false, existingSecret, fmt.Errorf("failed updating secret %s: %w", existingSecret.Name, err)
+		if err := cl.Update(ctx, existingSecret); err != nil {
+			return Noop, existingSecret, fmt.Errorf("failed updating secret %s: %w", existingSecret.Name, err)
 		}
-		return true, existingSecret, nil
+		return Updated, existingSecret, nil
 	}
-	return false, existingSecret, nil
+	return Noop, existingSecret, nil
 }
 
 // getPreDeleteHooks returns a list of pre-delete hooks for the given object type.
@@ -295,7 +310,7 @@ func generateTLSDataSecret(
 	mtlsCASecret types.NamespacedName,
 	usages []certificatesv1.KeyUsage,
 	k8sClient client.Client,
-) (bool, *corev1.Secret, error) {
+) (CreatedUpdatedOrNoop, *corev1.Secret, error) {
 	template := x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:   subject,
@@ -308,12 +323,12 @@ func generateTLSDataSecret(
 
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, err
 	}
 
 	der, err := x509.CreateCertificateRequest(rand.Reader, &template, priv)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, err
 	}
 
 	// This is effectively a placeholder so long as we handle signing internally. When actually creating CSR resources,
@@ -345,16 +360,16 @@ func generateTLSDataSecret(
 	ca := &corev1.Secret{}
 	err = k8sClient.Get(ctx, mtlsCASecret, ca)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, err
 	}
 
 	signed, err := signCertificate(csr, ca)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, err
 	}
 	privDer, err := x509.MarshalECPrivateKey(priv)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, err
 	}
 
 	generatedSecret.Data = map[string][]byte{
@@ -368,10 +383,10 @@ func generateTLSDataSecret(
 
 	err = k8sClient.Create(ctx, generatedSecret)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, err
 	}
 
-	return true, generatedSecret, nil
+	return Created, generatedSecret, nil
 }
 
 // -----------------------------------------------------------------------------

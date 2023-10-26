@@ -33,7 +33,7 @@ func ensureDataPlaneCertificate(
 	dataplane *operatorv1beta1.DataPlane,
 	clusterCASecretNN types.NamespacedName,
 	adminServiceNN types.NamespacedName,
-) (bool, *corev1.Secret, error) {
+) (CreatedUpdatedOrNoop, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
 		certificatesv1.UsageDigitalSignature, certificatesv1.UsageServerAuth,

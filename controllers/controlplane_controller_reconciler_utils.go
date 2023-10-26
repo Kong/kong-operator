@@ -352,7 +352,7 @@ func (r *ControlPlaneReconciler) ensureClusterRoleBindingForControlPlane(
 func (r *ControlPlaneReconciler) ensureCertificate(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
-) (bool, *corev1.Secret, error) {
+) (CreatedUpdatedOrNoop, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
 		certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth,

@@ -304,12 +304,12 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	trace(log, "creating mTLS certificate", controlplane)
-	created, certSecret, err := r.ensureCertificate(ctx, controlplane)
+	res, certSecret, err := r.ensureCertificate(ctx, controlplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if created {
-		debug(log, "mTLS certificate created", controlplane)
+	if res != Noop {
+		debug(log, "mTLS certificate created/updated", controlplane)
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 

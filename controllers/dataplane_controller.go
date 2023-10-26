@@ -131,7 +131,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	trace(log, "ensuring mTLS certificate", dataplane)
-	certCreatedOrUpdated, certSecret, err := ensureDataPlaneCertificate(ctx, r.Client, dataplane,
+	res, certSecret, err := ensureDataPlaneCertificate(ctx, r.Client, dataplane,
 		types.NamespacedName{
 			Namespace: r.ClusterCASecretNamespace,
 			Name:      r.ClusterCASecretName,
@@ -144,8 +144,8 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if certCreatedOrUpdated {
-		debug(log, "mTLS certificate created", dataplane)
+	if res != Noop {
+		debug(log, "mTLS certificate created/updated", dataplane)
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
