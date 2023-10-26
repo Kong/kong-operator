@@ -9,7 +9,7 @@ replace github.com/kong/gateway-operator => ../../
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
-	github.com/go-git/go-git/v5 v5.9.0
+	github.com/go-git/go-git/v5 v5.10.0
 	github.com/hashicorp/go-retryablehttp v0.7.4
 	github.com/kong/gateway-operator v0.0.0-00010101000000-000000000000
 	k8s.io/api v0.28.3
