@@ -30,6 +30,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,16 +49,12 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
-	"github.com/kong/gateway-operator/internal/manager/logging"
 	"github.com/kong/gateway-operator/internal/manager/metadata"
 	"github.com/kong/gateway-operator/internal/telemetry"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
-var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
-)
+var scheme = runtime.NewScheme()
 
 const (
 	caCertFilename  = "ca.crt"
@@ -128,9 +125,7 @@ func DefaultConfig() Config {
 }
 
 func Run(cfg Config) error {
-	cfg.LoggerOpts = logging.SetupLogEncoder(cfg.DevelopmentMode, cfg.LoggerOpts)
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&cfg.LoggerOpts)))
-
+	setupLog := ctrl.Log.WithName("setup")
 	setupLog.Info("starting controller manager",
 		"release", metadata.Release,
 		"repo", metadata.Repo,
@@ -173,6 +168,7 @@ func Run(cfg Config) error {
 	}
 
 	caMgr := &caManager{
+		logger:          ctrl.Log.WithName("ca_manager"),
 		client:          mgr.GetClient(),
 		secretName:      cfg.ClusterCASecretName,
 		secretNamespace: cfg.ClusterCASecretNamespace,
@@ -239,7 +235,7 @@ func Run(cfg Config) error {
 	// Enable anonnymous reporting when configured but not for development builds
 	// to reduce the noise.
 	if cfg.AnonymousReports && !cfg.DevelopmentMode {
-		stopAnonymousReports, err := setupAnonymousReports(cfg)
+		stopAnonymousReports, err := setupAnonymousReports(context.Background(), cfg, setupLog)
 		if err != nil {
 			setupLog.Error(err, "failed setting up anonymous reports")
 		} else {
@@ -260,6 +256,7 @@ func Run(cfg Config) error {
 }
 
 type caManager struct {
+	logger          logr.Logger
 	client          client.Client
 	secretName      string
 	secretNamespace string
@@ -287,7 +284,7 @@ func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		setupLog.Info(fmt.Sprintf("no CA certificate Secret %s found, generating CA certificate", m.secretName))
+		m.logger.Info(fmt.Sprintf("no CA certificate Secret %s found, generating CA certificate", m.secretName))
 		template := x509.Certificate{
 			Subject: pkix.Name{
 				CommonName:   "Kong Gateway Operator CA",
@@ -362,8 +359,8 @@ func getKubeconfig(apiServerPath string, kubeconfig string) (*rest.Config, error
 // a cleanup function and an error.
 // The caller is responsible to call the returned function - when the returned
 // error is not nil - to stop the reports sending.
-func setupAnonymousReports(cfg Config) (func(), error) {
-	setupLog.Info("starting anonymous reports")
+func setupAnonymousReports(ctx context.Context, cfg Config, logger logr.Logger) (func(), error) {
+	logger.Info("starting anonymous reports")
 	restConfig, err := getKubeconfig(cfg.APIServerPath, cfg.KubeconfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
@@ -373,7 +370,7 @@ func setupAnonymousReports(cfg Config) (func(), error) {
 		"v": metadata.Release,
 	}
 
-	tMgr, err := telemetry.CreateManager(telemetry.SignalPing, restConfig, setupLog, telemetryPayload)
+	tMgr, err := telemetry.CreateManager(telemetry.SignalPing, restConfig, logger, telemetryPayload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create anonymous reports manager: %w", err)
 	}
@@ -382,10 +379,10 @@ func setupAnonymousReports(cfg Config) (func(), error) {
 		return nil, fmt.Errorf("anonymous reports failed to start: %w", err)
 	}
 
-	if err := tMgr.TriggerExecute(context.Background(), telemetry.SignalStart); err != nil {
+	if err := tMgr.TriggerExecute(ctx, telemetry.SignalStart); err != nil {
 		// We failed to send initial start signal with telemetry data.
 		// Don't abort and return an error, just log an error and continue.
-		setupLog.WithValues("error", err).
+		logger.WithValues("error", err).
 			Info("failed to send an initial telemetry start signal")
 	}
 

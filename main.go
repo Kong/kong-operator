@@ -22,7 +22,11 @@ import (
 	"fmt"
 	"os"
 
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	"github.com/kong/gateway-operator/internal/manager"
+	"github.com/kong/gateway-operator/internal/manager/logging"
 	"github.com/kong/gateway-operator/internal/manager/metadata"
 )
 
@@ -154,8 +158,11 @@ func main() {
 		WebhookPort:                         manager.DefaultConfig().WebhookPort,
 	}
 
+	cfg.LoggerOpts = logging.SetupLogEncoder(cfg.DevelopmentMode, cfg.LoggerOpts)
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&cfg.LoggerOpts)))
+
 	if err := manager.Run(cfg); err != nil {
-		fmt.Println(err.Error())
+		ctrl.Log.Error(err, "failed to run manager")
 		os.Exit(1)
 	}
 }
