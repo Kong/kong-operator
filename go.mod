@@ -7,7 +7,7 @@ toolchain go1.21.0
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/cloudflare/cfssl v1.6.4
-	github.com/go-logr/logr v1.2.4
+	github.com/go-logr/logr v1.3.0
 	github.com/google/uuid v1.3.1
 	github.com/kong/kubernetes-telemetry v0.1.1
 	github.com/kong/kubernetes-testing-framework v0.41.1
