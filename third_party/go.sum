@@ -454,8 +454,8 @@ github.com/ghostiam/protogetter v0.2.3/go.mod h1:KmNLOsy1v04hKbvZs8EfGI1fk39AgTd
 github.com/gliderlabs/ssh v0.2.2/go.mod h1:U7qILu1NlMHj9FlMhZLlkCdDnU1DBEAqr0aevW3Awn0=
 github.com/go-critic/go-critic v0.9.0 h1:Pmys9qvU3pSML/3GEQ2Xd9RZ/ip+aXHKILuxczKGV/U=
 github.com/go-critic/go-critic v0.9.0/go.mod h1:5P8tdXL7m/6qnyG6oRAlYLORvoXH0WDypYgAEmagT40=
-github.com/go-delve/delve v1.21.1 h1:oDpED8gvXPLS1VKSYzaMH/ihZtyk04H9jqQ9xpyFXl0=
-github.com/go-delve/delve v1.21.1/go.mod h1:FgTAiRUe43RS5EexL06RPyMtP8AMZVL/t9Qqgy3qUe4=
+github.com/go-delve/delve v1.21.2 h1:eaS+ziJo+660mi3D2q/VP8RxW5GcF4Y1zyKSi82alsU=
+github.com/go-delve/delve v1.21.2/go.mod h1:FgTAiRUe43RS5EexL06RPyMtP8AMZVL/t9Qqgy3qUe4=
 github.com/go-delve/liner v1.2.3-0.20220127212407-d32d89dd2a5d h1:pxjSLshkZJGLVm0wv20f/H0oTWiq/egkoJQ2ja6LEvo=
 github.com/go-delve/liner v1.2.3-0.20220127212407-d32d89dd2a5d/go.mod h1:biJCRbqp51wS+I92HMqn5H8/A0PAhxn2vyOT+JqhiGI=
 github.com/go-git/gcfg v1.5.0 h1:Q5ViNfGF8zFgyJWPqYwA7qGFoMTEiBmdlkcfRmpIMa4=

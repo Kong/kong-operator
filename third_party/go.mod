@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/elastic/crd-ref-docs v0.0.10
-	github.com/go-delve/delve v1.21.1
+	github.com/go-delve/delve v1.21.2
 	github.com/golangci/golangci-lint v1.55.1
 	github.com/operator-framework/operator-registry v1.30.1
 	gotest.tools/gotestsum v1.11.0
