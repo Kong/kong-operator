@@ -104,89 +104,13 @@ jobs:
         env:
           KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE: ${{ needs.build-push-images.outputs.full_tag }}
 
-  community-operators-push-bundle:
+  create-release-pr:
     runs-on: ubuntu-latest
     needs:
       - semver
       - build-push-images
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
-
-    steps:
-
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Setup go
-      uses: actions/setup-go@v4
-      with:
-        go-version-file: go.mod
-
-    - name: Ensure version is set
-      env:
-        VERSION: ${{ needs.semver.outputs.fullversion }}
-      run: |
-        echo "VERSION=${VERSION}" >> $GITHUB_ENV
-        echo ${VERSION} > VERSION
-
-    - name: Generate bundle
-      run: make bundle
-
-    - name: Checkout k8s-operatorhub/community-operators repo
-      uses: actions/checkout@v4
-      with:
-        repository: k8s-operatorhub/community-operators
-        path: k8s-operatorhub-community-operators
-
-    - name: Copy the bundle to the k8s-operatorhub-community-operators repo
-      # Operator bundles in community-operators do not have a 'v' prefix in directory
-      # names so we use the 'v' stripped tag.
-      run: |
-        mkdir -p k8s-operatorhub-community-operators/operators/kong-gateway-operator/${{ env.VERSION }}
-        cp -r bundle/regular/* k8s-operatorhub-community-operators/operators/kong-gateway-operator/${{ env.VERSION }}
-
-    - name: Read PR template from k8s-operatorhub-community-operators/docs/pull_request_template.md
-      id: pr-template
-      run: |
-        echo "PR_TEMPLATE<<EOF" >> $GITHUB_ENV
-        cat k8s-operatorhub-community-operators/docs/pull_request_template.md >> $GITHUB_ENV
-        echo "EOF" >> $GITHUB_ENV
-
-    - name: GPG sign the commits
-      uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef
-      with:
-        gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-        passphrase: ${{ secrets.GPG_PASSPHRASE }}
-        git_user_signingkey: true
-        git_commit_gpgsign: true
-
-    - name: Pushes bundle to k8s-operatorhub-community-operators
-      uses: peter-evans/create-pull-request@153407881ec5c347639a548ade7d8ad1d6740e38
-      with:
-        token: ${{ secrets.PAT_GITHUB }}
-        path: k8s-operatorhub-community-operators
-        push-to-fork: Kong/k8s-operatorhub-community-operators
-        add-paths: operators/kong-gateway-operator/${{ env.VERSION }}
-        commit-message: operator kong-gateway-operator (${{ env.VERSION }})
-        committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
-        author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
-        signoff: true
-        base: main
-        branch: kong-gateway-operator-${{ inputs.tag }}
-        delete-branch: true
-        title: operator kong-gateway-operator (${{ env.VERSION }})
-        body: ${{ env.PR_TEMPLATE }}
-
-  publish-release:
-    runs-on: ubuntu-latest
-    needs:
-      - semver
-      - build-push-images
-      - test-integration-current-kubernetes
-      - test-e2e-current-kubernetes
-      - community-operators-push-bundle
     steps:
       # Use the main branch as a base for the release.
       # Any changes made on the branch that the workflow was triggered on will not be included 
