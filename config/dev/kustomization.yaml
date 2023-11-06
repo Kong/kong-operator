@@ -3,7 +3,6 @@ kind: Kustomization
 
 resources:
 - ../default
-- ../crd
 
 patches:
 - path: manager_dev.yaml

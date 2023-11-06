@@ -40,7 +40,6 @@ RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
 # layers when using COPY instructions for go.mod and go.sum.
 # https://docs.docker.com/build/guide/mounts/
 RUN --mount=type=cache,target=$GOPATH/pkg/mod \
-    --mount=type=cache,target=$GOCACHE \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \
     CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \

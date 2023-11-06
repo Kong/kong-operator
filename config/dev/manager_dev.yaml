@@ -16,14 +16,16 @@ spec:
       containers:
         - command:
             - /manager
+            - -anonymous-reports=false
             - -no-leader-election
             - -zap-time-encoding=iso8601
             - -cluster-ca-secret-namespace=kong-system
             - -zap-log-level=debug
+            - -zap-devel=true
+            - -enable-controller-gateway=true
+            - -enable-controller-controlplane=true
+            - -enable-validating-webhook=true
           name: manager
-          env:
-            - name: CONTROLLER_DEVELOPMENT_MODE
-              value: "true"
           resources:
             limits:
               cpu: 1000m

@@ -20,9 +20,10 @@ profiles:
     kustomize:
       paths:
       - config/default
+      - config/crd
   build:
     artifacts:
-    - image: kong/gateway-operator
+    - image: docker.io/kong/gateway-operator
       docker:
         dockerfile: Dockerfile
         target: distroless
@@ -35,9 +36,10 @@ profiles:
     kustomize:
       paths:
       - config/dev
+      - config/crd
   build:
     artifacts:
-    - image: kong/gateway-operator
+    - image: docker.io/kong/gateway-operator
       docker:
         dockerfile: Dockerfile
         target: distroless
@@ -50,9 +52,10 @@ profiles:
     kustomize:
       paths:
       - config/debug
+      - config/crd
   build:
     artifacts:
-    - image: kong/gateway-operator
+    - image: docker.io/kong/gateway-operator
       docker:
         dockerfile: debug.Dockerfile
         target: debug
