@@ -6,7 +6,7 @@ require (
 	github.com/elastic/crd-ref-docs v0.0.10
 	github.com/go-delve/delve v1.21.2
 	github.com/golangci/golangci-lint v1.55.1
-	github.com/operator-framework/operator-registry v1.30.1
+	github.com/operator-framework/operator-registry v1.31.0
 	gotest.tools/gotestsum v1.11.0
 	k8s.io/code-generator v0.28.3
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220715194349-88234a8fc9ad
@@ -205,7 +205,7 @@ require (
 	github.com/onsi/gomega v1.28.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b // indirect
-	github.com/operator-framework/api v0.18.0 // indirect
+	github.com/operator-framework/api v0.19.0 // indirect
 	github.com/otiai10/copy v1.11.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
