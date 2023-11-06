@@ -584,7 +584,7 @@ deploy: manifests kustomize
 	cp -R config $(TMP)
 	cd $(TMP)/config/manager && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
 	cd $(TMP)/config/default && $(KUSTOMIZE) build . | kubectl apply -f -
-	kubectl wait deploy -n kong-system gateway-operator-controller-manager --for=condition=Available=true
+	kubectl wait --timeout=1m deploy -n kong-system gateway-operator-controller-manager --for=condition=Available=true
 
 # Undeploy controller from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
