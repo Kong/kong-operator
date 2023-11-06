@@ -1,4 +1,4 @@
-package dataplane
+package controlplane
 
 import (
 	"errors"
@@ -53,11 +53,6 @@ func (v *Validator) ValidateDeploymentOptions(opts *operatorv1alpha1.DeploymentO
 	// Ref: https://github.com/Kong/gateway-operator/issues/754.
 	if container.Image == "" {
 		return errors.New("ControlPlane requires an image")
-	}
-
-	// Ref: https://github.com/Kong/gateway-operator/issues/740
-	if len(container.VolumeMounts) > 0 || len(opts.PodTemplateSpec.Spec.Volumes) > 0 {
-		return errors.New("ControlPlane does not support custom volumes and volume mounts")
 	}
 
 	return nil
