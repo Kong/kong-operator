@@ -164,7 +164,7 @@ jobs:
 
       - name: Ensure version is set
         env:
-          VERSION: ${{ needs.semver.outputs.fullversion }}
+          VERSION: ${{ needs.semver.outputs.version }}
         run: |
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo ${VERSION} > VERSION
