@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -35,7 +35,7 @@ func TestGatewayEssentials(t *testing.T) {
 
 	t.Log("deploying a GatewayClass resource")
 	gatewayClass := testutils.GenerateGatewayClass()
-	gatewayClass, err := clients.GatewayClient.GatewayV1beta1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err := clients.GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -45,7 +45,7 @@ func TestGatewayEssentials(t *testing.T) {
 		Namespace: namespace.Name,
 	}
 	gateway := testutils.GenerateGateway(gatewayNSN, gatewayClass)
-	gateway, err = clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	gateway, err = clients.GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
@@ -158,7 +158,7 @@ func TestGatewayEssentials(t *testing.T) {
 	}, time.Minute*2, time.Second)
 
 	t.Log("deleting Gateway resource")
-	require.NoError(t, clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
+	require.NoError(t, clients.GatewayClient.GatewayV1().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that DataPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
@@ -193,13 +193,13 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 
 	t.Log("deploying a GatewayClass resource")
 	gatewayClass := testutils.GenerateGatewayClass()
-	gatewayClass.Spec.ParametersRef = &gatewayv1beta1.ParametersReference{
+	gatewayClass.Spec.ParametersRef = &gatewayv1.ParametersReference{
 		Group:     "gateway-operator.konghq.com",
 		Kind:      "GatewayConfiguration",
 		Name:      gatewayConfigurationName,
-		Namespace: (*gatewayv1beta1.Namespace)(&namespace.Name),
+		Namespace: (*gatewayv1.Namespace)(&namespace.Name),
 	}
-	gatewayClass, err = clients.GatewayClient.GatewayV1beta1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = clients.GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -209,7 +209,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 		Namespace: namespace.Name,
 	}
 	gateway := testutils.GenerateGateway(gatewayNSN, gatewayClass)
-	gateway, err = clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	gateway, err = clients.GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
@@ -334,7 +334,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 
 	t.Run("verifying DataPlane's NetworkPolicies get deleted after Gateway is deleted", func(t *testing.T) {
 		t.Log("deleting Gateway resource")
-		require.NoError(t, clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
+		require.NoError(t, clients.GatewayClient.GatewayV1().Gateways(namespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 		t.Log("verifying networkpolicies are deleted")
 		require.Eventually(t, testutils.Not(testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients)), time.Minute, time.Second)

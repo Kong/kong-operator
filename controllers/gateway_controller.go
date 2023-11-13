@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -64,7 +64,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// watch for updates to GatewayClasses, if any GatewayClasses change, enqueue
 		// reconciliation for all supported gateway objects which reference it.
 		Watches(
-			&gatewayv1beta1.GatewayClass{},
+			&gatewayv1.GatewayClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatchesController))).
 		Complete(r)
@@ -215,8 +215,8 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	trace(log, "resource is supported, ensuring that it gets marked as scheduled", gateway)
 	if !k8sutils.IsValidCondition(GatewayScheduledType, gwConditionAware) {
 		condition := k8sutils.NewConditionWithGeneration(
-			k8sutils.ConditionType(gatewayv1beta1.GatewayConditionAccepted),
-			metav1.ConditionTrue, k8sutils.ConditionReason(gatewayv1beta1.GatewayClassReasonAccepted),
+			k8sutils.ConditionType(gatewayv1.GatewayConditionAccepted),
+			metav1.ConditionTrue, k8sutils.ConditionReason(gatewayv1.GatewayClassReasonAccepted),
 			fmt.Sprintf("this gateway has been picked up by the %s and will be processed", vars.ControllerName()),
 			gateway.Generation,
 		)
@@ -435,7 +435,7 @@ func (r *GatewayReconciler) provisionDataPlane(
 func (r *GatewayReconciler) provisionControlPlane(
 	ctx context.Context,
 	log logr.Logger,
-	gatewayClass *gatewayv1beta1.GatewayClass,
+	gatewayClass *gatewayv1.GatewayClass,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 	dataplane *operatorv1beta1.DataPlane,

@@ -13,7 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -89,21 +89,21 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	cleaner.Add(gatewayConfig)
 
 	t.Log("deploying a GatewayClass resource with the GatewayConfiguration attached via ParametersReference")
-	gatewayClass := &gatewayv1beta1.GatewayClass{
+	gatewayClass := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 		},
-		Spec: gatewayv1beta1.GatewayClassSpec{
-			ParametersRef: &gatewayv1beta1.ParametersReference{
-				Group:     gatewayv1beta1.Group(operatorv1alpha1.SchemeGroupVersion.Group),
-				Kind:      gatewayv1beta1.Kind("GatewayConfiguration"),
-				Namespace: (*gatewayv1beta1.Namespace)(&gatewayConfig.Namespace),
+		Spec: gatewayv1.GatewayClassSpec{
+			ParametersRef: &gatewayv1.ParametersReference{
+				Group:     gatewayv1.Group(operatorv1alpha1.SchemeGroupVersion.Group),
+				Kind:      gatewayv1.Kind("GatewayConfiguration"),
+				Namespace: (*gatewayv1.Namespace)(&gatewayConfig.Namespace),
 				Name:      gatewayConfig.Name,
 			},
-			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName()),
+			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
 	}
-	gatewayClass, err = clients.GatewayClient.GatewayV1beta1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = clients.GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -113,16 +113,16 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 			Namespace: namespace.Name,
 			Name:      uuid.NewString(),
 		},
-		Spec: gatewayv1beta1.GatewaySpec{
-			GatewayClassName: gatewayv1beta1.ObjectName(gatewayClass.Name),
-			Listeners: []gatewayv1beta1.Listener{{
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: gatewayv1.ObjectName(gatewayClass.Name),
+			Listeners: []gatewayv1.Listener{{
 				Name:     "http",
-				Protocol: gatewayv1beta1.HTTPProtocolType,
-				Port:     gatewayv1beta1.PortNumber(80),
+				Protocol: gatewayv1.HTTPProtocolType,
+				Port:     gatewayv1.PortNumber(80),
 			}},
 		},
 	}
-	gateway, err = clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	gateway, err = clients.GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 

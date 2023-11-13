@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -16,31 +16,31 @@ import (
 )
 
 // GenerateGatewayClass generates the default GatewayClass to be used in tests
-func GenerateGatewayClass() *gatewayv1beta1.GatewayClass {
-	gatewayClass := &gatewayv1beta1.GatewayClass{
+func GenerateGatewayClass() *gatewayv1.GatewayClass {
+	gatewayClass := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 		},
-		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName()),
+		Spec: gatewayv1.GatewayClassSpec{
+			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
 	}
 	return gatewayClass
 }
 
 // GenerateGateway generates a Gateway to be used in tests
-func GenerateGateway(gatewayNSN types.NamespacedName, gatewayClass *gatewayv1beta1.GatewayClass) *gwtypes.Gateway {
+func GenerateGateway(gatewayNSN types.NamespacedName, gatewayClass *gatewayv1.GatewayClass) *gwtypes.Gateway {
 	gateway := &gwtypes.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: gatewayNSN.Namespace,
 			Name:      gatewayNSN.Name,
 		},
-		Spec: gatewayv1beta1.GatewaySpec{
-			GatewayClassName: gatewayv1beta1.ObjectName(gatewayClass.Name),
-			Listeners: []gatewayv1beta1.Listener{{
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: gatewayv1.ObjectName(gatewayClass.Name),
+			Listeners: []gatewayv1.Listener{{
 				Name:     "http",
-				Protocol: gatewayv1beta1.HTTPProtocolType,
-				Port:     gatewayv1beta1.PortNumber(80),
+				Protocol: gatewayv1.HTTPProtocolType,
+				Port:     gatewayv1.PortNumber(80),
 			}},
 		},
 	}

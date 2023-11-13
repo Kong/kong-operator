@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 )
@@ -83,7 +83,7 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			addresses: []gwtypes.GatewayStatusAddress{
 				{
 					Value: "198.51.100.1",
-					Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
+					Type:  lo.ToPtr(gatewayv1.IPAddressType),
 				},
 			},
 			wantErr: false,
@@ -121,11 +121,11 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			addresses: []gwtypes.GatewayStatusAddress{
 				{
 					Value: "203.0.113.1",
-					Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
+					Type:  lo.ToPtr(gatewayv1.IPAddressType),
 				},
 				{
 					Value: "203.0.113.2",
-					Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
+					Type:  lo.ToPtr(gatewayv1.IPAddressType),
 				},
 			},
 			wantErr: false,
@@ -153,11 +153,11 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			addresses: []gwtypes.GatewayStatusAddress{
 				{
 					Value: "one.example.net",
-					Type:  lo.ToPtr(gatewayv1beta1.HostnameAddressType),
+					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
 				},
 				{
 					Value: "two.example.net",
-					Type:  lo.ToPtr(gatewayv1beta1.HostnameAddressType),
+					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
 				},
 			},
 			wantErr: false,
@@ -186,15 +186,15 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			addresses: []gwtypes.GatewayStatusAddress{
 				{
 					Value: "203.0.113.1",
-					Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
+					Type:  lo.ToPtr(gatewayv1.IPAddressType),
 				},
 				{
 					Value: "one.example.net",
-					Type:  lo.ToPtr(gatewayv1beta1.HostnameAddressType),
+					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
 				},
 				{
 					Value: "two.example.net",
-					Type:  lo.ToPtr(gatewayv1beta1.HostnameAddressType),
+					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
 				},
 			},
 			wantErr: false,

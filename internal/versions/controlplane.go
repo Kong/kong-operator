@@ -7,7 +7,14 @@ import (
 const (
 	// DefaultControlPlaneVersion is the default version of the ControlPlane to use.
 	// TODO: automatic PR updates https://github.com/Kong/gateway-operator/issues/210
-	DefaultControlPlaneVersion = "2.12.0"
+	//
+	// NOTE: This needs to be a full semver version (i.e. it needs to include
+	// the minor and the patch version). The reason for this is that it's used in the
+	// tests, e.g. https://github.com/Kong/gateway-operator/blob/02bd1e11243/test/e2e/environment_test.go#L201-L206
+	// and those tests create KIC's URLs for things like roles or CRDs.
+	// Since KIC only defines the full tags in its repo (as expected) we cannot use
+	// a partial version here, as it would not match KIC's tag.
+	DefaultControlPlaneVersion = "3.0.0"
 )
 
 // minimumControlPlaneVersion indicates the bare minimum version of the
@@ -29,7 +36,8 @@ var minimumControlPlaneVersion = semver.MustParse("2.11.0")
 // the release 5.0, a new entry '">=5.0": "5.0"' should be added to this map, and the previous most
 // updated entry should be limited to "<5.0".
 var RoleVersionsForKICVersions = map[string]string{
-	">=2.12":        "2.12.0",
+	">=3.0":         "3.0.0",
+	"<3.0, >=2.12":  "2.12.0",
 	"<2.12, >=2.11": "2.11.1",
 }
 

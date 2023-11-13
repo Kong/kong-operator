@@ -17,7 +17,7 @@ import (
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -29,8 +29,8 @@ import (
 )
 
 func init() {
-	if err := gatewayv1beta1.AddToScheme(scheme.Scheme); err != nil {
-		fmt.Println("error while adding gatewayv1beta1 scheme")
+	if err := gatewayv1.AddToScheme(scheme.Scheme); err != nil {
+		fmt.Println("error while adding gatewayv1 scheme")
 		os.Exit(1)
 	}
 	if err := operatorv1alpha1.AddToScheme(scheme.Scheme); err != nil {
@@ -47,7 +47,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 	testCases := []struct {
 		name                     string
 		gatewayReq               reconcile.Request
-		gatewayClass             *gatewayv1beta1.GatewayClass
+		gatewayClass             *gatewayv1.GatewayClass
 		gateway                  *gwtypes.Gateway
 		gatewaySubResources      []controllerruntimeclient.Object
 		dataplaneSubResources    []controllerruntimeclient.Object
@@ -62,21 +62,21 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					Name:      "test-gateway",
 				},
 			},
-			gatewayClass: &gatewayv1beta1.GatewayClass{
+			gatewayClass: &gatewayv1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-gatewayclass",
 				},
-				Spec: gatewayv1beta1.GatewayClassSpec{
-					ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName()),
+				Spec: gatewayv1.GatewayClassSpec{
+					ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 				},
-				Status: gatewayv1beta1.GatewayClassStatus{
+				Status: gatewayv1.GatewayClassStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:               string(gatewayv1beta1.GatewayClassConditionStatusAccepted),
+							Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
 							Status:             metav1.ConditionTrue,
 							ObservedGeneration: 0,
 							LastTransitionTime: metav1.Now(),
-							Reason:             string(gatewayv1beta1.GatewayClassReasonAccepted),
+							Reason:             string(gatewayv1.GatewayClassReasonAccepted),
 							Message:            "the gatewayclass has been accepted by the controller",
 						},
 					},
@@ -92,7 +92,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					Namespace: "test-namespace",
 					UID:       types.UID(uuid.NewString()),
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
+				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 				},
 			},
@@ -208,7 +208,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.Equal(t,
 					[]gwtypes.GatewayStatusAddress{
 						{
-							Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
+							Type:  lo.ToPtr(gatewayv1.IPAddressType),
 							Value: clusterIP,
 						},
 					},
@@ -242,11 +242,11 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.Equal(t,
 					[]gwtypes.GatewayStatusAddress{
 						{
-							Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
+							Type:  lo.ToPtr(gatewayv1.IPAddressType),
 							Value: loadBalancerIP,
 						},
 						{
-							Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
+							Type:  lo.ToPtr(gatewayv1.IPAddressType),
 							Value: otherBalancerIP,
 						},
 					},
@@ -274,7 +274,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
 				require.Equal(t, currentGateway.Status.Addresses, []gwtypes.GatewayStatusAddress{
 					{
-						Type:  lo.ToPtr(gatewayv1beta1.HostnameAddressType),
+						Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
 						Value: exampleHostname,
 					},
 				})
@@ -591,21 +591,21 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 }
 
 func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
-	gatewayClass := &gatewayv1beta1.GatewayClass{
+	gatewayClass := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-gatewayclass",
 		},
-		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName()),
+		Spec: gatewayv1.GatewayClassSpec{
+			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
-		Status: gatewayv1beta1.GatewayClassStatus{
+		Status: gatewayv1.GatewayClassStatus{
 			Conditions: []metav1.Condition{
 				{
-					Type:               string(gatewayv1beta1.GatewayClassConditionStatusAccepted),
+					Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
 					Status:             metav1.ConditionTrue,
 					ObservedGeneration: 0,
 					LastTransitionTime: metav1.Now(),
-					Reason:             string(gatewayv1beta1.GatewayClassReasonAccepted),
+					Reason:             string(gatewayv1.GatewayClassReasonAccepted),
 					Message:            "the gatewayclass has been accepted by the controller",
 				},
 			},
@@ -621,7 +621,7 @@ func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
 			Namespace: "test-namespace",
 			UID:       types.UID(uuid.NewString()),
 		},
-		Spec: gatewayv1beta1.GatewaySpec{
+		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-gatewayclass",
 		},
 	}

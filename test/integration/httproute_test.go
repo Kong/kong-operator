@@ -12,7 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -59,21 +59,21 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 	cleaner.Add(gatewayConfig)
 
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := &gatewayv1beta1.GatewayClass{
+	gatewayClass := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 		},
-		Spec: gatewayv1beta1.GatewayClassSpec{
-			ParametersRef: &gatewayv1beta1.ParametersReference{
-				Group:     gatewayv1beta1.Group(operatorv1alpha1.SchemeGroupVersion.Group),
-				Kind:      gatewayv1beta1.Kind("GatewayConfiguration"),
-				Namespace: (*gatewayv1beta1.Namespace)(&gatewayConfig.Namespace),
+		Spec: gatewayv1.GatewayClassSpec{
+			ParametersRef: &gatewayv1.ParametersReference{
+				Group:     gatewayv1.Group(operatorv1alpha1.SchemeGroupVersion.Group),
+				Kind:      gatewayv1.Kind("GatewayConfiguration"),
+				Namespace: (*gatewayv1.Namespace)(&gatewayConfig.Namespace),
 				Name:      gatewayConfig.Name,
 			},
-			ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName()),
+			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
 	}
-	gatewayClass, err = clients.GatewayClient.GatewayV1beta1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = clients.GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -84,7 +84,7 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 	}
 
 	gateway := testutils.GenerateGateway(gatewayNSN, gatewayClass)
-	gateway, err = clients.GatewayClient.GatewayV1beta1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	gateway, err = clients.GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
@@ -113,11 +113,11 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
-	httpPort := gatewayv1beta1.PortNumber(80)
-	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
-	kindService := gatewayv1beta1.Kind("Service")
+	httpPort := gatewayv1.PortNumber(80)
+	pathMatchPrefix := gatewayv1.PathMatchPathPrefix
+	kindService := gatewayv1.Kind("Service")
 	pathPrefix := "/prefix-test-http-route"
-	httpRoute := &gatewayv1beta1.HTTPRoute{
+	httpRoute := &gatewayv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      uuid.NewString(),
@@ -125,27 +125,27 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 				"konghq.com/strip-path": "true",
 			},
 		},
-		Spec: gatewayv1beta1.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-				ParentRefs: []gatewayv1beta1.ParentReference{{
-					Name: gatewayv1beta1.ObjectName(gateway.Name),
+		Spec: gatewayv1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{
+					Name: gatewayv1.ObjectName(gateway.Name),
 				}},
 			},
-			Rules: []gatewayv1beta1.HTTPRouteRule{
+			Rules: []gatewayv1.HTTPRouteRule{
 				{
-					Matches: []gatewayv1beta1.HTTPRouteMatch{
+					Matches: []gatewayv1.HTTPRouteMatch{
 						{
-							Path: &gatewayv1beta1.HTTPPathMatch{
+							Path: &gatewayv1.HTTPPathMatch{
 								Type:  &pathMatchPrefix,
 								Value: &pathPrefix,
 							},
 						},
 					},
-					BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+					BackendRefs: []gatewayv1.HTTPBackendRef{
 						{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-									Name: gatewayv1beta1.ObjectName(service.Name),
+							BackendRef: gatewayv1.BackendRef{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Name: gatewayv1.ObjectName(service.Name),
 									Port: &httpPort,
 									Kind: &kindService,
 								},
@@ -156,7 +156,7 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 			},
 		},
 	}
-	httpRoute, err = clients.GatewayClient.GatewayV1beta1().HTTPRoutes(namespace.Name).
+	httpRoute, err = clients.GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).
 		Create(ctx, httpRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(httpRoute)

@@ -13,7 +13,7 @@ import (
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -21,8 +21,8 @@ import (
 )
 
 func init() {
-	if err := gatewayv1beta1.AddToScheme(scheme.Scheme); err != nil {
-		fmt.Println("error while adding gatewayv1beta1 scheme")
+	if err := gatewayv1.AddToScheme(scheme.Scheme); err != nil {
+		fmt.Println("error while adding gatewayv1 scheme")
 		os.Exit(1)
 	}
 	if err := operatorv1alpha1.AddToScheme(scheme.Scheme); err != nil {
@@ -39,8 +39,8 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 	testCases := []struct {
 		name            string
 		gatewayClassReq reconcile.Request
-		gatewayClass    *gatewayv1beta1.GatewayClass
-		testBody        func(t *testing.T, reconciler GatewayClassReconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1beta1.GatewayClass)
+		gatewayClass    *gatewayv1.GatewayClass
+		testBody        func(t *testing.T, reconciler GatewayClassReconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1.GatewayClass)
 	}{
 		{
 			name: "gatewayclass not accepted",
@@ -49,15 +49,15 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 					Name: "test-gatewayclass",
 				},
 			},
-			gatewayClass: &gatewayv1beta1.GatewayClass{
+			gatewayClass: &gatewayv1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-gatewayclass",
 				},
-				Spec: gatewayv1beta1.GatewayClassSpec{
-					ControllerName: gatewayv1beta1.GatewayController("mismatch-controller-name"),
+				Spec: gatewayv1.GatewayClassSpec{
+					ControllerName: gatewayv1.GatewayController("mismatch-controller-name"),
 				},
 			},
-			testBody: func(t *testing.T, reconciler GatewayClassReconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1beta1.GatewayClass) {
+			testBody: func(t *testing.T, reconciler GatewayClassReconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1.GatewayClass) {
 				ctx := context.Background()
 				_, err := reconciler.Reconcile(ctx, gatewayClassReq)
 				require.NoError(t, err)
@@ -74,15 +74,15 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 					Name: "test-gatewayclass",
 				},
 			},
-			gatewayClass: &gatewayv1beta1.GatewayClass{
+			gatewayClass: &gatewayv1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-gatewayclass",
 				},
-				Spec: gatewayv1beta1.GatewayClassSpec{
-					ControllerName: gatewayv1beta1.GatewayController(vars.ControllerName()),
+				Spec: gatewayv1.GatewayClassSpec{
+					ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 				},
 			},
-			testBody: func(t *testing.T, reconciler GatewayClassReconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1beta1.GatewayClass) {
+			testBody: func(t *testing.T, reconciler GatewayClassReconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1.GatewayClass) {
 				ctx := context.Background()
 				_, err := reconciler.Reconcile(ctx, gatewayClassReq)
 				require.NoError(t, err)

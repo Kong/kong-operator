@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -396,7 +396,7 @@ func DataPlaneHasServiceSecret(t *testing.T, ctx context.Context, dpNN, usingSvc
 // that can be used to check if a GatewayClass is accepted.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func GatewayClassIsAccepted(t *testing.T, ctx context.Context, gatewayClassName string, clients K8sClients) func() bool {
-	gatewayClasses := clients.GatewayClient.GatewayV1beta1().GatewayClasses()
+	gatewayClasses := clients.GatewayClient.GatewayV1().GatewayClasses()
 
 	return func() bool {
 		gwc, err := gatewayClasses.Get(context.Background(), gatewayClassName, metav1.GetOptions{})
@@ -404,7 +404,7 @@ func GatewayClassIsAccepted(t *testing.T, ctx context.Context, gatewayClassName 
 			return false
 		}
 		for _, cond := range gwc.Status.Conditions {
-			if cond.Reason == string(gatewayv1beta1.GatewayClassConditionStatusAccepted) {
+			if cond.Reason == string(gatewayv1.GatewayClassConditionStatusAccepted) {
 				if cond.ObservedGeneration == gwc.Generation {
 					return true
 				}
@@ -420,7 +420,7 @@ func GatewayClassIsAccepted(t *testing.T, ctx context.Context, gatewayClassName 
 //	Should be used in conjunction with require.Eventually or assert.Eventually.
 func GatewayNotExist(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
-		gateways := clients.GatewayClient.GatewayV1beta1().Gateways(gatewayNSN.Namespace)
+		gateways := clients.GatewayClient.GatewayV1().Gateways(gatewayNSN.Namespace)
 		_, err := gateways.Get(ctx, gatewayNSN.Name, metav1.GetOptions{})
 		if err != nil {
 			return errors.IsNotFound(err)
@@ -555,7 +555,7 @@ func networkPolicyRuleSliceContainsRule[T ingressRuleT](rules []T, rule T) bool 
 func GatewayIPAddressExist(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
 		gateway := MustGetGateway(t, ctx, gatewayNSN, clients)
-		if len(gateway.Status.Addresses) > 0 && *gateway.Status.Addresses[0].Type == gatewayv1beta1.IPAddressType {
+		if len(gateway.Status.Addresses) > 0 && *gateway.Status.Addresses[0].Type == gatewayv1.IPAddressType {
 			return true
 		}
 		return false

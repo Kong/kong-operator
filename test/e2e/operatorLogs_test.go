@@ -142,7 +142,7 @@ func TestOperatorLogs(t *testing.T) {
 
 	t.Log("deploying a GatewayClass resource")
 	gatewayClass := testutils.GenerateGatewayClass()
-	gatewayClass, err = clients.GatewayClient.GatewayV1beta1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = clients.GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -153,13 +153,13 @@ func TestOperatorLogs(t *testing.T) {
 			Namespace: testNamespace.Name,
 		}
 		gateway := testutils.GenerateGateway(gatewayNN, gatewayClass)
-		gateway, err = clients.GatewayClient.GatewayV1beta1().Gateways(testNamespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+		gateway, err = clients.GatewayClient.GatewayV1().Gateways(testNamespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 		require.NoError(t, err)
 		cleaner.Add(gateway)
 		t.Logf("deployed gateway#%d, name: %q", i, gateway.Name)
 	}
 
-	gateways, err := clients.GatewayClient.GatewayV1beta1().Gateways(testNamespace.Name).List(ctx, metav1.ListOptions{})
+	gateways, err := clients.GatewayClient.GatewayV1().Gateways(testNamespace.Name).List(ctx, metav1.ListOptions{})
 	require.NoError(t, err)
 
 	t.Log("verifying all the Gateways get marked as Programmed")
@@ -172,7 +172,7 @@ func TestOperatorLogs(t *testing.T) {
 	t.Log("deleting all the Gateways")
 	for _, gateway := range gateways.Items {
 		t.Logf("deleting gateway %q", gateway.Name)
-		require.NoError(t, clients.GatewayClient.GatewayV1beta1().Gateways(testNamespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
+		require.NoError(t, clients.GatewayClient.GatewayV1().Gateways(testNamespace.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 	}
 
 	t.Log("checking that all the subresources have been deleted")

@@ -111,7 +111,7 @@ func TestMain(m *testing.M) {
 	// If we don't do it then we'll be left with Gateways that have a deleted
 	// timestamp and finalizers set but no operator running which could handle those.
 	if *shouldCleanup {
-		exitOnErr(waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1beta1()))
+		exitOnErr(waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1()))
 	}
 
 	if !skipClusterCleanup && existingCluster == "" {
@@ -166,7 +166,7 @@ func startControllerManager() <-chan struct{} {
 	return cfg.StartedCh
 }
 
-func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1beta1.GatewayV1beta1Interface) error {
+func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1beta1.GatewayV1Interface) error {
 	const conformanceInfraNamespace = "gateway-conformance-infra"
 
 	var (

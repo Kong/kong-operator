@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -374,7 +374,7 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 			require.NoError(t, corev1.AddToScheme(scheme))
 			require.NoError(t, appsv1.AddToScheme(scheme))
 			require.NoError(t, operatorv1beta1.AddToScheme(scheme))
-			require.NoError(t, gatewayv1beta1.AddToScheme(scheme))
+			require.NoError(t, gatewayv1.AddToScheme(scheme))
 
 			fakeClient := fakectrlruntimeclient.
 				NewClientBuilder().

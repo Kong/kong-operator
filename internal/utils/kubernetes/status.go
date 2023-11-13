@@ -2,7 +2,7 @@ package kubernetes
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // ConditionType literal that defines the different types of condition
@@ -19,10 +19,10 @@ const (
 	// ProgrammedType condition indicates whether a Gateway has generated some
 	// configuration that is assumed to be ready soon in the underlying data
 	// plane.
-	ProgrammedType ConditionType = ConditionType(gatewayv1beta1.GatewayConditionProgrammed)
+	ProgrammedType ConditionType = ConditionType(gatewayv1.GatewayConditionProgrammed)
 
 	// PendingReason is a Reason for Programmed condition.
-	PendingReason ConditionReason = ConditionReason(gatewayv1beta1.GatewayReasonPending)
+	PendingReason ConditionReason = ConditionReason(gatewayv1.GatewayReasonPending)
 
 	// DependenciesNotReadyReason is a generic reason describing that the other Conditions are not true
 	DependenciesNotReadyReason ConditionReason = "DependenciesNotReady"
@@ -139,14 +139,14 @@ func SetReady(resource ConditionsAndGenerationAware) {
 // SetProgrammed evaluates all the existing conditions and sets the Programmed status accordingly
 func SetProgrammed(resource ConditionsAndGenerationAware) {
 	ready := metav1.Condition{
-		Type:               string(gatewayv1beta1.GatewayConditionProgrammed),
+		Type:               string(gatewayv1.GatewayConditionProgrammed),
 		LastTransitionTime: metav1.Now(),
 		ObservedGeneration: resource.GetGeneration(),
 	}
 
 	if areAllConditionsHaveTrueStatus(resource) {
 		ready.Status = metav1.ConditionTrue
-		ready.Reason = string(gatewayv1beta1.GatewayReasonProgrammed)
+		ready.Reason = string(gatewayv1.GatewayReasonProgrammed)
 	} else {
 		ready.Status = metav1.ConditionFalse
 		ready.Reason = string(DependenciesNotReadyReason)
@@ -157,7 +157,7 @@ func SetProgrammed(resource ConditionsAndGenerationAware) {
 
 func areAllConditionsHaveTrueStatus(resource ConditionsAware) bool {
 	for _, condition := range resource.GetConditions() {
-		if condition.Type == string(gatewayv1beta1.GatewayConditionProgrammed) {
+		if condition.Type == string(gatewayv1.GatewayConditionProgrammed) {
 			continue
 		}
 		if condition.Type != string(ReadyType) && condition.Status != metav1.ConditionTrue {

@@ -17,7 +17,7 @@ import (
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -27,8 +27,8 @@ import (
 )
 
 func init() {
-	if err := gatewayv1beta1.AddToScheme(scheme.Scheme); err != nil {
-		fmt.Println("error while adding gatewayv1beta1 scheme")
+	if err := gatewayv1.AddToScheme(scheme.Scheme); err != nil {
+		fmt.Println("error while adding gatewayv1 scheme")
 		os.Exit(1)
 	}
 	if err := operatorv1alpha1.AddToScheme(scheme.Scheme); err != nil {

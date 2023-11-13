@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/vars"
@@ -31,7 +31,7 @@ type GatewayClassReconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&gatewayv1beta1.GatewayClass{},
+		For(&gatewayv1.GatewayClass{},
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatches))).
 		Complete(r)
 }
@@ -55,11 +55,11 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if gwc.isControlled() {
 		if !gwc.isAccepted() {
 			acceptedCondition := metav1.Condition{
-				Type:               string(gatewayv1beta1.GatewayClassConditionStatusAccepted),
+				Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: gwc.Generation,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1beta1.GatewayClassReasonAccepted),
+				Reason:             string(gatewayv1.GatewayClassReasonAccepted),
 				Message:            "the gatewayclass has been accepted by the operator",
 			}
 			k8sutils.SetCondition(acceptedCondition, gwc)
@@ -75,7 +75,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 // gatewayDecorator Decorator object to add additional functionality to the base k8s Gateway
 type gatewayClassDecorator struct {
-	*gatewayv1beta1.GatewayClass
+	*gatewayv1.GatewayClass
 }
 
 // GetConditions returns status conditions.
@@ -90,17 +90,17 @@ func (gwc *gatewayClassDecorator) SetConditions(conditions []metav1.Condition) {
 
 func newGatewayClass() *gatewayClassDecorator {
 	return &gatewayClassDecorator{
-		new(gatewayv1beta1.GatewayClass),
+		new(gatewayv1.GatewayClass),
 	}
 }
 
-func decorateGatewayClass(gwc *gatewayv1beta1.GatewayClass) *gatewayClassDecorator {
+func decorateGatewayClass(gwc *gatewayv1.GatewayClass) *gatewayClassDecorator {
 	return &gatewayClassDecorator{GatewayClass: gwc}
 }
 
 func (gwc *gatewayClassDecorator) isAccepted() bool {
-	if cond, ok := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1beta1.GatewayClassConditionStatusAccepted), gwc); ok {
-		return cond.Reason == string(gatewayv1beta1.GatewayClassReasonAccepted) &&
+	if cond, ok := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayClassConditionStatusAccepted), gwc); ok {
+		return cond.Reason == string(gatewayv1.GatewayClassReasonAccepted) &&
 			cond.ObservedGeneration == gwc.Generation && cond.Status == metav1.ConditionTrue
 	}
 	return false

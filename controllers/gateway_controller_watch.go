@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -52,7 +52,7 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 }
 
 func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) bool {
-	gatewayClass, ok := obj.(*gatewayv1beta1.GatewayClass)
+	gatewayClass, ok := obj.(*gatewayv1.GatewayClass)
 	if !ok {
 		log.FromContext(context.Background()).Error(
 			operatorerrors.ErrUnexpectedObject,
@@ -68,7 +68,7 @@ func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) boo
 func (r *GatewayReconciler) gatewayConfigurationMatchesController(obj client.Object) bool {
 	ctx := context.Background()
 
-	gatewayClassList := new(gatewayv1beta1.GatewayClassList)
+	gatewayClassList := new(gatewayv1.GatewayClassList)
 	if err := r.Client.List(ctx, gatewayClassList); err != nil {
 		log.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
@@ -96,7 +96,7 @@ func (r *GatewayReconciler) gatewayConfigurationMatchesController(obj client.Obj
 // -----------------------------------------------------------------------------
 
 func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
-	gatewayClass, ok := obj.(*gatewayv1beta1.GatewayClass)
+	gatewayClass, ok := obj.(*gatewayv1.GatewayClass)
 	if !ok {
 		log.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
@@ -106,14 +106,14 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, obj
 		return
 	}
 
-	gateways := new(gatewayv1beta1.GatewayList)
+	gateways := new(gatewayv1.GatewayList)
 	if err := r.Client.List(ctx, gateways); err != nil {
 		log.FromContext(ctx).Error(err, "could not list gateways in map func")
 		return
 	}
 
 	for _, gateway := range gateways.Items {
-		if gateway.Spec.GatewayClassName == gatewayv1beta1.ObjectName(gatewayClass.Name) {
+		if gateway.Spec.GatewayClassName == gatewayv1.ObjectName(gatewayClass.Name) {
 			recs = append(recs, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: gateway.Namespace,
@@ -139,7 +139,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayConfig(ctx context.Context, ob
 		return
 	}
 
-	gatewayClassList := new(gatewayv1beta1.GatewayClassList)
+	gatewayClassList := new(gatewayv1.GatewayClassList)
 	if err := r.Client.List(ctx, gatewayClassList); err != nil {
 		log.FromContext(ctx).Error(
 			fmt.Errorf("unexpected error occurred while listing GatewayClass resources"),
@@ -159,7 +159,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayConfig(ctx context.Context, ob
 		}
 	}
 
-	gatewayList := new(gatewayv1beta1.GatewayList)
+	gatewayList := new(gatewayv1.GatewayList)
 	if err := r.Client.List(ctx, gatewayList); err != nil {
 		log.FromContext(ctx).Error(
 			fmt.Errorf("unexpected error occurred while listing Gateway resources"),

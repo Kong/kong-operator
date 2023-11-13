@@ -13,10 +13,10 @@ import (
 // ClusterRole generator
 // -----------------------------------------------------------------------------
 
-// GenerateNewClusterRoleForControlPlane_ge2_12 is a helper to generate a ClusterRole
+// GenerateNewClusterRoleForControlPlane_ge3_0 is a helper to generate a ClusterRole
 // resource with all the permissions needed by the controlplane deployment.
-// It is used for controlplanes that match the semver constraint ">=2.12"
-func GenerateNewClusterRoleForControlPlane_ge2_12(controlplaneName string) *rbacv1.ClusterRole {
+// It is used for controlplanes that match the semver constraint ">=3.0"
+func GenerateNewClusterRoleForControlPlane_ge3_0(controlplaneName string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", controlplaneName),
@@ -220,6 +220,28 @@ func GenerateNewClusterRoleForControlPlane_ge2_12(controlplaneName string) *rbac
 				},
 				Resources: []string{
 					"kongplugins/status",
+				},
+				Verbs: []string{
+					"get", "patch", "update",
+				},
+			},
+			{
+				APIGroups: []string{
+					"configuration.konghq.com",
+				},
+				Resources: []string{
+					"kongupstreampolicies",
+				},
+				Verbs: []string{
+					"get", "list", "watch",
+				},
+			},
+			{
+				APIGroups: []string{
+					"configuration.konghq.com",
+				},
+				Resources: []string{
+					"kongupstreampolicies/status",
 				},
 				Verbs: []string{
 					"get", "patch", "update",
@@ -522,29 +544,6 @@ func GenerateNewClusterRoleForControlPlane_ge2_12(controlplaneName string) *rbac
 				},
 				Verbs: []string{
 					"get", "update",
-				},
-			},
-
-			{
-				APIGroups: []string{
-					"networking.internal.knative.dev",
-				},
-				Resources: []string{
-					"ingresses",
-				},
-				Verbs: []string{
-					"get", "list", "watch",
-				},
-			},
-			{
-				APIGroups: []string{
-					"networking.internal.knative.dev",
-				},
-				Resources: []string{
-					"ingresses/status",
-				},
-				Verbs: []string{
-					"get", "patch", "update",
 				},
 			},
 		},

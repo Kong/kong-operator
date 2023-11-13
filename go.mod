@@ -4,8 +4,6 @@ go 1.21
 
 toolchain go1.21.0
 
-exclude sigs.k8s.io/gateway-api v1.0.0
-
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/cloudflare/cfssl v1.6.4
@@ -22,7 +20,7 @@ require (
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3
 	sigs.k8s.io/controller-runtime v0.16.3
-	sigs.k8s.io/gateway-api v0.8.1
+	sigs.k8s.io/gateway-api v1.0.0
 )
 
 require (

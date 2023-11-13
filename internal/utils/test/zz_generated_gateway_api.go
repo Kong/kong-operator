@@ -4,9 +4,9 @@ package test
 
 const (
 	// GatewayStandardCRDsKustomizeURL is a URL that provides standard Gateway API CRDs.
-	GatewayStandardCRDsKustomizeURL = "github.com/kubernetes-sigs/gateway-api/config/crd/standard?ref=v0.8.1"
+	GatewayStandardCRDsKustomizeURL = "github.com/kubernetes-sigs/gateway-api/config/crd/standard?ref=v1.0.0"
 	// GatewayExperimentalCRDsKustomizeURL is a URL that provides experimental Gateway API CRDs.
-	GatewayExperimentalCRDsKustomizeURL = "github.com/kubernetes-sigs/gateway-api/config/crd/experimental?ref=v0.8.1"
+	GatewayExperimentalCRDsKustomizeURL = "github.com/kubernetes-sigs/gateway-api/config/crd/experimental?ref=v1.0.0"
 	// GatewayRawRepoURL is the base URL to the raw Gateway API repository.
-	GatewayRawRepoURL = "https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v0.8.1"
+	GatewayRawRepoURL = "https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.0.0"
 )

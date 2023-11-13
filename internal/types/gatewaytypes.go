@@ -1,11 +1,11 @@
 package types
 
 import (
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 type (
-	Gateway              = gatewayv1beta1.Gateway
-	GatewayAddress       = gatewayv1beta1.GatewayAddress
-	GatewayStatusAddress = gatewayv1beta1.GatewayStatusAddress
+	Gateway              = gatewayv1.Gateway
+	GatewayAddress       = gatewayv1.GatewayAddress
+	GatewayStatusAddress = gatewayv1.GatewayStatusAddress
 )

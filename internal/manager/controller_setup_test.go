@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 )
@@ -52,16 +52,16 @@ func TestCRDChecker(t *testing.T) {
 				restMapper := meta.NewDefaultRESTMapper(nil)
 
 				restMapper.Add(schema.GroupVersionKind{
-					Group:   gatewayv1beta1.SchemeGroupVersion.Group,
-					Version: gatewayv1beta1.SchemeGroupVersion.Version,
+					Group:   gatewayv1.SchemeGroupVersion.Group,
+					Version: gatewayv1.SchemeGroupVersion.Version,
 					Kind:    "Gateway",
 				}, meta.RESTScopeNamespace)
 
 				return meta.NewDefaultRESTMapper(nil)
 			},
 			CRD: schema.GroupVersionResource{
-				Group:   gatewayv1beta1.SchemeGroupVersion.Group,
-				Version: gatewayv1beta1.SchemeGroupVersion.Version,
+				Group:   gatewayv1.SchemeGroupVersion.Group,
+				Version: gatewayv1.SchemeGroupVersion.Version,
 				// Note: pluralising gateways does not work hence we need this.
 				// Ref: https://github.com/kubernetes/client-go/issues/1082
 				Resource: "gatewaies",
@@ -75,8 +75,8 @@ func TestCRDChecker(t *testing.T) {
 				return meta.NewDefaultRESTMapper(nil)
 			},
 			CRD: schema.GroupVersionResource{
-				Group:   gatewayv1beta1.SchemeGroupVersion.Group,
-				Version: gatewayv1beta1.SchemeGroupVersion.Version,
+				Group:   gatewayv1.SchemeGroupVersion.Group,
+				Version: gatewayv1.SchemeGroupVersion.Version,
 				// Note: pluralising gateways does not work hence we need this.
 				// Ref: https://github.com/kubernetes/client-go/issues/1082
 				Resource: "gatewaies",

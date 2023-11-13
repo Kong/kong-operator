@@ -15,7 +15,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -90,13 +90,13 @@ func setupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 			Condition: c.GatewayControllerEnabled,
 			GVRs: []schema.GroupVersionResource{
 				{
-					Group:    gatewayv1beta1.SchemeGroupVersion.Group,
-					Version:  gatewayv1beta1.SchemeGroupVersion.Version,
+					Group:    gatewayv1.SchemeGroupVersion.Group,
+					Version:  gatewayv1.SchemeGroupVersion.Version,
 					Resource: "gatewayclasses",
 				},
 				{
-					Group:    gatewayv1beta1.SchemeGroupVersion.Group,
-					Version:  gatewayv1beta1.SchemeGroupVersion.Version,
+					Group:    gatewayv1.SchemeGroupVersion.Group,
+					Version:  gatewayv1.SchemeGroupVersion.Version,
 					Resource: "gateways",
 				},
 			},
