@@ -22,13 +22,15 @@ var clusterRoleRelativePaths = []string{
 }
 
 const (
-	controllerRBACPath       = "./controllers/versioned_clusterroles"
+	controllerRBACPath       = "./internal/utils/kubernetes/resources/clusterroles/"
 	controllerRBACFilePrefix = "zz_generated_kong_ingress_controller_rbac"
 
 	kicRBACPath       = "./internal/utils/kubernetes/resources/clusterroles"
 	kicRBACFIlePrefix = "zz_generated_controlplane_clusterrole"
 
 	kicRBACHelperFileName = "./internal/utils/kubernetes/resources/zz_generated_clusterrole_helpers.go"
+
+	docFileName = controllerRBACPath + "doc.go"
 )
 
 var (
@@ -47,7 +49,12 @@ func init() {
 func main() {
 	if force {
 		exitOnErr(rmDirs(controllerRBACPath, kicRBACPath))
+		exitOnErr(mkdir(controllerRBACPath))
+		exitOnErr(mkdir(kicRBACPath))
+
 	}
+
+	exitOnErr(renderDoc(docFileName))
 
 	for versionConstraint, rbacVersion := range kicversions.RoleVersionsForKICVersions {
 		fmt.Printf("INFO: checking and generating code for constraint %s with version %s\n", versionConstraint, rbacVersion)

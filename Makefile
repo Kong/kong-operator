@@ -287,11 +287,14 @@ check.rbacs: kic-role-generator
 # Build - Manifests
 # ------------------------------------------------------------------------------
 
-CRD_OPTIONS ?= "+crd:generateEmbeddedObjectMeta=true"
+CONTROLLER_GEN_CRD_OPTIONS ?= "+crd:generateEmbeddedObjectMeta=true"
+CONTROLLER_GEN_PATHS ?= "./controllers/...;./$(APIS_DIR)/..."
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./controllers/...;./$(APIS_DIR)/..." +output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) paths=$(CONTROLLER_GEN_PATHS) rbac:roleName=manager-role
+	$(CONTROLLER_GEN) paths=$(CONTROLLER_GEN_PATHS) webhook
+	$(CONTROLLER_GEN) paths=$(CONTROLLER_GEN_PATHS) $(CONTROLLER_GEN_CRD_OPTIONS) +output:crd:artifacts:config=config/crd/bases
 
 # ------------------------------------------------------------------------------
 # Build - Container Images

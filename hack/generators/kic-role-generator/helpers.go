@@ -69,6 +69,10 @@ func renderHelperTemplate(semverVersions map[string]string, templateName, rawTem
 	return format.Source(buf.Bytes())
 }
 
+func renderDoc(filename string) error {
+	return os.WriteFile(filename, []byte(docTemplate), 0644)
+}
+
 func renderTemplate(clusterRoles []*rbacv1.ClusterRole, constraint string, templateName string, rawTemplate string) ([]byte, error) {
 	tpl, err := template.New(templateName).Funcs(sprig.TxtFuncMap()).Parse(rawTemplate)
 	if err != nil {
