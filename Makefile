@@ -28,10 +28,10 @@ KUSTOMIZE_IMG_NAME = docker.io/kong/gateway-operator
 # Read the version from the VERSION file
 VERSION ?= $(shell cat VERSION)
 
-CHANNELS ?= alpha
+CHANNELS ?= alpha,beta
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
 
-DEFAULT_CHANNEL ?= alpha
+DEFAULT_CHANNEL ?= beta
 BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
