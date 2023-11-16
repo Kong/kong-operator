@@ -8,7 +8,7 @@ require (
 	github.com/golangci/golangci-lint v1.55.2
 	github.com/operator-framework/operator-registry v1.31.0
 	gotest.tools/gotestsum v1.11.0
-	k8s.io/code-generator v0.28.3
+	k8s.io/code-generator v0.28.4
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220715194349-88234a8fc9ad
 	sigs.k8s.io/controller-tools v0.13.0
 )
@@ -298,7 +298,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20230525234035-dd9d682886f9 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230525234030-28d5490b6b19 // indirect
 	google.golang.org/grpc v1.54.0 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
+	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
