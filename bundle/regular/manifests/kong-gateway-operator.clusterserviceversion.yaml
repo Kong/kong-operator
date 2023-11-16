@@ -406,7 +406,7 @@ spec:
       name: gatewayconfigurations.gateway-operator.konghq.com
       version: v1alpha1
   description: |
-    Kong Gateway Operator for Kubernetes. Technical preview.
+    Kong Gateway Operator for Kubernetes.
 
     A [Kubernetes Operator][k8soperator] for the [Kong Gateway][kong].
 
@@ -847,6 +847,8 @@ spec:
   links:
   - name: Github repository for the operator
     url: https://github.com/kong/gateway-operator
+  - name: Documentation
+    url: https://docs.konghq.com/gateway-operator/latest/
   maintainers:
   - email: support@konghq.com
     name: Kong Inc.
