@@ -4,5 +4,6 @@ resources:
 - dataplane-konnect.yaml
 - dataplane-sidecar.yaml
 - gateway.yaml
+- gatewayconfiguration.yaml
 - controlplane.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

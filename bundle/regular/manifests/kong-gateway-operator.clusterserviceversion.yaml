@@ -47,6 +47,70 @@ metadata:
           }
         },
         {
+          "apiVersion": "gateway-operator.konghq.com/v1alpha1",
+          "kind": "GatewayConfiguration",
+          "metadata": {
+            "name": "kong",
+            "namespace": "default"
+          },
+          "spec": {
+            "controlPlaneOptions": {
+              "deployment": {
+                "podTemplateSpec": {
+                  "spec": {
+                    "containers": [
+                      {
+                        "env": [
+                          {
+                            "name": "CONTROLLER_LOG_LEVEL",
+                            "value": "debug"
+                          }
+                        ],
+                        "name": "controller"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "dataPlaneOptions": {
+              "deployment": {
+                "podTemplateSpec": {
+                  "metadata": {
+                    "annotations": {
+                      "dataplane-pod-annotation": "example"
+                    },
+                    "labels": {
+                      "dataplane-pod-label": "example"
+                    }
+                  },
+                  "spec": {
+                    "containers": [
+                      {
+                        "image": "kong:3.4",
+                        "name": "proxy",
+                        "readinessProbe": {
+                          "initialDelaySeconds": 1,
+                          "periodSeconds": 1
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "network": {
+                "services": {
+                  "ingress": {
+                    "annotations": {
+                      "foo": "bar"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
           "apiVersion": "gateway-operator.konghq.com/v1beta1",
           "kind": "DataPlane",
           "metadata": {
