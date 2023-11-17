@@ -3,7 +3,7 @@ kind: ClusterServiceVersion
 metadata:
   annotations:
     alm-examples: '[]'
-    capabilities: Basic Install
+    capabilities: Seamless Upgrades
     categories: Networking,Integration & Delivery
     containerImage: docker.io/kong/gateway-operator:1.0.3
     description: A Kubernetes Operator for the Kong Gateway
