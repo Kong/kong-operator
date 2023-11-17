@@ -973,8 +973,8 @@ github.com/opencontainers/selinux v1.8.0/go.mod h1:RScLhm78qiWa2gbVCcGkC7tCGdgk3
 github.com/opencontainers/selinux v1.8.2/go.mod h1:MUIHuUEvKB1wtJjQdOyYRgOnLD2xAPP8dBsCoU0KuF8=
 github.com/operator-framework/api v0.19.0 h1:QU1CTJU+CufoeneA5rsNlP/uP96s8vDHWUYDFZTauzA=
 github.com/operator-framework/api v0.19.0/go.mod h1:SCCslqke6AVOJ5JM+NqNE1CHuAgJLScsL66pnPaSMXs=
-github.com/operator-framework/operator-registry v1.31.0 h1:LHXNpyg8dv/DDPVe4oH8rYChhLcWz/JzKwiZWJQlFIc=
-github.com/operator-framework/operator-registry v1.31.0/go.mod h1:89VshAf6+n0V12vdh43+WOi8i1+XpY+kg6Ao4JO0y6k=
+github.com/operator-framework/operator-registry v1.32.0 h1:RNazXYt3vBf5FZ+JrNNjq4bNh3tDwlkwZJnC+kmCeKk=
+github.com/operator-framework/operator-registry v1.32.0/go.mod h1:89VshAf6+n0V12vdh43+WOi8i1+XpY+kg6Ao4JO0y6k=
 github.com/otiai10/copy v1.2.0/go.mod h1:rrF5dJ5F0t/EWSYODDu4j9/vEeYHMkc8jt0zJChqQWw=
 github.com/otiai10/copy v1.11.0 h1:OKBD80J/mLBrwnzXqGtFCzprFSGioo30JcmR4APsNwc=
 github.com/otiai10/copy v1.11.0/go.mod h1:rSaLseMUsZFFbsFGc7wCJnnkTAvdc5L6VWxPE4308Ww=
