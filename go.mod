@@ -13,7 +13,7 @@ require (
 	github.com/kong/kubernetes-testing-framework v0.41.1
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
-	github.com/samber/lo v1.38.1
+	github.com/samber/lo v1.39.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	k8s.io/api v0.28.4
