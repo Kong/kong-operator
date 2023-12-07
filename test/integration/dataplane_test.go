@@ -311,7 +311,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 			Name: "TEST_ENV", Value: "after_update",
 		},
 	}
-	_, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
+	dataplane, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("verifying environment variable TEST_ENV in deployment after update")
@@ -332,11 +332,11 @@ func TestDataPlaneUpdate(t *testing.T) {
 	dataPlaneConditionPredicate := func(c *metav1.Condition) func(dataplane *operatorv1beta1.DataPlane) bool {
 		return func(dataplane *operatorv1beta1.DataPlane) bool {
 			for _, condition := range dataplane.Status.Conditions {
-				if condition.Type == c.Type && condition.Status == c.Status {
+				if condition.Type == c.Type && condition.Status == c.Status && condition.ObservedGeneration == c.ObservedGeneration {
 					return true
 				}
-				t.Logf("DataPlane condition: Type=%q;Reason:%q;Status:%q;Message:%q",
-					condition.Type, condition.Reason, condition.Status, condition.Message,
+				t.Logf("DataPlane condition: Type=%q;ObservedGeneration:%d,Reason:%q;Status:%q;Message:%q",
+					condition.Type, condition.ObservedGeneration, condition.Reason, condition.Status, condition.Message,
 				)
 			}
 			return false
@@ -362,12 +362,13 @@ func TestDataPlaneUpdate(t *testing.T) {
 				},
 			},
 		}
-		_, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
+		dataplane, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		isNotReady := dataPlaneConditionPredicate(&metav1.Condition{
-			Type:   string(k8sutils.ReadyType),
-			Status: metav1.ConditionFalse,
+			Type:               string(k8sutils.ReadyType),
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
 			testutils.DataPlanePredicate(t, ctx, dataplaneName, isNotReady, clients.OperatorClient),
@@ -393,12 +394,44 @@ func TestDataPlaneUpdate(t *testing.T) {
 				},
 			},
 		}
-		_, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
+		dataplane, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(&metav1.Condition{
-			Type:   string(k8sutils.ReadyType),
-			Status: metav1.ConditionTrue,
+			Type:               string(k8sutils.ReadyType),
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: dataplane.Generation,
+		})
+		require.Eventually(t,
+			testutils.DataPlanePredicate(t, ctx, dataplaneName, isReady, clients.OperatorClient),
+			testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
+		)
+	})
+
+	t.Run("dataplane Ready condition gets properly update with correct ObservedGeneration", func(t *testing.T) {
+		dataplane, err = dataplaneClient.Get(ctx, dataplane.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+		require.NotNil(t, container)
+		container.StartupProbe = &corev1.Probe{
+			InitialDelaySeconds: 1,
+			PeriodSeconds:       1,
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/status",
+					Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+		}
+
+		dataplane, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
+		require.NoError(t, err)
+
+		isReady := dataPlaneConditionPredicate(&metav1.Condition{
+			Type:               string(k8sutils.ReadyType),
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
 			testutils.DataPlanePredicate(t, ctx, dataplaneName, isReady, clients.OperatorClient),
@@ -511,11 +544,6 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 										VolumeSource: corev1.VolumeSource{
 											Secret: &corev1.SecretVolumeSource{
 												SecretName: secret.Name,
-												// This is necessary because we're not able to correctly
-												// handle API fields that are filled with default by the
-												// API server.
-												// https://github.com/Kong/gateway-operator/issues/904
-												DefaultMode: lo.ToPtr(corev1.DownwardAPIVolumeSourceDefaultMode),
 											},
 										},
 									},

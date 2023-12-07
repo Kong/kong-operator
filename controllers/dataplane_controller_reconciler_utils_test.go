@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -151,39 +150,40 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				require.Len(t, deployment.Spec.Template.Spec.Volumes, 2)
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 				require.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
-				require.Equal(t, []corev1.Volume{
+
+				certificateVolume := corev1.Volume{}
+				certificateVolume.Secret = &corev1.SecretVolumeSource{}
+				// Fill in the defaults for the volume after setting the secret volume source
+				// field. This prevents setting the empty dir volume source field which
+				// would conflict with the secret volume source field.
+				k8sresources.SetDefaultsVolume(&certificateVolume)
+				certificateVolume.Name = consts.ClusterCertificateVolume
+				certificateVolume.VolumeSource.Secret.SecretName = "certificate"
+				certificateVolume.VolumeSource.Secret.Items = []corev1.KeyToPath{
 					{
-						Name: consts.ClusterCertificateVolume,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName:  "certificate",
-								DefaultMode: lo.ToPtr(corev1.DownwardAPIVolumeSourceDefaultMode),
-								Items: []corev1.KeyToPath{
-									{
-										Key:  "tls.crt",
-										Path: "tls.crt",
-									},
-									{
-										Key:  "tls.key",
-										Path: "tls.key",
-									},
-									{
-										Key:  "ca.crt",
-										Path: "ca.crt",
-									},
-								},
-							},
-						},
+						Key:  "tls.crt",
+						Path: "tls.crt",
 					},
 					{
-						Name: "test-volume",
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: "test-secret",
-							},
-						},
+						Key:  "tls.key",
+						Path: "tls.key",
 					},
-				},
+					{
+						Key:  "ca.crt",
+						Path: "ca.crt",
+					},
+				}
+
+				testVolume := corev1.Volume{}
+				testVolume.Secret = &corev1.SecretVolumeSource{}
+				// Fill in the defaults for the volume after setting the secret volume source
+				// field. This prevents setting the empty dir volume source field which
+				// would conflict with the secret volume source field.
+				k8sresources.SetDefaultsVolume(&testVolume)
+				testVolume.Name = "test-volume"
+				testVolume.VolumeSource.Secret.SecretName = "test-secret"
+				require.Equal(t,
+					[]corev1.Volume{certificateVolume, testVolume},
 					deployment.Spec.Template.Spec.Volumes,
 				)
 
@@ -492,6 +492,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 
 		fakeClient := fakectrlruntimeclient.
 			NewClientBuilder().
+			WithObjects(tc.dataPlane).
 			WithScheme(scheme.Scheme).
 			Build()
 

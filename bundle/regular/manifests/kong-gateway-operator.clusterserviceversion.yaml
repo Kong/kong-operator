@@ -268,7 +268,6 @@ metadata:
                     {
                       "name": "konnect-client-tls",
                       "secret": {
-                        "defaultMode": 420,
                         "secretName": "konnect-client-tls"
                       }
                     }

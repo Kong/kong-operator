@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -64,29 +63,7 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					Volumes: []corev1.Volume{
-						{
-							Name: consts.ClusterCertificateVolume,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName:  certSecretName,
-									DefaultMode: lo.ToPtr(corev1.DownwardAPIVolumeSourceDefaultMode),
-									Items: []corev1.KeyToPath{
-										{
-											Key:  "tls.crt",
-											Path: "tls.crt",
-										},
-										{
-											Key:  "tls.key",
-											Path: "tls.key",
-										},
-										{
-											Key:  "ca.crt",
-											Path: "ca.crt",
-										},
-									},
-								},
-							},
-						},
+						clusterCertificateVolume(certSecretName),
 					},
 					Containers: []corev1.Container{
 						GenerateControlPlaneContainer(controlplaneImage),
@@ -95,6 +72,7 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 			},
 		},
 	}
+	SetDefaultsPodTemplateSpec(&deployment.Spec.Template)
 	LabelObjectAsControlPlaneManaged(deployment)
 
 	if controlplane.Spec.Deployment.PodTemplateSpec != nil {
@@ -221,29 +199,7 @@ func GenerateNewDeploymentForDataPlane(
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					Volumes: []corev1.Volume{
-						{
-							Name: consts.ClusterCertificateVolume,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName:  certSecretName,
-									DefaultMode: lo.ToPtr(corev1.DownwardAPIVolumeSourceDefaultMode),
-									Items: []corev1.KeyToPath{
-										{
-											Key:  "tls.crt",
-											Path: "tls.crt",
-										},
-										{
-											Key:  "tls.key",
-											Path: "tls.key",
-										},
-										{
-											Key:  "ca.crt",
-											Path: "ca.crt",
-										},
-									},
-								},
-							},
-						},
+						clusterCertificateVolume(certSecretName),
 					},
 					Containers: []corev1.Container{
 						GenerateDataPlaneContainer(dataplane.Spec.Deployment, dataplaneImage),
@@ -252,6 +208,7 @@ func GenerateNewDeploymentForDataPlane(
 			},
 		},
 	}
+	SetDefaultsPodTemplateSpec(&deployment.Spec.Template)
 	LabelObjectAsDataPlaneManaged(deployment)
 
 	if dataplane.Spec.Deployment.PodTemplateSpec != nil {
@@ -376,4 +333,29 @@ func DefaultControlPlaneResources() *corev1.ResourceRequirements {
 		}
 	})
 	return _controlPlaneDefaultResources.DeepCopy()
+}
+
+func clusterCertificateVolume(certSecretName string) corev1.Volume {
+	clusterCertificateVolume := corev1.Volume{}
+	clusterCertificateVolume.Secret = &corev1.SecretVolumeSource{}
+	SetDefaultsVolume(&clusterCertificateVolume)
+	clusterCertificateVolume.Name = consts.ClusterCertificateVolume
+	clusterCertificateVolume.VolumeSource.Secret = &corev1.SecretVolumeSource{
+		SecretName: certSecretName,
+		Items: []corev1.KeyToPath{
+			{
+				Key:  "tls.crt",
+				Path: "tls.crt",
+			},
+			{
+				Key:  "tls.key",
+				Path: "tls.key",
+			},
+			{
+				Key:  "ca.crt",
+				Path: "ca.crt",
+			},
+		},
+	}
+	return clusterCertificateVolume
 }

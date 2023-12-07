@@ -142,12 +142,6 @@ func ensureDeploymentForDataPlane(
 		}
 
 		// ensure that PodTemplateSpec is up to date
-		// TODO: this is currently relying on us pre-empting API server defaults (by setting them ourselves).
-		// This could in theory lead to situations of incompatibility with newer Kubernetes versions down the
-		// road, the tradeoff was made due to a time crunch of a matter of hours. We should consider other options
-		// to verify whether there are changes staged.
-		//
-		// See: https://github.com/Kong/gateway-operator/issues/904
 		if !cmp.Equal(existingDeployment.Spec.Template, generatedDeployment.Spec.Template, opts...) {
 			existingDeployment.Spec.Template = generatedDeployment.Spec.Template
 			updated = true

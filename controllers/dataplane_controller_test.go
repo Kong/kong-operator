@@ -14,6 +14,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -707,6 +708,195 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				c, ok = k8sutils.GetCondition(k8sutils.ReadyType, dp)
 				require.True(t, ok, "DataPlane should have a Ready condition set")
 				assert.Equal(t, c.Status, metav1.ConditionTrue, "DataPlane should be ready at this point")
+				assert.EqualValues(t, 1, dp.Status.ReadyReplicas)
+				assert.EqualValues(t, 1, dp.Status.Replicas)
+			},
+		},
+		{
+			name: "dataplane gets updated with status conditions when it's updated with a field that has non zero defaults",
+			dataplaneReq: reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "dataplane-kong",
+					Namespace: "default",
+				},
+			},
+			dataplane: &operatorv1beta1.DataPlane{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
+					Kind:       "DataPlane",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "dataplane-kong",
+					Namespace: "default",
+					UID:       types.UID(uuid.NewString()),
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneBaseImage + ":3.2",
+												LivenessProbe: &corev1.Probe{
+													InitialDelaySeconds: 1,
+													PeriodSeconds:       1,
+													ProbeHandler: corev1.ProbeHandler{
+														HTTPGet: &corev1.HTTPGetAction{
+															Path: "/healthz",
+															Port: intstr.IntOrString{
+																Type:   intstr.Int,
+																IntVal: 8080,
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			dataplaneSubResources: []controllerruntimeclient.Object{
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-dataplane-deployment",
+						Namespace: "default",
+						Labels: map[string]string{
+							consts.DataPlaneDeploymentStateLabel:       consts.DataPlaneStateLabelValueLive,
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
+						},
+					},
+					Status: appsv1.DeploymentStatus{
+						AvailableReplicas: 1,
+						ReadyReplicas:     1,
+						Replicas:          1,
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-admin-service",
+						Namespace: "default",
+						Labels: map[string]string{
+							"app":                                      "test-dataplane",
+							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneAdminServiceLabelValue),
+							consts.DataPlaneServiceStateLabel:          string(consts.DataPlaneStateLabelValueLive),
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: corev1.ClusterIPNone,
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-proxy-service",
+						Namespace: "default",
+						Labels: map[string]string{
+							"app":                                      "test-dataplane",
+							consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValueLive,
+							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP:  "10.0.0.1",
+						ClusterIPs: []string{"10.0.0.1"},
+					},
+					Status: corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{
+								{
+									IP: "6.7.8.9",
+								},
+							},
+						},
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-dataplane-tls-secret-2",
+						Namespace: "default",
+					},
+					Data: helpers.TLSSecretData(t, ca,
+						helpers.CreateCert(t, "*.test-admin-service.default.svc", ca.Cert, ca.Key),
+					),
+				},
+			},
+			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request) {
+				ctx := context.Background()
+
+				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				// The second reconcile is needed because the first one would only get to marking
+				// the DataPlane as Scheduled.
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				// The third reconcile is needed because the second one will only ensure
+				// the service is deployed for the DataPlane.
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				// The fourth reconcile is needed to ensure the service name in the dataplane status
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				dp := &operatorv1beta1.DataPlane{}
+				nn := types.NamespacedName{Namespace: "default", Name: "dataplane-kong"}
+				err = reconciler.Client.Get(ctx, nn, dp)
+				require.NoError(t, err)
+				c, ok := k8sutils.GetCondition(k8sutils.ReadyType, dp)
+				require.True(t, ok, "DataPlane should have a Ready condition set")
+				assert.Equal(t, c.Status, metav1.ConditionFalse, "DataPlane shouldn't be ready just yet")
+				assert.EqualValues(t, 0, dp.Status.ReadyReplicas)
+				assert.EqualValues(t, 0, dp.Status.Replicas)
+
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				err = reconciler.Client.Get(ctx, nn, dp)
+				require.NoError(t, err)
+				c, ok = k8sutils.GetCondition(k8sutils.ReadyType, dp)
+				require.True(t, ok, "DataPlane should have a Ready condition set")
+				assert.Equal(t, c.Status, metav1.ConditionTrue, "DataPlane should be ready at this point")
+				assert.Equal(t, c.ObservedGeneration, dp.Generation, "DataPlane Ready condition should have the same generation as the DataPlane")
+				assert.EqualValues(t, 1, dp.Status.ReadyReplicas)
+				assert.EqualValues(t, 1, dp.Status.Replicas)
+
+				dp.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec.Containers[0].LivenessProbe.PeriodSeconds = 2
+				require.NoError(t, reconciler.Client.Update(ctx, dp))
+
+				// Below code checks if the dataplane gets properly updated status conditions when
+				// the dataplane spec changes with a field that has non zero defaults.
+				// See: https://github.com/Kong/gateway-operator/issues/904
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				require.NoError(t, reconciler.Client.Get(ctx, nn, dp))
+				c, ok = k8sutils.GetCondition(k8sutils.ReadyType, dp)
+				require.True(t, ok, "DataPlane should have a Ready condition set")
+				assert.Equal(t, c.Status, metav1.ConditionTrue, "DataPlane should be ready at this point")
+				assert.Equal(t, c.ObservedGeneration, dp.Generation, "DataPlane Ready condition should have the same generation as the DataPlane")
 				assert.EqualValues(t, 1, dp.Status.ReadyReplicas)
 				assert.EqualValues(t, 1, dp.Status.Replicas)
 			},

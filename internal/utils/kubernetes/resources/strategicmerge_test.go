@@ -77,6 +77,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				d, err := makeControlPlaneDeployment()
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Containers[0].Image = "alpine"
+				d.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
 				return d.Spec.Template
 			},
 		},
@@ -121,18 +122,20 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			Expected: func() corev1.PodTemplateSpec {
 				d, err := makeControlPlaneDeployment()
 				require.NoError(t, err)
-				d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, corev1.Volume{
-					Name: "volume1",
-					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{
-							SizeLimit: resource.NewQuantity(1000, resource.DecimalSI),
+				d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes,
+					corev1.Volume{
+						Name: "volume1",
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{
+								SizeLimit: resource.NewQuantity(1000, resource.DecimalSI),
+							},
 						},
-					},
-				})
-				d.Spec.Template.Spec.Containers[0].VolumeMounts = append(d.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-					Name:      "volume1",
-					MountPath: "/volume1",
-				})
+					})
+				d.Spec.Template.Spec.Containers[0].VolumeMounts = append(d.Spec.Template.Spec.Containers[0].VolumeMounts,
+					corev1.VolumeMount{
+						Name:      "volume1",
+						MountPath: "/volume1",
+					})
 
 				return d.Spec.Template
 			},
@@ -166,7 +169,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			Expected: func() corev1.PodTemplateSpec {
 				d, err := makeControlPlaneDeployment()
 				require.NoError(t, err)
-				d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, corev1.Container{
+				sidecarContainer := corev1.Container{
 					Name:  "sidecar",
 					Image: "alpine",
 					Command: []string{
@@ -178,7 +181,9 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 							Value: "VALUE1",
 						},
 					},
-				})
+				}
+				SetDefaultsContainer(&sidecarContainer)
+				d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, sidecarContainer)
 				return d.Spec.Template
 			},
 		},
@@ -232,7 +237,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			Expected: func() corev1.PodTemplateSpec {
 				d, err := makeControlPlaneDeployment()
 				require.NoError(t, err)
-				d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, corev1.Container{
+				sidecarContainer := corev1.Container{
 					Name:  "sidecar",
 					Image: "alpine",
 					Command: []string{
@@ -250,7 +255,9 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 							MountPath: "/volume",
 						},
 					},
-				})
+				}
+				SetDefaultsContainer(&sidecarContainer)
+				d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, sidecarContainer)
 				d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, corev1.Volume{
 					Name: "new_volume",
 					VolumeSource: corev1.VolumeSource{
@@ -372,14 +379,16 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			Expected: func() corev1.PodTemplateSpec {
 				d, err := makeControlPlaneDeployment()
 				require.NoError(t, err)
-				d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, corev1.Volume{
+				volume := corev1.Volume{
 					Name: "new_volume",
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName: "secret-1",
 						},
 					},
-				})
+				}
+				SetDefaultsVolume(&volume)
+				d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, volume)
 				require.Len(t, d.Spec.Template.Spec.Containers, 1)
 				d.Spec.Template.Spec.Containers[0].VolumeMounts = append(d.Spec.Template.Spec.Containers[0].VolumeMounts,
 					corev1.VolumeMount{

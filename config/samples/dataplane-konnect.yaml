@@ -79,8 +79,3 @@ spec:
         - name: konnect-client-tls
           secret:
             secretName: konnect-client-tls
-            # This is necessary because we're not able to correctly
-            # handle API fields that are filled with defaults by the
-            # API server.
-            # https://github.com/Kong/gateway-operator/issues/904
-            defaultMode: 420
