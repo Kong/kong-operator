@@ -33,6 +33,9 @@ jobs:
         go-version-file: go.mod
 
     - name: run lint
+      env:
+        # Our .golangci.yaml has fix: true, but we don't want that in CI therefore the below override.
+        GOLANGCI_LINT_FLAGS: "--fix=false"
       run: make lint
 
     - name: Verify diff
