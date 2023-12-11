@@ -138,7 +138,7 @@ func setupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 		},
 		// ControlPlane controller
 		{
-			Enabled: c.ControlPlaneControllerEnabled,
+			Enabled: c.GatewayControllerEnabled || c.ControlPlaneControllerEnabled,
 			Controller: &controllers.ControlPlaneReconciler{
 				Client:                   mgr.GetClient(),
 				Scheme:                   mgr.GetScheme(),
@@ -149,7 +149,7 @@ func setupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 		},
 		// DataPlane controller
 		{
-			Enabled: c.DataPlaneControllerEnabled && !c.DataPlaneBlueGreenControllerEnabled,
+			Enabled: (c.DataPlaneControllerEnabled || c.GatewayControllerEnabled) && !c.DataPlaneBlueGreenControllerEnabled,
 			Controller: &controllers.DataPlaneReconciler{
 				Client:                   mgr.GetClient(),
 				Scheme:                   mgr.GetScheme(),
