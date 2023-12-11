@@ -329,14 +329,16 @@ func TestDataPlaneUpdate(t *testing.T) {
 		return testEnv == "after_update"
 	}, testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
 
-	dataPlaneConditionPredicate := func(c *metav1.Condition) func(dataplane *operatorv1beta1.DataPlane) bool {
+	dataPlaneConditionPredicate := func(t *testing.T, c *metav1.Condition) func(dataplane *operatorv1beta1.DataPlane) bool {
+		t.Helper()
 		return func(dataplane *operatorv1beta1.DataPlane) bool {
+			t.Helper()
 			for _, condition := range dataplane.Status.Conditions {
-				if condition.Type == c.Type && condition.Status == c.Status && condition.ObservedGeneration == c.ObservedGeneration {
+				if condition.Type == c.Type && condition.Status == c.Status && condition.Reason == c.Reason && condition.ObservedGeneration == c.ObservedGeneration {
 					return true
 				}
-				t.Logf("DataPlane condition: Type=%q;ObservedGeneration:%d,Reason:%q;Status:%q;Message:%q",
-					condition.Type, condition.ObservedGeneration, condition.Reason, condition.Status, condition.Message,
+				t.Logf("DataPlane %q condition: Type=%q;ObservedGeneration:%d,Reason:%q;Status:%q;Message:%q",
+					dataplane.Name, condition.Type, condition.ObservedGeneration, condition.Reason, condition.Status, condition.Message,
 				)
 			}
 			return false
@@ -365,9 +367,10 @@ func TestDataPlaneUpdate(t *testing.T) {
 		dataplane, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
-		isNotReady := dataPlaneConditionPredicate(&metav1.Condition{
+		isNotReady := dataPlaneConditionPredicate(t, &metav1.Condition{
 			Type:               string(k8sutils.ReadyType),
 			Status:             metav1.ConditionFalse,
+			Reason:             string(k8sutils.WaitingToBecomeReadyReason),
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
@@ -397,9 +400,10 @@ func TestDataPlaneUpdate(t *testing.T) {
 		dataplane, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
-		isReady := dataPlaneConditionPredicate(&metav1.Condition{
+		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
 			Type:               string(k8sutils.ReadyType),
 			Status:             metav1.ConditionTrue,
+			Reason:             string(k8sutils.ResourceReadyReason),
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
@@ -414,8 +418,9 @@ func TestDataPlaneUpdate(t *testing.T) {
 		container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 		require.NotNil(t, container)
 		container.StartupProbe = &corev1.Probe{
-			InitialDelaySeconds: 1,
-			PeriodSeconds:       1,
+			InitialDelaySeconds: 0,
+			PeriodSeconds:       2,
+			FailureThreshold:    30,
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/status",
@@ -428,9 +433,10 @@ func TestDataPlaneUpdate(t *testing.T) {
 		dataplane, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
-		isReady := dataPlaneConditionPredicate(&metav1.Condition{
+		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
 			Type:               string(k8sutils.ReadyType),
 			Status:             metav1.ConditionTrue,
+			Reason:             string(k8sutils.ResourceReadyReason),
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
