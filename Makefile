@@ -222,7 +222,7 @@ lint: golangci-lint
 	$(GOLANGCI_LINT) run -v --config .golangci.yaml $(GOLANGCI_LINT_FLAGS)
 
 .PHONY: verify
-verify: verify.generators verify.manifests verify.bundle
+verify: verify.manifests verify.generators verify.bundle
 
 .PHONY: verify.bundle
 verify.bundle: verify.repo bundle verify.diff

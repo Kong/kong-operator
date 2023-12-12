@@ -38,9 +38,6 @@ jobs:
         GOLANGCI_LINT_FLAGS: "--fix=false"
       run: make lint
 
-    - name: Verify diff
-      run: make verify.diff
-
   verify:
     runs-on: ubuntu-latest
     steps:
@@ -54,9 +51,6 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - name: Verify operator-sdk bundle consistency
-      run: make verify.bundle
-
     - name: Verify manifests consistency
       run: make verify.manifests
 
@@ -66,6 +60,9 @@ jobs:
         timeout_minutes: 3
         max_attempts: 3
         command: make verify.generators
+
+    - name: Verify operator-sdk bundle consistency
+      run: make verify.bundle
 
   install-with-kustomize:
     runs-on: ubuntu-latest
