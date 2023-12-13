@@ -159,23 +159,14 @@ func ensureDeploymentForDataPlane(
 			updated = true
 		}
 
-		if updated {
-			if err := cl.Patch(ctx, existingDeployment, client.MergeFrom(oldExistingDeployment)); err != nil {
-				return Noop, existingDeployment, fmt.Errorf("failed patching DataPlane Deployment %s: %w", existingDeployment.Name, err)
-			}
-			debug(log, "deployment modified", dataplane, "deployment", existingDeployment.Name)
-			return Updated, existingDeployment, nil
-		}
-
-		trace(log, "no need for deployment update", dataplane, "deployment", existingDeployment.Name)
-		return Noop, existingDeployment, nil
+		return patchIfPatchIsNonEmpty(ctx, cl, log, existingDeployment, oldExistingDeployment, dataplane, updated)
 	}
 
 	if err = cl.Create(ctx, generatedDeployment); err != nil {
 		return Noop, nil, fmt.Errorf("failed creating Deployment for DataPlane %s: %w", dataplane.Name, err)
 	}
-	debug(log, "deployment created", dataplane, "deployment", generatedDeployment.Name)
 
+	debug(log, "deployment for DataPlane created", dataplane, "deployment", generatedDeployment.Name)
 	return Created, generatedDeployment, nil
 }
 

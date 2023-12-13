@@ -444,6 +444,39 @@ func TestDataPlaneUpdate(t *testing.T) {
 			testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
 		)
 	})
+
+	t.Run("dataplane gets properly updated with a ReadinessProbe using port names instead of numbers", func(t *testing.T) {
+		dataplane, err = dataplaneClient.Get(ctx, dataplane.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+		require.NotNil(t, container)
+		container.ReadinessProbe = &corev1.Probe{
+			InitialDelaySeconds: 0,
+			PeriodSeconds:       2,
+			FailureThreshold:    30,
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/status",
+					Port:   intstr.FromString("metrics"),
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+		}
+
+		dataplane, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
+		require.NoError(t, err)
+
+		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
+			Type:               string(k8sutils.ReadyType),
+			Status:             metav1.ConditionTrue,
+			Reason:             string(k8sutils.ResourceReadyReason),
+			ObservedGeneration: dataplane.Generation,
+		})
+		require.Eventually(t,
+			testutils.DataPlanePredicate(t, ctx, dataplaneName, isReady, clients.OperatorClient),
+			testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
+		)
+	})
 }
 
 func TestDataPlaneHorizontalScaling(t *testing.T) {

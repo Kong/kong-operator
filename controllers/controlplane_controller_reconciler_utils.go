@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
@@ -115,9 +116,10 @@ func (r *ControlPlaneReconciler) ensureDataPlaneConfiguration(
 // corresponding dataplane is set.
 func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	ctx context.Context,
+	log logr.Logger,
 	controlplane *operatorv1alpha1.ControlPlane,
 	serviceAccountName, certSecretName string,
-) (bool, *appsv1.Deployment, error) {
+) (CreatedUpdatedOrNoop, *appsv1.Deployment, error) {
 	dataplaneIsSet := controlplane.Spec.DataPlane != nil && *controlplane.Spec.DataPlane != ""
 
 	deployments, err := k8sutils.ListDeploymentsForOwner(ctx,
@@ -129,15 +131,15 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		},
 	)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, err
 	}
 
 	count := len(deployments)
 	if count > 1 {
 		if err := k8sreduce.ReduceDeployments(ctx, r.Client, deployments); err != nil {
-			return false, nil, err
+			return Noop, nil, err
 		}
-		return false, nil, errors.New("number of deployments reduced")
+		return Noop, nil, errors.New("number of deployments reduced")
 	}
 
 	versionValidationOptions := make([]versions.VersionValidationOption, 0)
@@ -146,16 +148,17 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	}
 	controlplaneImage, err := generateControlPlaneImage(&controlplane.Spec.ControlPlaneOptions, versionValidationOptions...)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, err
 	}
 	generatedDeployment, err := k8sresources.GenerateNewDeploymentForControlPlane(controlplane, controlplaneImage, serviceAccountName, certSecretName)
 	if err != nil {
-		return false, nil, err
+		return Noop, nil, err
 	}
 
 	if count == 1 {
 		var updated bool
 		existingDeployment := &deployments[0]
+		oldExistingDeployment := existingDeployment.DeepCopy()
 
 		// ensure that object metadata is up to date
 		updated, existingDeployment.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingDeployment.ObjectMeta, generatedDeployment.ObjectMeta)
@@ -191,20 +194,18 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 			}
 		}
 
-		if updated {
-			if err := r.Client.Update(ctx, existingDeployment); err != nil {
-				return true, existingDeployment, fmt.Errorf("failed updating ControlPlane's Deployment %s: %w", existingDeployment.Name, err)
-			}
-			return true, existingDeployment, nil
-		}
-
-		return false, existingDeployment, nil
+		return patchIfPatchIsNonEmpty(ctx, r.Client, log, existingDeployment, oldExistingDeployment, controlplane, updated)
 	}
 
 	if !dataplaneIsSet {
 		generatedDeployment.Spec.Replicas = lo.ToPtr(int32(numReplicasWhenNoDataplane))
 	}
-	return true, generatedDeployment, r.Client.Create(ctx, generatedDeployment)
+	if err := r.Client.Create(ctx, generatedDeployment); err != nil {
+		return Noop, nil, fmt.Errorf("failed creating ControlPlane Deployment %s: %w", generatedDeployment.Name, err)
+	}
+
+	debug(log, "deployment for ControlPlane created", controlplane, "deployment", generatedDeployment.Name)
+	return Created, generatedDeployment, nil
 }
 
 func (r *ControlPlaneReconciler) ensureServiceAccountForControlPlane(

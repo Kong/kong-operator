@@ -314,12 +314,11 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	trace(log, "looking for existing Deployments for ControlPlane resource", controlplane)
-	createdOrUpdated, controlplaneDeployment, err := r.ensureDeploymentForControlPlane(ctx, controlplane, controlplaneServiceAccount.Name, certSecret.Name)
+	res, controlplaneDeployment, err := r.ensureDeploymentForControlPlane(ctx, log, controlplane, controlplaneServiceAccount.Name, certSecret.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if createdOrUpdated {
-		debug(log, "deployment updated", controlplane)
+	if res != Noop {
 		if !dataplaneIsSet {
 			debug(log, "DataPlane not set, deployment for ControlPlane has been scaled down to 0 replicas", controlplane)
 			err := r.patchStatus(ctx, log, controlplane)
