@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gwapiv1beta1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
 	"github.com/kong/gateway-operator/internal/manager"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
@@ -166,7 +166,7 @@ func startControllerManager() <-chan struct{} {
 	return cfg.StartedCh
 }
 
-func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1beta1.GatewayV1Interface) error {
+func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1.GatewayV1Interface) error {
 	const conformanceInfraNamespace = "gateway-conformance-infra"
 
 	var (
