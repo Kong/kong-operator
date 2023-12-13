@@ -8,7 +8,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/cloudflare/cfssl v1.6.4
 	github.com/go-logr/logr v1.3.0
-	github.com/google/uuid v1.4.0
+	github.com/google/uuid v1.5.0
 	github.com/kong/kubernetes-telemetry v0.1.2
 	github.com/kong/kubernetes-testing-framework v0.42.0
 	github.com/kong/semver/v4 v4.0.1
