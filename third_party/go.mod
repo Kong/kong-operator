@@ -1,6 +1,8 @@
 module github.com/kong/gateway-operator/third_party
 
-go 1.19
+go 1.21
+
+toolchain go1.21.5
 
 require (
 	github.com/elastic/crd-ref-docs v0.0.10
@@ -8,7 +10,7 @@ require (
 	github.com/golangci/golangci-lint v1.55.2
 	github.com/operator-framework/operator-registry v1.33.0
 	gotest.tools/gotestsum v1.11.0
-	k8s.io/code-generator v0.28.4
+	k8s.io/code-generator v0.29.0
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220715194349-88234a8fc9ad
 	sigs.k8s.io/controller-tools v0.13.0
 )
@@ -84,7 +86,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.8.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/emicklei/go-restful/v3 v3.10.2 // indirect
+	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/esimonov/ifshort v1.0.4 // indirect
 	github.com/ettle/strcase v0.1.1 // indirect
 	github.com/fatih/color v1.15.0 // indirect
@@ -208,7 +210,7 @@ require (
 	github.com/nishanths/predeclared v0.2.2 // indirect
 	github.com/nunnatsa/ginkgolinter v0.14.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
-	github.com/onsi/gomega v1.28.1 // indirect
+	github.com/onsi/gomega v1.29.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc4 // indirect
 	github.com/opencontainers/runc v1.1.9 // indirect
@@ -321,9 +323,9 @@ require (
 	k8s.io/apiserver v0.28.0 // indirect
 	k8s.io/client-go v0.28.0 // indirect
 	k8s.io/component-base v0.28.0 // indirect
-	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d // indirect
-	k8s.io/klog/v2 v2.100.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
+	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
+	k8s.io/klog/v2 v2.110.1 // indirect
+	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	k8s.io/kubectl v0.27.7 // indirect
 	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
 	mvdan.cc/gofumpt v0.5.0 // indirect
@@ -334,6 +336,6 @@ require (
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.1.2 // indirect
 	sigs.k8s.io/controller-runtime v0.15.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
