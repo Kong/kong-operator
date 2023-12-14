@@ -13,7 +13,7 @@ spec:
       spec:
         containers:
         - name: controller
-          image: kong/kubernetes-ingress-controller:2.12
+          image: kong/kubernetes-ingress-controller:3.0.1
           readinessProbe:
             initialDelaySeconds: 1
             periodSeconds: 3
