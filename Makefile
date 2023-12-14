@@ -288,7 +288,7 @@ check.rbacs: kic-role-generator
 # ------------------------------------------------------------------------------
 
 CONTROLLER_GEN_CRD_OPTIONS ?= "+crd:generateEmbeddedObjectMeta=true"
-CONTROLLER_GEN_PATHS ?= "./controllers/...;./$(APIS_DIR)/..."
+CONTROLLER_GEN_PATHS ?= "./internal/utils/kubernetes/resources/clusterroles/;./internal/utils/kubernetes/reduce/;./controllers/...;./$(APIS_DIR)/..."
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.

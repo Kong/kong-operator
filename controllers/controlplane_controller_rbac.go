@@ -17,3 +17,4 @@ package controllers
 //+kubebuilder:rbac:groups=core,resources=services/status,verbs=get
 //+kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=create;get;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=serviceaccounts/status,verbs=get
+//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
