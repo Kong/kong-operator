@@ -213,7 +213,7 @@ func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gwtype
 		// This change will not be saved in the API server (i.e. user applied resource
 		// will not be changed) - which is the desired behavior - since the caller
 		// only uses the changed GatewayConfiguration to generate ControlPlane resource.
-		container = lo.ToPtr(resources.GenerateControlPlaneContainer(consts.DefaultControlPlaneImage))
+		container = lo.ToPtr[corev1.Container](resources.GenerateControlPlaneContainer(consts.DefaultControlPlaneImage))
 		controlPlanePodTemplateSpec.Spec.Containers = append(controlPlanePodTemplateSpec.Spec.Containers, *container)
 	}
 	for _, env := range container.Env {
