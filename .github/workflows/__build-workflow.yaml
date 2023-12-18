@@ -306,8 +306,8 @@ jobs:
         with:
           tags: ${{ steps.meta.outputs.tags }}
           sources: |
-            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.meta.outputs.tags }}-amd64
-            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.meta.outputs.tags }}-arm64
+            ${{ steps.meta.outputs.tags }}-amd64
+            ${{ steps.meta.outputs.tags }}-arm64
 
       - name: Set output tag
         if: ${{ inputs.tag != '' }}
