@@ -1,6 +1,7 @@
 package v1beta1
 
 import (
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -9,6 +10,8 @@ import (
 // includes options for managing Deployments such as the number of replicas
 // or pod options like container image and resource requirements.
 // version, as well as Env variable overrides.
+//
+// +kubebuilder:validation:XValidation:message="Using both replicas and scaling fields is not allowed.",rule="!(has(self.scaling) && has(self.replicas))"
 type DeploymentOptions struct {
 	// Replicas describes the number of desired pods.
 	// This is a pointer to distinguish between explicit zero and not specified.
@@ -19,12 +22,59 @@ type DeploymentOptions struct {
 	// +kubebuilder:default=1
 	Replicas *int32 `json:"replicas,omitempty"`
 
+	// Scaling defines the scaling options for the deployment.
+	//
+	// +optional
+	Scaling *Scaling `json:"scaling,omitempty"`
+
 	// PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
 	// It's being applied on top of the generated Deployments using
 	// [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch).
 	//
 	// +optional
 	PodTemplateSpec *corev1.PodTemplateSpec `json:"podTemplateSpec,omitempty"`
+}
+
+// Scaling defines the scaling options for the deployment.
+type Scaling struct {
+	// HorizontalScaling defines horizontal scaling options for the deployment.
+	// +optional
+	HorizontalScaling *HorizontalScaling `json:"horizontal,omitempty"`
+}
+
+// HorizontalScaling defines horizontal scaling options for the deployment.
+// It holds all the options from the HorizontalPodAutoscalerSpec besides the
+// ScaleTargetRef which is being controlled by the Operator.
+type HorizontalScaling struct {
+	// minReplicas is the lower limit for the number of replicas to which the autoscaler
+	// can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the
+	// alpha feature gate HPAScaleToZero is enabled and at least one Object or External
+	// metric is configured.  Scaling is active as long as at least one metric value is
+	// available.
+	// +optional
+	MinReplicas *int32 `json:"minReplicas,omitempty" protobuf:"varint,2,opt,name=minReplicas"`
+
+	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+	// It cannot be less that minReplicas.
+	MaxReplicas int32 `json:"maxReplicas" protobuf:"varint,3,opt,name=maxReplicas"`
+
+	// metrics contains the specifications for which to use to calculate the
+	// desired replica count (the maximum replica count across all metrics will
+	// be used).  The desired replica count is calculated multiplying the
+	// ratio between the target value and the current value by the current
+	// number of pods.  Ergo, metrics used must decrease as the pod count is
+	// increased, and vice-versa.  See the individual metric source types for
+	// more information about how each type of metric must respond.
+	// If not set, the default metric will be set to 80% average CPU utilization.
+	// +listType=atomic
+	// +optional
+	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty" protobuf:"bytes,4,rep,name=metrics"`
+
+	// behavior configures the scaling behavior of the target
+	// in both Up and Down directions (scaleUp and scaleDown fields respectively).
+	// If not set, the default HPAScalingRules for scale up and scale down are used.
+	// +optional
+	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty" protobuf:"bytes,5,opt,name=behavior"`
 }
 
 // Rollout defines options for rollouts.
