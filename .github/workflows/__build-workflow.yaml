@@ -302,7 +302,7 @@ jobs:
           username: ${{ inputs.username }}
           password: ${{ secrets.token }}
 
-      - uses: int128/docker-manifest-create-action@v1
+      - uses: int128/docker-manifest-create-action@v2
         with:
           tags: ${{ steps.meta.outputs.tags }}
           suffixes: |
