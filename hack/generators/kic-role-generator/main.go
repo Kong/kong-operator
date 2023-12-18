@@ -67,6 +67,9 @@ func main() {
 		fmt.Printf("INFO: parsing clusterRole for KIC version %s\n", kicVersion)
 		clusterRoles := []*rbacv1.ClusterRole{}
 		for _, rolePath := range clusterRoleRelativePaths {
+			if versionIsEqualToOrGraterThanV3(kicVersion) && rolePath == "config/rbac/knative/role.yaml" {
+				continue
+			}
 			// Here we try to merge all the rules from all known cluster roles.
 			newRole, err := getRoleFromKICRepository(rolePath, kicVersion)
 			exitOnErr(err)
@@ -128,6 +131,16 @@ func main() {
 	}
 }
 
+func versionIsEqualToOrGraterThanV3(vStr string) bool {
+	c, err := semver.NewConstraint(">=3.0")
+	exitOnErr(err)
+
+	v, err := semver.NewVersion(vStr)
+	exitOnErr(err)
+
+	return c.Check(v)
+}
+
 func getRoleFromKICRepository(filePath, version string) (*rbacv1.ClusterRole, error) {
 	file, err := getFileFromKICRepository(filePath, version)
 	if err != nil {
@@ -150,6 +163,10 @@ func getFileFromKICRepository(filePath, version string) (io.ReadCloser, error) {
 	resp, err := retryablehttp.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get %s from KIC repository: %w", url, err)
+	}
+
+	if resp.StatusCode == 404 {
+		return nil, fmt.Errorf("%s not found in KIC repository", url)
 	}
 
 	return resp.Body, nil
