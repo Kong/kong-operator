@@ -67,7 +67,7 @@ on:
         value: ${{ jobs.build.outputs.version }}
       artifact:
         value: ${{ jobs.build.outputs.artifact }}
-    
+
 jobs:
   semver:
     runs-on: ubuntu-latest
@@ -145,7 +145,7 @@ jobs:
           registry: ${{ inputs.registry }}
           username: ${{ inputs.username }}
           password: ${{ secrets.token }}
- 
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -305,9 +305,9 @@ jobs:
       - uses: int128/docker-manifest-create-action@v2
         with:
           tags: ${{ steps.meta.outputs.tags }}
-          suffixes: |
-            -amd64
-            -arm64
+          sources: |
+            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.meta.outputs.tags }}-amd64
+            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.meta.outputs.tags }}-arm64
 
       - name: Set output tag
         if: ${{ inputs.tag != '' }}
