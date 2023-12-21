@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -543,17 +544,17 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					// has been agreed in https://github.com/Kong/gateway-operator/issues/281
 					// then no action has to be taken. Otherwise this might need to be changed.
 					{
-						Type:       addressOf(operatorv1beta1.IPAddressType),
+						Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
 						Value:      "6.7.8.9",
 						SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 					},
 					{
-						Type:       addressOf(operatorv1beta1.HostnameAddressType),
+						Type:       lo.ToPtr(operatorv1beta1.HostnameAddressType),
 						Value:      "mycustomhostname.com",
 						SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 					},
 					{
-						Type:       addressOf(operatorv1beta1.IPAddressType),
+						Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
 						Value:      "10.0.0.1",
 						SourceType: operatorv1beta1.PrivateIPAddressSourceType,
 					},

@@ -1,4 +1,4 @@
-package controllers
+package address
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 )
 
-// addressesFromService retrieves addreses from the provided service.
+// AddressesFromService retrieves addresses from the provided service.
 //
 // Currently we create the return value in a way such that:
 //   - service LoadBalancer addresses are added first, one by one.
@@ -22,7 +22,7 @@ import (
 // If this ends up being the desired logic and aligns with what
 // has been agreed in https://github.com/Kong/gateway-operator/issues/281
 // then no action has to be taken. Otherwise this might need to be changed.
-func addressesFromService(service *corev1.Service) ([]operatorv1beta1.Address, error) {
+func AddressesFromService(service *corev1.Service) ([]operatorv1beta1.Address, error) {
 	addresses := make([]operatorv1beta1.Address,
 		0,
 		len(service.Spec.ClusterIPs)+len(service.Status.LoadBalancer.Ingress),
@@ -87,7 +87,7 @@ func addressesFromService(service *corev1.Service) ([]operatorv1beta1.Address, e
 const (
 	// https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.6/guide/service/annotations/#lb-scheme
 	serviceAnnotationAWSLoadBalancerSchemeKey            = "service.beta.kubernetes.io/aws-load-balancer-scheme"
-	serviceAnnotationAWSLoadBalancerSchemeIternal        = "internal"
+	serviceAnnotationAWSLoadBalancerSchemeInternal       = "internal"
 	serviceAnnotationAWSLoadBalancerSchemeInternetFacing = "internet-facing"
 )
 
@@ -97,7 +97,7 @@ const (
 func deduceAddressSourceTypeFromService(s *corev1.Service) operatorv1beta1.AddressSourceType {
 	if v, ok := s.Annotations[serviceAnnotationAWSLoadBalancerSchemeKey]; ok {
 		switch v {
-		case serviceAnnotationAWSLoadBalancerSchemeIternal:
+		case serviceAnnotationAWSLoadBalancerSchemeInternal:
 			return operatorv1beta1.PrivateLoadBalancerAddressSourceType
 		case serviceAnnotationAWSLoadBalancerSchemeInternetFacing:
 			return operatorv1beta1.PublicLoadBalancerAddressSourceType

@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/utils/address"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
@@ -27,10 +28,6 @@ func ensureDataPlaneReadinessStatus(
 ) {
 	dataplane.Status.Replicas = dataplaneDeployment.Status.Replicas
 	dataplane.Status.ReadyReplicas = dataplaneDeployment.Status.ReadyReplicas
-}
-
-func addressOf[T any](v T) *T {
-	return &v
 }
 
 func (r *DataPlaneReconciler) ensureDataPlaneServiceStatus(
@@ -62,7 +59,7 @@ func (r *DataPlaneReconciler) ensureDataPlaneAddressesStatus(
 	dataplane *operatorv1beta1.DataPlane,
 	dataplaneService *corev1.Service,
 ) (bool, error) {
-	addresses, err := addressesFromService(dataplaneService)
+	addresses, err := address.AddressesFromService(dataplaneService)
 	if err != nil {
 		return false, fmt.Errorf("failed getting addresses for service %s: %w", dataplaneService, err)
 	}

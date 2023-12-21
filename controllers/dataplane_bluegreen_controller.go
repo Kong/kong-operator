@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/utils/address"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
@@ -586,7 +587,7 @@ func (r *DataPlaneBlueGreenReconciler) ensureDataPlaneAdminAPIInRolloutStatus(
 	dataplane *operatorv1beta1.DataPlane,
 	dataplaneAdminAPIService *corev1.Service,
 ) (bool, error) {
-	addresses, err := addressesFromService(dataplaneAdminAPIService)
+	addresses, err := address.AddressesFromService(dataplaneAdminAPIService)
 	if err != nil {
 		return false, fmt.Errorf("failed getting addresses for Admin API service %s: %w", dataplaneAdminAPIService, err)
 	}
@@ -717,7 +718,7 @@ func (r *DataPlaneBlueGreenReconciler) ensureDataPlaneRolloutIngressServiceStatu
 	dataplane *operatorv1beta1.DataPlane,
 	ingressService *corev1.Service,
 ) (bool, error) {
-	addresses, err := addressesFromService(ingressService)
+	addresses, err := address.AddressesFromService(ingressService)
 	if err != nil {
 		return true, err
 	}
