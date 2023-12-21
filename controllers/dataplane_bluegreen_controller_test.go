@@ -15,6 +15,7 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/utils/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
@@ -98,7 +99,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 		name                     string
 		dataplane                *v1beta1.DataPlane
 		existingServiceModifier  func(*testing.T, context.Context, client.Client, *corev1.Service)
-		expectedCreatedOrUpdated CreatedUpdatedOrNoop
+		expectedCreatedOrUpdated op.CreatedUpdatedOrNoop
 		expectedService          *corev1.Service
 		// expectedErrorMessage is empty if we expect no error, otherwise returned error must contain it.
 		expectedErrorMessage string
@@ -110,7 +111,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 			).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
 				WithPromotionStrategy(v1beta1.AutomaticPromotion).Build(),
 			existingServiceModifier:  func(t *testing.T, ctx context.Context, cl client.Client, svc *corev1.Service) {}, // No-op
-			expectedCreatedOrUpdated: Noop,
+			expectedCreatedOrUpdated: op.Noop,
 			expectedService: &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:    "default",
@@ -141,7 +142,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 				require.NoError(t, DataPlaneOwnedObjectPreDeleteHook(ctx, cl, svc))
 				require.NoError(t, cl.Delete(ctx, svc))
 			},
-			expectedCreatedOrUpdated: Created,
+			expectedCreatedOrUpdated: op.Created,
 			expectedService: &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:    "default",
@@ -187,7 +188,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 				svc.Spec.Selector["app"] = "dp-0"
 				require.NoError(t, cl.Update(ctx, svc))
 			},
-			expectedCreatedOrUpdated: Updated,
+			expectedCreatedOrUpdated: op.Updated,
 			expectedService: &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:    "default",

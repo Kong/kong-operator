@@ -19,6 +19,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/utils/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -119,7 +120,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	log logr.Logger,
 	controlplane *operatorv1alpha1.ControlPlane,
 	serviceAccountName, certSecretName string,
-) (CreatedUpdatedOrNoop, *appsv1.Deployment, error) {
+) (op.CreatedUpdatedOrNoop, *appsv1.Deployment, error) {
 	dataplaneIsSet := controlplane.Spec.DataPlane != nil && *controlplane.Spec.DataPlane != ""
 
 	deployments, err := k8sutils.ListDeploymentsForOwner(ctx,
@@ -131,15 +132,15 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		},
 	)
 	if err != nil {
-		return Noop, nil, err
+		return op.Noop, nil, err
 	}
 
 	count := len(deployments)
 	if count > 1 {
 		if err := k8sreduce.ReduceDeployments(ctx, r.Client, deployments); err != nil {
-			return Noop, nil, err
+			return op.Noop, nil, err
 		}
-		return Noop, nil, errors.New("number of deployments reduced")
+		return op.Noop, nil, errors.New("number of deployments reduced")
 	}
 
 	versionValidationOptions := make([]versions.VersionValidationOption, 0)
@@ -148,11 +149,11 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	}
 	controlplaneImage, err := generateControlPlaneImage(&controlplane.Spec.ControlPlaneOptions, versionValidationOptions...)
 	if err != nil {
-		return Noop, nil, err
+		return op.Noop, nil, err
 	}
 	generatedDeployment, err := k8sresources.GenerateNewDeploymentForControlPlane(controlplane, controlplaneImage, serviceAccountName, certSecretName)
 	if err != nil {
-		return Noop, nil, err
+		return op.Noop, nil, err
 	}
 
 	if count == 1 {
@@ -201,11 +202,11 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		generatedDeployment.Spec.Replicas = lo.ToPtr(int32(numReplicasWhenNoDataplane))
 	}
 	if err := r.Client.Create(ctx, generatedDeployment); err != nil {
-		return Noop, nil, fmt.Errorf("failed creating ControlPlane Deployment %s: %w", generatedDeployment.Name, err)
+		return op.Noop, nil, fmt.Errorf("failed creating ControlPlane Deployment %s: %w", generatedDeployment.Name, err)
 	}
 
 	debug(log, "deployment for ControlPlane created", controlplane, "deployment", generatedDeployment.Name)
-	return Created, generatedDeployment, nil
+	return op.Created, generatedDeployment, nil
 }
 
 func (r *ControlPlaneReconciler) ensureServiceAccountForControlPlane(
@@ -347,7 +348,7 @@ func (r *ControlPlaneReconciler) ensureClusterRoleBindingForControlPlane(
 func (r *ControlPlaneReconciler) ensureCertificate(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
-) (CreatedUpdatedOrNoop, *corev1.Secret, error) {
+) (op.CreatedUpdatedOrNoop, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
 		certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth,

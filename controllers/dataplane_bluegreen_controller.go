@@ -22,6 +22,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/utils/address"
+	"github.com/kong/gateway-operator/controllers/utils/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
@@ -121,7 +122,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if err != nil {
 		cErr := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Admin API Service")
 		return ctrl.Result{}, fmt.Errorf("failed ensuring that preview Admin API Service exists for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
-	} else if res == Created || res == Updated {
+	} else if res == op.Created || res == op.Updated {
 		return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
 	}
 
@@ -145,7 +146,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if res != Noop {
+	if res != op.Noop {
 		debug(log, "mTLS certificate created/updated", dataplane)
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
@@ -155,7 +156,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if err != nil {
 		cErr := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview ingress Service")
 		return ctrl.Result{}, fmt.Errorf("failed ensuring preview Ingress service for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
-	} else if res == Created || res == Updated {
+	} else if res == op.Created || res == op.Updated {
 		return ctrl.Result{}, nil // dataplane ingress service creation/update will trigger reconciliation
 	}
 
@@ -171,7 +172,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if err != nil {
 		cErr := r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Deployment")
 		return ctrl.Result{}, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", errors.Join(cErr, err))
-	} else if res == Created || res == Updated {
+	} else if res == op.Created || res == op.Updated {
 		return ctrl.Result{}, nil // dataplane deployment creation/update will trigger reconciliation
 	} else if replicas := deployment.Spec.Replicas; replicas != nil && *replicas == 0 {
 		return ctrl.Result{}, r.ensureRolledOutCondition(ctx, log, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutWaitingForChange, "")
@@ -395,7 +396,7 @@ func (r *DataPlaneBlueGreenReconciler) ensureDeploymentForDataPlane(
 	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 	certSecret *corev1.Secret,
-) (*appsv1.Deployment, CreatedUpdatedOrNoop, error) {
+) (*appsv1.Deployment, op.CreatedUpdatedOrNoop, error) {
 	deploymentOpts := []k8sresources.DeploymentOpt{
 		labelSelectorFromDataPlaneRolloutStatusSelectorDeploymentOpt(dataplane),
 	}
@@ -422,17 +423,17 @@ func (r *DataPlaneBlueGreenReconciler) ensureDeploymentForDataPlane(
 		deploymentOpts...,
 	)
 	if err != nil {
-		return nil, Noop, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", err)
+		return nil, op.Noop, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", err)
 	}
 
 	switch res {
-	case Created, Updated:
+	case op.Created, op.Updated:
 		debug(log, "deployment modified", dataplane, "reason", res)
 		// requeue will be triggered by the creation or update of the owned object
 		return deployment, res, nil
 	default:
 		debug(log, "no need for deployment update", dataplane)
-		return deployment, Noop, nil
+		return deployment, op.Noop, nil
 	}
 }
 
@@ -652,7 +653,7 @@ func (r *DataPlaneBlueGreenReconciler) ensurePreviewAdminAPIService(
 	ctx context.Context,
 	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
-) (CreatedUpdatedOrNoop, *corev1.Service, error) {
+) (op.CreatedUpdatedOrNoop, *corev1.Service, error) {
 	additionalServiceLabels := map[string]string{
 		consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 	}
@@ -665,13 +666,13 @@ func (r *DataPlaneBlueGreenReconciler) ensurePreviewAdminAPIService(
 		labelSelectorFromDataPlaneRolloutStatusSelectorServiceOpt(dataplane),
 	)
 	if err != nil {
-		return Noop, nil, err
+		return op.Noop, nil, err
 	}
 
 	switch res {
-	case Created, Updated:
+	case op.Created, op.Updated:
 		debug(log, "preview admin service modified", dataplane, "service", svc.Name, "reason", res)
-	case Noop:
+	case op.Noop:
 		trace(log, "no need for preview Admin API service update", dataplane)
 	}
 	return res, svc, nil // dataplane admin service creation/update will trigger reconciliation
@@ -683,7 +684,7 @@ func (r *DataPlaneBlueGreenReconciler) ensurePreviewIngressService(
 	ctx context.Context,
 	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
-) (CreatedUpdatedOrNoop, *corev1.Service, error) {
+) (op.CreatedUpdatedOrNoop, *corev1.Service, error) {
 	additionalServiceLabels := map[string]string{
 		consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 	}
@@ -697,13 +698,13 @@ func (r *DataPlaneBlueGreenReconciler) ensurePreviewIngressService(
 		labelSelectorFromDataPlaneRolloutStatusSelectorServiceOpt(dataplane),
 	)
 	if err != nil {
-		return Noop, nil, err
+		return op.Noop, nil, err
 	}
 
 	switch res {
-	case Created, Updated:
+	case op.Created, op.Updated:
 		debug(log, "preview ingress service modified", dataplane, "service", svc.Name, "reason", res)
-	case Noop:
+	case op.Noop:
 		trace(log, "no need for preview ingress service update", dataplane)
 	}
 

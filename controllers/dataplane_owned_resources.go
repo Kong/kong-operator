@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/utils/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
@@ -33,7 +34,7 @@ func ensureDataPlaneCertificate(
 	dataplane *operatorv1beta1.DataPlane,
 	clusterCASecretNN types.NamespacedName,
 	adminServiceNN types.NamespacedName,
-) (CreatedUpdatedOrNoop, *corev1.Secret, error) {
+) (op.CreatedUpdatedOrNoop, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
 		certificatesv1.UsageDigitalSignature, certificatesv1.UsageServerAuth,
@@ -57,7 +58,7 @@ func ensureDeploymentForDataPlane(
 	certSecretName string,
 	additionalDeploymentLabels client.MatchingLabels,
 	opts ...k8sresources.DeploymentOpt,
-) (res CreatedUpdatedOrNoop, deploy *appsv1.Deployment, err error) {
+) (res op.CreatedUpdatedOrNoop, deploy *appsv1.Deployment, err error) {
 	// TODO: https://github.com/Kong/gateway-operator/pull/1101.
 	// Use only new labels after several minor version of soak time.
 
@@ -79,13 +80,13 @@ func ensureDeploymentForDataPlane(
 		matchingLabels,
 	)
 	if err != nil {
-		return Noop, nil, fmt.Errorf("failed listing Deployments for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		return op.Noop, nil, fmt.Errorf("failed listing Deployments for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 
 	// Get the Deploments for the DataPlane using legacy labels.
 	reqLegacyLabels, err := k8sresources.GetManagedLabelRequirementsForOwnerLegacy(dataplane)
 	if err != nil {
-		return Noop, nil, err
+		return op.Noop, nil, err
 	}
 	deploymentsLegacy, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
@@ -97,16 +98,16 @@ func ensureDeploymentForDataPlane(
 		},
 	)
 	if err != nil {
-		return Noop, nil, fmt.Errorf("failed listing Deployments for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		return op.Noop, nil, fmt.Errorf("failed listing Deployments for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 	deployments = append(deployments, deploymentsLegacy...)
 
 	count := len(deployments)
 	if count > 1 {
 		if err := k8sreduce.ReduceDeployments(ctx, cl, deployments, DataPlaneOwnedObjectPreDeleteHook); err != nil {
-			return Noop, nil, err
+			return op.Noop, nil, err
 		}
-		return Updated, nil, errors.New("number of deployments reduced")
+		return op.Updated, nil, errors.New("number of deployments reduced")
 	}
 
 	if len(additionalDeploymentLabels) > 0 {
@@ -119,12 +120,12 @@ func ensureDeploymentForDataPlane(
 	}
 	dataplaneImage, err := generateDataPlaneImage(dataplane, versionValidationOptions...)
 	if err != nil {
-		return Noop, nil, err
+		return op.Noop, nil, err
 	}
 
 	generatedDeployment, err := k8sresources.GenerateNewDeploymentForDataPlane(dataplane, dataplaneImage, certSecretName, opts...)
 	if err != nil {
-		return Noop, nil, err
+		return op.Noop, nil, err
 	}
 
 	if count == 1 {
@@ -163,11 +164,11 @@ func ensureDeploymentForDataPlane(
 	}
 
 	if err = cl.Create(ctx, generatedDeployment); err != nil {
-		return Noop, nil, fmt.Errorf("failed creating Deployment for DataPlane %s: %w", dataplane.Name, err)
+		return op.Noop, nil, fmt.Errorf("failed creating Deployment for DataPlane %s: %w", dataplane.Name, err)
 	}
 
 	debug(log, "deployment for DataPlane created", dataplane, "deployment", generatedDeployment.Name)
-	return Created, generatedDeployment, nil
+	return op.Created, generatedDeployment, nil
 }
 
 func matchingLabelsToServiceOpt(ml client.MatchingLabels) k8sresources.ServiceOpt {
@@ -209,7 +210,7 @@ func ensureAdminServiceForDataPlane(
 	dataplane *operatorv1beta1.DataPlane,
 	additionalServiceLabels client.MatchingLabels,
 	opts ...k8sresources.ServiceOpt,
-) (res CreatedUpdatedOrNoop, svc *corev1.Service, err error) {
+) (res op.CreatedUpdatedOrNoop, svc *corev1.Service, err error) {
 	// TODO: https://github.com/Kong/gateway-operator/pull/1101.
 	// Use only new labels after several minor version of soak time.
 
@@ -232,19 +233,19 @@ func ensureAdminServiceForDataPlane(
 		matchingLabels,
 	)
 	if err != nil {
-		return Noop, nil, fmt.Errorf("failed listing Services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		return op.Noop, nil, fmt.Errorf("failed listing Services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 
 	// Get the Services for the DataPlane using legacy labels.
 	reqLegacyLabels, err := k8sresources.GetManagedLabelRequirementsForOwnerLegacy(dataplane)
 	if err != nil {
-		return Noop, nil, err
+		return op.Noop, nil, err
 	}
 	reqLegacyServiceType, err := labels.NewRequirement(
 		consts.DataPlaneServiceTypeLabelLegacy, selection.Equals, []string{string(consts.DataPlaneAdminServiceLabelValue)},
 	)
 	if err != nil {
-		return Noop, nil, err
+		return op.Noop, nil, err
 	}
 	servicesLegacy, err := k8sutils.ListServicesForOwner(
 		ctx,
@@ -256,16 +257,16 @@ func ensureAdminServiceForDataPlane(
 		},
 	)
 	if err != nil {
-		return Noop, nil, fmt.Errorf("failed listing Services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		return op.Noop, nil, fmt.Errorf("failed listing Services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 	services = append(services, servicesLegacy...)
 
 	count := len(services)
 	if count > 1 {
 		if err := k8sreduce.ReduceServices(ctx, cl, services, DataPlaneOwnedObjectPreDeleteHook); err != nil {
-			return Noop, nil, err
+			return op.Noop, nil, err
 		}
-		return Noop, nil, errors.New("number of DataPlane Admin API services reduced")
+		return op.Noop, nil, errors.New("number of DataPlane Admin API services reduced")
 	}
 
 	if len(additionalServiceLabels) > 0 {
@@ -274,7 +275,7 @@ func ensureAdminServiceForDataPlane(
 
 	generatedService, err := k8sresources.GenerateNewAdminServiceForDataPlane(dataplane, opts...)
 	if err != nil {
-		return Noop, nil, err
+		return op.Noop, nil, err
 	}
 
 	if count == 1 {
@@ -297,18 +298,18 @@ func ensureAdminServiceForDataPlane(
 
 		if updated {
 			if err := cl.Update(ctx, existingService); err != nil {
-				return Noop, existingService, fmt.Errorf("failed updating DataPlane Service %s: %w", existingService.Name, err)
+				return op.Noop, existingService, fmt.Errorf("failed updating DataPlane Service %s: %w", existingService.Name, err)
 			}
-			return Updated, existingService, nil
+			return op.Updated, existingService, nil
 		}
-		return Noop, existingService, nil
+		return op.Noop, existingService, nil
 	}
 
 	if err = cl.Create(ctx, generatedService); err != nil {
-		return Noop, nil, fmt.Errorf("failed creating Admin API Service for DataPlane %s: %w", dataplane.Name, err)
+		return op.Noop, nil, fmt.Errorf("failed creating Admin API Service for DataPlane %s: %w", dataplane.Name, err)
 	}
 
-	return Created, generatedService, nil
+	return op.Created, generatedService, nil
 }
 
 // ensureIngressServiceForDataPlane ensures ingress service with metadata and spec
@@ -320,7 +321,7 @@ func ensureIngressServiceForDataPlane(
 	dataplane *operatorv1beta1.DataPlane,
 	additionalServiceLabels client.MatchingLabels,
 	opts ...k8sresources.ServiceOpt,
-) (CreatedUpdatedOrNoop, *corev1.Service, error) {
+) (op.CreatedUpdatedOrNoop, *corev1.Service, error) {
 	// TODO: https://github.com/Kong/gateway-operator/pull/1101.
 	// Use only new labels after several minor version of soak time.
 
@@ -343,19 +344,19 @@ func ensureIngressServiceForDataPlane(
 		matchingLabels,
 	)
 	if err != nil {
-		return Noop, nil, fmt.Errorf("failed listing Services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		return op.Noop, nil, fmt.Errorf("failed listing Services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 
 	// Get the Services for the DataPlane using legacy labels.
 	reqLegacyLabels, err := k8sresources.GetManagedLabelRequirementsForOwnerLegacy(dataplane)
 	if err != nil {
-		return Noop, nil, err
+		return op.Noop, nil, err
 	}
 	reqLegacyServiceType, err := labels.NewRequirement(
 		consts.DataPlaneServiceTypeLabelLegacy, selection.Equals, []string{string(consts.DataPlaneProxyServiceLabelValueLegacy)},
 	)
 	if err != nil {
-		return Noop, nil, err
+		return op.Noop, nil, err
 	}
 	servicesLegacy, err := k8sutils.ListServicesForOwner(
 		ctx,
@@ -367,16 +368,16 @@ func ensureIngressServiceForDataPlane(
 		},
 	)
 	if err != nil {
-		return Noop, nil, fmt.Errorf("failed listing Services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		return op.Noop, nil, fmt.Errorf("failed listing Services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 	services = append(services, servicesLegacy...)
 
 	count := len(services)
 	if count > 1 {
 		if err := k8sreduce.ReduceServices(ctx, cl, services, DataPlaneOwnedObjectPreDeleteHook); err != nil {
-			return Noop, nil, err
+			return op.Noop, nil, err
 		}
-		return Noop, nil, errors.New("number of DataPlane ingress services reduced")
+		return op.Noop, nil, errors.New("number of DataPlane ingress services reduced")
 	}
 
 	if len(additionalServiceLabels) > 0 {
@@ -385,7 +386,7 @@ func ensureIngressServiceForDataPlane(
 
 	generatedService, err := k8sresources.GenerateNewIngressServiceForDataplane(dataplane, opts...)
 	if err != nil {
-		return Noop, nil, err
+		return op.Noop, nil, err
 	}
 	addAnnotationsForDataplaneIngressService(generatedService, *dataplane)
 	k8sutils.SetOwnerForObject(generatedService, dataplane)
@@ -420,14 +421,14 @@ func ensureIngressServiceForDataPlane(
 
 		if updated {
 			if err := cl.Update(ctx, existingService); err != nil {
-				return Noop, existingService, fmt.Errorf("failed updating DataPlane Service %s: %w", existingService.Name, err)
+				return op.Noop, existingService, fmt.Errorf("failed updating DataPlane Service %s: %w", existingService.Name, err)
 			}
-			return Updated, existingService, nil
+			return op.Updated, existingService, nil
 		}
-		return Noop, existingService, nil
+		return op.Noop, existingService, nil
 	}
 
-	return Created, generatedService, cl.Create(ctx, generatedService)
+	return op.Created, generatedService, cl.Create(ctx, generatedService)
 }
 
 // DataPlaneOwnedObjectPreDeleteHook is a pre-delete hook for DataPlane-owned objects that ensures that before the

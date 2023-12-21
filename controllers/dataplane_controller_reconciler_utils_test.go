@@ -21,6 +21,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/utils/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/internal/versions"
@@ -81,7 +82,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 					},
 				)
 				require.NoError(t, err)
-				require.Equal(t, Created, res)
+				require.Equal(t, op.Created, res)
 				require.Equal(t, expectedDeploymentStrategy, deployment.Spec.Strategy)
 			},
 		},
@@ -146,7 +147,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 					},
 				)
 				require.NoError(t, err)
-				require.Equal(t, Created, res)
+				require.Equal(t, op.Created, res)
 				require.Len(t, deployment.Spec.Template.Spec.Volumes, 2)
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 				require.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
@@ -228,7 +229,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName, client.MatchingLabels{})
 				require.NoError(t, err)
 
-				assert.Equal(t, Updated, res, "the DataPlane deployment should be updated with the original strategy")
+				assert.Equal(t, op.Updated, res, "the DataPlane deployment should be updated with the original strategy")
 				assert.Equal(t, expectedDeploymentStrategy, deployment.Spec.Strategy)
 			},
 		},
@@ -286,7 +287,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName, client.MatchingLabels{})
 				require.NoError(t, err)
 
-				assert.Equal(t, Updated, res, "the DataPlane deployment should be updated to get the resources set to defaults")
+				assert.Equal(t, op.Updated, res, "the DataPlane deployment should be updated to get the resources set to defaults")
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 				require.Equal(t, dataPlane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Resources, deployment.Spec.Template.Spec.Containers[0].Resources)
 			},
@@ -352,7 +353,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName, client.MatchingLabels{})
 				require.NoError(t, err)
 
-				assert.Equal(t, Updated, res, "the DataPlane deployment should be updated to get the affinity set to the dataplane's spec")
+				assert.Equal(t, op.Updated, res, "the DataPlane deployment should be updated to get the affinity set to the dataplane's spec")
 				assert.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 				assert.Equal(t, dataPlane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Affinity.PodAntiAffinity, deployment.Spec.Template.Spec.Affinity.PodAntiAffinity)
 			},
@@ -388,7 +389,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 					},
 				)
 				require.NoError(t, err)
-				require.Equal(t, Created, res)
+				require.Equal(t, op.Created, res)
 
 				existingDeployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
 					PodAntiAffinity: &corev1.PodAntiAffinity{
@@ -416,7 +417,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 					},
 				)
 				require.NoError(t, err)
-				assert.Equal(t, Updated, res, "the DataPlane deployment should be updated to get the affinity removed")
+				assert.Equal(t, op.Updated, res, "the DataPlane deployment should be updated to get the affinity removed")
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 				require.Equal(t, deployment.Spec.Template.Spec.Affinity, &corev1.Affinity{})
 			},
@@ -452,7 +453,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 					},
 				)
 				require.NoError(t, err)
-				require.Equal(t, Created, res)
+				require.Equal(t, op.Created, res)
 
 				existingDeployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
 					PodAntiAffinity: &corev1.PodAntiAffinity{
@@ -480,7 +481,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 					},
 				)
 				require.NoError(t, err)
-				assert.Equal(t, Updated, res, "the DataPlane deployment should be updated to get the affinity removed")
+				assert.Equal(t, op.Updated, res, "the DataPlane deployment should be updated to get the affinity removed")
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 				require.Equal(t, deployment.Spec.Template.Spec.Affinity, &corev1.Affinity{})
 			},

@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/utils/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
@@ -95,10 +96,10 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 	switch res {
-	case Created, Updated:
+	case op.Created, op.Updated:
 		debug(log, "DataPlane admin service modified", dataplane, "service", dataplaneAdminService.Name, "reason", res)
 		return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
-	case Noop:
+	case op.Noop:
 	}
 
 	trace(log, "exposing DataPlane deployment via service", dataplane)
@@ -116,7 +117,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if serviceRes == Created || serviceRes == Updated {
+	if serviceRes == op.Created || serviceRes == op.Updated {
 		debug(log, "DataPlane ingress service created/updated", dataplane, "service", dataplaneIngressService.Name)
 		return ctrl.Result{}, nil
 	}
@@ -144,7 +145,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if res != Noop {
+	if res != op.Noop {
 		debug(log, "mTLS certificate created/updated", dataplane)
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
@@ -171,7 +172,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if res != Noop {
+	if res != op.Noop {
 		return ctrl.Result{}, nil
 	}
 

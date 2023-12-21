@@ -32,6 +32,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/utils/op"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
@@ -702,7 +703,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 		subject                  string
 		mtlsCASecretNN           NN
 		additionalMatchingLabels client.MatchingLabels
-		expectedResult           CreatedUpdatedOrNoop
+		expectedResult           op.CreatedUpdatedOrNoop
 		expectedError            error
 		objectList               client.ObjectList
 	}{
@@ -715,7 +716,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 				Namespace: "ns",
 			},
 			additionalMatchingLabels: nil,
-			expectedResult:           Created,
+			expectedResult:           op.Created,
 			expectedError:            nil,
 		},
 		{
@@ -750,7 +751,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 					}(),
 				},
 			},
-			expectedResult: Created,
+			expectedResult: op.Created,
 			expectedError:  nil,
 		},
 		{
@@ -804,7 +805,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 					}(),
 				},
 			},
-			expectedResult: Noop,
+			expectedResult: op.Noop,
 			expectedError:  errors.New("number of secrets reduced"),
 		},
 	}

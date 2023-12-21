@@ -1,4 +1,4 @@
-package controllers
+package op
 
 // CreatedUpdatedOrNoop represents a result of an operation that can either:
 // - create a resource

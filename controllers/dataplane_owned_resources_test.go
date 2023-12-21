@@ -13,6 +13,7 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/utils/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
@@ -24,7 +25,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 		dataplane                *operatorv1beta1.DataPlane
 		additionalLabels         map[string]string
 		existingServiceModifier  func(*testing.T, context.Context, client.Client, *corev1.Service)
-		expectedCreatedOrUpdated CreatedUpdatedOrNoop
+		expectedCreatedOrUpdated op.CreatedUpdatedOrNoop
 		expectedServiceType      corev1.ServiceType
 		expectedAnnotations      map[string]string
 		expectedLabels           map[string]string
@@ -39,7 +40,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 				require.NoError(t, DataPlaneOwnedObjectPreDeleteHook(ctx, c, svc))
 				require.NoError(t, c.Delete(ctx, svc))
 			},
-			expectedCreatedOrUpdated: Created,
+			expectedCreatedOrUpdated: op.Created,
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
 		},
 		{
@@ -48,7 +49,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 				Namespace: "default",
 				Name:      "dp-1",
 			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
-			expectedCreatedOrUpdated: Noop,
+			expectedCreatedOrUpdated: op.Noop,
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
 		},
 		{
@@ -62,7 +63,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 				svc.Annotations = nil
 				require.NoError(t, c.Update(ctx, svc))
 			},
-			expectedCreatedOrUpdated: Updated,
+			expectedCreatedOrUpdated: op.Updated,
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
 			expectedAnnotations: map[string]string{
 				"foo": "bar",
@@ -86,7 +87,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 				Name:      "dp-1",
 			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
 				WithIngressServiceAnnotations(map[string]string{"foo": "bar"}).Build(),
-			expectedCreatedOrUpdated: Updated,
+			expectedCreatedOrUpdated: op.Updated,
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
 			expectedAnnotations: map[string]string{
 				"foo": "bar",
@@ -109,7 +110,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 				}
 				require.NoError(t, c.Update(ctx, svc))
 			},
-			expectedCreatedOrUpdated: Created,
+			expectedCreatedOrUpdated: op.Created,
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
 			expectedLabels:           map[string]string{"foo": "bar"},
 		},
