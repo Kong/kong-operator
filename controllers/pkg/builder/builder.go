@@ -1,4 +1,4 @@
-package controllers
+package builder
 
 // Define builders to build objects used in tests.
 
@@ -13,7 +13,8 @@ type testDataPlaneBuilder struct {
 	dataplane *operatorv1beta1.DataPlane
 }
 
-func NewTestDataPlaneBuilder() *testDataPlaneBuilder {
+// NewDataPlaneBuilder returns a builder for DataPlane object.
+func NewDataPlaneBuilder() *testDataPlaneBuilder {
 	return &testDataPlaneBuilder{
 		dataplane: &operatorv1beta1.DataPlane{
 			Spec: operatorv1beta1.DataPlaneSpec{
@@ -29,10 +30,12 @@ func NewTestDataPlaneBuilder() *testDataPlaneBuilder {
 	}
 }
 
+// Build returns constructed DataPlane object.
 func (b *testDataPlaneBuilder) Build() *operatorv1beta1.DataPlane {
 	return b.dataplane
 }
 
+// WithObjectMeta sets the ObjectMeta of the DataPlane object.
 func (b *testDataPlaneBuilder) WithObjectMeta(objectMeta metav1.ObjectMeta) *testDataPlaneBuilder {
 	b.dataplane.ObjectMeta = objectMeta
 	return b
@@ -47,12 +50,14 @@ func (b *testDataPlaneBuilder) initIngressServiceOptions() {
 	}
 }
 
+// WithIngressServiceType sets the ServiceType of the Ingress service.
 func (b *testDataPlaneBuilder) WithIngressServiceType(typ corev1.ServiceType) *testDataPlaneBuilder {
 	b.initIngressServiceOptions()
 	b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.Type = typ
 	return b
 }
 
+// WithIngressServiceAnnotations sets the Annotations of the Ingress service.
 func (b *testDataPlaneBuilder) WithIngressServiceAnnotations(anns map[string]string) *testDataPlaneBuilder {
 	b.initIngressServiceOptions()
 	b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.Annotations = anns
@@ -68,6 +73,7 @@ func (b *testDataPlaneBuilder) initDeploymentRolloutBlueGreen() {
 	}
 }
 
+// WithPromotionStrategy sets the PromotionStrategy of the DataPlane object.
 func (b *testDataPlaneBuilder) WithPromotionStrategy(promotionStrategy operatorv1beta1.PromotionStrategy) *testDataPlaneBuilder {
 	b.initDeploymentRolloutBlueGreen()
 	b.dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen.Promotion.Strategy = promotionStrategy

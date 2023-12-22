@@ -13,6 +13,7 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/pkg/builder"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -32,7 +33,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 	}{
 		{
 			name: "should create a new service if service does not exist",
-			dataplane: NewTestDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
+			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
 				Namespace: "default",
 				Name:      "dp-1",
 			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
@@ -45,7 +46,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 		},
 		{
 			name: "should not update when a service exists",
-			dataplane: NewTestDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
+			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
 				Namespace: "default",
 				Name:      "dp-1",
 			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
@@ -54,7 +55,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 		},
 		{
 			name: "should add annotations to existing service",
-			dataplane: NewTestDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
+			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
 				Namespace: "default",
 				Name:      "dp-1",
 			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
@@ -82,7 +83,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 				}
 				require.NoError(t, c.Update(ctx, svc))
 			},
-			dataplane: NewTestDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
+			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
 				Namespace: "default",
 				Name:      "dp-1",
 			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
@@ -100,7 +101,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 		{
 			name:             "should create service when service does not contain additional labels",
 			additionalLabels: map[string]string{"foo": "bar"},
-			dataplane: NewTestDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
+			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
 				Namespace: "default",
 				Name:      "dp-1",
 			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),

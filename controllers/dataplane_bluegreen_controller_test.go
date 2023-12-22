@@ -15,6 +15,7 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/pkg/builder"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -30,21 +31,21 @@ func TestCanProceedWithPromotion(t *testing.T) {
 	}{
 		{
 			name: "AutomaticPromotion strategy",
-			dataplane: *NewTestDataPlaneBuilder().
+			dataplane: *builder.NewDataPlaneBuilder().
 				WithPromotionStrategy(v1beta1.AutomaticPromotion).
 				Build(),
 			expectedCanProceed: true,
 		},
 		{
 			name: "BreakBeforePromotion strategy, no annotation",
-			dataplane: *NewTestDataPlaneBuilder().
+			dataplane: *builder.NewDataPlaneBuilder().
 				WithPromotionStrategy(v1beta1.BreakBeforePromotion).
 				Build(),
 			expectedCanProceed: false,
 		},
 		{
 			name: "BreakBeforePromotion strategy, annotation false",
-			dataplane: *NewTestDataPlaneBuilder().
+			dataplane: *builder.NewDataPlaneBuilder().
 				WithObjectMeta(
 					metav1.ObjectMeta{
 						Annotations: map[string]string{
@@ -58,7 +59,7 @@ func TestCanProceedWithPromotion(t *testing.T) {
 		},
 		{
 			name: "BreakBeforePromotion strategy, annotation true",
-			dataplane: *NewTestDataPlaneBuilder().
+			dataplane: *builder.NewDataPlaneBuilder().
 				WithObjectMeta(
 					metav1.ObjectMeta{
 						Annotations: map[string]string{
@@ -72,7 +73,7 @@ func TestCanProceedWithPromotion(t *testing.T) {
 		},
 		{
 			name: "unknown strategy",
-			dataplane: *NewTestDataPlaneBuilder().
+			dataplane: *builder.NewDataPlaneBuilder().
 				WithPromotionStrategy(v1beta1.PromotionStrategy("unknown")).
 				Build(),
 			expectedErr: errors.New(`unknown promotion strategy: "unknown"`),
@@ -106,7 +107,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 	}{
 		{
 			name: "have existing service, should not update",
-			dataplane: NewTestDataPlaneBuilder().WithObjectMeta(
+			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(
 				metav1.ObjectMeta{Namespace: "default", Name: "dp-0"},
 			).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
 				WithPromotionStrategy(v1beta1.AutomaticPromotion).Build(),
@@ -134,7 +135,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 		},
 		{
 			name: "no existing service, should create",
-			dataplane: NewTestDataPlaneBuilder().WithObjectMeta(
+			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(
 				metav1.ObjectMeta{Namespace: "default", Name: "dp-1"},
 			).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
 				WithPromotionStrategy(v1beta1.AutomaticPromotion).Build(),
@@ -165,7 +166,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 		},
 		{
 			name: "multiple services, should reduce service",
-			dataplane: NewTestDataPlaneBuilder().WithObjectMeta(
+			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(
 				metav1.ObjectMeta{Namespace: "default", Name: "dp-1"},
 			).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
 				WithPromotionStrategy(v1beta1.AutomaticPromotion).Build(),
@@ -180,7 +181,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 		},
 		{
 			name: "existing service has different spec, should update",
-			dataplane: NewTestDataPlaneBuilder().WithObjectMeta(
+			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(
 				metav1.ObjectMeta{Namespace: "default", Name: "dp-1"},
 			).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
 				WithPromotionStrategy(v1beta1.AutomaticPromotion).Build(),

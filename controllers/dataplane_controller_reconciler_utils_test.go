@@ -21,6 +21,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/pkg/builder"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
@@ -530,13 +531,13 @@ func TestDataPlaneIngressServiceIsReady(t *testing.T) {
 	}{
 		{
 			name:                    "returns true when DataPlane not have a Load Balancer Ingress Service set",
-			dataPlane:               NewTestDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeClusterIP).Build(),
+			dataPlane:               builder.NewDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeClusterIP).Build(),
 			dataPlaneIngressService: ingressService(),
 			expected:                true,
 		},
 		{
 			name:      "returns true when DataPlane has a Load Balancer Ingress Service set with an IP",
-			dataPlane: NewTestDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
+			dataPlane: builder.NewDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
 			dataPlaneIngressService: ingressService(
 				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{
 					IP: "10.0.0.1",
@@ -546,7 +547,7 @@ func TestDataPlaneIngressServiceIsReady(t *testing.T) {
 		},
 		{
 			name:      "returns true when DataPlane has a Load Balancer Ingress Service set with a Hostname",
-			dataPlane: NewTestDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
+			dataPlane: builder.NewDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
 			dataPlaneIngressService: ingressService(
 				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{
 					Hostname: "random-hostname.example.com",
@@ -556,7 +557,7 @@ func TestDataPlaneIngressServiceIsReady(t *testing.T) {
 		},
 		{
 			name:      "returns true when DataPlane has a Load Balancer Ingress Service set with an IP and Hostname",
-			dataPlane: NewTestDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
+			dataPlane: builder.NewDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
 			dataPlaneIngressService: ingressService(
 				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{
 					IP:       "10.0.0.1",
@@ -567,13 +568,13 @@ func TestDataPlaneIngressServiceIsReady(t *testing.T) {
 		},
 		{
 			name:                    "returns false when DataPlane has a Load Balancer Ingress Service set without an IP or Hostname",
-			dataPlane:               NewTestDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
+			dataPlane:               builder.NewDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
 			dataPlaneIngressService: ingressService(),
 			expected:                false,
 		},
 		{
 			name:      "returns true when DataPlane has a Load Balancer Ingress Service set with 2 status and only the second one having an IP",
-			dataPlane: NewTestDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
+			dataPlane: builder.NewDataPlaneBuilder().WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
 			dataPlaneIngressService: ingressService(
 				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{}), // Shouldn't really happen though
 				withLoadBalancerIngressStatus(corev1.LoadBalancerIngress{
