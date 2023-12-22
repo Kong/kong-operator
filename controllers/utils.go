@@ -34,7 +34,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
-	"github.com/kong/gateway-operator/controllers/utils/op"
+	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	"github.com/kong/gateway-operator/internal/manager/logging"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"

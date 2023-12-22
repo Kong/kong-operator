@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
-	"github.com/kong/gateway-operator/controllers/utils/address"
+	"github.com/kong/gateway-operator/controllers/pkg/address"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
