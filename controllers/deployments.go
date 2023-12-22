@@ -11,6 +11,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/pkg/log"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 )
 
@@ -20,14 +21,14 @@ import (
 func patchIfPatchIsNonEmpty[OwnerT operatorv1beta1.DataPlane | operatorv1alpha1.ControlPlane](
 	ctx context.Context,
 	cl client.Client,
-	log logr.Logger,
+	logger logr.Logger,
 	existingDeployment *appsv1.Deployment,
 	oldExistingDeployment *appsv1.Deployment,
 	owner *OwnerT,
 	updated bool,
 ) (res op.CreatedUpdatedOrNoop, deploy *appsv1.Deployment, err error) {
 	if !updated {
-		trace(log, "No need for Deployment update", owner, "deployment", existingDeployment.Name)
+		log.Trace(logger, "No need for Deployment update", owner, "deployment", existingDeployment.Name)
 		return op.Noop, existingDeployment, nil
 	}
 
@@ -39,13 +40,13 @@ func patchIfPatchIsNonEmpty[OwnerT operatorv1beta1.DataPlane | operatorv1alpha1.
 	}
 	// Only perform the patch operation if the resulting patch is non empty.
 	if len(b) == 0 || bytes.Equal(b, []byte("{}")) {
-		trace(log, "No need for Deployment update", owner, "deployment", existingDeployment.Name)
+		log.Trace(logger, "No need for Deployment update", owner, "deployment", existingDeployment.Name)
 		return op.Noop, existingDeployment, nil
 	}
 
 	if err := cl.Patch(ctx, existingDeployment, client.MergeFrom(oldExistingDeployment)); err != nil {
 		return op.Noop, existingDeployment, fmt.Errorf("failed patching Deployment %s: %w", existingDeployment.Name, err)
 	}
-	debug(log, "Deployment modified", owner, "deployment", existingDeployment.Name)
+	log.Debug(logger, "Deployment modified", owner, "deployment", existingDeployment.Name)
 	return op.Updated, existingDeployment, nil
 }

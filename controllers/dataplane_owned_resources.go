@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/pkg/log"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -52,7 +53,7 @@ func ensureDataPlaneCertificate(
 func ensureDeploymentForDataPlane(
 	ctx context.Context,
 	cl client.Client,
-	log logr.Logger,
+	logger logr.Logger,
 	developmentMode bool,
 	dataplane *operatorv1beta1.DataPlane,
 	certSecretName string,
@@ -160,14 +161,14 @@ func ensureDeploymentForDataPlane(
 			updated = true
 		}
 
-		return patchIfPatchIsNonEmpty(ctx, cl, log, existingDeployment, oldExistingDeployment, dataplane, updated)
+		return patchIfPatchIsNonEmpty(ctx, cl, logger, existingDeployment, oldExistingDeployment, dataplane, updated)
 	}
 
 	if err = cl.Create(ctx, generatedDeployment); err != nil {
 		return op.Noop, nil, fmt.Errorf("failed creating Deployment for DataPlane %s: %w", dataplane.Name, err)
 	}
 
-	debug(log, "deployment for DataPlane created", dataplane, "deployment", generatedDeployment.Name)
+	log.Debug(logger, "deployment for DataPlane created", dataplane, "deployment", generatedDeployment.Name)
 	return op.Created, generatedDeployment, nil
 }
 
@@ -316,7 +317,7 @@ func ensureAdminServiceForDataPlane(
 // generated from the dataplane.
 func ensureIngressServiceForDataPlane(
 	ctx context.Context,
-	log logr.Logger,
+	logger logr.Logger,
 	cl client.Client,
 	dataplane *operatorv1beta1.DataPlane,
 	additionalServiceLabels client.MatchingLabels,
@@ -401,7 +402,7 @@ func ensureIngressServiceForDataPlane(
 					dataplane, existingMeta.Annotations, generatedMeta.Annotations,
 				)
 				if err != nil {
-					log.Error(err, "failed to update annotations of existing ingress service for dataplane",
+					logger.Error(err, "failed to update annotations of existing ingress service for dataplane",
 						"dataplane", fmt.Sprintf("%s/%s", dataplane.Namespace, dataplane.Name),
 						"ingress_service", fmt.Sprintf("%s/%s", existingService.Namespace, existingService.Name))
 					return true, existingMeta

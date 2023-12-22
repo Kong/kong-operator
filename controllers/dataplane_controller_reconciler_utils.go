@@ -14,6 +14,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/pkg/address"
+	"github.com/kong/gateway-operator/controllers/pkg/log"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
@@ -189,7 +190,7 @@ func dataPlaneIngressServiceIsReady(dataplane *operatorv1beta1.DataPlane, datapl
 
 // patchDataPlaneStatus patches the resource status only when there are changes
 // that requires it.
-func patchDataPlaneStatus(ctx context.Context, cl client.Client, log logr.Logger, updated *operatorv1beta1.DataPlane) (bool, error) {
+func patchDataPlaneStatus(ctx context.Context, cl client.Client, logger logr.Logger, updated *operatorv1beta1.DataPlane) (bool, error) {
 	current := &operatorv1beta1.DataPlane{}
 
 	err := cl.Get(ctx, client.ObjectKeyFromObject(updated), current)
@@ -203,7 +204,7 @@ func patchDataPlaneStatus(ctx context.Context, cl client.Client, log logr.Logger
 		current.Status.Service != updated.Status.Service ||
 		current.Status.Selector != updated.Status.Selector {
 
-		debug(log, "patching DataPlane status", updated, "status", updated.Status)
+		log.Debug(logger, "patching DataPlane status", updated, "status", updated.Status)
 		return true, cl.Status().Patch(ctx, updated, client.MergeFrom(current))
 	}
 

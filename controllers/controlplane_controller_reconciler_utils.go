@@ -19,6 +19,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/pkg/log"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -117,7 +118,7 @@ func (r *ControlPlaneReconciler) ensureDataPlaneConfiguration(
 // corresponding dataplane is set.
 func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	ctx context.Context,
-	log logr.Logger,
+	logger logr.Logger,
 	controlplane *operatorv1alpha1.ControlPlane,
 	serviceAccountName, certSecretName string,
 ) (op.CreatedUpdatedOrNoop, *appsv1.Deployment, error) {
@@ -195,7 +196,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 			}
 		}
 
-		return patchIfPatchIsNonEmpty(ctx, r.Client, log, existingDeployment, oldExistingDeployment, controlplane, updated)
+		return patchIfPatchIsNonEmpty(ctx, r.Client, logger, existingDeployment, oldExistingDeployment, controlplane, updated)
 	}
 
 	if !dataplaneIsSet {
@@ -205,7 +206,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		return op.Noop, nil, fmt.Errorf("failed creating ControlPlane Deployment %s: %w", generatedDeployment.Name, err)
 	}
 
-	debug(log, "deployment for ControlPlane created", controlplane, "deployment", generatedDeployment.Name)
+	log.Debug(logger, "deployment for ControlPlane created", controlplane, "deployment", generatedDeployment.Name)
 	return op.Created, generatedDeployment, nil
 }
 

@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/kong/gateway-operator/controllers/pkg/log"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -38,19 +39,19 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := getLogger(ctx, "gatewayclass", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, "gatewayclass", r.DevelopmentMode)
 
-	trace(log, "reconciling gatewayclass resource", req)
+	log.Trace(logger, "reconciling gatewayclass resource", req)
 
 	gwc := newGatewayClass()
 	if err := r.Client.Get(ctx, req.NamespacedName, gwc.GatewayClass); err != nil {
 		if errors.IsNotFound(err) {
-			debug(log, "object enqueued no longer exists, skipping", req)
+			log.Debug(logger, "object enqueued no longer exists, skipping", req)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
-	debug(log, "processing gatewayclass", gwc)
+	log.Debug(logger, "processing gatewayclass", gwc)
 
 	if gwc.isControlled() {
 		if !gwc.isAccepted() {

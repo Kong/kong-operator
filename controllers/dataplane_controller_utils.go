@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/pkg/log"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/internal/versions"
@@ -118,7 +119,7 @@ func extractOutdatedDataPlaneIngressServiceAnnotations(
 func ensureDataPlaneReadyStatus(
 	ctx context.Context,
 	cl client.Client,
-	log logr.Logger,
+	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 ) (ctrl.Result, error) {
 	deployments, err := k8sutils.ListDeploymentsForOwner(ctx,
@@ -134,7 +135,7 @@ func ensureDataPlaneReadyStatus(
 		return ctrl.Result{}, fmt.Errorf("failed listing deployments for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 	if len(deployments) != 1 {
-		info(log, "expected only 1 Deployment for DataPlane", dataplane)
+		log.Info(logger, "expected only 1 Deployment for DataPlane", dataplane)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -148,7 +149,7 @@ func ensureDataPlaneReadyStatus(
 	// until it stabilized to be equal to status.replicas.
 	// If any of those conditions is specified we mark the DataPlane as not ready yet.
 	if deployment.Status.Replicas == 0 || deployment.Status.AvailableReplicas < deployment.Status.Replicas {
-		debug(log, "Deployment for DataPlane not ready yet", dataplane)
+		log.Debug(logger, "Deployment for DataPlane not ready yet", dataplane)
 
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
@@ -162,7 +163,7 @@ func ensureDataPlaneReadyStatus(
 			dataplane,
 		)
 		ensureDataPlaneReadinessStatus(dataplane, &deployment)
-		if _, err = patchDataPlaneStatus(ctx, cl, log, dataplane); err != nil {
+		if _, err = patchDataPlaneStatus(ctx, cl, logger, dataplane); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed patching status (Deployment not ready) for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 		}
 		return ctrl.Result{}, nil
@@ -182,13 +183,13 @@ func ensureDataPlaneReadyStatus(
 		return ctrl.Result{}, fmt.Errorf("failed listing ingress services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 	if len(services) != 1 {
-		info(log, "expected only 1 ingress Service for DataPlane", dataplane)
+		log.Info(logger, "expected only 1 ingress Service for DataPlane", dataplane)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	ingressService := services[0]
 	if !dataPlaneIngressServiceIsReady(dataplane, &ingressService) {
-		debug(log, "Ingress Service for DataPlane not ready yet", dataplane)
+		log.Debug(logger, "Ingress Service for DataPlane not ready yet", dataplane)
 
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
@@ -202,7 +203,7 @@ func ensureDataPlaneReadyStatus(
 			dataplane,
 		)
 		ensureDataPlaneReadinessStatus(dataplane, &deployment)
-		if _, err = patchDataPlaneStatus(ctx, cl, log, dataplane); err != nil {
+		if _, err = patchDataPlaneStatus(ctx, cl, logger, dataplane); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed patching status (ingress Service not ready) for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 		}
 		return ctrl.Result{}, nil
@@ -211,7 +212,7 @@ func ensureDataPlaneReadyStatus(
 	k8sutils.SetReady(dataplane)
 	ensureDataPlaneReadinessStatus(dataplane, &deployment)
 
-	if _, err = patchDataPlaneStatus(ctx, cl, log, dataplane); err != nil {
+	if _, err = patchDataPlaneStatus(ctx, cl, logger, dataplane); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed patching status for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 
