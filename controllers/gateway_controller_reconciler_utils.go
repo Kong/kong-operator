@@ -20,6 +20,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/gatewayclass"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -147,12 +148,12 @@ func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAdd
 	return addresses, nil
 }
 
-func (r *GatewayReconciler) verifyGatewayClassSupport(ctx context.Context, gateway *gwtypes.Gateway) (*gatewayClassDecorator, error) {
+func (r *GatewayReconciler) verifyGatewayClassSupport(ctx context.Context, gateway *gwtypes.Gateway) (*gatewayclass.Decorator, error) {
 	if gateway.Spec.GatewayClassName == "" {
 		return nil, operatorerrors.ErrUnsupportedGateway
 	}
 
-	gwc := newGatewayClass()
+	gwc := gatewayclass.NewDecorator()
 	if err := r.Client.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gwc.GatewayClass); err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package controllers
+package gatewayclass
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 // GatewayClassReconciler - Watch Predicates
 // -----------------------------------------------------------------------------
 
-func (r *GatewayClassReconciler) gatewayClassMatches(obj client.Object) bool {
+func (r *Reconciler) gatewayClassMatches(obj client.Object) bool {
 
 	gwc, ok := obj.(*gatewayv1.GatewayClass)
 	if !ok {

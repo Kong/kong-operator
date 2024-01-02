@@ -1,4 +1,4 @@
-package controllers
+package gatewayclass
 
 import (
 	"context"
@@ -40,7 +40,7 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 		name            string
 		gatewayClassReq reconcile.Request
 		gatewayClass    *gatewayv1.GatewayClass
-		testBody        func(t *testing.T, reconciler GatewayClassReconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1.GatewayClass)
+		testBody        func(t *testing.T, reconciler Reconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1.GatewayClass)
 	}{
 		{
 			name: "gatewayclass not accepted",
@@ -57,14 +57,14 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 					ControllerName: gatewayv1.GatewayController("mismatch-controller-name"),
 				},
 			},
-			testBody: func(t *testing.T, reconciler GatewayClassReconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1.GatewayClass) {
+			testBody: func(t *testing.T, reconciler Reconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1.GatewayClass) {
 				ctx := context.Background()
 				_, err := reconciler.Reconcile(ctx, gatewayClassReq)
 				require.NoError(t, err)
-				gwc := newGatewayClass()
+				gwc := NewDecorator()
 				err = reconciler.Client.Get(ctx, gatewayClassReq.NamespacedName, gwc.GatewayClass)
 				require.NoError(t, err)
-				require.False(t, gwc.isAccepted())
+				require.False(t, gwc.IsAccepted())
 			},
 		},
 		{
@@ -82,14 +82,14 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 					ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 				},
 			},
-			testBody: func(t *testing.T, reconciler GatewayClassReconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1.GatewayClass) {
+			testBody: func(t *testing.T, reconciler Reconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1.GatewayClass) {
 				ctx := context.Background()
 				_, err := reconciler.Reconcile(ctx, gatewayClassReq)
 				require.NoError(t, err)
-				gwc := newGatewayClass()
+				gwc := NewDecorator()
 				err = reconciler.Client.Get(ctx, gatewayClassReq.NamespacedName, gwc.GatewayClass)
 				require.NoError(t, err)
-				require.True(t, gwc.isAccepted())
+				require.True(t, gwc.IsAccepted())
 			},
 		},
 	}
@@ -109,7 +109,7 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 				WithStatusSubresource(tc.gatewayClass).
 				Build()
 
-			reconciler := GatewayClassReconciler{
+			reconciler := Reconciler{
 				Client: fakeClient,
 			}
 

@@ -1,4 +1,4 @@
-package controllers
+package gatewayclass
 
 import (
 	"context"
@@ -23,14 +23,14 @@ import (
 // -----------------------------------------------------------------------------
 
 // GatewayReconciler reconciles a Gateway object
-type GatewayClassReconciler struct {
+type Reconciler struct {
 	client.Client
 	Scheme          *runtime.Scheme
 	DevelopmentMode bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&gatewayv1.GatewayClass{},
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatches))).
@@ -38,12 +38,12 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // Reconcile moves the current state of an object to the intended state.
-func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "gatewayclass", r.DevelopmentMode)
 
 	log.Trace(logger, "reconciling gatewayclass resource", req)
 
-	gwc := newGatewayClass()
+	gwc := NewDecorator()
 	if err := r.Client.Get(ctx, req.NamespacedName, gwc.GatewayClass); err != nil {
 		if errors.IsNotFound(err) {
 			log.Debug(logger, "object enqueued no longer exists, skipping", req)
@@ -54,7 +54,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	log.Debug(logger, "processing gatewayclass", gwc)
 
 	if gwc.isControlled() {
-		if !gwc.isAccepted() {
+		if !gwc.IsAccepted() {
 			acceptedCondition := metav1.Condition{
 				Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
 				Status:             metav1.ConditionTrue,
@@ -74,32 +74,34 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	return ctrl.Result{}, nil
 }
 
-// gatewayDecorator Decorator object to add additional functionality to the base k8s Gateway
-type gatewayClassDecorator struct {
+// Decorator struct adds additional functionality to the base K8s Gateway.
+type Decorator struct {
 	*gatewayv1.GatewayClass
 }
 
-// GetConditions returns status conditions.
-func (gwc *gatewayClassDecorator) GetConditions() []metav1.Condition {
+// GetConditions returns status conditions of GatewayClass.
+func (gwc *Decorator) GetConditions() []metav1.Condition {
 	return gwc.Status.Conditions
 }
 
-// SetConditions sets status conditions.
-func (gwc *gatewayClassDecorator) SetConditions(conditions []metav1.Condition) {
+// SetConditions sets status conditions of GatewayClass.
+func (gwc *Decorator) SetConditions(conditions []metav1.Condition) {
 	gwc.Status.Conditions = conditions
 }
 
-func newGatewayClass() *gatewayClassDecorator {
-	return &gatewayClassDecorator{
+// NewDecorator returns Decorator object to add additional functionality to the base K8s GatewayClass.
+func NewDecorator() *Decorator {
+	return &Decorator{
 		new(gatewayv1.GatewayClass),
 	}
 }
 
-func decorateGatewayClass(gwc *gatewayv1.GatewayClass) *gatewayClassDecorator {
-	return &gatewayClassDecorator{GatewayClass: gwc}
+func decorateGatewayClass(gwc *gatewayv1.GatewayClass) *Decorator {
+	return &Decorator{GatewayClass: gwc}
 }
 
-func (gwc *gatewayClassDecorator) isAccepted() bool {
+// IsAccepted returns true if the GatewayClass has been accepted by the operator.
+func (gwc *Decorator) IsAccepted() bool {
 	if cond, ok := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayClassConditionStatusAccepted), gwc); ok {
 		return cond.Reason == string(gatewayv1.GatewayClassReasonAccepted) &&
 			cond.ObservedGeneration == gwc.Generation && cond.Status == metav1.ConditionTrue
@@ -108,6 +110,6 @@ func (gwc *gatewayClassDecorator) isAccepted() bool {
 }
 
 // isControlled returns boolean if the GatewayClass is controlled by this controller.
-func (gwc *gatewayClassDecorator) isControlled() bool {
+func (gwc *Decorator) isControlled() bool {
 	return string(gwc.Spec.ControllerName) == vars.ControllerName()
 }

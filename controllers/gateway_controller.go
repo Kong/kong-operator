@@ -204,7 +204,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	if !gwc.isAccepted() {
+	if !gwc.IsAccepted() {
 		log.Debug(logger, "gatewayclass not accepted , ignoring", gateway)
 		return ctrl.Result{}, nil
 	}
