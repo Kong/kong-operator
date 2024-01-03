@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
@@ -22,7 +24,6 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		changed                     bool
 		newSpec                     *operatorv1alpha1.ControlPlaneOptions
 	}{
-		/* FIXME - we've broken the defaults
 		{
 			name:    "no_envs_no_dataplane",
 			spec:    &operatorv1alpha1.ControlPlaneOptions{},
@@ -63,10 +64,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			},
 		},
 		{
-			name:                      "no_envs_has_dataplane",
-			spec:                      &operatorv1alpha1.ControlPlaneOptions{},
-			changed:                   true,
-			namespace:                 "test-ns",
+			name:                        "no_envs_has_dataplane",
+			spec:                        &operatorv1alpha1.ControlPlaneOptions{},
+			changed:                     true,
+			namespace:                   "test-ns",
 			dataplaneIngressServiceName: "kong-proxy",
 			newSpec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
@@ -123,7 +124,6 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 				},
 			},
 		},
-		*/
 		{
 			name: "has_envs_and_dataplane",
 			spec: &operatorv1alpha1.ControlPlaneOptions{
@@ -348,8 +348,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 				}
 				if env.ValueFrom != nil {
 					actualValueFrom := envVarSourceByName(container.Env, env.Name)
-					require.Truef(t, reflect.DeepEqual(env.ValueFrom, actualValueFrom),
-						"should have same valuefrom of env %s", env.Name)
+					if !assert.Truef(t, reflect.DeepEqual(env.ValueFrom, actualValueFrom),
+						"should have same valuefrom of env %s", env.Name) {
+						t.Logf("diff:\n%s", cmp.Diff(env.ValueFrom, actualValueFrom))
+					}
 				}
 			}
 		})

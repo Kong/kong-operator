@@ -63,7 +63,6 @@ func setControlPlaneDefaults(
 		container = &corev1.Container{
 			Name: consts.ControlPlaneControllerContainerName,
 		}
-		podSpec.Containers = append(podSpec.Containers, *container)
 	}
 
 	if !reflect.DeepEqual(envSourceMetadataNamespace, envVarSourceByName(container.Env, "POD_NAMESPACE")) {
@@ -83,8 +82,8 @@ func setControlPlaneDefaults(
 		changed = true
 	}
 
-	if envValueByName(container.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME") != vars.ControllerName() {
-		container.Env = updateEnv(container.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME", vars.ControllerName())
+	if ctrlName := vars.ControllerName(); envValueByName(container.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME") != ctrlName {
+		container.Env = updateEnv(container.Env, "CONTROLLER_GATEWAY_API_CONTROLLER_NAME", ctrlName)
 		changed = true
 	}
 
@@ -116,6 +115,14 @@ func setControlPlaneDefaults(
 	}
 	if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_CA_CERT_FILE"]; !isOverrideDisabled {
 		container.Env = updateEnv(container.Env, "CONTROLLER_KONG_ADMIN_CA_CERT_FILE", "/var/cluster-certificate/ca.crt")
+	}
+
+	// PodSpec.Containers contains values not pointers so we cannot append here
+	// and change the container later on because that won't change the value
+	// in the PodSpec.
+	// To work around this append here to include all the modifications.
+	if changed {
+		podSpec.Containers = append(podSpec.Containers, *container)
 	}
 
 	return changed
