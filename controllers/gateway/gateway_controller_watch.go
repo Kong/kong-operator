@@ -1,4 +1,4 @@
-package controllers
+package gateway
 
 import (
 	"context"
@@ -29,7 +29,7 @@ import (
 // GatewayReconciler - Watch Predicates
 // -----------------------------------------------------------------------------
 
-func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
+func (r *Reconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
 	gateway, ok := obj.(*gwtypes.Gateway)
 	if !ok {
 		log.FromContext(context.Background()).Error(
@@ -52,7 +52,7 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 	return true
 }
 
-func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) bool {
+func (r *Reconciler) gatewayClassMatchesController(obj client.Object) bool {
 	gatewayClass, ok := obj.(*gatewayv1.GatewayClass)
 	if !ok {
 		log.FromContext(context.Background()).Error(
@@ -66,7 +66,7 @@ func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) boo
 	return string(gatewayClass.Spec.ControllerName) == vars.ControllerName()
 }
 
-func (r *GatewayReconciler) gatewayConfigurationMatchesController(obj client.Object) bool {
+func (r *Reconciler) gatewayConfigurationMatchesController(obj client.Object) bool {
 	ctx := context.Background()
 
 	gatewayClassList := new(gatewayv1.GatewayClassList)
@@ -96,7 +96,7 @@ func (r *GatewayReconciler) gatewayConfigurationMatchesController(obj client.Obj
 // GatewayReconciler - Watch Map Funcs
 // -----------------------------------------------------------------------------
 
-func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
+func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	gatewayClass, ok := obj.(*gatewayv1.GatewayClass)
 	if !ok {
 		log.FromContext(ctx).Error(
@@ -127,7 +127,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, obj
 	return
 }
 
-func (r *GatewayReconciler) listGatewaysForGatewayConfig(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
+func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	logger := log.FromContext(ctx)
 
 	gatewayConfig, ok := obj.(*operatorv1alpha1.GatewayConfiguration)
@@ -184,13 +184,13 @@ func (r *GatewayReconciler) listGatewaysForGatewayConfig(ctx context.Context, ob
 	return
 }
 
-func (r *GatewayReconciler) setDataplaneGatewayConfigDefaults(gatewayConfig *operatorv1alpha1.GatewayConfiguration) {
+func (r *Reconciler) setDataplaneGatewayConfigDefaults(gatewayConfig *operatorv1alpha1.GatewayConfiguration) {
 	if gatewayConfig.Spec.DataPlaneOptions == nil {
 		gatewayConfig.Spec.DataPlaneOptions = new(operatorv1beta1.DataPlaneOptions)
 	}
 }
 
-func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gwtypes.Gateway, gatewayConfig *operatorv1alpha1.GatewayConfiguration, dataplaneName, dataplaneIngressServiceName string) error { //nolint:unparam
+func (r *Reconciler) setControlplaneGatewayConfigDefaults(gateway *gwtypes.Gateway, gatewayConfig *operatorv1alpha1.GatewayConfiguration, dataplaneName, dataplaneIngressServiceName string) error { //nolint:unparam
 	dontOverride := make(map[string]struct{})
 	if gatewayConfig.Spec.ControlPlaneOptions == nil {
 		gatewayConfig.Spec.ControlPlaneOptions = new(operatorv1alpha1.ControlPlaneOptions)

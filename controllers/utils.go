@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -385,14 +384,6 @@ func generateTLSDataSecret(
 	}
 
 	return op.Created, generatedSecret, nil
-}
-
-// -----------------------------------------------------------------------------
-// ServicesOptions - Private Functions - Equality Checks
-// -----------------------------------------------------------------------------
-
-func servicesOptionsDeepEqual(opts1, opts2 *operatorv1beta1.DataPlaneNetworkOptions) bool {
-	return reflect.DeepEqual(opts1.Services, opts2.Services)
 }
 
 // -----------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-package controllers
+package gateway
 
 import (
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"

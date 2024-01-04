@@ -1,4 +1,4 @@
-package controllers
+package gateway
 
 import (
 	"context"
@@ -31,6 +31,7 @@ import (
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	"github.com/kong/gateway-operator/internal/utils/kubernetes/compare"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -39,15 +40,15 @@ import (
 // GatewayReconciler
 // -----------------------------------------------------------------------------
 
-// GatewayReconciler reconciles a Gateway object
-type GatewayReconciler struct {
+// Reconciler reconciles a Gateway object.
+type Reconciler struct {
 	client.Client
 	Scheme          *runtime.Scheme
 	DevelopmentMode bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		// watch Gateway objects, filtering out any Gateways which are not configured with
 		// a supported GatewayClass controller name.
@@ -75,7 +76,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // Reconcile moves the current state of an object to the intended state.
-func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "gateway", r.DevelopmentMode)
 
 	log.Trace(logger, "reconciling gateway resource", req)
@@ -339,7 +340,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	return ctrl.Result{}, nil
 }
 
-func (r *GatewayReconciler) provisionDataPlane(
+func (r *Reconciler) provisionDataPlane(
 	ctx context.Context,
 	logger logr.Logger,
 	gateway *gwtypes.Gateway,
@@ -436,7 +437,7 @@ func (r *GatewayReconciler) provisionDataPlane(
 	return dataplane
 }
 
-func (r *GatewayReconciler) provisionControlPlane(
+func (r *Reconciler) provisionControlPlane(
 	ctx context.Context,
 	logger logr.Logger,
 	gatewayClass *gatewayv1.GatewayClass,
@@ -607,14 +608,14 @@ func createControlPlaneCondition(status metav1.ConditionStatus, reason k8sutils.
 }
 
 // patchStatus patches the resource status with the Merge strategy
-func (r *GatewayReconciler) patchStatus(ctx context.Context, gateway, oldGateway *gwtypes.Gateway) error {
+func (r *Reconciler) patchStatus(ctx context.Context, gateway, oldGateway *gwtypes.Gateway) error {
 	return r.Client.Status().Patch(ctx, gateway, client.MergeFrom(oldGateway))
 }
 
 func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1beta1.DataPlaneOptions) bool {
 	// TODO: Doesn't take .Rollout field into account.
 	if !deploymentOptionsDeepEqual(&spec1.Deployment.DeploymentOptions, &spec2.Deployment.DeploymentOptions) ||
-		!servicesOptionsDeepEqual(&spec1.Network, &spec2.Network) {
+		!compare.NetworkOptionsDeepEqual(&spec1.Network, &spec2.Network) {
 		return false
 	}
 

@@ -1,4 +1,4 @@
-package controllers
+package gateway
 
 // -----------------------------------------------------------------------------
 // GatewayReconciler - RBAC Permissions

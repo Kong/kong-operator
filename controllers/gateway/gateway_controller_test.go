@@ -1,4 +1,4 @@
-package controllers
+package gateway
 
 import (
 	"context"
@@ -53,7 +53,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 		gatewaySubResources      []controllerruntimeclient.Object
 		dataplaneSubResources    []controllerruntimeclient.Object
 		controlplaneSubResources []controllerruntimeclient.Object
-		testBody                 func(t *testing.T, reconciler GatewayReconciler, gatewayReq reconcile.Request)
+		testBody                 func(t *testing.T, reconciler Reconciler, gatewayReq reconcile.Request)
 	}{
 		{
 			name: "service connectivity",
@@ -159,7 +159,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			testBody: func(t *testing.T, reconciler GatewayReconciler, gatewayReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, gatewayReq reconcile.Request) {
 				ctx := context.Background()
 
 				// These addresses are just placeholders, their value doesn't matter. No check is performed in the Gateway-controller,
@@ -338,7 +338,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				WithStatusSubresource(ObjectsToAdd...).
 				Build()
 
-			reconciler := GatewayReconciler{
+			reconciler := Reconciler{
 				Client: fakeClient,
 			}
 
@@ -633,7 +633,7 @@ func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
 		WithObjects(gateway, gatewayClass).
 		Build()
 
-	reconciler := GatewayReconciler{
+	reconciler := Reconciler{
 		Client: fakeClient,
 	}
 

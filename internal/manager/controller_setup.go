@@ -20,6 +20,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers"
+	"github.com/kong/gateway-operator/controllers/gateway"
 	"github.com/kong/gateway-operator/controllers/gatewayclass"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/internal/validation/dataplane"
@@ -131,7 +132,7 @@ func setupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 		// Gateway controller
 		{
 			Enabled: c.GatewayControllerEnabled,
-			Controller: &controllers.GatewayReconciler{
+			Controller: &gateway.Reconciler{
 				Client:          mgr.GetClient(),
 				Scheme:          mgr.GetScheme(),
 				DevelopmentMode: c.DevelopmentMode,

@@ -1,4 +1,4 @@
-package controllers
+package gateway
 
 import (
 	"context"
@@ -35,7 +35,7 @@ import (
 // GatewayReconciler - Reconciler Helpers
 // -----------------------------------------------------------------------------
 
-func (r *GatewayReconciler) createDataPlane(ctx context.Context,
+func (r *Reconciler) createDataPlane(ctx context.Context,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 ) error {
@@ -54,7 +54,7 @@ func (r *GatewayReconciler) createDataPlane(ctx context.Context,
 	return r.Client.Create(ctx, dataplane)
 }
 
-func (r *GatewayReconciler) createControlPlane(
+func (r *Reconciler) createControlPlane(
 	ctx context.Context,
 	gatewayClass *gatewayv1.GatewayClass,
 	gateway *gwtypes.Gateway,
@@ -83,7 +83,7 @@ func (r *GatewayReconciler) createControlPlane(
 	return r.Client.Create(ctx, controlplane)
 }
 
-func (r *GatewayReconciler) getGatewayAddresses(
+func (r *Reconciler) getGatewayAddresses(
 	ctx context.Context,
 	dataplane *operatorv1beta1.DataPlane,
 ) ([]gwtypes.GatewayStatusAddress, error) {
@@ -148,7 +148,7 @@ func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAdd
 	return addresses, nil
 }
 
-func (r *GatewayReconciler) verifyGatewayClassSupport(ctx context.Context, gateway *gwtypes.Gateway) (*gatewayclass.Decorator, error) {
+func (r *Reconciler) verifyGatewayClassSupport(ctx context.Context, gateway *gwtypes.Gateway) (*gatewayclass.Decorator, error) {
 	if gateway.Spec.GatewayClassName == "" {
 		return nil, operatorerrors.ErrUnsupportedGateway
 	}
@@ -165,7 +165,7 @@ func (r *GatewayReconciler) verifyGatewayClassSupport(ctx context.Context, gatew
 	return gwc, nil
 }
 
-func (r *GatewayReconciler) getOrCreateGatewayConfiguration(ctx context.Context, gatewayClass *gatewayv1.GatewayClass) (*operatorv1alpha1.GatewayConfiguration, error) {
+func (r *Reconciler) getOrCreateGatewayConfiguration(ctx context.Context, gatewayClass *gatewayv1.GatewayClass) (*operatorv1alpha1.GatewayConfiguration, error) {
 	gatewayConfig, err := r.getGatewayConfigForGatewayClass(ctx, gatewayClass)
 	if err != nil {
 		if errors.Is(err, operatorerrors.ErrObjectMissingParametersRef) {
@@ -177,7 +177,7 @@ func (r *GatewayReconciler) getOrCreateGatewayConfiguration(ctx context.Context,
 	return gatewayConfig, nil
 }
 
-func (r *GatewayReconciler) getGatewayConfigForGatewayClass(ctx context.Context, gatewayClass *gatewayv1.GatewayClass) (*operatorv1alpha1.GatewayConfiguration, error) {
+func (r *Reconciler) getGatewayConfigForGatewayClass(ctx context.Context, gatewayClass *gatewayv1.GatewayClass) (*operatorv1alpha1.GatewayConfiguration, error) {
 	if gatewayClass.Spec.ParametersRef == nil {
 		return nil, fmt.Errorf("%w, gatewayClass = %s", operatorerrors.ErrObjectMissingParametersRef, gatewayClass.Name)
 	}
@@ -214,7 +214,7 @@ func (r *GatewayReconciler) getGatewayConfigForGatewayClass(ctx context.Context,
 	}, gatewayConfig)
 }
 
-func (r *GatewayReconciler) ensureDataPlaneHasNetworkPolicy(
+func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
@@ -363,7 +363,7 @@ func generateDataPlaneNetworkPolicy(
 
 // ensureOwnedControlPlanesDeleted deletes all controlplanes owned by gateway.
 // returns true if at least one controlplane resource is deleted.
-func (r *GatewayReconciler) ensureOwnedControlPlanesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
+func (r *Reconciler) ensureOwnedControlPlanesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
 	controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, r.Client, gateway)
 	if err != nil {
 		return false, err
@@ -391,7 +391,7 @@ func (r *GatewayReconciler) ensureOwnedControlPlanesDeleted(ctx context.Context,
 
 // ensureOwnedDataPlanesDeleted deleted all dataplanes owned by gateway.
 // returns true if at least one dataplane resource is deleted.
-func (r *GatewayReconciler) ensureOwnedDataPlanesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
+func (r *Reconciler) ensureOwnedDataPlanesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
 	dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, r.Client, gateway)
 	if err != nil {
 		return false, err
@@ -414,7 +414,7 @@ func (r *GatewayReconciler) ensureOwnedDataPlanesDeleted(ctx context.Context, ga
 
 // ensureOwnedNetworkPoliciesDeleted deleted all network policies owned by gateway.
 // returns true if at least one networkPolicy resource is deleted.
-func (r *GatewayReconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
+func (r *Reconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
 	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway)
 	if err != nil {
 		return false, err

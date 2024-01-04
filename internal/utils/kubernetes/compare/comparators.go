@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
@@ -42,4 +43,8 @@ func DeploymentOptionsV1AlphaDeepEqual(o1, o2 *operatorv1alpha1.DeploymentOption
 		}),
 	}
 	return cmp.Equal(&o1.PodTemplateSpec, &o2.PodTemplateSpec, opts...)
+}
+
+func NetworkOptionsDeepEqual(opts1, opts2 *operatorv1beta1.DataPlaneNetworkOptions) bool {
+	return reflect.DeepEqual(opts1.Services, opts2.Services)
 }
