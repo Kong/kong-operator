@@ -3,6 +3,7 @@ package reduce
 import (
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -278,4 +279,27 @@ func filterNetworkPolicies(networkPolicies []networkingv1.NetworkPolicy) []netwo
 	}
 
 	return append(networkPolicies[:best], networkPolicies[best+1:]...)
+}
+
+// -----------------------------------------------------------------------------
+// Filter functions - HorizontalPodAutoscalers
+// -----------------------------------------------------------------------------
+
+// filterHPAs filters out the HorizontalPodAutoscalers to be kept and returns all
+// the HorizontalPodAutoscalers to be deleted.
+// The filtered-out HorizontalPodAutoscalers is decided as follows:
+// 1. creationTimestamp (older is better)
+func filterHPAs(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.HorizontalPodAutoscaler {
+	if len(hpas) < 2 {
+		return []autoscalingv2.HorizontalPodAutoscaler{}
+	}
+
+	best := 0
+	for i, hpa := range hpas {
+		if hpa.CreationTimestamp.Before(&hpas[best].CreationTimestamp) {
+			best = i
+		}
+	}
+
+	return append(hpas[:best], hpas[best+1:]...)
 }

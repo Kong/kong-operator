@@ -1,0 +1,57 @@
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: horizontal-autoscaling
+spec:
+  deployment:
+    scaling:
+      horizontal:
+        minReplicas: 2
+        maxReplicas: 10
+        metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 20
+        behavior:
+          scaleDown:
+            stabilizationWindowSeconds: 1
+            policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 2
+          scaleUp:
+            stabilizationWindowSeconds: 1
+            policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 2
+            - type: Pods
+              value: 5
+              periodSeconds: 2
+            selectPolicy: Max
+    podTemplateSpec:
+      metadata:
+        labels:
+          dataplane-pod-label: example
+        annotations:
+          dataplane-pod-annotation: example
+      spec:
+        containers:
+        - name: proxy
+          image: kong:3.4
+          env:
+          - name: KONG_LOG_LEVEL
+            value: debug
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 1

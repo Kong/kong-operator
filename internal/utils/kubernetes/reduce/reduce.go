@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -139,6 +140,19 @@ func ReduceNetworkPolicies(ctx context.Context, k8sClient client.Client, network
 	for _, networkPolicy := range filteredNetworkPolicies {
 		networkPolicy := networkPolicy
 		if err := k8sClient.Delete(ctx, &networkPolicy); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=delete
+
+// ReduceHPAs detects the best HorizontalPodAutoscaler in the set and deletes all the others.
+func ReduceHPAs(ctx context.Context, k8sClient client.Client, hpas []autoscalingv2.HorizontalPodAutoscaler) error {
+	for _, hpa := range filterHPAs(hpas) {
+		hpa := hpa
+		if err := k8sClient.Delete(ctx, &hpa); err != nil {
 			return err
 		}
 	}

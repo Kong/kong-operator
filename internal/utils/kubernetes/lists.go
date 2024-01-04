@@ -4,6 +4,7 @@ import (
 	"context"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -43,6 +44,41 @@ func ListDeploymentsForOwner(
 	}
 
 	return deployments, nil
+}
+
+// ListHPAsForOwner is a helper function to map a list of HorizontalPodAutoscalers
+// by list options and reduce by OwnerReference UID and namespace to efficiently
+// list only the objects owned by the provided UID.
+func ListHPAsForOwner(
+	ctx context.Context,
+	c client.Client,
+	namespace string,
+	uid types.UID,
+	listOpts ...client.ListOption,
+) ([]autoscalingv2.HorizontalPodAutoscaler, error) {
+	hpaList := &autoscalingv2.HorizontalPodAutoscalerList{}
+
+	err := c.List(
+		ctx,
+		hpaList,
+		append(
+			[]client.ListOption{client.InNamespace(namespace)},
+			listOpts...,
+		)...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	hpas := make([]autoscalingv2.HorizontalPodAutoscaler, 0)
+	for _, hpa := range hpaList.Items {
+		hpa := hpa
+		if IsOwnedByRefUID(&hpa, uid) {
+			hpas = append(hpas, hpa)
+		}
+	}
+
+	return hpas, nil
 }
 
 // ListServicesForOwner is a helper function to map a list of Services

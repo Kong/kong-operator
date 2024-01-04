@@ -122,6 +122,12 @@ func ensureDataPlaneReadyStatus(
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 ) (ctrl.Result, error) {
+	// retrieve a fresh copy of the dataplane to reduce the number of times we have to error on update
+	// due to new changes when the `Dataplane` resource is very active.
+	if err := cl.Get(ctx, client.ObjectKeyFromObject(dataplane), dataplane); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed getting DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+
 	deployments, err := k8sutils.ListDeploymentsForOwner(ctx,
 		cl,
 		dataplane.Namespace,

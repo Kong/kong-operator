@@ -15,11 +15,11 @@ import (
 type DeploymentOptions struct {
 	// Replicas describes the number of desired pods.
 	// This is a pointer to distinguish between explicit zero and not specified.
-	// This only affects the DataPlane deployments for now, for more details on
-	// ControlPlane scaling please see https://github.com/Kong/gateway-operator/issues/736.
+	// This is effectively shorthand for setting a scaling minimum and maximum
+	// to the same value. This field and the scaling field are mutually exclusive:
+	// You can only configure one or the other.
 	//
 	// +optional
-	// +kubebuilder:default=1
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	// Scaling defines the scaling options for the deployment.

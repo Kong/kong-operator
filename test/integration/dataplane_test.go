@@ -8,8 +8,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -524,7 +526,8 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
+	deployment := &appsv1.Deployment{}
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, deployment, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}, clients), time.Minute, time.Second)
 
@@ -538,6 +541,69 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 
 	t.Log("verifying that dataplane has indeed 1 ready replica after scaling down")
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneName, clients, 1), time.Minute, time.Second)
+
+	t.Log("changing from replicas to using autoscaling should create an HPA targeting the dataplane deployment")
+	require.Eventually(t,
+		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+			dp.Spec.Deployment.Scaling = &operatorv1beta1.Scaling{
+				HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+					MaxReplicas: 3,
+					Metrics: []autoscalingv2.MetricSpec{
+						{
+							Type: autoscalingv2.ResourceMetricSourceType,
+							Resource: &autoscalingv2.ResourceMetricSource{
+								Name: "cpu",
+								Target: autoscalingv2.MetricTarget{
+									Type:               autoscalingv2.UtilizationMetricType,
+									AverageUtilization: lo.ToPtr(int32(20)),
+								},
+							},
+						},
+					},
+				},
+			}
+			dp.Spec.Deployment.Replicas = nil
+		}),
+		time.Minute, time.Second)
+
+	{
+		var hpa autoscalingv2.HorizontalPodAutoscaler
+		require.Eventually(t, testutils.DataPlaneHasHPA(t, ctx, dataplane, &hpa, clients), time.Minute, time.Second)
+		require.NotNil(t, hpa)
+		assert.Equal(t, int32(3), hpa.Spec.MaxReplicas)
+		require.Len(t, hpa.Spec.Metrics, 1)
+		require.NotNil(t, hpa.Spec.Metrics[0].Resource)
+		require.NotNil(t, hpa.Spec.Metrics[0].Resource.Target.AverageUtilization)
+		assert.Equal(t, int32(20), *hpa.Spec.Metrics[0].Resource.Target.AverageUtilization)
+	}
+
+	t.Log("updating the horizontal scaling spec should update the relevant HPA")
+	require.Eventuallyf(t,
+		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+			dp.Spec.Deployment.Scaling.HorizontalScaling.MaxReplicas = 5
+			dp.Spec.Deployment.Scaling.HorizontalScaling.Metrics[0].Resource.Target.AverageUtilization = lo.ToPtr(int32(50))
+			dp.Spec.Deployment.Replicas = nil
+		}),
+		time.Minute, time.Second, "failed to update dataplane %s", dataplane.Name)
+	require.Eventuallyf(t, func() bool {
+		hpas := testutils.MustListDataPlaneHPAs(t, ctx, dataplane, clients, client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		})
+		if len(hpas) != 1 {
+			return false
+		}
+
+		hpa := hpas[0]
+		if hpa.Spec.MaxReplicas != 5 {
+			return false
+		}
+		if len(hpa.Spec.Metrics) != 1 || hpa.Spec.Metrics[0].Resource == nil ||
+			hpa.Spec.Metrics[0].Resource.Target.AverageUtilization == nil ||
+			*hpa.Spec.Metrics[0].Resource.Target.AverageUtilization != 50 {
+			return false
+		}
+		return true
+	}, time.Minute, time.Second, "HPA for dataplane %s not found or not as expected", dataplane.Name)
 }
 
 func TestDataPlaneVolumeMounts(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -155,10 +156,22 @@ func ensureDeploymentForDataPlane(
 			updated = true
 		}
 
-		// ensure that replication strategy is up to date
-		if !cmp.Equal(existingDeployment.Spec.Replicas, generatedDeployment.Spec.Replicas) {
-			existingDeployment.Spec.Replicas = generatedDeployment.Spec.Replicas
-			updated = true
+		if scaling := dataplane.Spec.Deployment.DeploymentOptions.Scaling; false ||
+			// If the scaling strategy is not specified, we compare the replicas.
+			(scaling == nil || scaling.HorizontalScaling == nil) ||
+			// If the scaling strategy is specified with minReplicas, we compare
+			// the minReplicas with the existing Deployment replicas and we set
+			// the replicas to the minReplicas if the existing Deployment replicas
+			// are less than the minReplicas to enforce faster scaling before HPA
+			// kicks in.
+			(scaling != nil && scaling.HorizontalScaling != nil &&
+				scaling.HorizontalScaling.MinReplicas != nil &&
+				existingDeployment.Spec.Replicas != nil &&
+				*existingDeployment.Spec.Replicas < *scaling.HorizontalScaling.MinReplicas) {
+			if !cmp.Equal(existingDeployment.Spec.Replicas, generatedDeployment.Spec.Replicas) {
+				existingDeployment.Spec.Replicas = generatedDeployment.Spec.Replicas
+				updated = true
+			}
 		}
 
 		return patchIfPatchIsNonEmpty(ctx, cl, logger, existingDeployment, oldExistingDeployment, dataplane, updated)
@@ -170,6 +183,65 @@ func ensureDeploymentForDataPlane(
 
 	log.Debug(logger, "deployment for DataPlane created", dataplane, "deployment", generatedDeployment.Name)
 	return op.Created, generatedDeployment, nil
+}
+
+func ensureHPAForDataPlane(
+	ctx context.Context,
+	cl client.Client,
+	log logr.Logger,
+	dataplane *operatorv1beta1.DataPlane,
+	deploymentName string,
+) (res op.CreatedUpdatedOrNoop, hpa *autoscalingv2.HorizontalPodAutoscaler, err error) {
+	if scaling := dataplane.Spec.Deployment.DeploymentOptions.Scaling; scaling == nil || scaling.HorizontalScaling == nil {
+		return op.Noop, nil, nil
+	}
+
+	matchingLabels := k8sresources.GetManagedLabelForOwner(dataplane)
+	hpas, err := k8sutils.ListHPAsForOwner(
+		ctx,
+		cl,
+		dataplane.Namespace,
+		dataplane.UID,
+		matchingLabels,
+	)
+	if err != nil {
+		return op.Noop, nil, fmt.Errorf("failed listing HPAs for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+
+	if len(hpas) > 1 {
+		if err := k8sreduce.ReduceHPAs(ctx, cl, hpas); err != nil {
+			return op.Noop, nil, fmt.Errorf("failed reducing HPAs for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		}
+		return op.Noop, nil, nil
+	}
+
+	generatedHPA, err := k8sresources.GenerateHPAForDataPlane(dataplane, deploymentName)
+	if err != nil {
+		return op.Noop, nil, err
+	}
+
+	if len(hpas) == 1 {
+		var updated bool
+		existingHPA := &hpas[0]
+		oldExistingHPA := existingHPA.DeepCopy()
+
+		// ensure that object metadata is up to date
+		updated, existingHPA.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingHPA.ObjectMeta, generatedHPA.ObjectMeta)
+
+		// ensure that rollout strategy is up to date
+		if !cmp.Equal(existingHPA.Spec, generatedHPA.Spec) {
+			existingHPA.Spec = generatedHPA.Spec
+			updated = true
+		}
+
+		return patchIfPatchIsNonEmpty(ctx, cl, log, existingHPA, oldExistingHPA, dataplane, updated)
+	}
+
+	if err = cl.Create(ctx, generatedHPA); err != nil {
+		return op.Noop, nil, fmt.Errorf("failed creating HPA for DataPlane %s: %w", dataplane.Name, err)
+	}
+
+	return op.Created, nil, nil
 }
 
 func matchingLabelsToServiceOpt(ml client.MatchingLabels) k8sresources.ServiceOpt {

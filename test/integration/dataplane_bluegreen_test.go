@@ -9,8 +9,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,7 +60,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 
 	t.Run("before patching", func(t *testing.T) {
 		t.Log("verifying preview deployment managed by the dataplane is present")
-		require.Eventually(t, testutils.DataPlaneHasDeployment(t, ctx, dataplaneName, clients, dataplanePreviewDeploymentLabels()), waitTime, tickTime)
+		require.Eventually(t, testutils.DataPlaneHasDeployment(t, ctx, dataplaneName, nil, clients, dataplanePreviewDeploymentLabels()), waitTime, tickTime)
 
 		t.Run("preview Admin API service", func(t *testing.T) {
 			t.Log("verifying preview admin service managed by the dataplane is present")
@@ -87,7 +90,6 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 	const dataplaneImageToPatch = "kong:3.1"
 
 	t.Run("after patching", func(t *testing.T) {
-		t.Logf("patching DataPlane with image %q", dataplaneImageToPatch)
 		patchDataPlaneImage(ctx, t, dataplane, clients.MgrClient, dataplaneImageToPatch)
 
 		t.Log("verifying preview deployment managed by the dataplane is present and has AvailableReplicas")
@@ -167,7 +169,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 			t.Log("verifying live deployment managed by the dataplane is present and has an available replica using the patched proxy image")
 
 			require.Eventually(t,
-				testutils.DataPlaneHasDeployment(t, ctx, dataplaneName, clients, dataplaneLiveDeploymentLabels(),
+				testutils.DataPlaneHasDeployment(t, ctx, dataplaneName, nil, clients, dataplaneLiveDeploymentLabels(),
 					func(d appsv1.Deployment) bool {
 						proxyContainer := k8sutils.GetPodContainerByName(&d.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 						return proxyContainer != nil && dataplaneImageToPatch == proxyContainer.Image
@@ -211,7 +213,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 
 			require.Eventually(t,
 				testutils.Not(
-					testutils.DataPlaneHasDeployment(t, ctx, dataplaneName, clients, dataplanePreviewDeploymentLabels())),
+					testutils.DataPlaneHasDeployment(t, ctx, dataplaneName, nil, clients, dataplanePreviewDeploymentLabels())),
 				waitTime, tickTime)
 		})
 
@@ -232,6 +234,102 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 				waitTime, tickTime)
 		})
 	})
+}
+
+func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
+	const (
+		waitTime = time.Minute
+		tickTime = 100 * time.Millisecond
+	)
+
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+
+	t.Log("deploying a dataplane")
+	dataplaneName := types.NamespacedName{
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
+	}
+	dataplane := &operatorv1beta1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: dataplaneName.Namespace,
+			Name:      dataplaneName.Name,
+		},
+		Spec: testBlueGreenDataPlaneSpec(),
+	}
+
+	dataplane.Spec.Deployment.Scaling = &operatorv1beta1.Scaling{
+		HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+			MinReplicas: lo.ToPtr(int32(2)),
+			MaxReplicas: 5,
+			Metrics: []autoscalingv2.MetricSpec{
+				{
+					Type: autoscalingv2.ResourceMetricSourceType,
+					Resource: &autoscalingv2.ResourceMetricSource{
+						Name: "cpu",
+						Target: autoscalingv2.MetricTarget{
+							Type:               autoscalingv2.UtilizationMetricType,
+							AverageUtilization: lo.ToPtr(int32(20)),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+
+	dataplane, err := dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(dataplane)
+
+	t.Logf("verifying DataPlane %s gets marked ready", dataplane.Name)
+	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, clients.OperatorClient), waitTime, tickTime)
+
+	const dataplaneImageToPatch = "kong:3.2"
+	patchDataPlaneImage(ctx, t, dataplane, clients.MgrClient, dataplaneImageToPatch)
+	var previewDeployment appsv1.Deployment
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &previewDeployment, dataplanePreviewDeploymentLabels(), clients), waitTime, tickTime)
+
+	t.Logf("checking if DataPlane %s has an HPA", dataplane.Name)
+	var hpa autoscalingv2.HorizontalPodAutoscaler
+	require.Eventually(t, testutils.DataPlaneHasHPA(t, ctx, dataplane, &hpa, clients),
+		waitTime, tickTime, "HPA should be created for DataPlane %s", dataplane.Name)
+	require.NotNil(t, hpa)
+	require.NotNil(t, hpa.Spec.MinReplicas)
+	assert.EqualValues(t, 2, *hpa.Spec.MinReplicas)
+	assert.Equal(t, int32(5), hpa.Spec.MaxReplicas)
+	require.Len(t, hpa.Spec.Metrics, 1)
+	require.NotNil(t, hpa.Spec.Metrics[0].Resource)
+	require.NotNil(t, hpa.Spec.Metrics[0].Resource.Target.AverageUtilization)
+	assert.Equal(t, int32(20), *hpa.Spec.Metrics[0].Resource.Target.AverageUtilization)
+
+	t.Logf("checking if the HPA %s is pointing to the correct Deployment", hpa.Name)
+	require.Eventually(t, testutils.HPAPredicate(t, ctx, client.ObjectKeyFromObject(&hpa),
+		func(hpa *autoscalingv2.HorizontalPodAutoscaler) bool {
+			return hpa.Spec.ScaleTargetRef.Name != previewDeployment.Name
+		}, clients.MgrClient),
+		waitTime, tickTime, "HPA should not target the preview deployment")
+
+	var deployment2 appsv1.Deployment
+	require.Eventually(t, testutils.DataPlaneHasDeployment(t, ctx, dataplaneName, &deployment2, clients,
+		client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
+		}, func(d appsv1.Deployment) bool {
+			return hpa.Spec.ScaleTargetRef.Name == d.Name
+		}),
+		waitTime, tickTime, "HPA should target the live deployment")
+
+	t.Logf("patching DataPlane with promotion triggering annotation %s=%s", operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey, operatorv1beta1.DataPlanePromoteWhenReadyAnnotationTrue)
+	patchDataPlaneAnnotations(t, dataplane, clients.MgrClient, map[string]string{
+		operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey: operatorv1beta1.DataPlanePromoteWhenReadyAnnotationTrue,
+	})
+	t.Logf("HPA %s should now point to just promoted %s Deployment", hpa.Name, previewDeployment.Name)
+	require.Eventually(t, testutils.HPAPredicate(t, ctx, client.ObjectKeyFromObject(&hpa),
+		func(hpa *autoscalingv2.HorizontalPodAutoscaler) bool {
+			return hpa.Spec.ScaleTargetRef.Name == previewDeployment.Name
+		}, clients.MgrClient),
+		waitTime, tickTime)
 }
 
 func TestDataPlane_ResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T) {
@@ -390,9 +488,20 @@ func testBlueGreenDataPlaneSpec() operatorv1beta1.DataPlaneSpec {
 }
 
 func patchDataPlaneImage(ctx context.Context, t *testing.T, dataplane *operatorv1beta1.DataPlane, cl client.Client, image string) {
+	t.Helper()
+	t.Logf("patching DataPlane %s with image %q", dataplane.Name, image)
+
 	oldDataplane := dataplane.DeepCopy()
 	require.Len(t, dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers, 1)
 	dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Image = image
+	require.NoError(t, cl.Patch(ctx, dataplane, client.MergeFrom(oldDataplane)))
+}
+
+func patchDataPlaneHorizontalScaling(ctx context.Context, t *testing.T, dataplane *operatorv1beta1.DataPlane, cl client.Client, h *operatorv1beta1.HorizontalScaling) {
+	oldDataplane := dataplane.DeepCopy()
+	dataplane.Spec.Deployment.Scaling = &operatorv1beta1.Scaling{
+		HorizontalScaling: h,
+	}
 	require.NoError(t, cl.Patch(ctx, dataplane, client.MergeFrom(oldDataplane)))
 }
 

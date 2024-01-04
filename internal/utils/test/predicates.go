@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -59,6 +60,22 @@ func DataPlanePredicate(
 		dataplane, err := dataPlaneClient.Get(ctx, dataplaneName.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		return predicate(dataplane)
+	}
+}
+
+// HPAPredicate is a helper function for tests that returns a function
+// that can be used to check if an HPA has a certain state.
+func HPAPredicate(
+	t *testing.T,
+	ctx context.Context,
+	hpaName types.NamespacedName,
+	predicate func(hpa *autoscalingv2.HorizontalPodAutoscaler) bool,
+	client client.Client,
+) func() bool {
+	return func() bool {
+		var hpa autoscalingv2.HorizontalPodAutoscaler
+		require.NoError(t, client.Get(ctx, hpaName, &hpa))
+		return predicate(&hpa)
 	}
 }
 
@@ -195,7 +212,8 @@ func ControlPlaneHasNReadyPods(t *testing.T, ctx context.Context, controlplaneNa
 }
 
 // DataPlaneHasActiveDeployment is a helper function for tests that returns a function
-// that can be used to check if a DataPlane has an active deployment.
+// that can be used to check if a DataPlane has an active deployment (that is,
+// a Deployment that has at least 1 Replica and that all Replicas as marked as Available).
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasActiveDeployment(
 	t *testing.T,
@@ -219,12 +237,64 @@ func DataPlaneHasActiveDeployment(
 	}, clients.OperatorClient)
 }
 
+// DataPlaneHasHPA is a helper function for tests that returns a function
+// that can be used to check if a DataPlane has an active HPA.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func DataPlaneHasHPA(
+	t *testing.T,
+	ctx context.Context,
+	dataplane *operatorv1beta1.DataPlane,
+	ret *autoscalingv2.HorizontalPodAutoscaler,
+	clients K8sClients,
+) func() bool {
+	dataplaneName := client.ObjectKeyFromObject(dataplane)
+	const dataplaneDeploymentAppLabel = "app"
+
+	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
+		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
+			dataplaneDeploymentAppLabel:          dataplane.Name,
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive, // Only live Deployment has an HPA.
+		})
+		if len(deployments) != 1 {
+			return false
+		}
+
+		hpas := MustListDataPlaneHPAs(t, ctx, dataplane, clients, client.MatchingLabels{
+			dataplaneDeploymentAppLabel:          dataplane.Name,
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		})
+		if len(hpas) != 1 {
+			return false
+		}
+
+		hpa := hpas[0]
+		if hpa.Spec.ScaleTargetRef.Name != deployments[0].Name {
+			return false
+		}
+
+		if ret != nil {
+			*ret = hpa
+		}
+
+		return true
+	}, clients.OperatorClient)
+}
+
 // DataPlaneHasDeployment is a helper function for tests that returns a function
 // that can be used to check if a DataPlane has a Deployment.
 // Optionally the caller can provide a list of assertions that will be checked
 // against the found Deployment.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func DataPlaneHasDeployment(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, matchingLabels client.MatchingLabels, asserts ...func(appsv1.Deployment) bool) func() bool {
+func DataPlaneHasDeployment(
+	t *testing.T,
+	ctx context.Context,
+	dataplaneName types.NamespacedName,
+	ret *appsv1.Deployment,
+	clients K8sClients,
+	matchingLabels client.MatchingLabels,
+	asserts ...func(appsv1.Deployment) bool,
+) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, matchingLabels)
 		if len(deployments) != 1 {
@@ -235,6 +305,9 @@ func DataPlaneHasDeployment(t *testing.T, ctx context.Context, dataplaneName typ
 			if !a(deployment) {
 				return false
 			}
+		}
+		if ret != nil {
+			*ret = deployment
 		}
 		return true
 	}, clients.OperatorClient)

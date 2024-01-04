@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -84,7 +85,7 @@ func MustListNetworkPoliciesForGateway(t *testing.T, ctx context.Context, gatewa
 	return networkPolicies
 }
 
-// MustListServices is a helper function for tests that
+// MustListDataPlaneServices is a helper function for tests that
 // conveniently lists all proxy services managed by a given dataplane.
 func MustListDataPlaneServices(t *testing.T, ctx context.Context, dataplane *operatorv1beta1.DataPlane, mgrClient client.Client, matchingLabels client.MatchingLabels) []corev1.Service {
 	services, err := k8sutils.ListServicesForOwner(
@@ -98,8 +99,8 @@ func MustListDataPlaneServices(t *testing.T, ctx context.Context, dataplane *ope
 	return services
 }
 
-// mustListDataPlaneDeployments is a helper function for tests that
-// conveniently lists all deployments managed by a given controlplane.
+// MustListDataPlaneDeployments is a helper function for tests that
+// conveniently lists all deployments managed by a given dataplane.
 func MustListDataPlaneDeployments(t *testing.T, ctx context.Context, dataplane *operatorv1beta1.DataPlane, clients K8sClients, matchinglabels client.MatchingLabels) []appsv1.Deployment {
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
@@ -110,6 +111,20 @@ func MustListDataPlaneDeployments(t *testing.T, ctx context.Context, dataplane *
 	)
 	require.NoError(t, err)
 	return deployments
+}
+
+// MustListDataPlaneHPAs is a helper function for tests that
+// conveniently lists all HPAs managed by a given dataplane.
+func MustListDataPlaneHPAs(t *testing.T, ctx context.Context, dataplane *operatorv1beta1.DataPlane, clients K8sClients, matchinglabels client.MatchingLabels) []autoscalingv2.HorizontalPodAutoscaler {
+	hpas, err := k8sutils.ListHPAsForOwner(
+		ctx,
+		clients.MgrClient,
+		dataplane.Namespace,
+		dataplane.UID,
+		matchinglabels,
+	)
+	require.NoError(t, err)
+	return hpas
 }
 
 // MustListServiceEndpointSlices is a helper function for tests that

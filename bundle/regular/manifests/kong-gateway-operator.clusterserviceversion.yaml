@@ -482,6 +482,16 @@ spec:
           verbs:
           - get
         - apiGroups:
+          - autoscaling
+          resources:
+          - horizontalpodautoscalers
+          verbs:
+          - delete
+          - get
+          - list
+          - patch
+          - watch
+        - apiGroups:
           - batch
           resources:
           - jobs

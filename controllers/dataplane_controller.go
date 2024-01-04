@@ -164,7 +164,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	res, _, err = ensureDeploymentForDataPlane(ctx, r.Client, logger, r.DevelopmentMode, dataplane, certSecret.Name,
+	res, deployment, err := ensureDeploymentForDataPlane(ctx, r.Client, logger, r.DevelopmentMode, dataplane, certSecret.Name,
 		client.MatchingLabels{
 			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
 		},
@@ -177,7 +177,13 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil
 	}
 
-	log.Trace(logger, "checking readiness of DataPlane deployments", dataplane)
+	res, _, err = ensureHPAForDataPlane(ctx, r.Client, logger, dataplane, deployment.Name)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if res != op.Noop {
+		return ctrl.Result{}, nil
+	}
 
 	if res, err := ensureDataPlaneReadyStatus(ctx, r.Client, logger, dataplane); err != nil {
 		return ctrl.Result{}, err

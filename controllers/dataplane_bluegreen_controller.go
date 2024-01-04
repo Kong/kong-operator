@@ -88,8 +88,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return r.DataPlaneController.Reconcile(ctx, req)
 	}
 
-	if !k8sutils.IsReady(&dataplane) {
-		log.Debug(logger, "DataPlane is not ready yet to proceed with BlueGreen rollout, delegating to DataPlaneReconciler", req)
+	if shouldDelegateToDataPlaneController(&dataplane, logger) {
 		return r.DataPlaneController.Reconcile(ctx, req)
 	}
 
@@ -169,7 +168,7 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	// Ensure "preview" Deployment.
-	deployment, _, err := r.ensureDeploymentForDataPlane(ctx, logger, &dataplane, certSecret)
+	deployment, res, err := r.ensureDeploymentForDataPlane(ctx, logger, &dataplane, certSecret)
 	if err != nil {
 		cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Deployment")
 		return ctrl.Result{}, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", errors.Join(cErr, err))
@@ -278,6 +277,39 @@ func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	log.Debug(logger, "BlueGreen reconciliation complete for DataPlane resource", dataplane)
 	return ctrl.Result{}, nil
+}
+
+// shouldDelegateToDataPlaneController determines if the dataplane needs to have the
+// standard, dataplane related reconciliation work done first, before proceeding to
+// perform the blue green related rollout work.
+func shouldDelegateToDataPlaneController(
+	dataplane *operatorv1beta1.DataPlane,
+	logger logr.Logger,
+) bool {
+	// If we're running the exact same Generation as "live" version is then:
+	// - if the rollout status condition "RolledOut" has a reason "WaitingForChange"
+	//   that means that we can delegate to DataPlaneReconciler and the DataPlane
+	//   will not receive any changes that should be staged to "preview".
+	// - any other reason for rollout status condition "RolledOut" should not trigger
+	//   the delegation because that either means that we're waiting for the promotion,
+	//   we're in the process of promotion or the promotion failed.
+	cReady, okReady := k8sutils.GetCondition(k8sutils.ReadyType, dataplane)
+	cRolledOut, okRolledOut := k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
+	if okReady && okRolledOut &&
+		cReady.ObservedGeneration == cRolledOut.ObservedGeneration &&
+		cReady.ObservedGeneration == dataplane.Generation {
+		if cRolledOut.Reason == string(consts.DataPlaneConditionReasonRolloutWaitingForChange) {
+			log.Debug(logger, "DataPlane is up to date, waiting for changes, delegating to DataPlaneReconciler", dataplane)
+			return true
+		}
+	}
+
+	if !k8sutils.IsReady(dataplane) {
+		log.Debug(logger, "DataPlane is not ready yet to proceed with BlueGreen rollout, delegating to DataPlaneReconciler", dataplane)
+		return true
+	}
+
+	return false
 }
 
 // prunePreviewSubresources is used to prune DataPlane's preview subresources
@@ -820,10 +852,10 @@ func (r *DataPlaneBlueGreenReconciler) ensurePreviewDeploymentLabeledLive(
 		matchingLabels,
 	)
 	if err != nil {
-		return false, fmt.Errorf("failed listing preview deployments: %w", err)
+		return false, fmt.Errorf("failed listing preview deployments for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 	if len(deployments) == 0 {
-		return false, errors.New("no preview deployments found")
+		return false, fmt.Errorf("no preview deployments found for DataPlane %s/%s", dataplane.Namespace, dataplane.Name)
 	}
 
 	// If there are multiple preview deployments, we will label live only the first one.
