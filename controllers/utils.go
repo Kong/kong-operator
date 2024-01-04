@@ -21,8 +21,6 @@ import (
 	"github.com/cloudflare/cfssl/signer"
 	"github.com/cloudflare/cfssl/signer/local"
 	"github.com/go-logr/logr"
-	"github.com/google/go-cmp/cmp"
-	"github.com/samber/lo"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -387,76 +385,6 @@ func generateTLSDataSecret(
 	}
 
 	return op.Created, generatedSecret, nil
-}
-
-// -----------------------------------------------------------------------------
-// DeploymentOptions - Private Functions - Equality Checks
-// -----------------------------------------------------------------------------
-
-func alphaDeploymentOptionsDeepEqual(o1, o2 *operatorv1alpha1.DeploymentOptions, envVarsToIgnore ...string) bool {
-	if o1 == nil && o2 == nil {
-		return true
-	}
-
-	if (o1 == nil && o2 != nil) || (o1 != nil && o2 == nil) {
-		return false
-	}
-
-	if !reflect.DeepEqual(o1.Replicas, o2.Replicas) {
-		return false
-	}
-
-	opts := []cmp.Option{
-		cmp.Comparer(func(a, b corev1.ResourceRequirements) bool {
-			return k8sresources.ResourceRequirementsEqual(a, b)
-		}),
-		cmp.Comparer(func(a, b []corev1.EnvVar) bool {
-			// Throw out env vars that we ignore.
-			a = lo.Filter(a, func(e corev1.EnvVar, _ int) bool {
-				return !lo.Contains(envVarsToIgnore, e.Name)
-			})
-			b = lo.Filter(b, func(e corev1.EnvVar, _ int) bool {
-				return !lo.Contains(envVarsToIgnore, e.Name)
-			})
-
-			// And compare.
-			return reflect.DeepEqual(a, b)
-		}),
-	}
-	return cmp.Equal(&o1.PodTemplateSpec, &o2.PodTemplateSpec, opts...)
-}
-
-func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVarsToIgnore ...string) bool {
-	if o1 == nil && o2 == nil {
-		return true
-	}
-
-	if (o1 == nil && o2 != nil) || (o1 != nil && o2 == nil) {
-		return false
-	}
-
-	if !reflect.DeepEqual(o1.Replicas, o2.Replicas) {
-		return false
-	}
-
-	opts := []cmp.Option{
-		cmp.Comparer(func(a, b corev1.ResourceRequirements) bool {
-			return k8sresources.ResourceRequirementsEqual(a, b)
-		}),
-		cmp.Comparer(func(a, b []corev1.EnvVar) bool {
-			// Throw out env vars that we ignore.
-			a = lo.Filter(a, func(e corev1.EnvVar, _ int) bool {
-				return !lo.Contains(envVarsToIgnore, e.Name)
-			})
-			b = lo.Filter(b, func(e corev1.EnvVar, _ int) bool {
-				return !lo.Contains(envVarsToIgnore, e.Name)
-			})
-
-			// And compare.
-			return reflect.DeepEqual(a, b)
-		}),
-	}
-	return cmp.Equal(&o1.PodTemplateSpec, &o2.PodTemplateSpec, opts...)
 }
 
 // -----------------------------------------------------------------------------

@@ -16,6 +16,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -220,9 +221,9 @@ func (r *GatewayReconciler) setControlplaneGatewayConfigDefaults(gateway *gwtype
 		dontOverride[env.Name] = struct{}{}
 	}
 
-	_ = setControlPlaneDefaults(gatewayConfig.Spec.ControlPlaneOptions, dontOverride, controlPlaneDefaultsArgs{
-		namespace:                   gateway.Namespace,
-		dataplaneIngressServiceName: dataplaneIngressServiceName,
+	_ = controlplane.SetDefaults(gatewayConfig.Spec.ControlPlaneOptions, dontOverride, controlplane.DefaultsArgs{
+		Namespace:                   gateway.Namespace,
+		DataplaneIngressServiceName: dataplaneIngressServiceName,
 	})
 
 	setControlPlaneOptionsDefaults(gatewayConfig.Spec.ControlPlaneOptions)

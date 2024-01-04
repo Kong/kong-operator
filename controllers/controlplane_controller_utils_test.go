@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/vars"
@@ -325,11 +326,11 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		index := i
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			changed := setControlPlaneDefaults(tc.spec, map[string]struct{}{}, controlPlaneDefaultsArgs{
-				dataPlanePodIP:              "1.2.3.4",
-				namespace:                   tc.namespace,
-				dataplaneIngressServiceName: tc.dataplaneIngressServiceName,
-				dataplaneAdminServiceName:   "kong-admin",
+			changed := controlplane.SetDefaults(tc.spec, map[string]struct{}{}, controlplane.DefaultsArgs{
+				DataPlanePodIP:              "1.2.3.4",
+				Namespace:                   tc.namespace,
+				DataplaneIngressServiceName: tc.dataplaneIngressServiceName,
+				DataplaneAdminServiceName:   "kong-admin",
 			})
 			require.Equalf(t, tc.changed, changed,
 				"should return the same value for test case %d:%s", index, tc.name)
@@ -342,12 +343,12 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 
 			for _, env := range containerNewSpec.Env {
 				if env.Value != "" {
-					actualValue := envValueByName(container.Env, env.Name)
+					actualValue := k8sutils.EnvValueByName(container.Env, env.Name)
 					require.Equalf(t, env.Value, actualValue,
 						"should have the same value of env %s", env.Name)
 				}
 				if env.ValueFrom != nil {
-					actualValueFrom := envVarSourceByName(container.Env, env.Name)
+					actualValueFrom := k8sutils.EnvVarSourceByName(container.Env, env.Name)
 					if !assert.Truef(t, reflect.DeepEqual(env.ValueFrom, actualValueFrom),
 						"should have same valuefrom of env %s", env.Name) {
 						t.Logf("diff:\n%s", cmp.Diff(env.ValueFrom, actualValueFrom))
@@ -617,7 +618,7 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.equal, controlplaneSpecDeepEqual(tc.spec1, tc.spec2, tc.envVarsToIgnore...))
+			require.Equal(t, tc.equal, controlplane.SpecDeepEqual(tc.spec1, tc.spec2, tc.envVarsToIgnore...))
 		})
 	}
 }

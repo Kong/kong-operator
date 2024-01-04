@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -23,12 +24,14 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	"github.com/kong/gateway-operator/controllers/pkg/log"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -490,7 +493,7 @@ func (r *GatewayReconciler) provisionControlPlane(
 		}
 		return nil
 	}
-	controlplane := controlplanes[0].DeepCopy()
+	controlPlane := controlplanes[0].DeepCopy()
 
 	log.Trace(logger, "ensuring controlplane config is up to date", gateway)
 	// compare deployment option of controlplane with controlplane deployment option of gatewayconfiguration.
@@ -502,11 +505,11 @@ func (r *GatewayReconciler) provisionControlPlane(
 	// Don't require setting defaults for ControlPlane when using Gateway CRD.
 	setControlPlaneOptionsDefaults(expectedControlplaneOptions)
 
-	if !controlplaneSpecDeepEqual(&controlplane.Spec.ControlPlaneOptions, expectedControlplaneOptions, "CONTROLLER_KONG_ADMIN_URL") {
+	if !controlplane.SpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, expectedControlplaneOptions, "CONTROLLER_KONG_ADMIN_URL") {
 		log.Trace(logger, "controlplane config is out of date, updating", gateway)
-		controlplaneOld := controlplane.DeepCopy()
-		controlplane.Spec.ControlPlaneOptions = *expectedControlplaneOptions
-		if err := r.Client.Patch(ctx, controlplane, client.MergeFrom(controlplaneOld)); err != nil {
+		controlplaneOld := controlPlane.DeepCopy()
+		controlPlane.Spec.ControlPlaneOptions = *expectedControlplaneOptions
+		if err := r.Client.Patch(ctx, controlPlane, client.MergeFrom(controlplaneOld)); err != nil {
 			k8sutils.SetCondition(
 				createControlPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error(), gateway.Generation),
 				gatewayConditionsAware(gateway),
@@ -520,7 +523,7 @@ func (r *GatewayReconciler) provisionControlPlane(
 	}
 
 	log.Trace(logger, "waiting for controlplane readiness", gateway)
-	if !k8sutils.IsReady(controlplane) {
+	if !k8sutils.IsReady(controlPlane) {
 		k8sutils.SetCondition(
 			createControlPlaneCondition(metav1.ConditionFalse, k8sutils.WaitingToBecomeReadyReason, k8sutils.WaitingToBecomeReadyMessage, gateway.Generation),
 			gatewayConditionsAware(gateway),
@@ -532,7 +535,7 @@ func (r *GatewayReconciler) provisionControlPlane(
 		createControlPlaneCondition(metav1.ConditionTrue, k8sutils.ResourceReadyReason, "", gateway.Generation),
 		gatewayConditionsAware(gateway),
 	)
-	return controlplane
+	return controlPlane
 }
 
 // setControlPlaneOptionsDefaults sets the default ControlPlane options not overriding
@@ -606,4 +609,47 @@ func createControlPlaneCondition(status metav1.ConditionStatus, reason k8sutils.
 // patchStatus patches the resource status with the Merge strategy
 func (r *GatewayReconciler) patchStatus(ctx context.Context, gateway, oldGateway *gwtypes.Gateway) error {
 	return r.Client.Status().Patch(ctx, gateway, client.MergeFrom(oldGateway))
+}
+
+func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1beta1.DataPlaneOptions) bool {
+	// TODO: Doesn't take .Rollout field into account.
+	if !deploymentOptionsDeepEqual(&spec1.Deployment.DeploymentOptions, &spec2.Deployment.DeploymentOptions) ||
+		!servicesOptionsDeepEqual(&spec1.Network, &spec2.Network) {
+		return false
+	}
+
+	return true
+}
+
+func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVarsToIgnore ...string) bool {
+	if o1 == nil && o2 == nil {
+		return true
+	}
+
+	if (o1 == nil && o2 != nil) || (o1 != nil && o2 == nil) {
+		return false
+	}
+
+	if !reflect.DeepEqual(o1.Replicas, o2.Replicas) {
+		return false
+	}
+
+	opts := []cmp.Option{
+		cmp.Comparer(func(a, b corev1.ResourceRequirements) bool {
+			return k8sresources.ResourceRequirementsEqual(a, b)
+		}),
+		cmp.Comparer(func(a, b []corev1.EnvVar) bool {
+			// Throw out env vars that we ignore.
+			a = lo.Filter(a, func(e corev1.EnvVar, _ int) bool {
+				return !lo.Contains(envVarsToIgnore, e.Name)
+			})
+			b = lo.Filter(b, func(e corev1.EnvVar, _ int) bool {
+				return !lo.Contains(envVarsToIgnore, e.Name)
+			})
+
+			// And compare.
+			return reflect.DeepEqual(a, b)
+		}),
+	}
+	return cmp.Equal(&o1.PodTemplateSpec, &o2.PodTemplateSpec, opts...)
 }

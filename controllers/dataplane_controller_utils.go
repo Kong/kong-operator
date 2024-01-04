@@ -224,17 +224,3 @@ func ensureDataPlaneReadyStatus(
 
 	return ctrl.Result{}, nil
 }
-
-// -----------------------------------------------------------------------------
-// DataPlane - Private Functions - Equality Checks
-// -----------------------------------------------------------------------------
-
-func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1beta1.DataPlaneOptions) bool {
-	// TODO: Doesn't take .Rollout field into account.
-	if !deploymentOptionsDeepEqual(&spec1.Deployment.DeploymentOptions, &spec2.Deployment.DeploymentOptions) ||
-		!servicesOptionsDeepEqual(&spec1.Network, &spec2.Network) {
-		return false
-	}
-
-	return true
-}

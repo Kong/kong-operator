@@ -284,7 +284,7 @@ func generateDataPlaneNetworkPolicy(
 	// account when updating NetworkPolicy ports.
 	dpOpts := gatewayConfig.Spec.DataPlaneOptions
 	container := k8sutils.GetPodContainerByName(&dpOpts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
-	if proxyListen := envValueByName(container.Env, "KONG_PROXY_LISTEN"); proxyListen != "" {
+	if proxyListen := k8sutils.EnvValueByName(container.Env, "KONG_PROXY_LISTEN"); proxyListen != "" {
 		kongListenConfig, err := parseKongListenEnv(proxyListen)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_PROXY_LISTEN env: %w", err)
@@ -296,7 +296,7 @@ func generateDataPlaneNetworkPolicy(
 			proxySSLPort = intstr.FromInt(kongListenConfig.SSLEndpoint.Port)
 		}
 	}
-	if adminListen := envValueByName(container.Env, "KONG_ADMIN_LISTEN"); adminListen != "" {
+	if adminListen := k8sutils.EnvValueByName(container.Env, "KONG_ADMIN_LISTEN"); adminListen != "" {
 		kongListenConfig, err := parseKongListenEnv(adminListen)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_ADMIN_LISTEN env: %w", err)

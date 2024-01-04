@@ -14,11 +14,12 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	"github.com/kong/gateway-operator/controllers/pkg/log"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -109,6 +110,31 @@ func (r *ControlPlaneReconciler) ensureDataPlaneConfiguration(
 	return nil
 }
 
+func setControlPlaneEnvOnDataPlaneChange(
+	spec *operatorv1alpha1.ControlPlaneOptions,
+	namespace string,
+	dataplaneServiceName string,
+) bool {
+	var changed bool
+
+	dataplaneIsSet := spec.DataPlane != nil && *spec.DataPlane != ""
+	container := k8sutils.GetPodContainerByName(&spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+	if dataplaneIsSet {
+		newPublishServiceValue := k8stypes.NamespacedName{Namespace: namespace, Name: dataplaneServiceName}.String()
+		if k8sutils.EnvValueByName(container.Env, "CONTROLLER_PUBLISH_SERVICE") != newPublishServiceValue {
+			container.Env = k8sutils.UpdateEnv(container.Env, "CONTROLLER_PUBLISH_SERVICE", newPublishServiceValue)
+			changed = true
+		}
+	} else {
+		if k8sutils.EnvValueByName(container.Env, "CONTROLLER_PUBLISH_SERVICE") != "" {
+			container.Env = k8sutils.RejectEnvByName(container.Env, "CONTROLLER_PUBLISH_SERVICE")
+			changed = true
+		}
+	}
+
+	return changed
+}
+
 // -----------------------------------------------------------------------------
 // ControlPlaneReconciler - Owned Resource Management
 // -----------------------------------------------------------------------------
@@ -119,15 +145,15 @@ func (r *ControlPlaneReconciler) ensureDataPlaneConfiguration(
 func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	ctx context.Context,
 	logger logr.Logger,
-	controlplane *operatorv1alpha1.ControlPlane,
+	controlPlane *operatorv1alpha1.ControlPlane,
 	serviceAccountName, certSecretName string,
 ) (op.CreatedUpdatedOrNoop, *appsv1.Deployment, error) {
-	dataplaneIsSet := controlplane.Spec.DataPlane != nil && *controlplane.Spec.DataPlane != ""
+	dataplaneIsSet := controlPlane.Spec.DataPlane != nil && *controlPlane.Spec.DataPlane != ""
 
 	deployments, err := k8sutils.ListDeploymentsForOwner(ctx,
 		r.Client,
-		controlplane.Namespace,
-		controlplane.UID,
+		controlPlane.Namespace,
+		controlPlane.UID,
 		client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		},
@@ -148,11 +174,11 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	if !r.DevelopmentMode {
 		versionValidationOptions = append(versionValidationOptions, versions.IsControlPlaneImageVersionSupported)
 	}
-	controlplaneImage, err := generateControlPlaneImage(&controlplane.Spec.ControlPlaneOptions, versionValidationOptions...)
+	controlplaneImage, err := controlplane.GenerateImage(&controlPlane.Spec.ControlPlaneOptions, versionValidationOptions...)
 	if err != nil {
 		return op.Noop, nil, err
 	}
-	generatedDeployment, err := k8sresources.GenerateNewDeploymentForControlPlane(controlplane, controlplaneImage, serviceAccountName, certSecretName)
+	generatedDeployment, err := k8sresources.GenerateNewDeploymentForControlPlane(controlPlane, controlplaneImage, serviceAccountName, certSecretName)
 	if err != nil {
 		return op.Noop, nil, err
 	}
@@ -178,7 +204,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		}
 
 		// ensure that replication strategy is up to date
-		replicas := controlplane.Spec.ControlPlaneOptions.Deployment.Replicas
+		replicas := controlPlane.Spec.ControlPlaneOptions.Deployment.Replicas
 		switch {
 		case !dataplaneIsSet && (replicas == nil || *replicas != numReplicasWhenNoDataplane):
 			// Dataplane was just unset, so we need to scale down the Deployment.
@@ -196,7 +222,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 			}
 		}
 
-		return patchIfPatchIsNonEmpty(ctx, r.Client, logger, existingDeployment, oldExistingDeployment, controlplane, updated)
+		return patchIfPatchIsNonEmpty(ctx, r.Client, logger, existingDeployment, oldExistingDeployment, controlPlane, updated)
 	}
 
 	if !dataplaneIsSet {
@@ -206,7 +232,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 		return op.Noop, nil, fmt.Errorf("failed creating ControlPlane Deployment %s: %w", generatedDeployment.Name, err)
 	}
 
-	log.Debug(logger, "deployment for ControlPlane created", controlplane, "deployment", generatedDeployment.Name)
+	log.Debug(logger, "deployment for ControlPlane created", controlPlane, "deployment", generatedDeployment.Name)
 	return op.Created, generatedDeployment, nil
 }
 
@@ -359,7 +385,7 @@ func (r *ControlPlaneReconciler) ensureCertificate(
 	return maybeCreateCertificateSecret(ctx,
 		controlplane,
 		fmt.Sprintf("%s.%s", controlplane.Name, controlplane.Namespace),
-		types.NamespacedName{
+		k8stypes.NamespacedName{
 			Namespace: r.ClusterCASecretNamespace,
 			Name:      r.ClusterCASecretName,
 		},
