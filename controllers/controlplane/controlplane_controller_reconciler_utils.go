@@ -1,4 +1,4 @@
-package controllers
+package controlplane
 
 import (
 	"context"
@@ -22,6 +22,8 @@ import (
 	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	"github.com/kong/gateway-operator/controllers/pkg/log"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
+	"github.com/kong/gateway-operator/controllers/pkg/patch"
+	"github.com/kong/gateway-operator/controllers/pkg/secrets"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -35,18 +37,18 @@ import (
 const numReplicasWhenNoDataplane = 0
 
 // -----------------------------------------------------------------------------
-// ControlPlaneReconciler - Status Management
+// Reconciler - Status Management
 // -----------------------------------------------------------------------------
 
-func (r *ControlPlaneReconciler) ensureIsMarkedScheduled(
+func (r *Reconciler) ensureIsMarkedScheduled(
 	controlplane *operatorv1alpha1.ControlPlane,
 ) bool {
-	_, present := k8sutils.GetCondition(ControlPlaneConditionTypeProvisioned, controlplane)
+	_, present := k8sutils.GetCondition(ConditionTypeProvisioned, controlplane)
 	if !present {
 		condition := k8sutils.NewCondition(
-			ControlPlaneConditionTypeProvisioned,
+			ConditionTypeProvisioned,
 			metav1.ConditionFalse,
-			ControlPlaneConditionReasonPodsNotReady,
+			ConditionReasonPodsNotReady,
 			"ControlPlane resource is scheduled for provisioning",
 		)
 
@@ -60,24 +62,24 @@ func (r *ControlPlaneReconciler) ensureIsMarkedScheduled(
 // ensureDataPlaneStatus ensures that the dataplane is in the correct state
 // to carry on with the controlplane deployments reconciliation.
 // Information about the missing dataplane is stored in the controlplane status.
-func (r *ControlPlaneReconciler) ensureDataPlaneStatus(
+func (r *Reconciler) ensureDataPlaneStatus(
 	controlplane *operatorv1alpha1.ControlPlane,
 	dataplane *operatorv1beta1.DataPlane,
 ) (dataplaneIsSet bool) {
 	dataplaneIsSet = controlplane.Spec.DataPlane != nil && *controlplane.Spec.DataPlane == dataplane.Name
-	condition, present := k8sutils.GetCondition(ControlPlaneConditionTypeProvisioned, controlplane)
+	condition, present := k8sutils.GetCondition(ConditionTypeProvisioned, controlplane)
 
 	newCondition := k8sutils.NewCondition(
-		ControlPlaneConditionTypeProvisioned,
+		ConditionTypeProvisioned,
 		metav1.ConditionFalse,
-		ControlPlaneConditionReasonNoDataplane,
+		ConditionReasonNoDataplane,
 		"DataPlane is not set",
 	)
 	if dataplaneIsSet {
 		newCondition = k8sutils.NewCondition(
-			ControlPlaneConditionTypeProvisioned,
+			ConditionTypeProvisioned,
 			metav1.ConditionFalse,
-			ControlPlaneConditionReasonPodsNotReady,
+			ConditionReasonPodsNotReady,
 			"DataPlane was set, ControlPlane resource is scheduled for provisioning",
 		)
 	}
@@ -88,10 +90,10 @@ func (r *ControlPlaneReconciler) ensureDataPlaneStatus(
 }
 
 // -----------------------------------------------------------------------------
-// ControlPlaneReconciler - Spec Management
+// Reconciler - Spec Management
 // -----------------------------------------------------------------------------
 
-func (r *ControlPlaneReconciler) ensureDataPlaneConfiguration(
+func (r *Reconciler) ensureDataPlaneConfiguration(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 	dataplaneServiceName string,
@@ -136,13 +138,13 @@ func setControlPlaneEnvOnDataPlaneChange(
 }
 
 // -----------------------------------------------------------------------------
-// ControlPlaneReconciler - Owned Resource Management
+// Reconciler - Owned Resource Management
 // -----------------------------------------------------------------------------
 
 // ensureDeploymentForControlPlane ensures that a Deployment is created for the
 // ControlPlane resource. Deployment will remain in dormant state until
 // corresponding dataplane is set.
-func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
+func (r *Reconciler) ensureDeploymentForControlPlane(
 	ctx context.Context,
 	logger logr.Logger,
 	controlPlane *operatorv1alpha1.ControlPlane,
@@ -222,7 +224,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 			}
 		}
 
-		return patchIfPatchIsNonEmpty(ctx, r.Client, logger, existingDeployment, oldExistingDeployment, controlPlane, updated)
+		return patch.ApplyPatchIfNonEmpty(ctx, r.Client, logger, existingDeployment, oldExistingDeployment, controlPlane, updated)
 	}
 
 	if !dataplaneIsSet {
@@ -236,7 +238,7 @@ func (r *ControlPlaneReconciler) ensureDeploymentForControlPlane(
 	return op.Created, generatedDeployment, nil
 }
 
-func (r *ControlPlaneReconciler) ensureServiceAccountForControlPlane(
+func (r *Reconciler) ensureServiceAccountForControlPlane(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (createdOrModified bool, sa *corev1.ServiceAccount, err error) {
@@ -280,7 +282,7 @@ func (r *ControlPlaneReconciler) ensureServiceAccountForControlPlane(
 	return true, generatedServiceAccount, r.Client.Create(ctx, generatedServiceAccount)
 }
 
-func (r *ControlPlaneReconciler) ensureClusterRoleForControlPlane(
+func (r *Reconciler) ensureClusterRoleForControlPlane(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (createdOrUpdated bool, cr *rbacv1.ClusterRole, err error) {
@@ -327,7 +329,7 @@ func (r *ControlPlaneReconciler) ensureClusterRoleForControlPlane(
 	return true, generatedClusterRole, r.Client.Create(ctx, generatedClusterRole)
 }
 
-func (r *ControlPlaneReconciler) ensureClusterRoleBindingForControlPlane(
+func (r *Reconciler) ensureClusterRoleBindingForControlPlane(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 	serviceAccountName string,
@@ -372,7 +374,7 @@ func (r *ControlPlaneReconciler) ensureClusterRoleBindingForControlPlane(
 	return true, generatedClusterRoleBinding, r.Client.Create(ctx, generatedClusterRoleBinding)
 }
 
-func (r *ControlPlaneReconciler) ensureCertificate(
+func (r *Reconciler) ensureCertificate(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (op.CreatedUpdatedOrNoop, *corev1.Secret, error) {
@@ -382,7 +384,7 @@ func (r *ControlPlaneReconciler) ensureCertificate(
 	}
 	// this subject is arbitrary. data planes only care that client certificates are signed by the trusted CA, and will
 	// accept a certificate with any subject
-	return maybeCreateCertificateSecret(ctx,
+	return secrets.EnsureCertificate(ctx,
 		controlplane,
 		fmt.Sprintf("%s.%s", controlplane.Name, controlplane.Namespace),
 		k8stypes.NamespacedName{
@@ -398,7 +400,7 @@ func (r *ControlPlaneReconciler) ensureCertificate(
 // ensureOwnedClusterRolesDeleted removes all the owned ClusterRoles of the controlplane.
 // it is called on cleanup of owned cluster resources on controlplane deletion.
 // returns nil if all of owned ClusterRoles successfully deleted (ok if no owned CRs or NotFound on deleting CRs).
-func (r *ControlPlaneReconciler) ensureOwnedClusterRolesDeleted(
+func (r *Reconciler) ensureOwnedClusterRolesDeleted(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (deletions bool, err error) {
@@ -431,7 +433,7 @@ func (r *ControlPlaneReconciler) ensureOwnedClusterRolesDeleted(
 // ensureOwnedClusterRoleBindingsDeleted removes all the owned ClusterRoleBindings of the controlplane
 // it is called on cleanup of owned cluster resources on controlplane deletion.
 // returns nil if all of owned ClusterRoleBindings successfully deleted (ok if no owned CRBs or NotFound on deleting CRBs).
-func (r *ControlPlaneReconciler) ensureOwnedClusterRoleBindingsDeleted(
+func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (deletions bool, err error) {

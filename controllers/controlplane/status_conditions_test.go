@@ -1,4 +1,4 @@
-package controllers
+package controlplane
 
 import (
 	"testing"
@@ -28,8 +28,8 @@ func TestMarkAsProvisioned(t *testing.T) {
 					return createControlPlane()
 				},
 				expectedCondition: metav1.Condition{
-					Type:    string(ControlPlaneConditionTypeProvisioned),
-					Reason:  string(ControlPlaneConditionReasonPodsReady),
+					Type:    string(ConditionTypeProvisioned),
+					Reason:  string(ConditionReasonPodsReady),
 					Message: "pods for all Deployments are ready",
 					Status:  metav1.ConditionTrue,
 				},
@@ -42,8 +42,8 @@ func TestMarkAsProvisioned(t *testing.T) {
 					return cp
 				},
 				expectedCondition: metav1.Condition{
-					Type:               string(ControlPlaneConditionTypeProvisioned),
-					Reason:             string(ControlPlaneConditionReasonPodsReady),
+					Type:               string(ConditionTypeProvisioned),
+					Reason:             string(ConditionReasonPodsReady),
 					Message:            "pods for all Deployments are ready",
 					Status:             metav1.ConditionTrue,
 					ObservedGeneration: 3,

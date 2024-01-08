@@ -1,7 +1,7 @@
-package controllers
+package controlplane
 
 // -----------------------------------------------------------------------------
-// ControlPlaneReconciler - RBAC
+// Reconciler - RBAC
 // -----------------------------------------------------------------------------
 
 //+kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=controlplanes,verbs=get;list;watch;update;patch

@@ -1,4 +1,4 @@
-package controllers
+package patch
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
-func TestPatchIfPatchIsNonEmpty(t *testing.T) {
+func TestApplyPatchIfNonEmpty(t *testing.T) {
 	testcases := []struct {
 		name      string
 		dataPlane *operatorv1beta1.DataPlane
@@ -184,7 +184,7 @@ func TestPatchIfPatchIsNonEmpty(t *testing.T) {
 				WithObjects(tc.dataPlane, hpa).
 				Build()
 
-			result, _, err := patchIfPatchIsNonEmpty(context.Background(), fakeClient, log, hpa, old, tc.dataPlane, tc.updated)
+			result, _, err := ApplyPatchIfNonEmpty(context.Background(), fakeClient, log, hpa, old, tc.dataPlane, tc.updated)
 			if tc.wantErr {
 				require.Error(t, err)
 				return

@@ -1,4 +1,4 @@
-package controllers
+package controlplane
 
 import (
 	"context"
@@ -32,12 +32,8 @@ import (
 	"github.com/kong/gateway-operator/internal/versions"
 )
 
-// -----------------------------------------------------------------------------
-// ControlPlaneReconciler
-// -----------------------------------------------------------------------------
-
-// ControlPlaneReconciler reconciles a ControlPlane object
-type ControlPlaneReconciler struct {
+// Reconciler reconciles a ControlPlane object
+type Reconciler struct {
 	client.Client
 	Scheme                   *runtime.Scheme
 	ClusterCASecretName      string
@@ -45,8 +41,10 @@ type ControlPlaneReconciler struct {
 	DevelopmentMode          bool
 }
 
+const requeueWithoutBackoff = time.Millisecond * 200
+
 // SetupWithManager sets up the controller with the Manager.
-func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// for owned objects we need to check if updates to the objects resulted in the
 	// removal of an OwnerReference to the parent object, and if so we need to
 	// enqueue the parent object so that reconciliation can create a replacement.
@@ -97,7 +95,7 @@ func (r *ControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // Reconcile moves the current state of an object to the intended state.
-func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "controlplane", r.DevelopmentMode)
 
 	log.Trace(logger, "reconciling ControlPlane resource", req)
@@ -368,7 +366,7 @@ func validateControlPlane(controlPlane *operatorv1alpha1.ControlPlane, devMode b
 }
 
 // patchStatus Patches the resource status only when there are changes in the Conditions
-func (r *ControlPlaneReconciler) patchStatus(ctx context.Context, logger logr.Logger, updated *operatorv1alpha1.ControlPlane) error {
+func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, updated *operatorv1alpha1.ControlPlane) error {
 	current := &operatorv1alpha1.ControlPlane{}
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)

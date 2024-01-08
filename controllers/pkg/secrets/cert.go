@@ -1,4 +1,4 @@
-package controllers
+package secrets
 
 import (
 	"context"
@@ -30,6 +30,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/pkg/dataplane"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	"github.com/kong/gateway-operator/internal/manager/logging"
@@ -37,12 +38,6 @@ import (
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
-
-// -----------------------------------------------------------------------------
-// Private Consts
-// -----------------------------------------------------------------------------
-
-const requeueWithoutBackoff = time.Millisecond * 200
 
 // -----------------------------------------------------------------------------
 // Private Functions - Certificate management
@@ -152,11 +147,11 @@ func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Se
 	return certBytes, nil
 }
 
-// maybeCreateCertificateSecret creates a namespace/name Secret for subject signed by the CA in the
+// EnsureCertificate creates a namespace/name Secret for subject signed by the CA in the
 // mtlsCASecretNamespace/mtlsCASecretName Secret, or does nothing if a namespace/name Secret is
 // already present. It returns a boolean indicating if it created a Secret and an error indicating
 // any failures it encountered.
-func maybeCreateCertificateSecret[
+func EnsureCertificate[
 	T interface {
 		*operatorv1alpha1.ControlPlane | *operatorv1beta1.DataPlane
 		client.Object
@@ -262,6 +257,17 @@ func maybeCreateCertificateSecret[
 	return op.Noop, existingSecret, nil
 }
 
+func matchingLabelsToSecretOpt(ml client.MatchingLabels) k8sresources.SecretOpt {
+	return func(a *corev1.Secret) {
+		if a.Labels == nil {
+			a.Labels = make(map[string]string)
+		}
+		for k, v := range ml {
+			a.Labels[k] = v
+		}
+	}
+}
+
 // getPreDeleteHooks returns a list of pre-delete hooks for the given object type.
 func getPreDeleteHooks[T interface {
 	*operatorv1alpha1.ControlPlane | *operatorv1beta1.DataPlane
@@ -271,7 +277,7 @@ func getPreDeleteHooks[T interface {
 ) []k8sreduce.PreDeleteHook {
 	switch any(obj).(type) {
 	case *operatorv1beta1.DataPlane:
-		return []k8sreduce.PreDeleteHook{DataPlaneOwnedObjectPreDeleteHook}
+		return []k8sreduce.PreDeleteHook{dataplane.OwnedObjectPreDeleteHook}
 	default:
 		return nil
 	}
@@ -386,11 +392,8 @@ func generateTLSDataSecret(
 	return op.Created, generatedSecret, nil
 }
 
-// -----------------------------------------------------------------------------
-// Owner based metadata getters - Private Functions
-// -----------------------------------------------------------------------------
-
-func getManagedLabelForServiceSecret(svcNN types.NamespacedName) client.MatchingLabels {
+// GetManagedLabelForServiceSecret returns a label selector for the ServiceSecret.
+func GetManagedLabelForServiceSecret(svcNN types.NamespacedName) client.MatchingLabels {
 	return client.MatchingLabels{
 		consts.ServiceSecretLabel: svcNN.Name,
 	}

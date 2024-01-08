@@ -1,4 +1,4 @@
-package controllers
+package controlplane
 
 import (
 	"context"
@@ -41,7 +41,7 @@ func init() {
 	}
 }
 
-func TestControlPlaneReconciler_Reconcile(t *testing.T) {
+func TestReconciler_Reconcile(t *testing.T) {
 	ca := helpers.CreateCA(t)
 	mtlsSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -62,7 +62,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 		controlplaneSubResources []controllerruntimeclient.Object
 		dataplaneSubResources    []controllerruntimeclient.Object
 		dataplanePods            []controllerruntimeclient.Object
-		testBody                 func(t *testing.T, reconciler ControlPlaneReconciler, controlplane reconcile.Request)
+		testBody                 func(t *testing.T, reconciler Reconciler, controlplane reconcile.Request)
 	}{
 		{
 			name: "valid ControlPlane image",
@@ -106,7 +106,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				Status: operatorv1alpha1.ControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(ControlPlaneConditionTypeProvisioned),
+							Type:   string(ConditionTypeProvisioned),
 							Status: metav1.ConditionTrue,
 						},
 					},
@@ -234,7 +234,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			testBody: func(t *testing.T, reconciler ControlPlaneReconciler, controlplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, controlplaneReq reconcile.Request) {
 				ctx := context.Background()
 
 				// first reconcile loop to allow the reconciler to set the controlplane defaults
@@ -287,7 +287,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				Status: operatorv1alpha1.ControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(ControlPlaneConditionTypeProvisioned),
+							Type:   string(ConditionTypeProvisioned),
 							Status: metav1.ConditionTrue,
 						},
 					},
@@ -415,7 +415,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			testBody: func(t *testing.T, reconciler ControlPlaneReconciler, controlplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, controlplaneReq reconcile.Request) {
 				ctx := context.Background()
 
 				_, err := reconciler.Reconcile(ctx, controlplaneReq)
@@ -455,7 +455,7 @@ func TestControlPlaneReconciler_Reconcile(t *testing.T) {
 				WithObjects(ObjectsToAdd...).
 				Build()
 
-			reconciler := ControlPlaneReconciler{
+			reconciler := Reconciler{
 				Client:                   fakeClient,
 				Scheme:                   scheme.Scheme,
 				ClusterCASecretName:      mtlsSecret.Name,

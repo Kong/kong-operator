@@ -1,4 +1,4 @@
-package controllers
+package patch
 
 import (
 	"bytes"
@@ -16,10 +16,10 @@ import (
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 )
 
-// patchIfPatchIsNonEmpty patches the provided resource if the resulting patch
+// ApplyPatchIfNonEmpty patches the provided resource if the resulting patch
 // between the provided existingResource and the provided oldExistingResource
 // is non empty.
-func patchIfPatchIsNonEmpty[
+func ApplyPatchIfNonEmpty[
 	OwnerT *operatorv1beta1.DataPlane | *operatorv1alpha1.ControlPlane,
 	ResourceT interface {
 		*appsv1.Deployment | *autoscalingv2.HorizontalPodAutoscaler

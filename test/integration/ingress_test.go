@@ -24,7 +24,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
-	"github.com/kong/gateway-operator/controllers"
+	"github.com/kong/gateway-operator/controllers/controlplane"
 	"github.com/kong/gateway-operator/internal/annotations"
 	"github.com/kong/gateway-operator/internal/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -108,7 +108,7 @@ func TestIngressEssentials(t *testing.T) {
 	require.NotNil(t, dataplane)
 
 	t.Log("verifying that the ControlPlane becomes provisioned")
-	var controlplane *operatorv1alpha1.ControlPlane
+	var controlPlane *operatorv1alpha1.ControlPlane
 	require.Eventually(t, func() bool {
 		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, clients.MgrClient, gateway)
 		if err != nil {
@@ -116,15 +116,15 @@ func TestIngressEssentials(t *testing.T) {
 		}
 		if len(controlplanes) == 1 {
 			for _, condition := range controlplanes[0].Status.Conditions {
-				if condition.Type == string(controllers.ControlPlaneConditionTypeProvisioned) && condition.Status == metav1.ConditionTrue {
-					controlplane = &controlplanes[0]
+				if condition.Type == string(controlplane.ConditionTypeProvisioned) && condition.Status == metav1.ConditionTrue {
+					controlPlane = &controlplanes[0]
 					return true
 				}
 			}
 		}
 		return false
 	}, testutils.SubresourceReadinessWait, time.Second)
-	require.NotNil(t, controlplane)
+	require.NotNil(t, controlPlane)
 
 	t.Log("verifying connectivity to the Gateway")
 	require.Eventually(t, expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s", gatewayIP)), testutils.DefaultIngressWait, time.Second)

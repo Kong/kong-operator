@@ -1,4 +1,4 @@
-package controllers
+package controlplane
 
 import k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 
@@ -7,29 +7,29 @@ import k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 // -----------------------------------------------------------------------------
 
 const (
-	// ControlPlaneConditionTypeProvisioned is a condition type indicating whether or
+	// ConditionTypeProvisioned is a condition type indicating whether or
 	// not all Deployments (or Daemonsets) for the ControlPlane have been provisioned
 	// successfully.
-	ControlPlaneConditionTypeProvisioned k8sutils.ConditionType = "Provisioned"
+	ConditionTypeProvisioned k8sutils.ConditionType = "Provisioned"
 )
 
 // -----------------------------------------------------------------------------
 // ControlPlane - Status Condition Reasons
 // -----------------------------------------------------------------------------
 
-// ControlPlaneConditionReason are the condition reasons for ControlPlane status conditions.
-type ControlPlaneConditionReason string
+// ConditionReason are the condition reasons for ControlPlane status conditions.
+type ConditionReason string
 
 const (
-	// ControlPlaneConditionReasonPodsNotReady is a reason which indicates why a ControlPlane
+	// ConditionReasonPodsNotReady is a reason which indicates why a ControlPlane
 	// has not yet reached a fully Provisioned status.
-	ControlPlaneConditionReasonPodsNotReady k8sutils.ConditionReason = "PodsNotReady"
+	ConditionReasonPodsNotReady k8sutils.ConditionReason = "PodsNotReady"
 
-	// ControlPlaneConditionReasonPodsReady is a reason which indicates how a ControlPlane
+	// ConditionReasonPodsReady is a reason which indicates how a ControlPlane
 	// reached fully Provisioned status.
-	ControlPlaneConditionReasonPodsReady k8sutils.ConditionReason = "PodsReady"
+	ConditionReasonPodsReady k8sutils.ConditionReason = "PodsReady"
 
 	// ControlPlaneConditionsReasonNoDataplane is a reason which indicates that no DataPlane
 	// has been provisioned.
-	ControlPlaneConditionReasonNoDataplane k8sutils.ConditionReason = "NoDataplane"
+	ConditionReasonNoDataplane k8sutils.ConditionReason = "NoDataplane"
 )

@@ -21,7 +21,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
-	"github.com/kong/gateway-operator/controllers"
+	"github.com/kong/gateway-operator/controllers/controlplane"
 	"github.com/kong/gateway-operator/internal/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
@@ -82,10 +82,10 @@ func HPAPredicate(
 // ControlPlaneIsScheduled is a helper function for tests that returns a function
 // that can be used to check if a ControlPlane was scheduled.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlaneIsScheduled(t *testing.T, ctx context.Context, controlplane types.NamespacedName, operatorClient *clientset.Clientset) func() bool {
-	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1alpha1.ControlPlane) bool {
+func ControlPlaneIsScheduled(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, operatorClient *clientset.Clientset) func() bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv1alpha1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(controllers.ControlPlaneConditionTypeProvisioned) {
+			if condition.Type == string(controlplane.ConditionTypeProvisioned) {
 				return true
 			}
 		}
@@ -110,12 +110,12 @@ func DataPlaneIsReady(t *testing.T, ctx context.Context, dataplane types.Namespa
 // ControlPlaneDetectedNoDataplane is a helper function for tests that returns a function
 // that can be used to check if a ControlPlane detected unset dataplane.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlaneDetectedNoDataplane(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1alpha1.ControlPlane) bool {
+func ControlPlaneDetectedNoDataplane(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv1alpha1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(controllers.ControlPlaneConditionTypeProvisioned) &&
+			if condition.Type == string(controlplane.ConditionTypeProvisioned) &&
 				condition.Status == metav1.ConditionFalse &&
-				condition.Reason == string(controllers.ControlPlaneConditionReasonNoDataplane) {
+				condition.Reason == string(controlplane.ConditionReasonNoDataplane) {
 				return true
 			}
 		}
@@ -126,10 +126,10 @@ func ControlPlaneDetectedNoDataplane(t *testing.T, ctx context.Context, controlp
 // ControlPlaneIsProvisioned is a helper function for tests that returns a function
 // that can be used to check if a ControlPlane was provisioned.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlaneIsProvisioned(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1alpha1.ControlPlane) bool {
+func ControlPlaneIsProvisioned(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv1alpha1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(controllers.ControlPlaneConditionTypeProvisioned) &&
+			if condition.Type == string(controlplane.ConditionTypeProvisioned) &&
 				condition.Status == metav1.ConditionTrue {
 				return true
 			}
@@ -543,16 +543,16 @@ func GatewayDataPlaneIsReady(t *testing.T, ctx context.Context, gateway *gwtypes
 
 func GatewayControlPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) func() bool {
 	return func() bool {
-		controlplanes := MustListControlPlanesForGateway(t, ctx, gateway, clients)
+		controlPlanes := MustListControlPlanesForGateway(t, ctx, gateway, clients)
 
-		if len(controlplanes) == 1 {
+		if len(controlPlanes) == 1 {
 			// if the controlplane DeletionTimestamp is set, the controlplane deletion has been requested.
 			// Hence we cannot consider it as a provisioned valid controlplane.
-			if controlplanes[0].DeletionTimestamp != nil {
+			if controlPlanes[0].DeletionTimestamp != nil {
 				return false
 			}
-			for _, condition := range controlplanes[0].Status.Conditions {
-				if condition.Type == string(controllers.ControlPlaneConditionTypeProvisioned) &&
+			for _, condition := range controlPlanes[0].Status.Conditions {
+				if condition.Type == string(controlplane.ConditionTypeProvisioned) &&
 					condition.Status == metav1.ConditionTrue {
 					return true
 				}

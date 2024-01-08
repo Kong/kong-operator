@@ -20,6 +20,7 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers"
+	"github.com/kong/gateway-operator/controllers/controlplane"
 	"github.com/kong/gateway-operator/controllers/gateway"
 	"github.com/kong/gateway-operator/controllers/gatewayclass"
 	"github.com/kong/gateway-operator/internal/utils/index"
@@ -141,7 +142,7 @@ func setupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 		// ControlPlane controller
 		{
 			Enabled: c.GatewayControllerEnabled || c.ControlPlaneControllerEnabled,
-			Controller: &controllers.ControlPlaneReconciler{
+			Controller: &controlplane.Reconciler{
 				Client:                   mgr.GetClient(),
 				Scheme:                   mgr.GetScheme(),
 				ClusterCASecretName:      c.ClusterCASecretName,

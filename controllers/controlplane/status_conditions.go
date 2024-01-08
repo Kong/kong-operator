@@ -1,4 +1,4 @@
-package controllers
+package controlplane
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,9 +14,9 @@ func markAsProvisioned[T *operatorv1alpha1.ControlPlane](resource T) {
 	case *operatorv1alpha1.ControlPlane:
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				ControlPlaneConditionTypeProvisioned,
+				ConditionTypeProvisioned,
 				metav1.ConditionTrue,
-				ControlPlaneConditionReasonPodsReady,
+				ConditionReasonPodsReady,
 				"pods for all Deployments are ready",
 				resource.Generation,
 			),

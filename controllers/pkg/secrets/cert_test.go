@@ -1,4 +1,4 @@
-package controllers
+package secrets
 
 import (
 	"bytes"
@@ -361,7 +361,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, fakeClient.Create(ctx, caSecret))
 
-			res, secret, err := maybeCreateCertificateSecret(
+			res, secret, err := EnsureCertificate(
 				ctx,
 				tc.dataPlane,
 				tc.subject,

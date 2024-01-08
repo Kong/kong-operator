@@ -22,6 +22,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/pkg/address"
+	"github.com/kong/gateway-operator/controllers/pkg/dataplane"
 	"github.com/kong/gateway-operator/controllers/pkg/log"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -490,17 +491,17 @@ func (r *DataPlaneBlueGreenReconciler) resetPromoteWhenReadyAnnotation(
 func (r *DataPlaneBlueGreenReconciler) reduceLiveDeployments(
 	ctx context.Context,
 	logger logr.Logger,
-	dataplane *operatorv1beta1.DataPlane,
+	dataPlane *operatorv1beta1.DataPlane,
 ) error {
 	matchingLabels := client.MatchingLabels{
-		"app":                                dataplane.Name,
+		"app":                                dataPlane.Name,
 		consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
 	}
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
 		r.Client,
-		dataplane.Namespace,
-		dataplane.UID,
+		dataPlane.Namespace,
+		dataPlane.UID,
 		matchingLabels,
 	)
 	if err != nil {
@@ -519,10 +520,10 @@ func (r *DataPlaneBlueGreenReconciler) reduceLiveDeployments(
 	// Delete all but the last deployment.
 	for _, deployment := range deployments[:len(deployments)-1] {
 		deployment := deployment
-		log.Debug(logger, "reducing live deployment", dataplane,
+		log.Debug(logger, "reducing live deployment", dataPlane,
 			"deployment", fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name))
 
-		if err := DataPlaneOwnedObjectPreDeleteHook(ctx, r.Client, &deployment); err != nil {
+		if err := dataplane.OwnedObjectPreDeleteHook(ctx, r.Client, &deployment); err != nil {
 			return fmt.Errorf("failed executing pre delete hook: %w", err)
 		}
 		if err := r.Client.Delete(ctx, &deployment); err != nil {
