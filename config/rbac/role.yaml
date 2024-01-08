@@ -51,6 +51,7 @@ rules:
   resources:
   - horizontalpodautoscalers
   verbs:
+  - create
   - delete
   - get
   - list
