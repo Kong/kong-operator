@@ -8,7 +8,7 @@ require (
 	github.com/elastic/crd-ref-docs v0.0.10
 	github.com/go-delve/delve v1.22.0
 	github.com/golangci/golangci-lint v1.55.2
-	github.com/operator-framework/operator-registry v1.33.0
+	github.com/operator-framework/operator-registry v1.34.0
 	gotest.tools/gotestsum v1.11.0
 	k8s.io/code-generator v0.29.0
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220715194349-88234a8fc9ad
@@ -35,7 +35,6 @@ require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Microsoft/hcsshim v0.12.0-rc.0 // indirect
 	github.com/OpenPeeDeeP/depguard/v2 v2.1.0 // indirect
-	github.com/acomagu/bufpipe v1.0.3 // indirect
 	github.com/alecthomas/go-check-sumtype v0.1.3 // indirect
 	github.com/alexkohler/nakedret/v2 v2.0.2 // indirect
 	github.com/alexkohler/prealloc v1.0.0 // indirect
@@ -95,14 +94,13 @@ require (
 	github.com/firefart/nonamedreturns v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fzipp/gocyclo v0.6.0 // indirect
-	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/ghostiam/protogetter v0.2.3 // indirect
 	github.com/go-critic/go-critic v0.9.0 // indirect
 	github.com/go-delve/gore v0.11.6 // indirect
 	github.com/go-delve/liner v1.2.3-0.20220127212407-d32d89dd2a5d // indirect
-	github.com/go-git/gcfg v1.5.0 // indirect
-	github.com/go-git/go-billy/v5 v5.3.1 // indirect
-	github.com/go-git/go-git/v5 v5.4.2 // indirect
+	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
+	github.com/go-git/go-billy/v5 v5.5.0 // indirect
+	github.com/go-git/go-git/v5 v5.11.0 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.2.4 // indirect
@@ -216,7 +214,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0-rc4 // indirect
 	github.com/opencontainers/runc v1.1.9 // indirect
 	github.com/opencontainers/runtime-spec v1.1.0 // indirect
-	github.com/operator-framework/api v0.19.0 // indirect
+	github.com/operator-framework/api v0.20.0 // indirect
 	github.com/otiai10/copy v1.11.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
@@ -293,16 +291,16 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/arch v0.6.0 // indirect
-	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/crypto v0.16.0 // indirect
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20230307190834-24139beb5833 // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.12.0 // indirect
 	golang.org/x/sync v0.4.0 // indirect
-	golang.org/x/sys v0.14.0 // indirect
-	golang.org/x/term v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/term v0.15.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.14.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
