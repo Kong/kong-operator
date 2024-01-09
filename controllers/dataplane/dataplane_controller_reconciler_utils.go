@@ -1,4 +1,4 @@
-package controllers
+package dataplane
 
 import (
 	"context"
@@ -31,7 +31,7 @@ func ensureDataPlaneReadinessStatus(
 	dataplane.Status.ReadyReplicas = dataplaneDeployment.Status.ReadyReplicas
 }
 
-func (r *DataPlaneReconciler) ensureDataPlaneServiceStatus(
+func (r *Reconciler) ensureDataPlaneServiceStatus(
 	ctx context.Context,
 	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
@@ -54,7 +54,7 @@ func (r *DataPlaneReconciler) ensureDataPlaneServiceStatus(
 // are as expected and pathes its status if there's a difference between the
 // current state and what's expected.
 // It returns a boolean indicating if the patch has been trigerred and an error.
-func (r *DataPlaneReconciler) ensureDataPlaneAddressesStatus(
+func (r *Reconciler) ensureDataPlaneAddressesStatus(
 	ctx context.Context,
 	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
@@ -86,7 +86,7 @@ func isSameDataPlaneCondition(condition1, condition2 metav1.Condition) bool {
 		condition1.Message == condition2.Message
 }
 
-func (r *DataPlaneReconciler) ensureDataPlaneIsMarkedNotReady(
+func (r *Reconciler) ensureDataPlaneIsMarkedNotReady(
 	ctx context.Context,
 	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,

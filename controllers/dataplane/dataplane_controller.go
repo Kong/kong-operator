@@ -1,4 +1,4 @@
-package controllers
+package dataplane
 
 import (
 	"context"
@@ -30,8 +30,8 @@ type dataPlaneValidator interface {
 	Validate(*operatorv1beta1.DataPlane) error
 }
 
-// DataPlaneReconciler reconciles a DataPlane object
-type DataPlaneReconciler struct {
+// Reconciler reconciles a DataPlane object
+type Reconciler struct {
 	client.Client
 	Scheme                   *runtime.Scheme
 	eventRecorder            record.EventRecorder
@@ -42,7 +42,7 @@ type DataPlaneReconciler struct {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *DataPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.eventRecorder = mgr.GetEventRecorderFor("dataplane")
 
 	return DataPlaneWatchBuilder(mgr).
@@ -54,7 +54,7 @@ func (r *DataPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // -----------------------------------------------------------------------------
 
 // Reconcile moves the current state of an object to the intended state.
-func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "dataplane", r.DevelopmentMode)
 
 	log.Trace(logger, "reconciling DataPlane resource", req)
@@ -195,7 +195,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	return ctrl.Result{}, nil
 }
 
-func (r *DataPlaneReconciler) initSelectorInStatus(ctx context.Context, logger logr.Logger, dataplane *operatorv1beta1.DataPlane) error {
+func (r *Reconciler) initSelectorInStatus(ctx context.Context, logger logr.Logger, dataplane *operatorv1beta1.DataPlane) error {
 	if dataplane.Status.Selector != "" {
 		return nil
 	}

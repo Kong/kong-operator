@@ -1,4 +1,4 @@
-package controllers
+package dataplane
 
 import k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 

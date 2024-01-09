@@ -1,4 +1,4 @@
-package controllers
+package dataplane
 
 import (
 	"context"
@@ -34,9 +34,9 @@ import (
 // DataPlaneBlueGreenReconciler
 // -----------------------------------------------------------------------------
 
-// DataPlaneBlueGreenReconciler reconciles a DataPlane objects for purposes
+// BlueGreenReconciler reconciles a DataPlane objects for purposes
 // of Blue Green rollouts.
-type DataPlaneBlueGreenReconciler struct {
+type BlueGreenReconciler struct {
 	client.Client
 
 	// DataPlaneController contains the DataPlaneReconciler to which we delegate
@@ -59,7 +59,7 @@ type DataPlaneBlueGreenReconciler struct {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *DataPlaneBlueGreenReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *BlueGreenReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return DataPlaneWatchBuilder(mgr).
 		Complete(r)
 }
@@ -69,7 +69,7 @@ func (r *DataPlaneBlueGreenReconciler) SetupWithManager(mgr ctrl.Manager) error 
 // -----------------------------------------------------------------------------
 
 // Reconcile moves the current state of an object to the intended state.
-func (r *DataPlaneBlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var dataplane operatorv1beta1.DataPlane
 	if err := r.Client.Get(ctx, req.NamespacedName, &dataplane); err != nil {
 		if k8serrors.IsNotFound(err) {
@@ -315,7 +315,7 @@ func shouldDelegateToDataPlaneController(
 
 // prunePreviewSubresources is used to prune DataPlane's preview subresources
 // when they are not necessary anymore, e.g. when rollout strategy is unset.
-func (r *DataPlaneBlueGreenReconciler) prunePreviewSubresources(
+func (r *BlueGreenReconciler) prunePreviewSubresources(
 	ctx context.Context,
 	dataplane *operatorv1beta1.DataPlane,
 ) error {
@@ -425,7 +425,7 @@ func removeObjectSliceWithDataPlaneOwnedFinalizer[
 	return nil
 }
 
-func (r *DataPlaneBlueGreenReconciler) ensureDeploymentForDataPlane(
+func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 	ctx context.Context,
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
@@ -473,7 +473,7 @@ func (r *DataPlaneBlueGreenReconciler) ensureDeploymentForDataPlane(
 
 // resetPromoteWhenReadyAnnotation resets promote-when-ready DataPlane annotation.
 // This makes the DataPlane ready for the next rollout cycle and prevents unintentional promotion.
-func (r *DataPlaneBlueGreenReconciler) resetPromoteWhenReadyAnnotation(
+func (r *BlueGreenReconciler) resetPromoteWhenReadyAnnotation(
 	ctx context.Context,
 	dataplane *operatorv1beta1.DataPlane,
 ) error {
@@ -488,7 +488,7 @@ func (r *DataPlaneBlueGreenReconciler) resetPromoteWhenReadyAnnotation(
 // reduceLiveDeployments reduces the number of live deployments to 1 by deleting the oldest ones.
 // It's used to reduce the number of live deployments that are not being used anymore after promotion (the old live
 // deployment gets "replaced" by the preview deployment).
-func (r *DataPlaneBlueGreenReconciler) reduceLiveDeployments(
+func (r *BlueGreenReconciler) reduceLiveDeployments(
 	ctx context.Context,
 	logger logr.Logger,
 	dataPlane *operatorv1beta1.DataPlane,
@@ -535,7 +535,7 @@ func (r *DataPlaneBlueGreenReconciler) reduceLiveDeployments(
 
 // ensureRolledOutCondition ensures that DataPlane rollout status contains RolledOut
 // Condition with provided status, reason and message.
-func (r *DataPlaneBlueGreenReconciler) ensureRolledOutCondition(
+func (r *BlueGreenReconciler) ensureRolledOutCondition(
 	ctx context.Context,
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
@@ -595,7 +595,7 @@ func labelSelectorFromDataPlaneRolloutStatusSelectorServiceOpt(dataplane *operat
 	}
 }
 
-func (r *DataPlaneBlueGreenReconciler) initSelectorInRolloutStatus(ctx context.Context, dataplane *operatorv1beta1.DataPlane) error {
+func (r *BlueGreenReconciler) initSelectorInRolloutStatus(ctx context.Context, dataplane *operatorv1beta1.DataPlane) error {
 	if dataplane.Status.RolloutStatus != nil && dataplane.Status.RolloutStatus.Deployment != nil && dataplane.Status.RolloutStatus.Deployment.Selector != "" {
 		return nil
 	}
@@ -616,7 +616,7 @@ func (r *DataPlaneBlueGreenReconciler) initSelectorInRolloutStatus(ctx context.C
 	return nil
 }
 
-func (r *DataPlaneBlueGreenReconciler) ensureDataPlaneAdminAPIInRolloutStatus(
+func (r *BlueGreenReconciler) ensureDataPlaneAdminAPIInRolloutStatus(
 	ctx context.Context,
 	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
@@ -651,7 +651,7 @@ func (r *DataPlaneBlueGreenReconciler) ensureDataPlaneAdminAPIInRolloutStatus(
 // patchRolloutStatus Patches the resource status only when there are changes
 // between the provided old and updated DataPlanes' rollout statuses.
 // It returns a bool flag indicating that the status has been patched and an error.
-func (r *DataPlaneBlueGreenReconciler) patchRolloutStatus(ctx context.Context, logger logr.Logger, old, updated *operatorv1beta1.DataPlane) (bool, error) {
+func (r *BlueGreenReconciler) patchRolloutStatus(ctx context.Context, logger logr.Logger, old, updated *operatorv1beta1.DataPlane) (bool, error) {
 	if rolloutStatusChanged(old, updated) {
 		log.Debug(logger, "patching DataPlane status", updated, "status", updated.Status)
 		return true, r.Client.Status().Patch(ctx, updated, client.MergeFrom(old))
@@ -683,7 +683,7 @@ func canProceedWithPromotion(dataplane operatorv1beta1.DataPlane) (bool, error) 
 }
 
 // ensurePreviewAdminAPIService ensures the "preview" Admin API Service is available.
-func (r *DataPlaneBlueGreenReconciler) ensurePreviewAdminAPIService(
+func (r *BlueGreenReconciler) ensurePreviewAdminAPIService(
 	ctx context.Context,
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
@@ -714,7 +714,7 @@ func (r *DataPlaneBlueGreenReconciler) ensurePreviewAdminAPIService(
 
 // ensurePreviewIngressService ensures the "preview" ingress service to access the Kong routes
 // in the "preview" version of Kong gateway.
-func (r *DataPlaneBlueGreenReconciler) ensurePreviewIngressService(
+func (r *BlueGreenReconciler) ensurePreviewIngressService(
 	ctx context.Context,
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
@@ -747,7 +747,7 @@ func (r *DataPlaneBlueGreenReconciler) ensurePreviewIngressService(
 
 // ensureDataPlaneRolloutIngressServiceStatus ensures status.rollout.service.ingress
 // contains the name and addresses of "preview" ingress service.
-func (r *DataPlaneBlueGreenReconciler) ensureDataPlaneRolloutIngressServiceStatus(
+func (r *BlueGreenReconciler) ensureDataPlaneRolloutIngressServiceStatus(
 	ctx context.Context,
 	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
@@ -781,7 +781,7 @@ func (r *DataPlaneBlueGreenReconciler) ensureDataPlaneRolloutIngressServiceStatu
 
 // ensurePreviewSelectorOverridesLive ensures that the current preview deployment selector overrides the live one.
 // That will make the DataPlane controller modify its live services to point to the preview deployment.
-func (r *DataPlaneBlueGreenReconciler) ensurePreviewSelectorOverridesLive(
+func (r *BlueGreenReconciler) ensurePreviewSelectorOverridesLive(
 	ctx context.Context,
 	dataplane *operatorv1beta1.DataPlane,
 ) (updated bool, err error) {
@@ -802,7 +802,7 @@ func (r *DataPlaneBlueGreenReconciler) ensurePreviewSelectorOverridesLive(
 
 // waitForLiveServiceSelectorsPropagation waits for a live service of a given type to have the expected selector.
 // It's used to wait for the Admin and Ingress services to have the selector of the preview deployment during promotion.
-func (r *DataPlaneBlueGreenReconciler) waitForLiveServiceSelectorsPropagation(
+func (r *BlueGreenReconciler) waitForLiveServiceSelectorsPropagation(
 	ctx context.Context,
 	dataplane *operatorv1beta1.DataPlane,
 	serviceType consts.ServiceType,
@@ -835,7 +835,7 @@ func (r *DataPlaneBlueGreenReconciler) waitForLiveServiceSelectorsPropagation(
 
 // ensurePreviewDeploymentLabeledLive ensures that the preview deployment with a given selector is labeled as live.
 // It's used to mark the preview deployment as live during promotion.
-func (r *DataPlaneBlueGreenReconciler) ensurePreviewDeploymentLabeledLive(
+func (r *BlueGreenReconciler) ensurePreviewDeploymentLabeledLive(
 	ctx context.Context,
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,

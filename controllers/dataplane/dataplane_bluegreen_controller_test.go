@@ -1,4 +1,4 @@
-package controllers
+package dataplane
 
 import (
 	"context"
@@ -235,11 +235,11 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 			// modify the existing service.
 			tc.existingServiceModifier(t, ctx, fakeClient, existingSvc)
 
-			reconciler := &DataPlaneReconciler{
+			reconciler := &Reconciler{
 				Client: fakeClient,
 			}
 
-			bgReconciler := DataPlaneBlueGreenReconciler{
+			bgReconciler := BlueGreenReconciler{
 				Client:              fakeClient,
 				DataPlaneController: reconciler,
 			}

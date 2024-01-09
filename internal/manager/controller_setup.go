@@ -19,12 +19,12 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
-	"github.com/kong/gateway-operator/controllers"
 	"github.com/kong/gateway-operator/controllers/controlplane"
+	"github.com/kong/gateway-operator/controllers/dataplane"
 	"github.com/kong/gateway-operator/controllers/gateway"
 	"github.com/kong/gateway-operator/controllers/gatewayclass"
 	"github.com/kong/gateway-operator/internal/utils/index"
-	"github.com/kong/gateway-operator/internal/validation/dataplane"
+	dataplanevalidator "github.com/kong/gateway-operator/internal/validation/dataplane"
 )
 
 // -----------------------------------------------------------------------------
@@ -153,50 +153,50 @@ func setupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 		// DataPlane controller
 		{
 			Enabled: (c.DataPlaneControllerEnabled || c.GatewayControllerEnabled) && !c.DataPlaneBlueGreenControllerEnabled,
-			Controller: &controllers.DataPlaneReconciler{
+			Controller: &dataplane.Reconciler{
 				Client:                   mgr.GetClient(),
 				Scheme:                   mgr.GetScheme(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				DevelopmentMode:          c.DevelopmentMode,
-				Validator:                dataplane.NewValidator(mgr.GetClient()),
+				Validator:                dataplanevalidator.NewValidator(mgr.GetClient()),
 			},
 		},
 		// DataPlaneBlueGreen controller
 		{
 			Enabled: c.DataPlaneBlueGreenControllerEnabled,
-			Controller: &controllers.DataPlaneBlueGreenReconciler{
+			Controller: &dataplane.BlueGreenReconciler{
 				Client:                   mgr.GetClient(),
 				DevelopmentMode:          c.DevelopmentMode,
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
-				DataPlaneController: &controllers.DataPlaneReconciler{
+				DataPlaneController: &dataplane.Reconciler{
 					Client:                   mgr.GetClient(),
 					Scheme:                   mgr.GetScheme(),
 					ClusterCASecretName:      c.ClusterCASecretName,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 					DevelopmentMode:          c.DevelopmentMode,
-					Validator:                dataplane.NewValidator(mgr.GetClient()),
+					Validator:                dataplanevalidator.NewValidator(mgr.GetClient()),
 				},
 			},
 		},
 		{
 			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled,
-			Controller: controllers.NewDataPlaneOwnedResourceFinalizerReconciler[corev1.Service](
+			Controller: dataplane.NewDataPlaneOwnedResourceFinalizerReconciler[corev1.Service](
 				mgr.GetClient(),
 				c.DevelopmentMode,
 			),
 		},
 		{
 			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled,
-			Controller: controllers.NewDataPlaneOwnedResourceFinalizerReconciler[corev1.Secret](
+			Controller: dataplane.NewDataPlaneOwnedResourceFinalizerReconciler[corev1.Secret](
 				mgr.GetClient(),
 				c.DevelopmentMode,
 			),
 		},
 		{
 			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled,
-			Controller: controllers.NewDataPlaneOwnedResourceFinalizerReconciler[appsv1.Deployment](
+			Controller: dataplane.NewDataPlaneOwnedResourceFinalizerReconciler[appsv1.Deployment](
 				mgr.GetClient(),
 				c.DevelopmentMode,
 			),

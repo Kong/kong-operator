@@ -1,4 +1,4 @@
-package controllers
+package dataplane
 
 import (
 	"context"
@@ -64,7 +64,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 		name           string
 		dataPlane      *operatorv1beta1.DataPlane
 		certSecretName string
-		testBody       func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string)
+		testBody       func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string)
 	}{
 		{
 			name: "no existing DataPlane deployment",
@@ -75,7 +75,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 			},
 			certSecretName: "certificate",
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName,
 					client.MatchingLabels{
@@ -139,7 +139,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 			},
 			certSecretName: "certificate",
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 
 				res, deployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName,
@@ -214,7 +214,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 			},
 			certSecretName: "certificate",
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				require.NoError(t, err)
@@ -270,7 +270,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 			},
 			certSecretName: "certificate",
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				require.NoError(t, err)
@@ -336,7 +336,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 			},
 			certSecretName: "certificate",
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 				dataplaneImage, err := generateDataPlaneImage(dataPlane, versions.IsDataPlaneImageVersionSupported)
 				// generateDataPlaneImage will set deployment's containers resources
@@ -381,7 +381,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 			},
 			certSecretName: "certificate",
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 
 				res, existingDeployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName,
@@ -445,7 +445,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 				},
 			},
 			certSecretName: "certificate",
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
 				ctx := context.Background()
 
 				res, existingDeployment, err := ensureDeploymentForDataPlane(ctx, reconciler.Client, logr.Discard(), developmentMode, dataPlane, certSecretName,
@@ -498,7 +498,7 @@ func TestEnsureDeploymentForDataPlane(t *testing.T) {
 			WithScheme(scheme.Scheme).
 			Build()
 
-		reconciler := DataPlaneReconciler{
+		reconciler := Reconciler{
 			Client: fakeClient,
 		}
 

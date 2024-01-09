@@ -1,4 +1,4 @@
-package controllers
+package dataplane
 
 import (
 	"context"
@@ -71,7 +71,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 		dataplaneReq          reconcile.Request
 		dataplane             *operatorv1beta1.DataPlane
 		dataplaneSubResources []controllerruntimeclient.Object
-		testBody              func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request)
+		testBody              func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request)
 	}{
 		{
 			name: "service reduction",
@@ -173,7 +173,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request) {
 				ctx := context.Background()
 
 				// first reconcile loop to allow the reconciler to set the dataplane defaults
@@ -270,7 +270,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request) {
 				ctx := context.Background()
 
 				// first reconcile loop to allow the reconciler to set the dataplane defaults
@@ -375,7 +375,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					),
 				},
 			},
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request) {
 				ctx := context.Background()
 
 				// first reconcile loop to allow the reconciler to set the dataplane defaults
@@ -509,7 +509,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					),
 				},
 			},
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request) {
 				ctx := context.Background()
 
 				_, err := reconciler.Reconcile(ctx, dataplaneReq)
@@ -667,7 +667,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					),
 				},
 			},
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request) {
 				ctx := context.Background()
 
 				_, err := reconciler.Reconcile(ctx, dataplaneReq)
@@ -832,7 +832,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					),
 				},
 			},
-			testBody: func(t *testing.T, reconciler DataPlaneReconciler, dataplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request) {
 				ctx := context.Background()
 
 				_, err := reconciler.Reconcile(ctx, dataplaneReq)
@@ -925,7 +925,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				WithStatusSubresource(tc.dataplane).
 				Build()
 
-			reconciler := DataPlaneReconciler{
+			reconciler := Reconciler{
 				Client:                   fakeClient,
 				ClusterCASecretName:      mtlsSecret.Name,
 				ClusterCASecretNamespace: mtlsSecret.Namespace,
