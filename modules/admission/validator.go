@@ -16,10 +16,12 @@ type validator struct {
 	controlplaneValidator *controlplanevalidation.Validator
 }
 
+// ValidateControlPlane validates the ControlPlane resource.
 func (v *validator) ValidateControlPlane(ctx context.Context, controlPlane operatorv1alpha1.ControlPlane) error {
 	return v.controlplaneValidator.Validate(&controlPlane)
 }
 
+// ValidateDataPlane validates the DataPlane resource.
 func (v *validator) ValidateDataPlane(ctx context.Context, dataPlane, old operatorv1beta1.DataPlane, operation admissionv1.Operation) error {
 	//nolint:exhaustive
 	switch operation {

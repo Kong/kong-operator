@@ -64,7 +64,8 @@ func setupIndexes(mgr manager.Manager) error {
 	return index.IndexDataPlaneNameOnControlPlane(mgr.GetCache())
 }
 
-func setupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
+// SetupControllers returns a list of ControllerDefs based on config.
+func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 	// These checks prevent controller-runtime spamming in logs about failing
 	// to get informer from cache.
 	// This way we only ever check the CRD once and issue clear log entry about

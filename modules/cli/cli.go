@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kong/gateway-operator/internal/manager"
-	"github.com/kong/gateway-operator/internal/manager/logging"
-	"github.com/kong/gateway-operator/internal/manager/metadata"
+	"github.com/kong/gateway-operator/modules/manager"
+	"github.com/kong/gateway-operator/modules/manager/logging"
+	"github.com/kong/gateway-operator/modules/manager/metadata"
 )
 
 // New returns a new CLI.

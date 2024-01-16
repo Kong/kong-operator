@@ -33,10 +33,10 @@ import (
 	"github.com/kong/gateway-operator/controllers/pkg/dataplane"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/internal/consts"
-	"github.com/kong/gateway-operator/internal/manager/logging"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 )
 
 // -----------------------------------------------------------------------------

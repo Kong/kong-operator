@@ -34,10 +34,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/kong/gateway-operator/internal/admission"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	"github.com/kong/gateway-operator/modules/admission"
 )
 
 const (
@@ -53,13 +53,24 @@ type webhookManager struct {
 	logger logr.Logger
 	cfg    *Config
 	server webhook.Server
+
+	setupControllers        SetupControllersFunc
+	admissionRequestHandler AdmissionRequestHandlerFunc
 }
 
-// PrepareWebhookServer creates a webhook server and add it to the controller manager.
+// AdmissionRequestHandlerFunc is a function that returns an implementation of admission.RequestHandler,
+// (validation webhook) it's passed to Run function and called later.
+type AdmissionRequestHandlerFunc func(c client.Client, l logr.Logger) *admission.RequestHandler
+
+// PrepareWebhookServerWithControllers creates a webhook server and adds it to the controller manager.
 // Because the controller runtime 0.14.x doed not allow adding readiness probe after manager starts,
 // We need to create webhook server and add it to manager before manager starts.
 // https://github.com/Kong/gateway-operator/issues/611
-func (m *webhookManager) PrepareWebhookServer(ctx context.Context) error {
+func (m *webhookManager) PrepareWebhookServerWithControllers(
+	ctx context.Context,
+	setupControllers SetupControllersFunc,
+	newAdmissionRequestHandler AdmissionRequestHandlerFunc,
+) error {
 	if m.cfg.ControllerNamespace == "" {
 		return errors.New("controllerNamespace must be set")
 	}
@@ -69,16 +80,27 @@ func (m *webhookManager) PrepareWebhookServer(ctx context.Context) error {
 	if m.cfg.WebhookPort == 0 {
 		return errors.New("webhookPort must be set")
 	}
+	m.setupControllers = setupControllers
 
 	// create and start a new webhook server
-	hookServer, err := admission.AddNewWebhookServerToManager(m.mgr, ctrl.Log, m.cfg.WebhookPort, m.cfg.WebhookCertDir)
-	if err != nil {
-		return err
+	hookServer := webhook.NewServer(webhook.Options{
+		CertDir: m.cfg.WebhookCertDir,
+		Port:    m.cfg.WebhookPort,
+	})
+
+	// add readyz check for checking connection to webhook server
+	// to make the controller to be marked as ready after webhook started.
+	if err := m.mgr.AddReadyzCheck("readyz", hookServer.StartedChecker()); err != nil {
+		return fmt.Errorf("failed to add readiness probe for webhook: %w", err)
 	}
+
 	m.server = hookServer
+	m.admissionRequestHandler = newAdmissionRequestHandler
+
 	return nil
 }
 
+// Start starts the webhook server and the controllers.
 func (m *webhookManager) Start(ctx context.Context) error {
 	m.logger.Info("starting webhook manager")
 
@@ -125,14 +147,14 @@ func (m *webhookManager) Start(ctx context.Context) error {
 		}
 	}
 
-	handler := admission.NewRequestHandler(m.mgr.GetClient(), m.logger)
+	handler := m.admissionRequestHandler(m.mgr.GetClient(), m.logger)
 	m.server.Register("/validate", handler)
 	if err := m.mgr.Add(m.server); err != nil {
 		return err
 	}
 
 	// load the Gateway API controllers and start them only after the webhook is in place
-	controllers, err := setupControllers(m.mgr, m.cfg)
+	controllers, err := m.setupControllers(m.mgr, m.cfg)
 	if err != nil {
 		return err
 	}

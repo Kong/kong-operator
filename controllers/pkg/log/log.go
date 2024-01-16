@@ -8,7 +8,7 @@ import (
 	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/gateway-operator/internal/manager/logging"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 )
 
 // Info logs a message at the info level.

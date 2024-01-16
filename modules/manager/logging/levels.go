@@ -1,10 +1,14 @@
 package logging
 
+// Level represents the log level.
 type Level int
 
 const (
-	InfoLevel  Level = 0
+	// InfoLevel is the default log level.
+	InfoLevel Level = 0
+	// DebugLevel is the debug log level.
 	DebugLevel Level = 1
+	// TraceLevel is the trace log level.
 	TraceLevel Level = 2
 )
 
@@ -21,6 +25,7 @@ func (l Level) String() string {
 	return ""
 }
 
+// Value returns the integer value of the log level.
 func (l Level) Value() int {
 	return (int)(l)
 }

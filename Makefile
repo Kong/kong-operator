@@ -208,9 +208,9 @@ build.operator.debug:
 .PHONY: _build.operator
 _build.operator:
 	go build -o bin/manager $(GCFLAGS) -ldflags "$(LDFLAGS) \
-		-X $(REPO)/internal/manager/metadata.Release=$(TAG) \
-		-X $(REPO)/internal/manager/metadata.Commit=$(COMMIT) \
-		-X $(REPO)/internal/manager/metadata.Repo=$(REPO_INFO)" \
+		-X $(REPO)/modules/manager/metadata.Release=$(TAG) \
+		-X $(REPO)/modules/manager/metadata.Commit=$(COMMIT) \
+		-X $(REPO)/modules/manager/metadata.Repo=$(REPO_INFO)" \
 		main.go
 
 .PHONY: build

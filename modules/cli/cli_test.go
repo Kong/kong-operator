@@ -7,8 +7,8 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/gateway-operator/internal/manager"
-	"github.com/kong/gateway-operator/internal/manager/logging"
+	"github.com/kong/gateway-operator/modules/manager"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 )
 
 func TestParse(t *testing.T) {

@@ -43,14 +43,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
-	"github.com/kong/gateway-operator/internal/manager/metadata"
 	"github.com/kong/gateway-operator/internal/telemetry"
+	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -70,6 +71,7 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+// Config represents the configuration for the manager.
 type Config struct {
 	MetricsAddr              string
 	ProbeAddr                string
@@ -100,6 +102,7 @@ type Config struct {
 	StartedCh chan struct{}
 }
 
+// DefaultConfig returns a default configuration for the manager.
 func DefaultConfig() Config {
 	const (
 		defaultNamespace               = "kong-system"
@@ -124,7 +127,17 @@ func DefaultConfig() Config {
 	}
 }
 
-func Run(cfg Config) error {
+// SetupControllersFunc represents function to setup controllers, which is called
+// in Run function.
+type SetupControllersFunc func(manager.Manager, *Config) ([]ControllerDef, error)
+
+// Run runs the manager. Parameter cfg represents the configuration for the manager
+// that for normal operation is derived from command-line flags. The function
+// setupControllers is expected to return a list of configured ControllerDef
+// that will be added to the manager. The function admissionRequestHandler is
+// used to construct the admission webhook handler for the validating webhook
+// that is added to the manager too.
+func Run(cfg Config, setupControllers SetupControllersFunc, admissionRequestHandler AdmissionRequestHandlerFunc) error {
 	setupLog := ctrl.Log.WithName("setup")
 	setupLog.Info("starting controller manager",
 		"release", metadata.Release,
@@ -192,7 +205,7 @@ func Run(cfg Config) error {
 			logger: ctrl.Log.WithName("webhook_manager"),
 			cfg:    &cfg,
 		}
-		if err := webhookMgr.PrepareWebhookServer(context.Background()); err != nil {
+		if err := webhookMgr.PrepareWebhookServerWithControllers(context.Background(), setupControllers, admissionRequestHandler); err != nil {
 			return fmt.Errorf("unable to create webhook server: %w", err)
 		}
 
@@ -262,6 +275,7 @@ type caManager struct {
 	secretNamespace string
 }
 
+// Start starts the CA manager.
 func (m *caManager) Start(ctx context.Context) error {
 	if m.secretName == "" {
 		return fmt.Errorf("cannot use an empty secret name when creating a CA secret")

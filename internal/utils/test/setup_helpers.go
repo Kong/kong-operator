@@ -21,7 +21,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/kong/gateway-operator/internal/manager"
+	"github.com/kong/gateway-operator/modules/manager"
 	operatorclient "github.com/kong/gateway-operator/pkg/clientset"
 )
 

@@ -12,9 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -25,22 +23,6 @@ var (
 	scheme = runtime.NewScheme()
 	codecs = serializer.NewCodecFactory(scheme)
 )
-
-// AddNewWebhookServerToManager creates a webhook server in manager.
-func AddNewWebhookServerToManager(mgr ctrl.Manager, logger logr.Logger, webhookPort int, webhookCertDir string) (webhook.Server, error) {
-	hookServer := webhook.NewServer(webhook.Options{
-		CertDir: webhookCertDir,
-		Port:    webhookPort,
-	})
-
-	// add readyz check for checking connection to webhook server
-	// to make the controller to be marked as ready after webhook started.
-	if err := mgr.AddReadyzCheck("readyz", hookServer.StartedChecker()); err != nil {
-		return nil, fmt.Errorf("failed to add readiness probe for webhook: %w", err)
-	}
-
-	return hookServer, nil
-}
 
 // Validator is the interface of validating
 type Validator interface {
