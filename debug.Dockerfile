@@ -14,13 +14,13 @@ ARG COMMIT
 ARG REPO_INFO
 
 LABEL name="${NAME}" \
-      description="${DESCRIPTION}" \
-      org.opencontainers.image.description="${DESCRIPTION}" \
-      vendor="Kong" \
-      version="${TAG}" \
-      release="1" \
-      url="https://github.com/Kong/gateway-operator" \
-      summary="A Kubernetes Operator for the Kong Gateway."
+    description="${DESCRIPTION}" \
+    org.opencontainers.image.description="${DESCRIPTION}" \
+    vendor="Kong" \
+    version="${TAG}" \
+    release="1" \
+    url="https://github.com/Kong/gateway-operator" \
+    summary="A Kubernetes Operator for the Kong Gateway."
 
 RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
     && printf ", TARGETARCH=${TARGETARCH}" \
@@ -41,10 +41,12 @@ COPY third_party/dlv.go third_party/dlv.go
 RUN make dlv
 
 COPY main.go main.go
+COPY modules/ modules/
 COPY apis/ apis/
 COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY internal/ internal/
+COPY Makefile Makefile
 COPY .git/ .git/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
