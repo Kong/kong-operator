@@ -3,44 +3,391 @@ package dataplane
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/gateway-operator/apis/v1beta1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/pkg/builder"
 	"github.com/kong/gateway-operator/controllers/pkg/dataplane"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	dpv "github.com/kong/gateway-operator/internal/validation/dataplane"
+	"github.com/kong/gateway-operator/test/helpers"
 )
+
+func init() {
+	if err := operatorv1beta1.AddToScheme(scheme.Scheme); err != nil {
+		fmt.Println("error while adding operatorv1beta1 scheme")
+		os.Exit(1)
+	}
+}
+
+// TODO: This test requires a rewrite to get rid of the mystical .Reconcile()
+// calls which tests writers each time have to guess how many of those will be
+// necessary.
+// There's an open issue to rewrite that into e.g. envtest based test(s) so that
+// test writers will be able to rely on the reconciler running against an apiserver
+// and just asserting on the actual desired effect.
+//
+// Ref: https://github.com/Kong/gateway-operator/issues/933
+func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
+	ca := helpers.CreateCA(t)
+	mtlsSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "mtls-secret",
+			Namespace: "test-namespace",
+		},
+		Data: map[string][]byte{
+			"tls.crt": ca.CertPEM.Bytes(),
+			"tls.key": ca.KeyPEM.Bytes(),
+		},
+	}
+
+	testCases := []struct {
+		name                  string
+		dataplaneReq          reconcile.Request
+		dataplane             *operatorv1beta1.DataPlane
+		dataplaneSubResources []client.Object
+		testBody              func(t *testing.T, reconciler BlueGreenReconciler, dataplaneReq reconcile.Request)
+	}{
+		{
+			name: "when live Deployment Pods become not Ready, DataPlane status should have the Ready status condition set to false",
+			dataplaneReq: reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-dataplane",
+					Namespace: "default",
+				},
+			},
+			dataplane: &operatorv1beta1.DataPlane{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
+					Kind:       "DataPlane",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-dataplane",
+					Namespace:  "default",
+					UID:        types.UID(uuid.NewString()),
+					Generation: 1,
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							Rollout: &operatorv1beta1.Rollout{
+								Strategy: operatorv1beta1.RolloutStrategy{
+									BlueGreen: &operatorv1beta1.BlueGreenStrategy{
+										Promotion: operatorv1beta1.Promotion{
+											Strategy: operatorv1beta1.BreakBeforePromotion,
+										},
+									},
+								},
+							},
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			dataplaneSubResources: []client.Object{
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-dataplane-deployment",
+						Namespace: "default",
+						Labels: map[string]string{
+							"app":                                      "test-dataplane",
+							consts.DataPlaneDeploymentStateLabel:       string(consts.DataPlaneStateLabelValueLive),
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
+						},
+					},
+					Status: appsv1.DeploymentStatus{
+						AvailableReplicas: 1,
+						ReadyReplicas:     1,
+						Replicas:          1,
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-admin-service",
+						Namespace: "default",
+						Labels: map[string]string{
+							"app":                                      "test-dataplane",
+							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneAdminServiceLabelValue),
+							consts.DataPlaneServiceStateLabel:          string(consts.DataPlaneStateLabelValueLive),
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: corev1.ClusterIPNone,
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-proxy-service",
+						Namespace: "default",
+						Labels: map[string]string{
+							"app":                                      "test-dataplane",
+							consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValueLive,
+							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
+							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP:  "10.0.0.1",
+						ClusterIPs: []string{"10.0.0.1"},
+					},
+					Status: corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{
+								{
+									IP: "6.7.8.9",
+								},
+							},
+						},
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-dataplane-tls-secret-2",
+						Namespace: "default",
+					},
+					Data: helpers.TLSSecretData(t, ca,
+						helpers.CreateCert(t, "*.test-admin-service.default.svc", ca.Cert, ca.Key),
+					),
+				},
+			},
+			testBody: func(t *testing.T, reconciler BlueGreenReconciler, dataplaneReq reconcile.Request) {
+				ctx := context.Background()
+
+				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				// The second reconcile is needed because the first one would only get to marking
+				// the DataPlane as Scheduled.
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				// The third reconcile is needed because the second one will only ensure
+				// the service is deployed for the DataPlane.
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				// The fourth reconcile is needed to ensure the service name in the dataplane status
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				dp := &operatorv1beta1.DataPlane{}
+				dpNN := types.NamespacedName{Namespace: dataplaneReq.Namespace, Name: dataplaneReq.Name}
+				require.NoError(t, reconciler.Client.Get(ctx, dpNN, dp))
+				require.Equal(t, "test-proxy-service", dp.Status.Service)
+				require.Equal(t, []operatorv1beta1.Address{
+					// This currently assumes that we sort the addresses in a way
+					// such that LoadBalancer IPs, then LoadBalancer hostnames are added
+					// and then ClusterIPs follow.
+					// If this ends up being the desired logic and aligns with what
+					// has been agreed in https://github.com/Kong/gateway-operator/issues/281
+					// then no action has to be taken. Otherwise this might need to be changed.
+					{
+						Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+						Value:      "6.7.8.9",
+						SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
+					},
+					{
+						Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+						Value:      "10.0.0.1",
+						SourceType: operatorv1beta1.PrivateIPAddressSourceType,
+					},
+				}, dp.Status.Addresses)
+
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				// Blue Green reconciliation starts
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				require.NoError(t, reconciler.Client.Get(ctx, dpNN, dp))
+				require.NotNil(t, dp.Status.RolloutStatus)
+				require.Len(t, dp.Status.RolloutStatus.Conditions, 1)
+				require.EqualValues(t, consts.DataPlaneConditionTypeRolledOut, dp.Status.RolloutStatus.Conditions[0].Type)
+				require.Equal(t, metav1.ConditionFalse, dp.Status.RolloutStatus.Conditions[0].Status)
+
+				// Update the DataPlane deployment options to trigger rollout.
+				dp.Spec.Deployment.PodTemplateSpec.Spec.Containers = append(
+					dp.Spec.Deployment.PodTemplateSpec.Spec.Containers, corev1.Container{
+						Name:  "proxy",
+						Image: "kong:3.3.0",
+					},
+				)
+				// We're not running these tests against an API server to let's just bump the generation ourselves.
+				dp.Generation++
+				require.NoError(t, reconciler.Client.Update(ctx, dp))
+
+				// Run reconciliation to advance the rollout.
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				// Update the DataPlane preview deployment status to pretend that its Pods are ready.
+				previewDeploymentLabelReq, err := labels.NewRequirement(
+					consts.DataPlaneDeploymentStateLabel,
+					selection.Equals,
+					[]string{consts.DataPlaneStateLabelValuePreview},
+				)
+				require.NoError(t, err)
+				previewDeployments := &appsv1.DeploymentList{}
+				require.NoError(t, reconciler.Client.List(ctx, previewDeployments, &client.ListOptions{
+					LabelSelector: labels.NewSelector().Add(*previewDeploymentLabelReq),
+				}))
+				require.Len(t, previewDeployments.Items, 1)
+				previewDeployments.Items[0].Status.AvailableReplicas = 1
+				previewDeployments.Items[0].Status.ReadyReplicas = 1
+				previewDeployments.Items[0].Status.Replicas = 1
+				require.NoError(t, reconciler.Client.Status().Update(ctx, &(previewDeployments.Items[0])))
+
+				// Update the DataPlane deployment status to pretend that its Pods are not ready.
+				require.NoError(t,
+					reconciler.Client.Status().Update(ctx,
+						&appsv1.Deployment{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test-dataplane-deployment",
+								Namespace: "default",
+							},
+							Status: appsv1.DeploymentStatus{
+								Replicas:          0,
+								ReadyReplicas:     0,
+								AvailableReplicas: 0,
+							},
+						},
+					),
+				)
+
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				require.NoError(t, err)
+
+				require.NoError(t, reconciler.Client.Get(ctx, dpNN, dp))
+
+				t.Logf("DataPlane status should have the Ready status condition set to false")
+				require.Len(t, dp.Status.Conditions, 1)
+				require.EqualValues(t, dp.Status.Conditions[0].Type, k8sutils.ReadyType)
+				require.Equal(t, dp.Status.Conditions[0].Status, metav1.ConditionFalse,
+					"DataPlane's Ready status condition should be set to false when live Deployment has no Ready replicas",
+				)
+				require.EqualValues(t, dp.Status.Conditions[0].Reason, k8sutils.WaitingToBecomeReadyReason)
+
+				t.Logf("DataPlane rollout status should have the Ready status condition set to true")
+				require.NotNil(t, dp.Status.RolloutStatus)
+				require.Len(t, dp.Status.RolloutStatus.Conditions, 1)
+				require.EqualValues(t, consts.DataPlaneConditionTypeRolledOut, dp.Status.RolloutStatus.Conditions[0].Type)
+				require.Equal(t, metav1.ConditionFalse, dp.Status.RolloutStatus.Conditions[0].Status,
+					"DataPlane's Ready rollout status condition should be set to true when preview Deployment has Ready replicas",
+				)
+				require.EqualValues(t, consts.DataPlaneConditionReasonRolloutAwaitingPromotion, dp.Status.RolloutStatus.Conditions[0].Reason)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			ObjectsToAdd := []client.Object{
+				tc.dataplane,
+				mtlsSecret,
+			}
+
+			for _, dataplaneSubresource := range tc.dataplaneSubResources {
+				k8sutils.SetOwnerForObject(dataplaneSubresource, tc.dataplane)
+				ObjectsToAdd = append(ObjectsToAdd, dataplaneSubresource)
+			}
+
+			fakeClient := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				WithObjects(ObjectsToAdd...).
+				WithStatusSubresource(tc.dataplane).
+				Build()
+
+			reconciler := BlueGreenReconciler{
+				Client:                   fakeClient,
+				ClusterCASecretName:      mtlsSecret.Name,
+				ClusterCASecretNamespace: mtlsSecret.Namespace,
+				DataPlaneController: &Reconciler{
+					Scheme:                   scheme.Scheme,
+					Client:                   fakeClient,
+					ClusterCASecretName:      mtlsSecret.Name,
+					ClusterCASecretNamespace: mtlsSecret.Namespace,
+					Validator:                dpv.NewValidator(fakeClient),
+				},
+			}
+
+			tc.testBody(t, reconciler, tc.dataplaneReq)
+		})
+	}
+}
 
 func TestCanProceedWithPromotion(t *testing.T) {
 	testCases := []struct {
 		name               string
-		dataplane          v1beta1.DataPlane
+		dataplane          operatorv1beta1.DataPlane
 		expectedCanProceed bool
 		expectedErr        error
 	}{
 		{
 			name: "AutomaticPromotion strategy",
 			dataplane: *builder.NewDataPlaneBuilder().
-				WithPromotionStrategy(v1beta1.AutomaticPromotion).
+				WithPromotionStrategy(operatorv1beta1.AutomaticPromotion).
 				Build(),
 			expectedCanProceed: true,
 		},
 		{
 			name: "BreakBeforePromotion strategy, no annotation",
 			dataplane: *builder.NewDataPlaneBuilder().
-				WithPromotionStrategy(v1beta1.BreakBeforePromotion).
+				WithPromotionStrategy(operatorv1beta1.BreakBeforePromotion).
 				Build(),
 			expectedCanProceed: false,
 		},
@@ -50,11 +397,11 @@ func TestCanProceedWithPromotion(t *testing.T) {
 				WithObjectMeta(
 					metav1.ObjectMeta{
 						Annotations: map[string]string{
-							v1beta1.DataPlanePromoteWhenReadyAnnotationKey: "false",
+							operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey: "false",
 						},
 					},
 				).
-				WithPromotionStrategy(v1beta1.BreakBeforePromotion).
+				WithPromotionStrategy(operatorv1beta1.BreakBeforePromotion).
 				Build(),
 			expectedCanProceed: false,
 		},
@@ -64,18 +411,18 @@ func TestCanProceedWithPromotion(t *testing.T) {
 				WithObjectMeta(
 					metav1.ObjectMeta{
 						Annotations: map[string]string{
-							v1beta1.DataPlanePromoteWhenReadyAnnotationKey: v1beta1.DataPlanePromoteWhenReadyAnnotationTrue,
+							operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey: operatorv1beta1.DataPlanePromoteWhenReadyAnnotationTrue,
 						},
 					},
 				).
-				WithPromotionStrategy(v1beta1.BreakBeforePromotion).
+				WithPromotionStrategy(operatorv1beta1.BreakBeforePromotion).
 				Build(),
 			expectedCanProceed: true,
 		},
 		{
 			name: "unknown strategy",
 			dataplane: *builder.NewDataPlaneBuilder().
-				WithPromotionStrategy(v1beta1.PromotionStrategy("unknown")).
+				WithPromotionStrategy(operatorv1beta1.PromotionStrategy("unknown")).
 				Build(),
 			expectedErr: errors.New(`unknown promotion strategy: "unknown"`),
 		},
@@ -99,7 +446,7 @@ func TestCanProceedWithPromotion(t *testing.T) {
 func TestEnsurePreviewIngressService(t *testing.T) {
 	testCases := []struct {
 		name                     string
-		dataplane                *v1beta1.DataPlane
+		dataplane                *operatorv1beta1.DataPlane
 		existingServiceModifier  func(*testing.T, context.Context, client.Client, *corev1.Service)
 		expectedCreatedOrUpdated op.CreatedUpdatedOrNoop
 		expectedService          *corev1.Service
@@ -111,7 +458,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(
 				metav1.ObjectMeta{Namespace: "default", Name: "dp-0"},
 			).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
-				WithPromotionStrategy(v1beta1.AutomaticPromotion).Build(),
+				WithPromotionStrategy(operatorv1beta1.AutomaticPromotion).Build(),
 			existingServiceModifier:  func(t *testing.T, ctx context.Context, cl client.Client, svc *corev1.Service) {}, // No-op
 			expectedCreatedOrUpdated: op.Noop,
 			expectedService: &corev1.Service{
@@ -139,7 +486,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(
 				metav1.ObjectMeta{Namespace: "default", Name: "dp-1"},
 			).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
-				WithPromotionStrategy(v1beta1.AutomaticPromotion).Build(),
+				WithPromotionStrategy(operatorv1beta1.AutomaticPromotion).Build(),
 			existingServiceModifier: func(t *testing.T, ctx context.Context, cl client.Client, svc *corev1.Service) {
 				require.NoError(t, dataplane.OwnedObjectPreDeleteHook(ctx, cl, svc))
 				require.NoError(t, cl.Delete(ctx, svc))
@@ -170,7 +517,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(
 				metav1.ObjectMeta{Namespace: "default", Name: "dp-1"},
 			).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
-				WithPromotionStrategy(v1beta1.AutomaticPromotion).Build(),
+				WithPromotionStrategy(operatorv1beta1.AutomaticPromotion).Build(),
 			existingServiceModifier: func(t *testing.T, ctx context.Context, cl client.Client, svc *corev1.Service) {
 				svcCopy := svc.DeepCopy()
 				svcCopy.UID = ""
@@ -185,7 +532,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(
 				metav1.ObjectMeta{Namespace: "default", Name: "dp-1"},
 			).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
-				WithPromotionStrategy(v1beta1.AutomaticPromotion).Build(),
+				WithPromotionStrategy(operatorv1beta1.AutomaticPromotion).Build(),
 			existingServiceModifier: func(t *testing.T, ctx context.Context, cl client.Client, svc *corev1.Service) {
 				svc.Spec.Selector["app"] = "dp-0"
 				require.NoError(t, cl.Update(ctx, svc))

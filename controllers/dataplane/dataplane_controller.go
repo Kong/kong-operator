@@ -185,7 +185,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	if res, err := ensureDataPlaneReadyStatus(ctx, r.Client, logger, dataplane); err != nil {
+	if res, err := ensureDataPlaneReadyStatus(ctx, r.Client, logger, dataplane, dataplane.Generation); err != nil {
 		return ctrl.Result{}, err
 	} else if res.Requeue {
 		return res, nil

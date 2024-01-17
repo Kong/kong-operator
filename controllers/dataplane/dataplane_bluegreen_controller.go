@@ -93,6 +93,12 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return r.DataPlaneController.Reconcile(ctx, req)
 	}
 
+	if res, err := r.ensureDataPlaneLiveReadyStatus(ctx, logger, &dataplane); err != nil {
+		return ctrl.Result{}, err
+	} else if res.Requeue {
+		return res, nil
+	}
+
 	if err := r.initSelectorInRolloutStatus(ctx, &dataplane); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed updating DataPlane with selector in Rollout Status: %w", err)
 	}
@@ -101,7 +107,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if ok && c.ObservedGeneration == dataplane.Generation && c.Reason == string(consts.DataPlaneConditionReasonRolloutPromotionDone) {
 		// If we've just completed the promotion and the RolledOut condition is up to date then we
 		// can update the Ready status condition of the DataPlane.
-		if res, err := ensureDataPlaneReadyStatus(ctx, r.Client, logger, &dataplane); err != nil {
+		if res, err := ensureDataPlaneReadyStatus(ctx, r.Client, logger, &dataplane, dataplane.Generation); err != nil {
 			return ctrl.Result{}, err
 		} else if res.Requeue {
 			return res, nil
@@ -280,6 +286,30 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	return ctrl.Result{}, nil
 }
 
+// ensureDataPlaneLiveReadyStatus ensures that the DataPlane has the Ready status
+// condition set to the correct value.
+// This is mainly used in the beginning of reconciliation of DataPlanes using
+// BlueGreen rollout strategy when e.g. "live" Pods are not ready.
+// Delegating to DataPlaneReconciler is not possible in this case because it
+// would overwrite the DataPlane with the current spec which would cause the
+// rollout to progress which is what the promotion does.
+func (r *BlueGreenReconciler) ensureDataPlaneLiveReadyStatus(
+	ctx context.Context,
+	logger logr.Logger,
+	dataplane *operatorv1beta1.DataPlane,
+) (ctrl.Result, error) {
+	c, ok := k8sutils.GetCondition(k8sutils.ReadyType, dataplane)
+	if !ok {
+		// No Ready condition yet, it will be set by the DataPlane controller.
+		return ctrl.Result{}, nil
+	}
+
+	// We use the Ready status condition ObservedGeneration to prevent advancing
+	// the DataPlane in BlueGreen rollout.
+
+	return ensureDataPlaneReadyStatus(ctx, r.Client, logger, dataplane, c.ObservedGeneration)
+}
+
 // shouldDelegateToDataPlaneController determines if the dataplane needs to have the
 // standard, dataplane related reconciliation work done first, before proceeding to
 // perform the blue green related rollout work.
@@ -305,8 +335,17 @@ func shouldDelegateToDataPlaneController(
 		}
 	}
 
-	if !k8sutils.IsReady(dataplane) {
+	// If the DataPlane is not ready yet and the Ready condition has an ObservedGeneration
+	// matching DataPlane's Generation then we need to delegate to DataPlaneReconciler.
+	// If the generations wouldn't match then the DataPlaneReconciler would overwrite
+	// the DataPlane with the current spec which would cause the rollout to progress
+	// which is what the promotion does.
+	if cReady.Status == metav1.ConditionFalse && cReady.ObservedGeneration == dataplane.Generation {
 		log.Debug(logger, "DataPlane is not ready yet to proceed with BlueGreen rollout, delegating to DataPlaneReconciler", dataplane)
+		return true
+	}
+
+	if !okReady {
 		return true
 	}
 

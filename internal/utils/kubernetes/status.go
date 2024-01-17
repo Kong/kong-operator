@@ -117,12 +117,13 @@ func InitProgrammed(resource ConditionsAware) {
 	SetCondition(NewCondition(ProgrammedType, metav1.ConditionFalse, PendingReason, DependenciesNotReadyMessage), resource)
 }
 
-// SetReady evaluates all the existing conditions and sets the Ready status accordingly
-func SetReady(resource ConditionsAndGenerationAware) {
+// SetReadyWithGeneration sets the Ready status to True if all the other conditions are True.
+// It uses the provided generation to set the ObservedGeneration field.
+func SetReadyWithGeneration(resource ConditionsAndGenerationAware, generation int64) {
 	ready := metav1.Condition{
 		Type:               string(ReadyType),
 		LastTransitionTime: metav1.Now(),
-		ObservedGeneration: resource.GetGeneration(),
+		ObservedGeneration: generation,
 	}
 
 	if areAllConditionsHaveTrueStatus(resource) {
@@ -134,6 +135,11 @@ func SetReady(resource ConditionsAndGenerationAware) {
 		ready.Message = DependenciesNotReadyMessage
 	}
 	SetCondition(ready, resource)
+}
+
+// SetReady evaluates all the existing conditions and sets the Ready status accordingly.
+func SetReady(resource ConditionsAndGenerationAware) {
+	SetReadyWithGeneration(resource, resource.GetGeneration())
 }
 
 // SetProgrammed evaluates all the existing conditions and sets the Programmed status accordingly

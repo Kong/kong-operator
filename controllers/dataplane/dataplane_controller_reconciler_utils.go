@@ -25,10 +25,10 @@ import (
 // ensureDataPlaneReadinessStatus ensures the readiness Status fields of DataPlane are set.
 func ensureDataPlaneReadinessStatus(
 	dataplane *operatorv1beta1.DataPlane,
-	dataplaneDeployment *appsv1.Deployment,
+	dataplaneDeploymentStatus appsv1.DeploymentStatus,
 ) {
-	dataplane.Status.Replicas = dataplaneDeployment.Status.Replicas
-	dataplane.Status.ReadyReplicas = dataplaneDeployment.Status.ReadyReplicas
+	dataplane.Status.Replicas = dataplaneDeploymentStatus.Replicas
+	dataplane.Status.ReadyReplicas = dataplaneDeploymentStatus.ReadyReplicas
 }
 
 func (r *Reconciler) ensureDataPlaneServiceStatus(
