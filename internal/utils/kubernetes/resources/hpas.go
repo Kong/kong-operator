@@ -17,7 +17,7 @@ import (
 func GenerateHPAForDataPlane(dataplane *operatorv1beta1.DataPlane, deploymentName string) (
 	*autoscalingv2.HorizontalPodAutoscaler, error,
 ) {
-	if scaling := dataplane.Spec.Deployment.DeploymentOptions.Scaling; scaling == nil && scaling.HorizontalScaling == nil {
+	if scaling := dataplane.Spec.Deployment.DeploymentOptions.Scaling; scaling == nil || scaling.HorizontalScaling == nil {
 		return nil, fmt.Errorf("cannot generate HPA for DataPlane %s which doesn't have horizontal autoscaling turned on", dataplane.Name)
 	}
 

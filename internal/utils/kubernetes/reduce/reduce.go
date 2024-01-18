@@ -148,9 +148,11 @@ func ReduceNetworkPolicies(ctx context.Context, k8sClient client.Client, network
 
 //+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=delete
 
+type HPAFilterFunc func(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.HorizontalPodAutoscaler
+
 // ReduceHPAs detects the best HorizontalPodAutoscaler in the set and deletes all the others.
-func ReduceHPAs(ctx context.Context, k8sClient client.Client, hpas []autoscalingv2.HorizontalPodAutoscaler) error {
-	for _, hpa := range filterHPAs(hpas) {
+func ReduceHPAs(ctx context.Context, k8sClient client.Client, hpas []autoscalingv2.HorizontalPodAutoscaler, filter HPAFilterFunc) error {
+	for _, hpa := range filter(hpas) {
 		hpa := hpa
 		if err := k8sClient.Delete(ctx, &hpa); err != nil {
 			return err

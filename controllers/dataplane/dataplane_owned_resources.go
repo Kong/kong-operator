@@ -194,10 +194,6 @@ func ensureHPAForDataPlane(
 	dataplane *operatorv1beta1.DataPlane,
 	deploymentName string,
 ) (res op.CreatedUpdatedOrNoop, hpa *autoscalingv2.HorizontalPodAutoscaler, err error) {
-	if scaling := dataplane.Spec.Deployment.DeploymentOptions.Scaling; scaling == nil || scaling.HorizontalScaling == nil {
-		return op.Noop, nil, nil
-	}
-
 	matchingLabels := k8sresources.GetManagedLabelForOwner(dataplane)
 	hpas, err := k8sutils.ListHPAsForOwner(
 		ctx,
@@ -210,8 +206,15 @@ func ensureHPAForDataPlane(
 		return op.Noop, nil, fmt.Errorf("failed listing HPAs for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 
+	if scaling := dataplane.Spec.Deployment.DeploymentOptions.Scaling; scaling == nil || scaling.HorizontalScaling == nil {
+		if err := k8sreduce.ReduceHPAs(ctx, cl, hpas, k8sreduce.FilterNone); err != nil {
+			return op.Noop, nil, fmt.Errorf("failed reducing HPAs for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		}
+		return op.Noop, nil, nil
+	}
+
 	if len(hpas) > 1 {
-		if err := k8sreduce.ReduceHPAs(ctx, cl, hpas); err != nil {
+		if err := k8sreduce.ReduceHPAs(ctx, cl, hpas, k8sreduce.FilterHPAs); err != nil {
 			return op.Noop, nil, fmt.Errorf("failed reducing HPAs for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 		}
 		return op.Noop, nil, nil

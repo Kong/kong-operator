@@ -604,6 +604,19 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 		}
 		return true
 	}, time.Minute, time.Second, "HPA for dataplane %s not found or not as expected", dataplane.Name)
+
+	t.Log("removing the horizontal scaling spec should delete the relevant HPA")
+	require.Eventuallyf(t,
+		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+			dp.Spec.Deployment.Scaling = nil
+		}),
+		time.Minute, time.Second, "failed to update dataplane %s", dataplane.Name)
+	require.Eventuallyf(t, func() bool {
+		hpas := testutils.MustListDataPlaneHPAs(t, ctx, dataplane, clients, client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		})
+		return len(hpas) == 0
+	}, time.Minute, time.Second, "HPA for dataplane %s found but should be deleted", dataplane.Name)
 }
 
 func TestDataPlaneVolumeMounts(t *testing.T) {

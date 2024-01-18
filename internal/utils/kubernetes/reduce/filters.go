@@ -12,6 +12,11 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 )
 
+// FiltenNone filter nothing, that is it returns the same slice as provided.
+func FilterNone[T any](objs []T) []T {
+	return objs
+}
+
 // -----------------------------------------------------------------------------
 // Filter functions - Secrets
 // -----------------------------------------------------------------------------
@@ -285,11 +290,11 @@ func filterNetworkPolicies(networkPolicies []networkingv1.NetworkPolicy) []netwo
 // Filter functions - HorizontalPodAutoscalers
 // -----------------------------------------------------------------------------
 
-// filterHPAs filters out the HorizontalPodAutoscalers to be kept and returns all
+// FilterHPAs filters out the HorizontalPodAutoscalers to be kept and returns all
 // the HorizontalPodAutoscalers to be deleted.
 // The filtered-out HorizontalPodAutoscalers is decided as follows:
 // 1. creationTimestamp (older is better)
-func filterHPAs(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.HorizontalPodAutoscaler {
+func FilterHPAs(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.HorizontalPodAutoscaler {
 	if len(hpas) < 2 {
 		return []autoscalingv2.HorizontalPodAutoscaler{}
 	}
