@@ -96,7 +96,8 @@ metadata:
                       }
                     ]
                   }
-                }
+                },
+                "replicas": 2
               },
               "network": {
                 "services": {

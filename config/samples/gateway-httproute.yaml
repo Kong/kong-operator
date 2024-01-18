@@ -126,6 +126,7 @@ metadata:
 spec:
   dataPlaneOptions:
     deployment:
+      replicas: 2
       podTemplateSpec:
         spec:
           containers:

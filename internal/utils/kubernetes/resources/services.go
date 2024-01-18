@@ -132,12 +132,20 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, o
 			},
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "admin",
+					Name:       consts.DataPlaneAdminServicePortName,
 					Protocol:   corev1.ProtocolTCP,
 					Port:       int32(consts.DataPlaneAdminAPIPort),
 					TargetPort: intstr.FromInt(consts.DataPlaneAdminAPIPort),
 				},
 			},
+			// We need to set the field PublishNotReadyAddresses for a chicken-egg problem
+			// in the context of the managed gateways. In that scenario, the controlplane needs
+			// to istantiate the connection with the dataplane to become ready, and the dataplane
+			// waits for a controlplane configuration to become ready. For this reason, we need
+			// the dataplane admin endpoints to be created even if the dataplane pod is not running,
+			// so that the controlplane can push the configuration to the dataplane and the pods
+			// can become ready.
+			PublishNotReadyAddresses: true,
 		},
 	}
 	LabelObjectAsDataPlaneManaged(adminService)

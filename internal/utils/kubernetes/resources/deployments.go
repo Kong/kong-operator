@@ -314,21 +314,26 @@ func GenerateDataPlaneContainer(opts operatorv1beta1.DataPlaneDeploymentOptions,
 				Protocol:      corev1.ProtocolTCP,
 			},
 		},
-		ReadinessProbe: &corev1.Probe{
-			FailureThreshold:    3,
-			InitialDelaySeconds: 5,
-			PeriodSeconds:       10,
-			SuccessThreshold:    1,
-			TimeoutSeconds:      1,
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path:   "/status",
-					Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
-					Scheme: corev1.URISchemeHTTP,
-				},
+		ReadinessProbe: GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusEndpoint),
+		Resources:      *DefaultDataPlaneResources(),
+	}
+}
+
+// GenerateDataPlaneReadinessProbe generates a dataplane probe that uses the specified endpoint.
+func GenerateDataPlaneReadinessProbe(endpoint string) *corev1.Probe {
+	return &corev1.Probe{
+		FailureThreshold:    3,
+		InitialDelaySeconds: 5,
+		PeriodSeconds:       10,
+		SuccessThreshold:    1,
+		TimeoutSeconds:      1,
+		ProbeHandler: corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path:   endpoint,
+				Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+				Scheme: corev1.URISchemeHTTP,
 			},
 		},
-		Resources: *DefaultDataPlaneResources(),
 	}
 }
 

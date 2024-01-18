@@ -1,7 +1,5 @@
 package consts
 
-import "github.com/kong/gateway-operator/internal/versions"
-
 // ServiceType is a re-typing of string to be used to distinguish between proxy and admin service
 type ServiceType string
 
@@ -28,10 +26,6 @@ const (
 	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/1101
 	GatewayOperatorManagedByLabelLegacy = "konghq.com/gateway-operator"
 
-	// ControlPlaneManagedLabelValue indicates that an object's lifecycle is managed
-	// by the controlplane controller.
-	ControlPlaneManagedLabelValue = "controlplane"
-
 	// GatewayManagedLabelValue indicates that the object's lifecycle is managed by
 	// the gateway controller.
 	GatewayManagedLabelValue = "gateway"
@@ -47,35 +41,7 @@ const (
 )
 
 // -----------------------------------------------------------------------------
-// Consts - Kubernetes GenerateName prefixes
-// -----------------------------------------------------------------------------
-
-const (
-
-	// ControlPlanePrefix is used as a name prefix to generate controlplane-owned objects' name
-	ControlPlanePrefix = "controlplane"
-)
-
-// -----------------------------------------------------------------------------
-// Consts - Container Parameters
-// -----------------------------------------------------------------------------
-
-const (
-	// DefaultControlPlaneBaseImage is the base container image that can be used
-	// by default for a ControlPlane resource if all other attempts to dynamically
-	// decide an image fail.
-	DefaultControlPlaneBaseImage = "kong/kubernetes-ingress-controller"
-
-	// DefaultControlPlaneImage is the default container image that can be used if
-	// all other attempts to dynamically decide the default image fail.
-	DefaultControlPlaneImage = DefaultControlPlaneBaseImage + ":" + versions.DefaultControlPlaneVersion
-
-	// ControlPlaneControllerContainerName is the name of the ingress controller container in a ControlPlane Deployment
-	ControlPlaneControllerContainerName = "controller"
-)
-
-// -----------------------------------------------------------------------------
-// Consts - Names for Shared Resources
+// Consts - Names and Paths for Shared Resources
 // -----------------------------------------------------------------------------
 
 const (
@@ -86,6 +52,24 @@ const (
 	// ClusterCertificateVolumeMountPath holds the path where cluster certificate
 	// volume will be mounted.
 	ClusterCertificateVolumeMountPath = "/var/cluster-certificate"
+
+	// TLSCRT is the filename for the tls.crt.
+	TLSCRT = "tls.crt"
+
+	// TLSKey is the filename for the tls.key.
+	TLSKey = "tls.key"
+
+	// CACRT is the filename for the ca.crt.
+	CACRT = "ca.crt"
+
+	// TLSCRTPath is the full path for the tls.crt file.
+	TLSCRTPath = ClusterCertificateVolumeMountPath + "/" + TLSCRT
+
+	// TLSKeyPath is the full path for the tls.key file.
+	TLSKeyPath = ClusterCertificateVolumeMountPath + "/" + TLSKey
+
+	// TLSCACRTPath is the full path for the ca.crt file.
+	TLSCACRTPath = ClusterCertificateVolumeMountPath + "/" + CACRT
 )
 
 // -----------------------------------------------------------------------------

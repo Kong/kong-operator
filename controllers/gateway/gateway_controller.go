@@ -24,7 +24,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
-	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
+	controlplanecontroller "github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	"github.com/kong/gateway-operator/controllers/pkg/log"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -180,7 +180,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		// cleanup completed
-		log.Debug(logger, "owned resource cleanup completed, gateway deleted", gateway)
+		log.Debug(logger, "owned resources cleanup completed", gateway)
 		return ctrl.Result{}, nil
 	}
 
@@ -250,16 +250,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				return ctrl.Result{}, err
 			}
 			log.Debug(logger, "dataplane not ready yet", gateway)
+			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, nil
 	}
 	// if the dataplane wasnt't ready before this reconciliation loop and now is ready, log this event
 	if !k8sutils.IsValidCondition(DataPlaneReadyType, oldGwConditionsAware) {
 		log.Debug(logger, "dataplane is ready", gateway)
 	}
+	// This should never happen as the dataplane at this point is always != nil.
+	// Nevertheless, this kind of check makes the Gateway controller bulletproof.
+	if dataplane == nil {
+		return ctrl.Result{}, errors.New("unexpected error (dataplane is nil), returning to avoid panic")
+	}
 
-	// List Services
-	services, err := k8sutils.ListServicesForOwner(
+	// List ingress Services
+	ingressServices, err := k8sutils.ListServicesForOwner(
 		ctx,
 		r.Client,
 		dataplane.Namespace,
@@ -273,20 +278,46 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	count := len(services)
+	count := len(ingressServices)
 	// if too many dataplane services are found here, this is a temporary situation.
 	// the number of services will be reduced to 1 by the dataplane controller.
 	if count > 1 {
-		return ctrl.Result{}, fmt.Errorf("found %d services for DataPlane currently unsupported: expected 1 or less", count)
+		return ctrl.Result{}, fmt.Errorf("found %d ingress services for DataPlane currently unsupported: expected 1 or less", count)
 	}
 
 	if count == 0 {
-		return ctrl.Result{}, fmt.Errorf("no services found for dataplane %s/%s", dataplane.Namespace, dataplane.Name)
+		return ctrl.Result{}, fmt.Errorf("no ingress services found for dataplane %s/%s", dataplane.Namespace, dataplane.Name)
+	}
+
+	// List admin Services
+	adminServices, err := k8sutils.ListServicesForOwner(
+		ctx,
+		r.Client,
+		dataplane.Namespace,
+		dataplane.UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+			consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
+		},
+	)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	count = len(adminServices)
+	// If too many dataplane services are found here, this is a temporary situation.
+	// The number of services will be reduced to 1 by the dataplane controller.
+	if count > 1 {
+		return ctrl.Result{}, fmt.Errorf("found %d admin services for DataPlane currently unsupported: expected 1 or less", count)
+	}
+
+	if count == 0 {
+		return ctrl.Result{}, fmt.Errorf("no admin services found for dataplane %s/%s", dataplane.Namespace, dataplane.Name)
 	}
 
 	// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
-	// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false
-	controlplane := r.provisionControlPlane(ctx, logger, gwc.GatewayClass, &gateway, gatewayConfig, dataplane, services)
+	// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false.
+	controlplane := r.provisionControlPlane(ctx, logger, gwc.GatewayClass, &gateway, gatewayConfig, dataplane, ingressServices[0], adminServices[0])
 
 	// Set the ControlPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no ControlPlaneReady condition in the old gateway, or
@@ -304,6 +335,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// if the controlplane wasnt't ready before this reconciliation loop and now is ready, log this event
 	if !k8sutils.IsValidCondition(ControlPlaneReadyType, oldGwConditionsAware) {
 		log.Debug(logger, "controlplane is ready", gateway)
+	}
+	// If the dataplane has not been marked as ready yet, return and wait for the next reconciliation loop.
+	if !k8sutils.IsValidCondition(DataPlaneReadyType, gwConditionAware) {
+		log.Debug(logger, "controlplane is ready, but dataplane is not ready yet", gateway)
+		return ctrl.Result{}, nil
+	}
+	// This should never happen as the controlplane at this point is always != nil.
+	// Nevertheless, this kind of check makes the Gateway controller bulletproof.
+	if controlplane == nil {
+		return ctrl.Result{}, errors.New("unexpected error, controlplane is nil. Returning to avoid panic")
 	}
 
 	// DataPlane NetworkPolicies
@@ -444,18 +485,11 @@ func (r *Reconciler) provisionControlPlane(
 	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 	dataplane *operatorv1beta1.DataPlane,
-	services []corev1.Service,
+	ingressService corev1.Service,
+	adminService corev1.Service,
 ) *operatorv1alpha1.ControlPlane {
 	logger = logger.WithName("controlplaneProvisioning")
-	err := r.setControlplaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, services[0].Name)
-	if err != nil {
-		log.Debug(logger, fmt.Sprintf("failed setting the GatewayConfig defaults - error: %v", err), gateway)
-		k8sutils.SetCondition(
-			createControlPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error(), gateway.Generation),
-			gatewayConditionsAware(gateway),
-		)
-		return nil
-	}
+	r.setControlplaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name)
 
 	log.Trace(logger, "looking for associated controlplanes", gateway)
 	controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, r.Client, gateway)
@@ -506,7 +540,7 @@ func (r *Reconciler) provisionControlPlane(
 	// Don't require setting defaults for ControlPlane when using Gateway CRD.
 	setControlPlaneOptionsDefaults(expectedControlplaneOptions)
 
-	if !controlplane.SpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, expectedControlplaneOptions, "CONTROLLER_KONG_ADMIN_URL") {
+	if !controlplanecontroller.SpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, expectedControlplaneOptions) {
 		log.Trace(logger, "controlplane config is out of date, updating", gateway)
 		controlplaneOld := controlPlane.DeepCopy()
 		controlPlane.Spec.ControlPlaneOptions = *expectedControlplaneOptions
@@ -581,6 +615,7 @@ func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions) {
 		if container.Image == "" {
 			container.Image = consts.DefaultDataPlaneImage
 		}
+		container.ReadinessProbe = k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint)
 	} else {
 		// Because we currently require image to be specified for DataPlanes
 		// we need to add it here. After #20 gets resolved this won't be needed
@@ -589,8 +624,9 @@ func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions) {
 		// - https://github.com/Kong/gateway-operator/issues/20
 		// - https://github.com/Kong/gateway-operator/issues/754
 		opts.Deployment.PodTemplateSpec.Spec.Containers = append(opts.Deployment.PodTemplateSpec.Spec.Containers, corev1.Container{
-			Name:  consts.DataPlaneProxyContainerName,
-			Image: consts.DefaultDataPlaneImage,
+			Name:           consts.DataPlaneProxyContainerName,
+			Image:          consts.DefaultDataPlaneImage,
+			ReadinessProbe: k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 		})
 	}
 

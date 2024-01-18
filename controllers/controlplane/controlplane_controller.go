@@ -99,8 +99,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger := log.GetLogger(ctx, "controlplane", r.DevelopmentMode)
 
 	log.Trace(logger, "reconciling ControlPlane resource", req)
-	controlPlane := new(operatorv1alpha1.ControlPlane)
-	if err := r.Client.Get(ctx, req.NamespacedName, controlPlane); err != nil {
+	cp := new(operatorv1alpha1.ControlPlane)
+	if err := r.Client.Get(ctx, req.NamespacedName, cp); err != nil {
 		if k8serrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -108,145 +108,135 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// controlplane is deleted, just run garbage collection for cluster wide resources.
-	if !controlPlane.DeletionTimestamp.IsZero() {
+	if !cp.DeletionTimestamp.IsZero() {
 		// wait for termination grace period before cleaning up roles and bindings
-		if controlPlane.DeletionTimestamp.After(metav1.Now().Time) {
-			log.Debug(logger, "control plane deletion still under grace period", controlPlane)
+		if cp.DeletionTimestamp.After(metav1.Now().Time) {
+			log.Debug(logger, "control plane deletion still under grace period", cp)
 			return ctrl.Result{
 				Requeue: true,
 				// Requeue when grace period expires.
 				// If deletion timestamp is changed,
 				// the update will trigger another round of reconciliation.
 				// so we do not consider updates of deletion timestamp here.
-				RequeueAfter: time.Until(controlPlane.DeletionTimestamp.Time),
+				RequeueAfter: time.Until(cp.DeletionTimestamp.Time),
 			}, nil
 		}
 
-		log.Trace(logger, "controlplane marked for deletion, removing owned cluster roles and cluster role bindings", controlPlane)
+		log.Trace(logger, "controlplane marked for deletion, removing owned cluster roles and cluster role bindings", cp)
 
-		newControlplane := controlPlane.DeepCopy()
+		newControlplane := cp.DeepCopy()
 		// ensure that the clusterrolebindings which were created for the ControlPlane are deleted
-		deletions, err := r.ensureOwnedClusterRoleBindingsDeleted(ctx, controlPlane)
+		deletions, err := r.ensureOwnedClusterRoleBindingsDeleted(ctx, cp)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if deletions {
-			log.Debug(logger, "clusterRoleBinding deleted", controlPlane)
+			log.Debug(logger, "clusterRoleBinding deleted", cp)
 			return ctrl.Result{}, nil // ClusterRoleBinding deletion will requeue
 		}
 
 		// now that ClusterRoleBindings are cleaned up, remove the relevant finalizer
 		if k8sutils.RemoveFinalizerInMetadata(&newControlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRoleBinding)) {
-			if err := r.Client.Patch(ctx, newControlplane, client.MergeFrom(controlPlane)); err != nil {
+			if err := r.Client.Patch(ctx, newControlplane, client.MergeFrom(cp)); err != nil {
 				return ctrl.Result{}, err
 			}
-			log.Debug(logger, "clusterRoleBinding finalizer removed", controlPlane)
+			log.Debug(logger, "clusterRoleBinding finalizer removed", cp)
 			return ctrl.Result{}, nil // Controlplane update will requeue
 		}
 
 		// ensure that the clusterroles created for the controlplane are deleted
-		deletions, err = r.ensureOwnedClusterRolesDeleted(ctx, controlPlane)
+		deletions, err = r.ensureOwnedClusterRolesDeleted(ctx, cp)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if deletions {
-			log.Debug(logger, "clusterRole deleted", controlPlane)
+			log.Debug(logger, "clusterRole deleted", cp)
 			return ctrl.Result{}, nil // ClusterRole deletion will requeue
 		}
 
 		// now that ClusterRoles are cleaned up, remove the relevant finalizer
 		if k8sutils.RemoveFinalizerInMetadata(&newControlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRole)) {
-			if err := r.Client.Patch(ctx, newControlplane, client.MergeFrom(controlPlane)); err != nil {
+			if err := r.Client.Patch(ctx, newControlplane, client.MergeFrom(cp)); err != nil {
 				return ctrl.Result{}, err
 			}
-			log.Debug(logger, "clusterRole finalizer removed", controlPlane)
+			log.Debug(logger, "clusterRole finalizer removed", cp)
 			return ctrl.Result{}, nil // Controlplane update will requeue
 		}
 
 		// cleanup completed
-		log.Debug(logger, "resource cleanup completed, controlplane deleted", controlPlane)
+		log.Debug(logger, "resource cleanup completed, controlplane deleted", cp)
 		return ctrl.Result{}, nil
 	}
 
 	// ensure the controlplane has a finalizer to delete owned cluster wide resources on delete.
-	finalizersChanged := k8sutils.EnsureFinalizersInMetadata(&controlPlane.ObjectMeta,
+	finalizersChanged := k8sutils.EnsureFinalizersInMetadata(&cp.ObjectMeta,
 		string(ControlPlaneFinalizerCleanupClusterRole),
 		string(ControlPlaneFinalizerCleanupClusterRoleBinding))
 	if finalizersChanged {
-		log.Trace(logger, "update metadata of control plane to set finalizer", controlPlane)
-		if err := r.Client.Update(ctx, controlPlane); err != nil {
+		log.Trace(logger, "update metadata of control plane to set finalizer", cp)
+		if err := r.Client.Update(ctx, cp); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane's finalizers : %w", err)
 		}
 		return ctrl.Result{}, nil
 	}
 
-	k8sutils.InitReady(controlPlane)
+	k8sutils.InitReady(cp)
 
-	log.Trace(logger, "validating ControlPlane resource conditions", controlPlane)
-	if r.ensureIsMarkedScheduled(controlPlane) {
-		err := r.patchStatus(ctx, logger, controlPlane)
+	log.Trace(logger, "validating ControlPlane resource conditions", cp)
+	if r.ensureIsMarkedScheduled(cp) {
+		err := r.patchStatus(ctx, logger, cp)
 		if err != nil {
-			log.Debug(logger, "unable to update ControlPlane resource", controlPlane)
+			log.Debug(logger, "unable to update ControlPlane resource", cp)
 			return ctrl.Result{}, err
 		}
 
-		log.Debug(logger, "ControlPlane resource now marked as scheduled", controlPlane)
+		log.Debug(logger, "ControlPlane resource now marked as scheduled", cp)
 		return ctrl.Result{}, nil // no need to requeue, status update will requeue
 	}
 
-	log.Trace(logger, "retrieving connected dataplane", controlPlane)
-	dataplane, err := gatewayutils.GetDataPlaneForControlPlane(ctx, r.Client, controlPlane)
+	log.Trace(logger, "retrieving connected dataplane", cp)
+	dataplane, err := gatewayutils.GetDataPlaneForControlPlane(ctx, r.Client, cp)
 	var dataplaneIngressServiceName, dataplaneAdminServiceName string
-	var dataPlanePodIP string
 	if err != nil {
 		if !errors.Is(err, operatorerrors.ErrDataPlaneNotSet) {
 			return ctrl.Result{}, err
 		}
-		log.Debug(logger, "no existing dataplane for controlplane", controlPlane, "error", err)
+		log.Debug(logger, "no existing dataplane for controlplane", cp, "error", err)
 	} else {
 		dataplaneIngressServiceName, err = gatewayutils.GetDataplaneServiceName(ctx, r.Client, dataplane, consts.DataPlaneIngressServiceLabelValue)
 		if err != nil {
-			log.Debug(logger, "no existing dataplane ingress service for controlplane", controlPlane, "error", err)
+			log.Debug(logger, "no existing dataplane ingress service for controlplane", cp, "error", err)
 			return ctrl.Result{}, err
 		}
 
 		dataplaneAdminServiceName, err = gatewayutils.GetDataplaneServiceName(ctx, r.Client, dataplane, consts.DataPlaneAdminServiceLabelValue)
 		if err != nil {
-			log.Debug(logger, "no existing dataplane admin service for controlplane", controlPlane, "error", err)
+			log.Debug(logger, "no existing dataplane admin service for controlplane", cp, "error", err)
 			return ctrl.Result{}, err
 		}
-
-		log.Trace(logger, "retrieving the newest DataPlane pod", controlPlane)
-		dataPlanePod, err := getDataPlanePod(ctx, r.Client, dataplane.Name, dataplane.Namespace)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		log.Trace(logger, "retrieving the newest DataPlane pod", controlPlane, "dataplane", dataPlanePod.Name)
-		dataPlanePodIP = dataPlanePod.Status.PodIP
 	}
 
-	log.Trace(logger, "validating ControlPlane configuration", controlPlane)
+	log.Trace(logger, "validating ControlPlane configuration", cp)
 	// TODO: complete validation here: https://github.com/Kong/gateway-operator/issues/109
-	if err := validateControlPlane(controlPlane, r.DevelopmentMode); err != nil {
+	if err := validateControlPlane(cp, r.DevelopmentMode); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	log.Trace(logger, "configuring ControlPlane resource", controlPlane)
+	log.Trace(logger, "configuring ControlPlane resource", cp)
 	changed := controlplane.SetDefaults(
-		&controlPlane.Spec.ControlPlaneOptions,
+		&cp.Spec.ControlPlaneOptions,
 		nil,
 		controlplane.DefaultsArgs{
-			DataPlanePodIP:              dataPlanePodIP,
-			Namespace:                   controlPlane.Namespace,
+			Namespace:                   cp.Namespace,
 			DataplaneIngressServiceName: dataplaneIngressServiceName,
 			DataplaneAdminServiceName:   dataplaneAdminServiceName,
 		})
 	if changed {
-		log.Debug(logger, "updating ControlPlane resource after defaults are set since resource has changed", controlPlane)
-		err := r.Client.Update(ctx, controlPlane)
+		log.Debug(logger, "updating ControlPlane resource after defaults are set since resource has changed", cp)
+		err := r.Client.Update(ctx, cp)
 		if err != nil {
 			if k8serrors.IsConflict(err) {
-				log.Debug(logger, "conflict found when updating ControlPlane resource, retrying", controlPlane)
+				log.Debug(logger, "conflict found when updating ControlPlane resource, retrying", cp)
 				return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 			}
 			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane: %w", err)
@@ -254,104 +244,104 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	log.Trace(logger, "validating that the ControlPlane's DataPlane configuration is up to date", controlPlane)
-	if err = r.ensureDataPlaneConfiguration(ctx, controlPlane, dataplaneIngressServiceName); err != nil {
+	log.Trace(logger, "validating that the ControlPlane's DataPlane configuration is up to date", cp)
+	if err = r.ensureDataPlaneConfiguration(ctx, cp, dataplaneIngressServiceName); err != nil {
 		if k8serrors.IsConflict(err) {
 			log.Debug(
 				logger,
 				"conflict found when trying to ensure ControlPlane's DataPlane configuration was up to date, retrying",
-				controlPlane,
+				cp,
 			)
 			return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 		}
 		return ctrl.Result{}, err
 	}
 
-	log.Trace(logger, "validating ControlPlane's DataPlane status", controlPlane)
-	dataplaneIsSet := r.ensureDataPlaneStatus(controlPlane, dataplane)
+	log.Trace(logger, "validating ControlPlane's DataPlane status", cp)
+	dataplaneIsSet := r.ensureDataPlaneStatus(cp, dataplane)
 	if dataplaneIsSet {
-		log.Trace(logger, "DataPlane is set, deployment for ControlPlane will be provisioned", controlPlane)
+		log.Trace(logger, "DataPlane is set, deployment for ControlPlane will be provisioned", cp)
 	} else {
-		log.Debug(logger, "DataPlane not set, deployment for ControlPlane will remain dormant", controlPlane)
+		log.Debug(logger, "DataPlane not set, deployment for ControlPlane will remain dormant", cp)
 	}
 
-	log.Trace(logger, "ensuring ServiceAccount for ControlPlane deployment exists", controlPlane)
-	createdOrUpdated, controlplaneServiceAccount, err := r.ensureServiceAccountForControlPlane(ctx, controlPlane)
+	log.Trace(logger, "ensuring ServiceAccount for ControlPlane deployment exists", cp)
+	createdOrUpdated, controlplaneServiceAccount, err := r.ensureServiceAccountForControlPlane(ctx, cp)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if createdOrUpdated {
-		log.Debug(logger, "serviceAccount updated", controlPlane)
+		log.Debug(logger, "serviceAccount updated", cp)
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
-	log.Trace(logger, "ensuring ClusterRoles for ControlPlane deployment exist", controlPlane)
-	createdOrUpdated, controlplaneClusterRole, err := r.ensureClusterRoleForControlPlane(ctx, controlPlane)
+	log.Trace(logger, "ensuring ClusterRoles for ControlPlane deployment exist", cp)
+	createdOrUpdated, controlplaneClusterRole, err := r.ensureClusterRoleForControlPlane(ctx, cp)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if createdOrUpdated {
-		log.Debug(logger, "clusterRole updated", controlPlane)
+		log.Debug(logger, "clusterRole updated", cp)
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
-	log.Trace(logger, "ensuring that ClusterRoleBindings for ControlPlane Deployment exist", controlPlane)
-	createdOrUpdated, _, err = r.ensureClusterRoleBindingForControlPlane(ctx, controlPlane, controlplaneServiceAccount.Name, controlplaneClusterRole.Name)
+	log.Trace(logger, "ensuring that ClusterRoleBindings for ControlPlane Deployment exist", cp)
+	createdOrUpdated, _, err = r.ensureClusterRoleBindingForControlPlane(ctx, cp, controlplaneServiceAccount.Name, controlplaneClusterRole.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if createdOrUpdated {
-		log.Debug(logger, "clusterRoleBinding updated", controlPlane)
+		log.Debug(logger, "clusterRoleBinding updated", cp)
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
-	log.Trace(logger, "creating mTLS certificate", controlPlane)
-	res, certSecret, err := r.ensureCertificate(ctx, controlPlane)
+	log.Trace(logger, "creating mTLS certificate", cp)
+	res, certSecret, err := r.ensureCertificate(ctx, cp)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if res != op.Noop {
-		log.Debug(logger, "mTLS certificate created/updated", controlPlane)
+		log.Debug(logger, "mTLS certificate created/updated", cp)
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
-	log.Trace(logger, "looking for existing Deployments for ControlPlane resource", controlPlane)
-	res, controlplaneDeployment, err := r.ensureDeploymentForControlPlane(ctx, logger, controlPlane, controlplaneServiceAccount.Name, certSecret.Name)
+	log.Trace(logger, "looking for existing Deployments for ControlPlane resource", cp)
+	res, controlplaneDeployment, err := r.ensureDeploymentForControlPlane(ctx, logger, cp, controlplaneServiceAccount.Name, certSecret.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if res != op.Noop {
 		if !dataplaneIsSet {
-			log.Debug(logger, "DataPlane not set, deployment for ControlPlane has been scaled down to 0 replicas", controlPlane)
-			err := r.patchStatus(ctx, logger, controlPlane)
+			log.Debug(logger, "DataPlane not set, deployment for ControlPlane has been scaled down to 0 replicas", cp)
+			err := r.patchStatus(ctx, logger, cp)
 			if err != nil {
-				log.Debug(logger, "unable to reconcile ControlPlane status", controlPlane)
+				log.Debug(logger, "unable to reconcile ControlPlane status", cp)
 			}
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
-	log.Trace(logger, "checking readiness of ControlPlane deployments", controlPlane)
+	log.Trace(logger, "checking readiness of ControlPlane deployments", cp)
 
 	if controlplaneDeployment.Status.Replicas == 0 || controlplaneDeployment.Status.AvailableReplicas < controlplaneDeployment.Status.Replicas {
 		log.Trace(logger, "deployment for ControlPlane not ready yet", controlplaneDeployment)
 		// Set Ready to false for controlplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
 			k8sutils.NewCondition(k8sutils.ReadyType, metav1.ConditionFalse, k8sutils.WaitingToBecomeReadyReason, k8sutils.WaitingToBecomeReadyMessage),
-			controlPlane,
+			cp,
 		)
-		return ctrl.Result{}, r.patchStatus(ctx, logger, controlPlane)
+		return ctrl.Result{}, r.patchStatus(ctx, logger, cp)
 	}
 
-	markAsProvisioned(controlPlane)
-	k8sutils.SetReady(controlPlane)
+	markAsProvisioned(cp)
+	k8sutils.SetReady(cp)
 
-	if err = r.patchStatus(ctx, logger, controlPlane); err != nil {
-		log.Debug(logger, "unable to reconcile the ControlPlane resource", controlPlane)
+	if err = r.patchStatus(ctx, logger, cp); err != nil {
+		log.Debug(logger, "unable to reconcile the ControlPlane resource", cp)
 		return ctrl.Result{}, err
 	}
 
-	log.Debug(logger, "reconciliation complete for ControlPlane resource", controlPlane)
+	log.Debug(logger, "reconciliation complete for ControlPlane resource", cp)
 	return ctrl.Result{}, nil
 }
 

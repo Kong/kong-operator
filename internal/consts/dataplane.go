@@ -1,30 +1,19 @@
 package consts
 
 // -----------------------------------------------------------------------------
-// Consts - Container Parameters
+// Consts - DataPlane Generic Parameters
 // -----------------------------------------------------------------------------
 
 const (
-	// DefaultDataPlaneBaseImage is the base container image that can be used
-	// by default for a DataPlane resource if all other attempts to dynamically
-	// decide an image fail.
-	DefaultDataPlaneBaseImage = "kong"
-
-	// DefaultDataPlaneEnterpriseImage is the enterprise base container image.
-	DefaultDataPlaneEnterpriseImage = "kong/kong-gateway"
-
-	// DefaultDataPlaneTag is the base container image tag that can be used
-	// by default for a DataPlane resource if all other attempts to dynamically
-	// decide an image tag fail.
-	DefaultDataPlaneTag = "3.4.0" // TODO: automatic PR updates https://github.com/Kong/gateway-operator/issues/209
-
-	// DefaultDataPlaneImage is the default container image that can be used if
-	// all other attempts to dynamically decide the default image fail.
-	DefaultDataPlaneImage = DefaultDataPlaneBaseImage + ":" + DefaultDataPlaneTag
-
 	// DataPlanePrefix is used as a name prefix to generate dataplane-owned objects' name
 	DataPlanePrefix = "dataplane"
+)
 
+// -----------------------------------------------------------------------------
+// Consts - DataPlane Labels and Annotations
+// -----------------------------------------------------------------------------
+
+const (
 	// DataPlaneManagedLabelValue indicates that an object's lifecycle is managed
 	// by the dataplane controller.
 	DataPlaneManagedLabelValue = "dataplane"
@@ -80,6 +69,29 @@ const (
 	// DataPlaneProxyServiceLabelValue is the legacy label value which indicates
 	// that the service is inteded to expose the DataPlane proxy.
 	DataPlaneProxyServiceLabelValueLegacy ServiceType = "proxy"
+)
+
+// -----------------------------------------------------------------------------
+// Consts - DataPlane Container Parameters
+// -----------------------------------------------------------------------------
+
+const (
+	// DefaultDataPlaneBaseImage is the base container image that can be used
+	// by default for a DataPlane resource if all other attempts to dynamically
+	// decide an image fail.
+	DefaultDataPlaneBaseImage = "kong"
+
+	// DefaultDataPlaneEnterpriseImage is the enterprise base container image.
+	DefaultDataPlaneEnterpriseImage = "kong/kong-gateway"
+
+	// DefaultDataPlaneTag is the base container image tag that can be used
+	// by default for a DataPlane resource if all other attempts to dynamically
+	// decide an image tag fail.
+	DefaultDataPlaneTag = "3.4.0" // TODO: automatic PR updates https://github.com/Kong/gateway-operator/issues/209
+
+	// DefaultDataPlaneImage is the default container image that can be used if
+	// all other attempts to dynamically decide the default image fail.
+	DefaultDataPlaneImage = DefaultDataPlaneBaseImage + ":" + DefaultDataPlaneTag
 
 	// ServiceSelectorOverrideAnnotation is used on the dataplane to override the Selector
 	// of both the admin and proxy services.
@@ -93,6 +105,13 @@ const (
 
 	// DataPlaneProxyContainerName is the name of the Kong proxy container
 	DataPlaneProxyContainerName = "proxy"
+
+	// DataPlaneReadyEndpoint is the endpoint to use for DataPlane readiness probe.
+	DataPlaneStatusEndpoint = "/status"
+
+	// DataPlaneStatusReadyEndpoint is the endpoint to use for DataPlane readiness probe
+	// in the context of managed gateways.
+	DataPlaneStatusReadyEndpoint = "/status/ready"
 )
 
 // -----------------------------------------------------------------------------
@@ -117,15 +136,26 @@ const (
 	// DataPlaneHTTPSPort is the port that the dataplane uses for HTTPS.
 	DataPlaneProxySSLPort = 8443
 
-	// DataPlaneHTTPSPort is the port that the dataplane uses for metrics.
+	// DataPlaneMetricsPort is the port that the dataplane uses for metrics.
 	DataPlaneMetricsPort = 8100
 
-	// DefaultKongStatusPort is the port that the dataplane users for status.
+	// DefaultKongStatusPort is the port that the dataplane uses for status.
 	DataPlaneStatusPort = 8100
 )
 
 // -----------------------------------------------------------------------------
-// Consts - Environment Variable Names
+// Consts - DataPlane Services parameters
+// -----------------------------------------------------------------------------
+const (
+	// DataPlaneAdminServicePortName is the port name of the DataPlane admin service.
+	DataPlaneAdminServicePortName = "admin"
+
+	// DataPlanePODDNSDiscoveryStrategy is DNS strategy to use when creating Gateway's Admin API addresses.
+	DataPlaneServiceDNSDiscoveryStrategy = "service"
+)
+
+// -----------------------------------------------------------------------------
+// Consts - DataPlane Environment Variable Names
 // -----------------------------------------------------------------------------
 
 const (
@@ -136,7 +166,7 @@ const (
 )
 
 // -----------------------------------------------------------------------------
-// Consts - Finalizers
+// Consts - DataPlane Finalizers
 // -----------------------------------------------------------------------------
 
 const (

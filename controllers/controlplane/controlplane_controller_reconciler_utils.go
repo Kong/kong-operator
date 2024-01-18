@@ -25,7 +25,6 @@ import (
 	"github.com/kong/gateway-operator/controllers/pkg/patch"
 	"github.com/kong/gateway-operator/controllers/pkg/secrets"
 	"github.com/kong/gateway-operator/internal/consts"
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
@@ -461,27 +460,4 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 	}
 
 	return deleted, errors.Join(errs...)
-}
-
-// getDataPlanePod returns the IP of the newest DataPlane pod.
-func getDataPlanePod(ctx context.Context, cl client.Reader, dataplaneName, namespace string) (*corev1.Pod, error) {
-	podList := corev1.PodList{}
-	if err := cl.List(ctx, &podList, client.InNamespace(namespace), client.MatchingLabels{
-		"app": dataplaneName,
-	}); err != nil {
-		return nil, err
-	}
-	if len(podList.Items) == 0 {
-		return nil, operatorerrors.ErrNoDataPlanePods
-	}
-	newestDataPlanePod := podList.Items[0]
-	for _, pod := range podList.Items[1:] {
-		if pod.DeletionTimestamp != nil || pod.Status.PodIP == "" {
-			continue
-		}
-		if pod.CreationTimestamp.After(newestDataPlanePod.CreationTimestamp.Time) {
-			newestDataPlanePod = pod
-		}
-	}
-	return &newestDataPlanePod, nil
 }

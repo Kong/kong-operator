@@ -62,14 +62,14 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	}
 
 	// Control plane needs a dataplane to exist to properly function.
-	dataplaneName := types.NamespacedName{
+	dataplaneNN := types.NamespacedName{
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
 	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: dataplaneName.Namespace,
-			Name:      dataplaneName.Name,
+			Namespace: dataplaneNN.Namespace,
+			Name:      dataplaneNN.Name,
 		},
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
@@ -108,12 +108,12 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	cleaner.Add(dataplane)
 
 	t.Log("verifying deployments managed by the dataplane are ready")
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneNN, &appsv1.Deployment{}, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("verifying services managed by the dataplane")
-	require.Eventually(t, testutils.DataPlaneHasService(t, ctx, dataplaneName, clients, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasService(t, ctx, dataplaneNN, clients, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	}), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)

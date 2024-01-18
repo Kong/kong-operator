@@ -22,6 +22,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		spec                        *operatorv1alpha1.ControlPlaneOptions
 		namespace                   string
 		dataplaneIngressServiceName string
+		dataplaneAdminServiceName   string
 		changed                     bool
 		newSpec                     *operatorv1alpha1.ControlPlaneOptions
 	}{
@@ -70,6 +71,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			changed:                     true,
 			namespace:                   "test-ns",
 			dataplaneIngressServiceName: "kong-proxy",
+			dataplaneAdminServiceName:   "kong-admin",
 			newSpec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -102,8 +104,16 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 											Value: "test-ns/kong-proxy",
 										},
 										{
-											Name:  "CONTROLLER_KONG_ADMIN_URL",
-											Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
+											Name:  "CONTROLLER_KONG_ADMIN_SVC",
+											Value: "test-ns/kong-admin",
+										},
+										{
+											Name:  "CONTROLLER_KONG_ADMIN_SVC_PORT_NAMES",
+											Value: "admin",
+										},
+										{
+											Name:  "CONTROLLER_GATEWAY_DISCOVERY_DNS_STRATEGY",
+											Value: consts.DataPlaneServiceDNSDiscoveryStrategy,
 										},
 										{
 											Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
@@ -116,6 +126,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 										{
 											Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
 											Value: "/var/cluster-certificate/ca.crt",
+										},
+										{
+											Name:  "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY",
+											Value: "5s",
 										},
 									},
 								},
@@ -150,6 +164,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			changed:                     true,
 			namespace:                   "test-ns",
 			dataplaneIngressServiceName: "kong-proxy",
+			dataplaneAdminServiceName:   "kong-admin",
 			newSpec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -183,8 +198,8 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 											Value: "test-ns/kong-proxy",
 										},
 										{
-											Name:  "CONTROLLER_KONG_ADMIN_URL",
-											Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
+											Name:  "CONTROLLER_KONG_ADMIN_SVC",
+											Value: "test-ns/kong-admin",
 										},
 										{
 											Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
@@ -197,6 +212,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 										{
 											Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
 											Value: "/var/cluster-certificate/ca.crt",
+										},
+										{
+											Name:  "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY",
+											Value: "5s",
 										},
 									},
 								},
@@ -240,8 +259,16 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 											Value: "test-ns/kong-proxy",
 										},
 										{
-											Name:  "CONTROLLER_KONG_ADMIN_URL",
-											Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
+											Name:  "CONTROLLER_KONG_ADMIN_SVC",
+											Value: "test-ns/kong-admin",
+										},
+										{
+											Name:  "CONTROLLER_KONG_ADMIN_SVC_PORT_NAMES",
+											Value: "admin",
+										},
+										{
+											Name:  "CONTROLLER_GATEWAY_DISCOVERY_DNS_STRATEGY",
+											Value: consts.DataPlaneServiceDNSDiscoveryStrategy,
 										},
 										{
 											Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
@@ -255,6 +282,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 											Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
 											Value: "/var/cluster-certificate/ca.crt",
 										},
+										{
+											Name:  "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY",
+											Value: "5s",
+										},
 									},
 								},
 							},
@@ -264,6 +295,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			},
 			namespace:                   "test-ns",
 			dataplaneIngressServiceName: "kong-proxy",
+			dataplaneAdminServiceName:   "kong-admin",
 			changed:                     false,
 			newSpec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
@@ -297,8 +329,16 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 											Value: "test-ns/kong-proxy",
 										},
 										{
-											Name:  "CONTROLLER_KONG_ADMIN_URL",
-											Value: "https://1-2-3-4.kong-admin.test-ns.svc:8444",
+											Name:  "CONTROLLER_KONG_ADMIN_SVC",
+											Value: "test-ns/kong-admin",
+										},
+										{
+											Name:  "CONTROLLER_KONG_ADMIN_SVC_PORT_NAMES",
+											Value: "admin",
+										},
+										{
+											Name:  "CONTROLLER_GATEWAY_DISCOVERY_DNS_STRATEGY",
+											Value: consts.DataPlaneServiceDNSDiscoveryStrategy,
 										},
 										{
 											Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
@@ -327,10 +367,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			changed := controlplane.SetDefaults(tc.spec, map[string]struct{}{}, controlplane.DefaultsArgs{
-				DataPlanePodIP:              "1.2.3.4",
 				Namespace:                   tc.namespace,
 				DataplaneIngressServiceName: tc.dataplaneIngressServiceName,
-				DataplaneAdminServiceName:   "kong-admin",
+				DataplaneAdminServiceName:   tc.dataplaneAdminServiceName,
+				ManagedByGateway:            true,
 			})
 			require.Equalf(t, tc.changed, changed,
 				"should return the same value for test case %d:%s", index, tc.name)

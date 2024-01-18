@@ -190,7 +190,12 @@ func (r *Reconciler) setDataplaneGatewayConfigDefaults(gatewayConfig *operatorv1
 	}
 }
 
-func (r *Reconciler) setControlplaneGatewayConfigDefaults(gateway *gwtypes.Gateway, gatewayConfig *operatorv1alpha1.GatewayConfiguration, dataplaneName, dataplaneIngressServiceName string) error { //nolint:unparam
+func (r *Reconciler) setControlplaneGatewayConfigDefaults(gateway *gwtypes.Gateway,
+	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
+	dataplaneName,
+	dataplaneIngressServiceName,
+	dataplaneAdminServiceName string,
+) {
 	dontOverride := make(map[string]struct{})
 	if gatewayConfig.Spec.ControlPlaneOptions == nil {
 		gatewayConfig.Spec.ControlPlaneOptions = new(operatorv1alpha1.ControlPlaneOptions)
@@ -224,9 +229,9 @@ func (r *Reconciler) setControlplaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 	_ = controlplane.SetDefaults(gatewayConfig.Spec.ControlPlaneOptions, dontOverride, controlplane.DefaultsArgs{
 		Namespace:                   gateway.Namespace,
 		DataplaneIngressServiceName: dataplaneIngressServiceName,
+		DataplaneAdminServiceName:   dataplaneAdminServiceName,
+		ManagedByGateway:            true,
 	})
 
 	setControlPlaneOptionsDefaults(gatewayConfig.Spec.ControlPlaneOptions)
-
-	return nil
 }

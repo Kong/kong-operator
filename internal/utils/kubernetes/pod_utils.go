@@ -17,6 +17,22 @@ func GetPodContainerByName(podSpec *corev1.PodSpec, name string) *corev1.Contain
 	return nil
 }
 
+// SetPodContainer appends a container to the list of containers if it does not exists,
+// or it overwrites the existing container, in case it exists.
+func SetPodContainer(podSpec *corev1.PodSpec, container *corev1.Container) {
+	var found bool
+	for i, c := range podSpec.Containers {
+		if c.Name == container.Name {
+			podSpec.Containers[i] = *container
+			found = true
+			break
+		}
+	}
+	if !found {
+		podSpec.Containers = append(podSpec.Containers, *container)
+	}
+}
+
 // GetPodVolumeByName gets the pointer of volume with given name.
 // if the volume with given name does not exist in the pod, it returns `nil`.
 func GetPodVolumeByName(podSpec *corev1.PodSpec, name string) *corev1.Volume {

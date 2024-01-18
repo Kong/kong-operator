@@ -6,6 +6,7 @@ metadata:
 spec:
   dataPlaneOptions:
     deployment:
+      replicas: 2
       podTemplateSpec:
         metadata:
           labels:

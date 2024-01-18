@@ -11,6 +11,7 @@ import (
 	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -40,34 +41,38 @@ func TestGatewayEssentials(t *testing.T) {
 	cleaner.Add(gatewayClass)
 
 	t.Log("deploying Gateway resource")
-	gatewayNSN := types.NamespacedName{
+	gatewayNN := types.NamespacedName{
 		Name:      uuid.NewString(),
 		Namespace: namespace.Name,
 	}
-	gateway := testutils.GenerateGateway(gatewayNSN, gatewayClass)
+	gateway := testutils.GenerateGateway(gatewayNN, gatewayClass)
 	gateway, err = clients.GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying Gateway gets marked as Scheduled")
-	require.Eventually(t, testutils.GatewayIsScheduled(t, ctx, gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsScheduled(t, ctx, gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets marked as Programmed")
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
-	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets an IP address")
-	require.Eventually(t, testutils.GatewayIPAddressExist(t, ctx, gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
-	gateway = testutils.MustGetGateway(t, ctx, gatewayNSN, clients)
+	require.Eventually(t, testutils.GatewayIPAddressExist(t, ctx, gatewayNN, clients), testutils.SubresourceReadinessWait, time.Second)
+	gateway = testutils.MustGetGateway(t, ctx, gatewayNN, clients)
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Log("verifying that the DataPlane becomes Ready")
 	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
-	dataplane := testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)[0]
+	dataplanes := testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)
+	require.Len(t, dataplanes, 1)
+	dataplane := dataplanes[0]
 
 	t.Log("verifying that the ControlPlane becomes provisioned")
 	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
-	controlplane := testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)[0]
+	controlplanes := testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)
+	require.Len(t, controlplanes, 1)
+	controlplane := controlplanes[0]
 
 	t.Log("verifying networkpolicies are created")
 	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
@@ -93,24 +98,28 @@ func TestGatewayEssentials(t *testing.T) {
 	require.NoError(t, dataplaneClient.Delete(ctx, dataplane.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying Gateway gets marked as not Programmed")
-	require.Eventually(t, testutils.Not(testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, clients)), testutils.GatewayReadyTimeLimit, time.Second)
-	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.Not(testutils.GatewayIsProgrammed(t, ctx, gatewayNN, clients)), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying that the ControlPlane becomes provisioned again")
 	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, ctx, gateway, clients), 45*time.Second, time.Second)
-	controlplane = testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)[0]
+	controlplanes = testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)
+	require.Len(t, controlplanes, 1)
+	controlplane = controlplanes[0]
 
 	t.Log("verifying that the DataPlane becomes provisioned again")
 	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, ctx, gateway, clients), 45*time.Second, time.Second)
-	dataplane = testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)[0]
+	dataplanes = testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)
+	require.Len(t, dataplanes, 1)
+	dataplane = dataplanes[0]
 
 	t.Log("verifying Gateway gets marked as Programmed again")
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
-	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets an IP address again")
-	require.Eventually(t, testutils.GatewayIPAddressExist(t, ctx, gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
-	gateway = testutils.MustGetGateway(t, ctx, gatewayNSN, clients)
+	require.Eventually(t, testutils.GatewayIPAddressExist(t, ctx, gatewayNN, clients), testutils.SubresourceReadinessWait, time.Second)
+	gateway = testutils.MustGetGateway(t, ctx, gatewayNN, clients)
 	gatewayIPAddress = gateway.Status.Addresses[0].Value
 
 	t.Log("verifying connectivity to the Gateway")
@@ -176,7 +185,93 @@ func TestGatewayEssentials(t *testing.T) {
 	require.Eventually(t, testutils.Not(testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients)), time.Minute, time.Second)
 
 	t.Log("verifying that gateway itself is deleted")
-	require.Eventually(t, testutils.GatewayNotExist(t, ctx, gatewayNSN, clients), time.Minute, time.Second)
+	require.Eventually(t, testutils.GatewayNotExist(t, ctx, gatewayNN, clients), time.Minute, time.Second)
+}
+
+func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+
+	// dataplaneReplicasUpdates contains the number of replicas the dataplane is configured with
+	// at each testing iteration.
+	dataplaneReplicasUpdates := []int32{3, 0, 5, 1}
+
+	gatewayConfigurationName := uuid.NewString()
+	t.Logf("deploying the GatewayConfiguration %s", gatewayConfigurationName)
+	gatewayConfiguration := testutils.GenerateGatewayConfiguration(types.NamespacedName{Namespace: namespace.Name, Name: gatewayConfigurationName})
+	gatewayConfiguration, err := clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfiguration, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gatewayConfiguration)
+
+	gatewayClass := testutils.GenerateGatewayClass()
+	gatewayClass.Spec.ParametersRef = &gatewayv1.ParametersReference{
+		Group:     "gateway-operator.konghq.com",
+		Kind:      "GatewayConfiguration",
+		Name:      gatewayConfigurationName,
+		Namespace: (*gatewayv1.Namespace)(&namespace.Name),
+	}
+	t.Logf("deploying the GatewayClass %s", gatewayClass.Name)
+	gatewayClass, err = clients.GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gatewayClass)
+
+	t.Log("deploying Gateway resource")
+	gatewayNN := types.NamespacedName{
+		Name:      uuid.NewString(),
+		Namespace: namespace.Name,
+	}
+	gateway := testutils.GenerateGateway(gatewayNN, gatewayClass)
+	gateway, err = clients.GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gateway)
+
+	t.Log("verifying Gateway gets marked as Scheduled")
+	require.Eventually(t, testutils.GatewayIsScheduled(t, ctx, gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+
+	t.Log("verifying Gateway gets marked as Programmed")
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+
+	t.Log("verifying that the ControlPlane becomes provisioned")
+	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+
+	t.Log("verifying that the DataPlane becomes ready")
+	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+
+	for _, replicas := range dataplaneReplicasUpdates {
+		replicas := replicas
+		gatewayConfiguration, err := clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Get(ctx, gatewayConfigurationName, metav1.GetOptions{})
+		require.NoError(t, err)
+		gatewayConfiguration.Spec.DataPlaneOptions.Deployment.Replicas = &replicas
+		t.Logf("changing the GatewayConfiguration to change dataplane replicas to %d", replicas)
+		_, err = clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Update(ctx, gatewayConfiguration, metav1.UpdateOptions{})
+		require.NoError(t, err)
+
+		t.Log("verifying the deployment managed by the controlplane is ready")
+		controlplanes := testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)
+		require.Len(t, controlplanes, 1)
+		controlplaneNN := client.ObjectKeyFromObject(&controlplanes[0])
+		require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t,
+			ctx,
+			controlplaneNN,
+			clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+
+		t.Logf("verifying the deployment managed by the dataplane is ready and has %d available replicas", replicas)
+		dataplanes := testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)
+		require.Len(t, dataplanes, 1)
+		dataplane := dataplanes[0]
+		require.Equal(t, *dataplane.Spec.DataPlaneOptions.Deployment.DeploymentOptions.Replicas, replicas)
+		dataplaneNN := client.ObjectKeyFromObject(&dataplane)
+		require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t,
+			ctx,
+			dataplaneNN,
+			&appsv1.Deployment{},
+			client.MatchingLabels{
+				consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+			},
+			clients), testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
+		require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneNN, clients, int(replicas)), time.Minute, time.Second)
+	}
 }
 
 func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
@@ -204,29 +299,33 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	cleaner.Add(gatewayClass)
 
 	t.Log("deploying Gateway resource")
-	gatewayNSN := types.NamespacedName{
+	gatewayNN := types.NamespacedName{
 		Name:      uuid.NewString(),
 		Namespace: namespace.Name,
 	}
-	gateway := testutils.GenerateGateway(gatewayNSN, gatewayClass)
+	gateway := testutils.GenerateGateway(gatewayNN, gatewayClass)
 	gateway, err = clients.GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying Gateway gets marked as Scheduled")
-	require.Eventually(t, testutils.GatewayIsScheduled(t, ctx, gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsScheduled(t, ctx, gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets marked as Programmed")
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
-	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying that the DataPlane becomes provisioned")
 	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
-	dataplane := testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)[0]
+	dataplanes := testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)
+	require.Len(t, dataplanes, 1)
+	dataplane := dataplanes[0]
 
 	t.Log("verifying that the ControlPlane becomes provisioned")
 	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
-	controlplane := testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)[0]
+	controlplanes := testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)
+	require.Len(t, controlplanes, 1)
+	controlplane := controlplanes[0]
 
 	t.Log("verifying DataPlane's NetworkPolicies is created")
 	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)

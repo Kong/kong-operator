@@ -26,6 +26,7 @@ import (
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -479,8 +480,9 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
 									{
-										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
+										Name:           consts.DataPlaneProxyContainerName,
+										Image:          consts.DefaultDataPlaneImage,
+										ReadinessProbe: resources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 									},
 								},
 							},
@@ -506,8 +508,9 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
 									{
-										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
+										Name:           consts.DataPlaneProxyContainerName,
+										Image:          consts.DefaultDataPlaneImage,
+										ReadinessProbe: resources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 									},
 								},
 							},
@@ -533,8 +536,9 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
 									{
-										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
+										Name:           consts.DataPlaneProxyContainerName,
+										Image:          consts.DefaultDataPlaneImage,
+										ReadinessProbe: resources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 									},
 								},
 							},
@@ -570,8 +574,9 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
 									{
-										Name:  consts.DataPlaneProxyContainerName,
-										Image: "image:v1",
+										Name:           consts.DataPlaneProxyContainerName,
+										Image:          "image:v1",
+										ReadinessProbe: resources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 									},
 								},
 							},

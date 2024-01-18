@@ -218,15 +218,14 @@ func ControlPlaneHasNReadyPods(t *testing.T, ctx context.Context, controlplaneNa
 func DataPlaneHasActiveDeployment(
 	t *testing.T,
 	ctx context.Context,
-	dataplaneName types.NamespacedName,
+	dataplaneNN types.NamespacedName,
 	ret *appsv1.Deployment,
 	matchingLabels client.MatchingLabels,
 	clients K8sClients,
 ) func() bool {
-	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
+	return DataPlanePredicate(t, ctx, dataplaneNN, func(dataplane *operatorv1beta1.DataPlane) bool {
 		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, matchingLabels)
 		if len(deployments) == 1 &&
-			*deployments[0].Spec.Replicas > 0 &&
 			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas {
 			if ret != nil {
 				*ret = deployments[0]
