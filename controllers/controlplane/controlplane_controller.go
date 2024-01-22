@@ -228,6 +228,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		nil,
 		controlplane.DefaultsArgs{
 			Namespace:                   cp.Namespace,
+			ControlPlaneName:            cp.Name,
 			DataplaneIngressServiceName: dataplaneIngressServiceName,
 			DataplaneAdminServiceName:   dataplaneAdminServiceName,
 		})

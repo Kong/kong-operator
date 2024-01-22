@@ -19,6 +19,7 @@ import (
 // DefaultsArgs contains the parameters to pass to setControlPlaneDefaults
 type DefaultsArgs struct {
 	Namespace                   string
+	ControlPlaneName            string
 	DataplaneIngressServiceName string
 	DataplaneAdminServiceName   string
 	ManagedByGateway            bool
@@ -141,6 +142,16 @@ func SetDefaults(
 		if k8sutils.EnvValueByName(container.Env, "CONTROLLER_KONG_ADMIN_CA_CERT_FILE") != consts.TLSCACRTPath {
 			container.Env = k8sutils.UpdateEnv(container.Env, "CONTROLLER_KONG_ADMIN_CA_CERT_FILE", consts.TLSCACRTPath)
 			changed = true
+		}
+	}
+
+	if args.ControlPlaneName != "" {
+		electionID := fmt.Sprintf("%s.konghq.com", args.ControlPlaneName)
+		if _, isOverrideDisabled := dontOverride["CONTROLLER_ELECTION_ID"]; !isOverrideDisabled {
+			if k8sutils.EnvValueByName(container.Env, "CONTROLLER_ELECTION_ID") != electionID {
+				container.Env = k8sutils.UpdateEnv(container.Env, "CONTROLLER_ELECTION_ID", electionID)
+				changed = true
+			}
 		}
 	}
 

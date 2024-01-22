@@ -279,7 +279,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 	deployment := &deployments[0]
 
 	t.Log("verifying controlplane Deployment.Pods.Env vars")
-	checkControlPlaneDeploymentEnvVars(t, deployment)
+	checkControlPlaneDeploymentEnvVars(t, deployment, controlplane.Name)
 
 	t.Log("deleting the  controlplane ClusterRole and ClusterRoleBinding")
 	clusterRoles := testutils.MustListControlPlaneClusterRoles(t, ctx, controlplane, clients)
@@ -300,7 +300,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 	require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t, ctx, controlplaneName, clients), time.Minute, time.Second)
 
 	t.Log("verifying controlplane Deployment.Pods.Env vars")
-	checkControlPlaneDeploymentEnvVars(t, deployment)
+	checkControlPlaneDeploymentEnvVars(t, deployment, controlplane.Name)
 
 	// delete controlplane and verify that cluster wide resources removed.
 	t.Log("verifying cluster wide resources removed after controlplane deleted")
@@ -323,7 +323,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 	)
 }
 
-func checkControlPlaneDeploymentEnvVars(t *testing.T, deployment *appsv1.Deployment) {
+func checkControlPlaneDeploymentEnvVars(t *testing.T, deployment *appsv1.Deployment, controlplaneName string) {
 	controllerContainer := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
 	require.NotNil(t, controllerContainer)
 
@@ -340,6 +340,11 @@ func checkControlPlaneDeploymentEnvVars(t *testing.T, deployment *appsv1.Deploym
 		"ValueFrom of POD_NAME should be the same as expected: expected %#v,actual %#v",
 		fieldRefMetadataName, podNameValueFrom,
 	)
+
+	t.Log("verifying CONTROLLER_ELECTION_ID env has value configured in controlplane")
+	electionIDEnvValue := getEnvValueByName(envs, "CONTROLLER_ELECTION_ID")
+	require.Equal(t, fmt.Sprintf("%s.konghq.com", controlplaneName), electionIDEnvValue)
+
 	t.Log("verifying custom env TEST_ENV has value configured in controlplane")
 	testEnvValue := getEnvValueByName(envs, "TEST_ENV")
 	require.Equal(t, "test", testEnvValue)

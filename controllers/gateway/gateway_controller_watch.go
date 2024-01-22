@@ -194,7 +194,8 @@ func (r *Reconciler) setControlplaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 	dataplaneName,
 	dataplaneIngressServiceName,
-	dataplaneAdminServiceName string,
+	dataplaneAdminServiceName,
+	controlPlaneName string,
 ) {
 	dontOverride := make(map[string]struct{})
 	if gatewayConfig.Spec.ControlPlaneOptions == nil {
@@ -231,6 +232,7 @@ func (r *Reconciler) setControlplaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 		DataplaneIngressServiceName: dataplaneIngressServiceName,
 		DataplaneAdminServiceName:   dataplaneAdminServiceName,
 		ManagedByGateway:            true,
+		ControlPlaneName:            controlPlaneName,
 	})
 
 	setControlPlaneOptionsDefaults(gatewayConfig.Spec.ControlPlaneOptions)

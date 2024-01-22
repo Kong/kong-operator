@@ -489,7 +489,6 @@ func (r *Reconciler) provisionControlPlane(
 	adminService corev1.Service,
 ) *operatorv1alpha1.ControlPlane {
 	logger = logger.WithName("controlplaneProvisioning")
-	r.setControlplaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name)
 
 	log.Trace(logger, "looking for associated controlplanes", gateway)
 	controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, r.Client, gateway)
@@ -502,16 +501,12 @@ func (r *Reconciler) provisionControlPlane(
 		return nil
 	}
 
+	var controlPlane *operatorv1alpha1.ControlPlane
+
 	count := len(controlplanes)
-	if count > 1 {
-		err := fmt.Errorf("control plane deployments found: %d, expected: 1, requeing", count)
-		k8sutils.SetCondition(
-			createControlPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error(), gateway.Generation),
-			gatewayConditionsAware(gateway),
-		)
-		return nil
-	}
-	if count == 0 {
+	switch {
+	case count == 0:
+		r.setControlplaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name, "")
 		err := r.createControlPlane(ctx, gatewayClass, gateway, gatewayConfig, dataplane.Name)
 		if err != nil {
 			log.Debug(logger, fmt.Sprintf("controlplane creation failed - error: %v", err), gateway)
@@ -527,8 +522,18 @@ func (r *Reconciler) provisionControlPlane(
 			)
 		}
 		return nil
+	case count > 1:
+		err := fmt.Errorf("control plane deployments found: %d, expected: 1, requeing", count)
+		k8sutils.SetCondition(
+			createControlPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error(), gateway.Generation),
+			gatewayConditionsAware(gateway),
+		)
+		return nil
 	}
-	controlPlane := controlplanes[0].DeepCopy()
+
+	// If we continue, there is only one controlplane.
+	controlPlane = controlplanes[0].DeepCopy()
+	r.setControlplaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name, controlPlane.Name)
 
 	log.Trace(logger, "ensuring controlplane config is up to date", gateway)
 	// compare deployment option of controlplane with controlplane deployment option of gatewayconfiguration.
