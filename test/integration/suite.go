@@ -10,15 +10,19 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/samber/lo"
+	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/gateway-operator/config"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/manager"
@@ -44,11 +48,20 @@ var (
 // Testing Vars - Testing Environment
 // -----------------------------------------------------------------------------
 
-var (
-	ctx    context.Context
-	cancel context.CancelFunc
-	env    environments.Environment
+var testSuite []func(*testing.T)
 
+// GetTestSuite returns all integration tests that should be run.
+func GetTestSuite() []func(*testing.T) {
+	return testSuite
+}
+
+func addTestsToTestSuite(tests ...func(*testing.T)) {
+	testSuite = append(testSuite, tests...)
+}
+
+var (
+	ctx     context.Context
+	env     environments.Environment
 	clients testutils.K8sClients
 
 	httpc = http.Client{
@@ -56,11 +69,52 @@ var (
 	}
 )
 
+// GetCtx returns the context used by the test suite.
+// It allows interaction in tests with environment bootstrapped
+// by TestMain.
+func GetCtx() context.Context {
+	return ctx
+}
+
+// GetEnv returns the environment used by the test suite.
+// It allows interaction in tests with environment bootstrapped
+// by TestMain
+func GetEnv() environments.Environment {
+	return env
+}
+
+// GetClients returns the Kubernetes clients used by the test suite.
+// It allows interaction in tests with environment bootstrapped
+// by TestMain
+func GetClients() testutils.K8sClients {
+	return clients
+}
+
+// RunTestSuite runs all tests from the test suite.
+// Import and call in a test function. Environment needs to be bootstrapped
+// in TestMain.
+func RunTestSuite(t *testing.T, testSuite []func(*testing.T)) {
+	duplicates := lo.FindDuplicatesBy(testSuite, func(f func(*testing.T)) string {
+		return getFunctionName(f)
+	})
+	duplicatesNames := lo.Map(duplicates, func(f func(*testing.T), _ int) string {
+		return getFunctionName(f)
+	})
+	require.Empty(t, duplicatesNames, "duplicate test functions found in test suite")
+	t.Log("INFO: running test suite")
+	for _, test := range testSuite {
+		t.Run(getFunctionName(test), test)
+	}
+}
+
 // -----------------------------------------------------------------------------
 // Testing Main
 // -----------------------------------------------------------------------------
 
+// TestMain is the entrypoint for the integration test suite. It bootstraps
+// the testing environment and runs the test suite. Call it from TestMain.
 func TestMain(m *testing.M) {
+	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 
@@ -87,14 +141,19 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")
 	exitOnErr(clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
-	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "../../config/rbac"))
+
+	configPath, cleaner, err := config.DumpKustomizeConfigToTempDir()
+	exitOnErr(err)
+	defer cleaner()
+
+	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), path.Join(configPath, "/rbac")))
 
 	// normally this is obtained from the downward API. the tests fake it.
 	err = os.Setenv("POD_NAMESPACE", "kong-system")
 	exitOnErr(err)
 
 	fmt.Println("INFO: deploying CRDs to test cluster")
-	exitOnErr(testutils.DeployCRDs(ctx, clients.OperatorClient, env))
+	exitOnErr(testutils.DeployCRDs(ctx, path.Join(configPath, "/crd"), clients.OperatorClient, env))
 
 	runWebhookTests = (os.Getenv("RUN_WEBHOOK_TESTS") == "true")
 	if runWebhookTests {
@@ -136,8 +195,7 @@ func exitOnErr(err error) {
 				env.Cleanup(ctx) //nolint:errcheck
 			}
 		}
-		fmt.Printf("ERROR: %s\n", err.Error())
-		os.Exit(1)
+		panic(fmt.Sprintf("ERROR: %s\n", err.Error()))
 	}
 }
 

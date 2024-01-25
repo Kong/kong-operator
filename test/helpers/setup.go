@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -31,7 +32,7 @@ func SetupTestEnv(t *testing.T, ctx context.Context, env environments.Environmen
 	})
 
 	t.Log("creating a testing namespace")
-	namespace, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
+	namespace, err := clusters.GenerateNamespace(ctx, env.Cluster(), labelValueForTest(t))
 	require.NoError(t, err)
 	t.Logf("using test namespace: %s", namespace.Name)
 	cleaner.AddNamespace(namespace)
@@ -45,4 +46,16 @@ func SetupTestEnv(t *testing.T, ctx context.Context, env environments.Environmen
 	})
 
 	return namespace, cleaner
+}
+
+// labelValueForTest returns a sanitized test name that can be used as kubernetes
+// label value.
+func labelValueForTest(t *testing.T) string {
+	s := strings.ReplaceAll(t.Name(), "/", ".")
+	// Trim to adhere to k8s label requirements:
+	// https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+	if len(s) > 63 {
+		return s[:63]
+	}
+	return s
 }

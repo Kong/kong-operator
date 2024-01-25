@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"testing"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
+	"github.com/kong/gateway-operator/config"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/manager"
@@ -77,16 +79,20 @@ func TestMain(m *testing.M) {
 	clients, err = testutils.NewK8sClients(env)
 	exitOnErr(err)
 
+	configPath, cleaner, err := config.DumpKustomizeConfigToTempDir()
+	exitOnErr(err)
+	defer cleaner()
+
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")
 	exitOnErr(clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
-	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "../../config/rbac"))
+	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), path.Join(configPath, "/rbac")))
 
 	// normally this is obtained from the downward API. the tests fake it.
 	err = os.Setenv("POD_NAMESPACE", "kong-system")
 	exitOnErr(err)
 
 	fmt.Println("INFO: deploying CRDs to test cluster")
-	exitOnErr(testutils.DeployCRDs(ctx, clients.OperatorClient, env))
+	exitOnErr(testutils.DeployCRDs(ctx, path.Join(configPath, "/crd") clients.OperatorClient, env))
 
 	fmt.Println("INFO: starting the operator's controller manager")
 	// startControllerManager will spawn the controller manager in a separate

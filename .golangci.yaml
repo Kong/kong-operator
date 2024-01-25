@@ -117,3 +117,8 @@ issues:
       linters:
         - revive
       text: "exported: exported"
+    # Test cases are self-explanatory, thus no need a docstring.
+    - path: test/integration
+      linters:
+        - revive
+      text: "exported: exported"

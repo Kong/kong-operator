@@ -28,6 +28,14 @@ import (
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
+func init() {
+	addTestsToTestSuite(
+		TestDataPlaneBlueGreenRollout,
+		TestDataPlaneBlueGreenHorizontalScaling,
+		TestDataPlane_ResourcesNotDeletedUntilOwnerIsRemoved,
+	)
+}
+
 func TestDataPlaneBlueGreenRollout(t *testing.T) {
 	const (
 		waitTime = time.Minute

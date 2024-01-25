@@ -199,10 +199,9 @@ func BuildMTLSCredentials(ctx context.Context, k8sClient *kubernetes.Clientset, 
 }
 
 // DeployCRDs deploys the CRDs commonly used in tests.
-func DeployCRDs(ctx context.Context, operatorClient *operatorclient.Clientset, env environments.Environment) error {
+func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorclient.Clientset, env environments.Environment) error {
 	kubectlFlags := []string{"--server-side", "-v5"}
-
-	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "../../config/crd", kubectlFlags...); err != nil {
+	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), crdPath, kubectlFlags...); err != nil {
 		return err
 	}
 	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), GatewayExperimentalCRDsKustomizeURL); err != nil {

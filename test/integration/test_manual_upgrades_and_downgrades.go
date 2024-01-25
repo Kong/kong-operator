@@ -26,6 +26,12 @@ import (
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
+func init() {
+	addTestsToTestSuite(
+		TestManualGatewayUpgradesAndDowngrades,
+	)
+}
+
 func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)

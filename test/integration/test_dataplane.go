@@ -25,6 +25,15 @@ import (
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
+func init() {
+	addTestsToTestSuite(
+		TestDataplaneEssentials,
+		TestDataPlaneUpdate,
+		TestDataPlaneHorizontalScaling,
+		TestDataPlaneVolumeMounts,
+	)
+}
+
 func TestDataplaneEssentials(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
