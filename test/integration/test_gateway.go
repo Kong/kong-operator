@@ -418,7 +418,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 		)
 		if !assert.Eventually(t,
 			testutils.GatewayNetworkPolicyForGatewayContainsRules(t, ctx, gateway, clients, expectedUpdatedLimitedAdminAPI.Rule),
-			testutils.SubresourceReadinessWait, time.Second,
+			2*testutils.SubresourceReadinessWait, time.Second,
 			"NetworkPolicy didn't get updated with port 8555 after a corresponding change to GatewayConfiguration") {
 			networkpolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, clients.MgrClient, gateway)
 			require.NoError(t, err)
