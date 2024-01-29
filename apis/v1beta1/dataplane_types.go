@@ -63,6 +63,51 @@ type DataPlaneOptions struct {
 
 	// +optional
 	Network DataPlaneNetworkOptions `json:"network"`
+
+	// +optional
+	Metrics *DataPlaneMetricOptions `json:"metrics,omitempty"`
+}
+
+// DataPlaneMetricOptions specifies options for DataPlane metrics.
+type DataPlaneMetricOptions struct {
+	// Enabled indicates whether metrics are enabled for the DataPlane.
+	// This translates into deployed instances having Prometheus plugin configured.
+	// Ref: https://docs.konghq.com/hub/kong-inc/prometheus/
+	//
+	// +kubebuilder:default=false
+	Enabled bool `json:"enabled"`
+
+	// Latency indicates whether latency metrics are enabled for the DataPlane.
+	// This translates into deployed instances having `latency_metrics` option set
+	// on the Prometheus plugin.
+	//
+	// +kubebuilder:default=false
+	// +optional
+	Latency bool `json:"latency"`
+
+	// Bandwidth indicates whether bandwidth metrics are enabled for the DataPlane.
+	// This translates into deployed instances having `bandwidth_metrics` option set
+	// on the Prometheus plugin.
+	//
+	// +kubebuilder:default=false
+	// +optional
+	Bandwidth bool `json:"bandwidth"`
+
+	// UpstreamHealth indicates whether upstream health metrics are enabled for the DataPlane.
+	// This translates into deployed instances having `upstream_health_metrics` option set
+	// on the Prometheus plugin.
+	//
+	// +kubebuilder:default=false
+	// +optional
+	UpstreamHealth bool `json:"upstreamHealth"`
+
+	// StatusCode indicates whether status code metrics are enabled for the DataPlane.
+	// This translates into deployed instances having `status_code_metrics` option set
+	// on the Prometheus plugin.
+	//
+	// +kubebuilder:default=false
+	// +optional
+	StatusCode bool `json:"statusCode"`
 }
 
 // DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
