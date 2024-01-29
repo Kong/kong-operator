@@ -31,9 +31,9 @@ import (
 	"github.com/kong/gateway-operator/internal/versions"
 )
 
-// numReplicasWhenNoDataplane represents the desired number of replicas
+// numReplicasWhenNoDataPlane represents the desired number of replicas
 // for the controlplane deployment when no dataplane is set.
-const numReplicasWhenNoDataplane = 0
+const numReplicasWhenNoDataPlane = 0
 
 // -----------------------------------------------------------------------------
 // Reconciler - Status Management
@@ -71,7 +71,7 @@ func (r *Reconciler) ensureDataPlaneStatus(
 	newCondition := k8sutils.NewCondition(
 		ConditionTypeProvisioned,
 		metav1.ConditionFalse,
-		ConditionReasonNoDataplane,
+		ConditionReasonNoDataPlane,
 		"DataPlane is not set",
 	)
 	if dataplaneIsSet {
@@ -207,14 +207,14 @@ func (r *Reconciler) ensureDeploymentForControlPlane(
 		// ensure that replication strategy is up to date
 		replicas := controlPlane.Spec.ControlPlaneOptions.Deployment.Replicas
 		switch {
-		case !dataplaneIsSet && (replicas == nil || *replicas != numReplicasWhenNoDataplane):
-			// Dataplane was just unset, so we need to scale down the Deployment.
-			if !cmp.Equal(existingDeployment.Spec.Replicas, lo.ToPtr(int32(numReplicasWhenNoDataplane))) {
-				existingDeployment.Spec.Replicas = lo.ToPtr(int32(numReplicasWhenNoDataplane))
+		case !dataplaneIsSet && (replicas == nil || *replicas != numReplicasWhenNoDataPlane):
+			// DataPlane was just unset, so we need to scale down the Deployment.
+			if !cmp.Equal(existingDeployment.Spec.Replicas, lo.ToPtr(int32(numReplicasWhenNoDataPlane))) {
+				existingDeployment.Spec.Replicas = lo.ToPtr(int32(numReplicasWhenNoDataPlane))
 				updated = true
 			}
-		case dataplaneIsSet && (replicas != nil && *replicas != numReplicasWhenNoDataplane):
-			// Dataplane was just set, so we need to scale up the Deployment
+		case dataplaneIsSet && (replicas != nil && *replicas != numReplicasWhenNoDataPlane):
+			// DataPlane was just set, so we need to scale up the Deployment
 			// and ensure the env variables that might have been changed in
 			// deployment are updated.
 			if !cmp.Equal(existingDeployment.Spec.Replicas, replicas) {
@@ -227,7 +227,7 @@ func (r *Reconciler) ensureDeploymentForControlPlane(
 	}
 
 	if !dataplaneIsSet {
-		generatedDeployment.Spec.Replicas = lo.ToPtr(int32(numReplicasWhenNoDataplane))
+		generatedDeployment.Spec.Replicas = lo.ToPtr(int32(numReplicasWhenNoDataPlane))
 	}
 	if err := r.Client.Create(ctx, generatedDeployment); err != nil {
 		return op.Noop, nil, fmt.Errorf("failed creating ControlPlane Deployment %s: %w", generatedDeployment.Name, err)

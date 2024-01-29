@@ -15,7 +15,7 @@ import (
 // the operator.
 func DataPlaneWatchBuilder(mgr ctrl.Manager) *builder.Builder {
 	return ctrl.NewControllerManagedBy(mgr).
-		// watch Dataplane objects
+		// watch DataPlane objects
 		For(&operatorv1beta1.DataPlane{}).
 		// watch for changes in Secrets created by the dataplane controller
 		Owns(&corev1.Secret{}).

@@ -105,9 +105,9 @@ func GetDataPlaneForControlPlane(
 	return &dataplane, nil
 }
 
-// GetDataplaneServiceName is a helper function that retrieves the name of the service owned by provided dataplane.
+// GetDataPlaneServiceName is a helper function that retrieves the name of the service owned by provided dataplane.
 // It accepts a string as the last argument to specify which service to retrieve (proxy/admin)
-func GetDataplaneServiceName(
+func GetDataPlaneServiceName(
 	ctx context.Context,
 	c client.Client,
 	dataplane *operatorv1beta1.DataPlane,

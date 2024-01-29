@@ -451,11 +451,11 @@ func ensureIngressServiceForDataPlane(
 		opts = append(opts, matchingLabelsToServiceOpt(additionalServiceLabels))
 	}
 
-	generatedService, err := k8sresources.GenerateNewIngressServiceForDataplane(dataPlane, opts...)
+	generatedService, err := k8sresources.GenerateNewIngressServiceForDataPlane(dataPlane, opts...)
 	if err != nil {
 		return op.Noop, nil, err
 	}
-	addAnnotationsForDataplaneIngressService(generatedService, *dataPlane)
+	addAnnotationsForDataPlaneIngressService(generatedService, *dataPlane)
 	k8sutils.SetOwnerForObject(generatedService, dataPlane)
 
 	if count == 1 {

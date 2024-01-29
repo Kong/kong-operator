@@ -105,7 +105,7 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	cleaner.Add(controlplane)
 
 	t.Log("verifying controlplane state reflects lack of dataplane")
-	require.Eventually(t, testutils.ControlPlaneDetectedNoDataplane(t, ctx, controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+	require.Eventually(t, testutils.ControlPlaneDetectedNoDataPlane(t, ctx, controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("verifying controlplane deployment has no active replicas")
 	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasActiveDeployment(t, ctx, controlplaneName, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)

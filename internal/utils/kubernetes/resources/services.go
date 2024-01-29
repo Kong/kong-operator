@@ -42,8 +42,8 @@ func GenerateNewServiceForCertificateConfig(namespace, name string) *corev1.Serv
 	}
 }
 
-// GenerateNewIngressServiceForDataplane is a helper to generate the dataplane ingress service
-func GenerateNewIngressServiceForDataplane(dataplane *operatorv1beta1.DataPlane, opts ...ServiceOpt) (*corev1.Service, error) {
+// GenerateNewIngressServiceForDataPlane is a helper to generate the dataplane ingress service
+func GenerateNewIngressServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, opts ...ServiceOpt) (*corev1.Service, error) {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,

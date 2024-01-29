@@ -389,7 +389,7 @@ func (r *Reconciler) provisionDataPlane(
 ) *operatorv1beta1.DataPlane {
 	logger = logger.WithName("dataplaneProvisioning")
 
-	r.setDataplaneGatewayConfigDefaults(gatewayConfig)
+	r.setDataPlaneGatewayConfigDefaults(gatewayConfig)
 	log.Trace(logger, "looking for associated dataplanes", gateway)
 	dataplanes, err := gatewayutils.ListDataPlanesForGateway(
 		ctx,
@@ -436,16 +436,16 @@ func (r *Reconciler) provisionDataPlane(
 	log.Trace(logger, "ensuring dataplane config is up to date", gateway)
 	// compare deployment option of dataplane with dataplane deployment option of gatewayconfiguration.
 	// if not configured in gatewayconfiguration, compare deployment option of dataplane with an empty one.
-	expectedDataplaneOptions := &operatorv1beta1.DataPlaneOptions{}
+	expectedDataPlaneOptions := &operatorv1beta1.DataPlaneOptions{}
 	if gatewayConfig.Spec.DataPlaneOptions != nil {
-		expectedDataplaneOptions = gatewayConfig.Spec.DataPlaneOptions
+		expectedDataPlaneOptions = gatewayConfig.Spec.DataPlaneOptions
 	}
 	// Don't require setting defaults for DataPlane when using Gateway CRD.
-	setDataPlaneOptionsDefaults(expectedDataplaneOptions)
+	setDataPlaneOptionsDefaults(expectedDataPlaneOptions)
 
-	if !dataplaneSpecDeepEqual(&dataplane.Spec.DataPlaneOptions, expectedDataplaneOptions) {
+	if !dataplaneSpecDeepEqual(&dataplane.Spec.DataPlaneOptions, expectedDataPlaneOptions) {
 		log.Trace(logger, "dataplane config is out of date, updating", gateway)
-		dataplane.Spec.DataPlaneOptions = *expectedDataplaneOptions
+		dataplane.Spec.DataPlaneOptions = *expectedDataPlaneOptions
 
 		err = r.Client.Update(ctx, dataplane)
 		if err != nil {
@@ -506,7 +506,7 @@ func (r *Reconciler) provisionControlPlane(
 	count := len(controlplanes)
 	switch {
 	case count == 0:
-		r.setControlplaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name, "")
+		r.setControlPlaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name, "")
 		err := r.createControlPlane(ctx, gatewayClass, gateway, gatewayConfig, dataplane.Name)
 		if err != nil {
 			log.Debug(logger, fmt.Sprintf("controlplane creation failed - error: %v", err), gateway)
@@ -533,22 +533,22 @@ func (r *Reconciler) provisionControlPlane(
 
 	// If we continue, there is only one controlplane.
 	controlPlane = controlplanes[0].DeepCopy()
-	r.setControlplaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name, controlPlane.Name)
+	r.setControlPlaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name, controlPlane.Name)
 
 	log.Trace(logger, "ensuring controlplane config is up to date", gateway)
 	// compare deployment option of controlplane with controlplane deployment option of gatewayconfiguration.
 	// if not configured in gatewayconfiguration, compare deployment option of controlplane with an empty one.
-	expectedControlplaneOptions := &operatorv1alpha1.ControlPlaneOptions{}
+	expectedControlPlaneOptions := &operatorv1alpha1.ControlPlaneOptions{}
 	if gatewayConfig.Spec.ControlPlaneOptions != nil {
-		expectedControlplaneOptions = gatewayConfig.Spec.ControlPlaneOptions
+		expectedControlPlaneOptions = gatewayConfig.Spec.ControlPlaneOptions
 	}
 	// Don't require setting defaults for ControlPlane when using Gateway CRD.
-	setControlPlaneOptionsDefaults(expectedControlplaneOptions)
+	setControlPlaneOptionsDefaults(expectedControlPlaneOptions)
 
-	if !controlplanecontroller.SpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, expectedControlplaneOptions) {
+	if !controlplanecontroller.SpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, expectedControlPlaneOptions) {
 		log.Trace(logger, "controlplane config is out of date, updating", gateway)
 		controlplaneOld := controlPlane.DeepCopy()
-		controlPlane.Spec.ControlPlaneOptions = *expectedControlplaneOptions
+		controlPlane.Spec.ControlPlaneOptions = *expectedControlPlaneOptions
 		if err := r.Client.Patch(ctx, controlPlane, client.MergeFrom(controlplaneOld)); err != nil {
 			k8sutils.SetCondition(
 				createControlPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error(), gateway.Generation),

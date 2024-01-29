@@ -48,17 +48,17 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// for owned objects we need to check if updates to the objects resulted in the
 	// removal of an OwnerReference to the parent object, and if so we need to
 	// enqueue the parent object so that reconciliation can create a replacement.
-	clusterRolePredicate := predicate.NewPredicateFuncs(r.clusterRoleHasControlplaneOwner)
+	clusterRolePredicate := predicate.NewPredicateFuncs(r.clusterRoleHasControlPlaneOwner)
 	clusterRolePredicate.UpdateFunc = func(e event.UpdateEvent) bool {
-		return r.clusterRoleHasControlplaneOwner(e.ObjectOld)
+		return r.clusterRoleHasControlPlaneOwner(e.ObjectOld)
 	}
-	clusterRoleBindingPredicate := predicate.NewPredicateFuncs(r.clusterRoleBindingHasControlplaneOwner)
+	clusterRoleBindingPredicate := predicate.NewPredicateFuncs(r.clusterRoleBindingHasControlPlaneOwner)
 	clusterRoleBindingPredicate.UpdateFunc = func(e event.UpdateEvent) bool {
-		return r.clusterRoleBindingHasControlplaneOwner(e.ObjectOld)
+		return r.clusterRoleBindingHasControlPlaneOwner(e.ObjectOld)
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		// watch Controlplane objects
+		// watch ControlPlane objects
 		For(&operatorv1alpha1.ControlPlane{}).
 		// watch for changes in Secrets created by the controlplane controller
 		Owns(&corev1.Secret{}).
@@ -72,7 +72,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// (Owns cannot be used in this case)
 		Watches(
 			&rbacv1.ClusterRole{},
-			handler.EnqueueRequestsFromMapFunc(r.getControlplaneForClusterRole),
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlaneForClusterRole),
 			builder.WithPredicates(clusterRolePredicate)).
 		// watch for changes in ClusterRoleBindings created by the controlplane controller.
 		// Since the ClusterRoleBindings are cluster-wide but controlplanes are namespaced,
@@ -80,7 +80,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// (Owns cannot be used in this case)
 		Watches(
 			&rbacv1.ClusterRoleBinding{},
-			handler.EnqueueRequestsFromMapFunc(r.getControlplaneForClusterRoleBinding),
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlaneForClusterRoleBinding),
 			builder.WithPredicates(clusterRoleBindingPredicate)).
 		Watches(
 			&operatorv1beta1.DataPlane{},
@@ -124,7 +124,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 		log.Trace(logger, "controlplane marked for deletion, removing owned cluster roles and cluster role bindings", cp)
 
-		newControlplane := cp.DeepCopy()
+		newControlPlane := cp.DeepCopy()
 		// ensure that the clusterrolebindings which were created for the ControlPlane are deleted
 		deletions, err := r.ensureOwnedClusterRoleBindingsDeleted(ctx, cp)
 		if err != nil {
@@ -136,12 +136,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		// now that ClusterRoleBindings are cleaned up, remove the relevant finalizer
-		if k8sutils.RemoveFinalizerInMetadata(&newControlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRoleBinding)) {
-			if err := r.Client.Patch(ctx, newControlplane, client.MergeFrom(cp)); err != nil {
+		if k8sutils.RemoveFinalizerInMetadata(&newControlPlane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRoleBinding)) {
+			if err := r.Client.Patch(ctx, newControlPlane, client.MergeFrom(cp)); err != nil {
 				return ctrl.Result{}, err
 			}
 			log.Debug(logger, "clusterRoleBinding finalizer removed", cp)
-			return ctrl.Result{}, nil // Controlplane update will requeue
+			return ctrl.Result{}, nil // ControlPlane update will requeue
 		}
 
 		// ensure that the clusterroles created for the controlplane are deleted
@@ -155,12 +155,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		// now that ClusterRoles are cleaned up, remove the relevant finalizer
-		if k8sutils.RemoveFinalizerInMetadata(&newControlplane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRole)) {
-			if err := r.Client.Patch(ctx, newControlplane, client.MergeFrom(cp)); err != nil {
+		if k8sutils.RemoveFinalizerInMetadata(&newControlPlane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRole)) {
+			if err := r.Client.Patch(ctx, newControlPlane, client.MergeFrom(cp)); err != nil {
 				return ctrl.Result{}, err
 			}
 			log.Debug(logger, "clusterRole finalizer removed", cp)
-			return ctrl.Result{}, nil // Controlplane update will requeue
+			return ctrl.Result{}, nil // ControlPlane update will requeue
 		}
 
 		// cleanup completed
@@ -203,13 +203,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		log.Debug(logger, "no existing dataplane for controlplane", cp, "error", err)
 	} else {
-		dataplaneIngressServiceName, err = gatewayutils.GetDataplaneServiceName(ctx, r.Client, dataplane, consts.DataPlaneIngressServiceLabelValue)
+		dataplaneIngressServiceName, err = gatewayutils.GetDataPlaneServiceName(ctx, r.Client, dataplane, consts.DataPlaneIngressServiceLabelValue)
 		if err != nil {
 			log.Debug(logger, "no existing dataplane ingress service for controlplane", cp, "error", err)
 			return ctrl.Result{}, err
 		}
 
-		dataplaneAdminServiceName, err = gatewayutils.GetDataplaneServiceName(ctx, r.Client, dataplane, consts.DataPlaneAdminServiceLabelValue)
+		dataplaneAdminServiceName, err = gatewayutils.GetDataPlaneServiceName(ctx, r.Client, dataplane, consts.DataPlaneAdminServiceLabelValue)
 		if err != nil {
 			log.Debug(logger, "no existing dataplane admin service for controlplane", cp, "error", err)
 			return ctrl.Result{}, err
@@ -229,8 +229,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		controlplane.DefaultsArgs{
 			Namespace:                   cp.Namespace,
 			ControlPlaneName:            cp.Name,
-			DataplaneIngressServiceName: dataplaneIngressServiceName,
-			DataplaneAdminServiceName:   dataplaneAdminServiceName,
+			DataPlaneIngressServiceName: dataplaneIngressServiceName,
+			DataPlaneAdminServiceName:   dataplaneAdminServiceName,
 		})
 	if changed {
 		log.Debug(logger, "updating ControlPlane resource after defaults are set since resource has changed", cp)

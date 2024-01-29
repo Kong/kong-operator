@@ -27,14 +27,14 @@ import (
 
 func init() {
 	addTestsToTestSuite(
-		TestDataplaneEssentials,
+		TestDataPlaneEssentials,
 		TestDataPlaneUpdate,
 		TestDataPlaneHorizontalScaling,
 		TestDataPlaneVolumeMounts,
 	)
 }
 
-func TestDataplaneEssentials(t *testing.T) {
+func TestDataPlaneEssentials(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 

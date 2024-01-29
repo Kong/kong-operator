@@ -17,6 +17,7 @@ linters:
   - errorlint
   - exhaustive
   - exportloopref
+  - forbidigo
   - gci
   - gofmt
   - goimports
@@ -106,6 +107,12 @@ linters-settings:
           recommendations:
           - sigs.k8s.io/controller-runtime/pkg/log
           - go.uber.org/zap/zapcore
+  forbidigo:
+    forbid:
+      - p: ^.*Dataplane.*$
+        msg: "Please use camel case 'DataPlane' instead of 'Dataplane'"
+      - p: ^.*Controlplane.*$
+        msg: "Please use camel case 'ControlPlane' instead of 'Controlplane'"
 issues:
   max-same-issues: 0
   fix: true

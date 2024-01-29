@@ -54,7 +54,7 @@ spec:
                     description: |-
                       DataPlanes refers to the named DataPlane objects which this ControlPlane
                       is responsible for. Currently they must be in the same namespace as the
-                      Dataplane.
+                      DataPlane.
                     type: string
                   deployment:
                     description: |-

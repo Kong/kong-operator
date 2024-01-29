@@ -639,7 +639,7 @@ func (r *BlueGreenReconciler) initSelectorInRolloutStatus(ctx context.Context, d
 		return nil
 	}
 
-	oldDataplane := dataplane.DeepCopy()
+	oldDataPlane := dataplane.DeepCopy()
 	if dataplane.Status.RolloutStatus == nil {
 		dataplane.Status.RolloutStatus = &operatorv1beta1.DataPlaneRolloutStatus{
 			Deployment: &operatorv1beta1.DataPlaneRolloutStatusDeployment{},
@@ -649,7 +649,7 @@ func (r *BlueGreenReconciler) initSelectorInRolloutStatus(ctx context.Context, d
 	}
 	dataplane.Status.RolloutStatus.Deployment.Selector = uuid.New().String()
 
-	if err := r.Client.Status().Patch(ctx, dataplane, client.MergeFrom(oldDataplane)); err != nil {
+	if err := r.Client.Status().Patch(ctx, dataplane, client.MergeFrom(oldDataPlane)); err != nil {
 		return err
 	}
 	return nil

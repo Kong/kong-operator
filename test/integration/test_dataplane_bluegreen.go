@@ -499,22 +499,22 @@ func patchDataPlaneImage(ctx context.Context, t *testing.T, dataplane *operatorv
 	t.Helper()
 	t.Logf("patching DataPlane %s with image %q", dataplane.Name, image)
 
-	oldDataplane := dataplane.DeepCopy()
+	oldDataPlane := dataplane.DeepCopy()
 	require.Len(t, dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers, 1)
 	dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Image = image
-	require.NoError(t, cl.Patch(ctx, dataplane, client.MergeFrom(oldDataplane)))
+	require.NoError(t, cl.Patch(ctx, dataplane, client.MergeFrom(oldDataPlane)))
 }
 
 func patchDataPlaneHorizontalScaling(ctx context.Context, t *testing.T, dataplane *operatorv1beta1.DataPlane, cl client.Client, h *operatorv1beta1.HorizontalScaling) {
-	oldDataplane := dataplane.DeepCopy()
+	oldDataPlane := dataplane.DeepCopy()
 	dataplane.Spec.Deployment.Scaling = &operatorv1beta1.Scaling{
 		HorizontalScaling: h,
 	}
-	require.NoError(t, cl.Patch(ctx, dataplane, client.MergeFrom(oldDataplane)))
+	require.NoError(t, cl.Patch(ctx, dataplane, client.MergeFrom(oldDataPlane)))
 }
 
 func patchDataPlaneAnnotations(t *testing.T, dataplane *operatorv1beta1.DataPlane, cl client.Client, annotations map[string]string) {
-	oldDataplane := dataplane.DeepCopy()
+	oldDataPlane := dataplane.DeepCopy()
 	require.Len(t, dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers, 1)
 	if dataplane.Annotations == nil {
 		dataplane.Annotations = annotations
@@ -523,7 +523,7 @@ func patchDataPlaneAnnotations(t *testing.T, dataplane *operatorv1beta1.DataPlan
 			dataplane.Annotations[k] = v
 		}
 	}
-	require.NoError(t, cl.Patch(ctx, dataplane, client.MergeFrom(oldDataplane)))
+	require.NoError(t, cl.Patch(ctx, dataplane, client.MergeFrom(oldDataPlane)))
 }
 
 func dataplaneAdminPreviewServiceLabels() client.MatchingLabels {

@@ -127,7 +127,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 				Build()
 
 			ctx := context.Background()
-			existingSvc, err := k8sresources.GenerateNewIngressServiceForDataplane(tc.dataplane)
+			existingSvc, err := k8sresources.GenerateNewIngressServiceForDataPlane(tc.dataplane)
 			require.NoError(t, err)
 			k8sutils.SetOwnerForObject(existingSvc, tc.dataplane)
 			err = fakeClient.Create(ctx, existingSvc)

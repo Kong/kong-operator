@@ -184,13 +184,13 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 	return
 }
 
-func (r *Reconciler) setDataplaneGatewayConfigDefaults(gatewayConfig *operatorv1alpha1.GatewayConfiguration) {
+func (r *Reconciler) setDataPlaneGatewayConfigDefaults(gatewayConfig *operatorv1alpha1.GatewayConfiguration) {
 	if gatewayConfig.Spec.DataPlaneOptions == nil {
 		gatewayConfig.Spec.DataPlaneOptions = new(operatorv1beta1.DataPlaneOptions)
 	}
 }
 
-func (r *Reconciler) setControlplaneGatewayConfigDefaults(gateway *gwtypes.Gateway,
+func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 	dataplaneName,
 	dataplaneIngressServiceName,
@@ -229,8 +229,8 @@ func (r *Reconciler) setControlplaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 
 	_ = controlplane.SetDefaults(gatewayConfig.Spec.ControlPlaneOptions, dontOverride, controlplane.DefaultsArgs{
 		Namespace:                   gateway.Namespace,
-		DataplaneIngressServiceName: dataplaneIngressServiceName,
-		DataplaneAdminServiceName:   dataplaneAdminServiceName,
+		DataPlaneIngressServiceName: dataplaneIngressServiceName,
+		DataPlaneAdminServiceName:   dataplaneAdminServiceName,
 		ManagedByGateway:            true,
 		ControlPlaneName:            controlPlaneName,
 	})

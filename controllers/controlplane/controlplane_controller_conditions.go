@@ -29,7 +29,7 @@ const (
 	// reached fully Provisioned status.
 	ConditionReasonPodsReady k8sutils.ConditionReason = "PodsReady"
 
-	// ControlPlaneConditionsReasonNoDataplane is a reason which indicates that no DataPlane
+	// ControlPlaneConditionsReasonNoDataPlane is a reason which indicates that no DataPlane
 	// has been provisioned.
-	ConditionReasonNoDataplane k8sutils.ConditionReason = "NoDataplane"
+	ConditionReasonNoDataPlane k8sutils.ConditionReason = "NoDataPlane"
 )

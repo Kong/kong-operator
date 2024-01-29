@@ -21,7 +21,7 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 )
 
-func TestHandleDataplaneValidation(t *testing.T) {
+func TestHandleDataPlaneValidation(t *testing.T) {
 	b := fakeclient.NewClientBuilder()
 	b.WithObjects(
 		&corev1.ConfigMap{

@@ -15,7 +15,7 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 )
 
-func TestDataplaneValidatingWebhook(t *testing.T) {
+func TestDataPlaneValidatingWebhook(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

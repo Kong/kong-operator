@@ -86,7 +86,7 @@ type ControlPlaneOptions struct {
 
 	// DataPlanes refers to the named DataPlane objects which this ControlPlane
 	// is responsible for. Currently they must be in the same namespace as the
-	// Dataplane.
+	// DataPlane.
 	//
 	// +optional
 	DataPlane *string `json:"dataplane,omitempty"`

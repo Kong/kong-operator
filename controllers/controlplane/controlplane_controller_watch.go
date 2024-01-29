@@ -23,7 +23,7 @@ import (
 // Reconciler - Watch Predicates
 // -----------------------------------------------------------------------------
 
-func (r *Reconciler) clusterRoleHasControlplaneOwner(obj client.Object) bool {
+func (r *Reconciler) clusterRoleHasControlPlaneOwner(obj client.Object) bool {
 	ctx := context.Background()
 
 	clusterRole, ok := obj.(*rbacv1.ClusterRole)
@@ -36,10 +36,10 @@ func (r *Reconciler) clusterRoleHasControlplaneOwner(obj client.Object) bool {
 		return false
 	}
 
-	return r.objHasControlplaneOwner(ctx, clusterRole)
+	return r.objHasControlPlaneOwner(ctx, clusterRole)
 }
 
-func (r *Reconciler) clusterRoleBindingHasControlplaneOwner(obj client.Object) bool {
+func (r *Reconciler) clusterRoleBindingHasControlPlaneOwner(obj client.Object) bool {
 	ctx := context.Background()
 
 	clusterRoleBinding, ok := obj.(*rbacv1.ClusterRoleBinding)
@@ -52,10 +52,10 @@ func (r *Reconciler) clusterRoleBindingHasControlplaneOwner(obj client.Object) b
 		return false
 	}
 
-	return r.objHasControlplaneOwner(ctx, clusterRoleBinding)
+	return r.objHasControlPlaneOwner(ctx, clusterRoleBinding)
 }
 
-func (r *Reconciler) objHasControlplaneOwner(ctx context.Context, obj client.Object) bool {
+func (r *Reconciler) objHasControlPlaneOwner(ctx context.Context, obj client.Object) bool {
 	controlplaneList := &operatorv1alpha1.ControlPlaneList{}
 	if err := r.Client.List(ctx, controlplaneList); err != nil {
 		// filtering here is just an optimization. If we fail here it's most likely because of some failure
@@ -78,7 +78,7 @@ func (r *Reconciler) objHasControlplaneOwner(ctx context.Context, obj client.Obj
 // Reconciler - Watch Map Funcs
 // -----------------------------------------------------------------------------
 
-func (r *Reconciler) getControlplaneForClusterRole(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
+func (r *Reconciler) getControlPlaneForClusterRole(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	clusterRole, ok := obj.(*rbacv1.ClusterRole)
 	if !ok {
 		log.FromContext(ctx).Error(
@@ -89,10 +89,10 @@ func (r *Reconciler) getControlplaneForClusterRole(ctx context.Context, obj clie
 		return
 	}
 
-	return r.getControlplaneRequestFromRefUID(ctx, clusterRole)
+	return r.getControlPlaneRequestFromRefUID(ctx, clusterRole)
 }
 
-func (r *Reconciler) getControlplaneForClusterRoleBinding(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
+func (r *Reconciler) getControlPlaneForClusterRoleBinding(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	clusterRoleBinding, ok := obj.(*rbacv1.ClusterRoleBinding)
 	if !ok {
 		log.FromContext(ctx).Error(
@@ -103,10 +103,10 @@ func (r *Reconciler) getControlplaneForClusterRoleBinding(ctx context.Context, o
 		return
 	}
 
-	return r.getControlplaneRequestFromRefUID(ctx, clusterRoleBinding)
+	return r.getControlPlaneRequestFromRefUID(ctx, clusterRoleBinding)
 }
 
-func (r *Reconciler) getControlplaneRequestFromRefUID(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
+func (r *Reconciler) getControlPlaneRequestFromRefUID(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	controlplanes := &operatorv1alpha1.ControlPlaneList{}
 	if err := r.Client.List(ctx, controlplanes); err != nil {
 		log.FromContext(ctx).Error(err, "could not list controlplanes in map func")
@@ -176,7 +176,7 @@ func (r *Reconciler) getControlPlanesFromDataPlane(ctx context.Context, obj clie
 	if err := r.Client.List(ctx, controlPlaneList,
 		client.InNamespace(dataplane.Namespace),
 		client.MatchingFields{
-			index.DataplaneNameIndex: dataplane.Name,
+			index.DataPlaneNameIndex: dataplane.Name,
 		}); err != nil {
 		log.FromContext(ctx).Error(err, "failed to map ControlPlane on DataPlane")
 		return

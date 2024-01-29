@@ -28,8 +28,8 @@ func NewValidator(c client.Client) *Validator {
 }
 
 // ValidateUpdate validates a DataPlane object change upon an update event.
-func (v *Validator) ValidateUpdate(dataplane, oldDataplane *operatorv1beta1.DataPlane) error {
-	return v.ValidateIfRolloutInProgress(dataplane, oldDataplane)
+func (v *Validator) ValidateUpdate(dataplane, oldDataPlane *operatorv1beta1.DataPlane) error {
+	return v.ValidateIfRolloutInProgress(dataplane, oldDataPlane)
 }
 
 // Validate validates a DataPlane object and return the first validation error found.
@@ -64,7 +64,7 @@ func (v *Validator) ValidateDataPlaneDeploymentRollout(rollout *operatorv1beta1.
 	return nil
 }
 
-func (v *Validator) ValidateIfRolloutInProgress(dataplane, oldDataplane *operatorv1beta1.DataPlane) error {
+func (v *Validator) ValidateIfRolloutInProgress(dataplane, oldDataPlane *operatorv1beta1.DataPlane) error {
 	if dataplane.Status.RolloutStatus == nil {
 		return nil
 	}
@@ -78,7 +78,7 @@ func (v *Validator) ValidateIfRolloutInProgress(dataplane, oldDataplane *operato
 	// If the promotion is in progress and the spec is changed in the update
 	// then reject the change.
 	if c.Reason == string(consts.DataPlaneConditionReasonRolloutPromotionInProgress) &&
-		!cmp.Equal(dataplane.Spec, oldDataplane.Spec) {
+		!cmp.Equal(dataplane.Spec, oldDataPlane.Spec) {
 		return ErrDataPlaneBlueGreenRolloutFailedToChangeSpecDuringPromotion
 	}
 

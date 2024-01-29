@@ -34,7 +34,7 @@ var ErrTooManyDataPlaneNetworkPolicies = errors.New("too many data plane network
 var ErrObjectMissingParametersRef = errors.New("no reference to related objects")
 
 // -----------------------------------------------------------------------------
-// Controlplane - Errors
+// ControlPlane - Errors
 // -----------------------------------------------------------------------------
 
 // ErrDataPlaneNotSet is a custom error that must be used when a specific OwnerReference

@@ -107,15 +107,15 @@ func DataPlaneIsReady(t *testing.T, ctx context.Context, dataplane types.Namespa
 	}, operatorClient)
 }
 
-// ControlPlaneDetectedNoDataplane is a helper function for tests that returns a function
+// ControlPlaneDetectedNoDataPlane is a helper function for tests that returns a function
 // that can be used to check if a ControlPlane detected unset dataplane.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlaneDetectedNoDataplane(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
+func ControlPlaneDetectedNoDataPlane(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
 	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv1alpha1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(controlplane.ConditionTypeProvisioned) &&
 				condition.Status == metav1.ConditionFalse &&
-				condition.Reason == string(controlplane.ConditionReasonNoDataplane) {
+				condition.Reason == string(controlplane.ConditionReasonNoDataPlane) {
 				return true
 			}
 		}

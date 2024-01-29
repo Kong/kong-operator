@@ -368,8 +368,8 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			changed := controlplane.SetDefaults(tc.spec, map[string]struct{}{}, controlplane.DefaultsArgs{
 				Namespace:                   tc.namespace,
-				DataplaneIngressServiceName: tc.dataplaneIngressServiceName,
-				DataplaneAdminServiceName:   tc.dataplaneAdminServiceName,
+				DataPlaneIngressServiceName: tc.dataplaneIngressServiceName,
+				DataPlaneAdminServiceName:   tc.dataplaneAdminServiceName,
 				ManagedByGateway:            true,
 			})
 			require.Equalf(t, tc.changed, changed,

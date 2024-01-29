@@ -20,8 +20,8 @@ import (
 type DefaultsArgs struct {
 	Namespace                   string
 	ControlPlaneName            string
-	DataplaneIngressServiceName string
-	DataplaneAdminServiceName   string
+	DataPlaneIngressServiceName string
+	DataPlaneAdminServiceName   string
 	ManagedByGateway            bool
 }
 
@@ -79,9 +79,9 @@ func SetDefaults(
 		changed = true
 	}
 
-	if args.Namespace != "" && args.DataplaneIngressServiceName != "" {
+	if args.Namespace != "" && args.DataPlaneIngressServiceName != "" {
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_PUBLISH_SERVICE"]; !isOverrideDisabled {
-			publishServiceNN := k8stypes.NamespacedName{Namespace: args.Namespace, Name: args.DataplaneIngressServiceName}.String()
+			publishServiceNN := k8stypes.NamespacedName{Namespace: args.Namespace, Name: args.DataPlaneIngressServiceName}.String()
 			if k8sutils.EnvValueByName(container.Env, "CONTROLLER_PUBLISH_SERVICE") != publishServiceNN {
 				container.Env = k8sutils.UpdateEnv(container.Env, "CONTROLLER_PUBLISH_SERVICE", publishServiceNN)
 				changed = true
@@ -89,8 +89,8 @@ func SetDefaults(
 		}
 	}
 
-	if args.Namespace != "" && args.DataplaneAdminServiceName != "" {
-		dataPlaneAdminServiceNN := k8stypes.NamespacedName{Namespace: args.Namespace, Name: args.DataplaneAdminServiceName}.String()
+	if args.Namespace != "" && args.DataPlaneAdminServiceName != "" {
+		dataPlaneAdminServiceNN := k8stypes.NamespacedName{Namespace: args.Namespace, Name: args.DataPlaneAdminServiceName}.String()
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_SVC"]; !isOverrideDisabled {
 			if k8sutils.EnvValueByName(container.Env, "CONTROLLER_KONG_ADMIN_SVC") != dataPlaneAdminServiceNN {
 				container.Env = k8sutils.UpdateEnv(container.Env, "CONTROLLER_KONG_ADMIN_SVC", dataPlaneAdminServiceNN)

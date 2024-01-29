@@ -46,14 +46,14 @@ func TestDataPlaneValidation(t *testing.T) {
 	cleaner.Add(configMap)
 
 	if runWebhookTests {
-		testDataplaneValidatingWebhook(t, namespace)
+		testDataPlaneValidatingWebhook(t, namespace)
 	} else {
-		testDataplaneReconcileValidation(t, namespace)
+		testDataPlaneReconcileValidation(t, namespace)
 	}
 }
 
 // could only run one of webhook validation or validation in reconciling.
-func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace) {
+func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace) {
 	if runWebhookTests {
 		t.Skip("run validating webhook tests instead of validating in reconciling")
 	}
@@ -269,7 +269,7 @@ func testDataplaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 	}
 }
 
-func testDataplaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
+func testDataPlaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 	if !runWebhookTests {
 		t.Skip("skip running webhook tests")
 	}

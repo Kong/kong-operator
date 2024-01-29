@@ -322,7 +322,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					controlPlane := gatewaySubResource.(*operatorv1alpha1.ControlPlane)
 					_ = controlplane.SetDefaults(&controlPlane.Spec.ControlPlaneOptions, map[string]struct{}{}, controlplane.DefaultsArgs{
 						Namespace:                   "test-namespace",
-						DataplaneIngressServiceName: "test-ingress-service",
+						DataPlaneIngressServiceName: "test-ingress-service",
 					})
 					for _, controlplaneSubResource := range tc.controlplaneSubResources {
 						k8sutils.SetOwnerForObject(controlplaneSubResource, gatewaySubResource)

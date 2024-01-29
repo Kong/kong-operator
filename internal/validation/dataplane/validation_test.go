@@ -404,7 +404,7 @@ func TestValidateUpdate(t *testing.T) {
 	testCases := []struct {
 		msg          string
 		dataplane    *operatorv1beta1.DataPlane
-		oldDataplane *operatorv1beta1.DataPlane
+		oldDataPlane *operatorv1beta1.DataPlane
 		hasError     bool
 		err          error
 	}{
@@ -422,7 +422,7 @@ func TestValidateUpdate(t *testing.T) {
 					RolloutStatus: nil,
 				},
 			},
-			oldDataplane: &operatorv1beta1.DataPlane{
+			oldDataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "no-promotion",
 					Namespace: "default",
@@ -458,7 +458,7 @@ func TestValidateUpdate(t *testing.T) {
 					},
 				},
 			},
-			oldDataplane: &operatorv1beta1.DataPlane{
+			oldDataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "promotion-in-progress",
 					Namespace: "default",
@@ -506,7 +506,7 @@ func TestValidateUpdate(t *testing.T) {
 					},
 				},
 			},
-			oldDataplane: &operatorv1beta1.DataPlane{
+			oldDataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "promotion-in-progress",
 					Namespace: "default",
@@ -550,7 +550,7 @@ func TestValidateUpdate(t *testing.T) {
 					},
 				},
 			},
-			oldDataplane: &operatorv1beta1.DataPlane{
+			oldDataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "promotion-in-progress",
 					Namespace: "default",
@@ -595,7 +595,7 @@ func TestValidateUpdate(t *testing.T) {
 					},
 				},
 			},
-			oldDataplane: &operatorv1beta1.DataPlane{
+			oldDataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "promotion-complete",
 					Namespace: "default",
@@ -625,7 +625,7 @@ func TestValidateUpdate(t *testing.T) {
 			v := &Validator{
 				c: b.Build(),
 			}
-			err := v.ValidateUpdate(tc.dataplane, tc.oldDataplane)
+			err := v.ValidateUpdate(tc.dataplane, tc.oldDataPlane)
 			if !tc.hasError {
 				require.NoError(t, err, tc.msg)
 			} else {

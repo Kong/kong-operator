@@ -572,7 +572,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 				Build()
 
 			// generate an existing "preview ingress service" for the test dataplane.
-			existingSvc, err := k8sresources.GenerateNewIngressServiceForDataplane(tc.dataplane,
+			existingSvc, err := k8sresources.GenerateNewIngressServiceForDataPlane(tc.dataplane,
 				func(svc *corev1.Service) {
 					svc.ObjectMeta.Labels[consts.DataPlaneServiceStateLabel] = consts.DataPlaneStateLabelValuePreview
 				})

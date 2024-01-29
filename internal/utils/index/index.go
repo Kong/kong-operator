@@ -10,14 +10,14 @@ import (
 )
 
 const (
-	// DataplaneNameIndex is the key to be used to access the .spec.dataplaneName indexed values
-	DataplaneNameIndex = "dataplane"
+	// DataPlaneNameIndex is the key to be used to access the .spec.dataplaneName indexed values
+	DataPlaneNameIndex = "dataplane"
 )
 
 // IndexDataPlaneNameOnControlPlane indexes the ControlPlane .spec.dataplaneName field
 // on the "dataplane" key.
 func IndexDataPlaneNameOnControlPlane(c cache.Cache) error {
-	return c.IndexField(context.Background(), &operatorv1alpha1.ControlPlane{}, DataplaneNameIndex, func(o client.Object) []string {
+	return c.IndexField(context.Background(), &operatorv1alpha1.ControlPlane{}, DataPlaneNameIndex, func(o client.Object) []string {
 		controlPlane, ok := o.(*operatorv1alpha1.ControlPlane)
 		if !ok {
 			return []string{}

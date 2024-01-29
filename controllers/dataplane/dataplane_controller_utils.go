@@ -56,7 +56,7 @@ func generateDataPlaneImage(dataplane *operatorv1beta1.DataPlane, validators ...
 // DataPlane - Private Functions - Kubernetes Object Labels and Annotations
 // -----------------------------------------------------------------------------
 
-func addAnnotationsForDataplaneIngressService(obj client.Object, dataplane operatorv1beta1.DataPlane) {
+func addAnnotationsForDataPlaneIngressService(obj client.Object, dataplane operatorv1beta1.DataPlane) {
 	specAnnotations := extractDataPlaneIngressServiceAnnotations(&dataplane)
 	if specAnnotations == nil {
 		return
@@ -126,7 +126,7 @@ func ensureDataPlaneReadyStatus(
 	generation int64,
 ) (ctrl.Result, error) {
 	// retrieve a fresh copy of the dataplane to reduce the number of times we have to error on update
-	// due to new changes when the `Dataplane` resource is very active.
+	// due to new changes when the `DataPlane` resource is very active.
 	if err := cl.Get(ctx, client.ObjectKeyFromObject(dataplane), dataplane); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed getting DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
