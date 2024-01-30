@@ -8,15 +8,17 @@ package integration_test
 import (
 	"testing"
 
+	helpers "github.com/kong/gateway-operator/test/helpers"
 	integration "github.com/kong/gateway-operator/test/integration"
 )
 
+var testSuiteToRun = integration.GetTestSuite()
+
 func TestMain(m *testing.M) {
+	testSuiteToRun = helpers.ParseGoTestFlags(TestIntegration, testSuiteToRun)
 	integration.TestMain(m)
 }
 
 func TestIntegration(t *testing.T) {
-	// To run chosen tests, pass their names as an argument instead of
-	// integration.GetDefaultTestSuite().
-	integration.RunTestSuite(t, integration.GetTestSuite())
+	helpers.RunTestSuite(t, testSuiteToRun)
 }

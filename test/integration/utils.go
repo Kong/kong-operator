@@ -11,9 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"reflect"
-	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
@@ -216,10 +213,4 @@ func getVolumeMountsByVolumeName(volumeMounts []corev1.VolumeMount, name string)
 		}
 	}
 	return ret
-}
-
-// get function name returns name of the function passed as an argument.
-func getFunctionName(i interface{}) string {
-	r := strings.Split(runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name(), ".")
-	return r[len(r)-1]
 }

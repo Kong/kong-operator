@@ -17,8 +17,6 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/samber/lo"
-	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -88,23 +86,6 @@ func GetEnv() environments.Environment {
 // by TestMain
 func GetClients() testutils.K8sClients {
 	return clients
-}
-
-// RunTestSuite runs all tests from the test suite.
-// Import and call in a test function. Environment needs to be bootstrapped
-// in TestMain.
-func RunTestSuite(t *testing.T, testSuite []func(*testing.T)) {
-	duplicates := lo.FindDuplicatesBy(testSuite, func(f func(*testing.T)) string {
-		return getFunctionName(f)
-	})
-	duplicatesNames := lo.Map(duplicates, func(f func(*testing.T), _ int) string {
-		return getFunctionName(f)
-	})
-	require.Empty(t, duplicatesNames, "duplicate test functions found in test suite")
-	t.Log("INFO: running test suite")
-	for _, test := range testSuite {
-		t.Run(getFunctionName(test), test)
-	}
 }
 
 // -----------------------------------------------------------------------------
