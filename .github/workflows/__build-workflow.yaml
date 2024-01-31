@@ -302,12 +302,23 @@ jobs:
           username: ${{ inputs.username }}
           password: ${{ secrets.token }}
 
+      # For a release full version is not empty and should be used, because meta.outputs.tags
+      # contains a list of tags.
       - uses: int128/docker-manifest-create-action@v2
+        if: ${{ inputs.tag != '' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
           sources: |
             ${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}-amd64
             ${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}-arm64
+      # When build on main tags contain only a single tag, so it can be used directly.
+      - uses: int128/docker-manifest-create-action@v2
+        if: ${{ inputs.tag == '' }}
+        with:
+          tags: ${{ steps.meta.outputs.tags }}
+          sources: |
+            ${{ steps.meta.outputs.tags }}-amd64
+            ${{ steps.meta.outputs.tags }}-arm64
 
       - name: Set output tag
         if: ${{ inputs.tag != '' }}
