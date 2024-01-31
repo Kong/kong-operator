@@ -5,7 +5,7 @@ metadata:
     alm-examples: '[]'
     capabilities: Seamless Upgrades
     categories: Networking,Integration & Delivery
-    containerImage: docker.io/kong/gateway-operator:1.1.0
+    containerImage: docker.io/kong/gateway-operator:1.2.0-alpha.1
     description: A Kubernetes Operator for the Kong Gateway
     operatorframework.io/suggested-namespace: kong-system
     repository: https://kong.github.io/gateway-operator-docs

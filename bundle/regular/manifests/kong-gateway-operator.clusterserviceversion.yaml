@@ -376,14 +376,14 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: Networking,Integration & Delivery
-    containerImage: docker.io/kong/gateway-operator:1.1.0
+    containerImage: docker.io/kong/gateway-operator:1.2.0-alpha.1
     description: A Kubernetes Operator for the Kong Gateway
     operatorframework.io/suggested-namespace: kong-system
     operators.operatorframework.io/builder: operator-sdk-v1.23.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://kong.github.io/gateway-operator-docs
     support: Kong Inc.
-  name: kong-gateway-operator.v1.1.0
+  name: kong-gateway-operator.v1.2.0-alpha.1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -1082,7 +1082,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.namespace
-                image: docker.io/kong/gateway-operator:1.1.0
+                image: docker.io/kong/gateway-operator:1.2.0-alpha.1
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -1197,4 +1197,4 @@ spec:
   provider:
     name: Kong Inc.
     url: https://konghq.com
-  version: 1.1.0
+  version: 1.2.0-alpha.1

@@ -15,4 +15,4 @@ configMapGenerator:
 images:
 - name: docker.io/kong/gateway-operator
   newName: docker.io/kong/gateway-operator
-  newTag: 1.1.0
+  newTag: 1.2.0-alpha.1
