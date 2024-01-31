@@ -129,3 +129,7 @@ issues:
       linters:
         - revive
       text: "exported: exported"
+    - path: test/e2e
+      linters:
+        - revive
+      text: "exported: exported"

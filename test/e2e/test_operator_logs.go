@@ -24,6 +24,10 @@ import (
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
 )
 
+func init() {
+	addTestsToTestSuite(TestOperatorLogs)
+}
+
 const (
 	// parallelGateways is the total number of gateways that are created and deleted one after the other
 	parallelGateways = 3
@@ -69,7 +73,7 @@ func TestOperatorLogs(t *testing.T) {
 
 	// createEnvironment will queue up environment cleanup if necessary
 	// and dumping diagnostics if the test fails.
-	e := createEnvironment(t, ctx)
+	e := CreateEnvironment(t, ctx)
 	clients, testNamespace, cleaner := e.Clients, e.Namespace, e.Cleaner
 
 	t.Log("finding the Pod for the Gateway Operator")

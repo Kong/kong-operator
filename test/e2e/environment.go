@@ -58,40 +58,50 @@ var (
 )
 
 // -----------------------------------------------------------------------------
-// Testing Consts - paths of kustomization directories and files
+// Test Suite - list of tests to run
 // -----------------------------------------------------------------------------
 
-const (
-	// testsKustomizationPath is a relative path to tests kustomization directory.
-	testsKustomizationPath = "config/tests/"
-)
+var testSuite []func(*testing.T)
+
+// GetTestSuite returns all e2e tests that should be run.
+func GetTestSuite() []func(*testing.T) {
+	return testSuite
+}
+
+func addTestsToTestSuite(tests ...func(*testing.T)) {
+	testSuite = append(testSuite, tests...)
+}
 
 // -----------------------------------------------------------------------------
 // Testing Vars - Testing Environment
 // -----------------------------------------------------------------------------
 
-type testEnvironment struct {
+// TestEnvironment represents a testing environment (K8s cluster) for running isolated e2e test.
+type TestEnvironment struct {
 	Clients     *testutils.K8sClients
 	Namespace   *corev1.Namespace
 	Cleaner     *clusters.Cleaner
 	Environment environments.Environment
 }
 
-type TestEnvOption func(opt *TestEnvOptions)
+// TestEnvOption is a functional option for configuring a test environment.
+type TestEnvOption func(opt *testEnvOptions)
 
-type TestEnvOptions struct {
+type testEnvOptions struct {
 	Image string
 }
 
+// WithOperatorImage allows configuring the operator image to use in the test environment.
 func WithOperatorImage(image string) TestEnvOption {
-	return func(opts *TestEnvOptions) {
+	return func(opts *testEnvOptions) {
 		opts.Image = image
 	}
 }
 
-func createEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption) testEnvironment {
+// CreateEnvironment creates a new independent testing environment for running isolated e2e test.
+func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption) TestEnvironment {
 	t.Helper()
-	var opt TestEnvOptions
+	var opt testEnvOptions
 	for _, o := range opts {
 		o(&opt)
 	}
@@ -135,12 +145,12 @@ func createEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 	if len(opt.Image) == 0 {
 		opt.Image = getOperatorImage(t)
 	}
-	kustomizationDir := prepareKustomizeDir(t, opt.Image)
+	kustomizeDir := PrepareKustomizeDir(t, opt.Image)
 
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		cleanupEnvironment(t, context.Background(), env, kustomizationDir)
+		cleanupEnvironment(t, context.Background(), env, kustomizeDir.Tests())
 	})
 
 	t.Logf("waiting for cluster %s and all addons to become ready", env.Cluster().Name())
@@ -175,10 +185,10 @@ func createEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 	require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
 
 	t.Log("deploying operator CRDs to test cluster via kustomize")
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), "../../config/crd", "--server-side"))
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizeDir.CRD(), "--server-side"))
 
 	t.Log("deploying operator to test cluster via kustomize")
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizationDir, "--server-side"))
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizeDir.Tests(), "--server-side"))
 
 	t.Log("waiting for operator deployment to complete")
 	require.NoError(t, waitForOperatorDeployment(ctx, clients.K8sClient))
@@ -189,7 +199,7 @@ func createEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 
 	t.Log("environment is ready, starting tests")
 
-	return testEnvironment{
+	return TestEnvironment{
 		Clients:     clients,
 		Namespace:   namespace,
 		Cleaner:     cleaner,
@@ -226,9 +236,9 @@ func cleanupEnvironment(t *testing.T, ctx context.Context, env environments.Envi
 // Testing Main - Helper Functions
 // -----------------------------------------------------------------------------
 
-type DeploymentAssertOptions func(*appsv1.Deployment) bool
+type deploymentAssertOptions func(*appsv1.Deployment) bool
 
-func DeploymentAssertConditions(conds ...appsv1.DeploymentCondition) DeploymentAssertOptions {
+func deploymentAssertConditions(conds ...appsv1.DeploymentCondition) deploymentAssertOptions {
 	return func(deployment *appsv1.Deployment) bool {
 		return lo.EveryBy(conds, func(cond appsv1.DeploymentCondition) bool {
 			return lo.ContainsBy(deployment.Status.Conditions, func(c appsv1.DeploymentCondition) bool {
@@ -240,7 +250,7 @@ func DeploymentAssertConditions(conds ...appsv1.DeploymentCondition) DeploymentA
 	}
 }
 
-func waitForOperatorDeployment(ctx context.Context, k8sClient *kubernetes.Clientset, opts ...DeploymentAssertOptions) error {
+func waitForOperatorDeployment(ctx context.Context, k8sClient *kubernetes.Clientset, opts ...deploymentAssertOptions) error {
 outer:
 	for {
 		select {

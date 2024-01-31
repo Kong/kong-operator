@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,20 +11,41 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"sigs.k8s.io/kustomize/kyaml/copyutil"
-	"sigs.k8s.io/kustomize/kyaml/filesys"
+
+	"github.com/kong/gateway-operator/config"
 )
 
-// prepareKustomizeDir prepares a temporary kustomize directory with operator
+//go:embed config/tests/kustomization.yaml
+var testKustomizationFile []byte
+
+// KustomizeDir represents a path to a temporary kustomize directory that has everything from
+// config dir plus the tests/ dir with kustomization.yaml that has the image patch in place.
+type KustomizeDir string
+
+// Tests returns the path to the tests/ dir in the temporary kustomize directory.
+func (kcp KustomizeDir) Tests() string {
+	return filepath.Join(string(kcp), "tests")
+}
+
+// CRD returns the path to the crd/ dir in the temporary kustomize directory.
+func (kcp KustomizeDir) CRD() string {
+	return filepath.Join(string(kcp), "crd")
+}
+
+// ManagerKustomizationYAML returns the path to the file manager/kustomization.yaml
+func (kcp KustomizeDir) ManagerKustomizationYAML() string {
+	return filepath.Join(string(kcp), "manager/kustomization.yaml")
+}
+
+// PrepareKustomizeDir prepares a temporary kustomize directory with operator
 // image patch in place.
 // It takes the provided image and uses it to append an "images:" section to
 // resulting kustomization.yaml.
-// It returns the path of said directory.
-func prepareKustomizeDir(t *testing.T, image string) string {
+// It returns the KustomizeConfigPath that has methods to access particular paths.
+func PrepareKustomizeDir(t *testing.T, image string) KustomizeDir {
 	t.Helper()
 
 	const (
-		configDir                                 = "../../config"
 		gatewayOperatorDefaultImage               = "docker.io/kong/gateway-operator"
 		gatewayOperatorDefaultTag                 = "main"
 		gatewayOperatorImageKustomizationContents = "\n" +
@@ -47,26 +69,25 @@ func prepareKustomizeDir(t *testing.T, image string) string {
 		}
 	}
 
-	fs := filesys.MakeFsOnDisk()
-	tmp, err := filesys.NewTmpConfirmedDir()
+	tmp, cleaner, err := config.DumpKustomizeConfigToTempDir()
 	require.NoError(t, err)
-
-	// Copy the whole contents of config/ dir to temp dir for tests.
-	require.NoError(t, copyutil.CopyDir(fs, configDir, tmp.String()))
+	t.Cleanup(cleaner)
 
 	// Create tests/ dir to contain the tests specific kustomization.
-	testsDir := filepath.Join(tmp.String(), "tests")
-	require.NoError(t, fs.MkdirAll(testsDir))
+	testsDir := filepath.Join(tmp, "tests")
+	require.NoError(t, os.Mkdir(testsDir, 0o700))
 	t.Logf("using temporary directory for tests' kustomization.yaml: %s", testsDir)
 
-	// Copy tests dir (containing kustomization.yaml) to tmp tests/ dir.
-	require.NoError(t, copyutil.CopyDir(fs, testsKustomizationPath, testsDir))
+	// Put tests config/tests/kustomization.yaml to tmp tests/ dir.
+	kustomizationTestFilePath := filepath.Join(testsDir, "kustomization.yaml")
+	require.NoError(t, os.WriteFile(kustomizationTestFilePath, testKustomizationFile, 0o600))
 
 	// Write the image patch to tests/kustomization.yaml in temp dir.
 	// NOTE: This could probably be done via parsed structs somehow instead of
 	// appending the patch verbatim to the file.
 	imagesPatch := fmt.Sprintf(gatewayOperatorImageKustomizationContents, imageName, imageTag)
-	f, err := os.OpenFile(fmt.Sprintf("%s%c%s", testsDir, filepath.Separator, "kustomization.yaml"),
+	f, err := os.OpenFile(
+		kustomizationTestFilePath,
 		os.O_APPEND|os.O_WRONLY|os.O_CREATE,
 		0o600,
 	)
@@ -74,7 +95,7 @@ func prepareKustomizeDir(t *testing.T, image string) string {
 	_, err = f.WriteString(imagesPatch)
 	require.NoError(t, err)
 
-	return testsDir
+	return KustomizeDir(tmp)
 }
 
 // getOperatorImage gets the operator image to use in tests based on the image
@@ -109,40 +130,4 @@ func extractImageNameAndTag(fullname string) (name, tag string, err error) {
 	tag = fullname[lastColon+1:]
 
 	return name, tag, nil
-}
-
-func Test_extractImageNameAndTag(t *testing.T) {
-	tests := []struct {
-		name     string
-		fullName string
-		wantName string
-		wantTag  string
-		wantErr  bool
-	}{
-		{
-			name:     "gcr.io/kong/gateway-operator:v1.0",
-			fullName: "gcr.io/kong/gateway-operator:v1.0",
-			wantName: "gcr.io/kong/gateway-operator",
-			wantTag:  "v1.0",
-		},
-		{
-			name:     "localhost:5000/kong/gateway-operator:v1.0",
-			fullName: "localhost:5000/kong/gateway-operator:v1.0",
-			wantName: "localhost:5000/kong/gateway-operator",
-			wantTag:  "v1.0",
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			gotName, gotTag, err := extractImageNameAndTag(tt.fullName)
-			if tt.wantErr {
-				require.NoError(t, err)
-				return
-			}
-
-			require.Equal(t, tt.wantName, gotName)
-			require.Equal(t, tt.wantTag, gotTag)
-		})
-	}
 }

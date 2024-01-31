@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
@@ -15,17 +14,16 @@ import (
 	ktypes "sigs.k8s.io/kustomize/api/types"
 )
 
+func init() {
+	addTestsToTestSuite(TestDeployAndUpgradeFromLatestTagToOverride)
+}
+
 type upgradeTestParams struct {
 	// fromImage is the image to start the upgrade test with.
 	fromImage string
 	// toImage is the image to upgrade to in the upgrade test.
 	toImage string
 }
-
-const (
-	kustomizeManagerKustomizationPath     = "../../config/manager"
-	kustomizeManagerKustomizationFilePath = kustomizeManagerKustomizationPath + string(filepath.Separator) + "kustomization.yaml"
-)
 
 // TestDeployAndUpgradeFromLatestTagToOverride tests an upgrade path from latest
 // released tag to an override version provided by environment variables.
@@ -51,6 +49,7 @@ func TestDeployAndUpgradeFromLatestTagToOverride(t *testing.T) {
 
 	// Read the last tag that was released, that's present in manager's kustomization.yaml.
 	var k ktypes.Kustomization
+	kustomizeManagerKustomizationFilePath := PrepareKustomizeDir(t, image).ManagerKustomizationYAML()
 	kbytes, err := os.ReadFile(kustomizeManagerKustomizationFilePath)
 	require.NoError(t, err)
 	require.NoError(t, k.Unmarshal(kbytes))
@@ -69,14 +68,14 @@ func testManifestsUpgrade(
 	ctx context.Context,
 	testParams upgradeTestParams,
 ) {
-	e := createEnvironment(t, ctx, WithOperatorImage(testParams.fromImage))
+	e := CreateEnvironment(t, ctx, WithOperatorImage(testParams.fromImage))
 
-	kustomizationDir := prepareKustomizeDir(t, testParams.toImage)
+	kustomizationDir := PrepareKustomizeDir(t, testParams.toImage)
 	t.Logf("deploying operator %q to test cluster %q via kustomize", testParams.toImage, e.Environment.Name())
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, e.Environment.Cluster(), kustomizationDir, "--server-side", "-v5"))
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, e.Environment.Cluster(), kustomizationDir.Tests(), "--server-side", "-v5"))
 	t.Log("waiting for operator deployment to complete")
 	require.NoError(t, waitForOperatorDeployment(ctx, e.Clients.K8sClient,
-		DeploymentAssertConditions(
+		deploymentAssertConditions(
 			appsv1.DeploymentCondition{
 				Reason: "NewReplicaSetAvailable",
 				Status: "True",

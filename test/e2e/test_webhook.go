@@ -15,13 +15,17 @@ import (
 	"github.com/kong/gateway-operator/internal/consts"
 )
 
+func init() {
+	addTestsToTestSuite(TestDataPlaneValidatingWebhook)
+}
+
 func TestDataPlaneValidatingWebhook(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// createEnvironment will queue up environment cleanup if necessary
 	// and dumping diagnostics if the test fails.
-	e := createEnvironment(t, ctx)
+	e := CreateEnvironment(t, ctx)
 	clients, testNamespace := e.Clients, e.Namespace
 
 	testCases := []struct {
