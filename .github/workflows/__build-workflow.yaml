@@ -302,12 +302,12 @@ jobs:
           username: ${{ inputs.username }}
           password: ${{ secrets.token }}
 
-      - uses: int128/docker-manifest-create-action@v1
+      - uses: int128/docker-manifest-create-action@v2
         with:
           tags: ${{ steps.meta.outputs.tags }}
           sources: |
-            ${{ steps.meta.outputs.tags }}-amd64
-            ${{ steps.meta.outputs.tags }}-arm64
+            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}-amd64
+            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}-arm64
 
       - name: Set output tag
         if: ${{ inputs.tag != '' }}
