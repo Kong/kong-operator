@@ -25,3 +25,6 @@ TODO
 .LSOverride
 go.work
 go.work.sum
+
+# Conformance tests report
+kong-gateway-operator.yaml

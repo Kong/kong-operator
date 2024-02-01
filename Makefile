@@ -3,6 +3,7 @@
 # ------------------------------------------------------------------------------
 
 REPO ?= github.com/kong/gateway-operator
+REPO_NAME ?= $(echo ${REPO} | cut -d / -f 3)
 REPO_INFO ?= $(shell git config --get remote.origin.url)
 TAG ?= $(shell git describe --tags)
 
@@ -453,6 +454,9 @@ _test.conformance: gotestsum
 .PHONY: test.conformance
 test.conformance:
 	@$(MAKE) _test.conformance \
+		KGO_PROJECT_URL=$(REPO) \
+		KGO_PROJECT_NAME=$(REPO_NAME) \
+		KGO_RELEASE=$(TAG)
 		GOTESTFLAGS="$(GOTESTFLAGS)"
 
 # ------------------------------------------------------------------------------

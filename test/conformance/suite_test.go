@@ -92,7 +92,7 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 
 	fmt.Println("INFO: deploying CRDs to test cluster")
-	exitOnErr(testutils.DeployCRDs(ctx, path.Join(configPath, "/crd") clients.OperatorClient, env))
+	exitOnErr(testutils.DeployCRDs(ctx, path.Join(configPath, "/crd"), clients.OperatorClient, env))
 
 	fmt.Println("INFO: starting the operator's controller manager")
 	// startControllerManager will spawn the controller manager in a separate
