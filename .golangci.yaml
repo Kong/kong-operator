@@ -5,7 +5,6 @@ run:
   - config/
   - third_party/
   build-tags:
-  - integration_tests
   - e2e_tests
 linters:
   enable:

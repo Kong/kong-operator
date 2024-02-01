@@ -1,5 +1,3 @@
-//go:build integration_tests || integration_tests_bluegreen
-
 package integration
 
 import (

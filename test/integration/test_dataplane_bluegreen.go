@@ -1,5 +1,3 @@
-//go:build integration_tests_bluegreen
-
 package integration
 
 import (
@@ -32,7 +30,7 @@ func init() {
 	addTestsToTestSuite(
 		TestDataPlaneBlueGreenRollout,
 		TestDataPlaneBlueGreenHorizontalScaling,
-		TestDataPlane_ResourcesNotDeletedUntilOwnerIsRemoved,
+		TestDataPlaneBlueGreen_ResourcesNotDeletedUntilOwnerIsRemoved,
 	)
 }
 
@@ -340,7 +338,7 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 		waitTime, tickTime)
 }
 
-func TestDataPlane_ResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T) {
+func TestDataPlaneBlueGreen_ResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T) {
 	const (
 		waitTime = time.Minute
 		tickTime = 100 * time.Millisecond
@@ -502,14 +500,6 @@ func patchDataPlaneImage(ctx context.Context, t *testing.T, dataplane *operatorv
 	oldDataPlane := dataplane.DeepCopy()
 	require.Len(t, dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers, 1)
 	dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Image = image
-	require.NoError(t, cl.Patch(ctx, dataplane, client.MergeFrom(oldDataPlane)))
-}
-
-func patchDataPlaneHorizontalScaling(ctx context.Context, t *testing.T, dataplane *operatorv1beta1.DataPlane, cl client.Client, h *operatorv1beta1.HorizontalScaling) {
-	oldDataPlane := dataplane.DeepCopy()
-	dataplane.Spec.Deployment.Scaling = &operatorv1beta1.Scaling{
-		HorizontalScaling: h,
-	}
 	require.NoError(t, cl.Patch(ctx, dataplane, client.MergeFrom(oldDataPlane)))
 }
 

@@ -413,17 +413,15 @@ _test.integration: gotestsum
 .PHONY: test.integration
 test.integration:
 	@$(MAKE) _test.integration \
-		GOTESTFLAGS="$(GOTESTFLAGS)" \
-		COVERPROFILE="coverage.integration.out" \
-		GOFLAGS="-tags=integration_tests"
+		GOTESTFLAGS="-skip=BlueGreen $(GOTESTFLAGS)" \
+		COVERPROFILE="coverage.integration.out"
 
 .PHONY: test.integration_bluegreen
 test.integration_bluegreen:
 	@$(MAKE) _test.integration \
 		GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER="true" \
-		GOTESTFLAGS="$(GOTESTFLAGS)" \
+		GOTESTFLAGS="-run=BlueGreen $(GOTESTFLAGS)" \
 		COVERPROFILE="coverage.integration-bluegreen.out" \
-		GOFLAGS="-tags=integration_tests_bluegreen"
 
 .PHONY: _test.e2e
 _test.e2e: gotestsum
