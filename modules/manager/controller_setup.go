@@ -23,6 +23,7 @@ import (
 	"github.com/kong/gateway-operator/controllers/dataplane"
 	"github.com/kong/gateway-operator/controllers/gateway"
 	"github.com/kong/gateway-operator/controllers/gatewayclass"
+	"github.com/kong/gateway-operator/controllers/specialized"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	dataplanevalidator "github.com/kong/gateway-operator/internal/validation/dataplane"
 )
@@ -201,6 +202,15 @@ func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 				mgr.GetClient(),
 				c.DevelopmentMode,
 			),
+		},
+		// AIGateway Controller
+		{
+			Enabled: c.AIGatewayControllerEnabled,
+			Controller: &specialized.AIGatewayReconciler{
+				Client:          mgr.GetClient(),
+				Scheme:          mgr.GetScheme(),
+				DevelopmentMode: c.DevelopmentMode,
+			},
 		},
 	}
 

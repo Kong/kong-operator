@@ -1,0 +1,27 @@
+# permissions for end users to view aigateways.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: aigateway-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: kong-gateway-operator
+    app.kubernetes.io/part-of: kong-gateway-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: aigateway-viewer-role
+rules:
+- apiGroups:
+  - gateway-operator.konghq.com
+  resources:
+  - aigateways
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway-operator.konghq.com
+  resources:
+  - aigateways/status
+  verbs:
+  - get

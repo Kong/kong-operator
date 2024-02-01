@@ -16,6 +16,11 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
+      - description: AIGateway is the Schema for the aigateways API
+        displayName: AIGateway
+        kind: AIGateway
+        name: aigateways.gateway-operator.konghq.com
+        version: v1alpha1
       - description: ControlPlane is the Schema for the controlplanes API
         displayName: Control Plane
         kind: ControlPlane

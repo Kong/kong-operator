@@ -31,10 +31,21 @@ func New() *CLI {
 	flagSet.StringVar(&cfg.ClusterCASecretName, "cluster-ca-secret", "kong-operator-ca", "name of the Secret containing the cluster CA certificate")
 	flagSet.StringVar(&deferCfg.ClusterCASecretNamespace, "cluster-ca-secret-namespace", "", "name of the namespace for Secret containing the cluster CA certificate")
 
+	// controllers for standard APIs and features
 	flagSet.BoolVar(&cfg.GatewayControllerEnabled, "enable-controller-gateway", false, "Enable the Gateway controller.")
 	flagSet.BoolVar(&cfg.ControlPlaneControllerEnabled, "enable-controller-controlplane", false, "Enable the ControlPlane controller.")
 	flagSet.BoolVar(&cfg.DataPlaneControllerEnabled, "enable-controller-dataplane", true, "Enable the DataPlane controller.")
 	flagSet.BoolVar(&cfg.DataPlaneBlueGreenControllerEnabled, "enable-controller-dataplane-bluegreen", true, "Enable the DataPlane BlueGreen controller. Mutually exclusive with DataPlane controller.")
+
+	// controllers for specialized APIs and features
+	//
+	// TODO: code for this controller exists, but it's currently only scaffolding.
+	// We will add the reconciliation logic and then enable the flag as part of
+	// https://github.com/Kong/gateway-operator/issues/1368
+	//
+	// flagSet.BoolVar(&cfg.AIGatewayControllerEnabled, "enable-controller-aigateway", false, "Enable the AIGateway controller.")
+
+	// webhook and validation options
 	flagSet.BoolVar(&deferCfg.ValidatingWebhookEnabled, "enable-validating-webhook", true, "Enable the validating webhook.")
 
 	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information")

@@ -43,4 +43,12 @@ resources:
   kind: Gateway
   path: github.com/kubernetes-sigs/gateway-api/apis/v1beta1
   version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  group: gateway-operator.konghq.com
+  kind: AIGateway
+  path: github.com/kong/gateway-operator/apis/v1alpha1
+  version: v1alpha1
 version: "3"

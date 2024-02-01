@@ -6,6 +6,21 @@ metadata:
       [
         {
           "apiVersion": "gateway-operator.konghq.com/v1alpha1",
+          "kind": "AIGateway",
+          "metadata": {
+            "labels": {
+              "app.kubernetes.io/created-by": "kong-gateway-operator",
+              "app.kubernetes.io/instance": "aigateway-sample",
+              "app.kubernetes.io/managed-by": "kustomize",
+              "app.kubernetes.io/name": "aigateway",
+              "app.kubernetes.io/part-of": "kong-gateway-operator"
+            },
+            "name": "aigateway-sample"
+          },
+          "spec": null
+        },
+        {
+          "apiVersion": "gateway-operator.konghq.com/v1alpha1",
           "kind": "ControlPlane",
           "metadata": {
             "name": "controlplane-example"
@@ -389,6 +404,11 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
+    - description: AIGateway is the Schema for the aigateways API
+      displayName: AIGateway
+      kind: AIGateway
+      name: aigateways.gateway-operator.konghq.com
+      version: v1alpha1
     - description: ControlPlane is the Schema for the controlplanes API
       displayName: Control Plane
       kind: ControlPlane
@@ -747,6 +767,32 @@ spec:
           - get
           - list
           - watch
+        - apiGroups:
+          - gateway-operator.konghq.com
+          resources:
+          - aigateways
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - gateway-operator.konghq.com
+          resources:
+          - aigateways/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - gateway-operator.konghq.com
+          resources:
+          - aigateways/status
+          verbs:
+          - get
+          - patch
+          - update
         - apiGroups:
           - gateway-operator.konghq.com
           resources:

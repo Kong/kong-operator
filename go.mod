@@ -13,6 +13,8 @@ require (
 	github.com/kong/kubernetes-testing-framework v0.44.0
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
+	github.com/onsi/ginkgo/v2 v2.14.0
+	github.com/onsi/gomega v1.30.0
 	github.com/samber/lo v1.39.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
@@ -31,6 +33,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-task/slim-sprig v2.20.0+incompatible // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
+	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -70,7 +73,6 @@ require (
 	github.com/jmoiron/sqlx v1.3.3 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 	github.com/puzpuzpuz/xsync/v2 v2.5.1 // indirect
-	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/weppos/publicsuffix-go v0.15.1-0.20210511084619-b1f36a2d6c0b // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	github.com/zmap/zcrypto v0.0.0-20210511125630-18f1e0152cfc // indirect
@@ -84,7 +86,7 @@ require (
 	google.golang.org/grpc v1.60.1 // indirect
 	sigs.k8s.io/kind v0.20.0 // indirect
 	sigs.k8s.io/kustomize/api v0.16.0
-	sigs.k8s.io/kustomize/kyaml v0.16.0
+	sigs.k8s.io/kustomize/kyaml v0.16.0 // indirect
 )
 
 require (

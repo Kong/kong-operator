@@ -1,0 +1,12 @@
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: AIGateway
+metadata:
+  labels:
+    app.kubernetes.io/name: aigateway
+    app.kubernetes.io/instance: aigateway-sample
+    app.kubernetes.io/part-of: kong-gateway-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kong-gateway-operator
+  name: aigateway-sample
+spec:
+  # TODO(user): Add fields here

@@ -314,6 +314,32 @@ rules:
 - apiGroups:
   - gateway-operator.konghq.com
   resources:
+  - aigateways
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - gateway-operator.konghq.com
+  resources:
+  - aigateways/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - gateway-operator.konghq.com
+  resources:
+  - aigateways/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - gateway-operator.konghq.com
+  resources:
   - controlplanes
   verbs:
   - create

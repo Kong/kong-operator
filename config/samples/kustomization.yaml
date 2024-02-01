@@ -6,4 +6,5 @@ resources:
 - gateway.yaml
 - gatewayconfiguration.yaml
 - controlplane.yaml
+- aigateway.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

@@ -1,0 +1,31 @@
+# permissions for end users to edit aigateways.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: aigateway-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: kong-gateway-operator
+    app.kubernetes.io/part-of: kong-gateway-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: aigateway-editor-role
+rules:
+- apiGroups:
+  - gateway-operator.konghq.com
+  resources:
+  - aigateways
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - gateway-operator.konghq.com
+  resources:
+  - aigateways/status
+  verbs:
+  - get

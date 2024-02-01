@@ -91,11 +91,17 @@ type Config struct {
 	ClusterCASecretNamespace string
 	LoggerOpts               zap.Options
 
+	// controllers for standard APIs and features
 	GatewayControllerEnabled            bool
 	ControlPlaneControllerEnabled       bool
 	DataPlaneControllerEnabled          bool
 	DataPlaneBlueGreenControllerEnabled bool
-	ValidatingWebhookEnabled            bool
+
+	// controllers for speciality APIs and features
+	AIGatewayControllerEnabled bool
+
+	// webhook and validation options
+	ValidatingWebhookEnabled bool
 
 	// StartedCh can be used as a signal to notify the caller when the manager has been started.
 	// Specifically, this channel gets closed when manager.Start() is called.
