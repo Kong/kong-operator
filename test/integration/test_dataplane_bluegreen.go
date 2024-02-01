@@ -40,7 +40,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 		tickTime = 100 * time.Millisecond
 	)
 
-	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying dataplane resource with 1 replica")
 	dataplaneName := types.NamespacedName{
@@ -55,40 +55,40 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 		Spec: testBlueGreenDataPlaneSpec(),
 	}
 
-	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 
-	dataplane, err := dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
+	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
 	t.Log("verifying dataplane gets marked ready")
-	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, clients.OperatorClient), waitTime, tickTime)
+	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), waitTime, tickTime)
 
 	t.Run("before patching", func(t *testing.T) {
 		t.Log("verifying preview deployment managed by the dataplane is present")
-		require.Eventually(t, testutils.DataPlaneHasDeployment(t, ctx, dataplaneName, nil, clients, dataplanePreviewDeploymentLabels()), waitTime, tickTime)
+		require.Eventually(t, testutils.DataPlaneHasDeployment(t, GetCtx(), dataplaneName, nil, clients, dataplanePreviewDeploymentLabels()), waitTime, tickTime)
 
 		t.Run("preview Admin API service", func(t *testing.T) {
 			t.Log("verifying preview admin service managed by the dataplane is present")
-			require.Eventually(t, testutils.DataPlaneHasService(t, ctx, dataplaneName, clients, dataplaneAdminPreviewServiceLabels()), waitTime, tickTime)
+			require.Eventually(t, testutils.DataPlaneHasService(t, GetCtx(), dataplaneName, clients, dataplaneAdminPreviewServiceLabels()), waitTime, tickTime)
 
 			t.Log("verifying that preview admin service has no active endpoints by default")
-			adminServices := testutils.MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, dataplaneAdminPreviewServiceLabels())
+			adminServices := testutils.MustListDataPlaneServices(t, GetCtx(), dataplane, GetClients().MgrClient, dataplaneAdminPreviewServiceLabels())
 			require.Len(t, adminServices, 1)
 			adminSvcNN := client.ObjectKeyFromObject(&adminServices[0])
-			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, ctx, adminSvcNN, clients, 0), waitTime, tickTime,
+			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, GetCtx(), adminSvcNN, clients, 0), waitTime, tickTime,
 				"with default rollout resource plan for DataPlane, the preview Admin Service shouldn't get an active endpoint")
 		})
 
 		t.Run("preview ingress service", func(t *testing.T) {
 			t.Log("verifying preview ingress service managed by the dataplane is present")
-			require.Eventually(t, testutils.DataPlaneHasService(t, ctx, dataplaneName, clients, dataplaneIngressPreviewServiceLabels()), waitTime, tickTime)
+			require.Eventually(t, testutils.DataPlaneHasService(t, GetCtx(), dataplaneName, clients, dataplaneIngressPreviewServiceLabels()), waitTime, tickTime)
 
 			t.Log("verifying that preview ingress service has no active endpoints by default")
-			ingressServices := testutils.MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, dataplaneIngressPreviewServiceLabels())
+			ingressServices := testutils.MustListDataPlaneServices(t, GetCtx(), dataplane, GetClients().MgrClient, dataplaneIngressPreviewServiceLabels())
 			require.Len(t, ingressServices, 1)
 			ingressSvcNN := client.ObjectKeyFromObject(&ingressServices[0])
-			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, ctx, ingressSvcNN, clients, 0), waitTime, tickTime,
+			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, GetCtx(), ingressSvcNN, clients, 0), waitTime, tickTime,
 				"with default rollout resource plan for DataPlane, the preview ingress Service shouldn't get an active endpoint")
 		})
 	})
@@ -96,47 +96,47 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 	const dataplaneImageToPatch = "kong:3.1"
 
 	t.Run("after patching", func(t *testing.T) {
-		patchDataPlaneImage(ctx, t, dataplane, clients.MgrClient, dataplaneImageToPatch)
+		patchDataPlaneImage(GetCtx(), t, dataplane, GetClients().MgrClient, dataplaneImageToPatch)
 
 		t.Log("verifying preview deployment managed by the dataplane is present and has AvailableReplicas")
-		require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, dataplanePreviewDeploymentLabels(), clients), waitTime, tickTime)
+		require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, &appsv1.Deployment{}, dataplanePreviewDeploymentLabels(), clients), waitTime, tickTime)
 
 		t.Run("preview Admin API service", func(t *testing.T) {
 			t.Log("verifying preview admin service managed by the dataplane has an active endpoint")
-			require.Eventually(t, testutils.DataPlaneHasService(t, ctx, dataplaneName, clients, dataplaneAdminPreviewServiceLabels()), waitTime, tickTime)
+			require.Eventually(t, testutils.DataPlaneHasService(t, GetCtx(), dataplaneName, clients, dataplaneAdminPreviewServiceLabels()), waitTime, tickTime)
 
 			t.Log("verifying that preview admin service has an active endpoint")
-			adminServices := testutils.MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, dataplaneAdminPreviewServiceLabels())
+			adminServices := testutils.MustListDataPlaneServices(t, GetCtx(), dataplane, GetClients().MgrClient, dataplaneAdminPreviewServiceLabels())
 			require.Len(t, adminServices, 1)
 			adminSvcNN := client.ObjectKeyFromObject(&adminServices[0])
-			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, ctx, adminSvcNN, clients, 1), waitTime, tickTime,
+			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, GetCtx(), adminSvcNN, clients, 1), waitTime, tickTime,
 				"with default rollout resource plan for DataPlane, the preview Admin Service should get an active endpoint")
 		})
 
 		t.Run("preview ingress service", func(t *testing.T) {
 			t.Log("verifying preview ingress service managed by the dataplane has an active endpoint")
-			require.Eventually(t, testutils.DataPlaneHasService(t, ctx, dataplaneName, clients, dataplaneIngressPreviewServiceLabels()), waitTime, tickTime)
+			require.Eventually(t, testutils.DataPlaneHasService(t, GetCtx(), dataplaneName, clients, dataplaneIngressPreviewServiceLabels()), waitTime, tickTime)
 
 			t.Log("verifying that preview ingress service has an active endpoint")
-			ingressServices := testutils.MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, dataplaneIngressPreviewServiceLabels())
+			ingressServices := testutils.MustListDataPlaneServices(t, GetCtx(), dataplane, GetClients().MgrClient, dataplaneIngressPreviewServiceLabels())
 			require.Len(t, ingressServices, 1)
 			ingressSvcNN := client.ObjectKeyFromObject(&ingressServices[0])
-			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, ctx, ingressSvcNN, clients, 1), waitTime, tickTime,
+			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, GetCtx(), ingressSvcNN, clients, 1), waitTime, tickTime,
 				"with default rollout resource plan for DataPlane, the preview ingress Service should get an active endpoint")
 		})
 
 		t.Run("live ingress service", func(t *testing.T) {
 			t.Log("verifying that live ingress service managed by the dataplane is available")
 			var liveIngressService corev1.Service
-			require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &liveIngressService, clients, dataplaneIngressLiveServiceLabels()), waitTime, tickTime)
+			require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, &liveIngressService, clients, dataplaneIngressLiveServiceLabels()), waitTime, tickTime)
 
-			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, ctx, client.ObjectKeyFromObject(&liveIngressService), clients, 1), waitTime, tickTime,
+			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, GetCtx(), client.ObjectKeyFromObject(&liveIngressService), clients, 1), waitTime, tickTime,
 				"live ingress Service should always have an active endpoint")
 		})
 
 		t.Run("live deployment", func(t *testing.T) {
 			t.Log("verifying live deployment managed by the dataplane is present and has an available replica")
-			require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, dataplaneLiveDeploymentLabels(), clients), waitTime, tickTime)
+			require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, &appsv1.Deployment{}, dataplaneLiveDeploymentLabels(), clients), waitTime, tickTime)
 		})
 	})
 
@@ -160,14 +160,14 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 			Status: metav1.ConditionFalse,
 		})
 		require.Eventually(t,
-			testutils.DataPlanePredicate(t, ctx, dataplaneName, isAwaitingPromotion, clients.OperatorClient),
+			testutils.DataPlanePredicate(t, GetCtx(), dataplaneName, isAwaitingPromotion, GetClients().OperatorClient),
 			waitTime, tickTime,
 		)
 	})
 
 	t.Run("after promotion", func(t *testing.T) {
 		t.Logf("patching DataPlane with promotion triggering annotation %s=%s", operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey, operatorv1beta1.DataPlanePromoteWhenReadyAnnotationTrue)
-		patchDataPlaneAnnotations(t, dataplane, clients.MgrClient, map[string]string{
+		patchDataPlaneAnnotations(t, dataplane, GetClients().MgrClient, map[string]string{
 			operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey: operatorv1beta1.DataPlanePromoteWhenReadyAnnotationTrue,
 		})
 
@@ -175,7 +175,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 			t.Log("verifying live deployment managed by the dataplane is present and has an available replica using the patched proxy image")
 
 			require.Eventually(t,
-				testutils.DataPlaneHasDeployment(t, ctx, dataplaneName, nil, clients, dataplaneLiveDeploymentLabels(),
+				testutils.DataPlaneHasDeployment(t, GetCtx(), dataplaneName, nil, clients, dataplaneLiveDeploymentLabels(),
 					func(d appsv1.Deployment) bool {
 						proxyContainer := k8sutils.GetPodContainerByName(&d.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 						return proxyContainer != nil && dataplaneImageToPatch == proxyContainer.Image
@@ -187,21 +187,21 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 		t.Run("live ingress service", func(t *testing.T) {
 			t.Log("verifying that live ingress service managed by the dataplane still has active endpoints")
 			var liveIngressService corev1.Service
-			require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &liveIngressService, clients, dataplaneIngressLiveServiceLabels()), waitTime, tickTime)
+			require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, &liveIngressService, clients, dataplaneIngressLiveServiceLabels()), waitTime, tickTime)
 			require.NotNil(t, liveIngressService)
 
-			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, ctx, client.ObjectKeyFromObject(&liveIngressService), clients, 1), waitTime, tickTime,
+			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, GetCtx(), client.ObjectKeyFromObject(&liveIngressService), clients, 1), waitTime, tickTime,
 				"live ingress Service should always have an active endpoint")
 		})
 
 		t.Run(fmt.Sprintf("%s annotation is cleared from DataPlane", operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey), func(t *testing.T) {
 			require.Eventually(t,
-				testutils.DataPlanePredicate(t, ctx, dataplaneName,
+				testutils.DataPlanePredicate(t, GetCtx(), dataplaneName,
 					func(dataplane *operatorv1beta1.DataPlane) bool {
 						_, ok := dataplane.Annotations[operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey]
 						return !ok
 					},
-					clients.OperatorClient,
+					GetClients().OperatorClient,
 				),
 				waitTime, tickTime,
 			)
@@ -212,14 +212,14 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 		t.Logf("patching DataPlane by removing the rollout strategy")
 		old := dataplane.DeepCopy()
 		dataplane.Spec.Deployment.Rollout = nil
-		require.NoError(t, clients.MgrClient.Patch(ctx, dataplane, client.MergeFrom(old)))
+		require.NoError(t, GetClients().MgrClient.Patch(GetCtx(), dataplane, client.MergeFrom(old)))
 
 		t.Run("preview deployment", func(t *testing.T) {
 			t.Log("verifying that preview deployment managed by the dataplane is removed")
 
 			require.Eventually(t,
 				testutils.Not(
-					testutils.DataPlaneHasDeployment(t, ctx, dataplaneName, nil, clients, dataplanePreviewDeploymentLabels())),
+					testutils.DataPlaneHasDeployment(t, GetCtx(), dataplaneName, nil, clients, dataplanePreviewDeploymentLabels())),
 				waitTime, tickTime)
 		})
 
@@ -228,15 +228,15 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 			var previewIngressService corev1.Service
 			require.Eventually(t,
 				testutils.Not(
-					testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &previewIngressService, clients, dataplaneIngressPreviewServiceLabels())),
+					testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, &previewIngressService, clients, dataplaneIngressPreviewServiceLabels())),
 				waitTime, tickTime)
 		})
 
 		t.Run("dataplane status rollout should be cleared", func(t *testing.T) {
 			require.Eventually(t,
-				testutils.DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
+				testutils.DataPlanePredicate(t, GetCtx(), dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 					return dataplane.Status.RolloutStatus == nil
-				}, clients.OperatorClient),
+				}, GetClients().OperatorClient),
 				waitTime, tickTime)
 		})
 	})
@@ -248,7 +248,7 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 		tickTime = 100 * time.Millisecond
 	)
 
-	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying a dataplane")
 	dataplaneName := types.NamespacedName{
@@ -282,23 +282,23 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 		},
 	}
 
-	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 
-	dataplane, err := dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
+	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
 	t.Logf("verifying DataPlane %s gets marked ready", dataplane.Name)
-	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, clients.OperatorClient), waitTime, tickTime)
+	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), waitTime, tickTime)
 
 	const dataplaneImageToPatch = "kong:3.2"
-	patchDataPlaneImage(ctx, t, dataplane, clients.MgrClient, dataplaneImageToPatch)
+	patchDataPlaneImage(GetCtx(), t, dataplane, GetClients().MgrClient, dataplaneImageToPatch)
 	var previewDeployment appsv1.Deployment
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &previewDeployment, dataplanePreviewDeploymentLabels(), clients), waitTime, tickTime)
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, &previewDeployment, dataplanePreviewDeploymentLabels(), clients), waitTime, tickTime)
 
 	t.Logf("checking if DataPlane %s has an HPA", dataplane.Name)
 	var hpa autoscalingv2.HorizontalPodAutoscaler
-	require.Eventually(t, testutils.DataPlaneHasHPA(t, ctx, dataplane, &hpa, clients),
+	require.Eventually(t, testutils.DataPlaneHasHPA(t, GetCtx(), dataplane, &hpa, clients),
 		waitTime, tickTime, "HPA should be created for DataPlane %s", dataplane.Name)
 	require.NotNil(t, hpa)
 	require.NotNil(t, hpa.Spec.MinReplicas)
@@ -310,14 +310,14 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 	assert.Equal(t, int32(20), *hpa.Spec.Metrics[0].Resource.Target.AverageUtilization)
 
 	t.Logf("checking if the HPA %s is pointing to the correct Deployment", hpa.Name)
-	require.Eventually(t, testutils.HPAPredicate(t, ctx, client.ObjectKeyFromObject(&hpa),
+	require.Eventually(t, testutils.HPAPredicate(t, GetCtx(), client.ObjectKeyFromObject(&hpa),
 		func(hpa *autoscalingv2.HorizontalPodAutoscaler) bool {
 			return hpa.Spec.ScaleTargetRef.Name != previewDeployment.Name
-		}, clients.MgrClient),
+		}, GetClients().MgrClient),
 		waitTime, tickTime, "HPA should not target the preview deployment")
 
 	var deployment2 appsv1.Deployment
-	require.Eventually(t, testutils.DataPlaneHasDeployment(t, ctx, dataplaneName, &deployment2, clients,
+	require.Eventually(t, testutils.DataPlaneHasDeployment(t, GetCtx(), dataplaneName, &deployment2, clients,
 		client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
@@ -327,14 +327,14 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 		waitTime, tickTime, "HPA should target the live deployment")
 
 	t.Logf("patching DataPlane with promotion triggering annotation %s=%s", operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey, operatorv1beta1.DataPlanePromoteWhenReadyAnnotationTrue)
-	patchDataPlaneAnnotations(t, dataplane, clients.MgrClient, map[string]string{
+	patchDataPlaneAnnotations(t, dataplane, GetClients().MgrClient, map[string]string{
 		operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey: operatorv1beta1.DataPlanePromoteWhenReadyAnnotationTrue,
 	})
 	t.Logf("HPA %s should now point to just promoted %s Deployment", hpa.Name, previewDeployment.Name)
-	require.Eventually(t, testutils.HPAPredicate(t, ctx, client.ObjectKeyFromObject(&hpa),
+	require.Eventually(t, testutils.HPAPredicate(t, GetCtx(), client.ObjectKeyFromObject(&hpa),
 		func(hpa *autoscalingv2.HorizontalPodAutoscaler) bool {
 			return hpa.Spec.ScaleTargetRef.Name == previewDeployment.Name
-		}, clients.MgrClient),
+		}, GetClients().MgrClient),
 		waitTime, tickTime)
 }
 
@@ -344,7 +344,7 @@ func TestDataPlaneBlueGreen_ResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T)
 		tickTime = 100 * time.Millisecond
 	)
 
-	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying dataplane")
 	dataplane := &operatorv1beta1.DataPlane{
@@ -356,8 +356,8 @@ func TestDataPlaneBlueGreen_ResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T)
 	}
 	dataplaneName := client.ObjectKeyFromObject(dataplane)
 
-	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
-	dataplane, err := dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
+	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
@@ -368,21 +368,21 @@ func TestDataPlaneBlueGreen_ResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T)
 		liveDeployment     = &appsv1.Deployment{}
 		liveTLSSecret      = &corev1.Secret{}
 	)
-	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, liveIngressService, clients, dataplaneIngressLiveServiceLabels()), waitTime, tickTime)
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, liveIngressService, clients, dataplaneIngressLiveServiceLabels()), waitTime, tickTime)
 	require.NotNil(t, liveIngressService)
 
-	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, liveAdminService, clients, dataplaneAdminLiveServiceLabels()), waitTime, tickTime)
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, liveAdminService, clients, dataplaneAdminLiveServiceLabels()), waitTime, tickTime)
 	require.NotNil(t, liveAdminService)
 
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, liveDeployment, dataplaneLiveDeploymentLabels(), clients), waitTime, tickTime)
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, liveDeployment, dataplaneLiveDeploymentLabels(), clients), waitTime, tickTime)
 	require.NotNil(t, liveDeployment)
 
-	require.Eventually(t, testutils.DataPlaneHasServiceSecret(t, ctx, dataplaneName, client.ObjectKeyFromObject(liveAdminService), liveTLSSecret, clients), waitTime, tickTime)
+	require.Eventually(t, testutils.DataPlaneHasServiceSecret(t, GetCtx(), dataplaneName, client.ObjectKeyFromObject(liveAdminService), liveTLSSecret, clients), waitTime, tickTime)
 	require.NotNil(t, liveTLSSecret)
 
 	t.Log("patching dataplane with another dataplane image to trigger rollout")
 	const dataplaneImageToPatch = "kong:3.1"
-	patchDataPlaneImage(ctx, t, dataplane, clients.MgrClient, dataplaneImageToPatch)
+	patchDataPlaneImage(GetCtx(), t, dataplane, GetClients().MgrClient, dataplaneImageToPatch)
 
 	t.Log("ensuring all preview dependent resources are created")
 	var (
@@ -392,16 +392,16 @@ func TestDataPlaneBlueGreen_ResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T)
 		previewTLSSecret      = &corev1.Secret{}
 	)
 
-	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, previewIngressService, clients, dataplaneIngressPreviewServiceLabels()), waitTime, tickTime)
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, previewIngressService, clients, dataplaneIngressPreviewServiceLabels()), waitTime, tickTime)
 	require.NotNil(t, previewIngressService)
 
-	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, previewAdminService, clients, dataplaneAdminPreviewServiceLabels()), waitTime, tickTime)
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, previewAdminService, clients, dataplaneAdminPreviewServiceLabels()), waitTime, tickTime)
 	require.NotNil(t, previewAdminService)
 
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, previewDeployment, dataplanePreviewDeploymentLabels(), clients), waitTime, tickTime)
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, previewDeployment, dataplanePreviewDeploymentLabels(), clients), waitTime, tickTime)
 	require.NotNil(t, previewDeployment)
 
-	require.Eventually(t, testutils.DataPlaneHasServiceSecret(t, ctx, dataplaneName, client.ObjectKeyFromObject(previewAdminService), previewTLSSecret, clients), waitTime, tickTime)
+	require.Eventually(t, testutils.DataPlaneHasServiceSecret(t, GetCtx(), dataplaneName, client.ObjectKeyFromObject(previewAdminService), previewTLSSecret, clients), waitTime, tickTime)
 	require.NotNil(t, previewTLSSecret)
 
 	dependentResources := []client.Object{
@@ -417,10 +417,10 @@ func TestDataPlaneBlueGreen_ResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T)
 
 	t.Log("ensuring dataplane owned resources after deletion are not immediately deleted")
 	for _, resource := range dependentResources {
-		require.NoError(t, clients.MgrClient.Delete(ctx, resource))
+		require.NoError(t, GetClients().MgrClient.Delete(GetCtx(), resource))
 
 		require.Eventually(t, func() bool {
-			err := clients.MgrClient.Get(ctx, client.ObjectKeyFromObject(resource), resource)
+			err := GetClients().MgrClient.Get(GetCtx(), client.ObjectKeyFromObject(resource), resource)
 			if err != nil {
 				t.Logf("error getting %T: %v", resource, err)
 				return false
@@ -436,10 +436,10 @@ func TestDataPlaneBlueGreen_ResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T)
 	}
 
 	t.Log("deleting dataplane and ensuring its owned resources are deleted after that")
-	require.NoError(t, clients.MgrClient.Delete(ctx, dataplane))
+	require.NoError(t, GetClients().MgrClient.Delete(GetCtx(), dataplane))
 	for _, resource := range dependentResources {
 		require.Eventually(t, func() bool {
-			err := clients.MgrClient.Get(ctx, client.ObjectKeyFromObject(resource), resource)
+			err := GetClients().MgrClient.Get(GetCtx(), client.ObjectKeyFromObject(resource), resource)
 			if err != nil && k8serrors.IsNotFound(err) {
 				return true
 			}
@@ -513,7 +513,7 @@ func patchDataPlaneAnnotations(t *testing.T, dataplane *operatorv1beta1.DataPlan
 			dataplane.Annotations[k] = v
 		}
 	}
-	require.NoError(t, cl.Patch(ctx, dataplane, client.MergeFrom(oldDataPlane)))
+	require.NoError(t, cl.Patch(GetCtx(), dataplane, client.MergeFrom(oldDataPlane)))
 }
 
 func dataplaneAdminPreviewServiceLabels() client.MatchingLabels {

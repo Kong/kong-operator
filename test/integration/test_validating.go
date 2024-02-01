@@ -26,10 +26,10 @@ func init() {
 
 func TestDataPlaneValidation(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	// create a configmap containing "KONG_DATABASE" key for envFroms
-	configMap, err := clients.K8sClient.CoreV1().ConfigMaps(namespace.Name).Create(ctx, &corev1.ConfigMap{
+	configMap, err := GetClients().K8sClient.CoreV1().ConfigMaps(namespace.Name).Create(GetCtx(), &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "dataplane-configs",
 			Namespace: namespace.Name,
@@ -186,16 +186,16 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 		},
 	}
 
-	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			dataplane, err := dataplaneClient.Create(ctx, tc.dataplane, metav1.CreateOptions{})
+			dataplane, err := dataplaneClient.Create(GetCtx(), tc.dataplane, metav1.CreateOptions{})
 			require.NoErrorf(t, err, "should not return error when create dataplane for case %s", tc.name)
 
 			if tc.validatingOK {
 				t.Logf("%s: verifying deployments managed by the dataplane", t.Name())
-				w, err := clients.K8sClient.AppsV1().Deployments(namespace.Name).Watch(ctx, metav1.ListOptions{
+				w, err := GetClients().K8sClient.AppsV1().Deployments(namespace.Name).Watch(GetCtx(), metav1.ListOptions{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "Deployment",
 						APIVersion: "apps/v1",
@@ -206,8 +206,8 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				t.Cleanup(func() { w.Stop() })
 				for {
 					select {
-					case <-ctx.Done():
-						t.Fatalf("context expired: %v", ctx.Err())
+					case <-GetCtx().Done():
+						t.Fatalf("context expired: %v", GetCtx().Err())
 					case event := <-w.ResultChan():
 						deployment, ok := event.Object.(*appsv1.Deployment)
 						require.True(t, ok)
@@ -225,7 +225,7 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				}
 			} else {
 				t.Logf("%s: verifying DataPlane conditions", t.Name())
-				w, err := dataplaneClient.Watch(ctx, metav1.ListOptions{
+				w, err := dataplaneClient.Watch(GetCtx(), metav1.ListOptions{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "DataPlane",
 						APIVersion: operatorv1alpha1.SchemeGroupVersion.String(),
@@ -236,8 +236,8 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				t.Cleanup(func() { w.Stop() })
 				for {
 					select {
-					case <-ctx.Done():
-						t.Fatalf("context expired: %v", ctx.Err())
+					case <-GetCtx().Done():
+						t.Fatalf("context expired: %v", GetCtx().Err())
 					case event := <-w.ResultChan():
 						dataplane, ok := event.Object.(*operatorv1beta1.DataPlane)
 						require.True(t, ok)
@@ -397,11 +397,11 @@ func testDataPlaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 		},
 	}
 
-	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := dataplaneClient.Create(ctx, tc.dataplane, metav1.CreateOptions{})
+			_, err := dataplaneClient.Create(GetCtx(), tc.dataplane, metav1.CreateOptions{})
 			if tc.errMsg == "" {
 				require.NoErrorf(t, err, "test case %s: should not return error", tc.name)
 			} else {

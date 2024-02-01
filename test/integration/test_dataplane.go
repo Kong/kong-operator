@@ -34,7 +34,7 @@ func init() {
 
 func TestDataPlaneEssentials(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying dataplane resource")
 	dataplaneName := types.NamespacedName{
@@ -87,22 +87,22 @@ func TestDataPlaneEssentials(t *testing.T) {
 		},
 	}
 
-	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
-	dataplane, err := dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
+	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
 	t.Log("verifying dataplane gets marked provisioned")
-	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}, clients), time.Minute, time.Second)
 
 	t.Logf("verifying that pod labels were set per the provided spec")
 	require.Eventually(t, func() bool {
-		deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
+		deployments := testutils.MustListDataPlaneDeployments(t, GetCtx(), dataplane, clients, client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		})
 		require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
@@ -125,7 +125,7 @@ func TestDataPlaneEssentials(t *testing.T) {
 	// check environment variables of deployments and pods.
 
 	t.Log("verifying dataplane Deployment.Pods.Env vars")
-	deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
+	deployments := testutils.MustListDataPlaneDeployments(t, GetCtx(), dataplane, clients, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	})
 	require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
@@ -144,7 +144,7 @@ func TestDataPlaneEssentials(t *testing.T) {
 
 	t.Log("verifying services managed by the dataplane")
 	var dataplaneIngressService corev1.Service
-	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneIngressService, clients, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, &dataplaneIngressService, clients, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	}), time.Minute, time.Second)
@@ -154,7 +154,7 @@ func TestDataPlaneEssentials(t *testing.T) {
 	t.Log("verifying dataplane services receive IP addresses")
 	var dataplaneIP string
 	require.Eventually(t, func() bool {
-		dataplaneService, err := clients.K8sClient.CoreV1().Services(dataplane.Namespace).Get(ctx, dataplaneIngressService.Name, metav1.GetOptions{})
+		dataplaneService, err := GetClients().K8sClient.CoreV1().Services(dataplane.Namespace).Get(GetCtx(), dataplaneIngressService.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		if len(dataplaneService.Status.LoadBalancer.Ingress) > 0 {
 			dataplaneIP = dataplaneService.Status.LoadBalancer.Ingress[0].IP
@@ -163,32 +163,32 @@ func TestDataPlaneEssentials(t *testing.T) {
 		return false
 	}, time.Minute, time.Second)
 
-	require.Eventually(t, expect404WithNoRouteFunc(t, ctx, "http://"+dataplaneIP), time.Minute, time.Second)
+	require.Eventually(t, expect404WithNoRouteFunc(t, GetCtx(), "http://"+dataplaneIP), time.Minute, time.Second)
 
 	t.Log("deleting the dataplane deployment")
-	dataplaneDeployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
+	dataplaneDeployments := testutils.MustListDataPlaneDeployments(t, GetCtx(), dataplane, clients, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	})
 	require.Len(t, dataplaneDeployments, 1, "there must be only one dataplane deployment")
-	require.NoError(t, clients.MgrClient.Delete(ctx, &dataplaneDeployments[0]))
+	require.NoError(t, GetClients().MgrClient.Delete(GetCtx(), &dataplaneDeployments[0]))
 
 	t.Log("verifying deployments managed by the dataplane after deletion")
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}, clients), time.Minute, time.Second)
 
 	t.Log("deleting the dataplane service")
-	require.NoError(t, clients.MgrClient.Delete(ctx, &dataplaneIngressService))
+	require.NoError(t, GetClients().MgrClient.Delete(GetCtx(), &dataplaneIngressService))
 
 	t.Log("verifying services managed by the dataplane after deletion")
-	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneIngressService, clients, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, &dataplaneIngressService, clients, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	}), time.Minute, time.Second)
 
 	t.Log("verifying dataplane services receive IP addresses after deletion")
 	require.Eventually(t, func() bool {
-		dataplaneService, err := clients.K8sClient.CoreV1().Services(dataplane.Namespace).Get(ctx, dataplaneIngressService.Name, metav1.GetOptions{})
+		dataplaneService, err := GetClients().K8sClient.CoreV1().Services(dataplane.Namespace).Get(GetCtx(), dataplaneIngressService.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		if len(dataplaneService.Status.LoadBalancer.Ingress) > 0 {
 			dataplaneIP = dataplaneService.Status.LoadBalancer.Ingress[0].IP
@@ -197,22 +197,22 @@ func TestDataPlaneEssentials(t *testing.T) {
 		return false
 	}, time.Minute, time.Second)
 
-	require.Eventually(t, expect404WithNoRouteFunc(t, ctx, "http://"+dataplaneIP), time.Minute, time.Second)
+	require.Eventually(t, expect404WithNoRouteFunc(t, GetCtx(), "http://"+dataplaneIP), time.Minute, time.Second)
 
 	t.Log("verifying dataplane status is properly filled with backing service name and its addresses")
-	require.Eventually(t, testutils.DataPlaneHasServiceAndAddressesInStatus(t, ctx, dataplaneName, clients), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneHasServiceAndAddressesInStatus(t, GetCtx(), dataplaneName, clients), time.Minute, time.Second)
 
 	t.Log("updating dataplane spec with proxy service type of ClusterIP")
 	require.Eventually(t,
-		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
 			dp.Spec.Network.Services.Ingress.Type = corev1.ServiceTypeClusterIP
 		}),
 		time.Minute, time.Second)
 
 	t.Log("checking if dataplane proxy service type changes to ClusterIP")
 	require.Eventually(t, func() bool {
-		servicesClient := clients.K8sClient.CoreV1().Services(dataplane.Namespace)
-		dataplaneIngressService, err := servicesClient.Get(ctx, dataplaneIngressService.Name, metav1.GetOptions{})
+		servicesClient := GetClients().K8sClient.CoreV1().Services(dataplane.Namespace)
+		dataplaneIngressService, err := servicesClient.Get(GetCtx(), dataplaneIngressService.Name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting dataplane proxy service: %v", err)
 			return false
@@ -228,9 +228,9 @@ func TestDataPlaneEssentials(t *testing.T) {
 
 func TestDataPlaneUpdate(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
-	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 	t.Log("deploying dataplane resource")
 	dataplaneName := types.NamespacedName{
 		Namespace: namespace.Name,
@@ -270,19 +270,19 @@ func TestDataPlaneUpdate(t *testing.T) {
 			},
 		},
 	}
-	dataplane, err := dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
+	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
 	t.Log("verifying that the dataplane gets marked as provisioned")
 	require.Eventually(t, testutils.DataPlaneIsReady(
-		t, ctx, dataplaneName, clients.OperatorClient),
+		t, GetCtx(), dataplaneName, GetClients().OperatorClient),
 		testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
 	)
 
 	t.Log("verifying deployments managed by the dataplane")
 	require.Eventually(t,
-		testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
+		testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		}, clients),
 		testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
@@ -291,14 +291,14 @@ func TestDataPlaneUpdate(t *testing.T) {
 	t.Log("verifying services managed by the dataplane")
 	var dataplaneService corev1.Service
 	require.Eventually(t,
-		testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, &dataplaneService, clients, client.MatchingLabels{
+		testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, &dataplaneService, clients, client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 			consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 		}),
 		testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
 	)
 
-	deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
+	deployments := testutils.MustListDataPlaneDeployments(t, GetCtx(), dataplane, clients, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	})
 	require.Len(t, deployments, 1, "There must be only one DatePlane deployment")
@@ -311,7 +311,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	require.Equal(t, "before_update", testEnv)
 
 	t.Logf("updating dataplane resource")
-	dataplane, err = dataplaneClient.Get(ctx, dataplane.Name, metav1.GetOptions{})
+	dataplane, err = dataplaneClient.Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	container = k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 	require.NotNil(t, container)
@@ -320,12 +320,12 @@ func TestDataPlaneUpdate(t *testing.T) {
 			Name: "TEST_ENV", Value: "after_update",
 		},
 	}
-	dataplane, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
+	dataplane, err = dataplaneClient.Update(GetCtx(), dataplane, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("verifying environment variable TEST_ENV in deployment after update")
 	require.Eventually(t, func() bool {
-		deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
+		deployments := testutils.MustListDataPlaneDeployments(t, GetCtx(), dataplane, clients, client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		})
 		require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
@@ -355,7 +355,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	}
 
 	t.Run("dataplane is not Ready when the underlying deployment changes state to not Ready", func(t *testing.T) {
-		dataplane, err = dataplaneClient.Get(ctx, dataplane.Name, metav1.GetOptions{})
+		dataplane, err = dataplaneClient.Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 		require.NotNil(t, container)
@@ -373,7 +373,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 				},
 			},
 		}
-		dataplane, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
+		dataplane, err = dataplaneClient.Update(GetCtx(), dataplane, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		isNotReady := dataPlaneConditionPredicate(t, &metav1.Condition{
@@ -383,12 +383,12 @@ func TestDataPlaneUpdate(t *testing.T) {
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
-			testutils.DataPlanePredicate(t, ctx, dataplaneName, isNotReady, clients.OperatorClient),
+			testutils.DataPlanePredicate(t, GetCtx(), dataplaneName, isNotReady, GetClients().OperatorClient),
 			testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
 		)
 	})
 	t.Run("dataplane gets Ready when the underlying deployment changes state to Ready", func(t *testing.T) {
-		dataplane, err = dataplaneClient.Get(ctx, dataplane.Name, metav1.GetOptions{})
+		dataplane, err = dataplaneClient.Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 		require.NotNil(t, container)
@@ -406,7 +406,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 				},
 			},
 		}
-		dataplane, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
+		dataplane, err = dataplaneClient.Update(GetCtx(), dataplane, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
@@ -416,13 +416,13 @@ func TestDataPlaneUpdate(t *testing.T) {
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
-			testutils.DataPlanePredicate(t, ctx, dataplaneName, isReady, clients.OperatorClient),
+			testutils.DataPlanePredicate(t, GetCtx(), dataplaneName, isReady, GetClients().OperatorClient),
 			testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
 		)
 	})
 
 	t.Run("dataplane Ready condition gets properly update with correct ObservedGeneration", func(t *testing.T) {
-		dataplane, err = dataplaneClient.Get(ctx, dataplane.Name, metav1.GetOptions{})
+		dataplane, err = dataplaneClient.Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 		require.NotNil(t, container)
@@ -439,7 +439,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 			},
 		}
 
-		dataplane, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
+		dataplane, err = dataplaneClient.Update(GetCtx(), dataplane, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
@@ -449,13 +449,13 @@ func TestDataPlaneUpdate(t *testing.T) {
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
-			testutils.DataPlanePredicate(t, ctx, dataplaneName, isReady, clients.OperatorClient),
+			testutils.DataPlanePredicate(t, GetCtx(), dataplaneName, isReady, GetClients().OperatorClient),
 			testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
 		)
 	})
 
 	t.Run("dataplane gets properly updated with a ReadinessProbe using port names instead of numbers", func(t *testing.T) {
-		dataplane, err = dataplaneClient.Get(ctx, dataplane.Name, metav1.GetOptions{})
+		dataplane, err = dataplaneClient.Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 		require.NotNil(t, container)
@@ -472,7 +472,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 			},
 		}
 
-		dataplane, err = dataplaneClient.Update(ctx, dataplane, metav1.UpdateOptions{})
+		dataplane, err = dataplaneClient.Update(GetCtx(), dataplane, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
@@ -482,7 +482,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
-			testutils.DataPlanePredicate(t, ctx, dataplaneName, isReady, clients.OperatorClient),
+			testutils.DataPlanePredicate(t, GetCtx(), dataplaneName, isReady, GetClients().OperatorClient),
 			testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
 		)
 	})
@@ -490,7 +490,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 
 func TestDataPlaneHorizontalScaling(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying dataplane resource with 2 replicas")
 	dataplaneName := types.NamespacedName{
@@ -523,35 +523,35 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 		},
 	}
 
-	dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 
-	dataplane, err := dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
+	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
 	t.Log("verifying dataplane gets marked provisioned")
-	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
 	deployment := &appsv1.Deployment{}
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, deployment, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, deployment, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}, clients), time.Minute, time.Second)
 
 	t.Log("verifying that dataplane has indeed 2 ready replicas")
-	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneName, clients, 2), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneName, clients, 2), time.Minute, time.Second)
 
 	t.Log("changing replicas in dataplane spec to 1 should scale down the deployment back to 1")
 	require.Eventually(t,
-		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) { dp.Spec.Deployment.Replicas = lo.ToPtr(int32(1)) }),
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) { dp.Spec.Deployment.Replicas = lo.ToPtr(int32(1)) }),
 		time.Minute, time.Second)
 
 	t.Log("verifying that dataplane has indeed 1 ready replica after scaling down")
-	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneName, clients, 1), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneName, clients, 1), time.Minute, time.Second)
 
 	t.Log("changing from replicas to using autoscaling should create an HPA targeting the dataplane deployment")
 	require.Eventually(t,
-		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
 			dp.Spec.Deployment.Scaling = &operatorv1beta1.Scaling{
 				HorizontalScaling: &operatorv1beta1.HorizontalScaling{
 					MaxReplicas: 3,
@@ -575,7 +575,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 
 	{
 		var hpa autoscalingv2.HorizontalPodAutoscaler
-		require.Eventually(t, testutils.DataPlaneHasHPA(t, ctx, dataplane, &hpa, clients), time.Minute, time.Second)
+		require.Eventually(t, testutils.DataPlaneHasHPA(t, GetCtx(), dataplane, &hpa, clients), time.Minute, time.Second)
 		require.NotNil(t, hpa)
 		assert.Equal(t, int32(3), hpa.Spec.MaxReplicas)
 		require.Len(t, hpa.Spec.Metrics, 1)
@@ -586,14 +586,14 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 
 	t.Log("updating the horizontal scaling spec should update the relevant HPA")
 	require.Eventuallyf(t,
-		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
 			dp.Spec.Deployment.Scaling.HorizontalScaling.MaxReplicas = 5
 			dp.Spec.Deployment.Scaling.HorizontalScaling.Metrics[0].Resource.Target.AverageUtilization = lo.ToPtr(int32(50))
 			dp.Spec.Deployment.Replicas = nil
 		}),
 		time.Minute, time.Second, "failed to update dataplane %s", dataplane.Name)
 	require.Eventuallyf(t, func() bool {
-		hpas := testutils.MustListDataPlaneHPAs(t, ctx, dataplane, clients, client.MatchingLabels{
+		hpas := testutils.MustListDataPlaneHPAs(t, GetCtx(), dataplane, clients, client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		})
 		if len(hpas) != 1 {
@@ -614,12 +614,12 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 
 	t.Log("removing the horizontal scaling spec should delete the relevant HPA")
 	require.Eventuallyf(t,
-		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
 			dp.Spec.Deployment.Scaling = nil
 		}),
 		time.Minute, time.Second, "failed to update dataplane %s", dataplane.Name)
 	require.Eventuallyf(t, func() bool {
-		hpas := testutils.MustListDataPlaneHPAs(t, ctx, dataplane, clients, client.MatchingLabels{
+		hpas := testutils.MustListDataPlaneHPAs(t, GetCtx(), dataplane, clients, client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		})
 		return len(hpas) == 0
@@ -628,7 +628,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 
 func TestDataPlaneVolumeMounts(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("creating a secret to mount to dataplane containers")
 	secret := &corev1.Secret{
@@ -640,7 +640,7 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 			"file-0": "foo",
 		},
 	}
-	secret, err := clients.K8sClient.CoreV1().Secrets(namespace.Name).Create(ctx, secret, metav1.CreateOptions{})
+	secret, err := GetClients().K8sClient.CoreV1().Secrets(namespace.Name).Create(GetCtx(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(secret)
 
@@ -713,20 +713,20 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 			},
 		},
 	}
-	dataplane, err = clients.OperatorClient.ApisV1beta1().DataPlanes(namespace.Name).Create(ctx, dataplane, metav1.CreateOptions{})
+	dataplane, err = GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name).Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
 	t.Log("verifying that the dataplane gets marked as Ready")
-	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, clients.OperatorClient), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), time.Minute, time.Second)
 
 	t.Log("verifying deployments managed by the dataplane")
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}, clients), time.Minute, time.Second)
 
 	t.Log("verifying dataplane deployment volume mounts")
-	deployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
+	deployments := testutils.MustListDataPlaneDeployments(t, GetCtx(), dataplane, clients, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	})
 	require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
@@ -783,11 +783,11 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 		MountPath: "/var/test",
 		ReadOnly:  true,
 	}
-	_, err = clients.K8sClient.AppsV1().Deployments(namespace.Name).Update(ctx, deployment, metav1.UpdateOptions{})
+	_, err = GetClients().K8sClient.AppsV1().Deployments(namespace.Name).Update(GetCtx(), deployment, metav1.UpdateOptions{})
 	require.NoError(t, err, "should update deployment successfully")
 
 	require.Eventually(t, func() bool {
-		deployment, err = clients.K8sClient.AppsV1().Deployments(namespace.Name).Get(ctx, deployment.Name, metav1.GetOptions{})
+		deployment, err = GetClients().K8sClient.AppsV1().Deployments(namespace.Name).Get(GetCtx(), deployment.Name, metav1.GetOptions{})
 		require.NoError(t, err, "should get dataplane deployment successfully")
 		vol := getVolumeByName(deployment.Spec.Template.Spec.Volumes, "test-volume")
 		if vol == nil || vol.Secret == nil || vol.Secret.SecretName != secret.Name {

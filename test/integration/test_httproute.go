@@ -27,7 +27,7 @@ func init() {
 
 func TestHTTPRouteV1Beta1(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying a GatewayConfiguration to set KIC log level")
 	gatewayConfig := &operatorv1alpha1.GatewayConfiguration{
@@ -58,7 +58,7 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 			},
 		},
 	}
-	gatewayConfig, err := clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err := GetClients().OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -77,7 +77,7 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
 	}
-	gatewayClass, err = clients.GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -88,32 +88,32 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 	}
 
 	gateway := testutils.GenerateGateway(gatewayNSN, gatewayClass)
-	gateway, err = clients.GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying Gateway gets marked as Scheduled")
-	require.Eventually(t, testutils.GatewayIsScheduled(t, ctx, gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsScheduled(t, GetCtx(), gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets marked as Programmed")
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 	t.Log("verifying Gateway Listeners get marked as Programmed")
-	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets an IP address")
-	require.Eventually(t, testutils.GatewayIPAddressExist(t, ctx, gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
-	gateway = testutils.MustGetGateway(t, ctx, gatewayNSN, clients)
+	require.Eventually(t, testutils.GatewayIPAddressExist(t, GetCtx(), gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
+	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayNSN, clients)
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Log("deploying backend deployment (httpbin) of HTTPRoute")
 	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err = GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(GetCtx(), deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
-	_, err = env.Cluster().Client().CoreV1().Services(namespace.Name).Create(ctx, service, metav1.CreateOptions{})
+	_, err = GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(GetCtx(), service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
@@ -160,8 +160,8 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 			},
 		},
 	}
-	httpRoute, err = clients.GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).
-		Create(ctx, httpRoute, metav1.CreateOptions{})
+	httpRoute, err = GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).
+		Create(GetCtx(), httpRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(httpRoute)
 
@@ -173,14 +173,14 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 
 	require.Eventually(
 		t, testutils.GetResponseBodyContains(
-			t, ctx, clients, httpc, "http://"+gatewayIPAddress+"/prefix-test-http-route", "<title>httpbin.org</title>",
+			t, GetCtx(), clients, httpc, "http://"+gatewayIPAddress+"/prefix-test-http-route", "<title>httpbin.org</title>",
 		),
 		httpRouteAccessTimeout, time.Second,
 	)
 	// will route to path /1234 of service httpbin, but httpbin will return a 404 page on this path.
 	require.Eventually(
 		t, testutils.GetResponseBodyContains(
-			t, ctx, clients, httpc, "http://"+gatewayIPAddress+"/prefix-test-http-route/1234", "<h1>Not Found</h1>",
+			t, GetCtx(), clients, httpc, "http://"+gatewayIPAddress+"/prefix-test-http-route/1234", "<h1>Not Found</h1>",
 		),
 		httpRouteAccessTimeout, time.Second,
 	)

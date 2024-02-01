@@ -27,7 +27,7 @@ func expect404WithNoRouteFunc(t *testing.T, ctx context.Context, url string) fun
 	return func() bool {
 		t.Logf("verifying connectivity to the dataplane %v", url)
 
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			t.Logf("failed creating request for %s: %v", url, err)
 			return false
@@ -92,7 +92,8 @@ func createValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Cl
 		return err
 	}
 
-	_, err = k8sClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(ctx,
+	_, err = k8sClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(
+		ctx,
 		&admissionregistrationv1.ValidatingWebhookConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gateway-operator-validating-webhook",

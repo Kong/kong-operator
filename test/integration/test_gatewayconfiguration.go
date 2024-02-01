@@ -36,7 +36,7 @@ func init() {
 
 func TestGatewayConfigurationEssentials(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -47,7 +47,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			testEnvVarFromKV: testEnvVarFromKV,
 		},
 	}
-	configMap, err := env.Cluster().Client().CoreV1().ConfigMaps(namespace.Name).Create(ctx, configMap, metav1.CreateOptions{})
+	configMap, err := GetEnv().Cluster().Client().CoreV1().ConfigMaps(namespace.Name).Create(GetCtx(), configMap, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(configMap)
 
@@ -124,7 +124,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			},
 		},
 	}
-	gatewayConfig, err = clients.OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err = GetClients().OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -143,7 +143,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
 	}
-	gatewayClass, err = clients.GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -162,13 +162,13 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			}},
 		},
 	}
-	gateway, err = clients.GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying that the DataPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, clients.MgrClient, gateway)
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -190,7 +190,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 
 	t.Log("verifying that the ControlPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, clients.MgrClient, gateway)
+		controlplanes, err := gatewayutils.ListControlPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -212,7 +212,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 
 	t.Log("verifying that the DataPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, clients.MgrClient, gateway)
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -235,7 +235,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 
 	t.Log("verifying that the ControlPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, clients.MgrClient, gateway)
+		controlplanes, err := gatewayutils.ListControlPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -257,19 +257,19 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 
 	t.Log("removing the GatewayConfiguration attachment")
 	require.Eventually(t, func() bool {
-		gatewayClass, err = clients.GatewayClient.GatewayV1().GatewayClasses().Get(ctx, gatewayClass.Name, metav1.GetOptions{})
+		gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Get(GetCtx(), gatewayClass.Name, metav1.GetOptions{})
 		if err != nil {
 			return false
 		}
 
 		gatewayClass.Spec.ParametersRef = nil
-		gatewayClass, err = clients.GatewayClient.GatewayV1().GatewayClasses().Update(ctx, gatewayClass, metav1.UpdateOptions{})
+		gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Update(GetCtx(), gatewayClass, metav1.UpdateOptions{})
 		return err == nil
 	}, testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying that the DataPlane loses the configuration override")
 	require.Eventually(t, func() bool {
-		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, clients.MgrClient, gateway)
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -295,7 +295,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 
 	t.Log("verifying that the ControlPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, clients.MgrClient, gateway)
+		controlplanes, err := gatewayutils.ListControlPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
 		if err != nil {
 			return false
 		}

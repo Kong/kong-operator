@@ -102,7 +102,7 @@ func TestMain(m *testing.M) {
 	defer closeControllerLogFile() //nolint:errcheck
 
 	fmt.Println("INFO: configuring cluster for testing environment")
-	env, err = testutils.BuildEnvironment(ctx, existingCluster,
+	env, err = testutils.BuildEnvironment(GetCtx(), existingCluster,
 		func(b *environments.Builder) {
 			if !disableCalicoCNI {
 				b.WithCalicoCNI()
@@ -111,28 +111,28 @@ func TestMain(m *testing.M) {
 	)
 	exitOnErr(err)
 
-	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
-	exitOnErr(<-env.WaitForReady(ctx))
+	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", GetEnv().Cluster().Name())
+	exitOnErr(<-GetEnv().WaitForReady(GetCtx()))
 
 	fmt.Println("INFO: initializing Kubernetes clients")
-	clients, err = testutils.NewK8sClients(env)
+	clients, err = testutils.NewK8sClients(GetEnv())
 	exitOnErr(err)
 
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")
-	exitOnErr(clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
+	exitOnErr(clusters.CreateNamespace(GetCtx(), GetEnv().Cluster(), "kong-system"))
 
 	configPath, cleaner, err := config.DumpKustomizeConfigToTempDir()
 	exitOnErr(err)
 	defer cleaner()
 
-	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), path.Join(configPath, "/rbac")))
+	exitOnErr(clusters.KustomizeDeployForCluster(GetCtx(), GetEnv().Cluster(), path.Join(configPath, "/rbac")))
 
 	// normally this is obtained from the downward API. the tests fake it.
 	err = os.Setenv("POD_NAMESPACE", "kong-system")
 	exitOnErr(err)
 
 	fmt.Println("INFO: deploying CRDs to test cluster")
-	exitOnErr(testutils.DeployCRDs(ctx, path.Join(configPath, "/crd"), clients.OperatorClient, env))
+	exitOnErr(testutils.DeployCRDs(GetCtx(), path.Join(configPath, "/crd"), GetClients().OperatorClient, GetEnv()))
 
 	runWebhookTests = (os.Getenv("RUN_WEBHOOK_TESTS") == "true")
 	if runWebhookTests {
@@ -145,11 +145,11 @@ func TestMain(m *testing.M) {
 	started := startControllerManager()
 	<-started
 
-	exitOnErr(testutils.BuildMTLSCredentials(ctx, clients.K8sClient, &httpc))
+	exitOnErr(testutils.BuildMTLSCredentials(GetCtx(), GetClients().K8sClient, &httpc))
 
 	// wait for webhook server in controller to be ready after controller started.
 	if runWebhookTests {
-		exitOnErr(waitForWebhook(ctx, webhookServerIP, webhookServerPort))
+		exitOnErr(waitForWebhook(GetCtx(), webhookServerIP, webhookServerPort))
 	}
 
 	fmt.Println("INFO: environment is ready, starting tests")
@@ -157,7 +157,7 @@ func TestMain(m *testing.M) {
 
 	if !skipClusterCleanup && existingCluster == "" {
 		fmt.Println("INFO: cleaning up testing cluster and environment")
-		exitOnErr(env.Cleanup(ctx))
+		exitOnErr(GetEnv().Cleanup(GetCtx()))
 	}
 
 	os.Exit(code)
@@ -170,8 +170,8 @@ func TestMain(m *testing.M) {
 func exitOnErr(err error) {
 	if err != nil {
 		if !skipClusterCleanup && existingCluster == "" {
-			if env != nil {
-				env.Cleanup(ctx) //nolint:errcheck
+			if GetEnv() != nil {
+				GetEnv().Cleanup(GetCtx()) //nolint:errcheck
 			}
 		}
 		panic(fmt.Sprintf("ERROR: %s\n", err.Error()))
@@ -223,7 +223,7 @@ func generateWebhookCertificates() error {
 	webhookCertDir = dir
 
 	fmt.Println("INFO: creating certificates in directory", webhookCertDir)
-	cmd := exec.CommandContext(ctx, "../../hack/generate-certificates-openssl.sh", webhookCertDir, webhookServerIP)
+	cmd := exec.CommandContext(GetCtx(), "../../hack/generate-certificates-openssl.sh", webhookCertDir, webhookServerIP)
 	return cmd.Run()
 }
 
@@ -250,7 +250,7 @@ func prepareWebhook() error {
 	// create webhook resources in k8s.
 	fmt.Println("INFO: creating a validating webhook and waiting for it to start")
 	return createValidatingWebhook(
-		ctx, clients.K8sClient,
+		GetCtx(), GetClients().K8sClient,
 		fmt.Sprintf("https://%s:%d/validate", webhookServerIP, webhookServerPort),
 		webhookCertDir+"/ca.crt",
 	)
