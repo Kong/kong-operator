@@ -249,7 +249,7 @@ verify.generators: verify.repo generate verify.diff
 APIS_DIR ?= apis
 
 .PHONY: generate
-generate: controller-gen generate.apis generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs
+generate: controller-gen generate.apis generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace
 
 .PHONY: generate.apis
 generate.apis:
@@ -275,6 +275,10 @@ generate.rbacs: kic-role-generator
 .PHONY: generate.docs
 generate.docs: crd-ref-docs
 	./scripts/apidocs-gen/generate.sh $(CRD_REF_DOCS)
+
+.PHONY: generate.k8sio-gomod-replace
+generate.k8sio-gomod-replace:
+	./hack/update-k8sio-gomod-replace.sh
 
 # ------------------------------------------------------------------------------
 # Files generation checks
