@@ -19,12 +19,6 @@ import (
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
-func init() {
-	addTestsToTestSuite(
-		TestHTTPRouteV1Beta1,
-	)
-}
-
 func TestHTTPRouteV1Beta1(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())

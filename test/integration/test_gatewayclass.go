@@ -16,13 +16,6 @@ import (
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
-func init() {
-	addTestsToTestSuite(
-		TestGatewayClassUpdates,
-		TestGatewayClassCreation,
-	)
-}
-
 func TestGatewayClassUpdates(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())

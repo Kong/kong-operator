@@ -28,12 +28,6 @@ const (
 	testEnvVarFromKV   = "dzhambul"
 )
 
-func init() {
-	addTestsToTestSuite(
-		TestGatewayConfigurationEssentials,
-	)
-}
-
 func TestGatewayConfigurationEssentials(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())

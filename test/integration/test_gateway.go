@@ -28,14 +28,6 @@ import (
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
-func init() {
-	addTestsToTestSuite(
-		TestGatewayEssentials,
-		TestScalingDataPlaneThroughGatewayConfiguration,
-		TestGatewayDataPlaneNetworkPolicy,
-	)
-}
-
 func TestGatewayEssentials(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())

@@ -24,14 +24,6 @@ import (
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
-func init() {
-	addTestsToTestSuite(
-		TestControlPlaneWhenNoDataPlane,
-		TestControlPlaneEssentials,
-		TestControlPlaneUpdate,
-	)
-}
-
 func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())

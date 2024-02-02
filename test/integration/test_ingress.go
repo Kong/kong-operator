@@ -38,12 +38,6 @@ const (
 	ingressClass = "kong"
 )
 
-func init() {
-	addTestsToTestSuite(
-		TestIngressEssentials,
-	)
-}
-
 func TestIngressEssentials(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())

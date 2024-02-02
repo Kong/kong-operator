@@ -249,7 +249,7 @@ verify.generators: verify.repo generate verify.diff
 APIS_DIR ?= apis
 
 .PHONY: generate
-generate: controller-gen generate.apis generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace
+generate: controller-gen generate.apis generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration
 
 .PHONY: generate.apis
 generate.apis:
@@ -279,6 +279,10 @@ generate.docs: crd-ref-docs
 .PHONY: generate.k8sio-gomod-replace
 generate.k8sio-gomod-replace:
 	./hack/update-k8sio-gomod-replace.sh
+
+.PHONY: generate.testcases-registration
+generate.testcases-registration:
+	go run ./hack/generators/testcases-registration/main.go
 
 # ------------------------------------------------------------------------------
 # Files generation checks

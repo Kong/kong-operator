@@ -6,8 +6,8 @@ package integration_test
 import (
 	"testing"
 
-	helpers "github.com/kong/gateway-operator/test/helpers"
-	integration "github.com/kong/gateway-operator/test/integration"
+	"github.com/kong/gateway-operator/test/helpers"
+	"github.com/kong/gateway-operator/test/integration"
 )
 
 var testSuiteToRun = integration.GetTestSuite()
