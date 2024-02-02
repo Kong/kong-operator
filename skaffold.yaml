@@ -22,6 +22,11 @@ profiles:
       - config/default
       - config/crd
   build:
+    # NOTE: uncomment below if you intend to use skaffold with Orbstack.
+    # local:
+    #   # should images be pushed to a registry. If not specified, images are
+    #   # pushed only if the current Kubernetes context connects to a remote cluster.
+    #   push: false
     artifacts:
     - image: docker.io/kong/gateway-operator
       docker:
@@ -38,6 +43,11 @@ profiles:
       - config/dev
       - config/crd
   build:
+    # NOTE: uncomment below if you intend to use skaffold with Orbstack.
+    # local:
+    #   # should images be pushed to a registry. If not specified, images are
+    #   # pushed only if the current Kubernetes context connects to a remote cluster.
+    #   push: false
     artifacts:
     - image: docker.io/kong/gateway-operator
       docker:
@@ -54,6 +64,11 @@ profiles:
       - config/debug
       - config/crd
   build:
+    # NOTE: uncomment below if you intend to use skaffold with Orbstack.
+    # local:
+    #   # should images be pushed to a registry. If not specified, images are
+    #   # pushed only if the current Kubernetes context connects to a remote cluster.
+    #   push: false
     artifacts:
     - image: docker.io/kong/gateway-operator
       docker:
