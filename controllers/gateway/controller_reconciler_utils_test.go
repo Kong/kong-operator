@@ -7,9 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	gwtypes "github.com/kong/gateway-operator/internal/types"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
 
 func TestParseKongProxyListenEnv(t *testing.T) {
@@ -238,6 +240,265 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			addresses, err := gatewayAddressesFromService(tc.svc)
 			assert.Equal(t, tc.wantErr, err != nil)
 			require.Equal(t, addresses, tc.addresses)
+		})
+	}
+}
+
+func TestSetAcceptedOnGateway(t *testing.T) {
+	testCases := []struct {
+		name                      string
+		listeners                 []gatewayv1.ListenerStatus
+		expectedAcceptedCondition metav1.Condition
+	}{
+		{
+			name: "single listener accepted",
+			listeners: []gatewayv1.ListenerStatus{
+				{
+					Name: "accepted",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionAccepted),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonAccepted),
+							ObservedGeneration: 1,
+						},
+						{
+							Type:               string(gatewayv1.ListenerConditionConflicted),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonNoConflicts),
+							ObservedGeneration: 1,
+						},
+					},
+				},
+			},
+			expectedAcceptedCondition: metav1.Condition{
+				Type:               string(gatewayv1.GatewayConditionAccepted),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayv1.GatewayReasonAccepted),
+				ObservedGeneration: 1,
+				Message:            "All listeners are accepted.",
+			},
+		},
+		{
+			name: "multiple listeners accepted",
+			listeners: []gatewayv1.ListenerStatus{
+				{
+					Name: "accepted",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionAccepted),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonAccepted),
+							ObservedGeneration: 1,
+						},
+						{
+							Type:               string(gatewayv1.ListenerConditionConflicted),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonNoConflicts),
+							ObservedGeneration: 1,
+						},
+					},
+				},
+				{
+					Name: "accepted",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionAccepted),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonAccepted),
+							ObservedGeneration: 1,
+						},
+						{
+							Type:               string(gatewayv1.ListenerConditionConflicted),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonNoConflicts),
+							ObservedGeneration: 1,
+						},
+					},
+				},
+			},
+			expectedAcceptedCondition: metav1.Condition{
+				Type:               string(gatewayv1.GatewayConditionAccepted),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayv1.GatewayReasonAccepted),
+				ObservedGeneration: 1,
+				Message:            "All listeners are accepted.",
+			},
+		},
+		{
+			name: "single listener, not accepted for unsupported protocol",
+			listeners: []gatewayv1.ListenerStatus{
+				{
+					Name: "not accepted, unsupported protocol",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionAccepted),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonUnsupportedProtocol),
+							ObservedGeneration: 1,
+						},
+						{
+							Type:               string(gatewayv1.ListenerConditionConflicted),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonNoConflicts),
+							ObservedGeneration: 1,
+						},
+					},
+				},
+			},
+			expectedAcceptedCondition: metav1.Condition{
+				Type:               string(gatewayv1.GatewayConditionAccepted),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.GatewayReasonListenersNotValid),
+				Message:            "Listener 0 is not accepted.",
+				ObservedGeneration: 1,
+			},
+		},
+		{
+			name: "single listener, hostname conflict",
+			listeners: []gatewayv1.ListenerStatus{
+				{
+					Name: "conflict, unsupported protocol",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionAccepted),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonAccepted),
+							ObservedGeneration: 1,
+						},
+						{
+							Type:               string(gatewayv1.ListenerConditionConflicted),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonHostnameConflict),
+							ObservedGeneration: 1,
+						},
+					},
+				},
+			},
+			expectedAcceptedCondition: metav1.Condition{
+				Type:               string(gatewayv1.GatewayConditionAccepted),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.GatewayReasonListenersNotValid),
+				Message:            "Listener 0 is conflicted.",
+				ObservedGeneration: 1,
+			},
+		},
+		{
+			name: "single listener, protocol conflict",
+			listeners: []gatewayv1.ListenerStatus{
+				{
+					Name: "protocol conflict",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionAccepted),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonAccepted),
+							ObservedGeneration: 1,
+						},
+						{
+							Type:               string(gatewayv1.ListenerConditionConflicted),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonProtocolConflict),
+							ObservedGeneration: 1,
+						},
+					},
+				},
+			},
+			expectedAcceptedCondition: metav1.Condition{
+				Type:               string(gatewayv1.GatewayConditionAccepted),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.GatewayReasonListenersNotValid),
+				Message:            "Listener 0 is conflicted.",
+				ObservedGeneration: 1,
+			},
+		},
+		{
+			name: "multiple listeners, accepted, not accepted and conflicted",
+			listeners: []gatewayv1.ListenerStatus{
+				{
+					Name: "accepted",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionAccepted),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonAccepted),
+							ObservedGeneration: 1,
+						},
+						{
+							Type:               string(gatewayv1.ListenerConditionConflicted),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonNoConflicts),
+							ObservedGeneration: 1,
+						},
+					},
+				},
+				{
+					Name: "conflict, unsupported protocol",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionAccepted),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonUnsupportedProtocol),
+							ObservedGeneration: 1,
+						},
+						{
+							Type:               string(gatewayv1.ListenerConditionConflicted),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonNoConflicts),
+							ObservedGeneration: 1,
+						},
+					},
+				},
+				{
+					Name: "protocol conflict",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionAccepted),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonAccepted),
+							ObservedGeneration: 1,
+						},
+						{
+							Type:               string(gatewayv1.ListenerConditionConflicted),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonProtocolConflict),
+							ObservedGeneration: 1,
+						},
+					},
+				},
+			},
+			expectedAcceptedCondition: metav1.Condition{
+				Type:               string(gatewayv1.GatewayConditionAccepted),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.GatewayReasonListenersNotValid),
+				ObservedGeneration: 1,
+				Message:            "Listener 1 is not accepted. Listener 2 is conflicted.",
+			},
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(tc.name, func(subt *testing.T) {
+			gateway := gatewayConditionsAndListenersAwareT{
+				Gateway: &gatewayv1.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test",
+						Namespace:  "default",
+						Generation: 1,
+					},
+					Status: gatewayv1.GatewayStatus{
+						Listeners: tc.listeners,
+					},
+				},
+			}
+
+			k8sutils.SetAcceptedConditionOnGateway(gateway)
+			acceptedCondition, found := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayConditionAccepted), gateway)
+			require.True(t, found)
+			// force the lastTransitionTime to be equal to properly compare the two conditions
+			tc.expectedAcceptedCondition.LastTransitionTime = acceptedCondition.LastTransitionTime
+			require.Equal(subt, tc.expectedAcceptedCondition, acceptedCondition)
 		})
 	}
 }

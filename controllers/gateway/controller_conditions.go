@@ -9,9 +9,6 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	// GatewayScheduledType the Gateway has been scheduled
-	GatewayScheduledType k8sutils.ConditionType = "GatewayScheduled"
-
 	// GatewayServiceType the Gateway service condition type
 	GatewayServiceType k8sutils.ConditionType = "GatewayService"
 

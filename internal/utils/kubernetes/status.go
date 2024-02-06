@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -12,17 +14,8 @@ type ConditionType string
 type ConditionReason string
 
 const (
-
 	// ReadyType indicates if the resource has all the dependent conditions Ready
 	ReadyType ConditionType = "Ready"
-
-	// ProgrammedType condition indicates whether a Gateway has generated some
-	// configuration that is assumed to be ready soon in the underlying data
-	// plane.
-	ProgrammedType ConditionType = ConditionType(gatewayv1.GatewayConditionProgrammed)
-
-	// PendingReason is a Reason for Programmed condition.
-	PendingReason ConditionReason = ConditionReason(gatewayv1.GatewayReasonPending)
 
 	// DependenciesNotReadyReason is a generic reason describing that the other Conditions are not true
 	DependenciesNotReadyReason ConditionReason = "DependenciesNotReady"
@@ -52,6 +45,11 @@ const (
 	ResourceUpdatedMessage = "Resource has been updated"
 )
 
+type ConditionsAndListenerConditionsAndGenerationAware interface {
+	ConditionsAndGenerationAware
+	ListenersConditionsAware
+}
+
 // ConditionsAndGenerationAware represents a CRD type that has been enabled with metav1.Conditions,
 // it can then benefit of a series of utility methods.
 type ConditionsAndGenerationAware interface {
@@ -62,6 +60,11 @@ type ConditionsAndGenerationAware interface {
 type ConditionsAware interface {
 	GetConditions() []metav1.Condition
 	SetConditions(conditions []metav1.Condition)
+}
+
+type ListenersConditionsAware interface {
+	GetListenersConditions() []gatewayv1.ListenerStatus
+	SetListenersConditions([]gatewayv1.ListenerStatus)
 }
 
 // SetCondition sets a new condition to the provided resource
@@ -114,7 +117,7 @@ func InitReady(resource ConditionsAndGenerationAware) {
 
 // InitProgrammed initializes the Programmed status to False
 func InitProgrammed(resource ConditionsAware) {
-	SetCondition(NewCondition(ProgrammedType, metav1.ConditionFalse, PendingReason, DependenciesNotReadyMessage), resource)
+	SetCondition(NewCondition(ConditionType(gatewayv1.GatewayConditionProgrammed), metav1.ConditionFalse, ConditionReason(gatewayv1.GatewayReasonPending), DependenciesNotReadyMessage), resource)
 }
 
 // SetReadyWithGeneration sets the Ready status to True if all the other conditions are True.
@@ -144,21 +147,68 @@ func SetReady(resource ConditionsAndGenerationAware) {
 
 // SetProgrammed evaluates all the existing conditions and sets the Programmed status accordingly
 func SetProgrammed(resource ConditionsAndGenerationAware) {
-	ready := metav1.Condition{
+	programmed := metav1.Condition{
 		Type:               string(gatewayv1.GatewayConditionProgrammed),
 		LastTransitionTime: metav1.Now(),
 		ObservedGeneration: resource.GetGeneration(),
 	}
 
 	if areAllConditionsHaveTrueStatus(resource) {
-		ready.Status = metav1.ConditionTrue
-		ready.Reason = string(gatewayv1.GatewayReasonProgrammed)
+		programmed.Status = metav1.ConditionTrue
+		programmed.Reason = string(gatewayv1.GatewayReasonProgrammed)
 	} else {
-		ready.Status = metav1.ConditionFalse
-		ready.Reason = string(DependenciesNotReadyReason)
-		ready.Message = DependenciesNotReadyMessage
+		programmed.Status = metav1.ConditionFalse
+		programmed.Reason = string(DependenciesNotReadyReason)
+		programmed.Message = DependenciesNotReadyMessage
 	}
-	SetCondition(ready, resource)
+	SetCondition(programmed, resource)
+}
+
+// SetAcceptedConditionOnGateway sets the gateway Accepted condition according to the Gateway API specification.
+func SetAcceptedConditionOnGateway(resource ConditionsAndListenerConditionsAndGenerationAware) {
+	oldCondition, NewCondition := metav1.Condition{}, metav1.Condition{
+		Type:               string(gatewayv1.GatewayConditionAccepted),
+		Status:             metav1.ConditionTrue,
+		Reason:             string(gatewayv1.GatewayReasonAccepted),
+		ObservedGeneration: resource.GetGeneration(),
+		LastTransitionTime: metav1.Now(),
+	}
+
+	// If even a single listener is not accepted or is conflicted, the gateway needs
+	// to be marked as not accepted.
+	for i, listStatus := range resource.GetListenersConditions() {
+		for _, listCond := range listStatus.Conditions {
+			if listCond.Type == string(gatewayv1.GatewayConditionAccepted) {
+				if listCond.Status == metav1.ConditionFalse {
+					if NewCondition.Message != "" {
+						NewCondition.Message = fmt.Sprintf("%s ", NewCondition.Message)
+					}
+					NewCondition.Status = metav1.ConditionFalse
+					NewCondition.Reason = string(gatewayv1.GatewayReasonListenersNotValid)
+					NewCondition.Message = fmt.Sprintf("%sListener %d is not accepted.", NewCondition.Message, i)
+				}
+
+			}
+			if listCond.Type == string(gatewayv1.ListenerConditionConflicted) {
+				if listCond.Status == metav1.ConditionTrue {
+					if NewCondition.Message != "" {
+						NewCondition.Message = fmt.Sprintf("%s ", NewCondition.Message)
+					}
+					NewCondition.Status = metav1.ConditionFalse
+					NewCondition.Reason = string(gatewayv1.GatewayReasonListenersNotValid)
+					NewCondition.Message = fmt.Sprintf("%sListener %d is conflicted.", NewCondition.Message, i)
+				}
+			}
+		}
+	}
+	if NewCondition.Message == "" {
+		NewCondition.Message = "All listeners are accepted."
+	}
+
+	if NewCondition.Status != oldCondition.Status ||
+		NewCondition.Reason != oldCondition.Reason {
+		SetCondition(NewCondition, resource)
+	}
 }
 
 func areAllConditionsHaveTrueStatus(resource ConditionsAware) bool {
@@ -171,6 +221,17 @@ func areAllConditionsHaveTrueStatus(resource ConditionsAware) bool {
 		}
 	}
 	return true
+}
+
+// IsAccepted evaluates whether a resource is in Accepted state, meaning
+// that all its listeners are accepted.
+func IsAccepted(resource ConditionsAware) bool {
+	for _, condition := range resource.GetConditions() {
+		if condition.Type == string(gatewayv1.GatewayConditionAccepted) {
+			return condition.Status == metav1.ConditionTrue
+		}
+	}
+	return false
 }
 
 // IsReady evaluates whether a resource is in Ready state, meaning
@@ -187,7 +248,7 @@ func IsReady(resource ConditionsAware) bool {
 // IsProgrammed evaluates whether a resource is in Programmed state.
 func IsProgrammed(resource ConditionsAware) bool {
 	for _, condition := range resource.GetConditions() {
-		if condition.Type == string(ProgrammedType) {
+		if condition.Type == string(gatewayv1.GatewayConditionProgrammed) {
 			return condition.Status == metav1.ConditionTrue
 		}
 	}

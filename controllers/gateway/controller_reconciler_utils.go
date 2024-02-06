@@ -439,24 +439,54 @@ func (r *Reconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gate
 // GatewayReconciler - Private type status-related utilities/wrappers
 // -----------------------------------------------------------------------------
 
-type gatewayConditionsAwareT struct {
+type gatewayConditionsAndListenersAwareT struct {
 	*gatewayv1.Gateway
 }
 
-func gatewayConditionsAware(gw *gwtypes.Gateway) gatewayConditionsAwareT {
-	return gatewayConditionsAwareT{
+func gatewayConditionsAndListenersAware(gw *gwtypes.Gateway) gatewayConditionsAndListenersAwareT {
+	return gatewayConditionsAndListenersAwareT{
 		Gateway: gw,
 	}
 }
 
 // GetConditions returns the status conditions.
-func (g gatewayConditionsAwareT) GetConditions() []metav1.Condition {
+func (g gatewayConditionsAndListenersAwareT) GetConditions() []metav1.Condition {
 	return g.Status.Conditions
 }
 
 // SetConditions sets the status conditions.
-func (g gatewayConditionsAwareT) SetConditions(conditions []metav1.Condition) {
+func (g gatewayConditionsAndListenersAwareT) SetConditions(conditions []metav1.Condition) {
 	g.Status.Conditions = conditions
+}
+
+// GetListenersConditions returns the listeners status.
+func (g gatewayConditionsAndListenersAwareT) GetListenersConditions() []gatewayv1.ListenerStatus {
+	return g.Status.Listeners
+}
+
+// SetListenersConditions sets the listeners status.
+func (g gatewayConditionsAndListenersAwareT) SetListenersConditions(listeners []gatewayv1.ListenerStatus) {
+	g.Status.Listeners = listeners
+}
+
+type listenerConditionAwareT struct {
+	*gatewayv1.ListenerStatus
+}
+
+func listenerConditionsAware(listener *gatewayv1.ListenerStatus) listenerConditionAwareT {
+	return listenerConditionAwareT{
+		ListenerStatus: listener,
+	}
+}
+
+// GetConditions returns the status conditions.
+func (l listenerConditionAwareT) GetConditions() []metav1.Condition {
+	return l.Conditions
+}
+
+// SetConditions sets the status conditions.
+func (l listenerConditionAwareT) SetConditions(conditions []metav1.Condition) {
+	l.Conditions = conditions
 }
 
 // supportedRoutesByProtocol returns a map of maps to relate each protocolType with the
@@ -468,73 +498,132 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 	return map[gatewayv1.ProtocolType]map[gatewayv1.Kind]struct{}{
 		gatewayv1.HTTPProtocolType:  {"HTTPRoute": {}},
 		gatewayv1.HTTPSProtocolType: {"HTTPRoute": {}},
-		gatewayv1.TLSProtocolType:   {"TLSRoute": {}},
-		gatewayv1.TCPProtocolType:   {"TCPRoute": {}},
-		gatewayv1.UDPProtocolType:   {"UDPRoute": {}},
+
+		// L4 routes not supported yet
+		// gatewayv1.TLSProtocolType:   {"TLSRoute": {}},
+		// gatewayv1.TCPProtocolType:   {"TCPRoute": {}},
+		// gatewayv1.UDPProtocolType:   {"UDPRoute": {}},
 	}
 }
 
-// InitReadyAndProgrammed initializes the gateway Programmed and Ready conditions
+// initReadyAndProgrammed initializes the gateway Programmed and Ready conditions
 // by setting the underlying Gateway Programmed and Ready status to false.
 // Furthermore, it sets the supportedKinds and initializes the readiness to false with reason
 // Pending for each Gateway listener.
-func (g *gatewayConditionsAwareT) InitReadyAndProgrammed() {
+func (g *gatewayConditionsAndListenersAwareT) initReadyAndProgrammed() {
 	k8sutils.InitReady(g)
 	k8sutils.InitProgrammed(g)
-	g.Status.Listeners = make([]gatewayv1.ListenerStatus, 0, len(g.Spec.Listeners))
-	for _, listener := range g.Spec.Listeners {
+	for i, listener := range g.Spec.Listeners {
 		supportedKinds, resolvedRefsCondition := getSupportedKindsWithCondition(g.Generation, listener)
-		lStatus := gatewayv1.ListenerStatus{
-			Name:           listener.Name,
-			SupportedKinds: supportedKinds,
-			Conditions: []metav1.Condition{
-				{
-					Type:               string(gatewayv1.ListenerConditionProgrammed),
-					Status:             metav1.ConditionFalse,
-					Reason:             string(gatewayv1.ListenerReasonPending),
-					ObservedGeneration: g.Generation,
-					LastTransitionTime: metav1.Now(),
-				},
-				resolvedRefsCondition,
+		lStatus := g.Status.Listeners[i]
+		lStatus.SupportedKinds = supportedKinds
+		lStatus.Conditions = append(lStatus.Conditions,
+			metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionProgrammed),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.ListenerReasonPending),
+				ObservedGeneration: g.Generation,
+				LastTransitionTime: metav1.Now(),
 			},
-		}
-		g.Status.Listeners = append(g.Status.Listeners, lStatus)
+			resolvedRefsCondition,
+		)
+		g.Status.Listeners[i] = lStatus
 	}
 }
 
-// SetReadyAndProgrammed sets the gateway Programmed and Ready conditions by
+// initListenersStatus initialize the listener status for a given gateway.
+func (g *gatewayConditionsAndListenersAwareT) initListenersStatus() {
+	// Initialize listeners status.
+	listenersStatus := make([]gatewayv1.ListenerStatus, len(g.Spec.Listeners))
+	for i, listener := range g.Spec.Listeners {
+		listenersStatus[i] = gatewayv1.ListenerStatus{
+			Name:       listener.Name,
+			Conditions: []metav1.Condition{},
+		}
+	}
+	g.Status.Listeners = listenersStatus
+}
+
+// setAccepted sets the listeners and gateway Accepted condition according to the Gateway API specification.
+func (g *gatewayConditionsAndListenersAwareT) setAccepted() {
+	for i, listener := range g.Spec.Listeners {
+		acceptedCondition := metav1.Condition{
+			Type:               string(gatewayv1.ListenerConditionAccepted),
+			Status:             metav1.ConditionTrue,
+			Reason:             string(gatewayv1.ListenerReasonAccepted),
+			LastTransitionTime: metav1.Now(),
+			ObservedGeneration: g.Generation,
+		}
+		if listener.Protocol != gatewayv1.HTTPProtocolType && listener.Protocol != gatewayv1.HTTPSProtocolType {
+			acceptedCondition.Status = metav1.ConditionFalse
+			acceptedCondition.Reason = string(gatewayv1.ListenerReasonUnsupportedProtocol)
+		}
+		listenerConditionsAware := listenerConditionsAware(&g.Status.Listeners[i])
+		listenerConditionsAware.SetConditions(append(listenerConditionsAware.Conditions, acceptedCondition))
+	}
+	k8sutils.SetAcceptedConditionOnGateway(g)
+}
+
+// setConflicted sets the gateway Conflicted condition according to the Gateway API specification.
+func (g *gatewayConditionsAndListenersAwareT) setConflicted() {
+	for i, l := range g.Spec.Listeners {
+		conflictedCondition := metav1.Condition{
+			Type:               string(gatewayv1.ListenerConditionConflicted),
+			Status:             metav1.ConditionFalse,
+			Reason:             string(gatewayv1.ListenerReasonNoConflicts),
+			LastTransitionTime: metav1.Now(),
+			ObservedGeneration: g.Generation,
+		}
+		for j, l2 := range g.Spec.Listeners {
+			if i == j {
+				continue
+			}
+			// If two listeners specify the same port and different protocols, they have a protocol conflict,
+			// and the conflicted condition must be updated accordingly.
+			if l.Port == l2.Port && l.Protocol != l2.Protocol {
+				conflictedCondition.Status = metav1.ConditionTrue
+				conflictedCondition.Reason = string(gatewayv1.ListenerReasonProtocolConflict)
+				break
+			}
+			// If two listeners specify the same hostname, they have a hostname conflict, and
+			// the conflicted condition must be updated accordingly.
+			if l.Hostname != nil && l2.Hostname != nil && *l.Hostname == *l2.Hostname {
+				conflictedCondition.Status = metav1.ConditionTrue
+				conflictedCondition.Reason = string(gatewayv1.ListenerReasonHostnameConflict)
+				break
+			}
+		}
+		listenerConditionsAware := listenerConditionsAware(&g.Status.Listeners[i])
+		k8sutils.SetCondition(conflictedCondition, listenerConditionsAware)
+	}
+}
+
+// setReadyAndProgrammed sets the gateway Programmed and Ready conditions by
 // setting the underlying Gateway Programmed and Ready status to true.
 // Furthermore, it sets the supportedKinds and initializes the readiness to true with reason
 // Ready or false with reason Invalid for each Gateway listener.
-func (g *gatewayConditionsAwareT) SetReadyAndProgrammed() {
+func (g *gatewayConditionsAndListenersAwareT) setReadyAndProgrammed() {
 	k8sutils.SetReady(g)
 	k8sutils.SetProgrammed(g)
 
-	listenersStatus := []gatewayv1.ListenerStatus{}
-	for _, listener := range g.Spec.Listeners {
+	for i, listener := range g.Spec.Listeners {
 		supportedKinds, resolvedRefsCondition := getSupportedKindsWithCondition(g.Generation, listener)
-		readyCondition := metav1.Condition{
+		programmedCondition := metav1.Condition{
 			Type:               string(gatewayv1.ListenerConditionProgrammed),
 			Status:             metav1.ConditionTrue,
 			Reason:             string(gatewayv1.ListenerReasonProgrammed),
-			ObservedGeneration: g.Generation,
+			ObservedGeneration: g.GetGeneration(),
 			LastTransitionTime: metav1.Now(),
 		}
 		if resolvedRefsCondition.Status == metav1.ConditionFalse {
-			readyCondition.Status = metav1.ConditionFalse
-			readyCondition.Reason = string(gatewayv1.ListenerReasonInvalid)
+			programmedCondition.Status = metav1.ConditionFalse
+			programmedCondition.Reason = string(gatewayv1.ListenerReasonInvalid)
 		}
-		lStatus := gatewayv1.ListenerStatus{
-			Name:           listener.Name,
-			SupportedKinds: supportedKinds,
-			Conditions: []metav1.Condition{
-				readyCondition,
-				resolvedRefsCondition,
-			},
-		}
-		listenersStatus = append(listenersStatus, lStatus)
+		listenerStatus := listenerConditionsAware(&g.Status.Listeners[i])
+		listenerStatus.SupportedKinds = supportedKinds
+		k8sutils.SetCondition(programmedCondition, listenerStatus)
+		k8sutils.SetCondition(resolvedRefsCondition, listenerStatus)
 	}
-	g.Status.Listeners = listenersStatus
 }
 
 // getSupportedKindsWithCondition returns all the route kinds supported by the listener, along with the resolvedRefs
@@ -549,11 +638,7 @@ func getSupportedKindsWithCondition(generation int64, listener gatewayv1.Listene
 		LastTransitionTime: metav1.Now(),
 	}
 	if len(listener.AllowedRoutes.Kinds) == 0 {
-		supportedRoutes, ok := supportedRoutesByProtocol()[listener.Protocol]
-		if !ok {
-			resolvedRefsCondition.Status = metav1.ConditionFalse
-			resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidRouteKinds)
-		}
+		supportedRoutes := supportedRoutesByProtocol()[listener.Protocol]
 		for route := range supportedRoutes {
 			supportedKinds = append(supportedKinds, gatewayv1.RouteGroupKind{
 				Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),

@@ -36,26 +36,8 @@ var skippedTests = []string{
 	tests.GatewaySecretReferenceGrantSpecific.ShortName,
 
 	//httproute
-	tests.HTTPRouteCrossNamespace.ShortName,
-	tests.HTTPExactPathMatching.ShortName,
 	tests.HTTPRouteHeaderMatching.ShortName,
-	tests.HTTPRouteHostnameIntersection.ShortName,
-	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
-	tests.HTTPRouteInvalidCrossNamespaceBackendRef.ShortName,
-	tests.HTTPRouteInvalidCrossNamespaceParentRef.ShortName,
-	tests.HTTPRouteInvalidNonExistentBackendRef.ShortName,
-	tests.HTTPRouteInvalidParentRefNotMatchingSectionName.ShortName,
-	tests.HTTPRouteInvalidReferenceGrant.ShortName,
-	tests.HTTPRouteListenerHostnameMatching.ShortName,
-	tests.HTTPRouteMatchingAcrossRoutes.ShortName,
-	tests.HTTPRouteMatching.ShortName,
-	tests.HTTPRouteObservedGenerationBump.ShortName,
-	tests.HTTPRoutePartiallyInvalidViaInvalidReferenceGrant.ShortName,
-	tests.HTTPRoutePathMatchOrder.ShortName,
-	tests.HTTPRouteRedirectHostAndStatus.ShortName,
 	tests.HTTPRouteReferenceGrant.ShortName,
-	tests.HTTPRouteRequestHeaderModifier.ShortName,
-	tests.HTTPRouteSimpleSameNamespace.ShortName,
 }
 
 var (
