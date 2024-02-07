@@ -319,6 +319,7 @@ _docker.build:
 		--build-arg TAG=$(TAG) \
 		--build-arg COMMIT=$(COMMIT) \
 		--build-arg REPO_INFO=$(REPO_INFO) \
+		$(DOCKERBUILDFLAGS) \
 		.
 
 .PHONY: docker.build
