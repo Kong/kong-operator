@@ -2,7 +2,7 @@
 # Builder
 # ------------------------------------------------------------------------------
 
-FROM golang:1.21.6 as builder
+FROM golang:1.21.7 as builder
 
 WORKDIR /workspace
 ARG GOPATH
