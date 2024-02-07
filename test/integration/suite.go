@@ -20,7 +20,6 @@ import (
 
 	"github.com/kong/gateway-operator/config"
 	testutils "github.com/kong/gateway-operator/internal/utils/test"
-	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/manager"
 )
 
@@ -91,8 +90,15 @@ func GetClients() testutils.K8sClients {
 // -----------------------------------------------------------------------------
 
 // TestMain is the entrypoint for the integration test suite. It bootstraps
-// the testing environment and runs the test suite. Call it from TestMain.
-func TestMain(m *testing.M) {
+// the testing environment and runs the test suite on instance of KGO
+// constructed based on its arguments: cfg, setUpControllers, and admissionRequestHandler.
+// Call it from TestMain.
+func TestMain(
+	m *testing.M,
+	cfg manager.Config,
+	setUpControllers manager.SetupControllersFunc,
+	admissionRequestHandler manager.AdmissionRequestHandlerFunc,
+) {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
@@ -134,16 +140,20 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: deploying CRDs to test cluster")
 	exitOnErr(testutils.DeployCRDs(GetCtx(), path.Join(configPath, "/crd"), GetClients().OperatorClient, GetEnv()))
 
+	// Currently it is not used, see
+	// TODO: https://github.com/Kong/gateway-operator/issues/1412
 	runWebhookTests = (os.Getenv("RUN_WEBHOOK_TESTS") == "true")
 	if runWebhookTests {
 		exitOnErr(prepareWebhook())
 	}
 
 	fmt.Println("INFO: starting the operator's controller manager")
-	// startControllerManager will spawn the controller manager in a separate
-	// goroutine and will report whether that succeeded.
-	started := startControllerManager()
-	<-started
+	// Spawn the controller manager based on passed config in
+	// a separate goroutine and report whether that succeeded.
+	go func() {
+		exitOnErr(manager.Run(cfg, setUpControllers, admissionRequestHandler))
+	}()
+	<-cfg.StartedCh
 
 	exitOnErr(testutils.BuildMTLSCredentials(GetCtx(), GetClients().K8sClient, &httpc))
 
@@ -178,9 +188,9 @@ func exitOnErr(err error) {
 	}
 }
 
-// startControllerManager will configure the manager and start it in a separate goroutine.
-// It returns a channel which will get closed when manager.Start() gets called.
-func startControllerManager() <-chan struct{} {
+// DefaultControllerConfigForTests returns a default configuration for the controller manager used in tests.
+// It can be adjusted by overriding arbitrary fields in the returned config.
+func DefaultControllerConfigForTests() manager.Config {
 	cfg := manager.DefaultConfig()
 	cfg.LeaderElection = false
 	cfg.DevelopmentMode = true
@@ -205,12 +215,7 @@ func startControllerManager() <-chan struct{} {
 
 		return client.New(config, options)
 	}
-
-	go func() {
-		exitOnErr(manager.Run(cfg, manager.SetupControllers, admission.NewRequestHandler))
-	}()
-
-	return cfg.StartedCh
+	return cfg
 }
 
 func generateWebhookCertificates() error {
