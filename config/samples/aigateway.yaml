@@ -1,12 +1,40 @@
+## TODO: once the reconciler is implemented, add some usage examples here
+## with curl using kubectl to grab the credentials.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: acme-ai-cloud-providers
+type: Opaque
+data:
+  apiToken: <your-api-token-here>
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: kong-ai-gateways
+spec:
+  controllerName: konghq.com/gateway-operator
+---
 apiVersion: gateway-operator.konghq.com/v1alpha1
 kind: AIGateway
 metadata:
-  labels:
-    app.kubernetes.io/name: aigateway
-    app.kubernetes.io/instance: aigateway-sample
-    app.kubernetes.io/part-of: kong-gateway-operator
-    app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/created-by: kong-gateway-operator
-  name: aigateway-sample
+  name: kong-aigateway-example
 spec:
-  # TODO(user): Add fields here
+  gatewayClassName: kong-ai-gateways
+  largeLanguageModels:
+    cloudHosted:
+    - identifier: marketing-team-classic-chatgpt
+      model: gpt-3.5-turbo
+      promptType: completions
+    - identifier: devteam-chatgpt
+      model: gpt-4
+      promptType: chat
+      defaultPrompts:
+      - role: system
+        content: "You are a helpful assistant who responds in the style of Sherlock Holmes."
+      defaultPromptParams:
+        temperature: "0.5" # higher confidence predictions
+        maxTokens: 50 # shorter responses
+        TopP: "0.9" # higher diversity
+  cloudProviderCredentials:
+    name: acme-ai-cloud-providers

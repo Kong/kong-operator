@@ -22,19 +22,22 @@ type AIGatewayReconciler struct {
 //+kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=aigateways/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=aigateways/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the AIGateway object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.4/pkg/reconcile
+// Reconcile reconciles the AIGateway resource.
 func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log.FromContext(ctx).Info("reconciling AIGateway", "namespace", req.Namespace, "name", req.Name)
+	log.FromContext(ctx).Info(
+		"AIGateway found, but controller not yet implemented. Quitting.",
+		"namespace", req.Namespace, "name", req.Name,
+	)
 
-	// TODO(user): your logic here
+	// TODO: implement the reconcile workflow
+	//
+	// High level workflow overview:
+	//
+	// 1. create an owned Gateway resource (must be v3.6.0 or RC)
+	// 2. push all LLM configuration to the AI plugins
+	// 3. create a consumer with credentials
+	// 3. configure the plugin with the consumer
+	// 5. update status with endpoint, consumers auth, e.t.c.
 
 	return ctrl.Result{}, nil
 }
