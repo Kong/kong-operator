@@ -62,13 +62,13 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
 .PHONY: _download_tool
 _download_tool:
-	(cd third_party && \
+	(cd $(PROJECT_DIR)/third_party && \
 		ls ./$(TOOL).go > /dev/null && \
 		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
 .PHONY: _download_tool_own
 _download_tool_own:
-	(cd third_party/$(TOOL) && \
+	(cd $(PROJECT_DIR)/third_party/$(TOOL) && \
 		ls ./$(TOOL).go > /dev/null && \
 		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
@@ -297,13 +297,14 @@ check.rbacs: kic-role-generator
 # ------------------------------------------------------------------------------
 
 CONTROLLER_GEN_CRD_OPTIONS ?= "+crd:generateEmbeddedObjectMeta=true"
-CONTROLLER_GEN_PATHS ?= "./internal/utils/kubernetes/resources/clusterroles/;./internal/utils/kubernetes/reduce/;./controllers/...;./$(APIS_DIR)/..."
+CONTROLLER_GEN_PATHS_RAW := ./internal/utils/kubernetes/resources/clusterroles/ ./internal/utils/kubernetes/reduce/ ./controllers/... ./$(APIS_DIR)/...
+CONTROLLER_GEN_PATHS := $(patsubst %,%;,$(strip $(CONTROLLER_GEN_PATHS_RAW)))
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) paths=$(CONTROLLER_GEN_PATHS) rbac:roleName=manager-role
-	$(CONTROLLER_GEN) paths=$(CONTROLLER_GEN_PATHS) webhook
-	$(CONTROLLER_GEN) paths=$(CONTROLLER_GEN_PATHS) $(CONTROLLER_GEN_CRD_OPTIONS) +output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" rbac:roleName=manager-role
+	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" webhook
+	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" $(CONTROLLER_GEN_CRD_OPTIONS) +output:crd:artifacts:config=config/crd/bases
 
 # ------------------------------------------------------------------------------
 # Build - Container Images
