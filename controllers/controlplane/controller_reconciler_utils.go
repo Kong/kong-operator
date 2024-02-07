@@ -140,10 +140,10 @@ func setControlPlaneEnvOnDataPlaneChange(
 // Reconciler - Owned Resource Management
 // -----------------------------------------------------------------------------
 
-// ensureDeploymentForControlPlane ensures that a Deployment is created for the
+// ensureDeployment ensures that a Deployment is created for the
 // ControlPlane resource. Deployment will remain in dormant state until
 // corresponding dataplane is set.
-func (r *Reconciler) ensureDeploymentForControlPlane(
+func (r *Reconciler) ensureDeployment(
 	ctx context.Context,
 	logger logr.Logger,
 	controlPlane *operatorv1alpha1.ControlPlane,
@@ -237,7 +237,7 @@ func (r *Reconciler) ensureDeploymentForControlPlane(
 	return op.Created, generatedDeployment, nil
 }
 
-func (r *Reconciler) ensureServiceAccountForControlPlane(
+func (r *Reconciler) ensureServiceAccount(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (createdOrModified bool, sa *corev1.ServiceAccount, err error) {
@@ -281,7 +281,7 @@ func (r *Reconciler) ensureServiceAccountForControlPlane(
 	return true, generatedServiceAccount, r.Client.Create(ctx, generatedServiceAccount)
 }
 
-func (r *Reconciler) ensureClusterRoleForControlPlane(
+func (r *Reconciler) ensureClusterRole(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (createdOrUpdated bool, cr *rbacv1.ClusterRole, err error) {
@@ -315,20 +315,22 @@ func (r *Reconciler) ensureClusterRoleForControlPlane(
 	if count == 1 {
 		var updated bool
 		existingClusterRole := &clusterRoles[0]
-		updated, existingClusterRole.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingClusterRole.ObjectMeta, generatedClusterRole.ObjectMeta)
-		if updated {
-			if err := r.Client.Update(ctx, existingClusterRole); err != nil {
-				return false, existingClusterRole, fmt.Errorf("failed updating ControlPlane's ClusterRole %s: %w", existingClusterRole.Name, err)
+		updated, generatedClusterRole.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingClusterRole.ObjectMeta, generatedClusterRole.ObjectMeta)
+		if updated ||
+			!cmp.Equal(existingClusterRole.Rules, generatedClusterRole.Rules) ||
+			!cmp.Equal(existingClusterRole.AggregationRule, generatedClusterRole.AggregationRule) {
+			if err := r.Client.Patch(ctx, generatedClusterRole, client.MergeFrom(existingClusterRole)); err != nil {
+				return false, existingClusterRole, fmt.Errorf("failed patching ControlPlane's ClusterRole %s: %w", existingClusterRole.Name, err)
 			}
-			return true, existingClusterRole, nil
+			return true, generatedClusterRole, nil
 		}
-		return false, existingClusterRole, nil
+		return false, generatedClusterRole, nil
 	}
 
 	return true, generatedClusterRole, r.Client.Create(ctx, generatedClusterRole)
 }
 
-func (r *Reconciler) ensureClusterRoleBindingForControlPlane(
+func (r *Reconciler) ensureClusterRoleBinding(
 	ctx context.Context,
 	controlplane *operatorv1alpha1.ControlPlane,
 	serviceAccountName string,
@@ -358,16 +360,16 @@ func (r *Reconciler) ensureClusterRoleBindingForControlPlane(
 	k8sutils.SetOwnerForObject(generatedClusterRoleBinding, controlplane)
 
 	if count == 1 {
-		var updated bool
 		existingClusterRoleBinding := &clusterRoleBindings[0]
-		updated, existingClusterRoleBinding.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingClusterRoleBinding.ObjectMeta, generatedClusterRoleBinding.ObjectMeta)
+		var updated bool
+		updated, generatedClusterRoleBinding.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingClusterRoleBinding.ObjectMeta, generatedClusterRoleBinding.ObjectMeta)
 		if updated {
-			if err := r.Client.Update(ctx, existingClusterRoleBinding); err != nil {
-				return true, existingClusterRoleBinding, fmt.Errorf("failed updating ControlPlane's ClusterRoleBinding %s: %w", existingClusterRoleBinding.Name, err)
+			if err := r.Client.Patch(ctx, generatedClusterRoleBinding, client.MergeFrom(existingClusterRoleBinding)); err != nil {
+				return false, existingClusterRoleBinding, fmt.Errorf("failed patching ControlPlane's ClusterRoleBinding %s: %w", existingClusterRoleBinding.Name, err)
 			}
-			return true, existingClusterRoleBinding, nil
+			return true, generatedClusterRoleBinding, nil
 		}
-		return false, existingClusterRoleBinding, nil
+		return false, generatedClusterRoleBinding, nil
 	}
 
 	return true, generatedClusterRoleBinding, r.Client.Create(ctx, generatedClusterRoleBinding)

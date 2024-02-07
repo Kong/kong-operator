@@ -267,7 +267,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "ensuring ServiceAccount for ControlPlane deployment exists", cp)
-	createdOrUpdated, controlplaneServiceAccount, err := r.ensureServiceAccountForControlPlane(ctx, cp)
+	createdOrUpdated, controlplaneServiceAccount, err := r.ensureServiceAccount(ctx, cp)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -277,7 +277,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "ensuring ClusterRoles for ControlPlane deployment exist", cp)
-	createdOrUpdated, controlplaneClusterRole, err := r.ensureClusterRoleForControlPlane(ctx, cp)
+	createdOrUpdated, controlplaneClusterRole, err := r.ensureClusterRole(ctx, cp)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -287,7 +287,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "ensuring that ClusterRoleBindings for ControlPlane Deployment exist", cp)
-	createdOrUpdated, _, err = r.ensureClusterRoleBindingForControlPlane(ctx, cp, controlplaneServiceAccount.Name, controlplaneClusterRole.Name)
+	createdOrUpdated, _, err = r.ensureClusterRoleBinding(ctx, cp, controlplaneServiceAccount.Name, controlplaneClusterRole.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -307,7 +307,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "looking for existing Deployments for ControlPlane resource", cp)
-	res, controlplaneDeployment, err := r.ensureDeploymentForControlPlane(ctx, logger, cp, controlplaneServiceAccount.Name, certSecret.Name)
+	res, controlplaneDeployment, err := r.ensureDeployment(ctx, logger, cp, controlplaneServiceAccount.Name, certSecret.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
