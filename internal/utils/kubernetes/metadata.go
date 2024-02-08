@@ -19,50 +19,6 @@ func GetAPIVersionForObject(obj client.Object) string {
 	return fmt.Sprintf("%s/%s", obj.GetObjectKind().GroupVersionKind().Group, obj.GetObjectKind().GroupVersionKind().Version)
 }
 
-// EnsureFinalizersInMetadata ensures the expected finalizers exist in ObjectMeta.
-// If the finalizers do not exist, append them to finalizers.
-// Returns true if the ObjectMeta has been changed.
-func EnsureFinalizersInMetadata(metadata *metav1.ObjectMeta, finalizers ...string) bool {
-	var added bool
-	for _, finalizer := range finalizers {
-		var finalizerExists bool
-		for _, f := range metadata.Finalizers {
-			if f == finalizer {
-				finalizerExists = true
-				break
-			}
-		}
-		if !finalizerExists {
-			metadata.Finalizers = append(metadata.Finalizers, finalizer)
-			added = true
-		}
-	}
-
-	return added
-}
-
-// RemoveFinalizerInMetadata removes the finalizer from the finalizers in ObjectMeta.
-// If it exists, remove the finalizer from the slice.
-// Returns true if the ObjectMeta has been changed.
-func RemoveFinalizerInMetadata(metadata *metav1.ObjectMeta, finalizer string) bool {
-	newFinalizers := []string{}
-	changed := false
-
-	for _, f := range metadata.Finalizers {
-		if f == finalizer {
-			changed = true
-			continue
-		}
-		newFinalizers = append(newFinalizers, f)
-	}
-
-	if changed {
-		metadata.Finalizers = newFinalizers
-	}
-
-	return changed
-}
-
 // EnsureObjectMetaIsUpdated ensures that the existing object metadata has
 // all the needed fields set. The source of truth is the second argument of
 // the function, a generated object metadata.

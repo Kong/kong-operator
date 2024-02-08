@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
@@ -293,7 +294,7 @@ func getSecretOpts[T interface {
 	switch any(obj).(type) {
 	case *operatorv1beta1.DataPlane:
 		withDataPlaneOwnedFinalizer := func(s *corev1.Secret) {
-			k8sutils.EnsureFinalizersInMetadata(&s.ObjectMeta, consts.DataPlaneOwnedWaitForOwnerFinalizer)
+			controllerutil.AddFinalizer(s, consts.DataPlaneOwnedWaitForOwnerFinalizer)
 		}
 		return []k8sresources.SecretOpt{withDataPlaneOwnedFinalizer}
 	default:

@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	pkgapisappsv1 "k8s.io/kubernetes/pkg/apis/apps/v1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -258,7 +259,7 @@ func GenerateNewDeploymentForDataPlane(
 	}
 
 	k8sutils.SetOwnerForObject(deployment, dataplane)
-	k8sutils.EnsureFinalizersInMetadata(&deployment.ObjectMeta, consts.DataPlaneOwnedWaitForOwnerFinalizer)
+	controllerutil.AddFinalizer(deployment, consts.DataPlaneOwnedWaitForOwnerFinalizer)
 
 	// Set defaults for the deployment so that we don't get a diff when we compare
 	// it with what's in the cluster.

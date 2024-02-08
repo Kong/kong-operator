@@ -18,6 +18,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -115,7 +116,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			}
 		} else {
 			oldGateway := gateway.DeepCopy()
-			if k8sutils.RemoveFinalizerInMetadata(&gateway.ObjectMeta, string(GatewayFinalizerCleanupDataPlanes)) {
+			if controllerutil.RemoveFinalizer(&gateway, string(GatewayFinalizerCleanupDataPlanes)) {
 				err := r.Client.Patch(ctx, &gateway, client.MergeFrom(oldGateway))
 				if err != nil {
 					return ctrl.Result{}, err
@@ -143,7 +144,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			}
 		} else {
 			oldGateway := gateway.DeepCopy()
-			if k8sutils.RemoveFinalizerInMetadata(&gateway.ObjectMeta, string(GatewayFinalizerCleanupControlPlanes)) {
+			if controllerutil.RemoveFinalizer(&gateway, string(GatewayFinalizerCleanupControlPlanes)) {
 				err := r.Client.Patch(ctx, &gateway, client.MergeFrom(oldGateway))
 				if err != nil {
 					return ctrl.Result{}, err
@@ -169,7 +170,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			}
 		} else {
 			oldGateway := gateway.DeepCopy()
-			if k8sutils.RemoveFinalizerInMetadata(&gateway.ObjectMeta, string(GatewayFinalizerCleanupNetworkpolicies)) {
+			if controllerutil.RemoveFinalizer(&gateway, string(GatewayFinalizerCleanupNetworkpolicies)) {
 				err := r.Client.Patch(ctx, &gateway, client.MergeFrom(oldGateway))
 				if err != nil {
 					return ctrl.Result{}, err
@@ -184,14 +185,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	// ensure the controlplane has a finalizer to delete owned cluster wide resources on delete.
-	finalizersChanged := k8sutils.EnsureFinalizersInMetadata(&gateway.ObjectMeta,
-		string(GatewayFinalizerCleanupControlPlanes),
-		string(GatewayFinalizerCleanupDataPlanes),
-		string(GatewayFinalizerCleanupNetworkpolicies),
-	)
-	if finalizersChanged {
-		log.Trace(logger, "update metadata of gateway to set finalizer", gateway)
+	// ensure the Gateway has finalizers to perform clean up for owned ControlPlanes, DataPlanes and NetworkPolicies.
+	cpFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupControlPlanes))
+	dpFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupDataPlanes))
+	npFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupNetworkpolicies))
+	if cpFinalizerSet || dpFinalizerSet || npFinalizerSet {
+		log.Trace(logger, "Setting finalizers", gateway)
 		if err := r.Client.Update(ctx, &gateway); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed updating Gateway's finalizers: %w", err)
 		}

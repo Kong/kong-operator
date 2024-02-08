@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
@@ -87,7 +88,7 @@ func GenerateNewIngressServiceForDataPlane(dataplane *operatorv1beta1.DataPlane,
 	}
 
 	k8sutils.SetOwnerForObject(svc, dataplane)
-	k8sutils.EnsureFinalizersInMetadata(&svc.ObjectMeta, consts.DataPlaneOwnedWaitForOwnerFinalizer)
+	controllerutil.AddFinalizer(svc, consts.DataPlaneOwnedWaitForOwnerFinalizer)
 
 	return svc, nil
 }
@@ -164,7 +165,7 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, o
 	}
 
 	k8sutils.SetOwnerForObject(adminService, dataplane)
-	k8sutils.EnsureFinalizersInMetadata(&adminService.ObjectMeta, consts.DataPlaneOwnedWaitForOwnerFinalizer)
+	controllerutil.AddFinalizer(adminService, consts.DataPlaneOwnedWaitForOwnerFinalizer)
 	return adminService, nil
 }
 

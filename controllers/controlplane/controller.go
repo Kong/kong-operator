@@ -16,6 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -136,7 +137,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		// now that ClusterRoleBindings are cleaned up, remove the relevant finalizer
-		if k8sutils.RemoveFinalizerInMetadata(&newControlPlane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRoleBinding)) {
+		if controllerutil.RemoveFinalizer(newControlPlane, string(ControlPlaneFinalizerCleanupClusterRoleBinding)) {
 			if err := r.Client.Patch(ctx, newControlPlane, client.MergeFrom(cp)); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -155,7 +156,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		// now that ClusterRoles are cleaned up, remove the relevant finalizer
-		if k8sutils.RemoveFinalizerInMetadata(&newControlPlane.ObjectMeta, string(ControlPlaneFinalizerCleanupClusterRole)) {
+		if controllerutil.RemoveFinalizer(newControlPlane, string(ControlPlaneFinalizerCleanupClusterRole)) {
 			if err := r.Client.Patch(ctx, newControlPlane, client.MergeFrom(cp)); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -169,11 +170,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// ensure the controlplane has a finalizer to delete owned cluster wide resources on delete.
-	finalizersChanged := k8sutils.EnsureFinalizersInMetadata(&cp.ObjectMeta,
-		string(ControlPlaneFinalizerCleanupClusterRole),
-		string(ControlPlaneFinalizerCleanupClusterRoleBinding))
-	if finalizersChanged {
-		log.Trace(logger, "update metadata of control plane to set finalizer", cp)
+	crFinalizerSet := controllerutil.AddFinalizer(cp, string(ControlPlaneFinalizerCleanupClusterRole))
+	crbFinalizerSet := controllerutil.AddFinalizer(cp, string(ControlPlaneFinalizerCleanupClusterRoleBinding))
+	if crFinalizerSet || crbFinalizerSet {
+		log.Trace(logger, "Setting finalizers", cp)
 		if err := r.Client.Update(ctx, cp); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane's finalizers : %w", err)
 		}
