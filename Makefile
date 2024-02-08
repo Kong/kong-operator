@@ -494,7 +494,7 @@ generate.gateway-api-urls:
 		CRDS_EXPERIMENTAL_URL="$(GATEWAY_API_CRDS_EXPERIMENTAL_URL)" \
 		RAW_REPO_URL="$(GATEWAY_API_RAW_REPO_URL)" \
 		INPUT=$(shell pwd)/internal/utils/cmd/generate-gateway-api-urls/gateway_consts.tmpl \
-		OUTPUT=$(shell pwd)/internal/utils/test/zz_generated_gateway_api.go \
+		OUTPUT=$(shell pwd)/pkg/utils/test/zz_generated_gateway_api.go \
 		go generate -tags=generate_gateway_api_urls ./internal/utils/cmd/generate-gateway-api-urls
 
 .PHONY: go-mod-download-gateway-api

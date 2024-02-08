@@ -19,7 +19,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
 	"github.com/kong/gateway-operator/config"
-	testutils "github.com/kong/gateway-operator/internal/utils/test"
+	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/manager"
 )

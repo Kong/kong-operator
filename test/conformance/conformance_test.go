@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	"github.com/kong/gateway-operator/internal/metadata"
-	testutils "github.com/kong/gateway-operator/internal/utils/test"
+	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
