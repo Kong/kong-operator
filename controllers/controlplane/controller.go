@@ -28,7 +28,7 @@ import (
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/pkg/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
-	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
+	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/internal/versions"
 )
