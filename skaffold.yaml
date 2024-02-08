@@ -33,9 +33,9 @@ profiles:
         dockerfile: Dockerfile
         target: distroless
         buildArgs:
-          TAG: ${{ .TAG }}
-          COMMIT: ${{ .COMMIT }}
-          REPO_INFO: ${{ .REPO_INFO }}
+          TAG: "{{ .TAG }}"
+          COMMIT: "{{ .COMMIT }}"
+          REPO_INFO: "{{ .REPO_INFO }}"
 - name: dev
   manifests:
     kustomize:
@@ -54,9 +54,9 @@ profiles:
         dockerfile: Dockerfile
         target: distroless
         buildArgs:
-          TAG: ${{ .TAG }}
-          COMMIT: ${{ .COMMIT }}
-          REPO_INFO: ${{ .REPO_INFO }}
+          TAG: "{{ .TAG }}"
+          COMMIT: "{{ .COMMIT }}"
+          REPO_INFO: "{{ .REPO_INFO }}"
 - name: debug
   manifests:
     kustomize:
@@ -75,6 +75,6 @@ profiles:
         dockerfile: debug.Dockerfile
         target: debug
         buildArgs:
-          TAG: ${{ .TAG }}
-          COMMIT: ${{ .COMMIT }}
-          REPO_INFO: ${{ .REPO_INFO }}
+          TAG: "{{ .TAG }}"
+          COMMIT: "{{ .COMMIT }}"
+          REPO_INFO: "{{ .REPO_INFO }}"
