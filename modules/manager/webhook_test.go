@@ -29,7 +29,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/gateway-operator/internal/consts"
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 func TestWaitForWebhookCertificate(t *testing.T) {

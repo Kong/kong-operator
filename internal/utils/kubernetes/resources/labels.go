@@ -11,7 +11,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
-	"github.com/kong/gateway-operator/internal/consts"
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 // LabelObjectAsDataPlaneManaged ensures that labels are set on the

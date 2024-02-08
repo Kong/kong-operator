@@ -8,7 +8,7 @@ import (
 	"github.com/Masterminds/semver"
 	rbacv1 "k8s.io/api/rbac/v1"
 
-	"github.com/kong/gateway-operator/internal/consts"
+	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources/clusterroles"
 	"github.com/kong/gateway-operator/internal/versions"
 )

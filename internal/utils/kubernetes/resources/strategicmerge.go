@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	pkgapiscorev1 "k8s.io/kubernetes/pkg/apis/core/v1"
 
-	"github.com/kong/gateway-operator/internal/consts"
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 // StrategicMergePatchPodTemplateSpec adds patches to base using a strategic merge patch and

@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/gateway-operator/apis/v1alpha1"
-	"github.com/kong/gateway-operator/internal/consts"
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
