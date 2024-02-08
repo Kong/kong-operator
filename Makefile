@@ -297,7 +297,7 @@ check.rbacs: kic-role-generator
 # ------------------------------------------------------------------------------
 
 CONTROLLER_GEN_CRD_OPTIONS ?= "+crd:generateEmbeddedObjectMeta=true"
-CONTROLLER_GEN_PATHS_RAW := ./internal/utils/kubernetes/resources/clusterroles/ ./internal/utils/kubernetes/reduce/ ./controllers/... ./$(APIS_DIR)/...
+CONTROLLER_GEN_PATHS_RAW := ./pkg/utils/kubernetes/resources/clusterroles/ ./pkg/utils/kubernetes/reduce/ ./controllers/... ./$(APIS_DIR)/...
 CONTROLLER_GEN_PATHS := $(patsubst %,%;,$(strip $(CONTROLLER_GEN_PATHS_RAW)))
 
 .PHONY: manifests

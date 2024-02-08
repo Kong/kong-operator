@@ -26,9 +26,9 @@ import (
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
-	k8sreduce "github.com/kong/gateway-operator/internal/utils/kubernetes/reduce"
-	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
+	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 

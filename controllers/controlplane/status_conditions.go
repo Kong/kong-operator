@@ -4,7 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 // markAsProvisioned marks the provided resource as ready by the means of Provisioned

@@ -15,7 +15,7 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 func TestParseKongProxyListenEnv(t *testing.T) {

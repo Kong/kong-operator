@@ -13,7 +13,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------

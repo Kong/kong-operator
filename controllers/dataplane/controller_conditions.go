@@ -1,6 +1,6 @@
 package dataplane
 
-import k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+import k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 // -----------------------------------------------------------------------------
 // DataPlane - Status Condition Reasons

@@ -32,7 +32,7 @@ import (
 	"github.com/kong/gateway-operator/controllers/pkg/log"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
-	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
 func Test_ensureContainerImageUpdated(t *testing.T) {

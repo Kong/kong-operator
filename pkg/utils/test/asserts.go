@@ -20,7 +20,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 // mustListControlPlaneDeployments is a helper function for tests that

@@ -9,7 +9,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
-	"github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
 func DeploymentOptionsV1AlphaDeepEqual(o1, o2 *operatorv1alpha1.DeploymentOptions, envVarsToIgnore ...string) bool {

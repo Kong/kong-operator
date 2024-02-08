@@ -14,7 +14,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/gateway-operator/controllers/pkg/log"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 

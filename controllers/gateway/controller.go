@@ -31,9 +31,9 @@ import (
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
-	"github.com/kong/gateway-operator/internal/utils/kubernetes/compare"
-	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	"github.com/kong/gateway-operator/pkg/utils/kubernetes/compare"
+	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 

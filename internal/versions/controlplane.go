@@ -23,7 +23,7 @@ var minimumControlPlaneVersion = semver.MustParse("2.11.0")
 
 // RoleVersionsForKICVersions is a map that explicitly sets which ClusterRole version to use upon the KIC
 // version. It is used by /hack/generators/kic-role-generator to generate the roles to be used by KIC.
-// The file /internal/utils/kubernetes/resources/zz_generated_clusterrole_helpers.go is generated out of this map.
+// The file /pkg/utils/kubernetes/resources/zz_generated_clusterrole_helpers.go is generated out of this map.
 // This data follows the semver constraint syntax (see https://github.com/Masterminds/semver#basic-comparisons)
 // to set the range of KIC versions to be associated with a specific role version.
 //

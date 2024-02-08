@@ -10,8 +10,8 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
-	k8scompare "github.com/kong/gateway-operator/internal/utils/kubernetes/compare"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	k8scompare "github.com/kong/gateway-operator/pkg/utils/kubernetes/compare"
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/vars"
 )

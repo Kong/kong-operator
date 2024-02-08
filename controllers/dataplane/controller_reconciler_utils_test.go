@@ -24,7 +24,7 @@ import (
 	"github.com/kong/gateway-operator/controllers/pkg/builder"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/pkg/consts"
-	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/internal/versions"
 )
 
