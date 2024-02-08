@@ -67,9 +67,11 @@ func TestDataPlaneEssentials(t *testing.T) {
 				},
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
-						Ingress: &operatorv1beta1.ServiceOptions{
-							Annotations: map[string]string{
-								"foo": "bar",
+						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+							ServiceOptions: operatorv1beta1.ServiceOptions{
+								Annotations: map[string]string{
+									"foo": "bar",
+								},
 							},
 						},
 					},

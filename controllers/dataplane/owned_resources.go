@@ -485,6 +485,14 @@ func ensureIngressServiceForDataPlane(
 			existingService.Spec.Selector = generatedService.Spec.Selector
 			updated = true
 		}
+		if !cmp.Equal(generatedService.Spec.Ports, existingService.Spec.Ports, cmp.FilterPath(func(p cmp.Path) bool {
+			// We need to check all the service values but the NodePort, as this field is assigned by
+			// the K8S controlplane components.
+			return p.Last().String() == ".NodePort"
+		}, cmp.Ignore())) {
+			existingService.Spec.Ports = generatedService.Spec.Ports
+			updated = true
+		}
 
 		if updated {
 			if err := cl.Update(ctx, existingService); err != nil {

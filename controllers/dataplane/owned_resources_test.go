@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -29,6 +30,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 		existingServiceModifier  func(*testing.T, context.Context, client.Client, *corev1.Service)
 		expectedCreatedOrUpdated op.CreatedUpdatedOrNoop
 		expectedServiceType      corev1.ServiceType
+		expectedServicePorts     []corev1.ServicePort
 		expectedAnnotations      map[string]string
 		expectedLabels           map[string]string
 	}{
@@ -44,6 +46,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 			},
 			expectedCreatedOrUpdated: op.Created,
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
+			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
 		},
 		{
 			name: "should not update when a service exists",
@@ -53,6 +56,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
 			expectedCreatedOrUpdated: op.Noop,
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
+			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
 		},
 		{
 			name: "should add annotations to existing service",
@@ -67,6 +71,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 			},
 			expectedCreatedOrUpdated: op.Updated,
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
+			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
 			expectedAnnotations: map[string]string{
 				"foo": "bar",
 				// should be annotated with last applied annotations
@@ -91,6 +96,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 				WithIngressServiceAnnotations(map[string]string{"foo": "bar"}).Build(),
 			expectedCreatedOrUpdated: op.Updated,
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
+			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
 			expectedAnnotations: map[string]string{
 				"foo": "bar",
 				// "foo2":                      "bar2", // this one should be removed
@@ -114,7 +120,31 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 			},
 			expectedCreatedOrUpdated: op.Created,
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
+			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
 			expectedLabels:           map[string]string{"foo": "bar"},
+		},
+		{
+			name: "should update ports",
+			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "dp-1",
+			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).WithIngressServicePorts([]operatorv1beta1.DataPlaneServicePort{
+				{
+					Name:       "http",
+					Port:       8080,
+					TargetPort: intstr.FromInt(8000),
+				},
+			}).Build(),
+			expectedCreatedOrUpdated: op.Updated,
+			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
+			expectedServicePorts: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Port:       8080,
+					TargetPort: intstr.FromInt(8000),
+					Protocol:   corev1.ProtocolTCP,
+				},
+			},
 		},
 	}
 
@@ -144,11 +174,14 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 				fakeClient,
 				tc.dataplane,
 				tc.additionalLabels,
+				k8sresources.ServicePortsFromDataPlaneIngressOpt(tc.dataplane),
 			)
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedCreatedOrUpdated, res)
 			// check service type.
 			require.Equal(t, tc.expectedServiceType, svc.Spec.Type, "should have the same service type")
+			// check service ports.
+			require.Equal(t, tc.expectedServicePorts, svc.Spec.Ports, "should have the same service ports")
 			// check service annotations.
 			require.Equal(t, tc.expectedAnnotations, svc.Annotations, "should have the same annotations")
 			// check service labels.

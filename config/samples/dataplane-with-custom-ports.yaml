@@ -1,0 +1,46 @@
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: dataplane-example
+spec:
+  deployment:
+    podTemplateSpec:
+      metadata:
+        labels:
+          dataplane-pod-label: example
+        annotations:
+          dataplane-pod-annotation: example
+      spec:
+        containers:
+        - name: proxy
+          image: kong:3.4
+          env:
+          - name: KONG_LOG_LEVEL
+            value: debug
+          - name: KONG_PROXY_LISTEN
+            value: 0.0.0.0:9000 reuseport backlog=16384, 0.0.0.0:9443 http2 ssl reuseport backlog=16384
+          - name: KONG_PORT_MAPS
+            value: 8080:9000, 8083:9443
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 1
+  network:
+    services:
+      ingress:
+        annotations:
+          foo: bar
+        ports:
+          - name: http
+            port: 8080
+            targetPort: 9000
+          - name: https
+            port: 8083
+            targetPort: 9443
+          

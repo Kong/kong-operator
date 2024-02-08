@@ -19,6 +19,7 @@ package v1beta1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func init() {
@@ -129,7 +130,7 @@ type DataPlaneNetworkOptions struct {
 	Services *DataPlaneServices `json:"services,omitempty"`
 }
 
-// DataPlaneServices contains Services related DataPlane configuration.
+// DataPlaneServices contains Services related DataPlane configuration, shared with the GatewayConfiguration.
 type DataPlaneServices struct {
 	// Ingress is the Kubernetes Service that will be used to expose ingress
 	// traffic for the DataPlane. Here you can determine whether the DataPlane
@@ -139,7 +140,45 @@ type DataPlaneServices struct {
 	// influence a cloud provider LoadBalancer configuration).
 	//
 	// +optional
-	Ingress *ServiceOptions `json:"ingress,omitempty"`
+	Ingress *DataPlaneServiceOptions `json:"ingress,omitempty"`
+}
+
+// DataPlaneServiceOptions contains Services related DataPlane configuration.
+type DataPlaneServiceOptions struct {
+	// Ports defines the list of ports that are exposed by the service.
+	// The ports field allows defining the name, port and targetPort of
+	// the underlying service ports, while the protocol is defaulted to TCP,
+	// as it is the only protocol currently supported.
+	Ports []DataPlaneServicePort `json:"ports,omitempty"`
+
+	// ServiceOptions is the struct containing service options shared with
+	// the GatewayConfiguration.
+	ServiceOptions `json:",inline"`
+}
+
+// DataPlaneServicePort contains information on service's port.
+type DataPlaneServicePort struct {
+	// The name of this port within the service. This must be a DNS_LABEL.
+	// All ports within a ServiceSpec must have unique names. When considering
+	// the endpoints for a Service, this must match the 'name' field in the
+	// EndpointPort.
+	// Optional if only one ServicePort is defined on this service.
+	// +optional
+	Name string `json:"name,omitempty"`
+
+	// The port that will be exposed by this service.
+	Port int32 `json:"port"`
+
+	// Number or name of the port to access on the pods targeted by the service.
+	// Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
+	// If this is a string, it will be looked up as a named port in the
+	// target Pod's container ports. If this is not specified, the value
+	// of the 'port' field is used (an identity map).
+	// This field is ignored for services with clusterIP=None, and should be
+	// omitted or set equal to the 'port' field.
+	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service
+	// +optional
+	TargetPort intstr.IntOrString `json:"targetPort,omitempty"`
 }
 
 // ServiceOptions is used to includes options to customize the ingress service,

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -57,20 +58,7 @@ func GenerateNewIngressServiceForDataPlane(dataplane *operatorv1beta1.DataPlane,
 		Spec: corev1.ServiceSpec{
 			Type:     getDataPlaneIngressServiceType(dataplane),
 			Selector: map[string]string{"app": dataplane.Name},
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       consts.DefaultHTTPPort,
-					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
-				},
-				{
-					Name:       "https",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       consts.DefaultHTTPSPort,
-					TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
-				},
-			},
+			Ports:    DefaultDataPlaneIngressServicePorts,
 		},
 	}
 	LabelObjectAsDataPlaneManaged(svc)
@@ -95,6 +83,21 @@ func GenerateNewIngressServiceForDataPlane(dataplane *operatorv1beta1.DataPlane,
 
 const DefaultDataPlaneIngressServiceType = corev1.ServiceTypeLoadBalancer
 
+var DefaultDataPlaneIngressServicePorts = []corev1.ServicePort{
+	{
+		Name:       "http",
+		Protocol:   corev1.ProtocolTCP,
+		Port:       consts.DefaultHTTPPort,
+		TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
+	},
+	{
+		Name:       "https",
+		Protocol:   corev1.ProtocolTCP,
+		Port:       consts.DefaultHTTPSPort,
+		TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
+	},
+}
+
 func getDataPlaneIngressServiceType(dataplane *operatorv1beta1.DataPlane) corev1.ServiceType {
 	if dataplane == nil || dataplane.Spec.Network.Services == nil {
 		return DefaultDataPlaneIngressServiceType
@@ -105,12 +108,50 @@ func getDataPlaneIngressServiceType(dataplane *operatorv1beta1.DataPlane) corev1
 
 type ServiceOpt func(*corev1.Service)
 
-func ServiceWithLabel(k, v string) func(s *corev1.Service) {
+func ServiceWithLabel(k, v string) ServiceOpt {
 	return func(s *corev1.Service) {
 		if s.Labels == nil {
 			s.Labels = make(map[string]string)
 		}
 		s.Labels[k] = v
+	}
+}
+
+// labelSelectorFromDataPlaneStatusSelectorServiceOpt returns a ServiceOpt function
+// which will set Service's selector based on provided DataPlane's Status selector
+// field.
+func LabelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane *operatorv1beta1.DataPlane) ServiceOpt {
+	return func(s *corev1.Service) {
+		if dataplane.Status.Selector != "" {
+			s.Spec.Selector[consts.OperatorLabelSelector] = dataplane.Status.Selector
+		}
+	}
+}
+
+// ServicePortsFromDataPlaneIngressOpt is a helper to translate the DataPlane service ports
+// field into actual service ports.
+func ServicePortsFromDataPlaneIngressOpt(dataplane *operatorv1beta1.DataPlane) ServiceOpt {
+	return func(service *corev1.Service) {
+		if dataplane.Spec.Network.Services == nil ||
+			dataplane.Spec.Network.Services.Ingress == nil ||
+			len(dataplane.Spec.Network.Services.Ingress.Ports) == 0 {
+			return
+		}
+		newPorts := []corev1.ServicePort{}
+		for _, p := range dataplane.Spec.Network.Services.Ingress.Ports {
+			targetPort := intstr.FromInt(consts.DataPlaneProxyPort)
+			if !cmp.Equal(p.TargetPort, intstr.IntOrString{}) {
+				targetPort = p.TargetPort
+			}
+			newPorts = append(newPorts, corev1.ServicePort{
+				Name: p.Name,
+				// Currently, only TCP protocol supported.
+				Protocol:   corev1.ProtocolTCP,
+				Port:       p.Port,
+				TargetPort: targetPort,
+			})
+		}
+		service.Spec.Ports = newPorts
 	}
 }
 

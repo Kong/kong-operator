@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -46,9 +47,12 @@ func (r *Reconciler) createDataPlane(ctx context.Context,
 		},
 	}
 	if gatewayConfig.Spec.DataPlaneOptions != nil {
-		dataplane.Spec.DataPlaneOptions = *gatewayConfig.Spec.DataPlaneOptions
+		dataplane.Spec.DataPlaneOptions = *gatewayConfigDataPlaneOptionsToDataPlaneOptions(*gatewayConfig.Spec.DataPlaneOptions)
 	}
 	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions)
+	if err := setDataPlaneIngressServicePorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners); err != nil {
+		return err
+	}
 	k8sutils.SetOwnerForObject(dataplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(dataplane)
 	return r.Client.Create(ctx, dataplane)
@@ -112,6 +116,26 @@ func (r *Reconciler) getGatewayAddresses(
 		return []gwtypes.GatewayStatusAddress{}, fmt.Errorf("no Services found for DataPlane %s/%s", dataplane.Namespace, dataplane.Name)
 	}
 	return gatewayAddressesFromService(services[0])
+}
+
+func gatewayConfigDataPlaneOptionsToDataPlaneOptions(opts operatorv1alpha1.GatewayConfigDataPlaneOptions) *operatorv1beta1.DataPlaneOptions {
+	dataPlaneOptions := &operatorv1beta1.DataPlaneOptions{
+		Deployment: opts.Deployment,
+	}
+	if opts.Network.Services != nil && opts.Network.Services.Ingress != nil {
+		dataPlaneOptions.Network = operatorv1beta1.DataPlaneNetworkOptions{
+			Services: &operatorv1beta1.DataPlaneServices{
+				Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+					ServiceOptions: operatorv1beta1.ServiceOptions{
+						Type:        opts.Network.Services.Ingress.Type,
+						Annotations: opts.Network.Services.Ingress.Annotations,
+					},
+				},
+			},
+		}
+	}
+
+	return dataPlaneOptions
 }
 
 func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAddress, error) {
@@ -217,7 +241,6 @@ func (r *Reconciler) getGatewayConfigForGatewayClass(ctx context.Context, gatewa
 func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
-	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 	dataplane *operatorv1beta1.DataPlane,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (createdOrUpdate bool, err error) {
@@ -234,7 +257,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 		return false, errors.New("number of networkPolicies reduced")
 	}
 
-	generatedPolicy, err := generateDataPlaneNetworkPolicy(gateway.Namespace, gatewayConfig, dataplane, controlplane)
+	generatedPolicy, err := generateDataPlaneNetworkPolicy(gateway.Namespace, dataplane, controlplane)
 	if err != nil {
 		return false, fmt.Errorf("failed generating network policy for DataPlane %s: %w", dataplane.Name, err)
 	}
@@ -263,7 +286,6 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 
 func generateDataPlaneNetworkPolicy(
 	namespace string,
-	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
 	dataplane *operatorv1beta1.DataPlane,
 	controlplane *operatorv1alpha1.ControlPlane,
 ) (*networkingv1.NetworkPolicy, error) {
@@ -282,7 +304,7 @@ func generateDataPlaneNetworkPolicy(
 	// Note: for now only direct env variable manipulation is allowed (through
 	// the .Env field in DataPlaneDeploymentOptions). EnvFrom is not taken into
 	// account when updating NetworkPolicy ports.
-	dpOpts := gatewayConfig.Spec.DataPlaneOptions
+	dpOpts := dataplane.Spec.DataPlaneOptions
 	container := k8sutils.GetPodContainerByName(&dpOpts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 	if proxyListen := k8sutils.EnvValueByName(container.Env, "KONG_PROXY_LISTEN"); proxyListen != "" {
 		kongListenConfig, err := parseKongListenEnv(proxyListen)
@@ -624,6 +646,48 @@ func (g *gatewayConditionsAndListenersAwareT) setReadyAndProgrammed() {
 		k8sutils.SetCondition(programmedCondition, listenerStatus)
 		k8sutils.SetCondition(resolvedRefsCondition, listenerStatus)
 	}
+}
+
+func setDataPlaneIngressServicePorts(opts *operatorv1beta1.DataPlaneOptions, listeners []gatewayv1.Listener) error {
+	if len(listeners) == 0 {
+		return nil
+	}
+
+	if opts.Network.Services == nil {
+		opts.Network.Services = &operatorv1beta1.DataPlaneServices{}
+	}
+	if opts.Network.Services.Ingress == nil {
+		opts.Network.Services.Ingress = &operatorv1beta1.DataPlaneServiceOptions{
+			Ports: []operatorv1beta1.DataPlaneServicePort{},
+		}
+	}
+
+	var errs error
+	for i, l := range listeners {
+		var name string
+		// If the listener name is set, use it. Otherwise, we need to be sure the
+		// port name is unique at the service level, hence the trimmed uuid.
+		if l.Name != "" {
+			name = string(l.Name)
+		} else {
+			name = fmt.Sprintf("%s-%s", l.Protocol, uuid.NewString()[:6])
+		}
+		port := operatorv1beta1.DataPlaneServicePort{
+			Name: name,
+			Port: int32(l.Port),
+		}
+		switch l.Protocol {
+		case gatewayv1.HTTPSProtocolType:
+			port.TargetPort = intstr.FromInt(consts.DataPlaneProxySSLPort)
+		case gatewayv1.HTTPProtocolType:
+			port.TargetPort = intstr.FromInt(consts.DataPlaneProxyPort)
+		default:
+			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
+			continue
+		}
+		opts.Network.Services.Ingress.Ports = append(opts.Network.Services.Ingress.Ports, port)
+	}
+	return errs
 }
 
 // getSupportedKindsWithCondition returns all the route kinds supported by the listener, along with the resolvedRefs

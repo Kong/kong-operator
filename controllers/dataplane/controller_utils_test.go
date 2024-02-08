@@ -126,8 +126,10 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
-								Ingress: &operatorv1beta1.ServiceOptions{
-									Type: corev1.ServiceTypeLoadBalancer,
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									ServiceOptions: operatorv1beta1.ServiceOptions{
+										Type: corev1.ServiceTypeLoadBalancer,
+									},
 								},
 							},
 						},
@@ -248,8 +250,10 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
-								Ingress: &operatorv1beta1.ServiceOptions{
-									Type: corev1.ServiceTypeLoadBalancer,
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									ServiceOptions: operatorv1beta1.ServiceOptions{
+										Type: corev1.ServiceTypeLoadBalancer,
+									},
 								},
 							},
 						},

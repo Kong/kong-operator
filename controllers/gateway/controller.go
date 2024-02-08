@@ -349,7 +349,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// DataPlane NetworkPolicies
 	log.Trace(logger, "ensuring DataPlane's NetworkPolicy exists", gateway)
-	createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, gatewayConfig, dataplane, controlplane)
+	createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, dataplane, controlplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -416,7 +416,7 @@ func (r *Reconciler) provisionDataPlane(
 		return nil
 	}
 	if count == 0 {
-		err = r.createDataPlane(ctx, gateway, gatewayConfig)
+		err := r.createDataPlane(ctx, gateway, gatewayConfig)
 		if err != nil {
 			log.Debug(logger, fmt.Sprintf("dataplane creation failed - error: %v", err), gateway)
 			k8sutils.SetCondition(
@@ -439,10 +439,19 @@ func (r *Reconciler) provisionDataPlane(
 	// if not configured in gatewayconfiguration, compare deployment option of dataplane with an empty one.
 	expectedDataPlaneOptions := &operatorv1beta1.DataPlaneOptions{}
 	if gatewayConfig.Spec.DataPlaneOptions != nil {
-		expectedDataPlaneOptions = gatewayConfig.Spec.DataPlaneOptions
+		expectedDataPlaneOptions = gatewayConfigDataPlaneOptionsToDataPlaneOptions(*gatewayConfig.Spec.DataPlaneOptions)
 	}
 	// Don't require setting defaults for DataPlane when using Gateway CRD.
 	setDataPlaneOptionsDefaults(expectedDataPlaneOptions)
+	err = setDataPlaneIngressServicePorts(expectedDataPlaneOptions, gateway.Spec.Listeners)
+	if err != nil {
+		log.Debug(logger, fmt.Sprintf("dataplane creation failed - error: %v", err.Error()), gateway)
+		k8sutils.SetCondition(
+			createDataPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error(), gateway.Generation),
+			gatewayConditionsAndListenersAware(gateway),
+		)
+		return nil
+	}
 
 	if !dataplaneSpecDeepEqual(&dataplane.Spec.DataPlaneOptions, expectedDataPlaneOptions) {
 		log.Trace(logger, "dataplane config is out of date, updating", gateway)

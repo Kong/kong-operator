@@ -15,7 +15,6 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	"github.com/kong/gateway-operator/internal/consts"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -186,7 +185,7 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 
 func (r *Reconciler) setDataPlaneGatewayConfigDefaults(gatewayConfig *operatorv1alpha1.GatewayConfiguration) {
 	if gatewayConfig.Spec.DataPlaneOptions == nil {
-		gatewayConfig.Spec.DataPlaneOptions = new(operatorv1beta1.DataPlaneOptions)
+		gatewayConfig.Spec.DataPlaneOptions = new(operatorv1alpha1.GatewayConfigDataPlaneOptions)
 	}
 }
 

@@ -21,7 +21,7 @@ func NewDataPlaneBuilder() *testDataPlaneBuilder {
 				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 					Network: operatorv1beta1.DataPlaneNetworkOptions{
 						Services: &operatorv1beta1.DataPlaneServices{
-							Ingress: &operatorv1beta1.ServiceOptions{},
+							Ingress: &operatorv1beta1.DataPlaneServiceOptions{},
 						},
 					},
 				},
@@ -46,7 +46,7 @@ func (b *testDataPlaneBuilder) initIngressServiceOptions() {
 		b.dataplane.Spec.DataPlaneOptions.Network.Services = &operatorv1beta1.DataPlaneServices{}
 	}
 	if b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress == nil {
-		b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress = &operatorv1beta1.ServiceOptions{}
+		b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress = &operatorv1beta1.DataPlaneServiceOptions{}
 	}
 }
 
@@ -54,6 +54,13 @@ func (b *testDataPlaneBuilder) initIngressServiceOptions() {
 func (b *testDataPlaneBuilder) WithIngressServiceType(typ corev1.ServiceType) *testDataPlaneBuilder {
 	b.initIngressServiceOptions()
 	b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.Type = typ
+	return b
+}
+
+// WithIngressServicePorts sets the Ports of the Ingress service.
+func (b *testDataPlaneBuilder) WithIngressServicePorts(ports []operatorv1beta1.DataPlaneServicePort) *testDataPlaneBuilder {
+	b.initIngressServiceOptions()
+	b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.Ports = ports
 	return b
 }
 

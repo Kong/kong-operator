@@ -7,7 +7,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,6 +19,7 @@ import (
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/internal/consts"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 )
 
 // -----------------------------------------------------------------------------
@@ -91,7 +91,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		client.MatchingLabels{
 			consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
 		},
-		labelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane),
+		k8sresources.LabelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane),
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -113,7 +113,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		r.Client,
 		dataplane,
 		additionalServiceLabels,
-		labelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane),
+		k8sresources.LabelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane),
+		k8sresources.ServicePortsFromDataPlaneIngressOpt(dataplane),
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -214,17 +215,6 @@ func labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane *operatorv1
 			d.Labels[consts.OperatorLabelSelector] = dataplane.Status.Selector
 			d.Spec.Selector.MatchLabels[consts.OperatorLabelSelector] = dataplane.Status.Selector
 			d.Spec.Template.Labels[consts.OperatorLabelSelector] = dataplane.Status.Selector
-		}
-	}
-}
-
-// labelSelectorFromDataPlaneStatusSelectorServiceOpt returns a ServiceOpt function
-// which will set Service's selector based on provided DataPlane's Status selector
-// field.
-func labelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane *operatorv1beta1.DataPlane) func(s *corev1.Service) {
-	return func(s *corev1.Service) {
-		if dataplane.Status.Selector != "" {
-			s.Spec.Selector[consts.OperatorLabelSelector] = dataplane.Status.Selector
 		}
 	}
 }

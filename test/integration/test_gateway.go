@@ -20,7 +20,6 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/consts"
 	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
@@ -184,6 +183,75 @@ func TestGatewayEssentials(t *testing.T) {
 
 	t.Log("verifying that gateway itself is deleted")
 	require.Eventually(t, testutils.GatewayNotExist(t, GetCtx(), gatewayNN, clients), time.Minute, time.Second)
+}
+
+func TestGatewayWithMultipleListeners(t *testing.T) {
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
+
+	t.Log("deploying a GatewayClass resource")
+	gatewayClass := testutils.GenerateGatewayClass()
+	gatewayClass, err := clients.GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gatewayClass)
+
+	t.Log("deploying Gateway resource")
+	gatewayNN := types.NamespacedName{
+		Name:      uuid.NewString(),
+		Namespace: namespace.Name,
+	}
+	const port8080 = 8080
+	gateway := testutils.GenerateGateway(gatewayNN, gatewayClass, func(gateway *gatewayv1.Gateway) {
+		gateway.Spec.Listeners = append(gateway.Spec.Listeners,
+			gatewayv1.Listener{
+				Name:     "http2",
+				Protocol: gatewayv1.HTTPProtocolType,
+				Port:     gatewayv1.PortNumber(port8080),
+			},
+		)
+	})
+	gateway, err = clients.GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gateway)
+
+	t.Log("verifying Gateway gets marked as Scheduled")
+	require.Eventually(t, testutils.GatewayIsScheduled(t, ctx, gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+
+	t.Log("verifying Gateway gets marked as Programmed")
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+
+	t.Log("verifying Gateway gets the IP addresses")
+	require.Eventually(t, testutils.GatewayIPAddressExist(t, ctx, gatewayNN, clients), testutils.SubresourceReadinessWait, time.Second)
+	gateway = testutils.MustGetGateway(t, ctx, gatewayNN, clients)
+	gatewayIPAddress := gateway.Status.Addresses[0].Value
+
+	t.Log("verifying that the DataPlane becomes Ready")
+	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	dataplanes := testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)
+	require.Len(t, dataplanes, 1)
+	dataplane := dataplanes[0]
+	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
+
+	t.Log("verifying that dataplane has 1 ready replica")
+	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneNN, clients, 1), time.Minute, time.Second)
+
+	t.Log("verifying that the ControlPlane becomes provisioned")
+	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	controlplanes := testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)
+	require.Len(t, controlplanes, 1)
+	controlplane := controlplanes[0]
+	controlplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: controlplane.Name}
+
+	t.Log("verifying that controlplane has 1 ready replica")
+	require.Eventually(t, testutils.ControlPlaneHasNReadyPods(t, ctx, controlplaneNN, clients, 1), time.Minute, time.Second)
+
+	t.Log("verifying networkpolicies are created")
+	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+
+	t.Log("verifying connectivity to the Gateway")
+	require.Eventually(t, expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s:80", gatewayIPAddress)), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s:%d", gatewayIPAddress, port8080)), testutils.SubresourceReadinessWait, time.Second)
 }
 
 func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
@@ -446,7 +514,7 @@ func setGatewayConfigurationEnvProxyPort(t *testing.T, gatewayConfiguration *ope
 
 	dpOptions := gatewayConfiguration.Spec.DataPlaneOptions
 	if dpOptions == nil {
-		dpOptions = &operatorv1beta1.DataPlaneOptions{}
+		dpOptions = &operatorv1alpha1.GatewayConfigDataPlaneOptions{}
 	}
 	if dpOptions.Deployment.PodTemplateSpec == nil {
 		dpOptions.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
@@ -472,7 +540,7 @@ func setGatewayConfigurationEnvAdminAPIPort(t *testing.T, gatewayConfiguration *
 
 	dpOptions := gatewayConfiguration.Spec.DataPlaneOptions
 	if dpOptions == nil {
-		dpOptions = &operatorv1beta1.DataPlaneOptions{}
+		dpOptions = &operatorv1alpha1.GatewayConfigDataPlaneOptions{}
 	}
 
 	container := k8sutils.GetPodContainerByName(&dpOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)

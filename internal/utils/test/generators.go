@@ -29,7 +29,7 @@ func GenerateGatewayClass() *gatewayv1.GatewayClass {
 }
 
 // GenerateGateway generates a Gateway to be used in tests
-func GenerateGateway(gatewayNSN types.NamespacedName, gatewayClass *gatewayv1.GatewayClass) *gwtypes.Gateway {
+func GenerateGateway(gatewayNSN types.NamespacedName, gatewayClass *gatewayv1.GatewayClass, opts ...func(gateway *gatewayv1.Gateway)) *gwtypes.Gateway {
 	gateway := &gwtypes.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: gatewayNSN.Namespace,
@@ -44,6 +44,11 @@ func GenerateGateway(gatewayNSN types.NamespacedName, gatewayClass *gatewayv1.Ga
 			}},
 		},
 	}
+
+	for _, opt := range opts {
+		opt(gateway)
+	}
+
 	return gateway
 }
 
@@ -83,7 +88,7 @@ func GenerateGatewayConfiguration(gatewayConfigurationNSN types.NamespacedName) 
 					},
 				},
 			},
-			DataPlaneOptions: &operatorv1beta1.DataPlaneOptions{
+			DataPlaneOptions: &operatorv1alpha1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{

@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/gateway-operator/apis/v1beta1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 )
 
 func init() {
@@ -46,13 +46,50 @@ type GatewayConfigurationSpec struct {
 	// overrides for DataPlane resources that will be created for the Gateway.
 	//
 	// +optional
-	DataPlaneOptions *v1beta1.DataPlaneOptions `json:"dataPlaneOptions,omitempty"`
+	DataPlaneOptions *GatewayConfigDataPlaneOptions `json:"dataPlaneOptions,omitempty"`
 
 	// ControlPlaneOptions is the specification for configuration
 	// overrides for ControlPlane resources that will be created for the Gateway.
 	//
 	// +optional
 	ControlPlaneOptions *ControlPlaneOptions `json:"controlPlaneOptions,omitempty"`
+}
+
+// GatewayConfigDataPlaneOptions indicates the specific information needed to
+// configure and deploy a DataPlane object.
+type GatewayConfigDataPlaneOptions struct {
+	// +optional
+	Deployment operatorv1beta1.DataPlaneDeploymentOptions `json:"deployment"`
+
+	// +optional
+	Network GatewayConfigDataPlaneNetworkOptions `json:"network"`
+}
+
+// GatewayConfigDataPlaneNetworkOptions defines network related options for a DataPlane.
+type GatewayConfigDataPlaneNetworkOptions struct {
+	// Services indicates the configuration of Kubernetes Services needed for
+	// the topology of various forms of traffic (including ingress, etc.) to
+	// and from the DataPlane.
+	Services *GatewayConfigDataPlaneServices `json:"services,omitempty"`
+}
+
+// GatewayConfigDataPlaneServices contains Services related DataPlane configuration.
+type GatewayConfigDataPlaneServices struct {
+	// Ingress is the Kubernetes Service that will be used to expose ingress
+	// traffic for the DataPlane. Here you can determine whether the DataPlane
+	// will be exposed outside the cluster (e.g. using a LoadBalancer type
+	// Services) or only internally (e.g. ClusterIP), and inject any additional
+	// annotations you need on the service (for instance, if you need to
+	// influence a cloud provider LoadBalancer configuration).
+	//
+	// +optional
+	Ingress *GatewayConfigServiceOptions `json:"ingress,omitempty"`
+}
+
+// GatewayConfigServiceOptions is used to includes options to customize the ingress service,
+// such as the annotations.
+type GatewayConfigServiceOptions struct {
+	operatorv1beta1.ServiceOptions `json:",inline"`
 }
 
 // GatewayConfigurationStatus defines the observed state of GatewayConfiguration

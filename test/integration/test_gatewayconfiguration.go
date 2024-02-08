@@ -52,7 +52,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			Name:      uuid.NewString(),
 		},
 		Spec: operatorv1alpha1.GatewayConfigurationSpec{
-			DataPlaneOptions: &operatorv1beta1.DataPlaneOptions{
+			DataPlaneOptions: &operatorv1alpha1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{

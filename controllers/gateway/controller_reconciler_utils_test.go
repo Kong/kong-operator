@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/samber/lo"
@@ -8,8 +9,11 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/internal/consts"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 )
@@ -499,6 +503,81 @@ func TestSetAcceptedOnGateway(t *testing.T) {
 			// force the lastTransitionTime to be equal to properly compare the two conditions
 			tc.expectedAcceptedCondition.LastTransitionTime = acceptedCondition.LastTransitionTime
 			require.Equal(subt, tc.expectedAcceptedCondition, acceptedCondition)
+		})
+	}
+}
+
+func TestSetDataPlaneIngressServicePorts(t *testing.T) {
+	testCases := []struct {
+		name          string
+		listeners     []gatewayv1.Listener
+		expectedPorts []operatorv1beta1.DataPlaneServicePort
+		expectedError error
+	}{
+		{
+			name: "no listeners",
+		},
+		{
+			name: "only valid listeners",
+			listeners: []gatewayv1.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "https",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(443),
+				},
+			},
+			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
+				{
+					Name:       "http",
+					Port:       80,
+					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
+				},
+				{
+					Name:       "https",
+					Port:       443,
+					TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
+				},
+			},
+		},
+		{
+			name: "some invalid listeners",
+			listeners: []gatewayv1.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "udp",
+					Protocol: gatewayv1.UDPProtocolType,
+					Port:     gatewayv1.PortNumber(8899),
+				},
+			},
+			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
+				{
+					Name:       "http",
+					Port:       80,
+					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
+				},
+			},
+			expectedError: errors.New("listener 1 uses unsupported protocol UDP"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			err := setDataPlaneIngressServicePorts(&operatorv1beta1.DataPlaneOptions{}, tc.listeners)
+			if tc.expectedError == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.expectedError.Error())
+			}
 		})
 	}
 }
