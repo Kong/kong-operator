@@ -27,10 +27,10 @@ import (
 	"github.com/kong/gateway-operator/controllers/pkg/builder"
 	"github.com/kong/gateway-operator/controllers/pkg/dataplane"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
+	dpv "github.com/kong/gateway-operator/internal/validation/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
-	dpv "github.com/kong/gateway-operator/internal/validation/dataplane"
 	"github.com/kong/gateway-operator/test/helpers"
 )
 

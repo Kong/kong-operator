@@ -7,9 +7,9 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 
 	kgoerrors "github.com/kong/gateway-operator/internal/errors"
+	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources/clusterroles"
-	"github.com/kong/gateway-operator/internal/versions"
 )
 
 func TestClusterroleHelpers(t *testing.T) {

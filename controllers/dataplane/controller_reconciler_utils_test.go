@@ -23,9 +23,9 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/pkg/builder"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
+	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
-	"github.com/kong/gateway-operator/internal/versions"
 )
 
 func init() {

@@ -1,13 +1,13 @@
 package dataplane
 
 import (
-	"maps"
 	"sort"
 	"testing"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"maps"
 
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
