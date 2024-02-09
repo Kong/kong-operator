@@ -78,6 +78,7 @@ func GetManagedLabelForOwnerLegacy(owner metav1.Object) client.MatchingLabels {
 	return client.MatchingLabels{}
 }
 
+// GetManagedLabelRequirementsForOwnerLegacy returns the legacy managed-by label requirements for the provided owner.
 func GetManagedLabelRequirementsForOwnerLegacy(owner metav1.Object) (labels.Requirements, error) {
 	managedByLabelsLegacy := GetManagedLabelForOwnerLegacy(owner)
 	if len(managedByLabelsLegacy) == 0 {

@@ -38,6 +38,7 @@ func SetOwnerForObject(obj, owner client.Object) {
 	}
 }
 
+// GetOwnerReferencer retrieves owner references.
 type GetOwnerReferencer interface {
 	GetOwnerReferences() []metav1.OwnerReference
 }

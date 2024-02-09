@@ -148,6 +148,7 @@ func ReduceNetworkPolicies(ctx context.Context, k8sClient client.Client, network
 
 //+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=delete
 
+// HPAFilterFunc filters a list of HorizontalPodAutoscalers.
 type HPAFilterFunc func(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.HorizontalPodAutoscaler
 
 // ReduceHPAs detects the best HorizontalPodAutoscaler in the set and deletes all the others.

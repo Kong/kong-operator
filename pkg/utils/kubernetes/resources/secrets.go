@@ -17,8 +17,10 @@ import (
 // Secret generators
 // -----------------------------------------------------------------------------
 
+// SecretOpt is an option function for a Secret.
 type SecretOpt func(*corev1.Secret)
 
+// SecretWithLabel adds a label to a Secret.
 func SecretWithLabel(k, v string) func(s *corev1.Secret) {
 	return func(s *corev1.Secret) {
 		if s.Labels == nil {

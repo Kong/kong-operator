@@ -81,8 +81,10 @@ func GenerateNewIngressServiceForDataPlane(dataplane *operatorv1beta1.DataPlane,
 	return svc, nil
 }
 
+// DefaultDataPlaneIngressServiceType is the default Service type for a DataPlane.
 const DefaultDataPlaneIngressServiceType = corev1.ServiceTypeLoadBalancer
 
+// DefaultDataPlaneIngressServicePorts returns the default ServicePorts for a DataPlane.
 var DefaultDataPlaneIngressServicePorts = []corev1.ServicePort{
 	{
 		Name:       "http",
@@ -106,8 +108,10 @@ func getDataPlaneIngressServiceType(dataplane *operatorv1beta1.DataPlane) corev1
 	return dataplane.Spec.Network.Services.Ingress.Type
 }
 
+// ServiceOpt is an option function for a Service.
 type ServiceOpt func(*corev1.Service)
 
+// ServiceWithLabel adds a label to a Service.
 func ServiceWithLabel(k, v string) ServiceOpt {
 	return func(s *corev1.Service) {
 		if s.Labels == nil {

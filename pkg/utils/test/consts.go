@@ -86,5 +86,6 @@ const (
 	// parent resource.
 	SubresourceReadinessWait = time.Second * 30
 
+	// DefaultHTTPPort is the default HTTP port.
 	DefaultHTTPPort = 80
 )

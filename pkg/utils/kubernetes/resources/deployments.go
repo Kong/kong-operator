@@ -21,11 +21,15 @@ import (
 )
 
 const (
+	// DefaultControlPlaneCPURequest is the default ControlPlane CPU request.
 	DefaultControlPlaneCPURequest = "100m"
-	DefaultControlPlaneCPULimit   = "200m"
+	// DefaultControlPlaneCPULimit is the default ControlPlane CPU limit.
+	DefaultControlPlaneCPULimit = "200m"
 
+	// DefaultControlPlaneMemoryRequest is the default ControlPlane memory request.
 	DefaultControlPlaneMemoryRequest = "20Mi"
-	DefaultControlPlaneMemoryLimit   = "100Mi"
+	// DefaultControlPlaneMemoryLimit is the default ControlPlane memory limit.
+	DefaultControlPlaneMemoryLimit = "100Mi"
 )
 
 var terminationGracePeriodSeconds = int64(corev1.DefaultTerminationGracePeriodSeconds)
@@ -95,6 +99,7 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 	return deployment, nil
 }
 
+// GenerateControlPlaneContainer generates a control plane container.
 func GenerateControlPlaneContainer(image string) corev1.Container {
 	return corev1.Container{
 		Name:                     consts.ControlPlaneControllerContainerName,
@@ -149,13 +154,18 @@ func GenerateControlPlaneContainer(image string) corev1.Container {
 }
 
 const (
+	// DefaultDataPlaneCPURequest is the default DataPlane CPU request.
 	DefaultDataPlaneCPURequest = "100m"
-	DefaultDataPlaneCPULimit   = "1000m"
+	// DefaultDataPlaneCPULimit is the default DataPlane CPU limit.
+	DefaultDataPlaneCPULimit = "1000m"
 
+	// DefaultDataPlaneMemoryRequest is the default DataPlane memory request.
 	DefaultDataPlaneMemoryRequest = "20Mi"
-	DefaultDataPlaneMemoryLimit   = "1000Mi"
+	// DefaultDataPlaneMemoryLimit is the default DataPlane memory limit.
+	DefaultDataPlaneMemoryLimit = "1000Mi"
 )
 
+// DeploymentOpt is an option for Deployment generators.
 type DeploymentOpt func(*appsv1.Deployment)
 
 // GenerateNewDeploymentForDataPlane generates a new Deployment for the DataPlane
@@ -268,6 +278,7 @@ func GenerateNewDeploymentForDataPlane(
 	return deployment, nil
 }
 
+// GenerateDataPlaneContainer generates a DataPlane container.
 func GenerateDataPlaneContainer(opts operatorv1beta1.DataPlaneDeploymentOptions, image string) corev1.Container {
 	return corev1.Container{
 		Name: consts.DataPlaneProxyContainerName,
@@ -345,6 +356,7 @@ var (
 	_controlPlaneDefaultResources     corev1.ResourceRequirements
 )
 
+// DefaultDataPlaneResources generates a ResourceRequirements with the DataPlane defaults.
 func DefaultDataPlaneResources() *corev1.ResourceRequirements {
 	_defaultDataPlaneResourcesOnce.Do(func() {
 		// Initialize just once, no need to do it more.
@@ -362,6 +374,7 @@ func DefaultDataPlaneResources() *corev1.ResourceRequirements {
 	return _dataPlaneDefaultResources.DeepCopy()
 }
 
+// DefaultControlPlaneResources generates a ResourceRequirements with the ControlPlane defaults.
 func DefaultControlPlaneResources() *corev1.ResourceRequirements {
 	_defaultControlPlaneResourcesOnce.Do(func() {
 		_controlPlaneDefaultResources = corev1.ResourceRequirements{

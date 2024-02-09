@@ -12,6 +12,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
+// DeploymentOptionsV1AlphaDeepEqual checks if DeploymentOptions are equal, ignoring some envvars.
 func DeploymentOptionsV1AlphaDeepEqual(o1, o2 *operatorv1alpha1.DeploymentOptions, envVarsToIgnore ...string) bool {
 	if o1 == nil && o2 == nil {
 		return true
@@ -45,6 +46,7 @@ func DeploymentOptionsV1AlphaDeepEqual(o1, o2 *operatorv1alpha1.DeploymentOption
 	return cmp.Equal(&o1.PodTemplateSpec, &o2.PodTemplateSpec, opts...)
 }
 
+// NetworkOptionsDeepEqual checks if NetworkOptions are equal.
 func NetworkOptionsDeepEqual(opts1, opts2 *operatorv1beta1.DataPlaneNetworkOptions) bool {
 	return reflect.DeepEqual(opts1.Services, opts2.Services)
 }

@@ -202,6 +202,7 @@ func ControlPlaneHasClusterRoleBinding(t *testing.T, ctx context.Context, contro
 	}
 }
 
+// ControlPlaneHasNReadyPods checks if a ControlPlane has at least N ready Pods.
 func ControlPlaneHasNReadyPods(t *testing.T, ctx context.Context, controlplaneName types.NamespacedName, clients K8sClients, n int) func() bool {
 	return controlPlanePredicate(t, ctx, controlplaneName, func(controlplane *operatorv1alpha1.ControlPlane) bool {
 		deployments := MustListControlPlaneDeployments(t, ctx, controlplane, clients)
@@ -312,6 +313,7 @@ func DataPlaneHasDeployment(
 	}, clients.OperatorClient)
 }
 
+// DataPlaneHasNReadyPods checks if a DataPlane has at least N ready Pods.
 func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, n int) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
@@ -446,6 +448,7 @@ func DataPlaneUpdateEventually(t *testing.T, ctx context.Context, dataplaneNN ty
 	}
 }
 
+// DataPlaneHasServiceSecret checks if a DataPlane's Service has one owned Secret.
 func DataPlaneHasServiceSecret(t *testing.T, ctx context.Context, dpNN, usingSvc types.NamespacedName, ret *corev1.Secret, clients K8sClients) func() bool {
 	return DataPlanePredicate(t, ctx, dpNN, func(dp *operatorv1beta1.DataPlane) bool {
 		secrets, err := k8sutils.ListSecretsForOwner(ctx, clients.MgrClient, dp.GetUID(), client.MatchingLabels{
@@ -501,24 +504,28 @@ func GatewayNotExist(t *testing.T, ctx context.Context, gatewayNSN types.Namespa
 	}
 }
 
+// GatewayIsScheduled returns a function that checks if a Gateway is scheduled.
 func GatewayIsScheduled(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
 		return gatewayutils.IsScheduled(MustGetGateway(t, ctx, gatewayNSN, clients))
 	}
 }
 
+// GatewayIsProgrammed returns a function that checks if a Gateway is programmed.
 func GatewayIsProgrammed(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
 		return gatewayutils.IsProgrammed(MustGetGateway(t, ctx, gatewayNSN, clients))
 	}
 }
 
+// GatewayListenersAreProgrammed returns a function that checks if a Gateway's listeners are programmed.
 func GatewayListenersAreProgrammed(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
 		return gatewayutils.AreListenersProgrammed(MustGetGateway(t, ctx, gatewayNSN, clients))
 	}
 }
 
+// GatewayDataPlaneIsReady returns a function that checks if a Gateway's DataPlane is ready.
 func GatewayDataPlaneIsReady(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) func() bool {
 	return func() bool {
 		dataplanes := MustListDataPlanesForGateway(t, ctx, gateway, clients)
@@ -540,6 +547,7 @@ func GatewayDataPlaneIsReady(t *testing.T, ctx context.Context, gateway *gwtypes
 	}
 }
 
+// GatewayControlPlaneIsProvisioned returns a function that checks if a Gateway's ControlPlane is provisioned.
 func GatewayControlPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) func() bool {
 	return func() bool {
 		controlPlanes := MustListControlPlanesForGateway(t, ctx, gateway, clients)
@@ -624,6 +632,7 @@ func networkPolicyRuleSliceContainsRule[T ingressRuleT](rules []T, rule T) bool 
 	return false
 }
 
+// GatewayIPAddressExist checks if a Gateway has IP addresses.
 func GatewayIPAddressExist(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
 		gateway := MustGetGateway(t, ctx, gatewayNSN, clients)
@@ -634,6 +643,7 @@ func GatewayIPAddressExist(t *testing.T, ctx context.Context, gatewayNSN types.N
 	}
 }
 
+// GetResponseBodyContains issues an HTTP request and checks if a response body contains a string.
 func GetResponseBodyContains(t *testing.T, ctx context.Context, clients K8sClients, httpc http.Client, url string, responseContains string) func() bool {
 	return func() bool {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)

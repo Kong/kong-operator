@@ -86,6 +86,7 @@ func WaitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Cli
 	return nil
 }
 
+// BuilderOpt is an option function for an environment builder.
 type BuilderOpt func(*environments.Builder)
 
 // BuildEnvironment builds the k8s environment for the tests.

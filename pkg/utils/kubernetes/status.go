@@ -45,6 +45,8 @@ const (
 	ResourceUpdatedMessage = "Resource has been updated"
 )
 
+// ConditionsAndListenerConditionsAndGenerationAware is a CRD type that has Conditions, Generation, and Listener
+// Conditions.
 type ConditionsAndListenerConditionsAndGenerationAware interface {
 	ConditionsAndGenerationAware
 	ListenersConditionsAware
@@ -57,11 +59,13 @@ type ConditionsAndGenerationAware interface {
 	ConditionsAware
 }
 
+// ConditionsAware is a CRD that has Conditions.
 type ConditionsAware interface {
 	GetConditions() []metav1.Condition
 	SetConditions(conditions []metav1.Condition)
 }
 
+// ListenersConditionsAware is a CRD that has Listener Conditions.
 type ListenersConditionsAware interface {
 	GetListenersConditions() []gatewayv1.ListenerStatus
 	SetListenersConditions([]gatewayv1.ListenerStatus)
