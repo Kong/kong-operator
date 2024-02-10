@@ -252,6 +252,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			log.Debug(logger, "dataplane not ready yet", gateway)
 			return ctrl.Result{}, nil
 		}
+		if dataplane == nil {
+			// Having the dataplane==nil here is a corner-case that can be happening sometimes,
+			// in case the dataplane provisioning has had some errors, the dataplane ReadyCondition
+			// has already been patched with the ConditionFalse, and a new reconciliation loop is triggered.
+			log.Trace(logger, "dataplane is not ready yet, and the dataplane ready condition has already been set in the gateway", gateway)
+			return ctrl.Result{}, nil
+		}
 	}
 	// if the dataplane wasnt't ready before this reconciliation loop and now is ready, log this event
 	if !k8sutils.IsValidCondition(DataPlaneReadyType, oldGwConditionsAware) {
