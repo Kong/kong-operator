@@ -16,8 +16,8 @@ endif
 # Configuration - Build
 # ------------------------------------------------------------------------------
 
-SHELL = /usr/bin/env bash -o pipefail
-.SHELLFLAGS = -ec
+SHELL = bash
+.SHELLFLAGS = -ec -o pipefail
 
 IMG ?= docker.io/kong/gateway-operator-oss
 KUSTOMIZE_IMG_NAME = docker.io/kong/gateway-operator-oss
@@ -26,7 +26,6 @@ KUSTOMIZE_IMG_NAME = docker.io/kong/gateway-operator-oss
 # Configuration - Tooling
 # ------------------------------------------------------------------------------
 
-ENVTEST_K8S_VERSION = 1.23
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
 else
@@ -35,25 +34,16 @@ endif
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
-.PHONY: _download_tool
-_download_tool:
-	(cd $(PROJECT_DIR)/third_party && \
-		ls ./$(TOOL).go > /dev/null && \
-		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
-
-.PHONY: _download_tool_own
-_download_tool_own:
-	(cd $(PROJECT_DIR)/third_party/$(TOOL) && \
-		ls ./$(TOOL).go > /dev/null && \
-		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
+TOOLS_VERSIONS_FILE = .tools_versions.yaml
 
 .PHONY: tools
-tools: envtest kic-role-generator controller-gen kustomize client-gen golangci-lint gotestsum dlv skaffold yq crd-ref-docs
+tools: kic-role-generator controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq crd-ref-docs
 
-ENVTEST = $(PROJECT_DIR)/bin/setup-envtest
-.PHONY: envtest
-envtest: ## Download envtest-setup locally if necessary.
-	@$(MAKE) _download_tool TOOL=setup-envtest
+MISE := $(shell which mise)
+.PHONY: mise
+mise:
+	@mise -V >/dev/null || (echo "mise not found. Please install it." && exit 1) 
+
 
 KIC_ROLE_GENERATOR = $(PROJECT_DIR)/bin/kic-role-generator
 .PHONY: kic-role-generator
@@ -65,55 +55,70 @@ KIC_WEBHOOKCONFIG_GENERATOR = $(PROJECT_DIR)/bin/kic-webhook-config-generator
 kic-webhook-config-generator:
 	( cd ./hack/generators/kic/webhook-config-generator && go build -o $(KIC_WEBHOOKCONFIG_GENERATOR) . )
 
-CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
+export MISE_DATA_DIR = bin/
+
+CONTROLLER_GEN_VERSION = $(shell yq -ojson -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
+CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/kube-controller-tools/$(CONTROLLER_GEN_VERSION)/bin/controller-gen
 .PHONY: controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	@$(MAKE) _download_tool TOOL=controller-gen
+controller-gen: mise ## Download controller-gen locally if necessary.
+	@$(MISE) plugin install --yes -q kube-controller-tools
+	@$(MISE) install -q kube-controller-tools@$(CONTROLLER_GEN_VERSION)
 
-KUSTOMIZE = $(PROJECT_DIR)/bin/kustomize
+KUSTOMIZE_VERSION = $(shell yq -ojson -r '.kustomize' < $(TOOLS_VERSIONS_FILE))
+KUSTOMIZE = $(PROJECT_DIR)/bin/installs/kustomize/$(KUSTOMIZE_VERSION)/bin/kustomize
 .PHONY: kustomize
-kustomize: ## Download kustomize locally if necessary.
-	@$(MAKE) _download_tool_own TOOL=kustomize
+kustomize: mise ## Download kustomize locally if necessary.
+	@$(MISE) plugin install --yes -q kustomize
+	@$(MISE) install -q kustomize@$(KUSTOMIZE_VERSION)
 
-CLIENT_GEN = $(PROJECT_DIR)/bin/client-gen
+CLIENT_GEN_VERSION = $(shell yq -ojson -r '.code-generator' < $(TOOLS_VERSIONS_FILE))
+CLIENT_GEN = $(PROJECT_DIR)/bin/installs/kube-code-generator/$(CLIENT_GEN_VERSION)/bin/client-gen
 .PHONY: client-gen
-client-gen: ## Download client-gen locally if necessary.
-	@$(MAKE) _download_tool TOOL=client-gen
+client-gen: mise ## Download client-gen locally if necessary.
+	@$(MISE) plugin install --yes -q kube-code-generator
+	@$(MISE) install -q kube-code-generator@$(CLIENT_GEN_VERSION)
 
-GOLANGCI_LINT = $(PROJECT_DIR)/bin/golangci-lint
+GOLANGCI_LINT_VERSION = $(shell yq -ojson -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
+GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/golangci-lint/$(GOLANGCI_LINT_VERSION)/bin/golangci-lint
 .PHONY: golangci-lint
-golangci-lint: ## Download golangci-lint locally if necessary.
-	@$(MAKE) _download_tool TOOL=golangci-lint
+golangci-lint: mise ## Download golangci-lint locally if necessary.
+	@$(MISE) plugin install --yes -q golangci-lint
+	@$(MISE) install -q golangci-lint@$(GOLANGCI_LINT_VERSION)
 
-OPM = $(PROJECT_DIR)/bin/opm
-.PHONY: opm
-opm:
-	@$(MAKE) _download_tool TOOL=opm
+OPERATOR_SDK_VERSION = $(shell yq -ojson -r '.operator-sdk' < $(TOOLS_VERSIONS_FILE))
+OPERATOR_SDK = $(PROJECT_DIR)/bin/installs/operator-sdk/$(OPERATOR_SDK_VERSION)/bin/operator-sdk
+.PHONY: operator-sdk
+operator-sdk: mise ## Download operator-sdk locally if necessary.
+	@$(MISE) plugin install --yes -q operator-sdk https://github.com/Medium/asdf-operator-sdk.git
+	@$(MISE) install -q operator-sdk@$(OPERATOR_SDK_VERSION)
 
-GOTESTSUM = $(PROJECT_DIR)/bin/gotestsum
+GOTESTSUM_VERSION = $(shell yq -ojson -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
+GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum
 .PHONY: gotestsum
 gotestsum: ## Download gotestsum locally if necessary.
-	@$(MAKE) _download_tool TOOL=gotestsum
+	@$(MISE) plugin install --yes -q gotestsum https://github.com/pmalek/mise-gotestsum.git
+	@$(MISE) install -q gotestsum
 
+CRD_REF_DOCS_VERSION = $(shell yq -ojson -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
 CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
 .PHONY: crd-ref-docs
 crd-ref-docs: ## Download crd-ref-docs locally if necessary.
-	@$(MAKE) _download_tool TOOL=crd-ref-docs
+	GOBIN=$(PROJECT_DIR)/bin go install -v \
+		github.com/elastic/crd-ref-docs@v$(CRD_REF_DOCS_VERSION)
 
-DLV = $(PROJECT_DIR)/bin/dlv
-.PHONY: dlv
-dlv: ## Download dlv locally if necessary.
-	@$(MAKE) _download_tool TOOL=dlv
-
-SKAFFOLD = $(PROJECT_DIR)/bin/skaffold
+SKAFFOLD_VERSION = $(shell yq -ojson -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
+SKAFFOLD = $(PROJECT_DIR)/bin/installs/skaffold/$(SKAFFOLD_VERSION)/bin/skaffold
 .PHONY: skaffold
-skaffold: ## Download skaffold locally if necessary.
-	@$(MAKE) _download_tool_own TOOL=skaffold
+skaffold: mise ## Download skaffold locally if necessary.
+	@$(MISE) plugin install --yes -q skaffold
+	@$(MISE) install -q skaffold@$(SKAFFOLD_VERSION)
 
-YQ = $(PROJECT_DIR)/bin/yq
+YQ_VERSION = $(shell yq -ojson -r '.yq' < $(TOOLS_VERSIONS_FILE))
+YQ = $(PROJECT_DIR)/bin/installs/yq/$(YQ_VERSION)/bin/yq
 .PHONY: yq
-yq: ## Download yq locally if necessary.
-	@$(MAKE) _download_tool_own TOOL=yq
+yq: mise # Download yq locally if necessary.
+	@$(MISE) plugin install --yes -q yq
+	@$(MISE) install -q yq@$(YQ_VERSION)
 
 # ------------------------------------------------------------------------------
 # Build

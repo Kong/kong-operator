@@ -32,6 +32,10 @@ jobs:
       with:
         go-version-file: go.mod
 
+    - uses: jdx/mise-action@v2
+      with:
+        install: false
+
     - name: run lint
       env:
         # Our .golangci.yaml has fix: true, but we don't want that in CI therefore the below override.
@@ -50,6 +54,10 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version-file: go.mod
+
+    - uses: jdx/mise-action@v2
+      with:
+        install: false
 
     - name: Verify manifests consistency
       run: make verify.manifests
@@ -76,6 +84,10 @@ jobs:
 
     - name: Create k8s KinD Cluster
       uses: helm/kind-action@v1.9.0
+
+    - uses: jdx/mise-action@v2
+      with:
+        install: false
 
     - name: Verify installing CRDs via kustomize works
       run: make install
@@ -116,6 +128,10 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version-file: go.mod
+
+    - uses: jdx/mise-action@v2
+      with:
+        install: false
 
     - name: run unit tests
       run: make test.unit
@@ -189,6 +205,10 @@ jobs:
       with:
         go-version-file: go.mod
 
+    - uses: jdx/mise-action@v2
+      with:
+        install: false
+
     - name: run integration tests
       run: make test.integration
       env:
@@ -238,6 +258,10 @@ jobs:
       with:
         go-version-file: go.mod
 
+    - uses: jdx/mise-action@v2
+      with:
+        install: false
+
     - name: run integration tests
       run: make test.integration_bluegreen
       env:
@@ -285,6 +309,10 @@ jobs:
       with:
         go-version-file: go.mod
 
+    - uses: jdx/mise-action@v2
+      with:
+        install: false
+
     - name: run integration tests
       run: make test.integration_provision_dataplane_fail
       env:
@@ -330,6 +358,10 @@ jobs:
         IMG: gateway-operator
         TAG: e2e-${{ github.sha }}
       run: make docker.build
+
+    - uses: jdx/mise-action@v2
+      with:
+        install: false
 
     - name: run e2e tests
       run: make test.e2e
