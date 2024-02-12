@@ -15,6 +15,7 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -96,6 +97,7 @@ func GetClients() testutils.K8sClients {
 func TestMain(
 	m *testing.M,
 	cfg manager.Config,
+	scheme *runtime.Scheme,
 	setUpControllers manager.SetupControllersFunc,
 	admissionRequestHandler manager.AdmissionRequestHandlerFunc,
 ) {
@@ -151,7 +153,7 @@ func TestMain(
 	// Spawn the controller manager based on passed config in
 	// a separate goroutine and report whether that succeeded.
 	go func() {
-		exitOnErr(manager.Run(cfg, setUpControllers, admissionRequestHandler))
+		exitOnErr(manager.Run(cfg, scheme, setUpControllers, admissionRequestHandler))
 	}()
 	<-cfg.StartedCh
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/manager"
+	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/test/helpers"
 	"github.com/kong/gateway-operator/test/integration"
 )
@@ -20,6 +21,7 @@ func TestMain(m *testing.M) {
 	integration.TestMain(
 		m,
 		integration.DefaultControllerConfigForTests(),
+		scheme.Get(),
 		manager.SetupControllers,
 		admission.NewRequestHandler,
 	)

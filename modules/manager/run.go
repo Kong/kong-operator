@@ -35,8 +35,6 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -46,30 +44,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/telemetry"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
-
-var scheme = runtime.NewScheme()
 
 const (
 	caCertFilename  = "ca.crt"
 	tlsCertFilename = "tls.crt"
 	tlsKeyFilename  = "tls.key"
 )
-
-func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(operatorv1beta1.AddToScheme(scheme))
-	utilruntime.Must(gatewayv1.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
-}
 
 // Config represents the configuration for the manager.
 type Config struct {
@@ -143,7 +128,7 @@ type SetupControllersFunc func(manager.Manager, *Config) ([]ControllerDef, error
 // that will be added to the manager. The function admissionRequestHandler is
 // used to construct the admission webhook handler for the validating webhook
 // that is added to the manager too.
-func Run(cfg Config, setupControllers SetupControllersFunc, admissionRequestHandler AdmissionRequestHandlerFunc) error {
+func Run(cfg Config, scheme *runtime.Scheme, setupControllers SetupControllersFunc, admissionRequestHandler AdmissionRequestHandlerFunc) error {
 	setupLog := ctrl.Log.WithName("setup")
 	setupLog.Info("starting controller manager",
 		"release", metadata.Release,
