@@ -20,4 +20,6 @@ package v1alpha1
 
 type ControlPlaneExpansion interface{}
 
+type DataPlaneMetricsExtensionExpansion interface{}
+
 type GatewayConfigurationExpansion interface{}

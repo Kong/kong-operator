@@ -29,6 +29,7 @@ import (
 type ApisV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	ControlPlanesGetter
+	DataPlaneMetricsExtensionsGetter
 	GatewayConfigurationsGetter
 }
 
@@ -39,6 +40,10 @@ type ApisV1alpha1Client struct {
 
 func (c *ApisV1alpha1Client) ControlPlanes(namespace string) ControlPlaneInterface {
 	return newControlPlanes(c, namespace)
+}
+
+func (c *ApisV1alpha1Client) DataPlaneMetricsExtensions(namespace string) DataPlaneMetricsExtensionInterface {
+	return newDataPlaneMetricsExtensions(c, namespace)
 }
 
 func (c *ApisV1alpha1Client) GatewayConfigurations(namespace string) GatewayConfigurationInterface {
