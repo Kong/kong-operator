@@ -108,15 +108,16 @@ func IsValidCondition(cType ConditionType, resource ConditionsAware) bool {
 
 // InitReady initializes the Ready status to False if Ready condition is not
 // yet set on the resource.
-func InitReady(resource ConditionsAndGenerationAware) {
+func InitReady(resource ConditionsAndGenerationAware) bool {
 	_, ok := GetCondition(ReadyType, resource)
 	if ok {
-		return
+		return false
 	}
 	SetCondition(
 		NewConditionWithGeneration(ReadyType, metav1.ConditionFalse, DependenciesNotReadyReason, DependenciesNotReadyMessage, resource.GetGeneration()),
 		resource,
 	)
+	return true
 }
 
 // InitProgrammed initializes the Programmed status to False
@@ -191,7 +192,6 @@ func SetAcceptedConditionOnGateway(resource ConditionsAndListenerConditionsAndGe
 					NewCondition.Reason = string(gatewayv1.GatewayReasonListenersNotValid)
 					NewCondition.Message = fmt.Sprintf("%sListener %d is not accepted.", NewCondition.Message, i)
 				}
-
 			}
 			if listCond.Type == string(gatewayv1.ListenerConditionConflicted) {
 				if listCond.Status == metav1.ConditionTrue {

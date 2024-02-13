@@ -66,11 +66,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	k8sutils.InitReady(dataplane)
-	if patched, err := patchDataPlaneStatus(ctx, r.Client, logger, dataplane); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed initializing DataPlane Ready condition: %w", err)
-	} else if patched {
-		return ctrl.Result{}, nil
+	if k8sutils.InitReady(dataplane) {
+		if patched, err := patchDataPlaneStatus(ctx, r.Client, logger, dataplane); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed initializing DataPlane Ready condition: %w", err)
+		} else if patched {
+			return ctrl.Result{}, nil
+		}
 	}
 
 	if err := r.initSelectorInStatus(ctx, logger, dataplane); err != nil {

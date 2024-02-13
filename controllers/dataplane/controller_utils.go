@@ -180,7 +180,7 @@ func ensureDataPlaneReadyStatus(
 				k8sutils.ReadyType,
 				metav1.ConditionFalse,
 				k8sutils.WaitingToBecomeReadyReason,
-				k8sutils.WaitingToBecomeReadyMessage,
+				fmt.Sprintf("%s: Deployment %s is not ready yet", k8sutils.WaitingToBecomeReadyMessage, deployment.Name),
 				generation,
 			),
 			dataplane,
@@ -213,13 +213,11 @@ func ensureDataPlaneReadyStatus(
 			dataplane,
 		)
 		ensureDataPlaneReadinessStatus(dataplane, deployment.Status)
-		res, err := patchDataPlaneStatus(ctx, cl, logger, dataplane)
+		_, err := patchDataPlaneStatus(ctx, cl, logger, dataplane)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed patching status (ingress Service not present) for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 		}
-		if res {
-			return ctrl.Result{}, nil
-		}
+		return ctrl.Result{}, nil
 
 	case 1: // Expect just 1.
 
@@ -229,7 +227,7 @@ func ensureDataPlaneReadyStatus(
 	}
 
 	ingressService := services[0]
-	if !dataPlaneIngressServiceIsReady(dataplane, &ingressService) {
+	if !dataPlaneIngressServiceIsReady(&ingressService) {
 		log.Debug(logger, "Ingress Service for DataPlane not ready yet", dataplane)
 
 		// Set Ready to false for dataplane as the Service is not ready yet.
@@ -238,19 +236,17 @@ func ensureDataPlaneReadyStatus(
 				k8sutils.ReadyType,
 				metav1.ConditionFalse,
 				k8sutils.WaitingToBecomeReadyReason,
-				k8sutils.WaitingToBecomeReadyMessage,
+				fmt.Sprintf("%s: ingress Service %s is not ready yet", k8sutils.WaitingToBecomeReadyMessage, ingressService.Name),
 				generation,
 			),
 			dataplane,
 		)
 		ensureDataPlaneReadinessStatus(dataplane, deployment.Status)
-		res, err := patchDataPlaneStatus(ctx, cl, logger, dataplane)
+		_, err := patchDataPlaneStatus(ctx, cl, logger, dataplane)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed patching status (ingress Service not ready) for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 		}
-		if res {
-			return ctrl.Result{}, nil
-		}
+		return ctrl.Result{}, nil
 	}
 
 	k8sutils.SetReadyWithGeneration(dataplane, generation)

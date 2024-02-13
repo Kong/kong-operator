@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -105,7 +106,7 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 						k8sutils.ReadyType,
 						metav1.ConditionFalse,
 						k8sutils.WaitingToBecomeReadyReason,
-						k8sutils.WaitingToBecomeReadyMessage,
+						fmt.Sprintf("%s: Deployment %s is not ready yet", k8sutils.WaitingToBecomeReadyMessage, "dataplane-deployment-1"),
 						102,
 					),
 				},
@@ -188,7 +189,7 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 				},
 				&corev1.ServiceList{
 					TypeMeta: metav1.TypeMeta{
-						Kind:       "DeploymentList",
+						Kind:       "ServiceList",
 						APIVersion: "apps/v1",
 					},
 					Items: []corev1.Service{
@@ -213,7 +214,9 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 									},
 								},
 							},
-							Spec:   corev1.ServiceSpec{},
+							Spec: corev1.ServiceSpec{
+								Type: corev1.ServiceTypeLoadBalancer,
+							},
 							Status: corev1.ServiceStatus{
 								// Empty to cause Ready condition False
 							},
@@ -229,7 +232,7 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 						k8sutils.ReadyType,
 						metav1.ConditionFalse,
 						k8sutils.WaitingToBecomeReadyReason,
-						k8sutils.WaitingToBecomeReadyMessage,
+						fmt.Sprintf("%s: ingress Service %s is not ready yet", k8sutils.WaitingToBecomeReadyMessage, "dataplane-service-1"),
 						102,
 					),
 				},

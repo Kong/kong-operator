@@ -166,12 +166,12 @@ func ensureDataPlaneIngressServiceAnnotationsUpdated(
 //   - true for DataPlanes that have the Ingress Service type set as LoadBalancer and
 //     which have at least one IP or Hostname in their Ingress Service Status
 //   - false otherwise.
-func dataPlaneIngressServiceIsReady(dataplane *operatorv1beta1.DataPlane, dataplaneIngressService *corev1.Service) bool {
-	// If the DataPlane doesn't have a LoadBalancer set for its Ingress Service
-	// return true.
-	if dataplane.Spec.Network.Services == nil ||
-		dataplane.Spec.Network.Services.Ingress == nil ||
-		dataplane.Spec.Network.Services.Ingress.Type != corev1.ServiceTypeLoadBalancer {
+func dataPlaneIngressServiceIsReady(dataplaneIngressService *corev1.Service) bool {
+	// If the DataPlane ingress Service is not of a LoadBalancer type then
+	// report the DataPlane as Ready.
+	// We don't check DataPlane spec to see if the Service is of type LoadBalancer
+	// because we might be relying on the default Service type which might change.
+	if dataplaneIngressService.Spec.Type != corev1.ServiceTypeLoadBalancer {
 		return true
 	}
 
