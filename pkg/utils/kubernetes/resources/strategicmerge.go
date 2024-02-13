@@ -5,6 +5,7 @@ import (
 
 	"github.com/goccy/go-json"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	pkgapiscorev1 "k8s.io/kubernetes/pkg/apis/core/v1"
 
@@ -101,8 +102,19 @@ func SetDefaultsVolume(v *corev1.Volume) {
 	// TODO: https://github.com/Kong/gateway-operator/issues/1226
 	if v.Name != consts.ClusterCertificateVolume {
 		pkgapiscorev1.SetDefaults_Volume(v)
+		if v.HostPath != nil {
+			pkgapiscorev1.SetDefaults_HostPathVolumeSource(v.HostPath)
+		}
+		if v.ScaleIO != nil {
+			pkgapiscorev1.SetDefaults_ScaleIOVolumeSource(v.ScaleIO)
+		}
+		if v.RBD != nil {
+			pkgapiscorev1.SetDefaults_RBDVolumeSource(v.RBD)
+		}
 	}
 }
+
+var _quantityOne = resource.MustParse("1")
 
 // SetDefaultsContainer sets defaults in the provided Container.
 func SetDefaultsContainer(c *corev1.Container) {
@@ -123,6 +135,22 @@ func SetDefaultsContainer(c *corev1.Container) {
 		pkgapiscorev1.SetDefaults_Probe(ss)
 		if ss.HTTPGet != nil {
 			pkgapiscorev1.SetDefaults_HTTPGetAction(ss.HTTPGet)
+		}
+	}
+
+	for _, e := range c.Env {
+		if e.ValueFrom != nil {
+			if e.ValueFrom.FieldRef != nil {
+				pkgapiscorev1.SetDefaults_ObjectFieldSelector(e.ValueFrom.FieldRef)
+			}
+
+			if e.ValueFrom.ResourceFieldRef != nil {
+				// NOTE: Divisor defaults to 1 but doesn't have a SetDefaults function.
+				// Ensure that the divisor is set to 1 if it's not set.
+				if e.ValueFrom.ResourceFieldRef.Divisor.IsZero() {
+					e.ValueFrom.ResourceFieldRef.Divisor = _quantityOne
+				}
+			}
 		}
 	}
 }

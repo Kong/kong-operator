@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/pretty"
@@ -263,6 +264,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					VolumeSource: corev1.VolumeSource{
 						HostPath: &corev1.HostPathVolumeSource{
 							Path: "/host/path",
+							Type: lo.ToPtr(corev1.HostPathUnset),
 						},
 					},
 				})
@@ -395,6 +397,130 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						Name:      "new_volume",
 						MountPath: "/new_volume",
 					})
+				return d.Spec.Template
+			},
+		},
+		{
+			Name: "add hostPath volume and volumeMount",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: consts.ControlPlaneControllerContainerName,
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									// NOTE: we need to provide the existing entry in the slice
+									// to prevent merging the provided new entry with existing entries.
+									Name:      consts.ClusterCertificateVolume,
+									MountPath: consts.ClusterCertificateVolumeMountPath,
+								},
+								{
+									Name:      "hostpath-volumemount",
+									MountPath: "/var/log/hostpath",
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: consts.ClusterCertificateVolume,
+						},
+						{
+							Name: "hostpath-volume",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/var/log",
+								},
+							},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeControlPlaneDeployment()
+				require.NoError(t, err)
+				d.Spec.Template.Spec.Volumes = []corev1.Volume{
+					{
+						Name: "cluster-certificate",
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: "kong-cert-secret",
+								Items: []corev1.KeyToPath{
+									{
+										Key:  "tls.crt",
+										Path: "tls.crt",
+									},
+									{
+										Key:  "tls.key",
+										Path: "tls.key",
+									},
+									{
+										Key:  "ca.crt",
+										Path: "ca.crt",
+									},
+								},
+								DefaultMode: lo.ToPtr(corev1.SecretVolumeSourceDefaultMode),
+							},
+						},
+					},
+					{
+						Name: "hostpath-volume",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{
+								Path: "/var/log",
+								Type: lo.ToPtr(corev1.HostPathUnset),
+							},
+						},
+					},
+				}
+				d.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+					d.Spec.Template.Spec.Containers[0].VolumeMounts,
+					corev1.VolumeMount{
+						Name:      "hostpath-volumemount",
+						MountPath: "/var/log/hostpath",
+					},
+				)
+
+				return d.Spec.Template
+			},
+		},
+		{
+			Name: "add envs with fieldRef",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: consts.ControlPlaneControllerContainerName,
+							Env: []corev1.EnvVar{
+								{
+									Name: "LIMIT",
+									ValueFrom: &corev1.EnvVarSource{
+										ResourceFieldRef: &corev1.ResourceFieldSelector{
+											Resource: "limits.cpu",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeControlPlaneDeployment()
+				require.NoError(t, err)
+				d.Spec.Template.Spec.Containers[0].Env = append(
+					d.Spec.Template.Spec.Containers[0].Env,
+					corev1.EnvVar{
+						Name: "LIMIT",
+						ValueFrom: &corev1.EnvVarSource{
+							ResourceFieldRef: &corev1.ResourceFieldSelector{
+								Resource: "limits.cpu",
+								Divisor:  *resource.NewQuantity(1, resource.DecimalSI),
+							},
+						},
+					},
+				)
+
 				return d.Spec.Template
 			},
 		},
