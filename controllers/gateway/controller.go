@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -89,103 +88,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	if !gateway.DeletionTimestamp.IsZero() {
-		if gateway.DeletionTimestamp.After(time.Now()) {
-			log.Debug(logger, "gateway deletion still under grace period", gateway)
-			return ctrl.Result{
-				Requeue:      true,
-				RequeueAfter: time.Until(gateway.DeletionTimestamp.Time),
-			}, nil
-		}
-		log.Trace(logger, "gateway is marked delete, waiting for owned resources deleted", gateway)
-
-		// delete owned dataplanes.
-		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, r.Client, &gateway)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		if len(dataplanes) > 0 {
-			deletions, err := r.ensureOwnedDataPlanesDeleted(ctx, &gateway)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-			if deletions {
-				log.Debug(logger, "deleted owned dataplanes", gateway)
-				return ctrl.Result{}, err
-			}
-		} else {
-			oldGateway := gateway.DeepCopy()
-			if controllerutil.RemoveFinalizer(&gateway, string(GatewayFinalizerCleanupDataPlanes)) {
-				err := r.Client.Patch(ctx, &gateway, client.MergeFrom(oldGateway))
-				if err != nil {
-					return ctrl.Result{}, err
-				}
-				log.Debug(logger, "finalizer for cleaning up dataplanes removed", gateway)
-				return ctrl.Result{}, nil
-			}
-		}
-
-		// delete owned controlplanes.
-		// Because controlplanes have finalizers, so we only remove the finalizer
-		// for cleaning up owned controlplanes when they disappeared.
-		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, r.Client, &gateway)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if len(controlplanes) > 0 {
-			deletions, err := r.ensureOwnedControlPlanesDeleted(ctx, &gateway)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-			if deletions {
-				log.Debug(logger, "deleted owned controlplanes", gateway)
-				return ctrl.Result{}, err
-			}
-		} else {
-			oldGateway := gateway.DeepCopy()
-			if controllerutil.RemoveFinalizer(&gateway, string(GatewayFinalizerCleanupControlPlanes)) {
-				err := r.Client.Patch(ctx, &gateway, client.MergeFrom(oldGateway))
-				if err != nil {
-					return ctrl.Result{}, err
-				}
-				log.Debug(logger, "finalizer for cleaning up controlplanes removed", gateway)
-				return ctrl.Result{}, nil
-			}
-		}
-
-		// delete owned network policies
-		networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, &gateway)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if len(networkPolicies) > 0 {
-			deletions, err := r.ensureOwnedNetworkPoliciesDeleted(ctx, &gateway)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-			if deletions {
-				log.Debug(logger, "deleted owned network policies", gateway)
-				return ctrl.Result{}, err
-			}
-		} else {
-			oldGateway := gateway.DeepCopy()
-			if controllerutil.RemoveFinalizer(&gateway, string(GatewayFinalizerCleanupNetworkpolicies)) {
-				err := r.Client.Patch(ctx, &gateway, client.MergeFrom(oldGateway))
-				if err != nil {
-					return ctrl.Result{}, err
-				}
-				log.Debug(logger, "finalizer for cleaning up network policies removed", gateway)
-				return ctrl.Result{}, nil
-			}
-		}
-
-		// cleanup completed
-		log.Debug(logger, "owned resources cleanup completed", gateway)
-		return ctrl.Result{}, nil
+	log.Trace(logger, "managing cleanup for gateway resource", gateway)
+	cleanupUnderway, result, err := r.cleanup(ctx, logger, &gateway)
+	if cleanupUnderway {
+		return result, err
 	}
 
-	// ensure the Gateway has finalizers to perform clean up for owned ControlPlanes, DataPlanes and NetworkPolicies.
+	log.Trace(logger, "managing the gateway resource finalizers", gateway)
 	cpFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupControlPlanes))
 	dpFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupDataPlanes))
 	npFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupNetworkpolicies))
