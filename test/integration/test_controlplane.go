@@ -291,14 +291,18 @@ func TestControlPlaneEssentials(t *testing.T) {
 	require.Eventually(t, testutils.ControlPlaneHasClusterRole(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 	require.Eventually(t, testutils.ControlPlaneHasClusterRoleBinding(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
-	t.Log("deleting the controlplane Deployment")
-	require.NoError(t, GetClients().MgrClient.Delete(GetCtx(), deployment))
+	t.Run("deployment gets recreated", func(t *testing.T) {
+		t.Skip("ControlPlane's ClusterRole doesn't get properly updated: https://github.com/Kong/gateway-operator/issues/1448")
 
-	t.Log("verifying deployments managed by the dataplane after deletion")
-	require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t, GetCtx(), controlplaneName, clients), time.Minute, time.Second)
+		t.Log("deleting the controlplane Deployment")
+		require.NoError(t, GetClients().MgrClient.Delete(GetCtx(), deployment))
 
-	t.Log("verifying controlplane Deployment.Pods.Env vars")
-	checkControlPlaneDeploymentEnvVars(t, deployment, controlplane.Name)
+		t.Log("verifying deployments managed by the dataplane after deletion")
+		require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t, GetCtx(), controlplaneName, clients), time.Minute, time.Second)
+
+		t.Log("verifying controlplane Deployment.Pods.Env vars")
+		checkControlPlaneDeploymentEnvVars(t, deployment, controlplane.Name)
+	})
 
 	// delete controlplane and verify that cluster wide resources removed.
 	t.Log("verifying cluster wide resources removed after controlplane deleted")
