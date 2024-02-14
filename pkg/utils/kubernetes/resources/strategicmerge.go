@@ -6,6 +6,7 @@ import (
 	"github.com/goccy/go-json"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/mergepatch"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	pkgapiscorev1 "k8s.io/kubernetes/pkg/apis/core/v1"
 
@@ -19,9 +20,18 @@ func StrategicMergePatchPodTemplateSpec(base, patch *corev1.PodTemplateSpec) (*c
 		return base, nil
 	}
 
+	// NOTE: this is needed because without it the patch will wipe out the containers from the base.
+	if len(patch.Spec.Containers) == 0 {
+		patch.Spec.Containers = base.Spec.Containers
+	}
+
 	baseBytes, err := json.Marshal(base)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal JSON for base %s: %w", base.Name, err)
+	}
+	baseMap := map[string]interface{}{}
+	if err := json.Unmarshal(baseBytes, &baseMap); err != nil {
+		return nil, mergepatch.ErrBadJSONDoc
 	}
 
 	SetDefaultsPodTemplateSpec(patch)
@@ -29,14 +39,34 @@ func StrategicMergePatchPodTemplateSpec(base, patch *corev1.PodTemplateSpec) (*c
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal JSON for patch %s: %w", patch.Name, err)
 	}
+	patchMap := map[string]interface{}{}
+	if err := json.Unmarshal(patchBytes, &patchMap); err != nil {
+		return nil, mergepatch.ErrBadJSONDoc
+	}
+	schema, err := strategicpatch.NewPatchMetaFromStruct(&corev1.PodTemplateSpec{})
+	if err != nil {
+		return nil, err
+	}
 
-	// Calculate the patch result.
-	jsonResultBytes, err := strategicpatch.StrategicMergePatch(baseBytes, patchBytes, &corev1.PodTemplateSpec{})
+	out, err := CreateTwoWayMergeMapPatchUsingLookupPatchMeta(baseMap, patchMap, schema)
+	if err != nil {
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	outMap, err := strategicpatch.StrategicMergeMapPatch(baseMap, out, &corev1.PodTemplateSpec{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate merge patch for %s: %w", base.Name, err)
 	}
 
-	patchResult := base.DeepCopy()
+	jsonResultBytes, err := json.Marshal(outMap)
+	if err != nil {
+		return nil, err
+	}
+
+	patchResult := &corev1.PodTemplateSpec{}
 	if err := json.Unmarshal(jsonResultBytes, patchResult); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal merged %s: %w", base.Name, err)
 	}

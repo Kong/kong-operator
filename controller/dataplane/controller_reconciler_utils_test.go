@@ -105,11 +105,6 @@ func TestDeploymentBuilder(t *testing.T) {
 									Spec: corev1.PodSpec{
 										Volumes: []corev1.Volume{
 											{
-												// NOTE: we need to provide the existing entry in the slice
-												// to prevent merging the provided new entry with existing entries.
-												Name: consts.ClusterCertificateVolume,
-											},
-											{
 												Name: "test-volume",
 												VolumeSource: corev1.VolumeSource{
 													Secret: &corev1.SecretVolumeSource{
@@ -122,10 +117,6 @@ func TestDeploymentBuilder(t *testing.T) {
 											{
 												Name: consts.DataPlaneProxyContainerName,
 												VolumeMounts: []corev1.VolumeMount{
-													{
-														Name:      consts.ClusterCertificateVolume,
-														MountPath: consts.ClusterCertificateVolumeMountPath,
-													},
 													{
 														Name:      "test-volume",
 														MountPath: "/var/test/",
@@ -187,16 +178,20 @@ func TestDeploymentBuilder(t *testing.T) {
 				k8sresources.SetDefaultsVolume(&testVolume)
 				testVolume.Name = "test-volume"
 				testVolume.VolumeSource.Secret.SecretName = "test-secret"
+				require.Equal(t,
+					[]corev1.Volume{testVolume, certificateVolume},
+					deployment.Spec.Template.Spec.Volumes,
+				)
 
 				require.Equal(t, []corev1.VolumeMount{
 					{
-						Name:      consts.ClusterCertificateVolume,
-						MountPath: consts.ClusterCertificateVolumeMountPath,
+						Name:      "test-volume",
+						MountPath: "/var/test/",
 						ReadOnly:  true,
 					},
 					{
-						Name:      "test-volume",
-						MountPath: "/var/test/",
+						Name:      consts.ClusterCertificateVolume,
+						MountPath: consts.ClusterCertificateVolumeMountPath,
 						ReadOnly:  true,
 					},
 				},

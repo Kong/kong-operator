@@ -917,6 +917,87 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 			},
 			equal: true,
 		},
+		{
+			name: "not matching Extensions, different length",
+			spec1: &operatorv1alpha1.ControlPlaneOptions{
+				Extensions: []operatorv1alpha1.ExtensionRef{
+					{
+						NamespacedRef: operatorv1alpha1.NamespacedRef{
+							Name: "test",
+						},
+					},
+				},
+			},
+			spec2: &operatorv1alpha1.ControlPlaneOptions{
+				Extensions: []operatorv1alpha1.ExtensionRef{
+					{
+						NamespacedRef: operatorv1alpha1.NamespacedRef{
+							Name: "test",
+						},
+					},
+					{
+						NamespacedRef: operatorv1alpha1.NamespacedRef{
+							Name: "test2",
+						},
+					},
+				},
+			},
+			equal: false,
+		},
+		{
+			name: "matching Extensions, different order",
+			spec1: &operatorv1alpha1.ControlPlaneOptions{
+				Extensions: []operatorv1alpha1.ExtensionRef{
+					{
+						NamespacedRef: operatorv1alpha1.NamespacedRef{
+							Name: "test",
+						},
+					},
+					{
+						NamespacedRef: operatorv1alpha1.NamespacedRef{
+							Name: "test2",
+						},
+					},
+				},
+			},
+			spec2: &operatorv1alpha1.ControlPlaneOptions{
+				Extensions: []operatorv1alpha1.ExtensionRef{
+					{
+						NamespacedRef: operatorv1alpha1.NamespacedRef{
+							Name: "test2",
+						},
+					},
+					{
+						NamespacedRef: operatorv1alpha1.NamespacedRef{
+							Name: "test",
+						},
+					},
+				},
+			},
+			equal: false,
+		},
+		{
+			name: "not matching Extensions, different names",
+			spec1: &operatorv1alpha1.ControlPlaneOptions{
+				Extensions: []operatorv1alpha1.ExtensionRef{
+					{
+						NamespacedRef: operatorv1alpha1.NamespacedRef{
+							Name: "test",
+						},
+					},
+				},
+			},
+			spec2: &operatorv1alpha1.ControlPlaneOptions{
+				Extensions: []operatorv1alpha1.ExtensionRef{
+					{
+						NamespacedRef: operatorv1alpha1.NamespacedRef{
+							Name: "test2",
+						},
+					},
+				},
+			},
+			equal: false,
+		},
 	}
 
 	for _, tc := range testCases {
