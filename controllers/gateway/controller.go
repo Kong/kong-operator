@@ -26,6 +26,7 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	controlplanecontroller "github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	"github.com/kong/gateway-operator/controllers/pkg/log"
+	"github.com/kong/gateway-operator/controllers/pkg/watch"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -71,7 +72,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&gatewayv1.GatewayClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
-			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatchesController))).
+			builder.WithPredicates(predicate.NewPredicateFuncs(watch.GatewayClassMatchesController))).
 		Complete(r)
 }
 

@@ -51,20 +51,6 @@ func (r *Reconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
 	return true
 }
 
-func (r *Reconciler) gatewayClassMatchesController(obj client.Object) bool {
-	gatewayClass, ok := obj.(*gatewayv1.GatewayClass)
-	if !ok {
-		log.FromContext(context.Background()).Error(
-			operatorerrors.ErrUnexpectedObject,
-			"failed to run predicate function",
-			"expected", "GatewayClass", "found", reflect.TypeOf(obj),
-		)
-		return false
-	}
-
-	return string(gatewayClass.Spec.ControllerName) == vars.ControllerName()
-}
-
 func (r *Reconciler) gatewayConfigurationMatchesController(obj client.Object) bool {
 	ctx := context.Background()
 

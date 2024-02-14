@@ -1,5 +1,9 @@
 package v1alpha1
 
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
 // -----------------------------------------------------------------------------
 // AIGateway API - Conditions
 // -----------------------------------------------------------------------------
@@ -131,3 +135,17 @@ const (
 	// logs for help finding the cause.
 	AIGatewayConditionReasonFailed string = "Failed"
 )
+
+// -----------------------------------------------------------------------------
+// AIGateway - ConditionsAware Implementation
+// -----------------------------------------------------------------------------
+
+// GetConditions returns the status conditions.
+func (a *AIGateway) GetConditions() []metav1.Condition {
+	return a.Status.Conditions
+}
+
+// SetConditions sets the status conditions.
+func (a *AIGateway) SetConditions(conditions []metav1.Condition) {
+	a.Status.Conditions = conditions
+}

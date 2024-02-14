@@ -17,6 +17,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -61,7 +62,7 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 				ctx := context.Background()
 				_, err := reconciler.Reconcile(ctx, gatewayClassReq)
 				require.NoError(t, err)
-				gwc := NewDecorator()
+				gwc := gatewayclass.NewDecorator()
 				err = reconciler.Client.Get(ctx, gatewayClassReq.NamespacedName, gwc.GatewayClass)
 				require.NoError(t, err)
 				require.False(t, gwc.IsAccepted())
@@ -86,7 +87,7 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 				ctx := context.Background()
 				_, err := reconciler.Reconcile(ctx, gatewayClassReq)
 				require.NoError(t, err)
-				gwc := NewDecorator()
+				gwc := gatewayclass.NewDecorator()
 				err = reconciler.Client.Get(ctx, gatewayClassReq.NamespacedName, gwc.GatewayClass)
 				require.NoError(t, err)
 				require.True(t, gwc.IsAccepted())

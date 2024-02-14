@@ -14,8 +14,8 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/gateway-operator/controllers/pkg/log"
+	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	"github.com/kong/gateway-operator/pkg/vars"
 )
 
 // -----------------------------------------------------------------------------
@@ -43,7 +43,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	log.Trace(logger, "reconciling gatewayclass resource", req)
 
-	gwc := NewDecorator()
+	gwc := gatewayclass.NewDecorator()
 	if err := r.Client.Get(ctx, req.NamespacedName, gwc.GatewayClass); err != nil {
 		if errors.IsNotFound(err) {
 			log.Debug(logger, "object enqueued no longer exists, skipping", req)
@@ -53,7 +53,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	log.Debug(logger, "processing gatewayclass", gwc)
 
-	if gwc.isControlled() {
+	if gwc.IsControlled() {
 		if !gwc.IsAccepted() {
 			acceptedCondition := metav1.Condition{
 				Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
@@ -72,44 +72,4 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	return ctrl.Result{}, nil
-}
-
-// Decorator struct adds additional functionality to the base K8s Gateway.
-type Decorator struct {
-	*gatewayv1.GatewayClass
-}
-
-// GetConditions returns status conditions of GatewayClass.
-func (gwc *Decorator) GetConditions() []metav1.Condition {
-	return gwc.Status.Conditions
-}
-
-// SetConditions sets status conditions of GatewayClass.
-func (gwc *Decorator) SetConditions(conditions []metav1.Condition) {
-	gwc.Status.Conditions = conditions
-}
-
-// NewDecorator returns Decorator object to add additional functionality to the base K8s GatewayClass.
-func NewDecorator() *Decorator {
-	return &Decorator{
-		new(gatewayv1.GatewayClass),
-	}
-}
-
-func decorateGatewayClass(gwc *gatewayv1.GatewayClass) *Decorator {
-	return &Decorator{GatewayClass: gwc}
-}
-
-// IsAccepted returns true if the GatewayClass has been accepted by the operator.
-func (gwc *Decorator) IsAccepted() bool {
-	if cond, ok := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayClassConditionStatusAccepted), gwc); ok {
-		return cond.Reason == string(gatewayv1.GatewayClassReasonAccepted) &&
-			cond.ObservedGeneration == gwc.Generation && cond.Status == metav1.ConditionTrue
-	}
-	return false
-}
-
-// isControlled returns boolean if the GatewayClass is controlled by this controller.
-func (gwc *Decorator) isControlled() bool {
-	return string(gwc.Spec.ControllerName) == vars.ControllerName()
 }
