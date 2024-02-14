@@ -4,9 +4,9 @@ run-name: "Release ${{ format('{0} (type: {1})', inputs.tag, inputs.release_type
 on:
   workflow_call:
     secrets:
-      - dockerhub-push-token:
-          required: true
-          description: "The token to push images to Docker Hub"
+      dockerhub-push-token:
+        required: true
+        description: "The token to push images to Docker Hub"
     inputs:
       dockerhub-push-username:
         description: "The username to push images to Docker Hub"
