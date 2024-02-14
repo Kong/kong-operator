@@ -61,9 +61,6 @@ jobs:
         max_attempts: 3
         command: make verify.generators
 
-    - name: Verify operator-sdk bundle consistency
-      run: make verify.bundle
-
   install-with-kustomize:
     runs-on: ubuntu-latest
     steps:

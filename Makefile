@@ -6,6 +6,7 @@ REPO ?= github.com/kong/gateway-operator
 REPO_NAME ?= $(echo ${REPO} | cut -d / -f 3)
 REPO_INFO ?= $(shell git config --get remote.origin.url)
 TAG ?= $(shell git describe --tags)
+VERSION ?= $(shell cat VERSION)
 
 ifndef COMMIT
   COMMIT := $(shell git rev-parse --short HEAD)
@@ -20,32 +21,6 @@ SHELL = /usr/bin/env bash -o pipefail
 
 IMG ?= docker.io/kong/gateway-operator
 KUSTOMIZE_IMG_NAME = docker.io/kong/gateway-operator
-
-# ------------------------------------------------------------------------------
-# Configuration - OperatorHub
-# ------------------------------------------------------------------------------
-
-
-# Read the version from the VERSION file
-VERSION ?= $(shell cat VERSION)
-
-CHANNELS ?= alpha,beta
-BUNDLE_CHANNELS := --channels=$(CHANNELS)
-
-DEFAULT_CHANNEL ?= alpha
-BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
-
-BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
-IMAGE_TAG_BASE ?= docker.io/kong/gateway-operator
-BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:$(VERSION)
-BUNDLE_GEN_FLAGS ?= --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
-USE_IMAGE_DIGESTS ?= false
-ifeq ($(USE_IMAGE_DIGESTS), true)
-	BUNDLE_GEN_FLAGS += --use-image-digests
-endif
-
-BUNDLE_DEFAULT_KUSTOMIZE_MANIFESTS ?= config/manifests
-BUNDLE_DEFAULT_DIR ?= bundle/regular
 
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
@@ -223,10 +198,7 @@ lint: golangci-lint
 	$(GOLANGCI_LINT) run -v --config .golangci.yaml $(GOLANGCI_LINT_FLAGS)
 
 .PHONY: verify
-verify: verify.manifests verify.generators verify.bundle
-
-.PHONY: verify.bundle
-verify.bundle: verify.repo bundle verify.diff
+verify: verify.manifests verify.generators
 
 .PHONY: verify.diff
 verify.diff:
@@ -329,57 +301,6 @@ docker.build:
 .PHONY: docker.push
 docker.push:
 	docker push $(IMG):$(TAG)
-
-# ------------------------------------------------------------------------------
-# Build - OperatorHub Bundles
-# ------------------------------------------------------------------------------
-.PHONY: _bundle
-_bundle: manifests kustomize operator-sdk yq
-	$(OPERATOR_SDK) generate kustomize manifests --apis-dir=$(APIS_DIR)/
-	cd config/manager && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
-	$(YQ) -i e '.metadata.annotations.containerImage |= "$(IMG):$(VERSION)"' \
-		 config/manifests/bases/kong-gateway-operator.clusterserviceversion.yaml
-	$(KUSTOMIZE) build $(KUSTOMIZE_DIR) | $(OPERATOR_SDK) generate bundle --output-dir=$(BUNDLE_DIR) $(BUNDLE_GEN_FLAGS)
-	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
-	mv bundle.Dockerfile $(BUNDLE_DIR)
-
-.PHONY: bundle
-bundle:
-	KUSTOMIZE_DIR=$(BUNDLE_DEFAULT_KUSTOMIZE_MANIFESTS) \
-	BUNDLE_DIR=$(BUNDLE_DEFAULT_DIR) \
-		$(MAKE) _bundle
-
-.PHONY: bundle.build
-bundle.build: ## Build the bundle image.
-	docker build -f $(BUNDLE_DEFAULT_DIR)/bundle.Dockerfile -t $(BUNDLE_IMG) .
-
-.PHONY: bundle-push
-bundle-push: ## Push the bundle image.
-	$(MAKE) docker-push IMG=$(BUNDLE_IMG)
-
-# A comma-separated list of bundle images (e.g. make catalog-build BUNDLE_IMGS=example.com/operator-bundle:v0.1.0,example.com/operator-bundle:v0.2.0).
-# These images MUST exist in a registry and be pull-able.
-BUNDLE_IMGS ?= $(BUNDLE_IMG)
-
-# The image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
-CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION)
-
-# Set CATALOG_BASE_IMG to an existing catalog image tag to add $BUNDLE_IMGS to that image.
-ifneq ($(origin CATALOG_BASE_IMG), undefined)
-FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG)
-endif
-
-# Build a catalog image by adding bundle images to an empty catalog using the operator package manager tool, 'opm'.
-# This recipe invokes 'opm' in 'semver' bundle add mode. For more information on add modes, see:
-# https://github.com/operator-framework/community-operators/blob/7f1438c/docs/packaging-operator.md#updating-your-existing-operator
-.PHONY: catalog-build
-catalog-build: opm ## Build a catalog image.
-	$(OPM) index add --container-tool docker --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
-
-# Push the catalog image.
-.PHONY: catalog-push
-catalog-push: ## Push a catalog image.
-	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
 # ------------------------------------------------------------------------------
 # Testing
