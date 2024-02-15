@@ -246,7 +246,8 @@ generate.clientsets: client-gen
 		--output-package $(REPO)/pkg/ \
 		--trim-path-prefix pkg/$(REPO)/
 	rm apis
-	find ./pkg/clientset/ -type f -name '*.go' -exec sed -i 's/github.com\/kong\/gateway-operator\/apis/github.com\/kong\/gateway-operator\/api/gI' {} \;
+	find ./pkg/clientset/ -type f -name '*.go' -exec sed -i.bak 's#$(REPO)/apis#$(REPO)/api#gI' {} \;
+	find ./pkg/clientset/ -type f -name '*.go.bak' -exec rm {} \;
 
 .PHONY: generate.rbacs
 generate.rbacs: kic-role-generator
