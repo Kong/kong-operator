@@ -20,7 +20,6 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/internal/controllers/pkg/controlplane"
-	"github.com/kong/gateway-operator/internal/controllers/pkg/log"
 	"github.com/kong/gateway-operator/internal/controllers/pkg/op"
 	"github.com/kong/gateway-operator/internal/controllers/pkg/patch"
 	"github.com/kong/gateway-operator/internal/controllers/pkg/secrets"
@@ -29,6 +28,7 @@ import (
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/gateway-operator/pkg/log"
 )
 
 // numReplicasWhenNoDataPlane represents the desired number of replicas

@@ -15,11 +15,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
-	"github.com/kong/gateway-operator/internal/controllers/pkg/log"
 	"github.com/kong/gateway-operator/internal/controllers/pkg/op"
 	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/gateway-operator/pkg/log"
 )
 
 // -----------------------------------------------------------------------------

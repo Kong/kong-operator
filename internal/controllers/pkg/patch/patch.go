@@ -12,8 +12,8 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
-	"github.com/kong/gateway-operator/internal/controllers/pkg/log"
 	"github.com/kong/gateway-operator/internal/controllers/pkg/op"
+	"github.com/kong/gateway-operator/pkg/log"
 )
 
 // ApplyPatchIfNonEmpty patches the provided resource if the resulting patch

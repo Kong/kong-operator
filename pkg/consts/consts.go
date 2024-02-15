@@ -11,11 +11,32 @@ const (
 	// OperatorLabelPrefix is the common label prefix used by the operator
 	OperatorLabelPrefix = "gateway-operator.konghq.com/"
 
+	// OperatorAnnotationPrefix is the common annotation prefix used by the operator
+	OperatorAnnotationPrefix = OperatorLabelPrefix
+
 	// GatewayOperatorManagedByLabel is the label that is used for objects which
 	// were created by this operator.
 	// The value associated with this label indicated what component is controlling
-	// the resource that has this label set.
+	// the resource that has this label set, e.g. controlplane.
 	GatewayOperatorManagedByLabel = OperatorLabelPrefix + "managed-by"
+
+	// GatewayOperatorManagedByNameLabel is the label that is used for objects which
+	// were created by this operator.
+	// The value set for this label is the name of the object that is controlling
+	// the resource that has this label set.
+	// This can be used e.g. as a link between a managing object and the managed object
+	// specifying when there's a cross namespace reference which is disallowed by the
+	// Kubernetes API.
+	GatewayOperatorManagedByNameLabel = OperatorLabelPrefix + "managed-by-name"
+
+	// GatewayOperatorManagedByNamespaceLabel is the label that is used for objects which
+	// were created by this operator.
+	// The value set for this label is the namespace of the object that is controlling
+	// the resource that has this label set.
+	// This can be used e.g. as a link between a managing object and the managed object
+	// specifying when there's a cross namespace reference which is disallowed by the
+	// Kubernetes API.
+	GatewayOperatorManagedByNamespaceLabel = OperatorLabelPrefix + "managed-by-namespace"
 
 	// GatewayOperatorManagedByLabelLegacy is the legacy label used for object
 	// with were created by this operator

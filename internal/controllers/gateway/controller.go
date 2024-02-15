@@ -25,7 +25,6 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	controlplanecontroller "github.com/kong/gateway-operator/internal/controllers/pkg/controlplane"
-	"github.com/kong/gateway-operator/internal/controllers/pkg/log"
 	"github.com/kong/gateway-operator/internal/controllers/pkg/watch"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -34,6 +33,7 @@ import (
 	"github.com/kong/gateway-operator/internal/utils/kubernetes/compare"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/gateway-operator/pkg/log"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 

@@ -29,10 +29,10 @@ import (
 	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
-	"github.com/kong/gateway-operator/internal/controllers/pkg/log"
 	"github.com/kong/gateway-operator/internal/controllers/pkg/op"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	k8sresources "github.com/kong/gateway-operator/internal/utils/kubernetes/resources"
+	"github.com/kong/gateway-operator/pkg/log"
 )
 
 func Test_ensureContainerImageUpdated(t *testing.T) {
