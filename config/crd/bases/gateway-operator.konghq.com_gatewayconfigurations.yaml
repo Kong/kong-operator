@@ -7773,6 +7773,43 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  extensions:
+                    description: |-
+                      Extensions provide additional or replacement features for the ControlPlane
+                      resources to influence or enhance functionality.
+                    items:
+                      description: |-
+                        ExtensionRef corresponds to another resource in the Kubernetes cluster which
+                        defines extended behavior for a resource (e.g. ControlPlane).
+                      properties:
+                        group:
+                          description: Group is the group of the extension resource.
+                          type: string
+                        kind:
+                          description: Kind is kind of the extension resource.
+                          type: string
+                        name:
+                          description: Name is the name of the referred resource.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        namespace:
+                          description: |-
+                            Namespace is the namespace of the referred resource.
+
+
+                            For namespace-scoped resources if no Namespace is provided then the
+                            namespace of the parent object MUST be used.
+
+
+                            This field MUST not be set when referring to cluster-scoped resources.
+                          type: string
+                      required:
+                      - group
+                      - kind
+                      - name
+                      type: object
+                    type: array
                 type: object
               dataPlaneOptions:
                 description: |-

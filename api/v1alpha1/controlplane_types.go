@@ -76,12 +76,6 @@ type ControlPlaneSpec struct {
 	//
 	// +optional
 	IngressClass *string `json:"ingressClass,omitempty"`
-
-	// Extensions provide additional or replacement features for the DataPlane
-	// resources to influence or enhance functionality.
-	//
-	// +optional
-	Extensions []ExtensionRef `json:"extensions"`
 }
 
 // ControlPlaneOptions indicates the specific information needed to
@@ -96,6 +90,12 @@ type ControlPlaneOptions struct {
 	//
 	// +optional
 	DataPlane *string `json:"dataplane,omitempty"`
+
+	// Extensions provide additional or replacement features for the ControlPlane
+	// resources to influence or enhance functionality.
+	//
+	// +optional
+	Extensions []ExtensionRef `json:"extensions,omitempty"`
 }
 
 // ControlPlaneStatus defines the observed state of ControlPlane

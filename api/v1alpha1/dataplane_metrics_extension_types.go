@@ -18,6 +18,15 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+func init() {
+	SchemeBuilder.Register(&DataPlaneMetricsExtension{}, &DataPlaneMetricsExtensionList{})
+}
+
+const (
+	// DataPlaneMetricsExtensionKind holds the kind for the DataPlaneMetricsExtension.
+	DataPlaneMetricsExtensionKind = "DataPlaneMetricsExtension"
+)
+
 //+genclient
 //+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 //+kubebuilder:object:root=true

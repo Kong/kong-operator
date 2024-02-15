@@ -29,7 +29,7 @@ func init() {
 //+genclient
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=kgc,categories=kong;all
+//+kubebuilder:resource:shortName=kgc,categories=kong;all
 
 // GatewayConfiguration is the Schema for the gatewayconfigurations API
 type GatewayConfiguration struct {
