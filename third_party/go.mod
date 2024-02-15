@@ -1,8 +1,8 @@
 module github.com/kong/gateway-operator/third_party
 
-go 1.21
+go 1.22
 
-toolchain go1.21.5
+toolchain go1.22.0
 
 require (
 	github.com/elastic/crd-ref-docs v0.0.10

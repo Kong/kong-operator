@@ -1,8 +1,8 @@
 module github.com/kong/gateway-operator/hack/generators
 
-go 1.21.1
+go 1.22
 
-toolchain go1.21.5
+toolchain go1.22.0
 
 replace github.com/kong/gateway-operator => ../../
 
