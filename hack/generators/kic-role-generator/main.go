@@ -22,13 +22,13 @@ var clusterRoleRelativePaths = []string{
 }
 
 const (
-	controllerRBACPath       = "./pkg/utils/kubernetes/resources/clusterroles/"
+	controllerRBACPath       = "./internal/utils/kubernetes/resources/clusterroles/"
 	controllerRBACFilePrefix = "zz_generated_kong_ingress_controller_rbac"
 
-	kicRBACPath       = "./pkg/utils/kubernetes/resources/clusterroles"
+	kicRBACPath       = "./internal/utils/kubernetes/resources/clusterroles"
 	kicRBACFIlePrefix = "zz_generated_controlplane_clusterrole"
 
-	kicRBACHelperFileName = "./pkg/utils/kubernetes/resources/zz_generated_clusterrole_helpers.go"
+	kicRBACHelperFileName = "./internal/utils/kubernetes/resources/zz_generated_clusterrole_helpers.go"
 
 	docFileName = controllerRBACPath + "doc.go"
 )

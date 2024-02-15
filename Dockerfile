@@ -16,9 +16,8 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
     go mod download -x
 
 COPY main.go main.go
+COPY api/ api/
 COPY modules/ modules/
-COPY apis/ apis/
-COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY internal/ internal/
 COPY Makefile Makefile

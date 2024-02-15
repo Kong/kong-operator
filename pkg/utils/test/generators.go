@@ -8,8 +8,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/pkg/vars"

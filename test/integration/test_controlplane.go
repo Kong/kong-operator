@@ -16,10 +16,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
 )
