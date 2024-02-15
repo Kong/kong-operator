@@ -28,6 +28,7 @@ func SetPodContainer(podSpec *corev1.PodSpec, container *corev1.Container) {
 			break
 		}
 	}
+
 	if !found {
 		podSpec.Containers = append(podSpec.Containers, *container)
 	}
