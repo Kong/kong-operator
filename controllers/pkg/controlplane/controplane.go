@@ -200,5 +200,9 @@ func SpecDeepEqual(spec1, spec2 *operatorv1alpha1.ControlPlaneOptions, envVarsTo
 		return false
 	}
 
+	if !reflect.DeepEqual(spec1.Extensions, spec2.Extensions) {
+		return false
+	}
+
 	return true
 }

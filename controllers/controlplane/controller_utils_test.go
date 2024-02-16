@@ -653,6 +653,107 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 			},
 			equal: false,
 		},
+		{
+			name: "not matching Extensions",
+			spec1: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "controller",
+									Env: []corev1.EnvVar{
+										{
+											Name:  "CONTROLLER_PUBLISH_SERVICE",
+											Value: "test-ns/kong-proxy",
+										},
+										{
+											Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+											Value: "/var/cluster-certificate/tls.crt",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			spec2: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "controller",
+									Env: []corev1.EnvVar{
+										{
+											Name:  "CONTROLLER_PUBLISH_SERVICE",
+											Value: "test-ns/kong-proxy",
+										},
+										{
+											Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+											Value: "/var/cluster-certificate/tls.crt",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Extensions: []operatorv1alpha1.ExtensionRef{
+					{
+						NamespacedRef: operatorv1alpha1.NamespacedRef{
+							Name: "test",
+						},
+					},
+				},
+			},
+			equal: false,
+		},
+		{
+			name: "matching Extensions",
+			spec1: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "controller",
+								},
+							},
+						},
+					},
+				},
+				Extensions: []operatorv1alpha1.ExtensionRef{
+					{
+						NamespacedRef: operatorv1alpha1.NamespacedRef{
+							Name: "test",
+						},
+					},
+				},
+			},
+			spec2: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "controller",
+								},
+							},
+						},
+					},
+				},
+				Extensions: []operatorv1alpha1.ExtensionRef{
+					{
+						NamespacedRef: operatorv1alpha1.NamespacedRef{
+							Name: "test",
+						},
+					},
+				},
+			},
+			equal: true,
+		},
 	}
 
 	for _, tc := range testCases {
