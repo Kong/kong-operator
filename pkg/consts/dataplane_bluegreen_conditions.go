@@ -1,6 +1,6 @@
 package consts
 
-import k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+import k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 const (
 	// DataPlaneConditionTypeRolledOut is a condition type indicating whether or

@@ -218,7 +218,7 @@ verify.generators: verify.repo generate verify.diff
 # Build - Generators
 # ------------------------------------------------------------------------------
 
-APIS_DIR ?= api
+APIS_DIR ?= apis
 
 .PHONY: generate
 generate: controller-gen generate.apis generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration
@@ -230,24 +230,15 @@ generate.apis:
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 .PHONY: generate.clientsets
 generate.clientsets: client-gen
-	# We create a symlink to the apis/ directory as a hack because currently
-	# client-gen does not properly support the use of api/ as your API
-	# directory.
-	#
-	# See: https://github.com/kubernetes/code-generator/issues/167
-	ln -s api apis
 	$(CLIENT_GEN) \
 		--go-header-file ./hack/generators/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base '' \
-		--input $(REPO)/apis/v1alpha1 \
-		--input $(REPO)/apis/v1beta1 \
+		--input $(REPO)/$(APIS_DIR)/v1alpha1 \
+		--input $(REPO)/$(APIS_DIR)/v1beta1 \
 		--output-base pkg/ \
 		--output-package $(REPO)/pkg/ \
 		--trim-path-prefix pkg/$(REPO)/
-	rm apis
-	find ./pkg/clientset/ -type f -name '*.go' -exec sed -i.bak 's#$(REPO)/apis#$(REPO)/api#gI' {} \;
-	find ./pkg/clientset/ -type f -name '*.go.bak' -exec rm {} \;
 
 .PHONY: generate.rbacs
 generate.rbacs: kic-role-generator
@@ -278,7 +269,7 @@ check.rbacs: kic-role-generator
 # ------------------------------------------------------------------------------
 
 CONTROLLER_GEN_CRD_OPTIONS ?= "+crd:generateEmbeddedObjectMeta=true"
-CONTROLLER_GEN_PATHS_RAW := ./internal/utils/kubernetes/resources/clusterroles/ ./internal/utils/kubernetes/reduce/ ./internal/controllers/... ./$(APIS_DIR)/...
+CONTROLLER_GEN_PATHS_RAW := ./pkg/utils/kubernetes/resources/clusterroles/ ./pkg/utils/kubernetes/reduce/ ./controllers/... ./$(APIS_DIR)/...
 CONTROLLER_GEN_PATHS := $(patsubst %,%;,$(strip $(CONTROLLER_GEN_PATHS_RAW)))
 
 .PHONY: manifests
@@ -328,6 +319,7 @@ _test.unit: gotestsum
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
 		-coverprofile=coverage.unit.out \
+		./controllers/... \
 		./internal/... \
 		./pkg/...
 

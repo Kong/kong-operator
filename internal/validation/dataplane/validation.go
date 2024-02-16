@@ -12,9 +12,9 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 // Validator validates DataPlane objects.

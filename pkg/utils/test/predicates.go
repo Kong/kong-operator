@@ -19,14 +19,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
-	"github.com/kong/gateway-operator/internal/controllers/controlplane"
+	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/controlplane"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
-	gatewayutils "github.com/kong/gateway-operator/internal/utils/gateway"
-	k8sutils "github.com/kong/gateway-operator/internal/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/clientset"
 	"github.com/kong/gateway-operator/pkg/consts"
+	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 // controlPlanePredicate is a helper function for tests that returns a function

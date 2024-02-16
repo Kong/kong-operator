@@ -41,8 +41,9 @@ COPY third_party/dlv.go third_party/dlv.go
 RUN make dlv
 
 COPY main.go main.go
-COPY api/ api/
 COPY modules/ modules/
+COPY apis/ apis/
+COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY internal/ internal/
 COPY Makefile Makefile
