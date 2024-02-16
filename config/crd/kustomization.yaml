@@ -8,6 +8,7 @@ resources:
 - bases/gateway-operator.konghq.com_controlplanes.yaml
 - bases/gateway-operator.konghq.com_dataplanes.yaml
 - bases/gateway-operator.konghq.com_gatewayconfigurations.yaml
+- bases/gateway-operator.konghq.com_dataplanemetricsextensions.yaml
 - bases/gateway-operator.konghq.com_aigateways.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
