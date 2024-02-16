@@ -15,7 +15,6 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -92,14 +91,12 @@ func GetClients() testutils.K8sClients {
 
 // TestMain is the entrypoint for the integration test suite. It bootstraps
 // the testing environment and runs the test suite on instance of KGO
-// constructed based on its arguments: cfg, setUpControllers, and admissionRequestHandler.
-// Call it from TestMain.
+// constructed by the argument managerRun. It is expected that managerRun
+// function will start the controller manager with manager.Run function and
+// desired configuration.
 func TestMain(
 	m *testing.M,
-	cfg manager.Config,
-	scheme *runtime.Scheme,
-	setUpControllers manager.SetupControllersFunc,
-	admissionRequestHandler manager.AdmissionRequestHandlerFunc,
+	managerRun func(startedChan chan struct{}) error,
 ) {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(context.Background())
@@ -152,10 +149,11 @@ func TestMain(
 	fmt.Println("INFO: starting the operator's controller manager")
 	// Spawn the controller manager based on passed config in
 	// a separate goroutine and report whether that succeeded.
+	startedChan := make(chan struct{})
 	go func() {
-		exitOnErr(manager.Run(cfg, scheme, setUpControllers, admissionRequestHandler))
+		exitOnErr(managerRun(startedChan))
 	}()
-	<-cfg.StartedCh
+	<-startedChan
 
 	exitOnErr(testutils.BuildMTLSCredentials(GetCtx(), GetClients().K8sClient, &httpc))
 
@@ -203,7 +201,6 @@ func DefaultControllerConfigForTests() manager.Config {
 	cfg.DataPlaneBlueGreenControllerEnabled = bluegreenController
 	cfg.ValidatingWebhookEnabled = false
 	cfg.AnonymousReports = false
-	cfg.StartedCh = make(chan struct{})
 
 	if runWebhookTests {
 		cfg.WebhookCertDir = webhookCertDir

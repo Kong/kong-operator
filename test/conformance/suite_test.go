@@ -154,7 +154,6 @@ func startControllerManager() <-chan struct{} {
 	cfg.DataPlaneControllerEnabled = true
 	cfg.ValidatingWebhookEnabled = false
 	cfg.AnonymousReports = false
-	cfg.StartedCh = make(chan struct{})
 
 	cfg.NewClientFunc = func(config *rest.Config, options client.Options) (client.Client, error) {
 		// always hijack and impersonate the system service account here so that the manager
@@ -165,11 +164,12 @@ func startControllerManager() <-chan struct{} {
 		return client.New(config, options)
 	}
 
+	startedChan := make(chan struct{})
 	go func() {
-		exitOnErr(manager.Run(cfg, scheme.Get(), manager.SetupControllers, admission.NewRequestHandler))
+		exitOnErr(manager.Run(cfg, scheme.Get(), manager.SetupControllers, admission.NewRequestHandler, startedChan))
 	}()
 
-	return cfg.StartedCh
+	return startedChan
 }
 
 func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1.GatewayV1Interface) error {

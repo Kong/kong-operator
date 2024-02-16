@@ -17,13 +17,13 @@ var testSuiteToRun = integration.GetTestSuite()
 
 func TestMain(m *testing.M) {
 	testSuiteToRun = helpers.ParseGoTestFlags(TestIntegration, testSuiteToRun)
-
+	cfg := integration.DefaultControllerConfigForTests()
+	managerToTest := func(startedChan chan struct{}) error {
+		return manager.Run(cfg, scheme.Get(), manager.SetupControllers, admission.NewRequestHandler, startedChan)
+	}
 	integration.TestMain(
 		m,
-		integration.DefaultControllerConfigForTests(),
-		scheme.Get(),
-		manager.SetupControllers,
-		admission.NewRequestHandler,
+		managerToTest,
 	)
 }
 

@@ -87,10 +87,6 @@ type Config struct {
 
 	// webhook and validation options
 	ValidatingWebhookEnabled bool
-
-	// StartedCh can be used as a signal to notify the caller when the manager has been started.
-	// Specifically, this channel gets closed when manager.Start() is called.
-	StartedCh chan struct{}
 }
 
 // DefaultConfig returns a default configuration for the manager.
@@ -127,8 +123,16 @@ type SetupControllersFunc func(manager.Manager, *Config) ([]ControllerDef, error
 // setupControllers is expected to return a list of configured ControllerDef
 // that will be added to the manager. The function admissionRequestHandler is
 // used to construct the admission webhook handler for the validating webhook
-// that is added to the manager too.
-func Run(cfg Config, scheme *runtime.Scheme, setupControllers SetupControllersFunc, admissionRequestHandler AdmissionRequestHandlerFunc) error {
+// that is added to the manager too. Argument startedChan can be used as a signal
+// to notify the caller when the manager has been started. Specifically, this channel
+// gets closed when manager.Start() is called. Pass nil if you don't need this signal.
+func Run(
+	cfg Config,
+	scheme *runtime.Scheme,
+	setupControllers SetupControllersFunc,
+	admissionRequestHandler AdmissionRequestHandlerFunc,
+	startedChan chan<- struct{},
+) error {
 	setupLog := ctrl.Log.WithName("setup")
 	setupLog.Info("starting controller manager",
 		"release", metadata.Release,
@@ -249,8 +253,8 @@ func Run(cfg Config, scheme *runtime.Scheme, setupControllers SetupControllersFu
 
 	setupLog.Info("starting manager")
 	// If started channel is set, close it to notify the caller that manager has started.
-	if cfg.StartedCh != nil {
-		close(cfg.StartedCh)
+	if startedChan != nil {
+		close(startedChan)
 	}
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		return fmt.Errorf("problem running manager: %w", err)
