@@ -356,7 +356,6 @@ test.integration_bluegreen:
 
 .PHONY: _test.e2e
 _test.e2e: gotestsum
-	GOFLAGS="-tags=e2e_tests" \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
@@ -372,7 +371,6 @@ PARALLEL := $(if $(PARALLEL),$(PARALLEL),$(NCPU))
 
 .PHONY: _test.conformance
 _test.conformance: gotestsum
-	GOFLAGS="-tags=conformance_tests" \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-timeout $(CONFORMANCE_TEST_TIMEOUT) \

@@ -1,5 +1,3 @@
-//go:build conformance_tests
-
 package conformance
 
 import (
@@ -21,6 +19,7 @@ import (
 	"github.com/kong/gateway-operator/config"
 	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/manager"
+	"github.com/kong/gateway-operator/modules/manager/scheme"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 )
 
@@ -167,7 +166,7 @@ func startControllerManager() <-chan struct{} {
 	}
 
 	go func() {
-		exitOnErr(manager.Run(cfg, manager.SetupControllers, admission.NewRequestHandler))
+		exitOnErr(manager.Run(cfg, scheme.Get(), manager.SetupControllers, admission.NewRequestHandler))
 	}()
 
 	return cfg.StartedCh

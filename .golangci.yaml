@@ -4,8 +4,6 @@ run:
   - pkg/clientset
   - config/
   - third_party/
-  build-tags:
-  - e2e_tests
 linters:
   enable:
   - asciicheck
