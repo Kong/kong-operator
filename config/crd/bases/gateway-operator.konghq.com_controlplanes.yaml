@@ -7669,7 +7669,7 @@ spec:
                 type: object
               extensions:
                 description: |-
-                  Extensions provide additional or replacement features for the DataPlane
+                  Extensions provide additional or replacement features for the ControlPlane
                   resources to influence or enhance functionality.
                 items:
                   description: |-
