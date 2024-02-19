@@ -26,6 +26,12 @@ func Trace[T any](log logr.Logger, msg string, rawObj T, keysAndValues ...interf
 	_log(log, logging.TraceLevel, msg, rawObj, keysAndValues...)
 }
 
+// Error logs a message at the error level.
+func Error[T any](log logr.Logger, err error, msg string, rawObj T, keysAndValues ...interface{}) {
+	kvs := keyValuesFromObj(rawObj)
+	log.Error(err, msg, append(kvs, keysAndValues...)...)
+}
+
 type nameNamespacer interface {
 	GetName() string
 	GetNamespace() string

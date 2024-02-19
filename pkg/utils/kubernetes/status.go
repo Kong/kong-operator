@@ -96,8 +96,8 @@ func GetCondition(cType ConditionType, resource ConditionsAware) (metav1.Conditi
 	return metav1.Condition{}, false
 }
 
-// IsValidCondition returns a true value whether the condition is ConditionTrue, false otherwise
-func IsValidCondition(cType ConditionType, resource ConditionsAware) bool {
+// IsConditionTrue returns a true value whether the condition is ConditionTrue, false otherwise
+func IsConditionTrue(cType ConditionType, resource ConditionsAware) bool {
 	for _, condition := range resource.GetConditions() {
 		if condition.Type == string(cType) {
 			return condition.Status == metav1.ConditionTrue

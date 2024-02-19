@@ -39,7 +39,7 @@ import (
 func (r *Reconciler) createDataPlane(ctx context.Context,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
-) error {
+) (*operatorv1beta1.DataPlane, error) {
 	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    gateway.Namespace,
@@ -51,11 +51,15 @@ func (r *Reconciler) createDataPlane(ctx context.Context,
 	}
 	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions)
 	if err := setDataPlaneIngressServicePorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners); err != nil {
-		return err
+		return nil, err
 	}
 	k8sutils.SetOwnerForObject(dataplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(dataplane)
-	return r.Client.Create(ctx, dataplane)
+	err := r.Client.Create(ctx, dataplane)
+	if err != nil {
+		return nil, err
+	}
+	return dataplane, nil
 }
 
 func (r *Reconciler) createControlPlane(

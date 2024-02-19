@@ -333,7 +333,7 @@ func TestIsValidCondition(t *testing.T) {
 	} {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			current := IsValidCondition(ConditionType(tt.input), resource)
+			current := IsConditionTrue(ConditionType(tt.input), resource)
 			assert.Equal(t, current, tt.expected)
 		})
 	}
