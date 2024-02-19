@@ -89,14 +89,19 @@ func GetClients() testutils.K8sClients {
 // Testing Main
 // -----------------------------------------------------------------------------
 
+// SetUpAndRunManagerFunc is the type of the callback that is passed to TestMain.
+// This id called to set up and run the controller manager. Returned error should be
+// a result of calling manager.Run.
+type SetUpAndRunManagerFunc func(startedChan chan struct{}) error
+
 // TestMain is the entrypoint for the integration test suite. It bootstraps
 // the testing environment and runs the test suite on instance of KGO
-// constructed by the argument managerRun. It is expected that managerRun
-// function will start the controller manager with manager.Run function and
-// desired configuration.
+// constructed by the argument setUpAndRunManager. This callback is called,
+// when the whole cluster is ready and the controller manager can be started.
+// Thus it can be used e.g. to apply additional resources to the cluster too.
 func TestMain(
 	m *testing.M,
-	managerRun func(startedChan chan struct{}) error,
+	setUpAndRunManager SetUpAndRunManagerFunc,
 ) {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(context.Background())
@@ -151,7 +156,7 @@ func TestMain(
 	// a separate goroutine and report whether that succeeded.
 	startedChan := make(chan struct{})
 	go func() {
-		exitOnErr(managerRun(startedChan))
+		exitOnErr(setUpAndRunManager(startedChan))
 	}()
 	<-startedChan
 

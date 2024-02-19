@@ -69,23 +69,6 @@ func SetupControllerLogger(controllerManagerOut string) (func() error, error) {
 	return closeLogFile, nil
 }
 
-// WaitForOperatorCRDs waits for the operator CRDs to be available.
-func WaitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Clientset) error {
-	ready := false
-	for !ready {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			_, err := operatorClient.ApisV1beta1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{})
-			if err == nil {
-				ready = true
-			}
-		}
-	}
-	return nil
-}
-
 // BuilderOpt is an option function for an environment builder.
 type BuilderOpt func(*environments.Builder)
 
@@ -208,8 +191,27 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), GatewayExperimentalCRDsKustomizeURL); err != nil {
 		return err
 	}
-	if err := WaitForOperatorCRDs(ctx, operatorClient); err != nil {
+	// NOTE: this check is not ideal, because we don't know if CRDs were deployed, it assumes that all for KGO are deployed
+	// and checks it by waiting for a single arbitrary chosen CRDs for each API group.
+	if err := waitForOperatorCRDs(ctx, operatorClient); err != nil {
 		return err
+	}
+	return nil
+}
+
+func waitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Clientset) error {
+	ready := false
+	for !ready {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			_, errV1beta1 := operatorClient.ApisV1beta1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{})
+			_, errV1alpha1 := operatorClient.ApisV1alpha1().ControlPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{})
+			if errV1beta1 == nil && errV1alpha1 == nil {
+				ready = true
+			}
+		}
 	}
 	return nil
 }
