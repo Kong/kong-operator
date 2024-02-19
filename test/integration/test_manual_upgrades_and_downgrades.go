@@ -29,15 +29,12 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	originalControlPlaneImageName := "kong/kubernetes-ingress-controller"
-	originalControlPlaneImageVersion := "2.5.0"
+	originalControlPlaneImageVersion := "3.1.0"
 	originalControlPlaneImage := fmt.Sprintf("%s:%s", originalControlPlaneImageName, originalControlPlaneImageVersion)
 
 	originalDataPlaneImageName := "kong/kong"
 	originalDataPlaneImageVersion := "2.7.0"
 	originalDataPlaneImage := fmt.Sprintf("%s:%s", originalDataPlaneImageName, originalDataPlaneImageVersion)
-
-	newControlPlaneImageVersion := "2.6.0"
-	newControlPlaneImage := fmt.Sprintf("%s:%s", originalControlPlaneImageName, newControlPlaneImageVersion)
 
 	newDataPlaneImageVersion := "2.8.0"
 	newDataPlaneImage := fmt.Sprintf("%s:%s", originalDataPlaneImageName, newDataPlaneImageVersion)
@@ -57,6 +54,11 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 								{
 									Name:  consts.ControlPlaneControllerContainerName,
 									Image: fmt.Sprintf("%s:%s", originalControlPlaneImageName, originalControlPlaneImageVersion),
+									ReadinessProbe: &corev1.Probe{
+										InitialDelaySeconds: 1,
+										PeriodSeconds:       1,
+										SuccessThreshold:    1,
+									},
 								},
 							},
 						},
@@ -72,6 +74,11 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 									{
 										Name:  consts.DataPlaneProxyContainerName,
 										Image: fmt.Sprintf("%s:%s", originalDataPlaneImageName, originalDataPlaneImageVersion),
+										ReadinessProbe: &corev1.Probe{
+											InitialDelaySeconds: 1,
+											PeriodSeconds:       1,
+											SuccessThreshold:    1,
+										},
 									},
 								},
 							},
@@ -163,32 +170,39 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		return err == nil && upToDate
 	}, time.Minute, time.Second)
 
-	t.Log("upgrading the ControlPlane version for the Gateway")
-	require.Eventually(t, func() bool {
-		return changeControlPlaneImage(gatewayConfig, originalControlPlaneImageName, newControlPlaneImageVersion) == nil
-	}, time.Second*10, time.Second)
+	t.Run("upgrade the ControlPlane", func(t *testing.T) {
+		t.Skip("skipping upgrade test because we do not have a newer image than 3.1.0 to upgrade to, unskip when 3.1.1 or 3.2.0 is out")
 
-	t.Log("verifying that the ControlPlane receives the configuration override")
-	require.Eventually(t, func() bool {
-		controlplanes, err := gatewayutils.ListControlPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
-		if err != nil {
-			return false
-		}
-		if len(controlplanes) != 1 {
-			return false
-		}
-		container := k8sutils.GetPodContainerByName(&controlplanes[0].Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-		if container == nil {
-			return false
-		}
-		return container.Image == fmt.Sprintf("%s:%s", originalControlPlaneImageName, newControlPlaneImageVersion)
-	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
+		newControlPlaneImageVersion := "3.2.0"
+		newControlPlaneImage := fmt.Sprintf("%s:%s", originalControlPlaneImageName, newControlPlaneImageVersion)
 
-	t.Log("verifying upgraded ControlPlane Pod images for Gateway")
-	require.Eventually(t, func() bool {
-		upToDate, err := verifyContainerImageForGateway(gateway, newControlPlaneImage, originalDataPlaneImage)
-		return err == nil && upToDate
-	}, time.Minute, time.Second)
+		t.Log("upgrading the ControlPlane version for the Gateway")
+		require.Eventually(t, func() bool {
+			return changeControlPlaneImage(gatewayConfig, originalControlPlaneImageName, newControlPlaneImageVersion) == nil
+		}, time.Second*10, time.Second)
+
+		t.Log("verifying that the ControlPlane receives the configuration override")
+		require.Eventually(t, func() bool {
+			controlplanes, err := gatewayutils.ListControlPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
+			if err != nil {
+				return false
+			}
+			if len(controlplanes) != 1 {
+				return false
+			}
+			container := k8sutils.GetPodContainerByName(&controlplanes[0].Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+			if container == nil {
+				return false
+			}
+			return container.Image == fmt.Sprintf("%s:%s", originalControlPlaneImageName, newControlPlaneImageVersion)
+		}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
+
+		t.Log("verifying upgraded ControlPlane Pod images for Gateway")
+		require.Eventually(t, func() bool {
+			upToDate, err := verifyContainerImageForGateway(gateway, newControlPlaneImage, originalDataPlaneImage)
+			return err == nil && upToDate
+		}, time.Minute, time.Second)
+	})
 
 	t.Log("upgrading the DataPlane version for the Gateway")
 	require.Eventually(t, func() bool {
@@ -213,36 +227,40 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 
 	t.Log("verifying upgraded DataPlane Pod images for Gateway")
 	require.Eventually(t, func() bool {
-		upToDate, err := verifyContainerImageForGateway(gateway, newControlPlaneImage, newDataPlaneImage)
-		return err == nil && upToDate
-	}, time.Minute, time.Second)
-
-	t.Log("downgrading the ControlPlane version for the Gateway")
-	require.Eventually(t, func() bool {
-		return changeControlPlaneImage(gatewayConfig, originalControlPlaneImageName, originalControlPlaneImageVersion) == nil
-	}, time.Second*10, time.Second)
-
-	t.Log("verifying that the ControlPlane receives the configuration override")
-	require.Eventually(t, func() bool {
-		controlplanes, err := gatewayutils.ListControlPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
-		if err != nil {
-			return false
-		}
-		if len(controlplanes) != 1 {
-			return false
-		}
-		container := k8sutils.GetPodContainerByName(&controlplanes[0].Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-		if container == nil {
-			return false
-		}
-		return container.Image == fmt.Sprintf("%s:%s", originalControlPlaneImageName, originalControlPlaneImageVersion)
-	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
-
-	t.Log("verifying downgraded ControlPlane Pod images for Gateway")
-	require.Eventually(t, func() bool {
 		upToDate, err := verifyContainerImageForGateway(gateway, originalControlPlaneImage, newDataPlaneImage)
 		return err == nil && upToDate
 	}, time.Minute, time.Second)
+
+	t.Run("downgrade the ControlPlane", func(t *testing.T) {
+		t.Skip("skipping downagrade because we only have 1 supported image now (3.1.0)")
+
+		t.Log("downgrading the ControlPlane version for the Gateway")
+		require.Eventually(t, func() bool {
+			return changeControlPlaneImage(gatewayConfig, originalControlPlaneImageName, originalControlPlaneImageVersion) == nil
+		}, time.Second*10, time.Second)
+
+		t.Log("verifying that the ControlPlane receives the configuration override")
+		require.Eventually(t, func() bool {
+			controlplanes, err := gatewayutils.ListControlPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
+			if err != nil {
+				return false
+			}
+			if len(controlplanes) != 1 {
+				return false
+			}
+			container := k8sutils.GetPodContainerByName(&controlplanes[0].Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+			if container == nil {
+				return false
+			}
+			return container.Image == fmt.Sprintf("%s:%s", originalControlPlaneImageName, originalControlPlaneImageVersion)
+		}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
+
+		t.Log("verifying downgraded ControlPlane Pod images for Gateway")
+		require.Eventually(t, func() bool {
+			upToDate, err := verifyContainerImageForGateway(gateway, originalControlPlaneImage, newDataPlaneImage)
+			return err == nil && upToDate
+		}, time.Minute, time.Second)
+	})
 
 	t.Log("downgrading the DataPlane version for the Gateway")
 	require.Eventually(t, func() bool {

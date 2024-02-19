@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -79,15 +80,19 @@ func main() {
 		// Don't add the same policy rules twice.
 		// Those might hypothetically come from different roles which we use for generation.
 		rolePermissionsCache := make(map[string]struct{}, 0)
+
 		for _, clusterRole := range clusterRoles {
-			for idx, policyRule := range clusterRole.Rules {
-				key := policyRule.String()
+			fmt.Printf("INFO: checking clusterRole %s for KIC version %s\n", clusterRole.Name, kicVersion)
+
+			newRules := slices.DeleteFunc(clusterRole.Rules, func(pr rbacv1.PolicyRule) bool {
+				key := pr.String()
 				if _, ok := rolePermissionsCache[key]; ok {
-					clusterRole.Rules = append(clusterRole.Rules[:idx], clusterRole.Rules[idx+1:]...)
-					continue
+					return true
 				}
 				rolePermissionsCache[key] = struct{}{}
-			}
+				return false
+			})
+			clusterRole.Rules = newRules
 		}
 
 		exitOnErr(generatefile(

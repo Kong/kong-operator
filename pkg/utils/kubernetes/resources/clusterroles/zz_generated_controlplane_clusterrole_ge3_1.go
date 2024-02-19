@@ -13,10 +13,10 @@ import (
 // ClusterRole generator
 // -----------------------------------------------------------------------------
 
-// GenerateNewClusterRoleForControlPlane_ge3_0 is a helper to generate a ClusterRole
+// GenerateNewClusterRoleForControlPlane_ge3_1 is a helper to generate a ClusterRole
 // resource with all the permissions needed by the controlplane deployment.
-// It is used for controlplanes that match the semver constraint ">=3.0"
-func GenerateNewClusterRoleForControlPlane_ge3_0(controlplaneName string) *rbacv1.ClusterRole {
+// It is used for controlplanes that match the semver constraint ">=3.1"
+func GenerateNewClusterRoleForControlPlane_ge3_1(controlplaneName string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", controlplaneName),
@@ -208,6 +208,28 @@ func GenerateNewClusterRoleForControlPlane_ge3_0(controlplaneName string) *rbacv
 					"configuration.konghq.com",
 				},
 				Resources: []string{
+					"konglicenses",
+				},
+				Verbs: []string{
+					"get", "list", "watch",
+				},
+			},
+			{
+				APIGroups: []string{
+					"configuration.konghq.com",
+				},
+				Resources: []string{
+					"konglicenses/status",
+				},
+				Verbs: []string{
+					"get", "patch", "update",
+				},
+			},
+			{
+				APIGroups: []string{
+					"configuration.konghq.com",
+				},
+				Resources: []string{
 					"kongplugins",
 				},
 				Verbs: []string{
@@ -242,6 +264,28 @@ func GenerateNewClusterRoleForControlPlane_ge3_0(controlplaneName string) *rbacv
 				},
 				Resources: []string{
 					"kongupstreampolicies/status",
+				},
+				Verbs: []string{
+					"get", "patch", "update",
+				},
+			},
+			{
+				APIGroups: []string{
+					"configuration.konghq.com",
+				},
+				Resources: []string{
+					"kongvaults",
+				},
+				Verbs: []string{
+					"get", "list", "watch",
+				},
+			},
+			{
+				APIGroups: []string{
+					"configuration.konghq.com",
+				},
+				Resources: []string{
+					"kongvaults/status",
 				},
 				Verbs: []string{
 					"get", "patch", "update",
@@ -300,6 +344,39 @@ func GenerateNewClusterRoleForControlPlane_ge3_0(controlplaneName string) *rbacv
 				},
 				Verbs: []string{
 					"get", "list", "watch",
+				},
+			},
+			{
+				APIGroups: []string{
+					"gateway.networking.k8s.io",
+				},
+				Resources: []string{
+					"httproutes",
+				},
+				Verbs: []string{
+					"get", "list", "watch",
+				},
+			},
+			{
+				APIGroups: []string{
+					"incubator.ingress-controller.konghq.com",
+				},
+				Resources: []string{
+					"kongservicefacades",
+				},
+				Verbs: []string{
+					"get", "list", "watch",
+				},
+			},
+			{
+				APIGroups: []string{
+					"incubator.ingress-controller.konghq.com",
+				},
+				Resources: []string{
+					"kongservicefacades/status",
+				},
+				Verbs: []string{
+					"get", "patch", "update",
 				},
 			},
 			{
@@ -434,17 +511,6 @@ func GenerateNewClusterRoleForControlPlane_ge3_0(controlplaneName string) *rbacv
 				},
 				Verbs: []string{
 					"get", "patch", "update",
-				},
-			},
-			{
-				APIGroups: []string{
-					"gateway.networking.k8s.io",
-				},
-				Resources: []string{
-					"httproutes",
-				},
-				Verbs: []string{
-					"get", "list", "watch",
 				},
 			},
 			{

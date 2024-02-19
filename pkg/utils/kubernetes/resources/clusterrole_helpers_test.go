@@ -7,7 +7,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 
 	kgoerrors "github.com/kong/gateway-operator/internal/errors"
-	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources/clusterroles"
 )
@@ -20,61 +19,23 @@ func TestClusterroleHelpers(t *testing.T) {
 		expectedError       error
 	}{
 		{
-			controlplane: "test_3.0",
-			image:        "kong/kubernetes-ingress-controller:3.0",
+			controlplane: "test_3.1",
+			image:        "kong/kubernetes-ingress-controller:3.1",
 			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_0("test_3.0")
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_1("test_3.1")
 				resources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
 		},
 		{
-			controlplane: "test_2.12",
-			image:        "kong/kubernetes-ingress-controller:2.12",
-			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_lt3_0_ge2_12("test_2.12")
-				resources.LabelObjectAsControlPlaneManaged(cr)
-				return cr
-			},
+			controlplane:  "test_3.0",
+			image:         "kong/kubernetes-ingress-controller:3.0.0",
+			expectedError: resources.ErrControlPlaneVersionNotSupported,
 		},
 		{
-			controlplane: "test_2.11",
-			image:        "kong/kubernetes-ingress-controller:2.11",
-			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_lt2_12_ge2_11("test_2.11")
-				resources.LabelObjectAsControlPlaneManaged(cr)
-				return cr
-			},
-		},
-		{
-			controlplane: "test_development_untagged",
-			image:        "test/development",
-			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_lt3_0_ge2_12("test_development_untagged")
-				resources.LabelObjectAsControlPlaneManaged(cr)
-				return cr
-			},
-			expectedError: versions.ErrExpectedSemverVersion,
-		},
-		{
-			controlplane: "test_empty",
-			image:        "kong/kubernetes-ingress-controller",
-			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_lt3_0_ge2_12("test_empty")
-				resources.LabelObjectAsControlPlaneManaged(cr)
-				return cr
-			},
-			expectedError: versions.ErrExpectedSemverVersion,
-		},
-		{
-			// TODO: https://github.com/Kong/gateway-operator/issues/1029
-			controlplane: "test_unsupported",
-			image:        "kong/kubernetes-ingress-controller:1.0",
-			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_0("test_unsupported")
-				resources.LabelObjectAsControlPlaneManaged(cr)
-				return cr
-			},
+			controlplane:  "test_unsupported",
+			image:         "kong/kubernetes-ingress-controller:1.0",
+			expectedError: resources.ErrControlPlaneVersionNotSupported,
 		},
 		{
 			controlplane:  "test_invalid_tag",
@@ -88,6 +49,7 @@ func TestClusterroleHelpers(t *testing.T) {
 		t.Run(tc.controlplane, func(t *testing.T) {
 			clusterRole, err := resources.GenerateNewClusterRoleForControlPlane(tc.controlplane, tc.image)
 			if tc.expectedError != nil {
+				require.Error(t, err)
 				require.ErrorIs(t, err, tc.expectedError)
 			} else {
 				require.NoError(t, err)

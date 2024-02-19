@@ -140,6 +140,22 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - konglicenses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - konglicenses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
   - kongplugins
   verbs:
   - get
@@ -165,6 +181,22 @@ rules:
   - configuration.konghq.com
   resources:
   - kongupstreampolicies/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongvaults
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongvaults/status
   verbs:
   - get
   - patch
@@ -528,17 +560,17 @@ rules:
   - get
   - update
 - apiGroups:
-  - networking.internal.knative.dev
+  - incubator.ingress-controller.konghq.com
   resources:
-  - ingresses
+  - kongservicefacades
   verbs:
   - get
   - list
   - watch
 - apiGroups:
-  - networking.internal.knative.dev
+  - incubator.ingress-controller.konghq.com
   resources:
-  - ingresses/status
+  - kongservicefacades/status
   verbs:
   - get
   - patch

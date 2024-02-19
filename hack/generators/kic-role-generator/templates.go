@@ -106,7 +106,6 @@ import (
 	"github.com/Masterminds/semver"
 	rbacv1 "k8s.io/api/rbac/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources/clusterroles"
 	"github.com/kong/gateway-operator/internal/versions"
 )
@@ -115,12 +114,13 @@ import (
 // ClusterRole generator helper
 // -----------------------------------------------------------------------------
 
+var ErrControlPlaneVersionNotSupported = fmt.Errorf("version not supported")
+
 // GenerateNewClusterRoleForControlPlane is a helper function that extract
 // the version from the tag, and returns the ClusterRole with all the needed
 // permissions.
 func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string) (*rbacv1.ClusterRole, error) {
 	versionToUse := versions.DefaultControlPlaneVersion 
-	imageToUse := consts.DefaultControlPlaneImage
 	var constraint *semver.Constraints
 
 	if image != "" {
@@ -132,10 +132,11 @@ func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string
 		if err != nil {
 			return nil, err
 		}
-		if supported {
-			imageToUse = image
-			versionToUse = v.String()
+		if !supported {
+			return nil, ErrControlPlaneVersionNotSupported 
 		}
+
+		versionToUse = v.String()
 	}
 
 	semVersion, err := semver.NewVersion(versionToUse)
@@ -154,7 +155,7 @@ func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string
 		return cr, nil
 	}	
 	{{ end}}
-	return nil, fmt.Errorf("version %s not supported", imageToUse)
+	return nil, ErrControlPlaneVersionNotSupported 
 }
 
 `
