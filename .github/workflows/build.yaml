@@ -23,5 +23,5 @@ jobs:
     with:
       username: ${{ vars.DOCKERHUB_PUSH_USERNAME  }}
       registry: docker.io
-      image-name: kong/gateway-operator
+      image-name: ${{ vars.DOCKERHUB_IMAGE_NAME }}
       push: true

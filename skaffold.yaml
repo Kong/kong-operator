@@ -28,7 +28,7 @@ profiles:
     #   # pushed only if the current Kubernetes context connects to a remote cluster.
     #   push: false
     artifacts:
-    - image: docker.io/kong/gateway-operator
+    - image: docker.io/kong/gateway-operator-oss
       docker:
         dockerfile: Dockerfile
         target: distroless
@@ -49,7 +49,7 @@ profiles:
     #   # pushed only if the current Kubernetes context connects to a remote cluster.
     #   push: false
     artifacts:
-    - image: docker.io/kong/gateway-operator
+    - image: docker.io/kong/gateway-operator-oss
       docker:
         dockerfile: Dockerfile
         target: distroless
@@ -70,7 +70,7 @@ profiles:
     #   # pushed only if the current Kubernetes context connects to a remote cluster.
     #   push: false
     artifacts:
-    - image: docker.io/kong/gateway-operator
+    - image: docker.io/kong/gateway-operator-oss
       docker:
         dockerfile: debug.Dockerfile
         target: debug

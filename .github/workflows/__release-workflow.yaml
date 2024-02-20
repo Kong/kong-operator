@@ -1,5 +1,5 @@
 name: Reusable release
-run-name: "Release ${{ format('{0} (type: {1})', inputs.tag, inputs.release_type) }} "
+run-name: "Release ${{ format('{0} (type: {1})', inputs.tag, inputs.release-type) }} "
 
 on:
   workflow_call:
@@ -29,7 +29,7 @@ on:
         description: Whether to mark this release latest
         type: boolean
         default: false
-      release_type:
+      release-type:
         description: Whether to make a created release a pre-release
         required: true
         default: 'prerelease'
@@ -42,6 +42,10 @@ on:
         required: true
       regenerate-bundle:
         description: "Whether to regenerate the bundle before creating the release PR"
+        type: boolean
+        default: false
+      regenerate-manifests:
+        description: "Whether to regenerate the manifests before creating the release PR"
         type: boolean
         default: false
 
@@ -160,7 +164,12 @@ jobs:
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo ${VERSION} > VERSION
 
-      # Generated bundles and kustomized config are part of the release PR.
+      # Generated manifests are part of the release PR.
+      - name: Generate manifests
+        if: ${{ inputs.regenerate_manifests }}
+        run: make manifests
+
+      # The generated bundle is part of the release PR.
       # This is done locally in this job, to avoid including unintended changes.
       # If anything needs to be fixed before a release, it should be done on the main branch.
       - name: Generate bundle
@@ -175,7 +184,7 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
 
-      # PRs to the main branch will update the version file, and the generated bundle.
+      # PRs to the main branch will update the version file, manifests and the generated bundle.
       - name: create a release PR
         uses: peter-evans/create-pull-request@b1ddad2c994a25fbc81a28b3ec0e368bb2021c50
         with:
@@ -184,10 +193,11 @@ jobs:
           add-paths: |
             bundle
             VERSION
-          commit-message: "chore(${{ inputs.release_type }}): [bot] ${{ env.VERSION }}"
+            config
+          commit-message: "chore(${{ inputs.release-type }}): [bot] ${{ env.VERSION }}"
           committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           signoff: true
           delete-branch: true
-          title: "chore(${{ inputs.release_type }}): [bot] ${{ env.VERSION }}"
-          body: "chore(${{ inputs.release_type }}): [bot] ${{ env.VERSION }}"
+          title: "chore(${{ inputs.release-type }}): [bot] ${{ env.VERSION }}"
+          body: "chore(${{ inputs.release-type }}): [bot] ${{ env.VERSION }}"

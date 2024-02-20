@@ -19,8 +19,8 @@ endif
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
-IMG ?= docker.io/kong/gateway-operator
-KUSTOMIZE_IMG_NAME = docker.io/kong/gateway-operator
+IMG ?= docker.io/kong/gateway-operator-oss
+KUSTOMIZE_IMG_NAME = docker.io/kong/gateway-operator-oss
 
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
@@ -273,10 +273,18 @@ CONTROLLER_GEN_PATHS_RAW := ./pkg/utils/kubernetes/resources/clusterroles/ ./pkg
 CONTROLLER_GEN_PATHS := $(patsubst %,%;,$(strip $(CONTROLLER_GEN_PATHS_RAW)))
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: controller-gen manifests.versions ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" rbac:roleName=manager-role
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" webhook
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" $(CONTROLLER_GEN_CRD_OPTIONS) +output:crd:artifacts:config=config/crd/bases
+
+# manifests.versions ensures that image versions are set in the manifests according to the current version.
+.PHONY: manifests.versions
+manifests.versions: kustomize yq operator-sdk
+	$(OPERATOR_SDK) generate kustomize manifests --apis-dir=$(APIS_DIR)/
+	cd config/manager && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
+	$(YQ) -i e '.metadata.annotations.containerImage |= "$(IMG):$(VERSION)"' \
+		 config/manifests/bases/kong-gateway-operator.clusterserviceversion.yaml
 
 # ------------------------------------------------------------------------------
 # Build - Container Images
