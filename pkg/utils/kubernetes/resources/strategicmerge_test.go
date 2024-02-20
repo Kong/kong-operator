@@ -27,7 +27,28 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				Name:      "cp-1",
 			},
 		}
-		return GenerateNewDeploymentForControlPlane(cp, consts.DefaultControlPlaneImage, "kong-sa", "kong-cert-secret")
+		d, err := GenerateNewDeploymentForControlPlane(cp, consts.DefaultControlPlaneImage, "kong-sa", "kong-cert-secret")
+		if err != nil {
+			return nil, err
+		}
+		d.Spec.Template.Spec.Containers[0].Env = append(d.Spec.Template.Spec.Containers[0].Env,
+			[]corev1.EnvVar{
+				{
+					Name:  "ENV1",
+					Value: "VALUE1",
+				},
+				{
+					Name:  "ENV2",
+					Value: "VALUE2",
+				},
+				{
+					Name:  "ENV3",
+					Value: "VALUE3",
+				},
+			}...,
+		)
+
+		return d, nil
 	}
 
 	testcases := []struct {
@@ -68,7 +89,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  "controller",
+							Name:  consts.ControlPlaneControllerContainerName,
 							Image: "alpine",
 						},
 					},
@@ -79,6 +100,184 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Containers[0].Image = "alpine"
 				d.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
+				return d.Spec.Template
+			},
+		},
+		{
+			Name: "add env vars",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: consts.ControlPlaneControllerContainerName,
+							Env: []corev1.EnvVar{
+								{
+									// Prepend
+									Name:  "CONTROLLER_KONG_ADMIN_SVC_PORT_NAMES",
+									Value: "not-your-usual-admin-port-name",
+								},
+								{
+									// Prepend
+									Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
+									Value: "not-your-usual-controller-name",
+								},
+							},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeControlPlaneDeployment()
+				require.NoError(t, err)
+				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+					{
+						Name:  "CONTROLLER_KONG_ADMIN_SVC_PORT_NAMES",
+						Value: "not-your-usual-admin-port-name",
+					},
+					{
+						Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
+						Value: "not-your-usual-controller-name",
+					},
+					{
+						Name:  "ENV1",
+						Value: "VALUE1",
+					},
+					{
+						Name:  "ENV2",
+						Value: "VALUE2",
+					},
+					{
+						Name:  "ENV3",
+						Value: "VALUE3",
+					},
+				}
+				return d.Spec.Template
+			},
+		},
+		{
+			Name: "overwrite env vars",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: consts.ControlPlaneControllerContainerName,
+							Env: []corev1.EnvVar{
+								{
+									Name:  "ENV1",
+									Value: "custom-value",
+								},
+							},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeControlPlaneDeployment()
+				require.NoError(t, err)
+				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+					{
+						Name:  "ENV1",
+						Value: "custom-value",
+					},
+					{
+						Name:  "ENV2",
+						Value: "VALUE2",
+					},
+					{
+						Name:  "ENV3",
+						Value: "VALUE3",
+					},
+				}
+				return d.Spec.Template
+			},
+		},
+		{
+			Name: "overwrite and add env vars",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: consts.ControlPlaneControllerContainerName,
+							Env: []corev1.EnvVar{
+								{
+									Name:  "ENV1",
+									Value: "custom-value",
+								},
+								{
+									Name:  "CUSTOM_ENV",
+									Value: "custom-env-value",
+								},
+							},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeControlPlaneDeployment()
+				require.NoError(t, err)
+				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+					{
+						Name:  "ENV1",
+						Value: "custom-value",
+					},
+					{
+						Name:  "CUSTOM_ENV",
+						Value: "custom-env-value",
+					},
+					{
+						Name:  "ENV2",
+						Value: "VALUE2",
+					},
+					{
+						Name:  "ENV3",
+						Value: "VALUE3",
+					},
+				}
+				return d.Spec.Template
+			},
+		},
+		{
+			Name: "add and overwrite env vars",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: consts.ControlPlaneControllerContainerName,
+							Env: []corev1.EnvVar{
+								{
+									Name:  "CUSTOM_ENV",
+									Value: "custom-env-value",
+								},
+								{
+									Name:  "ENV1",
+									Value: "custom-value",
+								},
+							},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeControlPlaneDeployment()
+				require.NoError(t, err)
+				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+					{
+						Name:  "CUSTOM_ENV",
+						Value: "custom-env-value",
+					},
+					{
+						Name:  "ENV1",
+						Value: "custom-value",
+					},
+					{
+						Name:  "ENV2",
+						Value: "VALUE2",
+					},
+					{
+						Name:  "ENV3",
+						Value: "VALUE3",
+					},
+				}
 				return d.Spec.Template
 			},
 		},
@@ -508,9 +707,89 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			Expected: func() corev1.PodTemplateSpec {
 				d, err := makeControlPlaneDeployment()
 				require.NoError(t, err)
-				d.Spec.Template.Spec.Containers[0].Env = append(
-					d.Spec.Template.Spec.Containers[0].Env,
-					corev1.EnvVar{
+				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+					{
+						Name: "LIMIT",
+						// NOTE: this is an artifact of the strategic merge patch at work.
+						// This values comes from the first entry in the base patch.
+						// In order to overcome this we need to re-state the base values
+						// in the slice.
+						Value: "VALUE1",
+						ValueFrom: &corev1.EnvVarSource{
+							ResourceFieldRef: &corev1.ResourceFieldSelector{
+								Resource: "limits.cpu",
+								Divisor:  *resource.NewQuantity(1, resource.DecimalSI),
+							},
+						},
+					},
+					{
+						Name:  "ENV1",
+						Value: "VALUE1",
+					},
+					{
+						Name:  "ENV2",
+						Value: "VALUE2",
+					},
+					{
+						Name:  "ENV3",
+						Value: "VALUE3",
+					},
+				}
+
+				return d.Spec.Template
+			},
+		},
+		{
+			Name: "add envs with fieldRef re-stating the base",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: consts.ControlPlaneControllerContainerName,
+							Env: []corev1.EnvVar{
+								{
+									Name:  "ENV1",
+									Value: "VALUE1",
+								},
+								{
+									Name:  "ENV2",
+									Value: "VALUE2",
+								},
+								{
+									Name:  "ENV3",
+									Value: "VALUE3",
+								},
+								// We're moving the `LIMIT` entry from the 1st to the 4th place in the slice to make sure it will not end up with both `Value` and `ValueFrom` fields.
+								{
+									Name: "LIMIT",
+									ValueFrom: &corev1.EnvVarSource{
+										ResourceFieldRef: &corev1.ResourceFieldSelector{
+											Resource: "limits.cpu",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeControlPlaneDeployment()
+				require.NoError(t, err)
+				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+					{
+						Name:  "ENV1",
+						Value: "VALUE1",
+					},
+					{
+						Name:  "ENV2",
+						Value: "VALUE2",
+					},
+					{
+						Name:  "ENV3",
+						Value: "VALUE3",
+					},
+					{
 						Name: "LIMIT",
 						ValueFrom: &corev1.EnvVarSource{
 							ResourceFieldRef: &corev1.ResourceFieldSelector{
@@ -519,7 +798,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 							},
 						},
 					},
-				)
+				}
 
 				return d.Spec.Template
 			},
