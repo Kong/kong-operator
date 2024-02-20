@@ -7,6 +7,15 @@ on:
       dockerhub-push-token:
         required: true
         description: "The token to push images to Docker Hub"
+      gpg-private-key:
+        required: true
+        description: "The GPG private key to sign the commits"
+      gpg-passphrase:
+        required: true
+        description: "The GPG passphrase to sign the commits"
+      gh-pat:
+        required: true
+        description: "The GitHub Personal Access Token to create the release PR"
     inputs:
       dockerhub-push-username:
         description: "The username to push images to Docker Hub"
@@ -161,8 +170,8 @@ jobs:
       - name: GPG sign the commits
         uses: crazy-max/ghaction-import-gpg@01dd5d3ca463c7f10f7f4f7b4f177225ac661ee4
         with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          gpg_private_key: ${{ secrets.gpg-private-key }}
+          passphrase: ${{ secrets.gpg-passphrase }}
           git_user_signingkey: true
           git_commit_gpgsign: true
 
@@ -170,7 +179,7 @@ jobs:
       - name: create a release PR
         uses: peter-evans/create-pull-request@b1ddad2c994a25fbc81a28b3ec0e368bb2021c50
         with:
-          token: ${{ secrets.PAT_GITHUB }}
+          token: ${{ secrets.gh-pat }}
           path: .
           add-paths: |
             bundle

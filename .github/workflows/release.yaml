@@ -25,6 +25,9 @@ jobs:
     uses: ./.github/workflows/__release-workflow.yaml
     secrets:
       dockerhub-push-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
+      gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+      gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
+      gh-pat: ${{ secrets.GH_PAT }}
     with:
       dockerhub-push-username: ${{ vars.DOCKERHUB_PUSH_USERNAME  }}
       image-name: kong/gateway-operator-oss
