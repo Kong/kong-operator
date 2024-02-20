@@ -313,15 +313,15 @@ CONFORMANCE_TEST_TIMEOUT ?= "20m"
 .PHONY: test
 test: test.unit
 
+UNIT_TEST_PATHS := ./controllers/... ./internal/... ./pkg/...
+
 .PHONY: _test.unit
 _test.unit: gotestsum
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
 		-coverprofile=coverage.unit.out \
-		./controllers/... \
-		./internal/... \
-		./pkg/...
+		$(UNIT_TEST_PATHS)
 
 .PHONY: test.unit
 test.unit:
@@ -329,7 +329,7 @@ test.unit:
 
 .PHONY: test.unit.pretty
 test.unit.pretty:
-	@$(MAKE) _test.unit GOTESTSUM_FORMAT=pkgname GOTESTFLAGS="$(GOTESTFLAGS)"
+	@$(MAKE) _test.unit GOTESTSUM_FORMAT=pkgname GOTESTFLAGS="$(GOTESTFLAGS)" UNIT_TEST_PATHS="$(UNIT_TEST_PATHS)"
 
 .PHONY: _test.integration
 _test.integration: gotestsum
