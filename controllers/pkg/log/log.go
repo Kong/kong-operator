@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/types"
 	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -52,6 +53,11 @@ func keyValuesFromObj[T any](rawObj T) []interface{} {
 		return []interface{}{
 			"namespace", req.Namespace,
 			"name", req.Name,
+		}
+	} else if nn, ok := any(rawObj).(types.NamespacedName); ok {
+		return []interface{}{
+			"namespace", nn.Namespace,
+			"name", nn.Name,
 		}
 	}
 
