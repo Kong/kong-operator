@@ -231,7 +231,7 @@ jobs:
             REPO_INFO=https://github.com/${{ github.repository }}.git
             GOPATH=${{ env.GOPATH}}
             GOCACHE=${{ env.GOCACHE}}
-            K8S_TEAM_BOT_GH_PAT=${{ secrets.gh-pat }}
+            PAT_GITHUB=${{ secrets.gh-pat }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: ${{ inputs.outputs }}
