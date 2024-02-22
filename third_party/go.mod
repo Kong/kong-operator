@@ -6,7 +6,7 @@ toolchain go1.22.0
 
 require (
 	github.com/elastic/crd-ref-docs v0.0.10
-	github.com/go-delve/delve v1.22.0
+	github.com/go-delve/delve v1.22.1
 	github.com/golangci/golangci-lint v1.56.2
 	github.com/operator-framework/operator-registry v1.36.0
 	gotest.tools/gotestsum v1.11.0
@@ -98,8 +98,7 @@ require (
 	github.com/fzipp/gocyclo v0.6.0 // indirect
 	github.com/ghostiam/protogetter v0.3.4 // indirect
 	github.com/go-critic/go-critic v0.11.1 // indirect
-	github.com/go-delve/gore v0.11.6 // indirect
-	github.com/go-delve/liner v1.2.3-0.20220127212407-d32d89dd2a5d // indirect
+	github.com/go-delve/liner v1.2.3-0.20231231155935-4726ab1d7f62 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.5.0 // indirect
 	github.com/go-git/go-git/v5 v5.11.0 // indirect
