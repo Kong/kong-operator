@@ -40,6 +40,11 @@ on:
         description: "The name of the image to push to Docker Hub"
         type: string
         required: true
+      verify-image-script:
+        description: Path to the script that will be used to verify the built image.
+        required: false
+        type: string
+        default: ./scripts/verify-version.sh
       regenerate-bundle:
         description: "Whether to regenerate the bundle before creating the release PR"
         type: boolean
@@ -61,22 +66,22 @@ jobs:
     steps:
       - uses: mukunku/tag-exists-action@v1.6.0
         id: check-tag
-        name: check if tag already exists
+        name: Check if tag already exists
         with:
           tag: ${{ inputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: fail if tag already exists
+      - name: Fail if tag already exists
         if: ${{ steps.check-tag.outputs.exists == 'true' }}
         run: exit 1
 
-      - name: checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: parse semver string
+      - name: Parse semver string
         id: semver_parser
         uses: booxmedialtd/ws-action-parse-semver@v1.4.7
         with:
@@ -86,7 +91,8 @@ jobs:
   build-push-images:
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
-      token: ${{ secrets.dockerhub-push-token }}
+      dockerhub-token: ${{ secrets.dockerhub-push-token }}
+      gh-pat: ${{ secrets.gh-pat }}
     with:
       registry: docker.io
       username: ${{ inputs.dockerhub-push-username }}
@@ -94,17 +100,24 @@ jobs:
       push: true
       latest: ${{ inputs.latest }}
       tag: ${{ inputs.tag }}
+      verify-image-script: ${{ inputs.verify-image-script }}
 
   test-integration-current-kubernetes:
     runs-on: ubuntu-latest
     needs: build-push-images
     steps:
-      - name: checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: setup golang
+      - name: Configure Git for private repositories (temporary until making KGO public)
+        run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
+
+      - name: Checkout KGO submodule
+        run: git submodule update --init
+
+      - name: Setup golang
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -118,12 +131,18 @@ jobs:
       - semver
       - build-push-images
     steps:
-      - name: checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: setup golang
+      - name: Configure Git for private repositories (temporary until making KGO public)
+        run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
+
+      - name: Checkout KGO submodule
+        run: git submodule update --init
+
+      - name: Setup golang
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -151,7 +170,13 @@ jobs:
           fetch-depth: 0
           ref: main
 
-      - name: setup golang
+      - name: Configure Git for private repositories (temporary until making KGO public)
+        run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
+
+      - name: Checkout KGO submodule
+        run: git submodule update --init
+
+      - name: Setup golang
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -166,14 +191,14 @@ jobs:
 
       # Generated manifests are part of the release PR.
       - name: Generate manifests
-        if: ${{ inputs.regenerate_manifests }}
+        if: ${{ inputs.regenerate-manifests }}
         run: make manifests
 
       # The generated bundle is part of the release PR.
       # This is done locally in this job, to avoid including unintended changes.
       # If anything needs to be fixed before a release, it should be done on the main branch.
       - name: Generate bundle
-        if: ${{ inputs.regenerate_bundle }}
+        if: ${{ inputs.regenerate-bundle }}
         run: make bundle
 
       - name: GPG sign the commits
@@ -185,7 +210,7 @@ jobs:
           git_commit_gpgsign: true
 
       # PRs to the main branch will update the version file, manifests and the generated bundle.
-      - name: create a release PR
+      - name: Create a release PR
         uses: peter-evans/create-pull-request@b1ddad2c994a25fbc81a28b3ec0e368bb2021c50
         with:
           token: ${{ secrets.gh-pat }}
