@@ -121,35 +121,9 @@ func GenerateControlPlaneContainer(image string) corev1.Container {
 				Protocol:      corev1.ProtocolTCP,
 			},
 		},
-		LivenessProbe: &corev1.Probe{
-			FailureThreshold:    3,
-			InitialDelaySeconds: 5,
-			PeriodSeconds:       10,
-			SuccessThreshold:    1,
-			TimeoutSeconds:      1,
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path:   "/healthz",
-					Port:   intstr.FromInt(10254),
-					Scheme: corev1.URISchemeHTTP,
-				},
-			},
-		},
-		ReadinessProbe: &corev1.Probe{
-			FailureThreshold:    3,
-			InitialDelaySeconds: 5,
-			PeriodSeconds:       10,
-			SuccessThreshold:    1,
-			TimeoutSeconds:      1,
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path:   "/readyz",
-					Port:   intstr.FromInt(10254),
-					Scheme: corev1.URISchemeHTTP,
-				},
-			},
-		},
-		Resources: *DefaultControlPlaneResources(),
+		LivenessProbe:  GenerateControlPlaneProbe("/healthz", intstr.FromInt(10254)),
+		ReadinessProbe: GenerateControlPlaneProbe("/readyz", intstr.FromInt(10254)),
+		Resources:      *DefaultControlPlaneResources(),
 	}
 }
 
@@ -343,6 +317,25 @@ func GenerateDataPlaneReadinessProbe(endpoint string) *corev1.Probe {
 			HTTPGet: &corev1.HTTPGetAction{
 				Path:   endpoint,
 				Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+				Scheme: corev1.URISchemeHTTP,
+			},
+		},
+	}
+}
+
+// GenerateControlPlaneProbe generates a controlplane probe that uses the specified endpoint.
+// This is currently used both for readiness and liveness.
+func GenerateControlPlaneProbe(endpoint string, port intstr.IntOrString) *corev1.Probe {
+	return &corev1.Probe{
+		FailureThreshold:    3,
+		InitialDelaySeconds: 5,
+		PeriodSeconds:       10,
+		SuccessThreshold:    1,
+		TimeoutSeconds:      1,
+		ProbeHandler: corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path:   endpoint,
+				Port:   port,
 				Scheme: corev1.URISchemeHTTP,
 			},
 		},

@@ -448,6 +448,29 @@ func DataPlaneUpdateEventually(t *testing.T, ctx context.Context, dataplaneNN ty
 	}
 }
 
+// ControlPlaneUpdateEventually is a helper function for tests that returns a function
+// that can be used to update the ControlPlane.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func ControlPlaneUpdateEventually(t *testing.T, ctx context.Context, controlplaneNN types.NamespacedName, clients K8sClients, updateFunc func(*operatorv1alpha1.ControlPlane)) func() bool {
+	return func() bool {
+		cl := clients.OperatorClient.ApisV1alpha1().ControlPlanes(controlplaneNN.Namespace)
+		dp, err := cl.Get(ctx, controlplaneNN.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting controlplane: %v", err)
+			return false
+		}
+
+		updateFunc(dp)
+
+		_, err = cl.Update(ctx, dp, metav1.UpdateOptions{})
+		if err != nil {
+			t.Logf("error updating controlplane: %v", err)
+			return false
+		}
+		return true
+	}
+}
+
 // DataPlaneHasServiceSecret checks if a DataPlane's Service has one owned Secret.
 func DataPlaneHasServiceSecret(t *testing.T, ctx context.Context, dpNN, usingSvc types.NamespacedName, ret *corev1.Secret, clients K8sClients) func() bool {
 	return DataPlanePredicate(t, ctx, dpNN, func(dp *operatorv1beta1.DataPlane) bool {

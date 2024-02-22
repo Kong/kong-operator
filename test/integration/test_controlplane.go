@@ -20,6 +20,7 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
 )
@@ -378,6 +379,10 @@ func TestControlPlaneUpdate(t *testing.T) {
 									{
 										Name:  consts.DataPlaneProxyContainerName,
 										Image: consts.DefaultDataPlaneImage,
+										ReadinessProbe: &corev1.Probe{
+											InitialDelaySeconds: 1,
+											PeriodSeconds:       1,
+										},
 									},
 								},
 							},
@@ -411,6 +416,10 @@ func TestControlPlaneUpdate(t *testing.T) {
 									},
 									Name:  consts.ControlPlaneControllerContainerName,
 									Image: consts.DefaultControlPlaneImage,
+									ReadinessProbe: &corev1.Probe{
+										InitialDelaySeconds: 1,
+										PeriodSeconds:       1,
+									},
 								},
 							},
 						},
@@ -488,17 +497,13 @@ func TestControlPlaneUpdate(t *testing.T) {
 		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 	)
 
-	var correctReadinessProbePath string
 	t.Run("controlplane is not Ready when the underlying deployment changes state to not Ready", func(t *testing.T) {
-		deployments := testutils.MustListControlPlaneDeployments(t, GetCtx(), controlplane, clients)
-		require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
-		deployment := &deployments[0]
-		require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
-		container := &deployment.Spec.Template.Spec.Containers[0]
-		correctReadinessProbePath = container.ReadinessProbe.HTTPGet.Path
-		container.ReadinessProbe.HTTPGet.Path = "/status_which_will_always_return_404"
-		_, err = GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Update(GetCtx(), deployment, metav1.UpdateOptions{})
-		require.NoError(t, err)
+		require.Eventually(t,
+			testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1alpha1.ControlPlane) {
+				cp.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Image = "kong/kubernetes-ingress-controller:99999.0.0"
+			}),
+			time.Minute, time.Second,
+		)
 
 		t.Logf("verifying that controlplane is indeed not Ready when the underlying deployment is not Ready")
 		require.Eventually(t,
@@ -508,13 +513,12 @@ func TestControlPlaneUpdate(t *testing.T) {
 	})
 
 	t.Run("controlplane gets Ready when the underlying deployment changes state to Ready", func(t *testing.T) {
-		deployments := testutils.MustListControlPlaneDeployments(t, GetCtx(), controlplane, clients)
-		require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
-		deployment := &deployments[0]
-		container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
-		container.ReadinessProbe.HTTPGet.Path = correctReadinessProbePath
-		_, err = GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Update(GetCtx(), deployment, metav1.UpdateOptions{})
-		require.NoError(t, err)
+		require.Eventually(t,
+			testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1alpha1.ControlPlane) {
+				cp.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Image = consts.DefaultControlPlaneImage
+			}),
+			time.Minute, time.Second,
+		)
 
 		require.Eventually(t,
 			testutils.ControlPlaneIsReady(t, GetCtx(), controlplaneName, clients),
@@ -523,26 +527,14 @@ func TestControlPlaneUpdate(t *testing.T) {
 	})
 
 	t.Run("controlplane correctly reconciles when is updated with a ReadinessProbe using a port name", func(t *testing.T) {
-		deployments := testutils.MustListControlPlaneDeployments(t, GetCtx(), controlplane, clients)
-		require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
-		deployment := &deployments[0]
-		container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
-		container.ReadinessProbe = &corev1.Probe{
-			FailureThreshold:    30,
-			InitialDelaySeconds: 0,
-			PeriodSeconds:       1,
-			SuccessThreshold:    1,
-			TimeoutSeconds:      1,
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path:   "/readyz",
-					Port:   intstr.FromString("health"),
-					Scheme: corev1.URISchemeHTTP,
-				},
-			},
-		}
-		_, err = GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Update(GetCtx(), deployment, metav1.UpdateOptions{})
-		require.NoError(t, err)
+		require.Eventually(t,
+			testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1alpha1.ControlPlane) {
+				container := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+				require.NotNil(t, container)
+				container.ReadinessProbe = k8sresources.GenerateControlPlaneProbe("/readyz", intstr.FromInt(10254))
+			}),
+			time.Minute, time.Second,
+		)
 
 		require.Eventually(t,
 			testutils.ControlPlaneIsReady(t, GetCtx(), controlplaneName, clients),
