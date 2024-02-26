@@ -57,6 +57,8 @@ import (
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------
@@ -69,7 +71,7 @@ import (
 func GenerateNewClusterRoleForControlPlane_{{.Version}}(controlplaneName string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-", controlplaneName),
+			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", controlplaneName)),
 			Labels: map[string]string{
 				"app": controlplaneName,
 			},

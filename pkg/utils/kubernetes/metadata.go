@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"strings"
 
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
@@ -62,4 +63,16 @@ func EnsureObjectMetaIsUpdated(
 	}
 
 	return metaToUpdate, existingMeta
+}
+
+// TrimGenerateName cut the string to 63 chars, in case it is longer,
+// to be compliant with the GenerateName length maximum size of 63 chars.
+func TrimGenerateName(name string) string {
+	if len(name) > 63 {
+		name = name[:62]
+	}
+	if !strings.HasSuffix(name, "-") {
+		name = name + "-"
+	}
+	return name
 }

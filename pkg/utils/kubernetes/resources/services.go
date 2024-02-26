@@ -49,7 +49,7 @@ func GenerateNewIngressServiceForDataPlane(dataplane *operatorv1beta1.DataPlane,
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,
-			GenerateName: fmt.Sprintf("%s-ingress-%s-", consts.DataPlanePrefix, dataplane.Name),
+			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-ingress-%s-", consts.DataPlanePrefix, dataplane.Name)),
 			Labels: map[string]string{
 				"app":                            dataplane.Name,
 				consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneIngressServiceLabelValue),
@@ -164,7 +164,7 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, o
 	adminService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,
-			GenerateName: dataPlaneAdminServiceGenerateName(dataplane),
+			GenerateName: k8sutils.TrimGenerateName(dataPlaneAdminServiceGenerateName(dataplane)),
 			Labels: map[string]string{
 				"app":                            dataplane.Name,
 				consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),

@@ -71,7 +71,7 @@ func GenerateNewTLSSecret[
 		s           = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:    owner.GetNamespace(),
-				GenerateName: fmt.Sprintf("%s-%s-", ownerPrefix, owner.GetName()),
+				GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-%s-", ownerPrefix, owner.GetName())),
 			},
 			Type: corev1.SecretTypeTLS,
 		}

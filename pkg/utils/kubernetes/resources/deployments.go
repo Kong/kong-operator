@@ -43,7 +43,7 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.Control
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    controlplane.Namespace,
-			GenerateName: fmt.Sprintf("%s-%s-", consts.ControlPlanePrefix, controlplane.Name),
+			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-%s-", consts.ControlPlanePrefix, controlplane.Name)),
 			Labels: map[string]string{
 				"app": controlplane.Name,
 			},
@@ -152,7 +152,7 @@ func GenerateNewDeploymentForDataPlane(
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,
-			GenerateName: fmt.Sprintf("%s-%s-", consts.DataPlanePrefix, dataplane.Name),
+			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-%s-", consts.DataPlanePrefix, dataplane.Name)),
 			Labels: map[string]string{
 				"app": dataplane.Name,
 			},

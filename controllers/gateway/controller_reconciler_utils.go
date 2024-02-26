@@ -43,7 +43,7 @@ func (r *Reconciler) createDataPlane(ctx context.Context,
 	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    gateway.Namespace,
-			GenerateName: fmt.Sprintf("%s-", gateway.Name),
+			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)),
 		},
 	}
 	if gatewayConfig.Spec.DataPlaneOptions != nil {
@@ -72,7 +72,7 @@ func (r *Reconciler) createControlPlane(
 	controlplane := &operatorv1alpha1.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    gateway.Namespace,
-			GenerateName: fmt.Sprintf("%s-", gateway.Name),
+			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)),
 		},
 		Spec: operatorv1alpha1.ControlPlaneSpec{
 			GatewayClass: (*gatewayv1.ObjectName)(&gatewayClass.Name),
@@ -367,7 +367,7 @@ func generateDataPlaneNetworkPolicy(
 	return &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    namespace,
-			GenerateName: fmt.Sprintf("%s-limit-admin-api-", dataplane.Name),
+			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-limit-admin-api-", dataplane.Name)),
 		},
 		Spec: networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
