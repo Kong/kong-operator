@@ -133,12 +133,13 @@ func TestMain(m *testing.M) {
 // -----------------------------------------------------------------------------
 
 func exitOnErr(err error) {
-	if !skipClusterCleanup && existingCluster == "" && err != nil {
-		if env != nil {
-			env.Cleanup(ctx) //nolint:errcheck
+	if err != nil {
+		if !skipClusterCleanup && existingCluster == "" {
+			if env != nil {
+				env.Cleanup(ctx) //nolint:errcheck
+			}
 		}
-		fmt.Printf("ERROR: %s\n", err.Error())
-		os.Exit(1)
+		panic(fmt.Sprintf("ERROR: %s\n", err.Error()))
 	}
 }
 
