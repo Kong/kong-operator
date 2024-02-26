@@ -7,4 +7,5 @@ resources:
 - gatewayconfiguration.yaml
 - controlplane.yaml
 - aigateway.yaml
+- dataplanemetricsextension.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

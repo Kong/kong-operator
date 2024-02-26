@@ -27,10 +27,10 @@ const (
 	DataPlaneMetricsExtensionKind = "DataPlaneMetricsExtension"
 )
 
-//+genclient
-//+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // DataPlaneMetricsExtension holds the configuration for the DataPlane metrics extension.
 // It can be attached to a ControlPlane using its spec.extensions.
@@ -49,7 +49,7 @@ type DataPlaneMetricsExtension struct {
 	Status DataPlaneMetricsExtensionStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // DataPlaneMetricsExtensionList contains a list of DataPlaneMetricsExtension.
 type DataPlaneMetricsExtensionList struct {

@@ -5,8 +5,8 @@ kind: Secret
 metadata:
   name: acme-ai-cloud-providers
 type: Opaque
-data:
-  apiToken: <your-api-token-here>
+stringData:
+  apiToken: "<your-api-token-here>"
 ---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1

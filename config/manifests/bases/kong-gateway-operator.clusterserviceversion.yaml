@@ -26,6 +26,11 @@ spec:
         kind: ControlPlane
         name: controlplanes.gateway-operator.konghq.com
         version: v1alpha1
+      - description: "DataPlaneMetricsExtension holds the configuration for the DataPlane metrics extension. It can be attached to a ControlPlane using its spec.extensions. When attached it will make the ControlPlane configure its DataPlane with the specified metrics configuration. Additionally, it will also make the operator expose DataPlane's metrics enriched with metadata required for in-cluster Kubernetes autoscaling. \n NOTE: This is an enterprise feature. In order to use it you need to use the EE version of Kong Gateway Operator with a valid license."
+        displayName: Data Plane Metrics Extension
+        kind: DataPlaneMetricsExtension
+        name: dataplanemetricsextensions.gateway-operator.konghq.com
+        version: v1alpha1
       - description: DataPlane is the Schema for the dataplanes API
         displayName: Data Plane
         kind: DataPlane

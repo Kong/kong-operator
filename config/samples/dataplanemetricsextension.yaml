@@ -1,0 +1,15 @@
+# NOTE: This is an enterprise feature. In order to use it you need to use
+# the EE version of Kong Gateway Operator with a valid license.
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: DataPlaneMetricsExtension
+metadata:
+  name: dp-metrics-example
+spec:
+  serviceSelector:
+    matchNames:
+      - name: example-service
+  config:
+    latency: true
+    bandwidth: true
+    upstreamHealth: true
+    statusCode: true
