@@ -98,10 +98,14 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	}
 
 	validatingWebhookEnabled := c.deferFlagValues.ValidatingWebhookEnabled
+	anonymousReportsEnabled := c.cfg.AnonymousReports
 	if developmentModeEnabled {
 		// If developmentModeEnabled is true, we are running the webhook locally,
 		// therefore enabling the validatingWebhook is ineffective and might also be problematic to handle.
 		validatingWebhookEnabled = false
+		// If developmentModeEnabled is true, we want to disable `telemetry` to not pollute telemetry results.
+		// https://github.com/Kong/gateway-operator/issues/1392
+		anonymousReportsEnabled = false
 	}
 
 	if c.deferFlagValues.Version {
@@ -154,6 +158,7 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	c.cfg.LoggerOpts = logging.SetupLogEncoder(c.cfg.DevelopmentMode, loggerOpts)
 	c.cfg.WebhookPort = manager.DefaultConfig().WebhookPort
 	c.cfg.LeaderElectionNamespace = controllerNamespace
+	c.cfg.AnonymousReports = anonymousReportsEnabled
 
 	return *c.cfg
 }

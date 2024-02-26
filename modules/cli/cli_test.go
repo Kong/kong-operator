@@ -55,6 +55,7 @@ func TestParse(t *testing.T) {
 				loggerOpts := manager.DefaultConfig().LoggerOpts
 				loggerOpts.Development = true
 				cfg.LoggerOpts = logging.SetupLogEncoder(true, loggerOpts)
+				cfg.AnonymousReports = false
 				return cfg
 			},
 		},

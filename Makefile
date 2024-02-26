@@ -321,7 +321,7 @@ CONFORMANCE_TEST_TIMEOUT ?= "20m"
 .PHONY: test
 test: test.unit
 
-UNIT_TEST_PATHS := ./controllers/... ./internal/... ./pkg/...
+UNIT_TEST_PATHS := ./controllers/... ./internal/... ./pkg/... ./modules/...
 
 .PHONY: _test.unit
 _test.unit: gotestsum

@@ -23,6 +23,7 @@ type DefaultsArgs struct {
 	DataPlaneIngressServiceName string
 	DataPlaneAdminServiceName   string
 	ManagedByGateway            bool
+	AnonymousReportsEnabled     bool
 }
 
 // -----------------------------------------------------------------------------
@@ -59,6 +60,13 @@ func SetDefaults(
 
 	if !reflect.DeepEqual(envSourceMetadataNamespace, k8sutils.EnvVarSourceByName(container.Env, "POD_NAMESPACE")) {
 		container.Env = k8sutils.UpdateEnvSource(container.Env, "POD_NAMESPACE", envSourceMetadataNamespace)
+		changed = true
+	}
+
+	// due to the anonymous reports being enabled by default
+	// if the flag is set to false, we need to set the env var to false
+	if k8sutils.EnvValueByName(container.Env, "CONTROLLER_ANONYMOUS_REPORTS") != fmt.Sprintf("%t", args.AnonymousReportsEnabled) {
+		container.Env = k8sutils.UpdateEnv(container.Env, "CONTROLLER_ANONYMOUS_REPORTS", fmt.Sprintf("%t", args.AnonymousReportsEnabled))
 		changed = true
 	}
 

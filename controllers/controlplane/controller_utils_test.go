@@ -24,12 +24,14 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		dataplaneIngressServiceName string
 		dataplaneAdminServiceName   string
 		changed                     bool
+		anonymousReportsEnabled     bool
 		newSpec                     *operatorv1alpha1.ControlPlaneOptions
 	}{
 		{
-			name:    "no_envs_no_dataplane",
-			spec:    &operatorv1alpha1.ControlPlaneOptions{},
-			changed: true,
+			name:                    "no_envs_no_dataplane_no_anonymous_reports",
+			spec:                    &operatorv1alpha1.ControlPlaneOptions{},
+			changed:                 true,
+			anonymousReportsEnabled: false,
 			newSpec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -57,6 +59,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 											Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
 											Value: vars.ControllerName(),
 										},
+										{
+											Name:  "CONTROLLER_ANONYMOUS_REPORTS",
+											Value: "false",
+										},
 									},
 								},
 							},
@@ -66,9 +72,54 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			},
 		},
 		{
-			name:                        "no_envs_has_dataplane",
+			name:                    "no_envs_no_dataplane_with_anonymous_reports",
+			spec:                    &operatorv1alpha1.ControlPlaneOptions{},
+			changed:                 true,
+			anonymousReportsEnabled: true,
+			newSpec: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: consts.DefaultControlPlaneImage,
+									Env: []corev1.EnvVar{
+										{
+											Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+												FieldRef: &corev1.ObjectFieldSelector{
+													APIVersion: "v1", FieldPath: "metadata.namespace",
+												},
+											},
+										},
+										{
+											Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
+												FieldRef: &corev1.ObjectFieldSelector{
+													APIVersion: "v1", FieldPath: "metadata.name",
+												},
+											},
+										},
+										{
+											Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
+											Value: vars.ControllerName(),
+										},
+										{
+											Name:  "CONTROLLER_ANONYMOUS_REPORTS",
+											Value: "true",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:                        "no_envs_has_dataplane_no_anonymous_reports",
 			spec:                        &operatorv1alpha1.ControlPlaneOptions{},
 			changed:                     true,
+			anonymousReportsEnabled:     false,
 			namespace:                   "test-ns",
 			dataplaneIngressServiceName: "kong-proxy",
 			dataplaneAdminServiceName:   "kong-admin",
@@ -131,6 +182,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 											Name:  "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY",
 											Value: "5s",
 										},
+										{
+											Name:  "CONTROLLER_ANONYMOUS_REPORTS",
+											Value: "false",
+										},
 									},
 								},
 							},
@@ -140,7 +195,86 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "has_envs_and_dataplane",
+			name:                        "no_envs_has_dataplane_with_anonymous_reports",
+			spec:                        &operatorv1alpha1.ControlPlaneOptions{},
+			changed:                     true,
+			anonymousReportsEnabled:     true,
+			namespace:                   "test-ns",
+			dataplaneIngressServiceName: "kong-proxy",
+			dataplaneAdminServiceName:   "kong-admin",
+			newSpec: &operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: consts.DefaultControlPlaneImage,
+									Env: []corev1.EnvVar{
+										{
+											Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+												FieldRef: &corev1.ObjectFieldSelector{
+													APIVersion: "v1", FieldPath: "metadata.namespace",
+												},
+											},
+										},
+										{
+											Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
+												FieldRef: &corev1.ObjectFieldSelector{
+													APIVersion: "v1", FieldPath: "metadata.name",
+												},
+											},
+										},
+										{
+											Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
+											Value: vars.ControllerName(),
+										},
+										{
+											Name:  "CONTROLLER_PUBLISH_SERVICE",
+											Value: "test-ns/kong-proxy",
+										},
+										{
+											Name:  "CONTROLLER_KONG_ADMIN_SVC",
+											Value: "test-ns/kong-admin",
+										},
+										{
+											Name:  "CONTROLLER_KONG_ADMIN_SVC_PORT_NAMES",
+											Value: "admin",
+										},
+										{
+											Name:  "CONTROLLER_GATEWAY_DISCOVERY_DNS_STRATEGY",
+											Value: consts.DataPlaneServiceDNSDiscoveryStrategy,
+										},
+										{
+											Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE",
+											Value: "/var/cluster-certificate/tls.crt",
+										},
+										{
+											Name:  "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE",
+											Value: "/var/cluster-certificate/tls.key",
+										},
+										{
+											Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
+											Value: "/var/cluster-certificate/ca.crt",
+										},
+										{
+											Name:  "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY",
+											Value: "5s",
+										},
+										{
+											Name:  "CONTROLLER_ANONYMOUS_REPORTS",
+											Value: "true",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "has_envs_and_dataplane_no_anonymous_reports",
 			spec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -154,6 +288,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 											Name:  "TEST_ENV",
 											Value: "test",
 										},
+										{
+											Name:  "CONTROLLER_ANONYMOUS_REPORTS",
+											Value: "true",
+										},
 									},
 								},
 							},
@@ -162,6 +300,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 				},
 			},
 			changed:                     true,
+			anonymousReportsEnabled:     false,
 			namespace:                   "test-ns",
 			dataplaneIngressServiceName: "kong-proxy",
 			dataplaneAdminServiceName:   "kong-admin",
@@ -217,6 +356,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 											Name:  "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY",
 											Value: "5s",
 										},
+										{
+											Name:  "CONTROLLER_ANONYMOUS_REPORTS",
+											Value: "false",
+										},
 									},
 								},
 							},
@@ -226,7 +369,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "has_dataplane_env_unchanged",
+			name: "has_dataplane_env_unchanged_with_anonymous_reports",
 			spec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -286,6 +429,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 											Name:  "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY",
 											Value: "5s",
 										},
+										{
+											Name:  "CONTROLLER_ANONYMOUS_REPORTS",
+											Value: "true",
+										},
 									},
 								},
 							},
@@ -297,6 +444,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			dataplaneIngressServiceName: "kong-proxy",
 			dataplaneAdminServiceName:   "kong-admin",
 			changed:                     false,
+			anonymousReportsEnabled:     true,
 			newSpec: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -352,6 +500,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 											Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
 											Value: "/var/cluster-certificate/ca.crt",
 										},
+										{
+											Name:  "CONTROLLER_ANONYMOUS_REPORTS",
+											Value: "true",
+										},
 									},
 								},
 							},
@@ -371,6 +523,7 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 				DataPlaneIngressServiceName: tc.dataplaneIngressServiceName,
 				DataPlaneAdminServiceName:   tc.dataplaneAdminServiceName,
 				ManagedByGateway:            true,
+				AnonymousReportsEnabled:     tc.anonymousReportsEnabled,
 			})
 			require.Equalf(t, tc.changed, changed,
 				"should return the same value for test case %d:%s", index, tc.name)

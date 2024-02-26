@@ -222,6 +222,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
+	anonymousReportsEnabled := true
+	if r.DevelopmentMode {
+		anonymousReportsEnabled = false
+	}
+
 	log.Trace(logger, "configuring ControlPlane resource", cp)
 	changed := controlplane.SetDefaults(
 		&cp.Spec.ControlPlaneOptions,
@@ -231,6 +236,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			ControlPlaneName:            cp.Name,
 			DataPlaneIngressServiceName: dataplaneIngressServiceName,
 			DataPlaneAdminServiceName:   dataplaneAdminServiceName,
+			AnonymousReportsEnabled:     anonymousReportsEnabled,
 		})
 	if changed {
 		log.Debug(logger, "updating ControlPlane resource after defaults are set since resource has changed", cp)
