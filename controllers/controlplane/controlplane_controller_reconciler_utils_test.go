@@ -2,6 +2,7 @@ package controlplane
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
@@ -179,6 +180,151 @@ func TestEnsureClusterRole(t *testing.T) {
 			require.Equal(t, tc.expectedClusterRole.Rules, generatedClusterRole.Rules)
 			require.Equal(t, tc.expectedClusterRole.AggregationRule, generatedClusterRole.AggregationRule)
 			require.Equal(t, tc.expectedClusterRole.Labels, generatedClusterRole.Labels)
+		})
+	}
+}
+
+func TestEnsureClusterRoleBinding(t *testing.T) {
+	const (
+		testNamespace          = "test-ns"
+		testControlPlane       = "test-cp"
+		testServiceAccount     = "test-sa"
+		testClusterRole        = "test-cr"
+		testClusterRoleBinding = "test-crb"
+	)
+
+	controlPlane := &operatorv1alpha1.ControlPlane{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "gateway-operator.konghq.com/v1alpha1",
+			Kind:       "ControlPlane",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testControlPlane,
+			Namespace: testNamespace,
+			UID:       types.UID(uuid.NewString()),
+		},
+		Spec: operatorv1alpha1.ControlPlaneSpec{
+			ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
+				Deployment: operatorv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  consts.ControlPlaneControllerContainerName,
+									Image: consts.DefaultControlPlaneImage,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	expectedClusterRoleBinding := k8sresources.GenerateNewClusterRoleBindingForControlPlane(testNamespace, testControlPlane, testServiceAccount, testClusterRole)
+	expectedClusterRoleBinding.Name = testClusterRoleBinding
+
+	crbWithDifferentName := expectedClusterRoleBinding.DeepCopy()
+	crbWithDifferentName.Name = expectedClusterRoleBinding.Name + "-1"
+
+	crbWithWrongClusterRole := expectedClusterRoleBinding.DeepCopy()
+	crbWithWrongClusterRole.RoleRef.Name = "wrong"
+
+	crbWithNoServiceAccount := expectedClusterRoleBinding.DeepCopy()
+	crbWithNoServiceAccount.Subjects = nil
+
+	crbWithDifferentLabel := expectedClusterRoleBinding.DeepCopy()
+	crbWithDifferentLabel.ObjectMeta.Labels["foo"] = "bar"
+
+	testCases := []struct {
+		name             string
+		existingCRBs     []*rbacv1.ClusterRoleBinding
+		err              error
+		createdOrUpdated bool
+	}{
+		{
+			name: "reduce multiple existing ClusterRoleBindings",
+			existingCRBs: []*rbacv1.ClusterRoleBinding{
+				expectedClusterRoleBinding,
+				crbWithDifferentName,
+			},
+			err:              errors.New("number of clusterRoleBindings reduced"),
+			createdOrUpdated: false,
+		},
+		{
+			name: "ClusterRoleBinding is up to date",
+			existingCRBs: []*rbacv1.ClusterRoleBinding{
+				expectedClusterRoleBinding,
+			},
+			err:              nil,
+			createdOrUpdated: false,
+		},
+		{
+			name:             "no ClusterRoleBinding, should create one",
+			existingCRBs:     nil,
+			err:              nil,
+			createdOrUpdated: true,
+		},
+		{
+			name: "existing ClusterRoleBinding has wrong RoleRef, should delete existing one",
+			existingCRBs: []*rbacv1.ClusterRoleBinding{
+				crbWithWrongClusterRole,
+			},
+			err:              errors.New("name of ClusterRole changed, out of date ClusterRoleBinding deleted"),
+			createdOrUpdated: false,
+		},
+		{
+			name: "existing ClusterRoleBinding has wrong labels, should update",
+			existingCRBs: []*rbacv1.ClusterRoleBinding{
+				crbWithDifferentLabel,
+			},
+			err:              nil,
+			createdOrUpdated: true,
+		},
+		{
+			name: "existing ClusterRoleBinding does not include expected ServiceAccount, should update",
+			existingCRBs: []*rbacv1.ClusterRoleBinding{
+				crbWithNoServiceAccount,
+			},
+			err:              nil,
+			createdOrUpdated: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		objectsToAdd := []controllerruntimeclient.Object{
+			controlPlane,
+		}
+		for _, crb := range tc.existingCRBs {
+			k8sutils.SetOwnerForObject(crb, controlPlane)
+			objectsToAdd = append(objectsToAdd, crb)
+		}
+
+		fakeClient := fakectrlruntimeclient.
+			NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithObjects(objectsToAdd...).
+			Build()
+
+		r := Reconciler{
+			Client: fakeClient,
+			Scheme: scheme.Scheme,
+		}
+
+		t.Run(tc.name, func(t *testing.T) {
+			createdOrUpdated, generatedCRB, err := r.ensureClusterRoleBinding(context.Background(), controlPlane, testServiceAccount, testClusterRole)
+			require.Equal(t, tc.err, err)
+			require.Equal(t, tc.createdOrUpdated, createdOrUpdated)
+			// when err == nil, ensureClusterRoleBinding should return a non-nil ClusterRoleBinding with the same metadata, RoleRef
+			// and contains the ServiceAccounts of the expected ClusterRoleBinding.
+			if tc.err == nil {
+				require.Equal(t, expectedClusterRoleBinding.Labels, generatedCRB.Labels)
+				require.Equal(t, testClusterRole, generatedCRB.RoleRef.Name)
+				require.Truef(t, k8sresources.ClusterRoleBindingContainsServiceAccount(generatedCRB, testNamespace, testServiceAccount),
+					"ClusterRoleBinding should contain expected ServiceAccount %s/%s in its subjects",
+					testNamespace, testServiceAccount,
+				)
+			}
 		})
 	}
 }

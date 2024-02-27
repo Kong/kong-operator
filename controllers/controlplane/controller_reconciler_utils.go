@@ -336,6 +336,8 @@ func (r *Reconciler) ensureClusterRoleBinding(
 	serviceAccountName string,
 	clusterRoleName string,
 ) (createdOrUpdate bool, crb *rbacv1.ClusterRoleBinding, err error) {
+	logger := log.GetLogger(ctx, "controlplane.ensureClusterRoleBinding", r.DevelopmentMode)
+
 	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(
 		ctx,
 		r.Client,
@@ -361,15 +363,29 @@ func (r *Reconciler) ensureClusterRoleBinding(
 
 	if count == 1 {
 		existingClusterRoleBinding := &clusterRoleBindings[0]
+		// Delete and re-create ClusterRoleBinding if name of ClusterRole changed because RoleRef is immutable.
+		if !k8sresources.CompareClusterRoleName(existingClusterRoleBinding, clusterRoleName) {
+			log.Debug(logger, "ClusterRole name changed, delete and re-create a ClusterRoleBinding",
+				existingClusterRoleBinding,
+				"old_cluster_role", existingClusterRoleBinding.RoleRef.Name,
+				"new_cluster_role", clusterRoleName,
+			)
+			if err := r.Client.Delete(ctx, existingClusterRoleBinding); err != nil {
+				return false, nil, err
+			}
+			return false, nil, errors.New("name of ClusterRole changed, out of date ClusterRoleBinding deleted")
+		}
 		var updated bool
 		updated, generatedClusterRoleBinding.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingClusterRoleBinding.ObjectMeta, generatedClusterRoleBinding.ObjectMeta)
-		if updated {
+		if updated ||
+			!k8sresources.ClusterRoleBindingContainsServiceAccount(existingClusterRoleBinding, controlplane.Namespace, serviceAccountName) {
 			if err := r.Client.Patch(ctx, generatedClusterRoleBinding, client.MergeFrom(existingClusterRoleBinding)); err != nil {
 				return false, existingClusterRoleBinding, fmt.Errorf("failed patching ControlPlane's ClusterRoleBinding %s: %w", existingClusterRoleBinding.Name, err)
 			}
 			return true, generatedClusterRoleBinding, nil
 		}
 		return false, generatedClusterRoleBinding, nil
+
 	}
 
 	return true, generatedClusterRoleBinding, r.Client.Create(ctx, generatedClusterRoleBinding)
