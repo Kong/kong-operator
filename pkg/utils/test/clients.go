@@ -6,6 +6,7 @@ import (
 	ctrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
@@ -31,18 +32,18 @@ func NewK8sClients(env environments.Environment) (K8sClients, error) {
 	if err != nil {
 		return clients, err
 	}
-
 	clients.GatewayClient, err = gatewayclient.NewForConfig(env.Cluster().Config())
 	if err != nil {
 		return clients, err
 	}
-
 	clients.MgrClient, err = ctrlruntimeclient.New(env.Cluster().Config(), ctrlruntimeclient.Options{})
 	if err != nil {
 		return clients, err
 	}
-
 	if err := gatewayv1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
+		return clients, err
+	}
+	if err := gatewayv1beta1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
 		return clients, err
 	}
 

@@ -1,7 +1,10 @@
 package gateway
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/samber/lo"
@@ -10,13 +13,28 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
+
+func init() {
+	if err := gatewayv1.AddToScheme(scheme.Scheme); err != nil {
+		fmt.Println("error while adding gatewayv1 scheme")
+		os.Exit(1)
+	}
+	if err := gatewayv1beta1.AddToScheme(scheme.Scheme); err != nil {
+		fmt.Println("error while adding gatewayv1 scheme")
+		os.Exit(1)
+	}
+}
 
 func TestParseKongProxyListenEnv(t *testing.T) {
 	testcases := []struct {
@@ -578,6 +596,635 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 			} else {
 				require.EqualError(t, err, tc.expectedError.Error())
 			}
+		})
+	}
+}
+
+func TestIsSecretCrossReferenceGranted(t *testing.T) {
+	customizeReferenceGrant := func(rg gatewayv1beta1.ReferenceGrant, opts ...func(rg *gatewayv1beta1.ReferenceGrant)) gatewayv1beta1.ReferenceGrant {
+		rg = *rg.DeepCopy()
+		for _, opt := range opts {
+			opt(&rg)
+		}
+		return rg
+	}
+
+	badSecretName := gatewayv1.ObjectName("wrong-secret")
+	emptySecretName := gatewayv1.ObjectName("")
+	goodSecretName := gatewayv1.ObjectName("good-secret")
+	referenceGrant := gatewayv1beta1.ReferenceGrant{
+		Spec: gatewayv1beta1.ReferenceGrantSpec{
+			From: []gatewayv1beta1.ReferenceGrantFrom{
+				{
+					Group:     gatewayv1.GroupName,
+					Kind:      "Gateway",
+					Namespace: "goodNamespace",
+				},
+			},
+			To: []gatewayv1beta1.ReferenceGrantTo{
+				{
+					Group: "",
+					Kind:  "Secret",
+					Name:  &goodSecretName,
+				},
+			},
+		},
+	}
+
+	testCases := []struct {
+		name            string
+		referenceGrants []gatewayv1beta1.ReferenceGrant
+		isGranted       bool
+	}{
+		{
+			name:      "no referenceGrants",
+			isGranted: false,
+		},
+		{
+			name: "granted",
+			referenceGrants: []gatewayv1beta1.ReferenceGrant{
+				referenceGrant,
+			},
+			isGranted: true,
+		},
+		{
+			name: "not granted, bad 'from' group",
+			referenceGrants: []gatewayv1beta1.ReferenceGrant{
+				customizeReferenceGrant(referenceGrant, func(rg *gatewayv1beta1.ReferenceGrant) {
+					rg.Spec.From[0].Group = "wrong-group"
+				}),
+			},
+			isGranted: false,
+		},
+		{
+			name: "not granted, bad 'to' group",
+			referenceGrants: []gatewayv1beta1.ReferenceGrant{
+				customizeReferenceGrant(referenceGrant, func(rg *gatewayv1beta1.ReferenceGrant) {
+					rg.Spec.To[0].Group = "wrong-group"
+				}),
+			},
+			isGranted: false,
+		},
+		{
+			name: "not granted, bad 'from' kind",
+			referenceGrants: []gatewayv1beta1.ReferenceGrant{
+				customizeReferenceGrant(referenceGrant, func(rg *gatewayv1beta1.ReferenceGrant) {
+					rg.Spec.From[0].Kind = "wrong-kind"
+				}),
+			},
+			isGranted: false,
+		},
+		{
+			name: "not granted, bad 'to' kind",
+			referenceGrants: []gatewayv1beta1.ReferenceGrant{
+				customizeReferenceGrant(referenceGrant, func(rg *gatewayv1beta1.ReferenceGrant) {
+					rg.Spec.To[0].Kind = "wrong-kind"
+				}),
+			},
+			isGranted: false,
+		},
+		{
+			name: "not granted, bad 'from' namespace",
+			referenceGrants: []gatewayv1beta1.ReferenceGrant{
+				customizeReferenceGrant(referenceGrant, func(rg *gatewayv1beta1.ReferenceGrant) {
+					rg.Spec.From[0].Namespace = "bad-namespace"
+				}),
+			},
+			isGranted: false,
+		},
+		{
+			name: "not granted, empty 'to' secret name",
+			referenceGrants: []gatewayv1beta1.ReferenceGrant{
+				customizeReferenceGrant(referenceGrant, func(rg *gatewayv1beta1.ReferenceGrant) {
+					rg.Spec.To[0].Name = &emptySecretName
+				}),
+			},
+			isGranted: false,
+		},
+		{
+			name: "not granted, bad 'to' secret name",
+			referenceGrants: []gatewayv1beta1.ReferenceGrant{
+				customizeReferenceGrant(referenceGrant, func(rg *gatewayv1beta1.ReferenceGrant) {
+					rg.Spec.To[0].Name = &badSecretName
+				}),
+			},
+			isGranted: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.isGranted, isSecretCrossReferenceGranted("goodNamespace", goodSecretName, tc.referenceGrants))
+		})
+	}
+}
+
+func TestGatewayStatusNeedsUpdate(t *testing.T) {
+	customizeGateway := func(gateway gatewayv1.Gateway, opts ...func(*gatewayv1.Gateway)) *gatewayv1.Gateway {
+		newGateway := gateway.DeepCopy()
+		for _, opt := range opts {
+			opt(newGateway)
+		}
+		return newGateway
+	}
+
+	listenerStatus := gatewayv1.ListenerStatus{
+		SupportedKinds: []gatewayv1.RouteGroupKind{
+			{
+				Kind: "HTTPRoute",
+			},
+		},
+		Conditions: []metav1.Condition{
+			{
+				Type:   string(gatewayv1.GatewayConditionAccepted),
+				Status: metav1.ConditionTrue,
+				Reason: string(gatewayv1.GatewayReasonAccepted),
+			},
+			{
+				Type:   string(gatewayv1.GatewayConditionProgrammed),
+				Status: metav1.ConditionTrue,
+				Reason: string(gatewayv1.GatewayReasonProgrammed),
+			},
+			{
+				Type:   string(gatewayv1.ListenerConditionResolvedRefs),
+				Status: metav1.ConditionTrue,
+				Reason: string(gatewayv1.ListenerReasonResolvedRefs),
+			},
+		},
+	}
+	gateway := gatewayv1.Gateway{
+		Status: gatewayv1.GatewayStatus{
+			Conditions: []metav1.Condition{
+				{
+					Type:   string(gatewayv1.GatewayConditionAccepted),
+					Status: metav1.ConditionTrue,
+					Reason: string(gatewayv1.GatewayReasonAccepted),
+				},
+				{
+					Type:   string(gatewayv1.GatewayConditionProgrammed),
+					Status: metav1.ConditionTrue,
+					Reason: string(gatewayv1.GatewayReasonProgrammed),
+				},
+			},
+			Listeners: []gatewayv1.ListenerStatus{
+				listenerStatus,
+			},
+		},
+	}
+
+	testCases := []struct {
+		name        string
+		needsUpdate bool
+		oldGateway  gatewayConditionsAndListenersAwareT
+		newGateway  gatewayConditionsAndListenersAwareT
+	}{
+		{
+			name:        "no update needed",
+			needsUpdate: false,
+			oldGateway:  gatewayConditionsAndListenersAware(&gateway),
+			newGateway:  gatewayConditionsAndListenersAware(&gateway),
+		},
+		{
+			name:        "update needed, old is not accepted",
+			needsUpdate: true,
+			oldGateway: gatewayConditionsAndListenersAware(customizeGateway(gateway, func(g *gatewayv1.Gateway) {
+				g.Status.Conditions[0].Status = metav1.ConditionFalse
+				g.Status.Conditions[0].Reason = string(gatewayv1.GatewayReasonInvalid)
+			})),
+			newGateway: gatewayConditionsAndListenersAware(&gateway),
+		},
+		{
+			name:        "update needed, different amount of listeners",
+			needsUpdate: true,
+			oldGateway:  gatewayConditionsAndListenersAware(&gateway),
+			newGateway: gatewayConditionsAndListenersAware(customizeGateway(gateway, func(g *gatewayv1.Gateway) {
+				g.Status.Listeners = append(g.Status.Listeners, listenerStatus)
+			})),
+		},
+		{
+			name:        "update needed, different amount of listeners' condition",
+			needsUpdate: true,
+			oldGateway:  gatewayConditionsAndListenersAware(&gateway),
+			newGateway: gatewayConditionsAndListenersAware(customizeGateway(gateway, func(g *gatewayv1.Gateway) {
+				g.Status.Listeners[0].Conditions = append(g.Status.Listeners[0].Conditions,
+					metav1.Condition{
+						Type:   string(gatewayv1.ListenerConditionConflicted),
+						Status: metav1.ConditionFalse,
+						Reason: string(gatewayv1.ListenerReasonHostnameConflict),
+					},
+				)
+			})),
+		},
+		{
+			name:        "update needed, different supportedkinds",
+			needsUpdate: true,
+			oldGateway: gatewayConditionsAndListenersAware(customizeGateway(gateway, func(g *gatewayv1.Gateway) {
+				g.Status.Listeners[0].SupportedKinds = []gatewayv1.RouteGroupKind{}
+			})),
+			newGateway: gatewayConditionsAndListenersAware(&gateway),
+		},
+		{
+			name:        "update needed, different listener conditions",
+			needsUpdate: true,
+			oldGateway: gatewayConditionsAndListenersAware(customizeGateway(gateway, func(g *gatewayv1.Gateway) {
+				g.Status.Listeners[0].Conditions[0].Status = metav1.ConditionFalse
+				g.Status.Listeners[0].Conditions[0].Reason = string(gatewayv1.ListenerReasonInvalid)
+			})),
+			newGateway: gatewayConditionsAndListenersAware(&gateway),
+		},
+		{
+			name:        "update needed, unsorted listener conditions",
+			needsUpdate: true,
+			oldGateway: gatewayConditionsAndListenersAware(customizeGateway(gateway, func(g *gatewayv1.Gateway) {
+				g.Status.Listeners[0].Conditions = []metav1.Condition{
+					{
+						Type:   string(gatewayv1.GatewayConditionAccepted),
+						Status: metav1.ConditionTrue,
+						Reason: string(gatewayv1.GatewayReasonAccepted),
+					},
+					{
+						Type:   string(gatewayv1.ListenerConditionResolvedRefs),
+						Status: metav1.ConditionTrue,
+						Reason: string(gatewayv1.ListenerReasonResolvedRefs),
+					},
+					{
+						Type:   string(gatewayv1.GatewayConditionProgrammed),
+						Status: metav1.ConditionTrue,
+						Reason: string(gatewayv1.GatewayReasonProgrammed),
+					},
+				}
+			})),
+			newGateway: gatewayConditionsAndListenersAware(&gateway),
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.needsUpdate, gatewayStatusNeedsUpdate(tc.oldGateway, tc.newGateway))
+		})
+	}
+}
+
+func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
+	var generation int64 = 1
+
+	testCases := []struct {
+		name                          string
+		gatewayNamespace              string
+		listener                      gatewayv1.Listener
+		referenceGrants               []client.Object
+		secrets                       []client.Object
+		expectedSupportedKinds        []gatewayv1.RouteGroupKind
+		expectedResolvedRefsCondition metav1.Condition
+	}{
+		{
+			name: "no tls, HTTP protocol, no allowed routes",
+			listener: gatewayv1.Listener{
+				Protocol: gatewayv1.HTTPProtocolType,
+			},
+			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+				{
+					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "HTTPRoute",
+				},
+			},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayv1.ListenerReasonResolvedRefs),
+				Message:            "Listeners' references are accepted.",
+				ObservedGeneration: generation,
+			},
+		},
+		{
+			name: "no tls, UDP protocol, no allowed routes",
+			listener: gatewayv1.Listener{
+				Protocol: gatewayv1.UDPProtocolType,
+			},
+			expectedSupportedKinds: []gatewayv1.RouteGroupKind{},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayv1.ListenerReasonResolvedRefs),
+				Message:            "Listeners' references are accepted.",
+				ObservedGeneration: generation,
+			},
+		},
+		{
+			name: "no tls, HTTP protocol, HTTP and UDP routes",
+			listener: gatewayv1.Listener{
+				Protocol: gatewayv1.HTTPProtocolType,
+				AllowedRoutes: &gatewayv1.AllowedRoutes{
+					Kinds: []gatewayv1.RouteGroupKind{
+						{
+							Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+							Kind:  "HTTPRoute",
+						},
+						{
+							Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+							Kind:  "UDPRoute",
+						},
+					},
+				},
+			},
+			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+				{
+					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "HTTPRoute",
+				},
+			},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.ListenerReasonInvalidRouteKinds),
+				Message:            "Route UDPRoute not supported.",
+				ObservedGeneration: generation,
+			},
+		},
+		{
+			name:             "tls well-formed, no cross-namespace reference",
+			gatewayNamespace: "default",
+			listener: gatewayv1.Listener{
+				Protocol: gatewayv1.HTTPSProtocolType,
+				TLS: &gatewayv1.GatewayTLSConfig{
+					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+					CertificateRefs: []gatewayv1.SecretObjectReference{
+						{
+							Name: "test-secret",
+						},
+					},
+				},
+			},
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret",
+						Namespace: "default",
+					},
+				},
+			},
+			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+				{
+					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "HTTPRoute",
+				},
+			},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayv1.ListenerReasonResolvedRefs),
+				Message:            "Listeners' references are accepted.",
+				ObservedGeneration: generation,
+			},
+		},
+		{
+			name:             "tls with passthrough, HTTPS protocol, no allowed routes",
+			gatewayNamespace: "default",
+			listener: gatewayv1.Listener{
+				Protocol: gatewayv1.HTTPSProtocolType,
+				TLS: &gatewayv1.GatewayTLSConfig{
+					Mode: lo.ToPtr(gatewayv1.TLSModePassthrough),
+					CertificateRefs: []gatewayv1.SecretObjectReference{
+						{
+							Name: "test-secret",
+						},
+					},
+				},
+			},
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret",
+						Namespace: "default",
+					},
+				},
+			},
+			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+				{
+					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "HTTPRoute",
+				},
+			},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.ListenerReasonInvalidCertificateRef),
+				Message:            "Only Terminate mode is supported.",
+				ObservedGeneration: generation,
+			},
+		},
+		{
+			name:             "tls bad-formed, multiple TLS secrets no cross-namespace reference",
+			gatewayNamespace: "default",
+			listener: gatewayv1.Listener{
+				Protocol: gatewayv1.HTTPSProtocolType,
+				TLS: &gatewayv1.GatewayTLSConfig{
+					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+					CertificateRefs: []gatewayv1.SecretObjectReference{
+						{
+							Name: "test-secret",
+						},
+						{
+							Name: "test-secret-2",
+						},
+					},
+				},
+			},
+			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+				{
+					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "HTTPRoute",
+				},
+			},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(ListenerReasonTooManyTLSSecrets),
+				Message:            "Only one certificate per listener is supported.",
+				ObservedGeneration: generation,
+			},
+		},
+		{
+			name:             "tls bad-formed, no tls secret, no cross-namespace reference",
+			gatewayNamespace: "default",
+			listener: gatewayv1.Listener{
+				Protocol: gatewayv1.HTTPSProtocolType,
+				TLS: &gatewayv1.GatewayTLSConfig{
+					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+					CertificateRefs: []gatewayv1.SecretObjectReference{
+						{
+							Name: "test-secret",
+						},
+					},
+				},
+			},
+			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+				{
+					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "HTTPRoute",
+				},
+			},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.ListenerReasonInvalidCertificateRef),
+				Message:            "Referenced secret default/test-secret does not exist.",
+				ObservedGeneration: generation,
+			},
+		},
+		{
+			name:             "tls bad-formed, bad group and kind of tls secret, no cross-namespace reference",
+			gatewayNamespace: "default",
+			listener: gatewayv1.Listener{
+				Protocol: gatewayv1.HTTPSProtocolType,
+				TLS: &gatewayv1.GatewayTLSConfig{
+					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+					CertificateRefs: []gatewayv1.SecretObjectReference{
+						{
+							Name:  "test-secret",
+							Group: (*gatewayv1.Group)(lo.ToPtr("bad-group")),
+							Kind:  (*gatewayv1.Kind)(lo.ToPtr("bad-kind")),
+						},
+					},
+				},
+			},
+			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+				{
+					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "HTTPRoute",
+				},
+			},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.ListenerReasonInvalidCertificateRef),
+				Message:            "Group bad-group not supported in CertificateRef. Kind bad-kind not supported in CertificateRef.",
+				ObservedGeneration: generation,
+			},
+		},
+		{
+			name:             "tls well-formed, with allowed cross-namespace reference",
+			gatewayNamespace: "default",
+			listener: gatewayv1.Listener{
+				Protocol: gatewayv1.HTTPSProtocolType,
+				TLS: &gatewayv1.GatewayTLSConfig{
+					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+					CertificateRefs: []gatewayv1.SecretObjectReference{
+						{
+							Name:      "test-secret",
+							Namespace: (*gatewayv1.Namespace)(lo.ToPtr("other-namespace")),
+						},
+					},
+				},
+			},
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret",
+						Namespace: "other-namespace",
+					},
+				},
+			},
+			referenceGrants: []client.Object{
+				&gatewayv1beta1.ReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "other-namespace",
+					},
+					Spec: gatewayv1beta1.ReferenceGrantSpec{
+						From: []gatewayv1beta1.ReferenceGrantFrom{
+							{
+								Group:     gatewayv1.GroupName,
+								Kind:      "Gateway",
+								Namespace: "default",
+							},
+						},
+						To: []gatewayv1beta1.ReferenceGrantTo{
+							{
+								Group: "",
+								Kind:  "Secret",
+								Name:  (*gatewayv1.ObjectName)(lo.ToPtr("test-secret")),
+							},
+						},
+					},
+				},
+			},
+			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+				{
+					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "HTTPRoute",
+				},
+			},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayv1.ListenerReasonResolvedRefs),
+				Message:            "Listeners' references are accepted.",
+				ObservedGeneration: generation,
+			},
+		},
+		{
+			name:             "tls well-formed, with unallowed cross-namespace reference",
+			gatewayNamespace: "default",
+			listener: gatewayv1.Listener{
+				Protocol: gatewayv1.HTTPSProtocolType,
+				TLS: &gatewayv1.GatewayTLSConfig{
+					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+					CertificateRefs: []gatewayv1.SecretObjectReference{
+						{
+							Name:      "test-secret",
+							Namespace: (*gatewayv1.Namespace)(lo.ToPtr("other-namespace")),
+						},
+					},
+				},
+			},
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret",
+						Namespace: "other-namespace",
+					},
+				},
+			},
+			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+				{
+					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "HTTPRoute",
+				},
+			},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.ListenerReasonRefNotPermitted),
+				Message:            "Secret other-namespace/test-secret reference not allowed by any referenceGrant.",
+				ObservedGeneration: generation,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		ctx := context.TODO()
+		client := fakectrlruntimeclient.
+			NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithObjects(tc.referenceGrants...).
+			WithObjects(tc.secrets...).
+			Build()
+
+		t.Run(tc.name, func(t *testing.T) {
+			supportedKinds, resolvedRefsCondition, err := getSupportedKindsWithResolvedRefsCondition(ctx,
+				client,
+				tc.gatewayNamespace,
+				generation,
+				tc.listener)
+
+			assert.NoError(t, err)
+			assert.Equal(t, supportedKinds, tc.expectedSupportedKinds)
+			// force the transitionTimes to be equal to properly assert the conditions are equal
+			resolvedRefsCondition.LastTransitionTime = tc.expectedResolvedRefsCondition.LastTransitionTime
+			assert.Equal(t, tc.expectedResolvedRefsCondition, resolvedRefsCondition)
 		})
 	}
 }

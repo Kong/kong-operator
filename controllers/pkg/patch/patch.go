@@ -9,6 +9,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -58,4 +59,31 @@ func ApplyPatchIfNonEmpty[
 	}
 	log.Debug(logger, "Resource modified", owner, kind, existingResource.GetName())
 	return op.Updated, existingResource, nil
+}
+
+// ApplyGatewayStatusPatchIfNotEmpty patches the provided gateways if the
+// resulting patch between the provided existingGateway and oldExistingGateway
+// is non empty.
+func ApplyGatewayStatusPatchIfNotEmpty(ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	existingGateway *gatewayv1.Gateway,
+	oldExistingGateway *gatewayv1.Gateway) (res op.CreatedUpdatedOrNoop, err error) {
+	// Check if the patch to be applied is empty.
+	patch := client.MergeFrom(oldExistingGateway)
+	b, err := patch.Data(existingGateway)
+	if err != nil {
+		return op.Noop, fmt.Errorf("failed to generate patch for gateway %s/%s: %w", existingGateway.Namespace, existingGateway.Name, err)
+	}
+	// Only perform the patch operation if the resulting patch is non empty.
+	if len(b) == 0 || bytes.Equal(b, []byte("{}")) {
+		log.Trace(logger, "No need for update", existingGateway)
+		return op.Noop, nil
+	}
+
+	if err := cl.Status().Patch(ctx, existingGateway, client.MergeFrom(oldExistingGateway)); err != nil {
+		return op.Noop, fmt.Errorf("failed patching gateway %s/%s: %w", existingGateway.Namespace, existingGateway.Name, err)
+	}
+	log.Debug(logger, "Resource modified", existingGateway)
+	return op.Updated, nil
 }

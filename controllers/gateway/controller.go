@@ -21,11 +21,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	controlplanecontroller "github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	"github.com/kong/gateway-operator/controllers/pkg/log"
+	"github.com/kong/gateway-operator/controllers/pkg/op"
+	"github.com/kong/gateway-operator/controllers/pkg/patch"
 	"github.com/kong/gateway-operator/controllers/pkg/watch"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -73,6 +76,14 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&gatewayv1.GatewayClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
 			builder.WithPredicates(predicate.NewPredicateFuncs(watch.GatewayClassMatchesController))).
+		// watch for events on ReferenceGrants, if any ReferenceGrant event happen, enqueue
+		// reconciliation for all supported gateway objects that are referenced in a "from"
+		// instance.
+		Watches(
+			&gatewayv1beta1.ReferenceGrant{},
+			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
+			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom)),
+		).
 		Complete(r)
 }
 
@@ -131,11 +142,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	gwConditionAware.setConflicted()
 	gwConditionAware.setAccepted()
 	gwConditionAware.initReadyAndProgrammed()
-	if !k8sutils.IsAccepted(gwConditionAware) {
+	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client); err != nil {
+		return ctrl.Result{}, err
+	}
+	acceptedCondition, _ := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayConditionAccepted), gwConditionAware)
+	// If the static Gateway API conditions (Accepted, ResolvedRefs, Conflicted) changed, we need to update the Gateway status
+	if gatewayStatusNeedsUpdate(oldGwConditionsAware, gwConditionAware) {
 		if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil { // requeue will be triggered by the update of the dataplane status
 			return ctrl.Result{}, err
 		}
-		log.Info(logger, "gateway not accepted", gateway)
+		if acceptedCondition.Status == metav1.ConditionTrue {
+			log.Info(logger, "gateway accepted", gateway)
+		} else {
+			log.Info(logger, "gateway not accepted", gateway)
+		}
+		return ctrl.Result{}, nil
+	}
+	// If the Gateway is not accepted, do not move on in the reconciliation logic.
+	if acceptedCondition.Status == metav1.ConditionFalse {
+		// TODO: clean up Dataplane and Controlplane https://github.com/Kong/gateway-operator/issues/1511
 		return ctrl.Result{}, nil
 	}
 
@@ -161,6 +186,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if err != nil {
 			log.Error(logger, err, "failed to provision dataplane", gateway)
 		}
+
 		oldCondition, oldFound := k8sutils.GetCondition(DataPlaneReadyType, oldGwConditionsAware)
 		if !oldFound || oldCondition.Status == metav1.ConditionTrue {
 			// requeue will be triggered by the update of the dataplane status
@@ -170,6 +196,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			log.Debug(logger, "dataplane not ready yet", gateway)
 			return ctrl.Result{}, nil
 		}
+
 		if dataplane == nil {
 			// Having the dataplane==nil here is a corner-case that can be happening sometimes,
 			// in case the dataplane provisioning has had some errors, the dataplane ReadyCondition
@@ -264,6 +291,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		return ctrl.Result{}, nil // requeue will be triggered by the update of the controlplane status
 	}
+
 	// if the controlplane wasnt't ready before this reconciliation loop and now is ready, log this event
 	if !k8sutils.IsConditionTrue(ControlPlaneReadyType, oldGwConditionsAware) {
 		log.Debug(logger, "controlplane is ready", gateway)
@@ -297,13 +325,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			gatewayConditionsAndListenersAware(&gateway))
 	} else {
 		log.Info(logger, "could not determine gateway status: %s", err)
-		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(GatewayServiceType, metav1.ConditionFalse, GatewayServiceErrorReason, err.Error(), gateway.Generation),
+		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(GatewayServiceType, metav1.ConditionFalse, GatewayReasonServiceError, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(&gateway))
 	}
 
 	gwConditionAware.setReadyAndProgrammed()
-	if err = r.patchStatus(ctx, &gateway, oldGateway); err != nil {
+	res, err := patch.ApplyGatewayStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
+	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if res != op.Noop {
+		return ctrl.Result{}, nil // gateway patch will trigger new reconciliation loop
 	}
 
 	if k8sutils.IsProgrammed(gwConditionAware) && !k8sutils.IsProgrammed(oldGwConditionsAware) {
@@ -387,10 +419,10 @@ func (r *Reconciler) provisionDataPlane(
 
 	if !dataplaneSpecDeepEqual(&dataplane.Spec.DataPlaneOptions, expectedDataPlaneOptions) {
 		log.Trace(logger, "dataplane config is out of date, updating", gateway)
-		old := dataplane.DeepCopy()
+		oldDataPlane := dataplane.DeepCopy()
 		dataplane.Spec.DataPlaneOptions = *expectedDataPlaneOptions
 
-		if err = r.Client.Patch(ctx, dataplane, client.MergeFrom(old)); err != nil {
+		if err = r.Client.Patch(ctx, dataplane, client.MergeFrom(oldDataPlane)); err != nil {
 			k8sutils.SetCondition(
 				createDataPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error(), gateway.Generation),
 				gatewayConditionsAndListenersAware(gateway),

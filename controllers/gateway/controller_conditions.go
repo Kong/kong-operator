@@ -24,6 +24,12 @@ const (
 // -----------------------------------------------------------------------------
 
 const (
-	// GatewayServiceErrorReason the Gateway Service is not properly configured
-	GatewayServiceErrorReason k8sutils.ConditionReason = "GatewayServiceError"
+	// GatewayReasonServiceError must be used with the GatewayService condition
+	// to express that the Gateway Service is not properly configured.
+	GatewayReasonServiceError k8sutils.ConditionReason = "GatewayServiceError"
+
+	// ListenerReasonTooManyTLSSecrets must be used with the ResolvedRefs condition
+	// to express that more than one TLS secret has been set in the listener
+	// TLS configuration.
+	ListenerReasonTooManyTLSSecrets k8sutils.ConditionReason = "TooManyTLSSecrets"
 )

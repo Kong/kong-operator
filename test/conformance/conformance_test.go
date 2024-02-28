@@ -24,18 +24,12 @@ import (
 
 var skippedTests = []string{
 	// gateway
-	tests.GatewayInvalidRouteKind.ShortName,
 	tests.GatewayInvalidTLSConfiguration.ShortName,
 	tests.GatewayModifyListeners.ShortName,
 	tests.GatewayWithAttachedRoutes.ShortName,
-	tests.GatewaySecretInvalidReferenceGrant.ShortName,
-	tests.GatewaySecretMissingReferenceGrant.ShortName,
-	tests.GatewaySecretReferenceGrantAllInNamespace.ShortName,
-	tests.GatewaySecretReferenceGrantSpecific.ShortName,
 
 	//httproute
 	tests.HTTPRouteHeaderMatching.ShortName,
-	tests.HTTPRouteReferenceGrant.ShortName,
 }
 
 var (

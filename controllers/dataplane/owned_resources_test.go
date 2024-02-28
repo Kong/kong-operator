@@ -139,7 +139,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
 			expectedServicePorts: []corev1.ServicePort{
 				{
-					Name:       "http",
+					Name:       "port-8080",
 					Port:       8080,
 					TargetPort: intstr.FromInt(8000),
 					Protocol:   corev1.ProtocolTCP,

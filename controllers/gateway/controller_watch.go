@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
@@ -74,6 +75,21 @@ func (r *Reconciler) gatewayConfigurationMatchesController(obj client.Object) bo
 		}
 	}
 
+	return false
+}
+
+// Predicates to filter only the ReferenceGrants that allow a Gateway
+// cross-namespace reference.
+func referenceGrantHasGatewayFrom(obj client.Object) bool {
+	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+	if !ok {
+		return false
+	}
+	for _, from := range grant.Spec.From {
+		if from.Kind == "Gateway" && from.Group == gatewayv1.GroupName {
+			return true
+		}
+	}
 	return false
 }
 
@@ -168,6 +184,47 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 
 	return
 }
+
+// listReferenceGrantsForGateway is a watch predicate which finds all Gateways mentioned in a From clause for a
+// ReferenceGrant.
+func (r *Reconciler) listReferenceGrantsForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := log.FromContext(ctx)
+
+	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+	if !ok {
+		logger.Error(
+			fmt.Errorf("unexpected object type"),
+			"Referencegrant watch predicate received unexpected object type",
+			"expected", "*gatewayapi.ReferenceGrant", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	gateways := &gatewayv1.GatewayList{}
+	if err := r.Client.List(ctx, gateways); err != nil {
+		logger.Error(err, "Failed to list gateways in watch", "referencegrant", grant.Name)
+		return nil
+	}
+	recs := []reconcile.Request{}
+	for _, gateway := range gateways.Items {
+		for _, from := range grant.Spec.From {
+			if string(from.Namespace) == gateway.Namespace &&
+				from.Kind == gatewayv1beta1.Kind("Gateway") &&
+				from.Group == gatewayv1beta1.Group("gateway.networking.k8s.io") {
+				recs = append(recs, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: gateway.Namespace,
+						Name:      gateway.Name,
+					},
+				})
+			}
+		}
+	}
+	return recs
+}
+
+// -----------------------------------------------------------------------------
+// GatewayReconciler - Config Defaults
+// -----------------------------------------------------------------------------
 
 func (r *Reconciler) setDataPlaneGatewayConfigDefaults(gatewayConfig *operatorv1alpha1.GatewayConfiguration) {
 	if gatewayConfig.Spec.DataPlaneOptions == nil {

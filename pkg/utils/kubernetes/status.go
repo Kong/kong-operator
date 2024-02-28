@@ -76,13 +76,18 @@ func SetCondition(condition metav1.Condition, resource ConditionsAware) {
 	conditions := resource.GetConditions()
 	newConditions := make([]metav1.Condition, 0, len(conditions))
 
+	var conditionFound bool
 	for i := 0; i < len(conditions); i++ {
 		if conditions[i].Type != condition.Type {
 			newConditions = append(newConditions, conditions[i])
+		} else {
+			newConditions = append(newConditions, condition)
+			conditionFound = true
 		}
 	}
-
-	newConditions = append(newConditions, condition)
+	if !conditionFound {
+		newConditions = append(newConditions, condition)
+	}
 	resource.SetConditions(newConditions)
 }
 

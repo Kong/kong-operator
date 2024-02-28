@@ -177,6 +177,9 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				// need to trigger the Reconcile again because the first one only updated the finalizers
 				_, err = reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
+				// need to trigger the Reconcile again because the previous updated the Gateway Status
+				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				require.NoError(t, err, "reconciliation returned an error")
 				// need to trigger the Reconcile again because the previous updated the NetworkPolicy
 				_, err = reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
@@ -187,7 +190,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				condition, found := k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionFalse)
-				require.Equal(t, k8sutils.ConditionReason(condition.Reason), GatewayServiceErrorReason)
+				require.Equal(t, k8sutils.ConditionReason(condition.Reason), GatewayReasonServiceError)
 				require.Len(t, currentGateway.Status.Addresses, 0)
 
 				t.Log("adding a ClusterIP to the dataplane service")
@@ -295,7 +298,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionFalse)
-				require.Equal(t, k8sutils.ConditionReason(condition.Reason), GatewayServiceErrorReason)
+				require.Equal(t, k8sutils.ConditionReason(condition.Reason), GatewayReasonServiceError)
 				require.Len(t, currentGateway.Status.Addresses, 0)
 			},
 		},

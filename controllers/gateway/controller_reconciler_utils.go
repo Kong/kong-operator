@@ -9,15 +9,18 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -126,6 +129,7 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(opts operatorv1alpha1.Gatew
 	dataPlaneOptions := &operatorv1beta1.DataPlaneOptions{
 		Deployment: opts.Deployment,
 	}
+
 	if opts.Network.Services != nil && opts.Network.Services.Ingress != nil {
 		dataPlaneOptions.Network = operatorv1beta1.DataPlaneNetworkOptions{
 			Services: &operatorv1beta1.DataPlaneServices{
@@ -539,22 +543,29 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 func (g *gatewayConditionsAndListenersAwareT) initReadyAndProgrammed() {
 	k8sutils.InitReady(g)
 	k8sutils.InitProgrammed(g)
-	for i, listener := range g.Spec.Listeners {
-		supportedKinds, resolvedRefsCondition := getSupportedKindsWithCondition(g.Generation, listener)
-		lStatus := g.Status.Listeners[i]
-		lStatus.SupportedKinds = supportedKinds
-		lStatus.Conditions = append(lStatus.Conditions,
-			metav1.Condition{
-				Type:               string(gatewayv1.ListenerConditionProgrammed),
-				Status:             metav1.ConditionFalse,
-				Reason:             string(gatewayv1.ListenerReasonPending),
-				ObservedGeneration: g.Generation,
-				LastTransitionTime: metav1.Now(),
-			},
-			resolvedRefsCondition,
-		)
-		g.Status.Listeners[i] = lStatus
+	for i := range g.Spec.Listeners {
+		lStatus := listenerConditionsAware(&g.Status.Listeners[i])
+		k8sutils.SetCondition(metav1.Condition{
+			Type:               string(gatewayv1.ListenerConditionProgrammed),
+			Status:             metav1.ConditionFalse,
+			Reason:             string(gatewayv1.ListenerReasonPending),
+			ObservedGeneration: g.Generation,
+			LastTransitionTime: metav1.Now(),
+		}, lStatus)
 	}
+}
+
+func (g *gatewayConditionsAndListenersAwareT) setResolvedRefsAndSupportedKinds(ctx context.Context, c client.Client) error {
+	for i, listener := range g.Spec.Listeners {
+		supportedKinds, resolvedRefsCondition, err := getSupportedKindsWithResolvedRefsCondition(ctx, c, g.Namespace, g.Generation, listener)
+		if err != nil {
+			return err
+		}
+		lStatus := listenerConditionsAware(&g.Status.Listeners[i])
+		lStatus.SupportedKinds = supportedKinds
+		k8sutils.SetCondition(resolvedRefsCondition, lStatus)
+	}
+	return nil
 }
 
 // initListenersStatus initialize the listener status for a given gateway.
@@ -632,8 +643,7 @@ func (g *gatewayConditionsAndListenersAwareT) setReadyAndProgrammed() {
 	k8sutils.SetReady(g)
 	k8sutils.SetProgrammed(g)
 
-	for i, listener := range g.Spec.Listeners {
-		supportedKinds, resolvedRefsCondition := getSupportedKindsWithCondition(g.Generation, listener)
+	for i := range g.Spec.Listeners {
 		programmedCondition := metav1.Condition{
 			Type:               string(gatewayv1.ListenerConditionProgrammed),
 			Status:             metav1.ConditionTrue,
@@ -641,14 +651,8 @@ func (g *gatewayConditionsAndListenersAwareT) setReadyAndProgrammed() {
 			ObservedGeneration: g.GetGeneration(),
 			LastTransitionTime: metav1.Now(),
 		}
-		if resolvedRefsCondition.Status == metav1.ConditionFalse {
-			programmedCondition.Status = metav1.ConditionFalse
-			programmedCondition.Reason = string(gatewayv1.ListenerReasonInvalid)
-		}
 		listenerStatus := listenerConditionsAware(&g.Status.Listeners[i])
-		listenerStatus.SupportedKinds = supportedKinds
 		k8sutils.SetCondition(programmedCondition, listenerStatus)
-		k8sutils.SetCondition(resolvedRefsCondition, listenerStatus)
 	}
 }
 
@@ -694,18 +698,86 @@ func setDataPlaneIngressServicePorts(opts *operatorv1beta1.DataPlaneOptions, lis
 	return errs
 }
 
-// getSupportedKindsWithCondition returns all the route kinds supported by the listener, along with the resolvedRefs
+// getSupportedKindsWithResolvedRefsCondition returns all the route kinds supported by the listener, along with the resolvedRefs
 // condition, that is based on the presence of errors in such a field.
-func getSupportedKindsWithCondition(generation int64, listener gatewayv1.Listener) (supportedKinds []gatewayv1.RouteGroupKind, resolvedRefsCondition metav1.Condition) {
+func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Client, gatewayNamespace string, generation int64, listener gatewayv1.Listener) (supportedKinds []gatewayv1.RouteGroupKind, resolvedRefsCondition metav1.Condition, err error) {
 	supportedKinds = make([]gatewayv1.RouteGroupKind, 0)
 	resolvedRefsCondition = metav1.Condition{
 		Type:               string(gatewayv1.ListenerConditionResolvedRefs),
 		Status:             metav1.ConditionTrue,
 		Reason:             string(gatewayv1.ListenerReasonResolvedRefs),
+		Message:            "Listeners' references are accepted.",
 		ObservedGeneration: generation,
 		LastTransitionTime: metav1.Now(),
 	}
-	if len(listener.AllowedRoutes.Kinds) == 0 {
+
+	message := ""
+	if listener.TLS != nil {
+		// We currently do not support TLSRoutes, hence only TLS termination supported.
+		if *listener.TLS.Mode != gatewayv1.TLSModeTerminate {
+			resolvedRefsCondition.Status = metav1.ConditionFalse
+			resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
+			message = conditionMessage(message, "Only Terminate mode is supported")
+		}
+		// We currently do not support more that one listener certificate.
+		if len(listener.TLS.CertificateRefs) != 1 {
+			resolvedRefsCondition.Reason = string(ListenerReasonTooManyTLSSecrets)
+			message = conditionMessage(message, "Only one certificate per listener is supported")
+		} else {
+			isValidGroupKind := true
+			certificateRef := listener.TLS.CertificateRefs[0]
+			if certificateRef.Group != nil && *certificateRef.Group != "" && *certificateRef.Group != gatewayv1.Group(corev1.SchemeGroupVersion.Group) {
+				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
+				message = conditionMessage(message, fmt.Sprintf("Group %s not supported in CertificateRef", *certificateRef.Group))
+				isValidGroupKind = false
+			}
+			if certificateRef.Kind != nil && *certificateRef.Kind != "" && *certificateRef.Kind != gatewayv1.Kind("Secret") {
+				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
+				message = conditionMessage(message, fmt.Sprintf("Kind %s not supported in CertificateRef", *certificateRef.Kind))
+				isValidGroupKind = false
+			}
+			secretNamespace := gatewayNamespace
+			if certificateRef.Namespace != nil && *certificateRef.Namespace != "" {
+				secretNamespace = string(*certificateRef.Namespace)
+			}
+
+			var secretExists bool
+			if isValidGroupKind {
+				// Get the secret and check it exists.
+				certificateSecret := &corev1.Secret{}
+				err = c.Get(ctx, types.NamespacedName{
+					Namespace: secretNamespace,
+					Name:      string(certificateRef.Name),
+				}, certificateSecret)
+				if err != nil {
+					if !k8serrors.IsNotFound(err) {
+						return
+					}
+					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
+					message = conditionMessage(message, fmt.Sprintf("Referenced secret %s/%s does not exist", secretNamespace, certificateRef.Name))
+				} else {
+					secretExists = true
+				}
+			}
+
+			if secretExists {
+				// In case there is a cross-namespace reference, check if there is any referenceGrant allowing it.
+				if secretNamespace != gatewayNamespace {
+					referenceGrantList := &gatewayv1beta1.ReferenceGrantList{}
+					err = c.List(ctx, referenceGrantList, client.InNamespace(secretNamespace))
+					if err != nil {
+						return
+					}
+					if !isSecretCrossReferenceGranted(gatewayv1.Namespace(gatewayNamespace), certificateRef.Name, referenceGrantList.Items) {
+						resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonRefNotPermitted)
+						message = conditionMessage(message, fmt.Sprintf("Secret %s/%s reference not allowed by any referenceGrant", secretNamespace, certificateRef.Name))
+					}
+				}
+			}
+		}
+	}
+
+	if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
 		supportedRoutes := supportedRoutesByProtocol()[listener.Protocol]
 		for route := range supportedRoutes {
 			supportedKinds = append(supportedKinds, gatewayv1.RouteGroupKind{
@@ -713,22 +785,75 @@ func getSupportedKindsWithCondition(generation int64, listener gatewayv1.Listene
 				Kind:  route,
 			})
 		}
-	}
+	} else {
+		for _, k := range listener.AllowedRoutes.Kinds {
+			validRoutes := supportedRoutesByProtocol()[listener.Protocol]
+			if _, ok := validRoutes[k.Kind]; !ok || k.Group == nil || *k.Group != gatewayv1.Group(gatewayv1.GroupVersion.Group) {
+				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidRouteKinds)
+				message = conditionMessage(message, fmt.Sprintf("Route %s not supported", string(k.Kind)))
+				continue
+			}
 
-	for _, k := range listener.AllowedRoutes.Kinds {
-		validRoutes := supportedRoutesByProtocol()[listener.Protocol]
-		if _, ok := validRoutes[k.Kind]; !ok || k.Group == nil || *k.Group != gatewayv1.Group(gatewayv1.GroupVersion.Group) {
-			resolvedRefsCondition.Status = metav1.ConditionFalse
-			resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidRouteKinds)
-			continue
+			supportedKinds = append(supportedKinds, gatewayv1.RouteGroupKind{
+				Group: k.Group,
+				Kind:  k.Kind,
+			})
 		}
-
-		supportedKinds = append(supportedKinds, gatewayv1.RouteGroupKind{
-			Group: k.Group,
-			Kind:  k.Kind,
-		})
 	}
-	return supportedKinds, resolvedRefsCondition
+
+	if resolvedRefsCondition.Reason != string(gatewayv1.ListenerReasonResolvedRefs) {
+		resolvedRefsCondition.Status = metav1.ConditionFalse
+		resolvedRefsCondition.Message = message
+	}
+
+	return supportedKinds, resolvedRefsCondition, nil
+}
+
+func isSecretCrossReferenceGranted(gatewayNamespace gatewayv1.Namespace, secretName gatewayv1.ObjectName, referenceGrants []gatewayv1beta1.ReferenceGrant) bool {
+	for _, rg := range referenceGrants {
+		var fromFound bool
+		for _, from := range rg.Spec.From {
+			if from.Group != gatewayv1.GroupName {
+				continue
+			}
+			if from.Kind != "Gateway" {
+				continue
+			}
+			if from.Namespace != gatewayNamespace {
+				continue
+			}
+			fromFound = true
+			break
+		}
+		if fromFound {
+			for _, to := range rg.Spec.To {
+				if to.Group != "" && to.Group != "core" {
+					continue
+				}
+				if to.Kind != "Secret" {
+					continue
+				}
+				if to.Name != nil && secretName != *to.Name {
+					continue
+				}
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// conditionMessage updates a condition message string with an additional message, for use when a problem
+// condition has multiple concurrent causes. It ensures all messages end with a period. New messages are
+// appended to the end of the current message with a leading space separating them.
+func conditionMessage(oldStr, newStr string) string {
+	if oldStr == "" {
+		return fmt.Sprintf("%s.", newStr)
+	}
+	if strings.HasSuffix(newStr, ".") {
+		return fmt.Sprintf("%s %s", oldStr, newStr)
+	}
+	return fmt.Sprintf("%s %s.", oldStr, newStr)
 }
 
 type proxyListenEndpoint struct {
@@ -788,4 +913,48 @@ func parseKongListenEnv(str string) (kongListenConfig, error) {
 	}
 
 	return kongListenConfig, nil
+}
+
+func gatewayStatusNeedsUpdate(oldGateway, newGateway gatewayConditionsAndListenersAwareT) bool {
+	oldCondAccepted, okOld := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayConditionAccepted), oldGateway)
+	newCondAccepted, _ := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayConditionAccepted), newGateway)
+
+	if !okOld || !areConditionsEqual(oldCondAccepted, newCondAccepted) {
+		return true
+	}
+
+	if len(newGateway.Status.Listeners) != len(oldGateway.Status.Listeners) {
+		return true
+	}
+
+	for i, newlistener := range newGateway.GetListenersConditions() {
+		oldListener := oldGateway.Status.Listeners[i]
+		if len(newlistener.Conditions) != len(oldListener.Conditions) {
+			return true
+		}
+		if !cmp.Equal(newlistener.SupportedKinds, oldListener.SupportedKinds) {
+			return true
+		}
+
+		for j, newListenerCond := range newlistener.Conditions {
+			// Do not consider the programmed condition, as it depends on the DataPlane and ControlPlane status.
+			if newListenerCond.Type != string(gatewayv1.ListenerConditionProgrammed) {
+				if !areConditionsEqual(oldListener.Conditions[j], newListenerCond) {
+					return true
+				}
+			} else {
+				if oldListener.Conditions[j].Type != string(gatewayv1.ListenerConditionProgrammed) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func areConditionsEqual(cond1, cond2 metav1.Condition) bool {
+	return cond1.Type == cond2.Type &&
+		cond1.Status == cond2.Status &&
+		cond1.Reason == cond2.Reason &&
+		cond1.Message == cond2.Message
 }
