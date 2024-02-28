@@ -45,33 +45,6 @@ func (r *Reconciler) cleanup(
 	}
 	log.Trace(logger, "gateway is marked delete, waiting for owned resources deleted", gateway)
 
-	// Delete owned dataplanes.
-	dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, r.Client, gateway)
-	if err != nil {
-		return true, ctrl.Result{}, err
-	}
-
-	if len(dataplanes) > 0 {
-		deletions, err := r.ensureOwnedDataPlanesDeleted(ctx, gateway)
-		if err != nil {
-			return true, ctrl.Result{}, err
-		}
-		if deletions {
-			log.Debug(logger, "deleted owned dataplanes", gateway)
-			return true, ctrl.Result{}, err
-		}
-	} else {
-		oldGateway := gateway.DeepCopy()
-		if controllerutil.RemoveFinalizer(gateway, string(GatewayFinalizerCleanupDataPlanes)) {
-			err := r.Client.Patch(ctx, gateway, client.MergeFrom(oldGateway))
-			if err != nil {
-				return true, ctrl.Result{}, err
-			}
-			log.Debug(logger, "finalizer for cleaning up dataplanes removed", gateway)
-			return true, ctrl.Result{}, nil
-		}
-	}
-
 	// Delete owned controlplanes.
 	// Because controlplanes have finalizers, so we only remove the finalizer
 	// for cleaning up owned controlplanes when they disappeared.
@@ -96,6 +69,33 @@ func (r *Reconciler) cleanup(
 				return true, ctrl.Result{}, err
 			}
 			log.Debug(logger, "finalizer for cleaning up controlplanes removed", gateway)
+			return true, ctrl.Result{}, nil
+		}
+	}
+
+	// Delete owned dataplanes.
+	dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, r.Client, gateway)
+	if err != nil {
+		return true, ctrl.Result{}, err
+	}
+
+	if len(dataplanes) > 0 {
+		deletions, err := r.ensureOwnedDataPlanesDeleted(ctx, gateway)
+		if err != nil {
+			return true, ctrl.Result{}, err
+		}
+		if deletions {
+			log.Debug(logger, "deleted owned dataplanes", gateway)
+			return true, ctrl.Result{}, err
+		}
+	} else {
+		oldGateway := gateway.DeepCopy()
+		if controllerutil.RemoveFinalizer(gateway, string(GatewayFinalizerCleanupDataPlanes)) {
+			err := r.Client.Patch(ctx, gateway, client.MergeFrom(oldGateway))
+			if err != nil {
+				return true, ctrl.Result{}, err
+			}
+			log.Debug(logger, "finalizer for cleaning up dataplanes removed", gateway)
 			return true, ctrl.Result{}, nil
 		}
 	}
