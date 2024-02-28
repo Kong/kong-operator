@@ -345,7 +345,7 @@ func checkControlPlaneDeploymentEnvVars(t *testing.T, deployment *appsv1.Deploym
 
 	envs := controllerContainer.Env
 	t.Log("verifying env POD_NAME comes from metadata.name")
-	podNameValueFrom := getEnvValueFromByName(envs, "POD_NAME")
+	podNameValueFrom := GetEnvValueFromByName(envs, "POD_NAME")
 	fieldRefMetadataName := &corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{
 			APIVersion: "v1",
@@ -358,15 +358,15 @@ func checkControlPlaneDeploymentEnvVars(t *testing.T, deployment *appsv1.Deploym
 	)
 
 	t.Log("verifying CONTROLLER_ELECTION_ID env has value configured in controlplane")
-	electionIDEnvValue := getEnvValueByName(envs, "CONTROLLER_ELECTION_ID")
+	electionIDEnvValue := GetEnvValueByName(envs, "CONTROLLER_ELECTION_ID")
 	require.Equal(t, fmt.Sprintf("%s.konghq.com", controlplaneName), electionIDEnvValue)
 
 	t.Log("verifying custom env TEST_ENV has value configured in controlplane")
-	testEnvValue := getEnvValueByName(envs, "TEST_ENV")
+	testEnvValue := GetEnvValueByName(envs, "TEST_ENV")
 	require.Equal(t, "test", testEnvValue)
 
 	t.Log("verifying that control plane has a validating webhook env var set")
-	admissionWebhookListen := getEnvValueByName(envs, "CONTROLLER_ADMISSION_WEBHOOK_LISTEN")
+	admissionWebhookListen := GetEnvValueByName(envs, "CONTROLLER_ADMISSION_WEBHOOK_LISTEN")
 	require.Equal(t, consts.ControlPlaneAdmissionWebhookEnvVarValue, admissionWebhookListen)
 }
 
@@ -505,7 +505,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 	t.Logf("verifying environment variable TEST_ENV in deployment before update")
 	container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
 	require.NotNil(t, container)
-	testEnv := getEnvValueByName(container.Env, "TEST_ENV")
+	testEnv := GetEnvValueByName(container.Env, "TEST_ENV")
 	require.Equal(t, "before_update", testEnv)
 
 	t.Logf("updating controlplane resource")
@@ -529,7 +529,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 
 		container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
 		require.NotNil(t, container)
-		testEnv := getEnvValueByName(container.Env, "TEST_ENV")
+		testEnv := GetEnvValueByName(container.Env, "TEST_ENV")
 		t.Logf("Tenvironment variable TEST_ENV is now %s in deployment", testEnv)
 		return testEnv == "after_update"
 	},

@@ -18,9 +18,9 @@ import (
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
-// expect404WithNoRouteFunc is used to check whether a given URL responds
+// Expect404WithNoRouteFunc is used to check whether a given URL responds
 // with 404 and a standard Kong no route message.
-func expect404WithNoRouteFunc(t *testing.T, ctx context.Context, url string) func() bool {
+func Expect404WithNoRouteFunc(t *testing.T, ctx context.Context, url string) func() bool {
 	t.Helper()
 
 	return func() bool {
@@ -59,7 +59,7 @@ func expect404WithNoRouteFunc(t *testing.T, ctx context.Context, url string) fun
 	}
 }
 
-func urlForService(ctx context.Context, cluster clusters.Cluster, nsn types.NamespacedName, port int) (*url.URL, error) {
+func URLForService(ctx context.Context, cluster clusters.Cluster, nsn types.NamespacedName, port int) (*url.URL, error) {
 	service, err := cluster.Client().CoreV1().Services(nsn.Namespace).Get(ctx, nsn.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func urlForService(ctx context.Context, cluster clusters.Cluster, nsn types.Name
 }
 
 // CreateValidatingWebhook creates validating webhook for gateway operator.
-func createValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Clientset, webhookURL string, ca, cert, key []byte) error {
+func CreateValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Clientset, webhookURL string, ca, cert, key []byte) error {
 	if _, err := k8sClient.CoreV1().Secrets("kong-system").Create(
 		ctx,
 		&corev1.Secret{
@@ -115,7 +115,7 @@ func createValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Cl
 
 // GetEnvValueByName returns the corresponding value of LAST item with given name.
 // returns empty string if the name not appeared.
-func getEnvValueByName(envs []corev1.EnvVar, name string) string {
+func GetEnvValueByName(envs []corev1.EnvVar, name string) string {
 	value := ""
 	for _, env := range envs {
 		if env.Name == name {
@@ -125,8 +125,8 @@ func getEnvValueByName(envs []corev1.EnvVar, name string) string {
 	return value
 }
 
-// setEnvValueByName sets the EnvVar in slice with the provided name and value.
-func setEnvValueByName(envs []corev1.EnvVar, name string, value string) []corev1.EnvVar {
+// SetEnvValueByName sets the EnvVar in slice with the provided name and value.
+func SetEnvValueByName(envs []corev1.EnvVar, name string, value string) []corev1.EnvVar {
 	for _, env := range envs {
 		if env.Name == name {
 			env.Value = value
@@ -141,7 +141,7 @@ func setEnvValueByName(envs []corev1.EnvVar, name string, value string) []corev1
 
 // GetEnvValueFromByName returns the corresponding ValueFrom pointer of LAST item with given name.
 // returns nil if the name not appeared.
-func getEnvValueFromByName(envs []corev1.EnvVar, name string) *corev1.EnvVarSource {
+func GetEnvValueFromByName(envs []corev1.EnvVar, name string) *corev1.EnvVarSource {
 	var valueFrom *corev1.EnvVarSource
 	for _, env := range envs {
 		if env.Name == name {
@@ -152,7 +152,7 @@ func getEnvValueFromByName(envs []corev1.EnvVar, name string) *corev1.EnvVarSour
 	return valueFrom
 }
 
-func getVolumeByName(volumes []corev1.Volume, name string) *corev1.Volume {
+func GetVolumeByName(volumes []corev1.Volume, name string) *corev1.Volume {
 	for _, v := range volumes {
 		if v.Name == name {
 			return v.DeepCopy()
@@ -161,7 +161,7 @@ func getVolumeByName(volumes []corev1.Volume, name string) *corev1.Volume {
 	return nil
 }
 
-func getVolumeMountsByVolumeName(volumeMounts []corev1.VolumeMount, name string) []corev1.VolumeMount {
+func GetVolumeMountsByVolumeName(volumeMounts []corev1.VolumeMount, name string) []corev1.VolumeMount {
 	ret := make([]corev1.VolumeMount, 0)
 	for _, m := range volumeMounts {
 		if m.Name == name {

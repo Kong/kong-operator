@@ -129,10 +129,10 @@ func TestDataPlaneEssentials(t *testing.T) {
 	require.NotNil(t, proxyContainer)
 	envs := proxyContainer.Env
 	// check specified custom envs
-	testEnvValue := getEnvValueByName(envs, "TEST_ENV")
+	testEnvValue := GetEnvValueByName(envs, "TEST_ENV")
 	require.Equal(t, "test", testEnvValue)
 	// check default envs added by operator
-	kongDatabaseEnvValue := getEnvValueByName(envs, consts.EnvVarKongDatabase)
+	kongDatabaseEnvValue := GetEnvValueByName(envs, consts.EnvVarKongDatabase)
 	require.Equal(t, "off", kongDatabaseEnvValue)
 
 	t.Log("verifying services managed by the dataplane")
@@ -156,7 +156,7 @@ func TestDataPlaneEssentials(t *testing.T) {
 		return false
 	}, time.Minute, time.Second)
 
-	require.Eventually(t, expect404WithNoRouteFunc(t, GetCtx(), "http://"+dataplaneIP), time.Minute, time.Second)
+	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+dataplaneIP), time.Minute, time.Second)
 
 	t.Log("deleting the dataplane deployment")
 	dataplaneDeployments := testutils.MustListDataPlaneDeployments(t, GetCtx(), dataplane, clients, client.MatchingLabels{
@@ -190,7 +190,7 @@ func TestDataPlaneEssentials(t *testing.T) {
 		return false
 	}, time.Minute, time.Second)
 
-	require.Eventually(t, expect404WithNoRouteFunc(t, GetCtx(), "http://"+dataplaneIP), time.Minute, time.Second)
+	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+dataplaneIP), time.Minute, time.Second)
 
 	t.Log("verifying dataplane status is properly filled with backing service name and its addresses")
 	require.Eventually(t, testutils.DataPlaneHasServiceAndAddressesInStatus(t, GetCtx(), dataplaneName, clients), time.Minute, time.Second)
@@ -300,7 +300,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	t.Logf("verifying environment variable TEST_ENV in deployment before update")
 	container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 	require.NotNil(t, container)
-	testEnv := getEnvValueByName(container.Env, "TEST_ENV")
+	testEnv := GetEnvValueByName(container.Env, "TEST_ENV")
 	require.Equal(t, "before_update", testEnv)
 
 	t.Logf("updating dataplane resource")
@@ -326,7 +326,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 
 		container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 		require.NotNil(t, container)
-		testEnv := getEnvValueByName(container.Env, "TEST_ENV")
+		testEnv := GetEnvValueByName(container.Env, "TEST_ENV")
 		t.Logf("Tenvironment variable TEST_ENV is now %s in deployment", testEnv)
 		return testEnv == "after_update"
 	}, testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
@@ -730,34 +730,34 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	require.NotNil(t, proxyContainer)
 
 	t.Log("verifying dataplane has the default cluster-certificate volume")
-	defaultVol := getVolumeByName(deployment.Spec.Template.Spec.Volumes, consts.ClusterCertificateVolume)
+	defaultVol := GetVolumeByName(deployment.Spec.Template.Spec.Volumes, consts.ClusterCertificateVolume)
 	require.NotNil(t, defaultVol, "dataplane pod should have the cluster-certificate volume")
 
 	t.Log("verifying dataplane has the custom test-volume volume")
-	vol := getVolumeByName(deployment.Spec.Template.Spec.Volumes, "test-volume")
+	vol := GetVolumeByName(deployment.Spec.Template.Spec.Volumes, "test-volume")
 	require.NotNil(t, vol, "dataplane pod should have the test-volume volume")
 	require.NotNil(t, vol.Secret, "test-volume volume should come from secret")
 
 	t.Log("verifying Kong proxy container has mounted the default cluster-certificate volume")
-	defVolumeMounts := getVolumeMountsByVolumeName(proxyContainer.VolumeMounts, consts.ClusterCertificateVolume)
+	defVolumeMounts := GetVolumeMountsByVolumeName(proxyContainer.VolumeMounts, consts.ClusterCertificateVolume)
 	require.Len(t, defVolumeMounts, 1, "proxy container should mount cluster-certificate volume")
 	require.Equal(t, defVolumeMounts[0].MountPath, consts.ClusterCertificateVolumeMountPath, "proxy container should mount cluster-certificate volume to path /var/cluster-certificate")
 	require.True(t, defVolumeMounts[0].ReadOnly, "proxy container should mount cluster-certificate volume in read only mode")
 
 	t.Log("verifying Kong proxy container has mounted the custom test-volume volume")
-	volMounts := getVolumeMountsByVolumeName(proxyContainer.VolumeMounts, "test-volume")
+	volMounts := GetVolumeMountsByVolumeName(proxyContainer.VolumeMounts, "test-volume")
 	require.Len(t, volMounts, 1, "proxy container should mount test-volume volume")
 	require.Equal(t, volMounts[0].MountPath, "/var/test", "proxy container should mount test-volume volume to path /var/test")
 	require.True(t, volMounts[0].ReadOnly, "proxy container should mount test-volume volume in read only mode")
 
 	t.Log("verifying dataplane pod has custom secret volume")
-	vol = getVolumeByName(deployment.Spec.Template.Spec.Volumes, "test-volume")
+	vol = GetVolumeByName(deployment.Spec.Template.Spec.Volumes, "test-volume")
 	require.NotNil(t, vol, "dataplane pod should have the volume test-volume")
 	require.NotNil(t, vol.Secret, "test-volume should come from secret")
 	require.Equalf(t, vol.Secret.SecretName, secret.Name, "test-volume should come from secret %s", secret.Name)
 
 	t.Log("verifying Kong proxy container has mounted custom secret volume")
-	volMounts = getVolumeMountsByVolumeName(proxyContainer.VolumeMounts, "test-volume")
+	volMounts = GetVolumeMountsByVolumeName(proxyContainer.VolumeMounts, "test-volume")
 	require.Len(t, volMounts, 1, "proxy container should mount custom secret volume 'test-volume'")
 	require.Equal(t, volMounts[0].MountPath, "/var/test", "proxy container should mount custom secret volume to path /var/test")
 	require.True(t, volMounts[0].ReadOnly, "proxy container should mount 'test-volume' in read only mode")
@@ -782,14 +782,14 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	require.Eventually(t, func() bool {
 		deployment, err = GetClients().K8sClient.AppsV1().Deployments(namespace.Name).Get(GetCtx(), deployment.Name, metav1.GetOptions{})
 		require.NoError(t, err, "should get dataplane deployment successfully")
-		vol := getVolumeByName(deployment.Spec.Template.Spec.Volumes, "test-volume")
+		vol := GetVolumeByName(deployment.Spec.Template.Spec.Volumes, "test-volume")
 		if vol == nil || vol.Secret == nil || vol.Secret.SecretName != secret.Name {
 			return false
 		}
 		proxyContainer := k8sutils.GetPodContainerByName(
 			&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 		require.NotNilf(t, proxyContainer, "dataplane deployment should have container %s", consts.DataPlaneProxyContainerName)
-		volMounts = getVolumeMountsByVolumeName(proxyContainer.VolumeMounts, "test-volume")
+		volMounts = GetVolumeMountsByVolumeName(proxyContainer.VolumeMounts, "test-volume")
 		if len(volMounts) != 1 {
 			return false
 		}

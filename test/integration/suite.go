@@ -233,7 +233,7 @@ func prepareWebhook() (ca, cert, key []byte, err error) {
 
 	// Create webhook resources in k8s.
 	fmt.Println("INFO: creating a validating webhook and waiting for it to start")
-	if err = createValidatingWebhook(
+	if err = CreateValidatingWebhook(
 		GetCtx(), GetClients().K8sClient,
 		fmt.Sprintf("https://%s:%d/validate", webhookServerIP, webhookServerPort),
 		ca, cert, key,

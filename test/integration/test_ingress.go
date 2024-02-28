@@ -124,7 +124,7 @@ func TestIngressEssentials(t *testing.T) {
 	require.NotNil(t, controlPlane)
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, expect404WithNoRouteFunc(t, GetCtx(), fmt.Sprintf("http://%s", gatewayIP)), testutils.DefaultIngressWait, time.Second)
+	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), fmt.Sprintf("http://%s", gatewayIP)), testutils.DefaultIngressWait, time.Second)
 
 	t.Log("retrieving the kong-proxy url")
 	services := testutils.MustListDataPlaneServices(t, GetCtx(), dataplane, GetClients().MgrClient, client.MatchingLabels{
@@ -132,7 +132,7 @@ func TestIngressEssentials(t *testing.T) {
 		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	})
 	require.Len(t, services, 1)
-	proxyURL, err := urlForService(GetCtx(), GetEnv().Cluster(), types.NamespacedName{Namespace: services[0].Namespace, Name: services[0].Name}, testutils.DefaultHTTPPort)
+	proxyURL, err := URLForService(GetCtx(), GetEnv().Cluster(), types.NamespacedName{Namespace: services[0].Namespace, Name: services[0].Name}, testutils.DefaultHTTPPort)
 	require.NoError(t, err)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
@@ -219,7 +219,7 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Logf("verifying that removing the ingress.class annotation %q from ingress causes routes to disconnect", ingressClass)
 	require.Eventually(t,
-		expect404WithNoRouteFunc(t, GetCtx(), fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name()))),
+		Expect404WithNoRouteFunc(t, GetCtx(), fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name()))),
 		testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
 	t.Logf("putting the ingress.class annotation %q back on ingress", ingressClass)
@@ -272,6 +272,6 @@ func TestIngressEssentials(t *testing.T) {
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(GetCtx(), GetEnv().Cluster(), namespace.Name, ingress))
 	require.Eventually(t,
-		expect404WithNoRouteFunc(t, GetCtx(), fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name()))),
+		Expect404WithNoRouteFunc(t, GetCtx(), fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name()))),
 		testutils.DefaultIngressWait, testutils.WaitIngressTick)
 }

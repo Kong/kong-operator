@@ -78,7 +78,7 @@ func TestGatewayEssentials(t *testing.T) {
 	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
 
 	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
@@ -123,7 +123,7 @@ func TestGatewayEssentials(t *testing.T) {
 	gatewayIPAddress = gateway.Status.Addresses[0].Value
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying services managed by the dataplane")
 	var dataplaneService corev1.Service
@@ -269,8 +269,8 @@ func TestGatewayMultiple(t *testing.T) {
 	require.Eventually(t, testutils.ControlPlaneHasNReadyPods(t, GetCtx(), controlplaneTwoNN, clients, 1), time.Minute, time.Second)
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayOneIPAddress), testutils.SubresourceReadinessWait, time.Second)
-	require.Eventually(t, expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayTwoIPAddress), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayOneIPAddress), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayTwoIPAddress), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying services are managed by their dataplanes")
 	var dataplaneOneService corev1.Service
@@ -507,8 +507,8 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s:80", gatewayIPAddress)), testutils.SubresourceReadinessWait, time.Second)
-	require.Eventually(t, expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s:%d", gatewayIPAddress, port8080)), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s:80", gatewayIPAddress)), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s:%d", gatewayIPAddress, port8080)), testutils.SubresourceReadinessWait, time.Second)
 }
 
 func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
@@ -780,11 +780,11 @@ func setGatewayConfigurationEnvProxyPort(t *testing.T, gatewayConfiguration *ope
 	container := k8sutils.GetPodContainerByName(&dpOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 	require.NotNil(t, container)
 
-	container.Env = setEnvValueByName(container.Env,
+	container.Env = SetEnvValueByName(container.Env,
 		"KONG_PROXY_LISTEN",
 		fmt.Sprintf("0.0.0.0:%d reuseport backlog=16384, 0.0.0.0:%d http2 ssl reuseport backlog=16384", proxyPort, proxySSLPort),
 	)
-	container.Env = setEnvValueByName(container.Env,
+	container.Env = SetEnvValueByName(container.Env,
 		"KONG_PORT_MAPS",
 		fmt.Sprintf("80:%d, 443:%d", proxyPort, proxySSLPort),
 	)
@@ -803,7 +803,7 @@ func setGatewayConfigurationEnvAdminAPIPort(t *testing.T, gatewayConfiguration *
 	container := k8sutils.GetPodContainerByName(&dpOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 	require.NotNil(t, container)
 
-	container.Env = setEnvValueByName(container.Env,
+	container.Env = SetEnvValueByName(container.Env,
 		"KONG_ADMIN_LISTEN",
 		fmt.Sprintf("0.0.0.0:%d ssl reuseport backlog=16384", adminAPIPort),
 	)
