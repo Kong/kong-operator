@@ -73,6 +73,12 @@ const (
 	// ControlPlaneServiceKindWebhook is the value for the SecretUsedByServiceLabel or ControlPlaneServiceLabel
 	// that is used to indicate that a Service is a webhook service.
 	ControlPlaneServiceKindWebhook = "webhook"
+
+	// CertPurposeLabel indicates the purpose of a certificate.
+	CertPurposeLabel = OperatorLabelPrefix + "cert-purpose"
+
+	// OwnerIDLabel indicates a resource's owner ID when references are not available.
+	OwnerIDLabel = OperatorLabelPrefix + "owner-id"
 )
 
 // -----------------------------------------------------------------------------
@@ -134,4 +140,15 @@ const (
 	WebhookCertificateConfigLabelvalue = "gateway-operator-certificate-config"
 	// WebhookServiceName is the name of the service that exposes the validating webhook
 	WebhookServiceName = "gateway-operator-validating-webhook"
+)
+
+// -----------------------------------------------------------------------------
+// Consts - Kong proxy environment variables
+// -----------------------------------------------------------------------------
+
+const (
+	// ClusterCertEnvKey is the environment variable name for the cluster certificate.
+	ClusterCertEnvKey = "KONG_CLUSTER_CERT"
+	// ClusterCertEnvKey is the environment variable name for the cluster certificate key.
+	ClusterCertKeyEnvKey = "KONG_CLUSTER_CERT_KEY"
 )
