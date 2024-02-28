@@ -8350,6 +8350,27 @@ spec:
                 description: DataPlaneNetworkOptions defines network related options
                   for a DataPlane.
                 properties:
+                  konnectCertificate:
+                    description: |-
+                      KonnectCA is the certificate authority that the operator uses to provision client certificates the DataPlane
+                      will use to authenticate itself to the Konnect API. Requires Enterprise.
+                    properties:
+                      issuer:
+                        description: |-
+                          Issuer is the cert-manager Issuer or ClusterIssuer the operator will use to request certificates. When Namespace
+                          is set, the operator will retrieve the Issuer with that Name in that Namespace. When Namespace is omitted, the
+                          operator will retrieve the ClusterIssuer with that name.
+                        properties:
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                        required:
+                        - name
+                        type: object
+                    required:
+                    - issuer
+                    type: object
                   services:
                     description: |-
                       Services indicates the configuration of Kubernetes Services needed for

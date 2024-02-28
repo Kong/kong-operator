@@ -83,6 +83,12 @@ type DataPlaneNetworkOptions struct {
 	// the topology of various forms of traffic (including ingress, e.t.c.) to
 	// and from the DataPlane.
 	Services *DataPlaneServices `json:"services,omitempty"`
+
+	// KonnectCA is the certificate authority that the operator uses to provision client certificates the DataPlane
+	// will use to authenticate itself to the Konnect API. Requires Enterprise.
+	//
+	// +optional
+	KonnectCertificateOptions *KonnectCertificateOptions `json:"konnectCertificate,omitempty"`
 }
 
 // DataPlaneServices contains Services related DataPlane configuration, shared with the GatewayConfiguration.

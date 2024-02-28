@@ -214,3 +214,19 @@ const (
 	// DataPlanePromoteWhenReadyAnnotationKey annotation to signal that the new resources should be promoted.
 	DataPlanePromoteWhenReadyAnnotationTrue = "true"
 )
+
+// KonnectCertificateOptions indicates how the operator should manage the certificates that managed entities will use
+// to interact with Konnect.
+type KonnectCertificateOptions struct {
+	// Issuer is the cert-manager Issuer or ClusterIssuer the operator will use to request certificates. When Namespace
+	// is set, the operator will retrieve the Issuer with that Name in that Namespace. When Namespace is omitted, the
+	// operator will retrieve the ClusterIssuer with that name.
+	Issuer NamespacedName `json:"issuer"`
+}
+
+// NamespacedName is a resource identified by name and optional namespace.
+type NamespacedName struct {
+	// +optional
+	Namespace string `json:"namespace"`
+	Name      string `json:"name"`
+}
