@@ -306,7 +306,7 @@ func (r *Reconciler) ensureClusterRole(
 	}
 
 	controlplaneContainer := k8sutils.GetPodContainerByName(&controlplane.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-	generatedClusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane(controlplane.Name, controlplaneContainer.Image)
+	generatedClusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane(controlplane.Name, controlplaneContainer.Image, r.DevelopmentMode)
 	if err != nil {
 		return false, nil, err
 	}

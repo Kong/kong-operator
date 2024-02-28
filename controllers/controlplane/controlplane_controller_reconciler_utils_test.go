@@ -23,7 +23,7 @@ import (
 )
 
 func TestEnsureClusterRole(t *testing.T) {
-	clusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane("test-controlplane", consts.DefaultControlPlaneImage)
+	clusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane("test-controlplane", consts.DefaultControlPlaneImage, false)
 	assert.NoError(t, err)
 	clusterRole.Name = "test-clusterrole"
 	wrongClusterRole := clusterRole.DeepCopy()

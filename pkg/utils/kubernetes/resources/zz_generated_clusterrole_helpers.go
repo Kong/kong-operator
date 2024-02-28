@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver"
+	semverv4 "github.com/kong/semver/v4"
 	rbacv1 "k8s.io/api/rbac/v1"
 
 	"github.com/kong/gateway-operator/internal/versions"
@@ -21,21 +22,34 @@ var ErrControlPlaneVersionNotSupported = fmt.Errorf("version not supported")
 // GenerateNewClusterRoleForControlPlane is a helper function that extract
 // the version from the tag, and returns the ClusterRole with all the needed
 // permissions.
-func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string) (*rbacv1.ClusterRole, error) {
+func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string, devMode bool) (*rbacv1.ClusterRole, error) {
 	versionToUse := versions.DefaultControlPlaneVersion
 	var constraint *semver.Constraints
 
 	if image != "" {
+		// In dev mode we run in unsafe mode, to allow trying nightly or testing versions
+		// of the controlplane. When an invalid or unsupported image is used in dev mode,
+		// the clusterRole associated to the default ControlPlane image is used instead.
 		v, err := versions.FromImage(image)
-		if err != nil {
+		if err != nil && !devMode {
 			return nil, err
 		}
+
 		supported, err := versions.IsControlPlaneImageVersionSupported(image)
-		if err != nil {
+		if err != nil && !devMode {
 			return nil, err
 		}
-		if !supported {
-			return nil, ErrControlPlaneVersionNotSupported
+		if devMode {
+			if !supported {
+				v, err = semverv4.Parse(versions.DefaultControlPlaneVersion)
+				if err != nil {
+					return nil, fmt.Errorf("error when creating semver from the default controlplane version: %w", err)
+				}
+			}
+		} else {
+			if !supported {
+				return nil, ErrControlPlaneVersionNotSupported
+			}
 		}
 
 		versionToUse = v.String()
