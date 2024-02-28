@@ -4,19 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/samber/lo"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesclient "k8s.io/client-go/kubernetes"
+
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 // expect404WithNoRouteFunc is used to check whether a given URL responds
@@ -81,13 +82,33 @@ func urlForService(ctx context.Context, cluster clusters.Cluster, nsn types.Name
 }
 
 // CreateValidatingWebhook creates validating webhook for gateway operator.
-func createValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Clientset, webhookURL string, caPath string) error {
-	sideEffect := admissionregistrationv1.SideEffectClassNone
-	caFile, err := os.Open(caPath)
+func createValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Clientset, webhookURL string, caDir string) error {
+	caContent, err := os.ReadFile(caDir + "/ca.crt")
 	if err != nil {
 		return err
 	}
-	caContent, err := io.ReadAll(caFile)
+	keyContent, err := os.ReadFile(caDir + "/tls.key")
+	if err != nil {
+		return err
+	}
+	certContent, err := os.ReadFile(caDir + "/tls.crt")
+	if err != nil {
+		return err
+	}
+
+	_, err = k8sClient.CoreV1().Secrets("kong-system").Create(
+		ctx,
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: consts.WebhookCertificateConfigSecretName,
+			},
+			Data: map[string][]byte{
+				consts.CAFieldSecret:   caContent,
+				consts.KeyFieldSecret:  keyContent,
+				consts.CertFieldSecret: certContent,
+			},
+		},
+		metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -96,11 +117,11 @@ func createValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Cl
 		ctx,
 		&admissionregistrationv1.ValidatingWebhookConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "gateway-operator-validating-webhook",
+				Name: consts.WebhookName,
 			},
 			Webhooks: []admissionregistrationv1.ValidatingWebhook{
 				{
-					Name: "gateway-operator-validation.konghq.com",
+					Name: consts.WebhookName,
 					ClientConfig: admissionregistrationv1.WebhookClientConfig{
 						URL:      &webhookURL,
 						CABundle: caContent,
@@ -117,43 +138,25 @@ func createValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Cl
 								Resources:   []string{"controlplanes", "dataplanes"},
 							},
 						},
+						{
+							Operations: []admissionregistrationv1.OperationType{
+								"CREATE",
+								"UPDATE",
+							},
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{"gateway-operator.konghq.com"},
+								APIVersions: []string{"v1beta1"},
+								Resources:   []string{"dataplanes"},
+							},
+						},
 					},
-					SideEffects:             &sideEffect,
+					SideEffects:             lo.ToPtr(admissionregistrationv1.SideEffectClassNone),
 					AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				},
 			},
 		},
 		metav1.CreateOptions{})
 	return err
-}
-
-// GetFirstNonLoopbackIP returns the first found non-loopback IPv4 ip of local interfaces.
-func getFirstNonLoopbackIP() (string, error) {
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return "", err
-	}
-
-	for _, iface := range ifaces {
-		addrs, err := iface.Addrs()
-		if err != nil {
-			continue
-		}
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-			if ip.To4() != nil && !ip.IsLoopback() {
-				return ip.String(), nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("no available IPs")
 }
 
 // GetEnvValueByName returns the corresponding value of LAST item with given name.

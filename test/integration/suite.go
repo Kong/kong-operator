@@ -21,6 +21,7 @@ import (
 	"github.com/kong/gateway-operator/config"
 	"github.com/kong/gateway-operator/modules/manager"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -31,8 +32,7 @@ var (
 	existingCluster      = os.Getenv("KONG_TEST_CLUSTER")
 	controllerManagerOut = os.Getenv("KONG_CONTROLLER_OUT")
 	skipClusterCleanup   = strings.ToLower(os.Getenv("KONG_TEST_CLUSTER_PERSIST")) == "true"
-	runWebhookTests      = false
-	webhookCertDir       = ""
+	webhookEnabled       = strings.ToLower(os.Getenv("WEBHOOK_ENABLED")) == "true"
 	webhookServerIP      = os.Getenv("GATEWAY_OPERATOR_WEBHOOK_IP")
 	bluegreenController  = strings.ToLower(os.Getenv("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER")) == "true"
 	webhookServerPort    = 9443
@@ -144,11 +144,16 @@ func TestMain(
 	fmt.Println("INFO: deploying CRDs to test cluster")
 	exitOnErr(testutils.DeployCRDs(GetCtx(), path.Join(configPath, "/crd"), GetClients().OperatorClient, GetEnv()))
 
-	// Currently it is not used, see
-	// TODO: https://github.com/Kong/gateway-operator/issues/1412
-	runWebhookTests = (os.Getenv("RUN_WEBHOOK_TESTS") == "true")
-	if runWebhookTests {
-		exitOnErr(prepareWebhook())
+	var webhookCertDir string // Location of temporary certificates generated for testing puproses.
+	if webhookEnabled {
+		var webhookCleaner func() error
+		webhookCertDir, webhookCleaner, err = prepareWebhook()
+		exitOnErr(err)
+		defer func() {
+			if cleanErr := webhookCleaner(); cleanErr != nil {
+				fmt.Printf("ERROR: failed to clean up webhook certificates: %v\n", cleanErr)
+			}
+		}()
 	}
 
 	fmt.Println("INFO: starting the operator's controller manager")
@@ -162,9 +167,9 @@ func TestMain(
 
 	exitOnErr(testutils.BuildMTLSCredentials(GetCtx(), GetClients().K8sClient, &httpc))
 
-	// wait for webhook server in controller to be ready after controller started.
-	if runWebhookTests {
-		exitOnErr(waitForWebhook(GetCtx(), webhookServerIP, webhookServerPort))
+	// Wait for webhook server in controller to be ready after controller started.
+	if webhookEnabled {
+		exitOnErr(waitForWebhook(GetCtx(), webhookServerIP, webhookServerPort, webhookCertDir))
 	}
 
 	fmt.Println("INFO: environment is ready, starting tests")
@@ -204,12 +209,8 @@ func DefaultControllerConfigForTests() manager.Config {
 	cfg.ControlPlaneControllerEnabled = true
 	cfg.DataPlaneControllerEnabled = true
 	cfg.DataPlaneBlueGreenControllerEnabled = bluegreenController
-	cfg.ValidatingWebhookEnabled = false
+	cfg.ValidatingWebhookEnabled = webhookEnabled
 	cfg.AnonymousReports = false
-
-	if runWebhookTests {
-		cfg.WebhookCertDir = webhookCertDir
-	}
 
 	cfg.NewClientFunc = func(config *rest.Config, options client.Options) (client.Client, error) {
 		// always hijack and impersonate the system service account here so that the manager
@@ -222,87 +223,94 @@ func DefaultControllerConfigForTests() manager.Config {
 	return cfg
 }
 
-func generateWebhookCertificates() error {
-	// generate certificates for webhook.
+func generateWebhookCertificates() (string, func() error, error) {
+	// Generate certificates for webhook used during tests.
 	fmt.Println("INFO: creating certificates for running webhook tests")
-	dir, err := os.MkdirTemp(os.TempDir(), "gateway-operator-webhook-certs")
-	if err != nil {
-		return err
-	}
-	webhookCertDir = dir
 
+	webhookCertDir, err := os.MkdirTemp(os.TempDir(), "gateway-operator-webhook-certs")
+	if err != nil {
+		return "", nil, err
+	}
 	fmt.Println("INFO: creating certificates in directory", webhookCertDir)
+	cleaner := func() error {
+		return os.RemoveAll(webhookCertDir)
+	}
+
 	cmd := exec.CommandContext(GetCtx(), "../../hack/generate-certificates-openssl.sh", webhookCertDir, webhookServerIP)
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		if cleanErr := cleaner(); cleanErr != nil {
+			return "", nil, fmt.Errorf("failed to generate certificates: %w and failed to clean up: %w", err, cleanErr)
+		}
+		return "", nil, fmt.Errorf("failed to generate certificates: %w", err)
+	}
+	return webhookCertDir, cleaner, nil
 }
 
 // prepareWebhook prepares for running webhook if we are going to run webhook tests. includes:
 // - creating self-signed TLS certificates for webhook server
-// - creating validaing webhook resource in test cluster
-func prepareWebhook() error {
-	// get IP for generating certificate and for clients to access.
+// - creating validating webhook resource in test cluster
+func prepareWebhook() (string, func() error, error) {
+	// Get IP for generating certificate and for clients to access.
 	if webhookServerIP == "" {
-		var getIPErr error
-		webhookServerIP, getIPErr = getFirstNonLoopbackIP()
-		if getIPErr != nil {
-			return getIPErr
-		}
+		webhookServerIP = helpers.GetAdmissionWebhookListenHost()
 	}
 
-	// generate certificates for webhooks.
-	// must run before we start controller manager to start webhook server in controller.
-	err := generateWebhookCertificates()
+	// Generate certificates for webhooks.
+	// It must run before we start controller manager to start webhook server in controller.
+	webhookCertDir, cleaner, err := generateWebhookCertificates()
 	if err != nil {
-		return err
+		return "", nil, err
 	}
 
-	// create webhook resources in k8s.
+	// Create webhook resources in k8s.
 	fmt.Println("INFO: creating a validating webhook and waiting for it to start")
-	return createValidatingWebhook(
+	if err = createValidatingWebhook(
 		GetCtx(), GetClients().K8sClient,
 		fmt.Sprintf("https://%s:%d/validate", webhookServerIP, webhookServerPort),
-		webhookCertDir+"/ca.crt",
-	)
+		webhookCertDir,
+	); err != nil {
+		if errClean := cleaner(); errClean != nil {
+			return "", nil, fmt.Errorf("failed to create validating webhook: %w and failed to clean up: %w", err, errClean)
+		}
+		return "", nil, fmt.Errorf("failed to create validating webhook: %w", err)
+	}
+	return webhookCertDir, cleaner, nil
 }
 
 // waitForWebhook waits for webhook server being able to be accessed by HTTPS.
-func waitForWebhook(ctx context.Context, ip string, port int) error {
-	ready := false
-
+func waitForWebhook(ctx context.Context, ip string, port int, webhookCertDir string) error {
 	certFile := webhookCertDir + "/tls.crt"
 	keyFile := webhookCertDir + "/tls.key"
 	caFile := webhookCertDir + "/ca.crt"
 
-	// Load client cert
+	// Load client cert.
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return err
 	}
-
-	// Load CA cert
+	// Load CA cert.
 	caCert, err := os.ReadFile(caFile)
 	if err != nil {
 		return err
 	}
-
+	// Setup HTTPS client.
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
-
-	// Setup HTTPS client
-	tlsConfig := &tls.Config{
-		MinVersion:   tls.VersionTLS12,
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      caCertPool,
+	client := http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				MinVersion:   tls.VersionTLS13,
+				Certificates: []tls.Certificate{cert},
+				RootCAs:      caCertPool,
+			},
+		},
 	}
-	transport := &http.Transport{TLSClientConfig: tlsConfig}
-	client := &http.Client{Transport: transport}
-
-	for !ready {
+	for ready := false; !ready; {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			// any kind of response from /validate path is considered OK
+			// Any kind of response from /validate path is considered OK.
 			resp, err := client.Get(fmt.Sprintf("https://%s:%d/validate", ip, port))
 			if err == nil {
 				_ = resp.Body.Close()

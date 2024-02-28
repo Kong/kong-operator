@@ -171,6 +171,13 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        webhook-enabled:
+          - "true"
+          - "false"
+    name: "integration-tests (WEBHOOK_ENABLED=${{ matrix.webhook-enabled }})"
     steps:
     - name: checkout repository
       uses: actions/checkout@v4
@@ -185,8 +192,9 @@ jobs:
     - name: run integration tests
       run: make test.integration
       env:
+        WEBHOOK_ENABLED: ${{ matrix.webhook-enabled }}
         KONG_CONTROLLER_OUT: stdout
-        GOTESTSUM_JUNITFILE: "integration-tests.xml"
+        GOTESTSUM_JUNITFILE: integration-tests-webhook-enabled-${{ matrix.webhook-enabled }}.xml
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -207,10 +215,17 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
-        path: integration-tests.xml
+        path: integration-tests-webhook-enabled-${{ matrix.webhook-enabled }}.xml
 
   integration-tests-bluegreen:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        webhook-enabled:
+          - "true"
+          - "false"
+    name: "integration-tests-bluegreen (WEBHOOK_ENABLED=${{ matrix.webhook-enabled }})"
     steps:
     - name: checkout repository
       uses: actions/checkout@v4
@@ -225,8 +240,9 @@ jobs:
     - name: run integration tests
       run: make test.integration_bluegreen
       env:
+        WEBHOOK_ENABLED: ${{ matrix.webhook-enabled }}
         KONG_CONTROLLER_OUT: stdout
-        GOTESTSUM_JUNITFILE: "integration-tests-bluegreen.xml"
+        GOTESTSUM_JUNITFILE: integration-tests-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}.xml
 
     - name: upload diagnostics
       if: always()
@@ -247,7 +263,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
-        path: integration-tests-bluegreen-.xml
+        path: integration-tests-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}.xml
 
   e2e-tests:
     runs-on: ubuntu-latest
@@ -321,3 +337,26 @@ jobs:
           path: report/*.xml
           key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
           secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
+
+  # We need this step to fail the workflow if any of the previous steps failed or were cancelled.
+  # It allows to use this particular job as a required check for PRs.
+  # Ref: https://github.com/orgs/community/discussions/26822#discussioncomment-3305794
+  passed:
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - verify
+      - install-with-kustomize
+      - build
+      - unit-tests
+      # - conformance-tests
+      - integration-tests
+      - integration-tests-bluegreen
+      - e2e-tests
+      - buildpulse-report
+    if: always()
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "Some jobs failed or were cancelled."
+          exit 1

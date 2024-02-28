@@ -340,7 +340,7 @@ test.unit.pretty:
 	@$(MAKE) _test.unit GOTESTSUM_FORMAT=pkgname GOTESTFLAGS="$(GOTESTFLAGS)" UNIT_TEST_PATHS="$(UNIT_TEST_PATHS)"
 
 .PHONY: _test.integration
-_test.integration: gotestsum
+_test.integration: webhook-certs-dir gotestsum
 	GOFLAGS=$(GOFLAGS) \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \

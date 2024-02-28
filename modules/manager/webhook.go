@@ -130,19 +130,19 @@ func (m *webhookManager) Start(ctx context.Context) error {
 	// write the webhook certificate files on the filesystem
 	{
 		p := path.Join(m.cfg.WebhookCertDir, caCertFilename)
-		if err := os.WriteFile(p, certSecret.Data["ca"], os.ModePerm); err != nil {
+		if err := os.WriteFile(p, certSecret.Data[consts.CAFieldSecret], os.ModePerm); err != nil {
 			return fmt.Errorf("failed writing CA to %s: %w", p, err)
 		}
 	}
 	{
 		p := path.Join(m.cfg.WebhookCertDir, tlsCertFilename)
-		if err := os.WriteFile(p, certSecret.Data["cert"], os.ModePerm); err != nil {
+		if err := os.WriteFile(p, certSecret.Data[consts.CertFieldSecret], os.ModePerm); err != nil {
 			return fmt.Errorf("failed writing certificate to %s: %w", p, err)
 		}
 	}
 	{
 		p := path.Join(m.cfg.WebhookCertDir, tlsKeyFilename)
-		if err := os.WriteFile(p, certSecret.Data["key"], os.ModePerm); err != nil {
+		if err := os.WriteFile(p, certSecret.Data[consts.KeyFieldSecret], os.ModePerm); err != nil {
 			return fmt.Errorf("failed writing key to %s: %w", p, err)
 		}
 	}
@@ -225,7 +225,7 @@ func (m *webhookManager) createCertificateConfigResources(ctx context.Context) e
 }
 
 func (m *webhookManager) createWebhookResources(ctx context.Context) error {
-	// create the operator ValidatinWebhookConfiguration
+	// create the operator ValidatingWebhookConfiguration
 	validatingWebhookConfiguration := k8sresources.GenerateNewValidatingWebhookConfiguration(m.cfg.ControllerNamespace, consts.WebhookServiceName, consts.WebhookName)
 	if err := m.setNamespaceAsOwner(ctx, validatingWebhookConfiguration); err != nil {
 		return err

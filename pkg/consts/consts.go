@@ -91,6 +91,15 @@ const (
 
 	// TLSCACRTPath is the full path for the ca.crt file.
 	TLSCACRTPath = ClusterCertificateVolumeMountPath + "/" + CACRT
+
+	// TLSFieldSecret is the field name in Kubernetes secret - WebhookCertificateConfigSecretName.
+	CertFieldSecret = "cert"
+
+	// KeyFieldSecret is the field name in Kubernetes secret - WebhookCertificateConfigSecretName.
+	KeyFieldSecret = "key"
+
+	// CAFieldSecret is the field name in Kubernetes secret - WebhookCertificateConfigSecretName.
+	CAFieldSecret = "ca"
 )
 
 // -----------------------------------------------------------------------------

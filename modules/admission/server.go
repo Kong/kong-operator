@@ -3,7 +3,6 @@ package admission
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -50,11 +49,6 @@ func NewRequestHandler(c client.Client, l logr.Logger) *RequestHandler {
 
 // ServeHTTP serves for HTTP requests.
 func (h *RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Body == nil {
-		h.Logger.Error(fmt.Errorf("empty body"), "received request with empty body")
-		http.Error(w, "admission review object is missing", http.StatusBadRequest)
-		return
-	}
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		h.Logger.Error(err, "failed to read request from client")

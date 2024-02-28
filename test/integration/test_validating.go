@@ -37,19 +37,17 @@ func TestDataPlaneValidation(t *testing.T) {
 	require.NoError(t, err, "failed to create configmap")
 	cleaner.Add(configMap)
 
-	if runWebhookTests {
+	if webhookEnabled {
+		t.Log("running tests for validation performed by admission webhook")
 		testDataPlaneValidatingWebhook(t, namespace)
 	} else {
+		t.Log("running tests for validation performed during reconciling")
 		testDataPlaneReconcileValidation(t, namespace)
 	}
 }
 
 // could only run one of webhook validation or validation in reconciling.
 func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace) {
-	if runWebhookTests {
-		t.Skip("run validating webhook tests instead of validating in reconciling")
-	}
-
 	testCases := []struct {
 		name             string
 		dataplane        *operatorv1beta1.DataPlane
@@ -57,7 +55,7 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 		conditionMessage string
 	}{
 		{
-			name: "reconciler:validating_error_with_empty_deplyoptions",
+			name: "reconciler:validating_error_with_empty_deployoptions",
 			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace.Name,
@@ -262,10 +260,6 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 }
 
 func testDataPlaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
-	if !runWebhookTests {
-		t.Skip("skip running webhook tests")
-	}
-
 	testCases := []struct {
 		name      string
 		dataplane *operatorv1beta1.DataPlane
@@ -278,6 +272,24 @@ func testDataPlaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace.Name,
 					Name:      uuid.NewString(),
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 			errMsg: "",
