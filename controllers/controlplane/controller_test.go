@@ -94,7 +94,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 									Containers: []corev1.Container{
 										{
 											Name:  consts.ControlPlaneControllerContainerName,
-											Image: "kong/kubernetes-ingress-controller:3.1",
+											Image: "kong/kubernetes-ingress-controller:3.1.1",
 										},
 									},
 								},

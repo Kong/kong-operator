@@ -14,12 +14,12 @@ const (
 	// and those tests create KIC's URLs for things like roles or CRDs.
 	// Since KIC only defines the full tags in its repo (as expected) we cannot use
 	// a partial version here, as it would not match KIC's tag.
-	DefaultControlPlaneVersion = "3.1.0"
+	DefaultControlPlaneVersion = "3.1.1"
 )
 
 // minimumControlPlaneVersion indicates the bare minimum version of the
 // ControlPlane that can be used by the operator.
-var minimumControlPlaneVersion = semver.MustParse("3.1.0")
+var minimumControlPlaneVersion = semver.MustParse("3.1.1")
 
 // ManifestsVersionsForKICVersions is a map that explicitly sets which manifests version to use upon the KIC
 // version. It is used in /hack/generators/kic to generate the roles and webhook configuration to be used by KIC.

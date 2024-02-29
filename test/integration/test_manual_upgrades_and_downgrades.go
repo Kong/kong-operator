@@ -29,7 +29,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	originalControlPlaneImageName := "kong/kubernetes-ingress-controller"
-	originalControlPlaneImageVersion := "3.1.0"
+	originalControlPlaneImageVersion := "3.1.1"
 	originalControlPlaneImage := fmt.Sprintf("%s:%s", originalControlPlaneImageName, originalControlPlaneImageVersion)
 
 	originalDataPlaneImageName := "kong/kong"
@@ -171,7 +171,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Run("upgrade the ControlPlane", func(t *testing.T) {
-		t.Skip("skipping upgrade test because we do not have a newer image than 3.1.0 to upgrade to, unskip when 3.1.1 or 3.2.0 is out")
+		t.Skip("skipping upgrade test because we do not have a newer image than 3.1.1 to upgrade to, unskip when 3.1.2 or 3.2.0 is out")
 
 		newControlPlaneImageVersion := "3.2.0"
 		newControlPlaneImage := fmt.Sprintf("%s:%s", originalControlPlaneImageName, newControlPlaneImageVersion)
@@ -232,7 +232,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Run("downgrade the ControlPlane", func(t *testing.T) {
-		t.Skip("skipping downagrade because we only have 1 supported image now (3.1.0)")
+		t.Skip("skipping downagrade because we only have 1 supported image now (3.1.1)")
 
 		t.Log("downgrading the ControlPlane version for the Gateway")
 		require.Eventually(t, func() bool {

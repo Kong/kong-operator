@@ -20,10 +20,10 @@ func TestClusterroleHelpers(t *testing.T) {
 		expectedError       error
 	}{
 		{
-			controlplane: "test_3.1",
-			image:        "kong/kubernetes-ingress-controller:3.1",
+			controlplane: "test_3.1.1",
+			image:        "kong/kubernetes-ingress-controller:3.1.1",
 			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_1("test_3.1")
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_1("test_3.1.1")
 				resources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
