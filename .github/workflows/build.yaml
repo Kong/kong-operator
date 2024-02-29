@@ -14,12 +14,14 @@ on:
   push:
     branches:
     - 'main'
+  workflow_dispatch: {}
 
 jobs:
   build:
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
-      token: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
+      dockerhub-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
+      gh-pat: ${{ secrets.PAT_GITHUB }}
     with:
       username: ${{ vars.DOCKERHUB_PUSH_USERNAME  }}
       registry: docker.io
