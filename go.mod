@@ -6,6 +6,7 @@ toolchain go1.22.0
 
 require (
 	github.com/Masterminds/semver v1.5.0
+	github.com/cert-manager/cert-manager v1.14.1
 	github.com/cloudflare/cfssl v1.6.4
 	github.com/go-logr/logr v1.4.1
 	github.com/google/uuid v1.6.0
@@ -41,7 +42,7 @@ require (
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/onsi/ginkgo/v2 v2.15.0 // indirect
 	github.com/onsi/gomega v1.31.1 // indirect
-	github.com/rogpeppe/go-internal v1.11.0 // indirect
+	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.47.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.47.0 // indirect
 	go.opentelemetry.io/otel v1.22.0 // indirect

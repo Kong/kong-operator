@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -22,7 +23,7 @@ import (
 func ApplyPatchIfNonEmpty[
 	OwnerT *operatorv1beta1.DataPlane | *operatorv1beta1.ControlPlane,
 	ResourceT interface {
-		*appsv1.Deployment | *autoscalingv2.HorizontalPodAutoscaler
+		*appsv1.Deployment | *autoscalingv2.HorizontalPodAutoscaler | *certmanagerv1.Certificate
 		client.Object
 	},
 ](
