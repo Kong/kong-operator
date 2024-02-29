@@ -280,10 +280,17 @@ func TestControlPlaneEssentials(t *testing.T) {
 	t.Log("verifying controlplane Deployment.Pods.Env vars")
 	checkControlPlaneDeploymentEnvVars(t, deployment, controlplane.Name)
 
-	t.Log("deleting the  controlplane ClusterRole and ClusterRoleBinding")
+	t.Log("deleting the controlplane ClusterRole")
 	clusterRoles := testutils.MustListControlPlaneClusterRoles(t, GetCtx(), controlplane, clients)
 	require.Len(t, clusterRoles, 1, "There must be only one ControlPlane ClusterRole")
 	require.NoError(t, GetClients().MgrClient.Delete(GetCtx(), &clusterRoles[0]))
+
+	t.Log("verifying controlplane ClusterRole and ClusterRoleBinding have been re-created")
+	require.Eventually(t, testutils.ControlPlaneHasClusterRole(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+	require.Eventually(t, testutils.ControlPlaneHasClusterRoleBinding(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+	require.Eventually(t, testutils.ControlPlaneCRBContainsCRAndSA(t, ctx, controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+
+	t.Log("deleting the controlplane ClusterRoleBinding")
 	clusterRoleBindings := testutils.MustListControlPlaneClusterRoleBindings(t, GetCtx(), controlplane, clients)
 	require.Len(t, clusterRoleBindings, 1, "There must be only one ControlPlane ClusterRoleBinding")
 	require.NoError(t, GetClients().MgrClient.Delete(GetCtx(), &clusterRoleBindings[0]))
@@ -291,6 +298,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 	t.Log("verifying controlplane ClusterRole and ClusterRoleBinding have been re-created")
 	require.Eventually(t, testutils.ControlPlaneHasClusterRole(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 	require.Eventually(t, testutils.ControlPlaneHasClusterRoleBinding(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+	require.Eventually(t, testutils.ControlPlaneCRBContainsCRAndSA(t, ctx, controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("deleting the controlplane Deployment")
 	require.NoError(t, GetClients().MgrClient.Delete(GetCtx(), deployment))

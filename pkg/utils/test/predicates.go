@@ -27,6 +27,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
 // controlPlanePredicate is a helper function for tests that returns a function
@@ -199,6 +200,25 @@ func ControlPlaneHasClusterRoleBinding(t *testing.T, ctx context.Context, contro
 		clusterRoleBindings := MustListControlPlaneClusterRoleBindings(t, ctx, controlplane, clients)
 		t.Logf("%d clusterrolebindings", len(clusterRoleBindings))
 		return len(clusterRoleBindings) > 0
+	}
+}
+
+// ControlPlaneCRBContainsCRAndSA is a helper function for tests that returns a function
+// that can be used to check if the ClusterRoleBinding of a ControPlane has the reference of ClusterRole belonging to the ControlPlane
+// and contains the service account used by the Deployment of the ControlPlane.
+func ControlPlaneCRBContainsCRAndSA(t *testing.T, ctx context.Context, controlplane *operatorv1alpha1.ControlPlane, clients K8sClients) func() bool {
+	return func() bool {
+		clusterRoleBindings := MustListControlPlaneClusterRoleBindings(t, ctx, controlplane, clients)
+		clusterRoles := MustListControlPlaneClusterRoles(t, ctx, controlplane, clients)
+		deployments := MustListControlPlaneDeployments(t, ctx, controlplane, clients)
+		if len(clusterRoleBindings) != 1 || len(clusterRoles) != 1 || len(deployments) != 1 {
+			return false
+		}
+		clusterRoleBinding := clusterRoleBindings[0]
+		clusterRole := clusterRoles[0]
+		serviceAccountName := deployments[0].Spec.Template.Spec.ServiceAccountName
+		return k8sresources.CompareClusterRoleName(&clusterRoleBinding, clusterRole.Name) &&
+			k8sresources.ClusterRoleBindingContainsServiceAccount(&clusterRoleBinding, controlplane.Namespace, serviceAccountName)
 	}
 }
 
