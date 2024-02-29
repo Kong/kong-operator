@@ -53,13 +53,13 @@ func GenerateGateway(gatewayNSN types.NamespacedName, gatewayClass *gatewayv1.Ga
 }
 
 // GenerateGatewayConfiguration generates a GatewayConfiguration to be used in tests
-func GenerateGatewayConfiguration(gatewayConfigurationNSN types.NamespacedName) *operatorv1alpha1.GatewayConfiguration {
-	return &operatorv1alpha1.GatewayConfiguration{
+func GenerateGatewayConfiguration(gatewayConfigurationNSN types.NamespacedName) *operatorv1beta1.GatewayConfiguration {
+	return &operatorv1beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: gatewayConfigurationNSN.Namespace,
 			Name:      gatewayConfigurationNSN.Name,
 		},
-		Spec: operatorv1alpha1.GatewayConfigurationSpec{
+		Spec: operatorv1beta1.GatewayConfigurationSpec{
 			ControlPlaneOptions: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -88,7 +88,7 @@ func GenerateGatewayConfiguration(gatewayConfigurationNSN types.NamespacedName) 
 					},
 				},
 			},
-			DataPlaneOptions: &operatorv1alpha1.GatewayConfigDataPlaneOptions{
+			DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{

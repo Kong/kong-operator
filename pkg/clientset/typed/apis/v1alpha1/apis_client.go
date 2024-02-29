@@ -30,7 +30,6 @@ type ApisV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	ControlPlanesGetter
 	DataPlaneMetricsExtensionsGetter
-	GatewayConfigurationsGetter
 }
 
 // ApisV1alpha1Client is used to interact with features provided by the apis group.
@@ -44,10 +43,6 @@ func (c *ApisV1alpha1Client) ControlPlanes(namespace string) ControlPlaneInterfa
 
 func (c *ApisV1alpha1Client) DataPlaneMetricsExtensions(namespace string) DataPlaneMetricsExtensionInterface {
 	return newDataPlaneMetricsExtensions(c, namespace)
-}
-
-func (c *ApisV1alpha1Client) GatewayConfigurations(namespace string) GatewayConfigurationInterface {
-	return newGatewayConfigurations(c, namespace)
 }
 
 // NewForConfig creates a new ApisV1alpha1Client for the given config.

@@ -13,6 +13,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
@@ -24,12 +25,12 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying a GatewayConfiguration to set KIC log level")
-	gatewayConfig := &operatorv1alpha1.GatewayConfiguration{
+	gatewayConfig := &operatorv1beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      uuid.NewString(),
 		},
-		Spec: operatorv1alpha1.GatewayConfigurationSpec{
+		Spec: operatorv1beta1.GatewayConfigurationSpec{
 			ControlPlaneOptions: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -52,7 +53,7 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 			},
 		},
 	}
-	gatewayConfig, err := GetClients().OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -63,7 +64,7 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 		},
 		Spec: gatewayv1.GatewayClassSpec{
 			ParametersRef: &gatewayv1.ParametersReference{
-				Group:     gatewayv1.Group(operatorv1alpha1.SchemeGroupVersion.Group),
+				Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
 				Kind:      gatewayv1.Kind("GatewayConfiguration"),
 				Namespace: (*gatewayv1.Namespace)(&gatewayConfig.Namespace),
 				Name:      gatewayConfig.Name,

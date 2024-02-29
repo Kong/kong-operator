@@ -67,7 +67,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// watch for updates to GatewayConfigurations, if any configuration targets a
 		// Gateway that is supported, enqueue that Gateway.
 		Watches(
-			&operatorv1alpha1.GatewayConfiguration{},
+			&operatorv1beta1.GatewayConfiguration{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayConfig),
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayConfigurationMatchesController))).
 		// watch for updates to GatewayClasses, if any GatewayClasses change, enqueue
@@ -350,7 +350,7 @@ func (r *Reconciler) provisionDataPlane(
 	ctx context.Context,
 	logger logr.Logger,
 	gateway *gwtypes.Gateway,
-	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
+	gatewayConfig *operatorv1beta1.GatewayConfiguration,
 ) (*operatorv1beta1.DataPlane, error) {
 	logger = logger.WithName("dataplaneProvisioning")
 
@@ -457,7 +457,7 @@ func (r *Reconciler) provisionControlPlane(
 	logger logr.Logger,
 	gatewayClass *gatewayv1.GatewayClass,
 	gateway *gwtypes.Gateway,
-	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
+	gatewayConfig *operatorv1beta1.GatewayConfiguration,
 	dataplane *operatorv1beta1.DataPlane,
 	ingressService corev1.Service,
 	adminService corev1.Service,

@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -265,7 +265,7 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 	gatewayConfigurationName := uuid.NewString()
 	t.Logf("deploying the GatewayConfiguration %s", gatewayConfigurationName)
 	gatewayConfiguration := testutils.GenerateGatewayConfiguration(types.NamespacedName{Namespace: namespace.Name, Name: gatewayConfigurationName})
-	gatewayConfiguration, err := GetClients().OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfiguration, metav1.CreateOptions{})
+	gatewayConfiguration, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfiguration, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfiguration)
 
@@ -306,11 +306,11 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 
 	for _, replicas := range dataplaneReplicasUpdates {
 		replicas := replicas
-		gatewayConfiguration, err := GetClients().OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Get(GetCtx(), gatewayConfigurationName, metav1.GetOptions{})
+		gatewayConfiguration, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Get(GetCtx(), gatewayConfigurationName, metav1.GetOptions{})
 		require.NoError(t, err)
 		gatewayConfiguration.Spec.DataPlaneOptions.Deployment.Replicas = &replicas
 		t.Logf("changing the GatewayConfiguration to change dataplane replicas to %d", replicas)
-		_, err = GetClients().OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Update(GetCtx(), gatewayConfiguration, metav1.UpdateOptions{})
+		_, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Update(GetCtx(), gatewayConfiguration, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		t.Log("verifying the deployment managed by the controlplane is ready")
@@ -348,7 +348,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	gatewayConfigurationName := uuid.NewString()
 	t.Log("deploying a GatewayConfiguration resource")
 	gatewayConfiguration := testutils.GenerateGatewayConfiguration(types.NamespacedName{Namespace: namespace.Name, Name: gatewayConfigurationName})
-	gatewayConfiguration, err = GetClients().OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfiguration, metav1.CreateOptions{})
+	gatewayConfiguration, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfiguration, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfiguration)
 
@@ -445,7 +445,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 		// TODO: https://github.com/Kong/gateway-operator/issues/695
 		t.Skip("re-enable once https://github.com/Kong/gateway-operator/issues/695 is fixed")
 
-		gwcClient := GetClients().OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name)
+		gwcClient := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name)
 
 		setGatewayConfigurationEnvProxyPort(t, gatewayConfiguration, 8005, 8999)
 		gatewayConfiguration, err = gwcClient.Update(GetCtx(), gatewayConfiguration, metav1.UpdateOptions{})
@@ -509,12 +509,12 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	})
 }
 
-func setGatewayConfigurationEnvProxyPort(t *testing.T, gatewayConfiguration *operatorv1alpha1.GatewayConfiguration, proxyPort int, proxySSLPort int) {
+func setGatewayConfigurationEnvProxyPort(t *testing.T, gatewayConfiguration *operatorv1beta1.GatewayConfiguration, proxyPort int, proxySSLPort int) {
 	t.Helper()
 
 	dpOptions := gatewayConfiguration.Spec.DataPlaneOptions
 	if dpOptions == nil {
-		dpOptions = &operatorv1alpha1.GatewayConfigDataPlaneOptions{}
+		dpOptions = &operatorv1beta1.GatewayConfigDataPlaneOptions{}
 	}
 	if dpOptions.Deployment.PodTemplateSpec == nil {
 		dpOptions.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
@@ -535,12 +535,12 @@ func setGatewayConfigurationEnvProxyPort(t *testing.T, gatewayConfiguration *ope
 	gatewayConfiguration.Spec.DataPlaneOptions = dpOptions
 }
 
-func setGatewayConfigurationEnvAdminAPIPort(t *testing.T, gatewayConfiguration *operatorv1alpha1.GatewayConfiguration, adminAPIPort int) {
+func setGatewayConfigurationEnvAdminAPIPort(t *testing.T, gatewayConfiguration *operatorv1beta1.GatewayConfiguration, adminAPIPort int) {
 	t.Helper()
 
 	dpOptions := gatewayConfiguration.Spec.DataPlaneOptions
 	if dpOptions == nil {
-		dpOptions = &operatorv1alpha1.GatewayConfigDataPlaneOptions{}
+		dpOptions = &operatorv1beta1.GatewayConfigDataPlaneOptions{}
 	}
 
 	container := k8sutils.GetPodContainerByName(&dpOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)

@@ -41,7 +41,7 @@ import (
 
 func (r *Reconciler) createDataPlane(ctx context.Context,
 	gateway *gwtypes.Gateway,
-	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
+	gatewayConfig *operatorv1beta1.GatewayConfiguration,
 ) (*operatorv1beta1.DataPlane, error) {
 	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
@@ -69,7 +69,7 @@ func (r *Reconciler) createControlPlane(
 	ctx context.Context,
 	gatewayClass *gatewayv1.GatewayClass,
 	gateway *gwtypes.Gateway,
-	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
+	gatewayConfig *operatorv1beta1.GatewayConfiguration,
 	dataplaneName string,
 ) error {
 	controlplane := &operatorv1alpha1.ControlPlane{
@@ -125,7 +125,7 @@ func (r *Reconciler) getGatewayAddresses(
 	return gatewayAddressesFromService(services[0])
 }
 
-func gatewayConfigDataPlaneOptionsToDataPlaneOptions(opts operatorv1alpha1.GatewayConfigDataPlaneOptions) *operatorv1beta1.DataPlaneOptions {
+func gatewayConfigDataPlaneOptionsToDataPlaneOptions(opts operatorv1beta1.GatewayConfigDataPlaneOptions) *operatorv1beta1.DataPlaneOptions {
 	dataPlaneOptions := &operatorv1beta1.DataPlaneOptions{
 		Deployment: opts.Deployment,
 	}
@@ -197,11 +197,11 @@ func (r *Reconciler) verifyGatewayClassSupport(ctx context.Context, gateway *gwt
 	return gwc, nil
 }
 
-func (r *Reconciler) getOrCreateGatewayConfiguration(ctx context.Context, gatewayClass *gatewayv1.GatewayClass) (*operatorv1alpha1.GatewayConfiguration, error) {
+func (r *Reconciler) getOrCreateGatewayConfiguration(ctx context.Context, gatewayClass *gatewayv1.GatewayClass) (*operatorv1beta1.GatewayConfiguration, error) {
 	gatewayConfig, err := r.getGatewayConfigForGatewayClass(ctx, gatewayClass)
 	if err != nil {
 		if errors.Is(err, operatorerrors.ErrObjectMissingParametersRef) {
-			return new(operatorv1alpha1.GatewayConfiguration), nil
+			return new(operatorv1beta1.GatewayConfiguration), nil
 		}
 		return nil, err
 	}
@@ -209,12 +209,12 @@ func (r *Reconciler) getOrCreateGatewayConfiguration(ctx context.Context, gatewa
 	return gatewayConfig, nil
 }
 
-func (r *Reconciler) getGatewayConfigForGatewayClass(ctx context.Context, gatewayClass *gatewayv1.GatewayClass) (*operatorv1alpha1.GatewayConfiguration, error) {
+func (r *Reconciler) getGatewayConfigForGatewayClass(ctx context.Context, gatewayClass *gatewayv1.GatewayClass) (*operatorv1beta1.GatewayConfiguration, error) {
 	if gatewayClass.Spec.ParametersRef == nil {
 		return nil, fmt.Errorf("%w, gatewayClass = %s", operatorerrors.ErrObjectMissingParametersRef, gatewayClass.Name)
 	}
 
-	if string(gatewayClass.Spec.ParametersRef.Group) != operatorv1alpha1.SchemeGroupVersion.Group ||
+	if string(gatewayClass.Spec.ParametersRef.Group) != operatorv1beta1.SchemeGroupVersion.Group ||
 		string(gatewayClass.Spec.ParametersRef.Kind) != "GatewayConfiguration" {
 		return nil, &k8serrors.StatusError{
 			ErrStatus: metav1.Status{
@@ -226,7 +226,7 @@ func (r *Reconciler) getGatewayConfigForGatewayClass(ctx context.Context, gatewa
 					Causes: []metav1.StatusCause{{
 						Type: metav1.CauseTypeFieldValueNotSupported,
 						Message: fmt.Sprintf("controller only supports %s %s resources for GatewayClass parametersRef",
-							operatorv1alpha1.SchemeGroupVersion.Group, "GatewayConfiguration"),
+							operatorv1beta1.SchemeGroupVersion.Group, "GatewayConfiguration"),
 					}},
 				},
 			},
@@ -239,7 +239,7 @@ func (r *Reconciler) getGatewayConfigForGatewayClass(ctx context.Context, gatewa
 		return nil, fmt.Errorf("GatewayClass %s has invalid ParametersRef: both namespace and name must be provided", gatewayClass.Name)
 	}
 
-	gatewayConfig := new(operatorv1alpha1.GatewayConfiguration)
+	gatewayConfig := new(operatorv1beta1.GatewayConfiguration)
 	return gatewayConfig, r.Client.Get(ctx, client.ObjectKey{
 		Namespace: string(*gatewayClass.Spec.ParametersRef.Namespace),
 		Name:      gatewayClass.Spec.ParametersRef.Name,

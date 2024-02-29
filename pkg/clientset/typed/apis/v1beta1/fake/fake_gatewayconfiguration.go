@@ -31,7 +31,7 @@ import (
 
 // FakeGatewayConfigurations implements GatewayConfigurationInterface
 type FakeGatewayConfigurations struct {
-	Fake *FakeApisV1alpha1
+	Fake *FakeApisV1beta1
 	ns   string
 }
 

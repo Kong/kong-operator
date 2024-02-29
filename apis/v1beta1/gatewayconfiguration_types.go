@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 )
 
 func init() {
@@ -52,14 +52,14 @@ type GatewayConfigurationSpec struct {
 	// overrides for ControlPlane resources that will be created for the Gateway.
 	//
 	// +optional
-	ControlPlaneOptions *ControlPlaneOptions `json:"controlPlaneOptions,omitempty"`
+	ControlPlaneOptions *operatorv1alpha1.ControlPlaneOptions `json:"controlPlaneOptions,omitempty"`
 }
 
 // GatewayConfigDataPlaneOptions indicates the specific information needed to
 // configure and deploy a DataPlane object.
 type GatewayConfigDataPlaneOptions struct {
 	// +optional
-	Deployment operatorv1beta1.DataPlaneDeploymentOptions `json:"deployment"`
+	Deployment DataPlaneDeploymentOptions `json:"deployment"`
 
 	// +optional
 	Network GatewayConfigDataPlaneNetworkOptions `json:"network"`
@@ -89,7 +89,7 @@ type GatewayConfigDataPlaneServices struct {
 // GatewayConfigServiceOptions is used to includes options to customize the ingress service,
 // such as the annotations.
 type GatewayConfigServiceOptions struct {
-	operatorv1beta1.ServiceOptions `json:",inline"`
+	ServiceOptions `json:",inline"`
 }
 
 // GatewayConfigurationStatus defines the observed state of GatewayConfiguration

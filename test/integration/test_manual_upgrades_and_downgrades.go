@@ -40,12 +40,12 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	newDataPlaneImage := fmt.Sprintf("%s:%s", originalDataPlaneImageName, newDataPlaneImageVersion)
 
 	t.Log("deploying a GatewayConfiguration resource")
-	gatewayConfig := &operatorv1alpha1.GatewayConfiguration{
+	gatewayConfig := &operatorv1beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      uuid.NewString(),
 		},
-		Spec: operatorv1alpha1.GatewayConfigurationSpec{
+		Spec: operatorv1beta1.GatewayConfigurationSpec{
 			ControlPlaneOptions: &operatorv1alpha1.ControlPlaneOptions{
 				Deployment: operatorv1alpha1.DeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -65,7 +65,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 					},
 				},
 			},
-			DataPlaneOptions: &operatorv1alpha1.GatewayConfigDataPlaneOptions{
+			DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -89,7 +89,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		},
 	}
 	var err error
-	gatewayConfig, err = GetClients().OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -100,7 +100,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		},
 		Spec: gatewayv1.GatewayClassSpec{
 			ParametersRef: &gatewayv1.ParametersReference{
-				Group:     gatewayv1.Group(operatorv1alpha1.SchemeGroupVersion.Group),
+				Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
 				Kind:      gatewayv1.Kind("GatewayConfiguration"),
 				Namespace: (*gatewayv1.Namespace)(&gatewayConfig.Namespace),
 				Name:      gatewayConfig.Name,
@@ -373,12 +373,12 @@ func verifyContainerImageForGateway(gateway *gwtypes.Gateway, controlPlaneImage,
 // changeControlPlaneImage is a helper function to update the image
 // for ControlPlanes in a given GatewayConfiguration.
 func changeControlPlaneImage(
-	gcfg *operatorv1alpha1.GatewayConfiguration,
+	gcfg *operatorv1beta1.GatewayConfiguration,
 	controlPlaneImageName,
 	controlPlaneImageVersion string,
 ) error {
 	// refresh the object
-	gcfg, err := GetClients().OperatorClient.ApisV1alpha1().GatewayConfigurations(gcfg.Namespace).Get(GetCtx(), gcfg.Name, metav1.GetOptions{})
+	gcfg, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(gcfg.Namespace).Get(GetCtx(), gcfg.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -389,19 +389,19 @@ func changeControlPlaneImage(
 	}
 	container.Image = fmt.Sprintf("%s:%s", controlPlaneImageName, controlPlaneImageVersion)
 
-	_, err = GetClients().OperatorClient.ApisV1alpha1().GatewayConfigurations(gcfg.Namespace).Update(GetCtx(), gcfg, metav1.UpdateOptions{})
+	_, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(gcfg.Namespace).Update(GetCtx(), gcfg, metav1.UpdateOptions{})
 	return err
 }
 
 // changeDataPlaneImage is a helper function to update the image
 // for DataPlane in a given GatewayConfiguration.
 func changeDataPlaneImage(
-	gcfg *operatorv1alpha1.GatewayConfiguration,
+	gcfg *operatorv1beta1.GatewayConfiguration,
 	dataPlaneImageName,
 	dataPlaneImageVersion string,
 ) error {
 	// refresh the object
-	gcfg, err := GetClients().OperatorClient.ApisV1alpha1().GatewayConfigurations(gcfg.Namespace).Get(GetCtx(), gcfg.Name, metav1.GetOptions{})
+	gcfg, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(gcfg.Namespace).Get(GetCtx(), gcfg.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -412,6 +412,6 @@ func changeDataPlaneImage(
 	}
 	container.Image = fmt.Sprintf("%s:%s", dataPlaneImageName, dataPlaneImageVersion)
 
-	_, err = GetClients().OperatorClient.ApisV1alpha1().GatewayConfigurations(gcfg.Namespace).Update(GetCtx(), gcfg, metav1.UpdateOptions{})
+	_, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(gcfg.Namespace).Update(GetCtx(), gcfg, metav1.UpdateOptions{})
 	return err
 }

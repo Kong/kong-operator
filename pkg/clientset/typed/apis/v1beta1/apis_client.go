@@ -29,6 +29,7 @@ import (
 type ApisV1beta1Interface interface {
 	RESTClient() rest.Interface
 	DataPlanesGetter
+	GatewayConfigurationsGetter
 }
 
 // ApisV1beta1Client is used to interact with features provided by the apis group.
@@ -38,6 +39,10 @@ type ApisV1beta1Client struct {
 
 func (c *ApisV1beta1Client) DataPlanes(namespace string) DataPlaneInterface {
 	return newDataPlanes(c, namespace)
+}
+
+func (c *ApisV1beta1Client) GatewayConfigurations(namespace string) GatewayConfigurationInterface {
+	return newGatewayConfigurations(c, namespace)
 }
 
 // NewForConfig creates a new ApisV1beta1Client for the given config.

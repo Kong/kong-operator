@@ -16,6 +16,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -131,7 +132,7 @@ func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client
 func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	logger := log.FromContext(ctx)
 
-	gatewayConfig, ok := obj.(*operatorv1alpha1.GatewayConfiguration)
+	gatewayConfig, ok := obj.(*operatorv1beta1.GatewayConfiguration)
 	if !ok {
 		logger.Error(
 			operatorerrors.ErrUnexpectedObject,
@@ -154,7 +155,7 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 	matchingGatewayClasses := make(map[string]struct{})
 	for _, gatewayClass := range gatewayClassList.Items {
 		if gatewayClass.Spec.ParametersRef != nil &&
-			string(gatewayClass.Spec.ParametersRef.Group) == operatorv1alpha1.SchemeGroupVersion.Group &&
+			string(gatewayClass.Spec.ParametersRef.Group) == operatorv1beta1.SchemeGroupVersion.Group &&
 			string(gatewayClass.Spec.ParametersRef.Kind) == "GatewayConfiguration" &&
 			gatewayClass.Spec.ParametersRef.Name == gatewayConfig.Name {
 			matchingGatewayClasses[gatewayClass.Name] = struct{}{}
@@ -226,14 +227,14 @@ func (r *Reconciler) listReferenceGrantsForGateway(ctx context.Context, obj clie
 // GatewayReconciler - Config Defaults
 // -----------------------------------------------------------------------------
 
-func (r *Reconciler) setDataPlaneGatewayConfigDefaults(gatewayConfig *operatorv1alpha1.GatewayConfiguration) {
+func (r *Reconciler) setDataPlaneGatewayConfigDefaults(gatewayConfig *operatorv1beta1.GatewayConfiguration) {
 	if gatewayConfig.Spec.DataPlaneOptions == nil {
-		gatewayConfig.Spec.DataPlaneOptions = new(operatorv1alpha1.GatewayConfigDataPlaneOptions)
+		gatewayConfig.Spec.DataPlaneOptions = new(operatorv1beta1.GatewayConfigDataPlaneOptions)
 	}
 }
 
 func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gateway,
-	gatewayConfig *operatorv1alpha1.GatewayConfiguration,
+	gatewayConfig *operatorv1beta1.GatewayConfiguration,
 	dataplaneName,
 	dataplaneIngressServiceName,
 	dataplaneAdminServiceName,

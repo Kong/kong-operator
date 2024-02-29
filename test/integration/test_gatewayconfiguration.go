@@ -46,13 +46,13 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 	cleaner.Add(configMap)
 
 	t.Log("deploying a GatewayConfiguration resource")
-	gatewayConfig := &operatorv1alpha1.GatewayConfiguration{
+	gatewayConfig := &operatorv1beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      uuid.NewString(),
 		},
-		Spec: operatorv1alpha1.GatewayConfigurationSpec{
-			DataPlaneOptions: &operatorv1alpha1.GatewayConfigDataPlaneOptions{
+		Spec: operatorv1beta1.GatewayConfigurationSpec{
+			DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -118,7 +118,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			},
 		},
 	}
-	gatewayConfig, err = GetClients().OperatorClient.ApisV1alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -129,7 +129,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		},
 		Spec: gatewayv1.GatewayClassSpec{
 			ParametersRef: &gatewayv1.ParametersReference{
-				Group:     gatewayv1.Group(operatorv1alpha1.SchemeGroupVersion.Group),
+				Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
 				Kind:      gatewayv1.Kind("GatewayConfiguration"),
 				Namespace: (*gatewayv1.Namespace)(&gatewayConfig.Namespace),
 				Name:      gatewayConfig.Name,

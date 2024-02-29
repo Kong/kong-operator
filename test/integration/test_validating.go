@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -220,7 +219,7 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				w, err := dataplaneClient.Watch(GetCtx(), metav1.ListOptions{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "DataPlane",
-						APIVersion: operatorv1alpha1.SchemeGroupVersion.String(),
+						APIVersion: operatorv1beta1.SchemeGroupVersion.String(),
 					},
 					FieldSelector: "metadata.name=" + tc.dataplane.Name,
 				})
