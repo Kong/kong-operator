@@ -110,7 +110,7 @@ func GenerateValidatingWebhookConfigurationForControlPlane(webhookName string, c
 	if err != nil {
 		return nil, err
 	}
-	if constraint.Check(cpVersion){
+	if constraint.Check(cpVersion) {
 		cfg := webhook.GenerateValidatingWebhookConfigurationForKIC_{{ $suffix }}(webhookName, clientConfig)
 		LabelObjectAsControlPlaneManaged(cfg)
 		return cfg, nil

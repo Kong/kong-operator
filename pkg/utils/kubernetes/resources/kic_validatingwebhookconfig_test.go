@@ -44,19 +44,16 @@ func TestGenerateValidatingWebhookConfigurationForControlPlane(t *testing.T) {
 
 			assert.Equal(t, "webhook", cfg.Name)
 			for _, wh := range cfg.Webhooks {
-				// For each webhook we expect client config to be set.
-				assert.Equal(t, "ns", wh.ClientConfig.Service.Namespace)
-				assert.Equal(t, "svc", wh.ClientConfig.Service.Name)
+				assert.Equal(t, "ns", wh.ClientConfig.Service.Namespace, "each webhook should have service namespace set")
+				assert.Equal(t, "svc", wh.ClientConfig.Service.Name, "each webhook should have service name set")
 
-				// For each webhook we expect rules to be set.
-				assert.NotEmpty(t, wh.Rules)
+				assert.NotEmpty(t, wh.Rules, "each webhook should have rules set")
 
-				// For each webhook rule we expect APIGroups, APIVersions, Resources and Operations to be set.
 				for _, rule := range wh.Rules {
-					assert.NotEmpty(t, rule.APIGroups)
-					assert.NotEmpty(t, rule.APIVersions)
-					assert.NotEmpty(t, rule.Resources)
-					assert.NotEmpty(t, rule.Operations)
+					assert.NotEmpty(t, rule.APIGroups, "each rule should have APIGroups set")
+					assert.NotEmpty(t, rule.APIVersions, "each rule should have APIVersions set")
+					assert.NotEmpty(t, rule.Resources, "each rule should have Resources set")
+					assert.NotEmpty(t, rule.Operations, "each rule should have Operations set")
 				}
 			}
 		})
