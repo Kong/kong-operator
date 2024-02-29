@@ -32,8 +32,8 @@ func New() *CLI {
 	flagSet.StringVar(&deferCfg.ClusterCASecretNamespace, "cluster-ca-secret-namespace", "", "name of the namespace for Secret containing the cluster CA certificate")
 
 	// controllers for standard APIs and features
-	flagSet.BoolVar(&cfg.GatewayControllerEnabled, "enable-controller-gateway", false, "Enable the Gateway controller.")
-	flagSet.BoolVar(&cfg.ControlPlaneControllerEnabled, "enable-controller-controlplane", false, "Enable the ControlPlane controller.")
+	flagSet.BoolVar(&cfg.GatewayControllerEnabled, "enable-controller-gateway", true, "Enable the Gateway controller.")
+	flagSet.BoolVar(&cfg.ControlPlaneControllerEnabled, "enable-controller-controlplane", true, "Enable the ControlPlane controller.")
 	flagSet.BoolVar(&cfg.DataPlaneControllerEnabled, "enable-controller-dataplane", true, "Enable the DataPlane controller.")
 	flagSet.BoolVar(&cfg.DataPlaneBlueGreenControllerEnabled, "enable-controller-dataplane-bluegreen", true, "Enable the DataPlane BlueGreen controller. Mutually exclusive with DataPlane controller.")
 
