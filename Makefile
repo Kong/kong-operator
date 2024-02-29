@@ -58,7 +58,12 @@ envtest: ## Download envtest-setup locally if necessary.
 KIC_ROLE_GENERATOR = $(PROJECT_DIR)/bin/kic-role-generator
 .PHONY: kic-role-generator
 kic-role-generator:
-	( cd ./hack/generators/kic-role-generator && go build -o $(KIC_ROLE_GENERATOR) . )
+	( cd ./hack/generators/kic/role-generator && go build -o $(KIC_ROLE_GENERATOR) . )
+
+KIC_WEBHOOKCONFIG_GENERATOR = $(PROJECT_DIR)/bin/kic-webhook-config-generator
+.PHONY: kic-webhook-config-generator
+kic-webhook-config-generator:
+	( cd ./hack/generators/kic/webhook-config-generator && go build -o $(KIC_WEBHOOKCONFIG_GENERATOR) . )
 
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
 .PHONY: controller-gen
@@ -221,7 +226,7 @@ verify.generators: verify.repo generate verify.diff
 APIS_DIR ?= apis
 
 .PHONY: generate
-generate: controller-gen generate.apis generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration
+generate: controller-gen generate.apis generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config
 
 .PHONY: generate.apis
 generate.apis:
@@ -255,6 +260,10 @@ generate.k8sio-gomod-replace:
 .PHONY: generate.testcases-registration
 generate.testcases-registration:
 	go run ./hack/generators/testcases-registration/main.go
+
+.PHONY: generate.kic-webhook-config
+generate.kic-webhook-config: kic-webhook-config-generator
+	$(KIC_WEBHOOKCONFIG_GENERATOR)
 
 # ------------------------------------------------------------------------------
 # Files generation checks

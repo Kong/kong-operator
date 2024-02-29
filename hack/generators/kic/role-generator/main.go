@@ -3,13 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"slices"
 	"strings"
 
 	"github.com/Masterminds/semver"
-	"github.com/hashicorp/go-retryablehttp"
+	"github.com/kong/gateway-operator/hack/generators/kic"
+	kongsemver "github.com/kong/semver/v4"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/util/yaml"
 
 	kicversions "github.com/kong/gateway-operator/internal/versions"
 )
@@ -57,10 +58,10 @@ func main() {
 
 	exitOnErr(renderDoc(docFileName))
 
-	for versionConstraint, rbacVersion := range kicversions.RoleVersionsForKICVersions {
+	for versionConstraint, rbacVersion := range kicversions.ManifestsVersionsForKICVersions {
 		fmt.Printf("INFO: checking and generating code for constraint %s with version %s\n", versionConstraint, rbacVersion)
 		// ensure the version has the "v" prefix
-		kicVersion := semver.MustParse(rbacVersion).String()
+		kicVersion := rbacVersion.String()
 		if !strings.HasPrefix(kicVersion, "v") {
 			kicVersion = fmt.Sprintf("v%s", kicVersion)
 		}
@@ -72,7 +73,7 @@ func main() {
 				continue
 			}
 			// Here we try to merge all the rules from all known cluster roles.
-			newRole, err := getRoleFromKICRepository(rolePath, kicVersion)
+			newRole, err := getRoleFromKICRepository(rolePath, rbacVersion)
 			exitOnErr(err)
 			clusterRoles = append(clusterRoles, newRole)
 		}
@@ -114,7 +115,7 @@ func main() {
 		))
 	}
 
-	buffer, err := renderHelperTemplate(kicversions.RoleVersionsForKICVersions, "kic-rbac", kicRBACHelperTemplate)
+	buffer, err := renderHelperTemplate(kicversions.ManifestsVersionsForKICVersions, "kic-rbac", kicRBACHelperTemplate)
 	exitOnErr(err)
 	m, err := filesEqual(kicRBACHelperFileName, buffer)
 	exitOnErr(err)
@@ -146,35 +147,18 @@ func versionIsEqualToOrGraterThanV3(vStr string) bool {
 	return c.Check(v)
 }
 
-func getRoleFromKICRepository(filePath, version string) (*rbacv1.ClusterRole, error) {
-	file, err := getFileFromKICRepository(filePath, version)
+func getRoleFromKICRepository(filePath string, version kongsemver.Version) (*rbacv1.ClusterRole, error) {
+	content, err := kic.GetFileFromKICRepositoryForVersion(filePath, version)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get %s from KIC repository: %w", filePath, err)
 	}
-	defer file.Close()
 
-	role, err := parseRole(file)
-	if err != nil {
+	role := &rbacv1.ClusterRole{}
+	if err = yaml.Unmarshal(content, role); err != nil {
 		return nil, fmt.Errorf("failed to parse role (%s) from KIC repository: %w", filePath, err)
 	}
 
 	return role, nil
-}
-
-func getFileFromKICRepository(filePath, version string) (io.ReadCloser, error) {
-	const baseKICRepoURLTemplate = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%s/%s"
-
-	url := fmt.Sprintf(baseKICRepoURLTemplate, version, filePath)
-	resp, err := retryablehttp.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get %s from KIC repository: %w", url, err)
-	}
-
-	if resp.StatusCode == 404 {
-		return nil, fmt.Errorf("%s not found in KIC repository", url)
-	}
-
-	return resp.Body, nil
 }
 
 func generatefile(
