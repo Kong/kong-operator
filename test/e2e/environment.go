@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/certmanager"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
@@ -122,22 +123,26 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 			require.NoError(t, err)
 			builder.WithExistingCluster(cluster)
 			builder.WithAddons(metallb.New())
+			builder.WithAddons(certmanager.New())
 		case string(gke.GKEClusterType):
 			cluster, err := gke.NewFromExistingWithEnv(ctx, clusterName)
 			require.NoError(t, err)
 			builder.WithExistingCluster(cluster)
+			builder.WithAddons(certmanager.New())
 		default:
 			t.Fatal(fmt.Errorf("unknown cluster type: %s", clusterType))
 		}
 	} else {
 		t.Log("no existing cluster found, deploying using Kubernetes In Docker (KIND)")
 		builder.WithAddons(metallb.New())
+		builder.WithAddons(certmanager.New())
 	}
 	if imageLoad != "" {
 		imageLoader, err := loadimage.NewBuilder().WithImage(imageLoad)
 		require.NoError(t, err)
 		t.Logf("loading image: %s", imageLoad)
 		builder.WithAddons(imageLoader.Build())
+		builder.WithAddons(certmanager.New())
 	}
 
 	if len(opt.Image) == 0 {
