@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	"github.com/kong/gateway-operator/controllers/pkg/log"
@@ -60,7 +59,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		// watch ControlPlane objects
-		For(&operatorv1alpha1.ControlPlane{}).
+		For(&operatorv1beta1.ControlPlane{}).
 		// watch for changes in Secrets created by the controlplane controller
 		Owns(&corev1.Secret{}).
 		// watch for changes in ServiceAccounts created by the controlplane controller
@@ -100,7 +99,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger := log.GetLogger(ctx, "controlplane", r.DevelopmentMode)
 
 	log.Trace(logger, "reconciling ControlPlane resource", req)
-	cp := new(operatorv1alpha1.ControlPlane)
+	cp := new(operatorv1beta1.ControlPlane)
 	if err := r.Client.Get(ctx, req.NamespacedName, cp); err != nil {
 		if k8serrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -353,7 +352,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 // validateControlPlane validates the control plane.
-func validateControlPlane(controlPlane *operatorv1alpha1.ControlPlane, devMode bool) error {
+func validateControlPlane(controlPlane *operatorv1beta1.ControlPlane, devMode bool) error {
 	versionValidationOptions := make([]versions.VersionValidationOption, 0)
 	if !devMode {
 		versionValidationOptions = append(versionValidationOptions, versions.IsControlPlaneImageVersionSupported)
@@ -363,8 +362,8 @@ func validateControlPlane(controlPlane *operatorv1alpha1.ControlPlane, devMode b
 }
 
 // patchStatus Patches the resource status only when there are changes in the Conditions
-func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, updated *operatorv1alpha1.ControlPlane) error {
-	current := &operatorv1alpha1.ControlPlane{}
+func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, updated *operatorv1beta1.ControlPlane) error {
+	current := &operatorv1beta1.ControlPlane{}
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)
 	if err != nil && !k8serrors.IsNotFound(err) {

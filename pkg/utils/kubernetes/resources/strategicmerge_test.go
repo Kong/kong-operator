@@ -15,13 +15,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 	makeControlPlaneDeployment := func() (*appsv1.Deployment, error) {
-		cp := &v1alpha1.ControlPlane{
+		cp := &operatorv1beta1.ControlPlane{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "test-namespace",
 				Name:      "cp-1",

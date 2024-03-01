@@ -21,7 +21,7 @@ package fake
 import (
 	"context"
 
-	v1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	v1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	types "k8s.io/apimachinery/pkg/types"
@@ -31,29 +31,29 @@ import (
 
 // FakeControlPlanes implements ControlPlaneInterface
 type FakeControlPlanes struct {
-	Fake *FakeApisV1alpha1
+	Fake *FakeApisV1beta1
 	ns   string
 }
 
-var controlplanesResource = v1alpha1.SchemeGroupVersion.WithResource("controlplanes")
+var controlplanesResource = v1beta1.SchemeGroupVersion.WithResource("controlplanes")
 
-var controlplanesKind = v1alpha1.SchemeGroupVersion.WithKind("ControlPlane")
+var controlplanesKind = v1beta1.SchemeGroupVersion.WithKind("ControlPlane")
 
 // Get takes name of the controlPlane, and returns the corresponding controlPlane object, and an error if there is any.
-func (c *FakeControlPlanes) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ControlPlane, err error) {
+func (c *FakeControlPlanes) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.ControlPlane, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(controlplanesResource, c.ns, name), &v1alpha1.ControlPlane{})
+		Invokes(testing.NewGetAction(controlplanesResource, c.ns, name), &v1beta1.ControlPlane{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.ControlPlane), err
+	return obj.(*v1beta1.ControlPlane), err
 }
 
 // List takes label and field selectors, and returns the list of ControlPlanes that match those selectors.
-func (c *FakeControlPlanes) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ControlPlaneList, err error) {
+func (c *FakeControlPlanes) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ControlPlaneList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(controlplanesResource, controlplanesKind, c.ns, opts), &v1alpha1.ControlPlaneList{})
+		Invokes(testing.NewListAction(controlplanesResource, controlplanesKind, c.ns, opts), &v1beta1.ControlPlaneList{})
 
 	if obj == nil {
 		return nil, err
@@ -63,8 +63,8 @@ func (c *FakeControlPlanes) List(ctx context.Context, opts v1.ListOptions) (resu
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.ControlPlaneList{ListMeta: obj.(*v1alpha1.ControlPlaneList).ListMeta}
-	for _, item := range obj.(*v1alpha1.ControlPlaneList).Items {
+	list := &v1beta1.ControlPlaneList{ListMeta: obj.(*v1beta1.ControlPlaneList).ListMeta}
+	for _, item := range obj.(*v1beta1.ControlPlaneList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -80,43 +80,43 @@ func (c *FakeControlPlanes) Watch(ctx context.Context, opts v1.ListOptions) (wat
 }
 
 // Create takes the representation of a controlPlane and creates it.  Returns the server's representation of the controlPlane, and an error, if there is any.
-func (c *FakeControlPlanes) Create(ctx context.Context, controlPlane *v1alpha1.ControlPlane, opts v1.CreateOptions) (result *v1alpha1.ControlPlane, err error) {
+func (c *FakeControlPlanes) Create(ctx context.Context, controlPlane *v1beta1.ControlPlane, opts v1.CreateOptions) (result *v1beta1.ControlPlane, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(controlplanesResource, c.ns, controlPlane), &v1alpha1.ControlPlane{})
+		Invokes(testing.NewCreateAction(controlplanesResource, c.ns, controlPlane), &v1beta1.ControlPlane{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.ControlPlane), err
+	return obj.(*v1beta1.ControlPlane), err
 }
 
 // Update takes the representation of a controlPlane and updates it. Returns the server's representation of the controlPlane, and an error, if there is any.
-func (c *FakeControlPlanes) Update(ctx context.Context, controlPlane *v1alpha1.ControlPlane, opts v1.UpdateOptions) (result *v1alpha1.ControlPlane, err error) {
+func (c *FakeControlPlanes) Update(ctx context.Context, controlPlane *v1beta1.ControlPlane, opts v1.UpdateOptions) (result *v1beta1.ControlPlane, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(controlplanesResource, c.ns, controlPlane), &v1alpha1.ControlPlane{})
+		Invokes(testing.NewUpdateAction(controlplanesResource, c.ns, controlPlane), &v1beta1.ControlPlane{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.ControlPlane), err
+	return obj.(*v1beta1.ControlPlane), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeControlPlanes) UpdateStatus(ctx context.Context, controlPlane *v1alpha1.ControlPlane, opts v1.UpdateOptions) (*v1alpha1.ControlPlane, error) {
+func (c *FakeControlPlanes) UpdateStatus(ctx context.Context, controlPlane *v1beta1.ControlPlane, opts v1.UpdateOptions) (*v1beta1.ControlPlane, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(controlplanesResource, "status", c.ns, controlPlane), &v1alpha1.ControlPlane{})
+		Invokes(testing.NewUpdateSubresourceAction(controlplanesResource, "status", c.ns, controlPlane), &v1beta1.ControlPlane{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.ControlPlane), err
+	return obj.(*v1beta1.ControlPlane), err
 }
 
 // Delete takes name of the controlPlane and deletes it. Returns an error if one occurs.
 func (c *FakeControlPlanes) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(controlplanesResource, c.ns, name, opts), &v1alpha1.ControlPlane{})
+		Invokes(testing.NewDeleteActionWithOptions(controlplanesResource, c.ns, name, opts), &v1beta1.ControlPlane{})
 
 	return err
 }
@@ -125,17 +125,17 @@ func (c *FakeControlPlanes) Delete(ctx context.Context, name string, opts v1.Del
 func (c *FakeControlPlanes) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionAction(controlplanesResource, c.ns, listOpts)
 
-	_, err := c.Fake.Invokes(action, &v1alpha1.ControlPlaneList{})
+	_, err := c.Fake.Invokes(action, &v1beta1.ControlPlaneList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched controlPlane.
-func (c *FakeControlPlanes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ControlPlane, err error) {
+func (c *FakeControlPlanes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ControlPlane, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(controlplanesResource, c.ns, name, pt, data, subresources...), &v1alpha1.ControlPlane{})
+		Invokes(testing.NewPatchSubresourceAction(controlplanesResource, c.ns, name, pt, data, subresources...), &v1beta1.ControlPlane{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.ControlPlane), err
+	return obj.(*v1beta1.ControlPlane), err
 }

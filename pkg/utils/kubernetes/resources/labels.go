@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 )
@@ -47,7 +46,7 @@ func LabelObjectAsControlPlaneManaged(obj metav1.Object) {
 // GetManagedLabelForOwner returns the managed-by labels for the provided owner.
 func GetManagedLabelForOwner(owner metav1.Object) client.MatchingLabels {
 	switch owner.(type) {
-	case *operatorv1alpha1.ControlPlane:
+	case *operatorv1beta1.ControlPlane:
 		return client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		}
@@ -66,7 +65,7 @@ func GetManagedLabelForOwner(owner metav1.Object) client.MatchingLabels {
 // Removed when https://github.com/Kong/gateway-operator/issues/1101 is closed.
 func GetManagedLabelForOwnerLegacy(owner metav1.Object) client.MatchingLabels {
 	switch owner.(type) {
-	case *operatorv1alpha1.ControlPlane:
+	case *operatorv1beta1.ControlPlane:
 		return client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabelLegacy: consts.ControlPlaneManagedLabelValue,
 		}

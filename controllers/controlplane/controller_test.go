@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -29,10 +28,6 @@ import (
 func init() {
 	if err := gatewayv1.AddToScheme(scheme.Scheme); err != nil {
 		fmt.Println("error while adding gatewayv1 scheme")
-		os.Exit(1)
-	}
-	if err := operatorv1alpha1.AddToScheme(scheme.Scheme); err != nil {
-		fmt.Println("error while adding operatorv1alpha1 scheme")
 		os.Exit(1)
 	}
 	if err := operatorv1beta1.AddToScheme(scheme.Scheme); err != nil {
@@ -57,7 +52,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 	testCases := []struct {
 		name                     string
 		controlplaneReq          reconcile.Request
-		controlplane             *operatorv1alpha1.ControlPlane
+		controlplane             *operatorv1beta1.ControlPlane
 		dataplane                *operatorv1beta1.DataPlane
 		controlplaneSubResources []controllerruntimeclient.Object
 		dataplaneSubResources    []controllerruntimeclient.Object
@@ -72,9 +67,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 					Name:      "test-controlplane",
 				},
 			},
-			controlplane: &operatorv1alpha1.ControlPlane{
+			controlplane: &operatorv1beta1.ControlPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "ControlPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -86,9 +81,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 						string(ControlPlaneFinalizerCleanupClusterRoleBinding),
 					},
 				},
-				Spec: operatorv1alpha1.ControlPlaneSpec{
-					ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.ControlPlaneSpec{
+					ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+						Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 							PodTemplateSpec: &corev1.PodTemplateSpec{
 								Spec: corev1.PodSpec{
 									Containers: []corev1.Container{
@@ -103,7 +98,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 						DataPlane: lo.ToPtr("test-dataplane"),
 					},
 				},
-				Status: operatorv1alpha1.ControlPlaneStatus{
+				Status: operatorv1beta1.ControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:   string(ConditionTypeProvisioned),
@@ -114,7 +109,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			},
 			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "DataPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -253,9 +248,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 					Name:      "test-controlplane",
 				},
 			},
-			controlplane: &operatorv1alpha1.ControlPlane{
+			controlplane: &operatorv1beta1.ControlPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "ControlPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -267,9 +262,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 						string(ControlPlaneFinalizerCleanupClusterRoleBinding),
 					},
 				},
-				Spec: operatorv1alpha1.ControlPlaneSpec{
-					ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.ControlPlaneSpec{
+					ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+						Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 							PodTemplateSpec: &corev1.PodTemplateSpec{
 								Spec: corev1.PodSpec{
 									Containers: []corev1.Container{
@@ -284,7 +279,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 						DataPlane: lo.ToPtr("test-dataplane"),
 					},
 				},
-				Status: operatorv1alpha1.ControlPlaneStatus{
+				Status: operatorv1beta1.ControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:   string(ConditionTypeProvisioned),
@@ -295,7 +290,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			},
 			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "DataPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{

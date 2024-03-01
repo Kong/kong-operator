@@ -146,7 +146,7 @@ func createValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Cl
 							Rule: admissionregistrationv1.Rule{
 								APIGroups:   []string{"gateway-operator.konghq.com"},
 								APIVersions: []string{"v1beta1"},
-								Resources:   []string{"dataplanes"},
+								Resources:   []string{"controlplanes", "dataplanes"},
 							},
 						},
 					},

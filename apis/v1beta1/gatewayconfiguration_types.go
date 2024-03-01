@@ -18,8 +18,6 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 )
 
 func init() {
@@ -52,7 +50,7 @@ type GatewayConfigurationSpec struct {
 	// overrides for ControlPlane resources that will be created for the Gateway.
 	//
 	// +optional
-	ControlPlaneOptions *operatorv1alpha1.ControlPlaneOptions `json:"controlPlaneOptions,omitempty"`
+	ControlPlaneOptions *ControlPlaneOptions `json:"controlPlaneOptions,omitempty"`
 }
 
 // GatewayConfigDataPlaneOptions indicates the specific information needed to

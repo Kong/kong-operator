@@ -28,7 +28,7 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Provisioned')].status
       name: Provisioned
       type: string
-    name: v1alpha1
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: ControlPlane is the Schema for the controlplanes API
@@ -61,7 +61,7 @@ spec:
                 type: string
               deployment:
                 description: |-
-                  DeploymentOptions is a shared type used on objects to indicate that their
+                  ControlPlaneDeploymentOptions is a shared type used on objects to indicate that their
                   configuration results in a Deployment which is managed by the Operator and
                   includes options for managing Deployments such as the the number of replicas
                   or pod options like container image and resource requirements.

@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -30,20 +29,20 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
-	controlplaneClient := GetClients().OperatorClient.ApisV1alpha1().ControlPlanes(namespace.Name)
+	controlplaneClient := GetClients().OperatorClient.ApisV1beta1().ControlPlanes(namespace.Name)
 
 	controlplaneName := types.NamespacedName{
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	controlplane := &operatorv1alpha1.ControlPlane{
+	controlplane := &operatorv1beta1.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: controlplaneName.Namespace,
 			Name:      controlplaneName.Name,
 		},
-		Spec: operatorv1alpha1.ControlPlaneSpec{
-			ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+		Spec: operatorv1beta1.ControlPlaneSpec{
+			ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -146,7 +145,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
-	controlplaneClient := GetClients().OperatorClient.ApisV1alpha1().ControlPlanes(namespace.Name)
+	controlplaneClient := GetClients().OperatorClient.ApisV1beta1().ControlPlanes(namespace.Name)
 
 	// Control plane needs a dataplane to exist to properly function.
 	dataplaneName := types.NamespacedName{
@@ -182,14 +181,14 @@ func TestControlPlaneEssentials(t *testing.T) {
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	controlplane := &operatorv1alpha1.ControlPlane{
+	controlplane := &operatorv1beta1.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: controlplaneName.Namespace,
 			Name:      controlplaneName.Name,
 		},
-		Spec: operatorv1alpha1.ControlPlaneSpec{
-			ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+		Spec: operatorv1beta1.ControlPlaneSpec{
+			ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
@@ -317,11 +316,11 @@ func TestControlPlaneEssentials(t *testing.T) {
 	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasClusterRoleBinding(t, GetCtx(), controlplane, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 	t.Log("verifying controlplane disappears after cluster resources are deleted")
 	require.Eventually(t, func() bool {
-		_, err := GetClients().OperatorClient.ApisV1alpha1().ControlPlanes(controlplaneName.Namespace).Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
+		_, err := GetClients().OperatorClient.ApisV1beta1().ControlPlanes(controlplaneName.Namespace).Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
 		return k8serrors.IsNotFound(err)
 	}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 		func() string {
-			controlplane, err := GetClients().OperatorClient.ApisV1alpha1().ControlPlanes(controlplaneName.Namespace).Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
+			controlplane, err := GetClients().OperatorClient.ApisV1beta1().ControlPlanes(controlplaneName.Namespace).Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
 			if err != nil {
 				return fmt.Sprintf("failed to get controlplane %s, error %v", controlplaneName.Name, err)
 			}
@@ -362,7 +361,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
-	controlplaneClient := GetClients().OperatorClient.ApisV1alpha1().ControlPlanes(namespace.Name)
+	controlplaneClient := GetClients().OperatorClient.ApisV1beta1().ControlPlanes(namespace.Name)
 
 	dataplaneName := types.NamespacedName{
 		Namespace: namespace.Name,
@@ -401,14 +400,14 @@ func TestControlPlaneUpdate(t *testing.T) {
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	controlplane := &operatorv1alpha1.ControlPlane{
+	controlplane := &operatorv1beta1.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: controlplaneName.Namespace,
 			Name:      controlplaneName.Name,
 		},
-		Spec: operatorv1alpha1.ControlPlaneSpec{
-			ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+		Spec: operatorv1beta1.ControlPlaneSpec{
+			ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -503,7 +502,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 
 	t.Run("controlplane is not Ready when the underlying deployment changes state to not Ready", func(t *testing.T) {
 		require.Eventually(t,
-			testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1alpha1.ControlPlane) {
+			testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
 				cp.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Image = "kong/kubernetes-ingress-controller:99999.0.0"
 			}),
 			time.Minute, time.Second,
@@ -518,7 +517,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 
 	t.Run("controlplane gets Ready when the underlying deployment changes state to Ready", func(t *testing.T) {
 		require.Eventually(t,
-			testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1alpha1.ControlPlane) {
+			testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
 				cp.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Image = consts.DefaultControlPlaneImage
 			}),
 			time.Minute, time.Second,
@@ -532,7 +531,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 
 	t.Run("controlplane correctly reconciles when is updated with a ReadinessProbe using a port name", func(t *testing.T) {
 		require.Eventually(t,
-			testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1alpha1.ControlPlane) {
+			testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
 				container := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
 				require.NotNil(t, container)
 				container.ReadinessProbe = k8sresources.GenerateControlPlaneProbe("/readyz", intstr.FromInt(10254))

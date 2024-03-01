@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -33,7 +33,7 @@ type DefaultsArgs struct {
 // SetDefaults updates the environment variables of control plane
 // and returns true if env field is changed.
 func SetDefaults(
-	spec *operatorv1alpha1.ControlPlaneOptions,
+	spec *operatorv1beta1.ControlPlaneOptions,
 	dontOverride map[string]struct{},
 	args DefaultsArgs,
 ) bool {
@@ -169,7 +169,7 @@ func SetDefaults(
 }
 
 // GenerateImage returns the image to use for the control plane.
-func GenerateImage(opts *operatorv1alpha1.ControlPlaneOptions, validators ...versions.VersionValidationOption) (string, error) {
+func GenerateImage(opts *operatorv1beta1.ControlPlaneOptions, validators ...versions.VersionValidationOption) (string, error) {
 	container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
 	if container == nil {
 		// This is just a safeguard against running the operator without an admission webhook
@@ -202,8 +202,8 @@ func GenerateImage(opts *operatorv1alpha1.ControlPlaneOptions, validators ...ver
 // -----------------------------------------------------------------------------
 // ControlPlane - Private Functions - Equality Checks
 // -----------------------------------------------------------------------------
-func SpecDeepEqual(spec1, spec2 *operatorv1alpha1.ControlPlaneOptions, envVarsToIgnore ...string) bool {
-	if !k8scompare.DeploymentOptionsV1AlphaDeepEqual(&spec1.Deployment, &spec2.Deployment, envVarsToIgnore...) ||
+func SpecDeepEqual(spec1, spec2 *operatorv1beta1.ControlPlaneOptions, envVarsToIgnore ...string) bool {
+	if !k8scompare.ControlPlaneDeploymentOptionsDeepEqual(&spec1.Deployment, &spec2.Deployment, envVarsToIgnore...) ||
 		!reflect.DeepEqual(spec1.DataPlane, spec2.DataPlane) {
 		return false
 	}

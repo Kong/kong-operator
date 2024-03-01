@@ -7,24 +7,24 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 func TestMarkAsProvisioned(t *testing.T) {
 	t.Run("controlplane", func(t *testing.T) {
-		createControlPlane := func() *operatorv1alpha1.ControlPlane {
-			return &operatorv1alpha1.ControlPlane{}
+		createControlPlane := func() *operatorv1beta1.ControlPlane {
+			return &operatorv1beta1.ControlPlane{}
 		}
 
 		testCases := []struct {
 			name              string
-			controlplane      func() *operatorv1alpha1.ControlPlane
+			controlplane      func() *operatorv1beta1.ControlPlane
 			expectedCondition metav1.Condition
 		}{
 			{
 				name: "ControlPlane gets a Provisioned Condition with Status True",
-				controlplane: func() *operatorv1alpha1.ControlPlane {
+				controlplane: func() *operatorv1beta1.ControlPlane {
 					return createControlPlane()
 				},
 				expectedCondition: metav1.Condition{
@@ -36,7 +36,7 @@ func TestMarkAsProvisioned(t *testing.T) {
 			},
 			{
 				name: "ControlPlane gets a Provisioned Condition with Status True and correct ObservedGeneration",
-				controlplane: func() *operatorv1alpha1.ControlPlane {
+				controlplane: func() *operatorv1beta1.ControlPlane {
 					cp := createControlPlane()
 					cp.Generation = 3
 					return cp

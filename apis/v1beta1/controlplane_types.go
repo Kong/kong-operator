@@ -14,11 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1beta1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	"github.com/kong/gateway-operator/apis/v1alpha1"
 )
 
 func init() {
@@ -82,7 +85,7 @@ type ControlPlaneSpec struct {
 // deploy and connect a ControlPlane to a DataPlane object.
 type ControlPlaneOptions struct {
 	// +optional
-	Deployment DeploymentOptions `json:"deployment"`
+	Deployment ControlPlaneDeploymentOptions `json:"deployment"`
 
 	// DataPlanes refers to the named DataPlane objects which this ControlPlane
 	// is responsible for. Currently they must be in the same namespace as the
@@ -95,7 +98,28 @@ type ControlPlaneOptions struct {
 	// resources to influence or enhance functionality.
 	//
 	// +optional
-	Extensions []ExtensionRef `json:"extensions,omitempty"`
+	Extensions []v1alpha1.ExtensionRef `json:"extensions,omitempty"`
+}
+
+// ControlPlaneDeploymentOptions is a shared type used on objects to indicate that their
+// configuration results in a Deployment which is managed by the Operator and
+// includes options for managing Deployments such as the the number of replicas
+// or pod options like container image and resource requirements.
+// version, as well as Env variable overrides.
+type ControlPlaneDeploymentOptions struct {
+	// Replicas describes the number of desired pods.
+	// This is a pointer to distinguish between explicit zero and not specified.
+	// This only affects the DataPlane deployments for now, for more details on
+	// ControlPlane scaling please see https://github.com/Kong/gateway-operator/issues/736.
+	//
+	// +optional
+	// +kubebuilder:default=1
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	// PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
+	//
+	// +optional
+	PodTemplateSpec *corev1.PodTemplateSpec `json:"podTemplateSpec,omitempty"`
 }
 
 // ControlPlaneStatus defines the observed state of ControlPlane

@@ -7,13 +7,12 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
-// DeploymentOptionsV1AlphaDeepEqual checks if DeploymentOptions are equal, ignoring some envvars.
-func DeploymentOptionsV1AlphaDeepEqual(o1, o2 *operatorv1alpha1.DeploymentOptions, envVarsToIgnore ...string) bool {
+// ControlPlaneDeploymentOptionsDeepEqual checks if DeploymentOptions are equal, ignoring some envvars.
+func ControlPlaneDeploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.ControlPlaneDeploymentOptions, envVarsToIgnore ...string) bool {
 	if o1 == nil && o2 == nil {
 		return true
 	}

@@ -15,7 +15,6 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -242,7 +241,7 @@ func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 ) {
 	dontOverride := make(map[string]struct{})
 	if gatewayConfig.Spec.ControlPlaneOptions == nil {
-		gatewayConfig.Spec.ControlPlaneOptions = new(operatorv1alpha1.ControlPlaneOptions)
+		gatewayConfig.Spec.ControlPlaneOptions = new(operatorv1beta1.ControlPlaneOptions)
 	}
 	if gatewayConfig.Spec.ControlPlaneOptions.DataPlane == nil ||
 		*gatewayConfig.Spec.ControlPlaneOptions.DataPlane == "" {

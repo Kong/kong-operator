@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/controlplane"
 	"github.com/kong/gateway-operator/internal/annotations"
@@ -106,7 +105,7 @@ func TestIngressEssentials(t *testing.T) {
 	require.NotNil(t, dataplane)
 
 	t.Log("verifying that the ControlPlane becomes provisioned")
-	var controlPlane *operatorv1alpha1.ControlPlane
+	var controlPlane *operatorv1beta1.ControlPlane
 	require.Eventually(t, func() bool {
 		controlplanes, err := gatewayutils.ListControlPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
 		if err != nil {

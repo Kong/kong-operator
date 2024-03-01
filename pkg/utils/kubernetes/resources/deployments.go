@@ -13,7 +13,6 @@ import (
 	pkgapisappsv1 "k8s.io/kubernetes/pkg/apis/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	dputils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -35,7 +34,7 @@ const (
 var terminationGracePeriodSeconds = int64(corev1.DefaultTerminationGracePeriodSeconds)
 
 // GenerateNewDeploymentForControlPlane generates a new Deployment for the ControlPlane
-func GenerateNewDeploymentForControlPlane(controlplane *operatorv1alpha1.ControlPlane,
+func GenerateNewDeploymentForControlPlane(controlplane *operatorv1beta1.ControlPlane,
 	controlplaneImage,
 	serviceAccountName,
 	certSecretName string,

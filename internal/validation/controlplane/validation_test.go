@@ -7,20 +7,20 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 )
 
 func TestValidator_ValidateDeploymentOptions(t *testing.T) {
 	tests := []struct {
 		name    string
 		v       *Validator
-		opts    *operatorv1alpha1.DeploymentOptions
+		opts    *operatorv1beta1.ControlPlaneDeploymentOptions
 		wantErr bool
 	}{
 		{
 			name: "specifying just the image works",
 			v:    &Validator{},
-			opts: &operatorv1alpha1.DeploymentOptions{
+			opts: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -37,7 +37,7 @@ func TestValidator_ValidateDeploymentOptions(t *testing.T) {
 		{
 			name: "not specifying the image is an error",
 			v:    &Validator{},
-			opts: &operatorv1alpha1.DeploymentOptions{
+			opts: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -53,14 +53,14 @@ func TestValidator_ValidateDeploymentOptions(t *testing.T) {
 		{
 			name:    "not specifying the controller container is an error",
 			v:       &Validator{},
-			opts:    &operatorv1alpha1.DeploymentOptions{},
+			opts:    &operatorv1beta1.ControlPlaneDeploymentOptions{},
 			wantErr: true,
 		},
 		{
 			// TODO: https://github.com/Kong/gateway-operator/issues/736
 			name: "using more than 1 replica is an error",
 			v:    &Validator{},
-			opts: &operatorv1alpha1.DeploymentOptions{
+			opts: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				Replicas: lo.ToPtr(int32(2)),
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
@@ -77,7 +77,7 @@ func TestValidator_ValidateDeploymentOptions(t *testing.T) {
 		{
 			name: "volumes and volume mounts can be specified on ControlPlane deployment options",
 			v:    &Validator{},
-			opts: &operatorv1alpha1.DeploymentOptions{
+			opts: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Volumes: []corev1.Volume{

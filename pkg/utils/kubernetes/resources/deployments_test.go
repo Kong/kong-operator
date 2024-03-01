@@ -28,7 +28,7 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 			name: "without resources specified we get the defaults",
 			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "DataPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -49,7 +49,7 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 			name: "with CPU resources specified we get merged resources",
 			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "DataPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -98,7 +98,7 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 			name: "with Memory resources specified",
 			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "DataPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -150,7 +150,7 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 			name: "with Pod labels specified",
 			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "DataPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -199,7 +199,7 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 			name: "with Affinity specified",
 			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "DataPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{

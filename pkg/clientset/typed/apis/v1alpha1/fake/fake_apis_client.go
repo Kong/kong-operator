@@ -28,10 +28,6 @@ type FakeApisV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeApisV1alpha1) ControlPlanes(namespace string) v1alpha1.ControlPlaneInterface {
-	return &FakeControlPlanes{c, namespace}
-}
-
 func (c *FakeApisV1alpha1) DataPlaneMetricsExtensions(namespace string) v1alpha1.DataPlaneMetricsExtensionInterface {
 	return &FakeDataPlaneMetricsExtensions{c, namespace}
 }

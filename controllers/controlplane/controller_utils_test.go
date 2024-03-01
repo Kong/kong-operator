@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -19,21 +20,21 @@ import (
 func TestSetControlPlaneDefaults(t *testing.T) {
 	testCases := []struct {
 		name                        string
-		spec                        *operatorv1alpha1.ControlPlaneOptions
+		spec                        *operatorv1beta1.ControlPlaneOptions
 		namespace                   string
 		dataplaneIngressServiceName string
 		dataplaneAdminServiceName   string
 		changed                     bool
 		anonymousReportsEnabled     bool
-		newSpec                     *operatorv1alpha1.ControlPlaneOptions
+		newSpec                     *operatorv1beta1.ControlPlaneOptions
 	}{
 		{
 			name:                    "no_envs_no_dataplane_no_anonymous_reports",
-			spec:                    &operatorv1alpha1.ControlPlaneOptions{},
+			spec:                    &operatorv1beta1.ControlPlaneOptions{},
 			changed:                 true,
 			anonymousReportsEnabled: false,
-			newSpec: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			newSpec: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -73,11 +74,11 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		},
 		{
 			name:                    "no_envs_no_dataplane_with_anonymous_reports",
-			spec:                    &operatorv1alpha1.ControlPlaneOptions{},
+			spec:                    &operatorv1beta1.ControlPlaneOptions{},
 			changed:                 true,
 			anonymousReportsEnabled: true,
-			newSpec: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			newSpec: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -117,14 +118,14 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		},
 		{
 			name:                        "no_envs_has_dataplane_no_anonymous_reports",
-			spec:                        &operatorv1alpha1.ControlPlaneOptions{},
+			spec:                        &operatorv1beta1.ControlPlaneOptions{},
 			changed:                     true,
 			anonymousReportsEnabled:     false,
 			namespace:                   "test-ns",
 			dataplaneIngressServiceName: "kong-proxy",
 			dataplaneAdminServiceName:   "kong-admin",
-			newSpec: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			newSpec: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -196,14 +197,14 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		},
 		{
 			name:                        "no_envs_has_dataplane_with_anonymous_reports",
-			spec:                        &operatorv1alpha1.ControlPlaneOptions{},
+			spec:                        &operatorv1beta1.ControlPlaneOptions{},
 			changed:                     true,
 			anonymousReportsEnabled:     true,
 			namespace:                   "test-ns",
 			dataplaneIngressServiceName: "kong-proxy",
 			dataplaneAdminServiceName:   "kong-admin",
-			newSpec: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			newSpec: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -275,8 +276,8 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		},
 		{
 			name: "has_envs_and_dataplane_no_anonymous_reports",
-			spec: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			spec: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -304,8 +305,8 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			namespace:                   "test-ns",
 			dataplaneIngressServiceName: "kong-proxy",
 			dataplaneAdminServiceName:   "kong-admin",
-			newSpec: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			newSpec: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -370,8 +371,8 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		},
 		{
 			name: "has_dataplane_env_unchanged_with_anonymous_reports",
-			spec: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			spec: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -445,8 +446,8 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 			dataplaneAdminServiceName:   "kong-admin",
 			changed:                     false,
 			anonymousReportsEnabled:     true,
-			newSpec: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			newSpec: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -555,15 +556,15 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 func TestControlPlaneSpecDeepEqual(t *testing.T) {
 	testCases := []struct {
 		name            string
-		spec1           *operatorv1alpha1.ControlPlaneOptions
-		spec2           *operatorv1alpha1.ControlPlaneOptions
+		spec1           *operatorv1beta1.ControlPlaneOptions
+		spec2           *operatorv1beta1.ControlPlaneOptions
 		envVarsToIgnore []string
 		equal           bool
 	}{
 		{
 			name: "matching env vars, no ignored vars",
-			spec1: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			spec1: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -589,8 +590,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			spec2: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			spec2: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -620,8 +621,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 		},
 		{
 			name: "matching env vars, with ignored vars",
-			spec1: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			spec1: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -651,8 +652,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			spec2: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			spec2: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -689,8 +690,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 		},
 		{
 			name: "not matching env vars, no ignored vars",
-			spec1: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			spec1: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -720,8 +721,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			spec2: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			spec2: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -751,8 +752,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 		},
 		{
 			name: "not matching env vars, with ignored vars",
-			spec1: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			spec1: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -778,8 +779,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			spec2: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			spec2: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -808,8 +809,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 		},
 		{
 			name: "not matching Extensions",
-			spec1: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			spec1: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -831,8 +832,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			spec2: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			spec2: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -865,8 +866,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 		},
 		{
 			name: "matching Extensions",
-			spec1: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			spec1: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -885,8 +886,8 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			spec2: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			spec2: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{

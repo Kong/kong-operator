@@ -210,9 +210,7 @@ func waitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Cli
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			_, errV1beta1 := operatorClient.ApisV1beta1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{})
-			_, errV1alpha1 := operatorClient.ApisV1alpha1().ControlPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{})
-			if errV1beta1 == nil && errV1alpha1 == nil {
+			if _, err := operatorClient.ApisV1beta1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); err == nil {
 				ready = true
 			}
 		}

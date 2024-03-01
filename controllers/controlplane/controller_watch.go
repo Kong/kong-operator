@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/index"
@@ -56,7 +55,7 @@ func (r *Reconciler) clusterRoleBindingHasControlPlaneOwner(obj client.Object) b
 }
 
 func (r *Reconciler) objHasControlPlaneOwner(ctx context.Context, obj client.Object) bool {
-	controlplaneList := &operatorv1alpha1.ControlPlaneList{}
+	controlplaneList := &operatorv1beta1.ControlPlaneList{}
 	if err := r.Client.List(ctx, controlplaneList); err != nil {
 		// filtering here is just an optimization. If we fail here it's most likely because of some failure
 		// of the Kubernetes API and it's technically better to enqueue the object
@@ -107,7 +106,7 @@ func (r *Reconciler) getControlPlaneForClusterRoleBinding(ctx context.Context, o
 }
 
 func (r *Reconciler) getControlPlaneRequestFromRefUID(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
-	controlplanes := &operatorv1alpha1.ControlPlaneList{}
+	controlplanes := &operatorv1beta1.ControlPlaneList{}
 	if err := r.Client.List(ctx, controlplanes); err != nil {
 		log.FromContext(ctx).Error(err, "could not list controlplanes in map func")
 		return
@@ -172,7 +171,7 @@ func (r *Reconciler) getControlPlanesFromDataPlane(ctx context.Context, obj clie
 		return
 	}
 
-	controlPlaneList := &operatorv1alpha1.ControlPlaneList{}
+	controlPlaneList := &operatorv1beta1.ControlPlaneList{}
 	if err := r.Client.List(ctx, controlPlaneList,
 		client.InNamespace(dataplane.Namespace),
 		client.MatchingFields{

@@ -38,7 +38,7 @@ func GenerateNewValidatingWebhookConfiguration(serviceNamespace, serviceName, we
 					{
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{"gateway-operator.konghq.com"},
-							APIVersions: []string{"v1alpha1"},
+							APIVersions: []string{"v1beta1"},
 							Resources:   []string{"controlplanes"},
 							Scope:       &namespacedScope,
 						},

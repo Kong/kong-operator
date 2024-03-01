@@ -10,3 +10,12 @@ func DataPlaneGVR() schema.GroupVersionResource {
 		Resource: "dataplanes",
 	}
 }
+
+// ControlPlaneGVR returns current package ControlPlane GVR.
+func ControlPlaneGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{
+		Group:    SchemeGroupVersion.Group,
+		Version:  SchemeGroupVersion.Version,
+		Resource: "controlplanes",
+	}
+}

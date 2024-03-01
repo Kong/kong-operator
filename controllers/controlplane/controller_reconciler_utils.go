@@ -17,7 +17,6 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	"github.com/kong/gateway-operator/controllers/pkg/log"
@@ -40,7 +39,7 @@ const numReplicasWhenNoDataPlane = 0
 // -----------------------------------------------------------------------------
 
 func (r *Reconciler) ensureIsMarkedScheduled(
-	controlplane *operatorv1alpha1.ControlPlane,
+	controlplane *operatorv1beta1.ControlPlane,
 ) bool {
 	_, present := k8sutils.GetCondition(ConditionTypeProvisioned, controlplane)
 	if !present {
@@ -62,7 +61,7 @@ func (r *Reconciler) ensureIsMarkedScheduled(
 // to carry on with the controlplane deployments reconciliation.
 // Information about the missing dataplane is stored in the controlplane status.
 func (r *Reconciler) ensureDataPlaneStatus(
-	controlplane *operatorv1alpha1.ControlPlane,
+	controlplane *operatorv1beta1.ControlPlane,
 	dataplane *operatorv1beta1.DataPlane,
 ) (dataplaneIsSet bool) {
 	dataplaneIsSet = controlplane.Spec.DataPlane != nil && *controlplane.Spec.DataPlane == dataplane.Name
@@ -94,7 +93,7 @@ func (r *Reconciler) ensureDataPlaneStatus(
 
 func (r *Reconciler) ensureDataPlaneConfiguration(
 	ctx context.Context,
-	controlplane *operatorv1alpha1.ControlPlane,
+	controlplane *operatorv1beta1.ControlPlane,
 	dataplaneServiceName string,
 ) error {
 	changed := setControlPlaneEnvOnDataPlaneChange(
@@ -112,7 +111,7 @@ func (r *Reconciler) ensureDataPlaneConfiguration(
 }
 
 func setControlPlaneEnvOnDataPlaneChange(
-	spec *operatorv1alpha1.ControlPlaneOptions,
+	spec *operatorv1beta1.ControlPlaneOptions,
 	namespace string,
 	dataplaneServiceName string,
 ) bool {
@@ -146,7 +145,7 @@ func setControlPlaneEnvOnDataPlaneChange(
 func (r *Reconciler) ensureDeployment(
 	ctx context.Context,
 	logger logr.Logger,
-	controlPlane *operatorv1alpha1.ControlPlane,
+	controlPlane *operatorv1beta1.ControlPlane,
 	serviceAccountName, certSecretName string,
 ) (op.CreatedUpdatedOrNoop, *appsv1.Deployment, error) {
 	dataplaneIsSet := controlPlane.Spec.DataPlane != nil && *controlPlane.Spec.DataPlane != ""
@@ -239,7 +238,7 @@ func (r *Reconciler) ensureDeployment(
 
 func (r *Reconciler) ensureServiceAccount(
 	ctx context.Context,
-	controlplane *operatorv1alpha1.ControlPlane,
+	controlplane *operatorv1beta1.ControlPlane,
 ) (createdOrModified bool, sa *corev1.ServiceAccount, err error) {
 	serviceAccounts, err := k8sutils.ListServiceAccountsForOwner(
 		ctx,
@@ -283,7 +282,7 @@ func (r *Reconciler) ensureServiceAccount(
 
 func (r *Reconciler) ensureClusterRole(
 	ctx context.Context,
-	controlplane *operatorv1alpha1.ControlPlane,
+	controlplane *operatorv1beta1.ControlPlane,
 ) (createdOrUpdated bool, cr *rbacv1.ClusterRole, err error) {
 	clusterRoles, err := k8sutils.ListClusterRolesForOwner(
 		ctx,
@@ -332,7 +331,7 @@ func (r *Reconciler) ensureClusterRole(
 
 func (r *Reconciler) ensureClusterRoleBinding(
 	ctx context.Context,
-	controlplane *operatorv1alpha1.ControlPlane,
+	controlplane *operatorv1beta1.ControlPlane,
 	serviceAccountName string,
 	clusterRoleName string,
 ) (createdOrUpdate bool, crb *rbacv1.ClusterRoleBinding, err error) {
@@ -393,7 +392,7 @@ func (r *Reconciler) ensureClusterRoleBinding(
 
 func (r *Reconciler) ensureCertificate(
 	ctx context.Context,
-	controlplane *operatorv1alpha1.ControlPlane,
+	controlplane *operatorv1beta1.ControlPlane,
 ) (op.CreatedUpdatedOrNoop, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
@@ -419,7 +418,7 @@ func (r *Reconciler) ensureCertificate(
 // returns nil if all of owned ClusterRoles successfully deleted (ok if no owned CRs or NotFound on deleting CRs).
 func (r *Reconciler) ensureOwnedClusterRolesDeleted(
 	ctx context.Context,
-	controlplane *operatorv1alpha1.ControlPlane,
+	controlplane *operatorv1beta1.ControlPlane,
 ) (deletions bool, err error) {
 	clusterRoles, err := k8sutils.ListClusterRolesForOwner(
 		ctx, r.Client,
@@ -452,7 +451,7 @@ func (r *Reconciler) ensureOwnedClusterRolesDeleted(
 // returns nil if all of owned ClusterRoleBindings successfully deleted (ok if no owned CRBs or NotFound on deleting CRBs).
 func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 	ctx context.Context,
-	controlplane *operatorv1alpha1.ControlPlane,
+	controlplane *operatorv1beta1.ControlPlane,
 ) (deletions bool, err error) {
 	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(
 		ctx, r.Client,

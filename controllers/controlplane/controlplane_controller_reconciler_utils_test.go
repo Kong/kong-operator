@@ -16,7 +16,7 @@ import (
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
@@ -45,7 +45,7 @@ func TestEnsureClusterRole(t *testing.T) {
 
 	testCases := []struct {
 		Name                string
-		controlplane        operatorv1alpha1.ControlPlane
+		controlplane        operatorv1beta1.ControlPlane
 		existingClusterRole *rbacv1.ClusterRole
 		createdorUpdated    bool
 		expectedClusterRole rbacv1.ClusterRole
@@ -53,9 +53,9 @@ func TestEnsureClusterRole(t *testing.T) {
 	}{
 		{
 			Name: "no existing clusterrole",
-			controlplane: operatorv1alpha1.ControlPlane{
+			controlplane: operatorv1beta1.ControlPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "ControlPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -63,9 +63,9 @@ func TestEnsureClusterRole(t *testing.T) {
 					Namespace: "test-namespace",
 					UID:       types.UID(uuid.NewString()),
 				},
-				Spec: operatorv1alpha1.ControlPlaneSpec{
-					ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.ControlPlaneSpec{
+					ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+						Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 							PodTemplateSpec: &corev1.PodTemplateSpec{
 								Spec: corev1.PodSpec{
 									Containers: []corev1.Container{
@@ -85,9 +85,9 @@ func TestEnsureClusterRole(t *testing.T) {
 		},
 		{
 			Name: "up to date clusterrole",
-			controlplane: operatorv1alpha1.ControlPlane{
+			controlplane: operatorv1beta1.ControlPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "ControlPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -95,9 +95,9 @@ func TestEnsureClusterRole(t *testing.T) {
 					Namespace: "test-namespace",
 					UID:       types.UID(uuid.NewString()),
 				},
-				Spec: operatorv1alpha1.ControlPlaneSpec{
-					ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.ControlPlaneSpec{
+					ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+						Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 							PodTemplateSpec: &corev1.PodTemplateSpec{
 								Spec: corev1.PodSpec{
 									Containers: []corev1.Container{
@@ -117,9 +117,9 @@ func TestEnsureClusterRole(t *testing.T) {
 		},
 		{
 			Name: "out of date clusterrole, object meta",
-			controlplane: operatorv1alpha1.ControlPlane{
+			controlplane: operatorv1beta1.ControlPlane{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1alpha1",
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "ControlPlane",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -127,9 +127,9 @@ func TestEnsureClusterRole(t *testing.T) {
 					Namespace: "test-namespace",
 					UID:       types.UID(uuid.NewString()),
 				},
-				Spec: operatorv1alpha1.ControlPlaneSpec{
-					ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
-						Deployment: operatorv1alpha1.DeploymentOptions{
+				Spec: operatorv1beta1.ControlPlaneSpec{
+					ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+						Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 							PodTemplateSpec: &corev1.PodTemplateSpec{
 								Spec: corev1.PodSpec{
 									Containers: []corev1.Container{
@@ -193,9 +193,9 @@ func TestEnsureClusterRoleBinding(t *testing.T) {
 		testClusterRoleBinding = "test-crb"
 	)
 
-	controlPlane := &operatorv1alpha1.ControlPlane{
+	controlPlane := &operatorv1beta1.ControlPlane{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "gateway-operator.konghq.com/v1alpha1",
+			APIVersion: "gateway-operator.konghq.com/v1beta1",
 			Kind:       "ControlPlane",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -203,9 +203,9 @@ func TestEnsureClusterRoleBinding(t *testing.T) {
 			Namespace: testNamespace,
 			UID:       types.UID(uuid.NewString()),
 		},
-		Spec: operatorv1alpha1.ControlPlaneSpec{
-			ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+		Spec: operatorv1beta1.ControlPlaneSpec{
+			ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{

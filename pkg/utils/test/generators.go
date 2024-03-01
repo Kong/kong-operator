@@ -8,7 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -60,8 +59,8 @@ func GenerateGatewayConfiguration(gatewayConfigurationNSN types.NamespacedName) 
 			Name:      gatewayConfigurationNSN.Name,
 		},
 		Spec: operatorv1beta1.GatewayConfigurationSpec{
-			ControlPlaneOptions: &operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{

@@ -6,7 +6,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 )
 
 const (
@@ -17,8 +17,8 @@ const (
 // IndexDataPlaneNameOnControlPlane indexes the ControlPlane .spec.dataplaneName field
 // on the "dataplane" key.
 func IndexDataPlaneNameOnControlPlane(c cache.Cache) error {
-	return c.IndexField(context.Background(), &operatorv1alpha1.ControlPlane{}, DataPlaneNameIndex, func(o client.Object) []string {
-		controlPlane, ok := o.(*operatorv1alpha1.ControlPlane)
+	return c.IndexField(context.Background(), &operatorv1beta1.ControlPlane{}, DataPlaneNameIndex, func(o client.Object) []string {
+		controlPlane, ok := o.(*operatorv1beta1.ControlPlane)
 		if !ok {
 			return []string{}
 		}

@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/internal/validation/dataplane"
 )
@@ -25,7 +24,7 @@ var (
 
 // Validator is the interface of validating
 type Validator interface {
-	ValidateControlPlane(ctx context.Context, controlplane operatorv1alpha1.ControlPlane) error
+	ValidateControlPlane(ctx context.Context, controlplane operatorv1beta1.ControlPlane) error
 	ValidateDataPlane(ctx context.Context, dataplane operatorv1beta1.DataPlane, old operatorv1beta1.DataPlane, op admissionv1.Operation) error
 }
 
@@ -86,8 +85,8 @@ func (h *RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 var (
 	controlPlaneGVResource = metav1.GroupVersionResource{
-		Group:    operatorv1alpha1.SchemeGroupVersion.Group,
-		Version:  operatorv1alpha1.SchemeGroupVersion.Version,
+		Group:    operatorv1beta1.SchemeGroupVersion.Group,
+		Version:  operatorv1beta1.SchemeGroupVersion.Version,
 		Resource: "controlplanes",
 	}
 	dataPlaneGVResource = metav1.GroupVersionResource{
@@ -121,7 +120,7 @@ func (h *RequestHandler) handleValidation(ctx context.Context, req *admissionv1.
 
 	switch req.Resource {
 	case controlPlaneGVResource:
-		controlPlane := operatorv1alpha1.ControlPlane{}
+		controlPlane := operatorv1beta1.ControlPlane{}
 		if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
 			_, _, err := deserializer.Decode(req.Object.Raw, nil, &controlPlane)
 			if err != nil {

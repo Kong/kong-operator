@@ -28,6 +28,7 @@ import (
 
 type ApisV1beta1Interface interface {
 	RESTClient() rest.Interface
+	ControlPlanesGetter
 	DataPlanesGetter
 	GatewayConfigurationsGetter
 }
@@ -35,6 +36,10 @@ type ApisV1beta1Interface interface {
 // ApisV1beta1Client is used to interact with features provided by the apis group.
 type ApisV1beta1Client struct {
 	restClient rest.Interface
+}
+
+func (c *ApisV1beta1Client) ControlPlanes(namespace string) ControlPlaneInterface {
+	return newControlPlanes(c, namespace)
 }
 
 func (c *ApisV1beta1Client) DataPlanes(namespace string) DataPlaneInterface {

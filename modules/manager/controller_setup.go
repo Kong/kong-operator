@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/controlplane"
 	"github.com/kong/gateway-operator/controllers/dataplane"
@@ -88,7 +87,7 @@ func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 		{
 			Condition: c.GatewayControllerEnabled || c.ControlPlaneControllerEnabled,
 			GVRs: []schema.GroupVersionResource{
-				operatorv1alpha1.ControlPlaneGVR(),
+				operatorv1beta1.ControlPlaneGVR(),
 			},
 		},
 		{

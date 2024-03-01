@@ -23,7 +23,6 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	controlplanecontroller "github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	"github.com/kong/gateway-operator/controllers/pkg/log"
@@ -61,7 +60,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// watch for changes in dataplanes created by the gateway controller
 		Owns(&operatorv1beta1.DataPlane{}).
 		// watch for changes in controlplanes created by the gateway controller
-		Owns(&operatorv1alpha1.ControlPlane{}).
+		Owns(&operatorv1beta1.ControlPlane{}).
 		// watch for changes in networkpolicies created by the gateway controller
 		Owns(&networkingv1.NetworkPolicy{}).
 		// watch for updates to GatewayConfigurations, if any configuration targets a
@@ -461,7 +460,7 @@ func (r *Reconciler) provisionControlPlane(
 	dataplane *operatorv1beta1.DataPlane,
 	ingressService corev1.Service,
 	adminService corev1.Service,
-) *operatorv1alpha1.ControlPlane {
+) *operatorv1beta1.ControlPlane {
 	logger = logger.WithName("controlplaneProvisioning")
 
 	log.Trace(logger, "looking for associated controlplanes", gateway)
@@ -475,7 +474,7 @@ func (r *Reconciler) provisionControlPlane(
 		return nil
 	}
 
-	var controlPlane *operatorv1alpha1.ControlPlane
+	var controlPlane *operatorv1beta1.ControlPlane
 
 	count := len(controlplanes)
 	switch {
@@ -512,7 +511,7 @@ func (r *Reconciler) provisionControlPlane(
 	log.Trace(logger, "ensuring controlplane config is up to date", gateway)
 	// compare deployment option of controlplane with controlplane deployment option of gatewayconfiguration.
 	// if not configured in gatewayconfiguration, compare deployment option of controlplane with an empty one.
-	expectedControlPlaneOptions := &operatorv1alpha1.ControlPlaneOptions{}
+	expectedControlPlaneOptions := &operatorv1beta1.ControlPlaneOptions{}
 	if gatewayConfig.Spec.ControlPlaneOptions != nil {
 		expectedControlPlaneOptions = gatewayConfig.Spec.ControlPlaneOptions
 	}
@@ -554,7 +553,7 @@ func (r *Reconciler) provisionControlPlane(
 
 // setControlPlaneOptionsDefaults sets the default ControlPlane options not overriding
 // what's been provided only filling in those fields that were unset or empty.
-func setControlPlaneOptionsDefaults(opts *operatorv1alpha1.ControlPlaneOptions) {
+func setControlPlaneOptionsDefaults(opts *operatorv1beta1.ControlPlaneOptions) {
 	if opts.Deployment.PodTemplateSpec == nil {
 		opts.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}

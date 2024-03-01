@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/pkg/log"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
@@ -21,7 +20,7 @@ import (
 // between the provided existingResource and the provided oldExistingResource
 // is non empty.
 func ApplyPatchIfNonEmpty[
-	OwnerT *operatorv1beta1.DataPlane | *operatorv1alpha1.ControlPlane,
+	OwnerT *operatorv1beta1.DataPlane | *operatorv1beta1.ControlPlane,
 	ResourceT interface {
 		*appsv1.Deployment | *autoscalingv2.HorizontalPodAutoscaler
 		client.Object

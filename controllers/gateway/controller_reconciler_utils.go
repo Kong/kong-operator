@@ -22,7 +22,6 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -72,12 +71,12 @@ func (r *Reconciler) createControlPlane(
 	gatewayConfig *operatorv1beta1.GatewayConfiguration,
 	dataplaneName string,
 ) error {
-	controlplane := &operatorv1alpha1.ControlPlane{
+	controlplane := &operatorv1beta1.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    gateway.Namespace,
 			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)),
 		},
-		Spec: operatorv1alpha1.ControlPlaneSpec{
+		Spec: operatorv1beta1.ControlPlaneSpec{
 			GatewayClass: (*gatewayv1.ObjectName)(&gatewayClass.Name),
 		},
 	}
@@ -250,7 +249,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
 	dataplane *operatorv1beta1.DataPlane,
-	controlplane *operatorv1alpha1.ControlPlane,
+	controlplane *operatorv1beta1.ControlPlane,
 ) (createdOrUpdate bool, err error) {
 	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway)
 	if err != nil {
@@ -295,7 +294,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 func generateDataPlaneNetworkPolicy(
 	namespace string,
 	dataplane *operatorv1beta1.DataPlane,
-	controlplane *operatorv1alpha1.ControlPlane,
+	controlplane *operatorv1beta1.ControlPlane,
 ) (*networkingv1.NetworkPolicy, error) {
 	var (
 		protocolTCP     = corev1.ProtocolTCP

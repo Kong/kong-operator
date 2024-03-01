@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 )
 
 func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
@@ -19,7 +19,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 
 	testcases := []struct {
 		name         string
-		o1, o2       *operatorv1alpha1.DeploymentOptions
+		o1, o2       *operatorv1beta1.ControlPlaneDeploymentOptions
 		envsToIgnore []string
 		expect       bool
 	}{
@@ -29,13 +29,13 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 		},
 		{
 			name:   "empty values are equal",
-			o1:     &operatorv1alpha1.DeploymentOptions{},
-			o2:     &operatorv1alpha1.DeploymentOptions{},
+			o1:     &operatorv1beta1.ControlPlaneDeploymentOptions{},
+			o2:     &operatorv1beta1.ControlPlaneDeploymentOptions{},
 			expect: true,
 		},
 		{
 			name: "different resource requirements implies different deployment options",
-			o1: &operatorv1alpha1.DeploymentOptions{
+			o1: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -56,7 +56,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			o2: &operatorv1alpha1.DeploymentOptions{
+			o2: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -81,7 +81,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 		},
 		{
 			name: "different pod labels implies different deployment options",
-			o1: &operatorv1alpha1.DeploymentOptions{
+			o1: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
@@ -107,7 +107,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			o2: &operatorv1alpha1.DeploymentOptions{
+			o2: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -132,7 +132,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 		},
 		{
 			name: "different image implies different deployment options",
-			o1: &operatorv1alpha1.DeploymentOptions{
+			o1: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -154,7 +154,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			o2: &operatorv1alpha1.DeploymentOptions{
+			o2: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -179,7 +179,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 		},
 		{
 			name: "different env var implies different deployment options",
-			o1: &operatorv1alpha1.DeploymentOptions{
+			o1: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -207,7 +207,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			o2: &operatorv1alpha1.DeploymentOptions{
+			o2: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -232,7 +232,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 		},
 		{
 			name: "the same",
-			o1: &operatorv1alpha1.DeploymentOptions{
+			o1: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
@@ -265,7 +265,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			o2: &operatorv1alpha1.DeploymentOptions{
+			o2: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
@@ -302,7 +302,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 		},
 		{
 			name: "different replicas implies different deployment options",
-			o1: &operatorv1alpha1.DeploymentOptions{
+			o1: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				Replicas: lo.ToPtr(int32(1)),
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
@@ -324,7 +324,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			o2: &operatorv1alpha1.DeploymentOptions{
+			o2: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				Replicas: lo.ToPtr(int32(3)),
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
@@ -350,7 +350,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 		},
 		{
 			name: "different env vars but included in the vars to ignore implies equal opts",
-			o1: &operatorv1alpha1.DeploymentOptions{
+			o1: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -367,7 +367,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			o2: &operatorv1alpha1.DeploymentOptions{
+			o2: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -383,7 +383,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 		},
 		{
 			name: "different env vars with 1 one them included in the vars to ignore implies unequal opts",
-			o1: &operatorv1alpha1.DeploymentOptions{
+			o1: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -404,7 +404,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			o2: &operatorv1alpha1.DeploymentOptions{
+			o2: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -420,7 +420,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 		},
 		{
 			name: "different labels unequal opts",
-			o1: &operatorv1alpha1.DeploymentOptions{
+			o1: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
@@ -442,7 +442,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 					},
 				},
 			},
-			o2: &operatorv1alpha1.DeploymentOptions{
+			o2: &operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
@@ -473,7 +473,7 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			ret := DeploymentOptionsV1AlphaDeepEqual(tc.o1, tc.o2, tc.envsToIgnore...)
+			ret := ControlPlaneDeploymentOptionsDeepEqual(tc.o1, tc.o2, tc.envsToIgnore...)
 			if tc.expect {
 				require.True(t, ret)
 			} else {

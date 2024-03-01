@@ -8,7 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -60,12 +59,12 @@ func ListControlPlanesForGateway(
 	ctx context.Context,
 	c client.Client,
 	gateway *gwtypes.Gateway,
-) ([]operatorv1alpha1.ControlPlane, error) {
+) ([]operatorv1beta1.ControlPlane, error) {
 	if gateway.Namespace == "" {
 		return nil, fmt.Errorf("can't list dataplanes for gateway: gateway resource was missing namespace")
 	}
 
-	controlplaneList := &operatorv1alpha1.ControlPlaneList{}
+	controlplaneList := &operatorv1beta1.ControlPlaneList{}
 
 	err := c.List(
 		ctx,
@@ -77,7 +76,7 @@ func ListControlPlanesForGateway(
 		return nil, err
 	}
 
-	controlplanes := make([]operatorv1alpha1.ControlPlane, 0)
+	controlplanes := make([]operatorv1beta1.ControlPlane, 0)
 	for _, controlplane := range controlplaneList.Items {
 		controlplane := controlplane
 		if k8sutils.IsOwnedByRefUID(&controlplane, gateway.UID) {
@@ -92,7 +91,7 @@ func ListControlPlanesForGateway(
 func GetDataPlaneForControlPlane(
 	ctx context.Context,
 	c client.Client,
-	controlplane *operatorv1alpha1.ControlPlane,
+	controlplane *operatorv1beta1.ControlPlane,
 ) (*operatorv1beta1.DataPlane, error) {
 	if controlplane.Spec.DataPlane == nil || *controlplane.Spec.DataPlane == "" {
 		return nil, fmt.Errorf("%w, controlplane = %s/%s", operatorerrors.ErrDataPlaneNotSet, controlplane.Namespace, controlplane.Name)

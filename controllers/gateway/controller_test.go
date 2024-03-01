@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -33,10 +32,6 @@ import (
 func init() {
 	if err := gatewayv1.AddToScheme(scheme.Scheme); err != nil {
 		fmt.Println("error while adding gatewayv1 scheme")
-		os.Exit(1)
-	}
-	if err := operatorv1alpha1.AddToScheme(scheme.Scheme); err != nil {
-		fmt.Println("error while adding operatorv1alpha1 scheme")
 		os.Exit(1)
 	}
 	if err := operatorv1beta1.AddToScheme(scheme.Scheme); err != nil {
@@ -111,18 +106,18 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 						},
 					},
 				},
-				&operatorv1alpha1.ControlPlane{
+				&operatorv1beta1.ControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-controlplane",
 						Namespace: "test-namespace",
 						UID:       types.UID(uuid.NewString()),
 					},
-					Spec: operatorv1alpha1.ControlPlaneSpec{
-						ControlPlaneOptions: operatorv1alpha1.ControlPlaneOptions{
+					Spec: operatorv1beta1.ControlPlaneSpec{
+						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
 							DataPlane: lo.ToPtr("test-dataplane"),
 						},
 					},
-					Status: operatorv1alpha1.ControlPlaneStatus{
+					Status: operatorv1beta1.ControlPlaneStatus{
 						Conditions: []metav1.Condition{
 							k8sutils.NewCondition(k8sutils.ReadyType, metav1.ConditionTrue, k8sutils.ResourceReadyReason, ""),
 						},
@@ -322,7 +317,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					}
 				}
 				if gatewaySubResource.GetName() == "test-controlplane" {
-					controlPlane := gatewaySubResource.(*operatorv1alpha1.ControlPlane)
+					controlPlane := gatewaySubResource.(*operatorv1beta1.ControlPlane)
 					_ = controlplane.SetDefaults(&controlPlane.Spec.ControlPlaneOptions, map[string]struct{}{}, controlplane.DefaultsArgs{
 						Namespace:                   "test-namespace",
 						DataPlaneIngressServiceName: "test-ingress-service",
@@ -354,14 +349,14 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 func Test_setControlPlaneOptionsDefaults(t *testing.T) {
 	testcases := []struct {
 		name     string
-		input    operatorv1alpha1.ControlPlaneOptions
-		expected operatorv1alpha1.ControlPlaneOptions
+		input    operatorv1beta1.ControlPlaneOptions
+		expected operatorv1beta1.ControlPlaneOptions
 	}{
 		{
 			name:  "no providing any options",
-			input: operatorv1alpha1.ControlPlaneOptions{},
-			expected: operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			input: operatorv1beta1.ControlPlaneOptions{},
+			expected: operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					Replicas: lo.ToPtr(int32(1)),
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
@@ -378,13 +373,13 @@ func Test_setControlPlaneOptionsDefaults(t *testing.T) {
 		},
 		{
 			name: "providing only replicas",
-			input: operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			input: operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					Replicas: lo.ToPtr(int32(10)),
 				},
 			},
-			expected: operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			expected: operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					Replicas: lo.ToPtr(int32(10)),
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
@@ -401,13 +396,13 @@ func Test_setControlPlaneOptionsDefaults(t *testing.T) {
 		},
 		{
 			name: "providing only replicas that are equal to default",
-			input: operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			input: operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					Replicas: lo.ToPtr(int32(1)),
 				},
 			},
-			expected: operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			expected: operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					Replicas: lo.ToPtr(int32(1)),
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
@@ -424,8 +419,8 @@ func Test_setControlPlaneOptionsDefaults(t *testing.T) {
 		},
 		{
 			name: "providing more options",
-			input: operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			input: operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					Replicas: lo.ToPtr(int32(10)),
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
@@ -439,8 +434,8 @@ func Test_setControlPlaneOptionsDefaults(t *testing.T) {
 					},
 				},
 			},
-			expected: operatorv1alpha1.ControlPlaneOptions{
-				Deployment: operatorv1alpha1.DeploymentOptions{
+			expected: operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					Replicas: lo.ToPtr(int32(10)),
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{

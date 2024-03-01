@@ -7,7 +7,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -31,12 +30,12 @@ func SecretWithLabel(k, v string) func(s *corev1.Secret) {
 }
 
 type controlPlaneOrDataPlane interface {
-	*operatorv1alpha1.ControlPlane | *operatorv1beta1.DataPlane
+	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane
 }
 
 func getPrefixForOwner[T controlPlaneOrDataPlane](owner T) string {
 	switch any(owner).(type) {
-	case *operatorv1alpha1.ControlPlane:
+	case *operatorv1beta1.ControlPlane:
 		return consts.ControlPlanePrefix
 	case *operatorv1beta1.DataPlane:
 		return consts.DataPlanePrefix
@@ -48,7 +47,7 @@ func getPrefixForOwner[T controlPlaneOrDataPlane](owner T) string {
 // addLabelForOwner labels the provided object as managed by the provided owner.
 func addLabelForOwner[T controlPlaneOrDataPlane](obj client.Object, owner T) {
 	switch any(owner).(type) {
-	case *operatorv1alpha1.ControlPlane:
+	case *operatorv1beta1.ControlPlane:
 		LabelObjectAsControlPlaneManaged(obj)
 	case *operatorv1beta1.DataPlane:
 		LabelObjectAsDataPlaneManaged(obj)

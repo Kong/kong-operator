@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/controlplane"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -36,10 +35,10 @@ func controlPlanePredicate(
 	t *testing.T,
 	ctx context.Context,
 	controlplaneName types.NamespacedName,
-	predicate func(controlplane *operatorv1alpha1.ControlPlane) bool,
+	predicate func(controlplane *operatorv1beta1.ControlPlane) bool,
 	operatorClient *clientset.Clientset,
 ) func() bool {
-	controlplaneClient := operatorClient.ApisV1alpha1().ControlPlanes(controlplaneName.Namespace)
+	controlplaneClient := operatorClient.ApisV1beta1().ControlPlanes(controlplaneName.Namespace)
 	return func() bool {
 		controlplane, err := controlplaneClient.Get(ctx, controlplaneName.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -84,7 +83,7 @@ func HPAPredicate(
 // that can be used to check if a ControlPlane was scheduled.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneIsScheduled(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, operatorClient *clientset.Clientset) func() bool {
-	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv1alpha1.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv1beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(controlplane.ConditionTypeProvisioned) {
 				return true
@@ -112,7 +111,7 @@ func DataPlaneIsReady(t *testing.T, ctx context.Context, dataplane types.Namespa
 // that can be used to check if a ControlPlane detected unset dataplane.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneDetectedNoDataPlane(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv1alpha1.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv1beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(controlplane.ConditionTypeProvisioned) &&
 				condition.Status == metav1.ConditionFalse &&
@@ -128,7 +127,7 @@ func ControlPlaneDetectedNoDataPlane(t *testing.T, ctx context.Context, controlP
 // that can be used to check if a ControlPlane was provisioned.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneIsProvisioned(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv1alpha1.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv1beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(controlplane.ConditionTypeProvisioned) &&
 				condition.Status == metav1.ConditionTrue {
@@ -143,7 +142,7 @@ func ControlPlaneIsProvisioned(t *testing.T, ctx context.Context, controlPlane t
 // that can be used to check if a ControlPlane is marked as not Ready.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneIsNotReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1alpha1.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(k8sutils.ReadyType) &&
 				condition.Status == metav1.ConditionFalse {
@@ -158,7 +157,7 @@ func ControlPlaneIsNotReady(t *testing.T, ctx context.Context, controlplane type
 // that can be used to check if a ControlPlane is marked as Ready.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneIsReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1alpha1.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(k8sutils.ReadyType) &&
 				condition.Status == metav1.ConditionTrue {
@@ -173,7 +172,7 @@ func ControlPlaneIsReady(t *testing.T, ctx context.Context, controlplane types.N
 // that can be used to check if a ControlPlane has an active deployment.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneHasActiveDeployment(t *testing.T, ctx context.Context, controlplaneName types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlplaneName, func(controlplane *operatorv1alpha1.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlplaneName, func(controlplane *operatorv1beta1.ControlPlane) bool {
 		deployments := MustListControlPlaneDeployments(t, ctx, controlplane, clients)
 		return len(deployments) == 1 &&
 			*deployments[0].Spec.Replicas > 0 &&
@@ -184,7 +183,7 @@ func ControlPlaneHasActiveDeployment(t *testing.T, ctx context.Context, controlp
 // ControlPlaneHasClusterRole is a helper function for tests that returns a function
 // that can be used to check if a ControlPlane has a ClusterRole.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlaneHasClusterRole(t *testing.T, ctx context.Context, controlplane *operatorv1alpha1.ControlPlane, clients K8sClients) func() bool {
+func ControlPlaneHasClusterRole(t *testing.T, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, clients K8sClients) func() bool {
 	return func() bool {
 		clusterRoles := MustListControlPlaneClusterRoles(t, ctx, controlplane, clients)
 		t.Logf("%d clusterroles", len(clusterRoles))
@@ -195,7 +194,7 @@ func ControlPlaneHasClusterRole(t *testing.T, ctx context.Context, controlplane 
 // ControlPlaneHasClusterRoleBinding is a helper function for tests that returns a function
 // that can be used to check if a ControlPlane has a ClusterRoleBinding.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlaneHasClusterRoleBinding(t *testing.T, ctx context.Context, controlplane *operatorv1alpha1.ControlPlane, clients K8sClients) func() bool {
+func ControlPlaneHasClusterRoleBinding(t *testing.T, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, clients K8sClients) func() bool {
 	return func() bool {
 		clusterRoleBindings := MustListControlPlaneClusterRoleBindings(t, ctx, controlplane, clients)
 		t.Logf("%d clusterrolebindings", len(clusterRoleBindings))
@@ -206,7 +205,7 @@ func ControlPlaneHasClusterRoleBinding(t *testing.T, ctx context.Context, contro
 // ControlPlaneCRBContainsCRAndSA is a helper function for tests that returns a function
 // that can be used to check if the ClusterRoleBinding of a ControPlane has the reference of ClusterRole belonging to the ControlPlane
 // and contains the service account used by the Deployment of the ControlPlane.
-func ControlPlaneCRBContainsCRAndSA(t *testing.T, ctx context.Context, controlplane *operatorv1alpha1.ControlPlane, clients K8sClients) func() bool {
+func ControlPlaneCRBContainsCRAndSA(t *testing.T, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, clients K8sClients) func() bool {
 	return func() bool {
 		clusterRoleBindings := MustListControlPlaneClusterRoleBindings(t, ctx, controlplane, clients)
 		clusterRoles := MustListControlPlaneClusterRoles(t, ctx, controlplane, clients)
@@ -224,7 +223,7 @@ func ControlPlaneCRBContainsCRAndSA(t *testing.T, ctx context.Context, controlpl
 
 // ControlPlaneHasNReadyPods checks if a ControlPlane has at least N ready Pods.
 func ControlPlaneHasNReadyPods(t *testing.T, ctx context.Context, controlplaneName types.NamespacedName, clients K8sClients, n int) func() bool {
-	return controlPlanePredicate(t, ctx, controlplaneName, func(controlplane *operatorv1alpha1.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlplaneName, func(controlplane *operatorv1beta1.ControlPlane) bool {
 		deployments := MustListControlPlaneDeployments(t, ctx, controlplane, clients)
 		return len(deployments) == 1 &&
 			*deployments[0].Spec.Replicas == int32(n) &&
@@ -471,9 +470,9 @@ func DataPlaneUpdateEventually(t *testing.T, ctx context.Context, dataplaneNN ty
 // ControlPlaneUpdateEventually is a helper function for tests that returns a function
 // that can be used to update the ControlPlane.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlaneUpdateEventually(t *testing.T, ctx context.Context, controlplaneNN types.NamespacedName, clients K8sClients, updateFunc func(*operatorv1alpha1.ControlPlane)) func() bool {
+func ControlPlaneUpdateEventually(t *testing.T, ctx context.Context, controlplaneNN types.NamespacedName, clients K8sClients, updateFunc func(*operatorv1beta1.ControlPlane)) func() bool {
 	return func() bool {
-		cl := clients.OperatorClient.ApisV1alpha1().ControlPlanes(controlplaneNN.Namespace)
+		cl := clients.OperatorClient.ApisV1beta1().ControlPlanes(controlplaneNN.Namespace)
 		dp, err := cl.Get(ctx, controlplaneNN.Name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting controlplane: %v", err)

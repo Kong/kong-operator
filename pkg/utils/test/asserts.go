@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -25,7 +24,7 @@ import (
 
 // mustListControlPlaneDeployments is a helper function for tests that
 // conveniently lists all deployments managed by a given controlplane.
-func MustListControlPlaneDeployments(t *testing.T, ctx context.Context, controlplane *operatorv1alpha1.ControlPlane, clients K8sClients) []appsv1.Deployment {
+func MustListControlPlaneDeployments(t *testing.T, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, clients K8sClients) []appsv1.Deployment {
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
 		clients.MgrClient,
@@ -41,7 +40,7 @@ func MustListControlPlaneDeployments(t *testing.T, ctx context.Context, controlp
 
 // MustListControlPlaneClusterRoles is a helper function for tests that
 // conveniently lists all clusterroles owned by a given controlplane.
-func MustListControlPlaneClusterRoles(t *testing.T, ctx context.Context, controlplane *operatorv1alpha1.ControlPlane, clients K8sClients) []rbacv1.ClusterRole {
+func MustListControlPlaneClusterRoles(t *testing.T, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, clients K8sClients) []rbacv1.ClusterRole {
 	clusterRoles, err := k8sutils.ListClusterRolesForOwner(
 		ctx,
 		clients.MgrClient,
@@ -56,7 +55,7 @@ func MustListControlPlaneClusterRoles(t *testing.T, ctx context.Context, control
 
 // MustListControlPlaneClusterRoleBindings is a helper function for tests that
 // conveniently lists all clusterrolebindings owned by a given controlplane.
-func MustListControlPlaneClusterRoleBindings(t *testing.T, ctx context.Context, controlplane *operatorv1alpha1.ControlPlane, clients K8sClients) []rbacv1.ClusterRoleBinding {
+func MustListControlPlaneClusterRoleBindings(t *testing.T, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, clients K8sClients) []rbacv1.ClusterRoleBinding {
 	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(
 		ctx,
 		clients.MgrClient,
@@ -71,7 +70,7 @@ func MustListControlPlaneClusterRoleBindings(t *testing.T, ctx context.Context, 
 
 // MustListControlPlanesForGateway is a helper function for tests that
 // conveniently lists all controlplanes managed by a given gateway.
-func MustListControlPlanesForGateway(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) []operatorv1alpha1.ControlPlane {
+func MustListControlPlanesForGateway(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) []operatorv1beta1.ControlPlane {
 	controlPlanes, err := gatewayutils.ListControlPlanesForGateway(ctx, clients.MgrClient, gateway)
 	require.NoError(t, err)
 	return controlPlanes
