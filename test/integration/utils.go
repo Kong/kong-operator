@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
@@ -82,38 +81,25 @@ func urlForService(ctx context.Context, cluster clusters.Cluster, nsn types.Name
 }
 
 // CreateValidatingWebhook creates validating webhook for gateway operator.
-func createValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Clientset, webhookURL string, caDir string) error {
-	caContent, err := os.ReadFile(caDir + "/ca.crt")
-	if err != nil {
-		return err
-	}
-	keyContent, err := os.ReadFile(caDir + "/tls.key")
-	if err != nil {
-		return err
-	}
-	certContent, err := os.ReadFile(caDir + "/tls.crt")
-	if err != nil {
-		return err
-	}
-
-	_, err = k8sClient.CoreV1().Secrets("kong-system").Create(
+func createValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Clientset, webhookURL string, ca, cert, key []byte) error {
+	if _, err := k8sClient.CoreV1().Secrets("kong-system").Create(
 		ctx,
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: consts.WebhookCertificateConfigSecretName,
 			},
 			Data: map[string][]byte{
-				consts.CAFieldSecret:   caContent,
-				consts.KeyFieldSecret:  keyContent,
-				consts.CertFieldSecret: certContent,
+				consts.CAFieldSecret:   ca,
+				consts.CertFieldSecret: cert,
+				consts.KeyFieldSecret:  key,
 			},
 		},
-		metav1.CreateOptions{})
-	if err != nil {
+		metav1.CreateOptions{},
+	); err != nil {
 		return err
 	}
 
-	_, err = k8sClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(
+	if _, err := k8sClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(
 		ctx,
 		&admissionregistrationv1.ValidatingWebhookConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
@@ -124,7 +110,7 @@ func createValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Cl
 					Name: consts.WebhookName,
 					ClientConfig: admissionregistrationv1.WebhookClientConfig{
 						URL:      &webhookURL,
-						CABundle: caContent,
+						CABundle: ca,
 					},
 					Rules: []admissionregistrationv1.RuleWithOperations{
 						{
@@ -155,8 +141,11 @@ func createValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Cl
 				},
 			},
 		},
-		metav1.CreateOptions{})
-	return err
+		metav1.CreateOptions{},
+	); err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetEnvValueByName returns the corresponding value of LAST item with given name.
