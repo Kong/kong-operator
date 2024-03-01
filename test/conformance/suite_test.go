@@ -84,7 +84,8 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")
 	exitOnErr(clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
-	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), path.Join(configPath, "/rbac")))
+	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), path.Join(configPath, "/rbac/base")))
+	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), path.Join(configPath, "/rbac/role")))
 
 	// normally this is obtained from the downward API. the tests fake it.
 	err = os.Setenv("POD_NAMESPACE", "kong-system")

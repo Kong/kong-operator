@@ -5,7 +5,8 @@ namespace: kong-system
 namePrefix: gateway-operator-
 
 resources:
-- ../rbac
+- ../rbac/base
+- ../rbac/role
 - ../manager
 
 patches:
