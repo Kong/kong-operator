@@ -335,7 +335,8 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					corev1.VolumeMount{
 						Name:      "volume1",
 						MountPath: "/volume1",
-					})
+					},
+				)
 
 				return d.Spec.Template
 			},
@@ -816,7 +817,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			// NOTE: We're using cmp.Diff here because assert.Equal has issues
 			// comparing resource.Quantity. We could write custom logic for this
 			// but cmp.Diff seems to do the job just fine.
-			diff := cmp.Diff(tc.Expected(), *result)
+			diff := cmp.Diff(*result, tc.Expected())
 			if !assert.Empty(t, diff) {
 				b := bytes.Buffer{}
 				require.NoError(t, json.NewEncoder(&b).Encode(result))

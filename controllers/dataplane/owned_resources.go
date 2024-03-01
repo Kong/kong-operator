@@ -19,11 +19,9 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/pkg/dataplane"
-	"github.com/kong/gateway-operator/controllers/pkg/log"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/controllers/pkg/patch"
 	"github.com/kong/gateway-operator/controllers/pkg/secrets"
-	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
@@ -51,140 +49,6 @@ func ensureDataPlaneCertificate(
 		cl,
 		secrets.GetManagedLabelForServiceSecret(adminServiceNN),
 	)
-}
-
-func ensureDeploymentForDataPlane(
-	ctx context.Context,
-	cl client.Client,
-	logger logr.Logger,
-	developmentMode bool,
-	dataPlane *operatorv1beta1.DataPlane,
-	certSecretName string,
-	additionalDeploymentLabels client.MatchingLabels,
-	opts ...k8sresources.DeploymentOpt,
-) (res op.CreatedUpdatedOrNoop, deploy *appsv1.Deployment, err error) {
-	// TODO: https://github.com/Kong/gateway-operator/pull/1101.
-	// Use only new labels after several minor version of soak time.
-
-	// Below we list both the Deployments with the new labels and the legacy labels
-	// in order to support upgrades from older versions of the operator and perform
-	// the reduction of the Deployments using the older labels.
-
-	// Get the Deploments for the DataPlane using new labels.
-	matchingLabels := k8sresources.GetManagedLabelForOwner(dataPlane)
-	for k, v := range additionalDeploymentLabels {
-		matchingLabels[k] = v
-	}
-
-	deployments, err := k8sutils.ListDeploymentsForOwner(
-		ctx,
-		cl,
-		dataPlane.Namespace,
-		dataPlane.UID,
-		matchingLabels,
-	)
-	if err != nil {
-		return op.Noop, nil, fmt.Errorf("failed listing Deployments for DataPlane %s/%s: %w", dataPlane.Namespace, dataPlane.Name, err)
-	}
-
-	// Get the Deploments for the DataPlane using legacy labels.
-	reqLegacyLabels, err := k8sresources.GetManagedLabelRequirementsForOwnerLegacy(dataPlane)
-	if err != nil {
-		return op.Noop, nil, err
-	}
-	deploymentsLegacy, err := k8sutils.ListDeploymentsForOwner(
-		ctx,
-		cl,
-		dataPlane.Namespace,
-		dataPlane.UID,
-		&client.ListOptions{
-			LabelSelector: labels.NewSelector().Add(reqLegacyLabels...),
-		},
-	)
-	if err != nil {
-		return op.Noop, nil, fmt.Errorf("failed listing Deployments for DataPlane %s/%s: %w", dataPlane.Namespace, dataPlane.Name, err)
-	}
-	deployments = append(deployments, deploymentsLegacy...)
-
-	count := len(deployments)
-	if count > 1 {
-		if err := k8sreduce.ReduceDeployments(ctx, cl, deployments, dataplane.OwnedObjectPreDeleteHook); err != nil {
-			return op.Noop, nil, err
-		}
-		return op.Updated, nil, errors.New("number of deployments reduced")
-	}
-
-	if len(additionalDeploymentLabels) > 0 {
-		opts = append(opts, matchingLabelsToDeploymentOpt(additionalDeploymentLabels))
-	}
-
-	versionValidationOptions := make([]versions.VersionValidationOption, 0)
-	if !developmentMode {
-		versionValidationOptions = append(versionValidationOptions, versions.IsDataPlaneImageVersionSupported)
-	}
-	dataplaneImage, err := generateDataPlaneImage(dataPlane, versionValidationOptions...)
-	if err != nil {
-		return op.Noop, nil, err
-	}
-
-	generatedDeployment, err := k8sresources.GenerateNewDeploymentForDataPlane(dataPlane, dataplaneImage, certSecretName, opts...)
-	if err != nil {
-		return op.Noop, nil, err
-	}
-
-	if count == 1 {
-		var updated bool
-		existingDeployment := &deployments[0]
-		oldExistingDeployment := existingDeployment.DeepCopy()
-
-		// ensure that object metadata is up to date
-		updated, existingDeployment.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingDeployment.ObjectMeta, generatedDeployment.ObjectMeta)
-
-		// some custom comparison rules are needed for some PodTemplateSpec sub-attributes, in particular
-		// resources and affinity.
-		opts := []cmp.Option{
-			cmp.Comparer(func(a, b corev1.ResourceRequirements) bool { return k8sresources.ResourceRequirementsEqual(a, b) }),
-		}
-
-		// ensure that PodTemplateSpec is up to date
-		if !cmp.Equal(existingDeployment.Spec.Template, generatedDeployment.Spec.Template, opts...) {
-			existingDeployment.Spec.Template = generatedDeployment.Spec.Template
-			updated = true
-		}
-
-		// ensure that rollout strategy is up to date
-		if !cmp.Equal(existingDeployment.Spec.Strategy, generatedDeployment.Spec.Strategy) {
-			existingDeployment.Spec.Strategy = generatedDeployment.Spec.Strategy
-			updated = true
-		}
-
-		if scaling := dataPlane.Spec.Deployment.DeploymentOptions.Scaling; false ||
-			// If the scaling strategy is not specified, we compare the replicas.
-			(scaling == nil || scaling.HorizontalScaling == nil) ||
-			// If the scaling strategy is specified with minReplicas, we compare
-			// the minReplicas with the existing Deployment replicas and we set
-			// the replicas to the minReplicas if the existing Deployment replicas
-			// are less than the minReplicas to enforce faster scaling before HPA
-			// kicks in.
-			(scaling != nil && scaling.HorizontalScaling != nil &&
-				scaling.HorizontalScaling.MinReplicas != nil &&
-				existingDeployment.Spec.Replicas != nil &&
-				*existingDeployment.Spec.Replicas < *scaling.HorizontalScaling.MinReplicas) {
-			if !cmp.Equal(existingDeployment.Spec.Replicas, generatedDeployment.Spec.Replicas) {
-				existingDeployment.Spec.Replicas = generatedDeployment.Spec.Replicas
-				updated = true
-			}
-		}
-
-		return patch.ApplyPatchIfNonEmpty(ctx, cl, logger, existingDeployment, oldExistingDeployment, dataPlane, updated)
-	}
-
-	if err = cl.Create(ctx, generatedDeployment); err != nil {
-		return op.Noop, nil, fmt.Errorf("failed creating Deployment for DataPlane %s: %w", dataPlane.Name, err)
-	}
-
-	log.Debug(logger, "deployment for DataPlane created", dataPlane, "deployment", generatedDeployment.Name)
-	return op.Created, generatedDeployment, nil
 }
 
 func ensureHPAForDataPlane(

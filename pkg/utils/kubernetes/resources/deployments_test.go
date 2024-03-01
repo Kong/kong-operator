@@ -15,7 +15,6 @@ import (
 
 func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 	const (
-		certSecretName = "cert-secret-name"
 		dataplaneImage = "kong:3.0"
 	)
 
@@ -266,7 +265,10 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			deployment, err := GenerateNewDeploymentForDataPlane(tt.dataplane, dataplaneImage, certSecretName)
+			partial, err := GenerateNewDeploymentForDataPlane(tt.dataplane, dataplaneImage)
+			require.NoError(t, err)
+
+			deployment, err := ApplyDeploymentUserPatches(partial, tt.dataplane.Spec.Deployment.PodTemplateSpec)
 			require.NoError(t, err)
 			tt.testFunc(t, &deployment.Spec)
 		})

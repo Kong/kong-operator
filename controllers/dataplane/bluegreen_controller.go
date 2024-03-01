@@ -56,6 +56,9 @@ type BlueGreenReconciler struct {
 	// DevelopmentMode indicates if the controller should run in development mode,
 	// which causes it to e.g. perform less validations.
 	DevelopmentMode bool
+
+	// Callbacks is a set of Callback functions to run at various stages of reconciliation.
+	Callbacks DataPlaneCallbacks
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -489,12 +492,17 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 		// TODO: implemented DeleteOnPromotionRecreateOnRollout
 		// Ref: https://github.com/Kong/gateway-operator/issues/1010
 	}
-	res, deployment, err := ensureDeploymentForDataPlane(ctx, r.Client, logger, r.DevelopmentMode, dataplane, certSecret.Name,
-		client.MatchingLabels{
-			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,
-		},
-		deploymentOpts...,
-	)
+	deploymentLabels := client.MatchingLabels{
+		consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,
+	}
+	deploymentBuilder := NewDeploymentBuilder(logger.WithName("deployment_builder"), r.Client).
+		WithBeforeCallbacks(r.Callbacks.BeforeDeployment).
+		WithAfterCallbacks(r.Callbacks.AfterDeployment).
+		WithClusterCertificate(certSecret.Name).
+		WithOpts(deploymentOpts...).
+		WithAdditionalLabels(deploymentLabels)
+
+	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.DevelopmentMode)
 	if err != nil {
 		return nil, op.Noop, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", err)
 	}

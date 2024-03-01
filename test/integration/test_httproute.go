@@ -52,11 +52,11 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 			},
 		},
 	}
+	t.Logf("deploying GatewayConfiguration %s/%s to set KIC log level", gatewayConfig.Namespace, gatewayConfig.Name)
 	gatewayConfig, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
-	t.Log("deploying a GatewayClass resource")
 	gatewayClass := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
@@ -71,30 +71,31 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
 	}
+	t.Logf("deploying GatewayClass %s", gatewayClass.Name)
 	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
-	t.Log("deploying Gateway resource")
 	gatewayNSN := types.NamespacedName{
 		Name:      uuid.NewString(),
 		Namespace: namespace.Name,
 	}
 
 	gateway := testutils.GenerateGateway(gatewayNSN, gatewayClass)
+	t.Logf("deploying Gateway %s/%s", gateway.Namespace, gateway.Name)
 	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
-	t.Log("verifying Gateway gets marked as Scheduled")
+	t.Logf("verifying Gateway %s/%s gets marked as Scheduled", gateway.Namespace, gateway.Name)
 	require.Eventually(t, testutils.GatewayIsScheduled(t, GetCtx(), gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
-	t.Log("verifying Gateway gets marked as Programmed")
+	t.Logf("verifying Gateway %s/%s gets marked as Programmed", gateway.Namespace, gateway.Name)
 	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
-	t.Log("verifying Gateway Listeners get marked as Programmed")
+	t.Logf("verifying Gateway %s/%s Listeners get marked as Programmed", gateway.Namespace, gateway.Name)
 	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
-	t.Log("verifying Gateway gets an IP address")
+	t.Logf("verifying Gateway %s/%s gets an IP address", gateway.Namespace, gateway.Name)
 	require.Eventually(t, testutils.GatewayIPAddressExist(t, GetCtx(), gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
 	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayNSN, clients)
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
@@ -110,7 +111,6 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 	_, err = GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(GetCtx(), service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
 	httpPort := gatewayv1.PortNumber(80)
 	pathMatchPrefix := gatewayv1.PathMatchPathPrefix
 	kindService := gatewayv1.Kind("Service")
@@ -154,6 +154,7 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 			},
 		},
 	}
+	t.Logf("creating httproute %s/%s to access deployment %s via kong", httpRoute.Namespace, httpRoute.Name, deployment.Name)
 	httpRoute, err = GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).
 		Create(GetCtx(), httpRoute, metav1.CreateOptions{})
 	require.NoError(t, err)

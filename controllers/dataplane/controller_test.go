@@ -396,7 +396,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err)
 
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
-				require.EqualError(t, err, "unsupported DataPlane image kong:1.0")
+				require.EqualError(t, err, "could not build Deployment for DataPlane default/test-dataplane: could not generate Deployment: unsupported DataPlane image kong:1.0")
 			},
 		},
 		{

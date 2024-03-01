@@ -19,7 +19,7 @@ func TestMain(m *testing.M) {
 	testSuiteToRun = helpers.ParseGoTestFlags(TestIntegration, testSuiteToRun)
 	cfg := integration.DefaultControllerConfigForTests()
 	managerToTest := func(startedChan chan struct{}) error {
-		return manager.Run(cfg, scheme.Get(), manager.SetupControllers, admission.NewRequestHandler, startedChan)
+		return manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, admission.NewRequestHandler, startedChan)
 	}
 	integration.TestMain(
 		m,

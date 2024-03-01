@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"reflect"
 
+	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,6 +27,37 @@ import (
 	"github.com/kong/gateway-operator/internal/utils/index"
 	dataplanevalidator "github.com/kong/gateway-operator/internal/validation/dataplane"
 )
+
+const (
+	// GatewayClassControllerName is the name of the GatewayClass controller.
+	GatewayClassControllerName = "GatewayClass"
+	// GatewayControllerName is the name of the GatewayClass controller.
+	GatewayControllerName = "Gateway"
+	// ControlPlaneControllerName is the name of the GatewayClass controller.
+	ControlPlaneControllerName = "ControlPlane"
+	// DataPlaneControllerName is the name of the GatewayClass controller.
+	DataPlaneControllerName = "DataPlane"
+	// DataPlaneBlueGreenControllerName is the name of the GatewayClass controller.
+	DataPlaneBlueGreenControllerName = "DataPlaneBlueGreen"
+	// DataPlaneOwnedServiceFinalizerControllerName is the name of the GatewayClass controller.
+	DataPlaneOwnedServiceFinalizerControllerName = "DataPlaneOwnedServiceFinalizer"
+	// DataPlaneOwnedSecretFinalizerControllerName is the name of the GatewayClass controller.
+	DataPlaneOwnedSecretFinalizerControllerName = "DataPlaneOwnedSecretFinalizer"
+	// DataPlaneOwnedDeploymentFinalizerControllerName is the name of the GatewayClass controller.
+	DataPlaneOwnedDeploymentFinalizerControllerName = "DataPlaneOwnedDeploymentFinalizer"
+	// AIGatewayControllerName is the name of the GatewayClass controller.
+	AIGatewayControllerName = "AIGateway"
+)
+
+// SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
+func SetupControllersShim(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
+	controllers, err := SetupControllers(mgr, c)
+	if err != nil {
+		return []ControllerDef{}, err
+	}
+
+	return maps.Values(controllers), nil
+}
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Controller Definition Interfaces
@@ -65,7 +97,7 @@ func setupIndexes(mgr manager.Manager) error {
 }
 
 // SetupControllers returns a list of ControllerDefs based on config.
-func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
+func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef, error) {
 	// These checks prevent controller-runtime spamming in logs about failing
 	// to get informer from cache.
 	// This way we only ever check the CRD once and issue clear log entry about
@@ -121,9 +153,9 @@ func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 		}
 	}
 
-	controllers := []ControllerDef{
+	controllers := map[string]ControllerDef{
 		// GatewayClass controller
-		{
+		GatewayClassControllerName: {
 			Enabled: c.GatewayControllerEnabled,
 			Controller: &gatewayclass.Reconciler{
 				Client:          mgr.GetClient(),
@@ -132,7 +164,7 @@ func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 			},
 		},
 		// Gateway controller
-		{
+		GatewayControllerName: {
 			Enabled: c.GatewayControllerEnabled,
 			Controller: &gateway.Reconciler{
 				Client:          mgr.GetClient(),
@@ -141,7 +173,7 @@ func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 			},
 		},
 		// ControlPlane controller
-		{
+		ControlPlaneControllerName: {
 			Enabled: c.GatewayControllerEnabled || c.ControlPlaneControllerEnabled,
 			Controller: &controlplane.Reconciler{
 				Client:                   mgr.GetClient(),
@@ -152,7 +184,7 @@ func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 			},
 		},
 		// DataPlane controller
-		{
+		DataPlaneControllerName: {
 			Enabled: (c.DataPlaneControllerEnabled || c.GatewayControllerEnabled) && !c.DataPlaneBlueGreenControllerEnabled,
 			Controller: &dataplane.Reconciler{
 				Client:                   mgr.GetClient(),
@@ -161,10 +193,14 @@ func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				DevelopmentMode:          c.DevelopmentMode,
 				Validator:                dataplanevalidator.NewValidator(mgr.GetClient()),
+				Callbacks: dataplane.DataPlaneCallbacks{
+					BeforeDeployment: dataplane.CreateCallbackManager(),
+					AfterDeployment:  dataplane.CreateCallbackManager(),
+				},
 			},
 		},
 		// DataPlaneBlueGreen controller
-		{
+		DataPlaneBlueGreenControllerName: {
 			Enabled: c.DataPlaneBlueGreenControllerEnabled,
 			Controller: &dataplane.BlueGreenReconciler{
 				Client:                   mgr.GetClient(),
@@ -179,23 +215,27 @@ func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 					DevelopmentMode:          c.DevelopmentMode,
 					Validator:                dataplanevalidator.NewValidator(mgr.GetClient()),
 				},
+				Callbacks: dataplane.DataPlaneCallbacks{
+					BeforeDeployment: dataplane.CreateCallbackManager(),
+					AfterDeployment:  dataplane.CreateCallbackManager(),
+				},
 			},
 		},
-		{
+		DataPlaneOwnedServiceFinalizerControllerName: {
 			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled,
 			Controller: dataplane.NewDataPlaneOwnedResourceFinalizerReconciler[corev1.Service](
 				mgr.GetClient(),
 				c.DevelopmentMode,
 			),
 		},
-		{
+		DataPlaneOwnedSecretFinalizerControllerName: {
 			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled,
 			Controller: dataplane.NewDataPlaneOwnedResourceFinalizerReconciler[corev1.Secret](
 				mgr.GetClient(),
 				c.DevelopmentMode,
 			),
 		},
-		{
+		DataPlaneOwnedDeploymentFinalizerControllerName: {
 			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled,
 			Controller: dataplane.NewDataPlaneOwnedResourceFinalizerReconciler[appsv1.Deployment](
 				mgr.GetClient(),
@@ -203,7 +243,7 @@ func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 			),
 		},
 		// AIGateway Controller
-		{
+		AIGatewayControllerName: {
 			Enabled: c.AIGatewayControllerEnabled,
 			Controller: &specialized.AIGatewayReconciler{
 				Client:          mgr.GetClient(),

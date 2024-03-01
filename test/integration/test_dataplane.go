@@ -763,7 +763,7 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	require.True(t, volMounts[0].ReadOnly, "proxy container should mount 'test-volume' in read only mode")
 
 	t.Log("updating volumes and volume mounts in dataplane spec to verify volumes could be reconciled")
-	dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Volumes[1] = corev1.Volume{
+	dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Volumes[0] = corev1.Volume{
 		Name: "test-volume-1",
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
@@ -771,7 +771,7 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 			},
 		},
 	}
-	dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].VolumeMounts[1] = corev1.VolumeMount{
+	dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].VolumeMounts[0] = corev1.VolumeMount{
 		Name:      "test-volume-1",
 		MountPath: "/var/test",
 		ReadOnly:  true,

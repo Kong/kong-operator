@@ -39,6 +39,7 @@ type Reconciler struct {
 	ClusterCASecretNamespace string
 	DevelopmentMode          bool
 	Validator                dataPlaneValidator
+	Callbacks                DataPlaneCallbacks
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -166,14 +167,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	res, deployment, err := ensureDeploymentForDataPlane(ctx, r.Client, logger, r.DevelopmentMode, dataplane, certSecret.Name,
-		client.MatchingLabels{
-			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
-		},
+	deploymentLabels := client.MatchingLabels{
+		consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
+	}
+	deploymentOpts := []k8sresources.DeploymentOpt{
 		labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),
-	)
+	}
+	deploymentBuilder := NewDeploymentBuilder(logger.WithName("deployment_builder"), r.Client).
+		WithBeforeCallbacks(r.Callbacks.BeforeDeployment).
+		WithAfterCallbacks(r.Callbacks.AfterDeployment).
+		WithClusterCertificate(certSecret.Name).
+		WithOpts(deploymentOpts...).
+		WithAdditionalLabels(deploymentLabels)
+
+	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.DevelopmentMode)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("could not build Deployment for DataPlane %s/%s: %w",
+			dataplane.Namespace, dataplane.Name, err)
 	}
 	if res != op.Noop {
 		return ctrl.Result{}, nil

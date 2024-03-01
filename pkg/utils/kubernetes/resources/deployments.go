@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
-	dputils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
@@ -32,6 +31,24 @@ const (
 )
 
 var terminationGracePeriodSeconds = int64(corev1.DefaultTerminationGracePeriodSeconds)
+
+// ApplyDeploymentUserPatches applies user PodTemplateSpec patches to a Deployment. It returns the existing Deployment
+// if there are no patches.
+func ApplyDeploymentUserPatches(
+	deployment *Deployment,
+	podTemplateSpec *corev1.PodTemplateSpec,
+) (*Deployment, error) {
+	if podTemplateSpec != nil {
+		patchedPodTemplateSpec, err := StrategicMergePatchPodTemplateSpec(
+			&deployment.Spec.Template, podTemplateSpec)
+		if err != nil {
+			return nil, err
+		}
+		deployment.Spec.Template = *patchedPodTemplateSpec
+	}
+
+	return deployment, nil
+}
 
 // GenerateNewDeploymentForControlPlane generates a new Deployment for the ControlPlane
 func GenerateNewDeploymentForControlPlane(controlplane *operatorv1beta1.ControlPlane,
@@ -69,7 +86,7 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1beta1.ControlP
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					Volumes: []corev1.Volume{
-						clusterCertificateVolume(certSecretName),
+						ClusterCertificateVolume(certSecretName),
 					},
 					Containers: []corev1.Container{
 						GenerateControlPlaneContainer(controlplaneImage),
@@ -145,9 +162,8 @@ type DeploymentOpt func(*appsv1.Deployment)
 func GenerateNewDeploymentForDataPlane(
 	dataplane *operatorv1beta1.DataPlane,
 	dataplaneImage string,
-	certSecretName string,
 	opts ...DeploymentOpt,
-) (*appsv1.Deployment, error) {
+) (*Deployment, error) {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,
@@ -188,9 +204,7 @@ func GenerateNewDeploymentForDataPlane(
 					TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					SchedulerName:                 corev1.DefaultSchedulerName,
-					Volumes: []corev1.Volume{
-						clusterCertificateVolume(certSecretName),
-					},
+					Volumes:                       []corev1.Volume{},
 					Containers: []corev1.Container{
 						GenerateDataPlaneContainer(dataplane.Spec.Deployment, dataplaneImage),
 					},
@@ -227,16 +241,6 @@ func GenerateNewDeploymentForDataPlane(
 	SetDefaultsPodTemplateSpec(&deployment.Spec.Template)
 	LabelObjectAsDataPlaneManaged(deployment)
 
-	if dpOpts.PodTemplateSpec != nil {
-		patchedPodTemplateSpec, err := StrategicMergePatchPodTemplateSpec(&deployment.Spec.Template, dpOpts.PodTemplateSpec)
-		if err != nil {
-			return nil, err
-		}
-		deployment.Spec.Template = *patchedPodTemplateSpec
-	}
-
-	dputils.FillDataPlaneProxyContainerEnvs(&deployment.Spec.Template)
-
 	for _, opt := range opts {
 		opt(deployment)
 	}
@@ -248,20 +252,15 @@ func GenerateNewDeploymentForDataPlane(
 	// it with what's in the cluster.
 	pkgapisappsv1.SetDefaults_Deployment(deployment)
 
-	return deployment, nil
+	wrapped := Deployment(*deployment)
+	return &wrapped, nil
 }
 
 // GenerateDataPlaneContainer generates a DataPlane container.
 func GenerateDataPlaneContainer(opts operatorv1beta1.DataPlaneDeploymentOptions, image string) corev1.Container {
 	return corev1.Container{
-		Name: consts.DataPlaneProxyContainerName,
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      consts.ClusterCertificateVolume,
-				ReadOnly:  true,
-				MountPath: consts.ClusterCertificateVolumeMountPath,
-			},
-		},
+		Name:            consts.DataPlaneProxyContainerName,
+		VolumeMounts:    []corev1.VolumeMount{},
 		Image:           image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Lifecycle: &corev1.Lifecycle{
@@ -383,7 +382,8 @@ func DefaultControlPlaneResources() *corev1.ResourceRequirements {
 	return _controlPlaneDefaultResources.DeepCopy()
 }
 
-func clusterCertificateVolume(certSecretName string) corev1.Volume {
+// ClusterCertificateVolume returns a volume holding a cluster certificate given a Secret holding a certificate.
+func ClusterCertificateVolume(certSecretName string) corev1.Volume {
 	clusterCertificateVolume := corev1.Volume{}
 	clusterCertificateVolume.Secret = &corev1.SecretVolumeSource{}
 	SetDefaultsVolume(&clusterCertificateVolume)
@@ -406,4 +406,85 @@ func clusterCertificateVolume(certSecretName string) corev1.Volume {
 		},
 	}
 	return clusterCertificateVolume
+}
+
+// ClusterCertificateVolumeMount returns a volume mount for the cluster certificate.
+func ClusterCertificateVolumeMount() corev1.VolumeMount {
+	return corev1.VolumeMount{
+		Name:      consts.ClusterCertificateVolume,
+		ReadOnly:  true,
+		MountPath: consts.ClusterCertificateVolumeMountPath,
+	}
+}
+
+// Deployment is a wrapper for appsv1.Deployment. It provides additional methods to modify parts of the Deployment,
+// such as to add a Volume or set an environment variable. These "With" methods do not return errors to allow chaining,
+// and may no-op if target subsection is not available or overwrite existing conflicting configuration. If the presence
+// of existing configuration is uncertain, you must check before invoking them.
+type Deployment appsv1.Deployment
+
+func (d *Deployment) Unwrap() *appsv1.Deployment {
+	casted := appsv1.Deployment(*d)
+	return &casted
+}
+
+// The various ApplyConfig types used in SSA (see
+// https://kubernetes.io/blog/2021/08/06/server-side-apply-ga/#using-server-side-apply-in-a-controller(
+// seem to roughly provide their own equivalents to these, e.g.
+// https://pkg.go.dev/k8s.io/client-go@v0.29.1/applyconfigurations/core/v1#PodSpecApplyConfiguration.WithVolumes
+// but they operate on the <Foo>ApplyConfiguration variants of the modified type. These types allow any field to be
+// empty, even when the normal variant of the type would require a non-nil value, but doing so would require further
+// research into how SSA uses them.
+
+// WithVolume appends a volume to a Deployment. It overwrites any existing Volume with the same name.
+func (d *Deployment) WithVolume(v corev1.Volume) *Deployment {
+	found := false
+	for i, existing := range d.Spec.Template.Spec.Volumes {
+		if v.Name == existing.Name {
+			d.Spec.Template.Spec.Volumes[i] = v
+			found = true
+		}
+	}
+	if !found {
+		d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, v)
+	}
+	return d
+}
+
+// WithVolumeMount appends a volume mount to a Deployment's container. It overwrites any existing VolumeMount with the
+// same path. It takes no action if the container does not exist.
+func (d *Deployment) WithVolumeMount(v corev1.VolumeMount, container string) *Deployment {
+	found := false
+	for i, c := range d.Spec.Template.Spec.Containers {
+		if c.Name == container {
+			for j, existing := range d.Spec.Template.Spec.Containers[i].VolumeMounts {
+				if v.MountPath == existing.MountPath {
+					d.Spec.Template.Spec.Containers[i].VolumeMounts[j] = v
+					found = true
+				}
+			}
+			if !found {
+				d.Spec.Template.Spec.Containers[i].VolumeMounts = append(d.Spec.Template.Spec.Containers[i].VolumeMounts, v)
+			}
+		}
+	}
+	return d
+}
+
+// WithEnvVar sets an environment variable in a container. It overwrites any existing environment variable with the
+// same name. It takes no action if the container does not exist.
+func (d *Deployment) WithEnvVar(v corev1.EnvVar, container string) *Deployment {
+	for i, c := range d.Spec.Template.Spec.Containers {
+		if c.Name == container {
+			for j, ev := range c.Env {
+				if ev.Name == v.Name {
+					d.Spec.Template.Spec.Containers[i].Env[j] = v
+					return d
+				}
+			}
+			d.Spec.Template.Spec.Containers[i].Env = append(d.Spec.Template.Spec.Containers[i].Env, v)
+			return d
+		}
+	}
+	return d
 }

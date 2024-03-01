@@ -49,7 +49,7 @@ var KongDefaults = map[string]string{
 // PodTemplateSpec.
 // EnvVars are sorted lexographically as a side effect.
 // It also returns the updated EnvVar slice.
-func FillDataPlaneProxyContainerEnvs(podTemplateSpec *corev1.PodTemplateSpec) {
+func FillDataPlaneProxyContainerEnvs(existing []corev1.EnvVar, podTemplateSpec *corev1.PodTemplateSpec) {
 	if podTemplateSpec == nil {
 		return
 	}
@@ -60,6 +60,11 @@ func FillDataPlaneProxyContainerEnvs(podTemplateSpec *corev1.PodTemplateSpec) {
 		return
 	}
 
+	for _, envVar := range existing {
+		if !k8sutils.IsEnvVarPresent(envVar, container.Env) {
+			container.Env = append(container.Env, envVar)
+		}
+	}
 	for k, v := range KongDefaults {
 		envVar := corev1.EnvVar{
 			Name:  k,

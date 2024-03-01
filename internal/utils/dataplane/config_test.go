@@ -26,13 +26,14 @@ func TestFillDataPlaneProxyContainerEnvs(t *testing.T) {
 	}
 
 	t.Run("nil doesn't panic", func(t *testing.T) {
-		FillDataPlaneProxyContainerEnvs(nil)
+		FillDataPlaneProxyContainerEnvs(nil, nil)
 	})
 
 	testcases := []struct {
 		name            string
 		podTemplateSpec *corev1.PodTemplateSpec
 		expected        []corev1.EnvVar
+		existing        []corev1.EnvVar
 	}{
 		{
 			name: "new env gest added to defaults",
@@ -84,11 +85,74 @@ func TestFillDataPlaneProxyContainerEnvs(t *testing.T) {
 				return ret
 			}(),
 		},
+		{
+			name: "existing with no overrides persist",
+			podTemplateSpec: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: consts.DataPlaneProxyContainerName,
+							Env:  []corev1.EnvVar{},
+						},
+					},
+				},
+			},
+			existing: func() []corev1.EnvVar {
+				m := maps.Clone(KongDefaults)
+				m["RED"] = "RED"
+				m["BLUE"] = "BLUE"
+				ret := toSortedSlice(m)
+				sort.Sort(k8sutils.SortableEnvVars(ret))
+				return ret
+			}(),
+			expected: func() []corev1.EnvVar {
+				m := maps.Clone(KongDefaults)
+				m["RED"] = "RED"
+				m["BLUE"] = "BLUE"
+				ret := toSortedSlice(m)
+				sort.Sort(k8sutils.SortableEnvVars(ret))
+				return ret
+			}(),
+		},
+		{
+			name: "existing with overrides overidden",
+			podTemplateSpec: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: consts.DataPlaneProxyContainerName,
+							Env: []corev1.EnvVar{
+								{
+									Name:  "BLUE",
+									Value: "OVERRIDE",
+								},
+							},
+						},
+					},
+				},
+			},
+			existing: func() []corev1.EnvVar {
+				m := maps.Clone(KongDefaults)
+				m["RED"] = "RED"
+				m["BLUE"] = "BLUE"
+				ret := toSortedSlice(m)
+				sort.Sort(k8sutils.SortableEnvVars(ret))
+				return ret
+			}(),
+			expected: func() []corev1.EnvVar {
+				m := maps.Clone(KongDefaults)
+				m["RED"] = "RED"
+				m["BLUE"] = "OVERRIDE"
+				ret := toSortedSlice(m)
+				sort.Sort(k8sutils.SortableEnvVars(ret))
+				return ret
+			}(),
+		},
 	}
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			FillDataPlaneProxyContainerEnvs(tc.podTemplateSpec)
+			FillDataPlaneProxyContainerEnvs(tc.existing, tc.podTemplateSpec)
 			container := k8sutils.GetPodContainerByName(&tc.podTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 			require.Equal(t, tc.expected, container.Env)
 		})
