@@ -62,8 +62,6 @@ jobs:
         command: make verify.generators
 
   install-with-kustomize:
-    # re-enable after nightly build and use the nigthly image in the test
-    if: false
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
@@ -268,8 +266,6 @@ jobs:
         path: integration-tests-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}.xml
 
   e2e-tests:
-    # re-enable after nightly build and use the nigthly image in the test
-    if: false
     runs-on: ubuntu-latest
     steps:
     - name: checkout repository

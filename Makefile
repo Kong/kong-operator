@@ -440,12 +440,10 @@ go-mod-download-gateway-api:
 .PHONY: install-gateway-api-crds
 install-gateway-api-crds: go-mod-download-gateway-api kustomize
 	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH) | kubectl apply -f -
-	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH)/experimental | kubectl apply -f -
 
 .PHONY: uninstall-gateway-api-crds
 uninstall-gateway-api-crds: go-mod-download-gateway-api kustomize
 	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH) | kubectl delete -f -
-	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH)/experimental | kubectl delete -f -
 
 # ------------------------------------------------------------------------------
 # Debug
@@ -516,13 +514,13 @@ debug.skaffold.continuous: _ensure-kong-system-namespace
 
 # Install CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install
-install: manifests kustomize
+install: manifests kustomize install-gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
 
 # Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall
-uninstall: manifests kustomize
+uninstall: manifests kustomize uninstall-gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 # Deploy controller to the K8s cluster specified in ~/.kube/config.
