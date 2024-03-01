@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -20,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/controllers/pkg/controlplane"
@@ -227,16 +229,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "configuring ControlPlane resource", cp)
+	defaultArgs := controlplane.DefaultsArgs{
+		Namespace:                   cp.Namespace,
+		ControlPlaneName:            cp.Name,
+		DataPlaneIngressServiceName: dataplaneIngressServiceName,
+		DataPlaneAdminServiceName:   dataplaneAdminServiceName,
+		AnonymousReportsEnabled:     anonymousReportsEnabled,
+	}
+	for _, owner := range cp.OwnerReferences {
+		if strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) && owner.Kind == "Gateway" {
+			defaultArgs.OwnedByGateway = owner.Name
+			continue
+		}
+	}
 	changed := controlplane.SetDefaults(
 		&cp.Spec.ControlPlaneOptions,
 		nil,
-		controlplane.DefaultsArgs{
-			Namespace:                   cp.Namespace,
-			ControlPlaneName:            cp.Name,
-			DataPlaneIngressServiceName: dataplaneIngressServiceName,
-			DataPlaneAdminServiceName:   dataplaneAdminServiceName,
-			AnonymousReportsEnabled:     anonymousReportsEnabled,
-		})
+		defaultArgs)
 	if changed {
 		log.Debug(logger, "updating ControlPlane resource after defaults are set since resource has changed", cp)
 		err := r.Client.Update(ctx, cp)

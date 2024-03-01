@@ -22,7 +22,7 @@ type DefaultsArgs struct {
 	ControlPlaneName            string
 	DataPlaneIngressServiceName string
 	DataPlaneAdminServiceName   string
-	ManagedByGateway            bool
+	OwnedByGateway              string
 	AnonymousReportsEnabled     bool
 }
 
@@ -120,19 +120,31 @@ func SetDefaults(
 		}
 	}
 
-	// If the controlplane is managed by a gateway, the controlplane may take some time to properly connect to the dataplane,
-	// as the controlplane and the dataplane are deployed together. For this reason, we set the env var CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY
-	// to 5s (the default value is 1s) to:
-	// - reduce spamming of "retrying connection to the dataplane i/60";
-	// - avoid crash of the controlplane pod when the dataplane is particularly slow to start (it happens quite rarely).
-	if args.ManagedByGateway {
+	if args.OwnedByGateway != "" {
+		// If the controlplane is managed by a gateway, the controlplane may take some time to properly connect to the dataplane,
+		// as the controlplane and the dataplane are deployed together. For this reason, we set the env var CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY
+		// to 5s (the default value is 1s) to:
+		// - reduce spamming of "retrying connection to the dataplane i/60";
+		// - avoid crash of the controlplane pod when the dataplane is particularly slow to start (it happens quite rarely).
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY"]; !isOverrideDisabled {
 			if k8sutils.EnvValueByName(container.Env, "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY") != consts.DataPlaneInitRetryDelay {
 				container.Env = k8sutils.UpdateEnv(container.Env, "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY", consts.DataPlaneInitRetryDelay)
 				changed = true
 			}
 		}
+
+		if _, isOverrideDisabled := dontOverride["CONTROLLER_GATEWAY_TO_RECONCILE"]; !isOverrideDisabled {
+			gatewayOwner := fmt.Sprintf("%s/%s", args.Namespace, args.OwnedByGateway)
+			if k8sutils.EnvValueByName(container.Env, "CONTROLLER_GATEWAY_TO_RECONCILE") != gatewayOwner {
+				container.Env = k8sutils.UpdateEnv(container.Env, "CONTROLLER_GATEWAY_TO_RECONCILE", gatewayOwner)
+				changed = true
+			}
+		}
 	}
+	// This uses a different check for ownership. this function gets invoked twice for gateway-managed ControlPlanes,
+	// once from the Gateway controller, which preps its own copy of the ControlPlane config before spawning a ControlPlane,
+	// and once from the ControlPlane controller. the Gateway controller only has the spec and lacks meta, whereas the
+	// ControlPlane controller doesn't have the args.ManagedByGateway
 
 	if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE"]; !isOverrideDisabled {
 		if k8sutils.EnvValueByName(container.Env, "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE") != consts.TLSCRTPath {

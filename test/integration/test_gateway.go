@@ -2,11 +2,14 @@ package integration
 
 import (
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/kr/pretty"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -183,6 +186,260 @@ func TestGatewayEssentials(t *testing.T) {
 
 	t.Log("verifying that gateway itself is deleted")
 	require.Eventually(t, testutils.GatewayNotExist(t, GetCtx(), gatewayNN, clients), time.Minute, time.Second)
+}
+
+// TestGatewayMultiple checks essential Gateway behavior with multiple Gateways of the same class. Ensure DataPlanes
+// only serve routes attached to their Gateway.
+func TestGatewayMultiple(t *testing.T) {
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+
+	t.Log("deploying a GatewayClass resource")
+	gatewayClass := testutils.GenerateGatewayClass()
+	gatewayClass, err := GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gatewayClass)
+
+	t.Log("deploying Gateway resources")
+	gatewayOneNN := types.NamespacedName{
+		Name:      uuid.NewString(),
+		Namespace: namespace.Name,
+	}
+	gatewayTwoNN := types.NamespacedName{
+		Name:      uuid.NewString(),
+		Namespace: namespace.Name,
+	}
+	gatewayOne := testutils.GenerateGateway(gatewayOneNN, gatewayClass)
+	gatewayOne, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gatewayOne, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gatewayOne)
+	gatewayTwo := testutils.GenerateGateway(gatewayTwoNN, gatewayClass)
+	gatewayTwo, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gatewayTwo, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gatewayTwo)
+
+	t.Log("verifying Gateways marked as Scheduled")
+	require.Eventually(t, testutils.GatewayIsScheduled(t, GetCtx(), gatewayOneNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsScheduled(t, GetCtx(), gatewayTwoNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+
+	t.Log("verifying Gateways marked as Programmed")
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayOneNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayOneNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayTwoNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayTwoNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+
+	t.Log("verifying Gateways get an IP address")
+	require.Eventually(t, testutils.GatewayIPAddressExist(t, GetCtx(), gatewayOneNN, clients), testutils.SubresourceReadinessWait, time.Second)
+	gatewayOne = testutils.MustGetGateway(t, GetCtx(), gatewayOneNN, clients)
+	gatewayOneIPAddress := gatewayOne.Status.Addresses[0].Value
+	gatewayTwo = testutils.MustGetGateway(t, GetCtx(), gatewayTwoNN, clients)
+	gatewayTwoIPAddress := gatewayTwo.Status.Addresses[0].Value
+
+	t.Log("verifying that the DataPlanes become Ready")
+	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, GetCtx(), gatewayOne, clients), testutils.SubresourceReadinessWait, time.Second)
+	dataplanesOne := testutils.MustListDataPlanesForGateway(t, GetCtx(), gatewayOne, clients)
+	require.Len(t, dataplanesOne, 1)
+	dataplaneOne := dataplanesOne[0]
+	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, GetCtx(), gatewayTwo, clients), testutils.SubresourceReadinessWait, time.Second)
+	dataplanesTwo := testutils.MustListDataPlanesForGateway(t, GetCtx(), gatewayTwo, clients)
+	require.Len(t, dataplanesTwo, 1)
+	dataplaneTwo := dataplanesTwo[0]
+
+	t.Log("verifying that the ControlPlanes become provisioned")
+	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, GetCtx(), gatewayOne, clients), testutils.SubresourceReadinessWait, time.Second)
+	controlplanesOne := testutils.MustListControlPlanesForGateway(t, GetCtx(), gatewayOne, clients)
+	require.Len(t, controlplanesOne, 1)
+	controlplaneOne := controlplanesOne[0]
+	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, GetCtx(), gatewayTwo, clients), testutils.SubresourceReadinessWait, time.Second)
+	controlplanesTwo := testutils.MustListControlPlanesForGateway(t, GetCtx(), gatewayTwo, clients)
+	require.Len(t, controlplanesTwo, 1)
+	controlplaneTwo := controlplanesTwo[0]
+
+	dataplaneOneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplaneOne.Name}
+	controlplaneOneNN := types.NamespacedName{Namespace: namespace.Name, Name: controlplaneOne.Name}
+	dataplaneTwoNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplaneTwo.Name}
+	controlplaneTwoNN := types.NamespacedName{Namespace: namespace.Name, Name: controlplaneTwo.Name}
+
+	t.Log("verifying that dataplanes have 1 ready replica each")
+	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneOneNN, clients, 1), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneTwoNN, clients, 1), time.Minute, time.Second)
+
+	t.Log("verifying that controlplanes have 1 ready replica each")
+	require.Eventually(t, testutils.ControlPlaneHasNReadyPods(t, GetCtx(), controlplaneOneNN, clients, 1), time.Minute, time.Second)
+	require.Eventually(t, testutils.ControlPlaneHasNReadyPods(t, GetCtx(), controlplaneTwoNN, clients, 1), time.Minute, time.Second)
+
+	t.Log("verifying connectivity to the Gateway")
+	require.Eventually(t, expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayOneIPAddress), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayTwoIPAddress), testutils.SubresourceReadinessWait, time.Second)
+
+	t.Log("verifying services are managed by their dataplanes")
+	var dataplaneOneService corev1.Service
+	dataplaneOneName := types.NamespacedName{
+		Namespace: dataplaneOne.Namespace,
+		Name:      dataplaneOne.Name,
+	}
+	var dataplaneTwoService corev1.Service
+	dataplaneTwoName := types.NamespacedName{
+		Namespace: dataplaneTwo.Namespace,
+		Name:      dataplaneTwo.Name,
+	}
+
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneOneName, &dataplaneOneService, clients, client.MatchingLabels{
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+	}), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneTwoName, &dataplaneTwoService, clients, client.MatchingLabels{
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+	}), time.Minute, time.Second)
+
+	t.Log("deploying backend deployment (httpbin) of HTTPRoute")
+	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err = GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(GetCtx(), deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
+	_, err = GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(GetCtx(), service, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
+	httpPort := gatewayv1.PortNumber(80)
+	pathMatchPrefix := gatewayv1.PathMatchPathPrefix
+	kindService := gatewayv1.Kind("Service")
+	pathOne := "/path-test-one"
+	pathTwo := "/path-test-two"
+
+	httpRoute := gatewayv1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace.Name,
+			Name:      uuid.NewString(),
+			Annotations: map[string]string{
+				"konghq.com/strip-path": "true",
+			},
+		},
+		Spec: gatewayv1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{
+					Name: gatewayv1.ObjectName(gatewayOne.Name),
+				}},
+			},
+			Rules: []gatewayv1.HTTPRouteRule{
+				{
+					Matches: []gatewayv1.HTTPRouteMatch{
+						{
+							Path: &gatewayv1.HTTPPathMatch{
+								Type:  &pathMatchPrefix,
+								Value: &pathOne,
+							},
+						},
+					},
+					BackendRefs: []gatewayv1.HTTPBackendRef{
+						{
+							BackendRef: gatewayv1.BackendRef{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Name: gatewayv1.ObjectName(service.Name),
+									Port: &httpPort,
+									Kind: &kindService,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	httpRouteOne, err := GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).
+		Create(GetCtx(), &httpRoute, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(httpRouteOne)
+
+	httpRoute.ObjectMeta.Name = uuid.NewString()
+	httpRoute.Spec.CommonRouteSpec.ParentRefs[0].Name = gatewayv1.ObjectName(gatewayTwo.Name)
+	httpRoute.Spec.Rules[0].Matches[0].Path.Value = lo.ToPtr(pathTwo)
+	httpRouteTwo, err := GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).
+		Create(GetCtx(), &httpRoute, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(httpRouteTwo)
+
+	t.Log("verifying connectivity to the HTTPRoute")
+
+	require.Eventually(t, func() bool {
+		url := fmt.Sprintf("http://%s%s", gatewayOneIPAddress, pathOne)
+		bad := fmt.Sprintf("http://%s%s", gatewayOneIPAddress, pathTwo)
+		req, err := http.NewRequestWithContext(GetCtx(), http.MethodGet, url, nil)
+		if err != nil {
+			return false
+		}
+		resp, err := httpc.Do(req)
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		badReq, err := http.NewRequestWithContext(GetCtx(), http.MethodGet, bad, nil)
+		if err != nil {
+			return false
+		}
+		badResp, err := httpc.Do(badReq)
+		if err != nil {
+			return false
+		}
+		defer badResp.Body.Close()
+		return resp.StatusCode == http.StatusOK && badResp.StatusCode == http.StatusNotFound
+	}, time.Minute, time.Second)
+
+	require.Eventually(t, func() bool {
+		url := fmt.Sprintf("http://%s%s", gatewayTwoIPAddress, pathTwo)
+		bad := fmt.Sprintf("http://%s%s", gatewayTwoIPAddress, pathOne)
+		req, err := http.NewRequestWithContext(GetCtx(), http.MethodGet, url, nil)
+		if err != nil {
+			return false
+		}
+		resp, err := httpc.Do(req)
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		badReq, err := http.NewRequestWithContext(GetCtx(), http.MethodGet, bad, nil)
+		if err != nil {
+			return false
+		}
+		badResp, err := httpc.Do(badReq)
+		if err != nil {
+			return false
+		}
+		defer badResp.Body.Close()
+		return resp.StatusCode == http.StatusOK && badResp.StatusCode == http.StatusNotFound
+	}, time.Minute, time.Second)
+
+	t.Log("deleting Gateway resource")
+	require.NoError(t, GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Delete(GetCtx(), gatewayOne.Name, metav1.DeleteOptions{}))
+	require.NoError(t, GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Delete(GetCtx(), gatewayTwo.Name, metav1.DeleteOptions{}))
+
+	t.Log("verifying that DataPlane sub-resources are deleted")
+	assert.Eventually(t, func() bool {
+		_, err := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name).Get(GetCtx(), dataplaneOne.Name, metav1.GetOptions{})
+		return errors.IsNotFound(err)
+	}, time.Minute, time.Second)
+	assert.Eventually(t, func() bool {
+		_, err := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name).Get(GetCtx(), dataplaneTwo.Name, metav1.GetOptions{})
+		return errors.IsNotFound(err)
+	}, time.Minute, time.Second)
+
+	t.Log("verifying that ControlPlane sub-resources are deleted")
+	assert.Eventually(t, func() bool {
+		_, err := GetClients().OperatorClient.ApisV1beta1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplaneOne.Name, metav1.GetOptions{})
+		return errors.IsNotFound(err)
+	}, time.Minute, time.Second)
+	assert.Eventually(t, func() bool {
+		_, err := GetClients().OperatorClient.ApisV1beta1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplaneTwo.Name, metav1.GetOptions{})
+		return errors.IsNotFound(err)
+	}, time.Minute, time.Second)
+
+	t.Log("verifying that gateways are deleted")
+	require.Eventually(t, testutils.GatewayNotExist(t, GetCtx(), gatewayOneNN, clients), time.Minute, time.Second)
+	require.Eventually(t, testutils.GatewayNotExist(t, GetCtx(), gatewayTwoNN, clients), time.Minute, time.Second)
 }
 
 func TestGatewayWithMultipleListeners(t *testing.T) {

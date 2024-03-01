@@ -269,13 +269,16 @@ func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 		dontOverride[env.Name] = struct{}{}
 	}
 
-	_ = controlplane.SetDefaults(gatewayConfig.Spec.ControlPlaneOptions, dontOverride, controlplane.DefaultsArgs{
-		Namespace:                   gateway.Namespace,
-		DataPlaneIngressServiceName: dataplaneIngressServiceName,
-		DataPlaneAdminServiceName:   dataplaneAdminServiceName,
-		ManagedByGateway:            true,
-		ControlPlaneName:            controlPlaneName,
-	})
+	// an actual ControlPlane will have ObjectMeta populated with ownership information. this includes a stand-in to
+	// satisfy the signature
+	_ = controlplane.SetDefaults(gatewayConfig.Spec.ControlPlaneOptions, dontOverride,
+		controlplane.DefaultsArgs{
+			Namespace:                   gateway.Namespace,
+			DataPlaneIngressServiceName: dataplaneIngressServiceName,
+			DataPlaneAdminServiceName:   dataplaneAdminServiceName,
+			OwnedByGateway:              gateway.Name,
+			ControlPlaneName:            controlPlaneName,
+		})
 
 	setControlPlaneOptionsDefaults(gatewayConfig.Spec.ControlPlaneOptions)
 }

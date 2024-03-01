@@ -180,10 +180,6 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 											Value: "/var/cluster-certificate/ca.crt",
 										},
 										{
-											Name:  "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY",
-											Value: "5s",
-										},
-										{
 											Name:  "CONTROLLER_ANONYMOUS_REPORTS",
 											Value: "false",
 										},
@@ -257,10 +253,6 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 										{
 											Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
 											Value: "/var/cluster-certificate/ca.crt",
-										},
-										{
-											Name:  "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY",
-											Value: "5s",
 										},
 										{
 											Name:  "CONTROLLER_ANONYMOUS_REPORTS",
@@ -354,10 +346,6 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 											Value: "/var/cluster-certificate/ca.crt",
 										},
 										{
-											Name:  "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY",
-											Value: "5s",
-										},
-										{
 											Name:  "CONTROLLER_ANONYMOUS_REPORTS",
 											Value: "false",
 										},
@@ -425,10 +413,6 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 										{
 											Name:  "CONTROLLER_KONG_ADMIN_CA_CERT_FILE",
 											Value: "/var/cluster-certificate/ca.crt",
-										},
-										{
-											Name:  "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY",
-											Value: "5s",
 										},
 										{
 											Name:  "CONTROLLER_ANONYMOUS_REPORTS",
@@ -519,13 +503,16 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		index := i
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			changed := controlplane.SetDefaults(tc.spec, map[string]struct{}{}, controlplane.DefaultsArgs{
-				Namespace:                   tc.namespace,
-				DataPlaneIngressServiceName: tc.dataplaneIngressServiceName,
-				DataPlaneAdminServiceName:   tc.dataplaneAdminServiceName,
-				ManagedByGateway:            true,
-				AnonymousReportsEnabled:     tc.anonymousReportsEnabled,
-			})
+			changed := controlplane.SetDefaults(
+				tc.spec,
+				map[string]struct{}{},
+				controlplane.DefaultsArgs{
+					Namespace:                   tc.namespace,
+					DataPlaneIngressServiceName: tc.dataplaneIngressServiceName,
+					DataPlaneAdminServiceName:   tc.dataplaneAdminServiceName,
+					AnonymousReportsEnabled:     tc.anonymousReportsEnabled,
+					OwnedByGateway:              "",
+				})
 			require.Equalf(t, tc.changed, changed,
 				"should return the same value for test case %d:%s", index, tc.name)
 
