@@ -218,14 +218,13 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
 
-      # PRs to the main branch will update the version file, manifests and the generated bundle.
+      # PRs to the main branch will update the version file and manifests
       - name: Create a release PR
         uses: peter-evans/create-pull-request@a4f52f8033a6168103c2538976c07b467e8163bc
         with:
           token: ${{ secrets.gh-pat }}
           path: .
           add-paths: |
-            bundle
             VERSION
             config
           commit-message: "chore(${{ inputs.release-type }}): [bot] ${{ env.VERSION }}"
