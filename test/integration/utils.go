@@ -9,14 +9,13 @@ import (
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/samber/lo"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesclient "k8s.io/client-go/kubernetes"
 
 	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
 // expect404WithNoRouteFunc is used to check whether a given URL responds
@@ -99,48 +98,14 @@ func createValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Cl
 		return err
 	}
 
+	validationWebhook := resources.NewValidatingWebhookConfigurationBuilder(consts.WebhookName).
+		WithScopeAllNamespaces().
+		WithClientConfigURL(webhookURL).
+		WithCABundle(ca).
+		Build()
 	if _, err := k8sClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(
 		ctx,
-		&admissionregistrationv1.ValidatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: consts.WebhookName,
-			},
-			Webhooks: []admissionregistrationv1.ValidatingWebhook{
-				{
-					Name: consts.WebhookName,
-					ClientConfig: admissionregistrationv1.WebhookClientConfig{
-						URL:      &webhookURL,
-						CABundle: ca,
-					},
-					Rules: []admissionregistrationv1.RuleWithOperations{
-						{
-							Operations: []admissionregistrationv1.OperationType{
-								"CREATE",
-								"UPDATE",
-							},
-							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{"gateway-operator.konghq.com"},
-								APIVersions: []string{"v1alpha1"},
-								Resources:   []string{"controlplanes", "dataplanes"},
-							},
-						},
-						{
-							Operations: []admissionregistrationv1.OperationType{
-								"CREATE",
-								"UPDATE",
-							},
-							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{"gateway-operator.konghq.com"},
-								APIVersions: []string{"v1beta1"},
-								Resources:   []string{"controlplanes", "dataplanes"},
-							},
-						},
-					},
-					SideEffects:             lo.ToPtr(admissionregistrationv1.SideEffectClassNone),
-					AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				},
-			},
-		},
+		validationWebhook,
 		metav1.CreateOptions{},
 	); err != nil {
 		return err

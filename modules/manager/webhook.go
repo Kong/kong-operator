@@ -226,7 +226,15 @@ func (m *webhookManager) createCertificateConfigResources(ctx context.Context) e
 
 func (m *webhookManager) createWebhookResources(ctx context.Context) error {
 	// create the operator ValidatingWebhookConfiguration
-	validatingWebhookConfiguration := k8sresources.GenerateNewValidatingWebhookConfiguration(m.cfg.ControllerNamespace, consts.WebhookServiceName, consts.WebhookName)
+	validatingWebhookConfiguration := k8sresources.
+		NewValidatingWebhookConfigurationBuilder(consts.WebhookName).
+		WithClientConfigKubernetesService(
+			types.NamespacedName{
+				Name:      consts.WebhookServiceName,
+				Namespace: m.cfg.ControllerNamespace,
+			},
+		).
+		Build()
 	if err := m.setNamespaceAsOwner(ctx, validatingWebhookConfiguration); err != nil {
 		return err
 	}
@@ -281,7 +289,15 @@ func (m *webhookManager) cleanup(ctx context.Context) error {
 
 func (m *webhookManager) cleanupWebhookResources(ctx context.Context) error {
 	// delete the operator ValidatingWebhookConfiguration
-	validatingWebhookConfiguration := k8sresources.GenerateNewValidatingWebhookConfiguration(m.cfg.ControllerNamespace, consts.WebhookServiceName, consts.WebhookName)
+	validatingWebhookConfiguration := k8sresources.
+		NewValidatingWebhookConfigurationBuilder(consts.WebhookName).
+		WithClientConfigKubernetesService(
+			types.NamespacedName{
+				Name:      consts.WebhookServiceName,
+				Namespace: m.cfg.ControllerNamespace,
+			},
+		).
+		Build()
 	if err := m.client.Delete(ctx, validatingWebhookConfiguration); err != nil {
 		if !k8serrors.IsNotFound(err) {
 			return err
