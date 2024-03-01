@@ -15,7 +15,7 @@ spec:
     listKind: ControlPlaneList
     plural: controlplanes
     shortNames:
-    - kcp
+    - kocp
     singular: controlplane
   scope: Namespaced
   versions:

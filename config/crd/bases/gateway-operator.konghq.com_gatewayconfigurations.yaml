@@ -15,7 +15,7 @@ spec:
     listKind: GatewayConfigurationList
     plural: gatewayconfigurations
     shortNames:
-    - kgc
+    - kogc
     singular: gatewayconfiguration
   scope: Namespaced
   versions:

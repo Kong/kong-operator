@@ -15,7 +15,7 @@ spec:
     listKind: DataPlaneList
     plural: dataplanes
     shortNames:
-    - kdp
+    - kodp
     singular: dataplane
   scope: Namespaced
   versions:
