@@ -15,4 +15,4 @@ configMapGenerator:
 images:
 - name: docker.io/kong/gateway-operator-oss
   newName: docker.io/kong/gateway-operator-oss
-  newTag: sha-c140250
+  newTag: 1.2.0-rc.1
