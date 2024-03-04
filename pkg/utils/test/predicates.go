@@ -231,6 +231,34 @@ func ControlPlaneHasNReadyPods(t *testing.T, ctx context.Context, controlplaneNa
 	}, clients.OperatorClient)
 }
 
+// ControlPlaneHasAdmissionWebhookService is a helper function for tests that returns a function
+// that can be used to check if a ControlPlane has an admission webhook Service.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func ControlPlaneHasAdmissionWebhookService(t *testing.T, ctx context.Context, cp *operatorv1beta1.ControlPlane, clients K8sClients) func() bool {
+	return func() bool {
+		services, err := k8sutils.ListServicesForOwner(ctx, clients.MgrClient, cp.Namespace, cp.UID, client.MatchingLabels{
+			consts.ControlPlaneServiceLabel: consts.ControlPlaneServiceKindWebhook,
+		})
+		require.NoError(t, err)
+		t.Logf("%d webhook services", len(services))
+		return len(services) > 0
+	}
+}
+
+// ControlPlaneHasAdmissionWebhookCertificateSecret is a helper function for tests that returns a function
+// that can be used to check if a ControlPlane has an admission webhook certificate Secret.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func ControlPlaneHasAdmissionWebhookCertificateSecret(t *testing.T, ctx context.Context, cp *operatorv1beta1.ControlPlane, clients K8sClients) func() bool {
+	return func() bool {
+		services, err := k8sutils.ListSecretsForOwner(ctx, clients.MgrClient, cp.UID, client.MatchingLabels{
+			consts.SecretUsedByServiceLabel: consts.ControlPlaneServiceKindWebhook,
+		})
+		require.NoError(t, err)
+		t.Logf("%d webhook secrets", len(services))
+		return len(services) > 0
+	}
+}
+
 // DataPlaneHasActiveDeployment is a helper function for tests that returns a function
 // that can be used to check if a DataPlane has an active deployment (that is,
 // a Deployment that has at least 1 Replica and that all Replicas as marked as Available).

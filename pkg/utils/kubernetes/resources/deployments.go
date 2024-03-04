@@ -50,46 +50,52 @@ func ApplyDeploymentUserPatches(
 	return deployment, nil
 }
 
+// GenerateNewDeploymentForControlPlaneParams is a parameter struct for GenerateNewDeploymentForControlPlane function.
+type GenerateNewDeploymentForControlPlaneParams struct {
+	ControlPlane                   *operatorv1beta1.ControlPlane
+	ControlPlaneImage              string
+	ServiceAccountName             string
+	AdminMTLSCertSecretName        string
+	AdmissionWebhookCertSecretName string
+}
+
 // GenerateNewDeploymentForControlPlane generates a new Deployment for the ControlPlane
-func GenerateNewDeploymentForControlPlane(controlplane *operatorv1beta1.ControlPlane,
-	controlplaneImage,
-	serviceAccountName,
-	certSecretName string,
-) (*appsv1.Deployment, error) {
+func GenerateNewDeploymentForControlPlane(params GenerateNewDeploymentForControlPlaneParams) (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    controlplane.Namespace,
-			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-%s-", consts.ControlPlanePrefix, controlplane.Name)),
+			Namespace:    params.ControlPlane.Namespace,
+			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-%s-", consts.ControlPlanePrefix, params.ControlPlane.Name)),
 			Labels: map[string]string{
-				"app": controlplane.Name,
+				"app": params.ControlPlane.Name,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": controlplane.Name,
+					"app": params.ControlPlane.Name,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					CreationTimestamp: metav1.Time{},
 					Labels: map[string]string{
-						"app": controlplane.Name,
+						"app": params.ControlPlane.Name,
 					},
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext:               &corev1.PodSecurityContext{},
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
-					ServiceAccountName:            serviceAccountName,
-					DeprecatedServiceAccount:      serviceAccountName,
+					ServiceAccountName:            params.ServiceAccountName,
+					DeprecatedServiceAccount:      params.ServiceAccountName,
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					Volumes: []corev1.Volume{
-						ClusterCertificateVolume(certSecretName),
+						ClusterCertificateVolume(params.AdminMTLSCertSecretName),
+						controlPlaneAdmissionWebhookCertificateVolume(params.AdmissionWebhookCertSecretName),
 					},
 					Containers: []corev1.Container{
-						GenerateControlPlaneContainer(controlplaneImage),
+						GenerateControlPlaneContainer(params.AdmissionWebhookCertSecretName),
 					},
 				},
 			},
@@ -98,15 +104,15 @@ func GenerateNewDeploymentForControlPlane(controlplane *operatorv1beta1.ControlP
 	SetDefaultsPodTemplateSpec(&deployment.Spec.Template)
 	LabelObjectAsControlPlaneManaged(deployment)
 
-	if controlplane.Spec.Deployment.PodTemplateSpec != nil {
-		patchedPodTemplateSpec, err := StrategicMergePatchPodTemplateSpec(&deployment.Spec.Template, controlplane.Spec.Deployment.PodTemplateSpec)
+	if params.ControlPlane.Spec.Deployment.PodTemplateSpec != nil {
+		patchedPodTemplateSpec, err := StrategicMergePatchPodTemplateSpec(&deployment.Spec.Template, params.ControlPlane.Spec.Deployment.PodTemplateSpec)
 		if err != nil {
 			return nil, err
 		}
 		deployment.Spec.Template = *patchedPodTemplateSpec
 	}
 
-	k8sutils.SetOwnerForObject(deployment, controlplane)
+	k8sutils.SetOwnerForObject(deployment, params.ControlPlane)
 
 	// Set defaults for the deployment so that we don't get a diff when we compare
 	// it with what's in the cluster.
@@ -129,11 +135,21 @@ func GenerateControlPlaneContainer(image string) corev1.Container {
 				ReadOnly:  true,
 				MountPath: consts.ClusterCertificateVolumeMountPath,
 			},
+			{
+				Name:      consts.ControlPlaneAdmissionWebhookVolumeName,
+				ReadOnly:  true,
+				MountPath: consts.ControlPlaneAdmissionWebhookVolumeMountPath,
+			},
 		},
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          "health",
 				ContainerPort: 10254,
+				Protocol:      corev1.ProtocolTCP,
+			},
+			{
+				Name:          "webhook",
+				ContainerPort: consts.ControlPlaneAdmissionWebhookListenPort,
 				Protocol:      corev1.ProtocolTCP,
 			},
 		},
@@ -487,4 +503,25 @@ func (d *Deployment) WithEnvVar(v corev1.EnvVar, container string) *Deployment {
 		}
 	}
 	return d
+}
+
+func controlPlaneAdmissionWebhookCertificateVolume(certSecretName string) corev1.Volume {
+	volume := corev1.Volume{}
+	volume.Secret = &corev1.SecretVolumeSource{}
+	SetDefaultsVolume(&volume)
+	volume.Name = consts.ControlPlaneAdmissionWebhookVolumeName
+	volume.VolumeSource.Secret = &corev1.SecretVolumeSource{
+		SecretName: certSecretName,
+		Items: []corev1.KeyToPath{
+			{
+				Key:  "tls.crt",
+				Path: "tls.crt",
+			},
+			{
+				Key:  "tls.key",
+				Path: "tls.key",
+			},
+		},
+	}
+	return volume
 }

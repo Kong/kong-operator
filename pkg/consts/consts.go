@@ -59,6 +59,20 @@ const (
 	// as a label selector key.
 	// Used with e.g. DataPlane's status.selector field.
 	OperatorLabelSelector = OperatorLabelPrefix + "selector"
+
+	// ControlPlaneServiceLabel is a Service's label that is used to indicate which kind of Service it is.
+	ControlPlaneServiceLabel = OperatorLabelPrefix + "service"
+
+	// SecretUsedByServiceLabel is a Secret's label that is used to indicate which Service kind is using the Secret.
+	SecretUsedByServiceLabel = OperatorLabelPrefix + "secret-used-by-service"
+
+	// ControlPlaneServiceKindAdmin is the value for SecretUsedByServiceLabel or ControlPlaneServiceLabel that
+	// is used to indicate that a Service is an admin service.
+	ControlPlaneServiceKindAdmin = "admin"
+
+	// ControlPlaneServiceKindWebhook is the value for the SecretUsedByServiceLabel or ControlPlaneServiceLabel
+	// that is used to indicate that a Service is a webhook service.
+	ControlPlaneServiceKindWebhook = "webhook"
 )
 
 // -----------------------------------------------------------------------------

@@ -139,21 +139,28 @@ func setControlPlaneEnvOnDataPlaneChange(
 // Reconciler - Owned Resource Management
 // -----------------------------------------------------------------------------
 
+// ensureDeploymentParams is a helper struct to pass parameters to the ensureDeployment method.
+type ensureDeploymentParams struct {
+	ControlPlane                   *operatorv1beta1.ControlPlane
+	ServiceAccountName             string
+	AdminMTLSCertSecretName        string
+	AdmissionWebhookCertSecretName string
+}
+
 // ensureDeployment ensures that a Deployment is created for the
 // ControlPlane resource. Deployment will remain in dormant state until
 // corresponding dataplane is set.
 func (r *Reconciler) ensureDeployment(
 	ctx context.Context,
 	logger logr.Logger,
-	controlPlane *operatorv1beta1.ControlPlane,
-	serviceAccountName, certSecretName string,
+	params ensureDeploymentParams,
 ) (op.CreatedUpdatedOrNoop, *appsv1.Deployment, error) {
-	dataplaneIsSet := controlPlane.Spec.DataPlane != nil && *controlPlane.Spec.DataPlane != ""
+	dataplaneIsSet := params.ControlPlane.Spec.DataPlane != nil && *params.ControlPlane.Spec.DataPlane != ""
 
 	deployments, err := k8sutils.ListDeploymentsForOwner(ctx,
 		r.Client,
-		controlPlane.Namespace,
-		controlPlane.UID,
+		params.ControlPlane.Namespace,
+		params.ControlPlane.UID,
 		client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		},
@@ -174,11 +181,17 @@ func (r *Reconciler) ensureDeployment(
 	if !r.DevelopmentMode {
 		versionValidationOptions = append(versionValidationOptions, versions.IsControlPlaneImageVersionSupported)
 	}
-	controlplaneImage, err := controlplane.GenerateImage(&controlPlane.Spec.ControlPlaneOptions, versionValidationOptions...)
+	controlplaneImage, err := controlplane.GenerateImage(&params.ControlPlane.Spec.ControlPlaneOptions, versionValidationOptions...)
 	if err != nil {
 		return op.Noop, nil, err
 	}
-	generatedDeployment, err := k8sresources.GenerateNewDeploymentForControlPlane(controlPlane, controlplaneImage, serviceAccountName, certSecretName)
+	generatedDeployment, err := k8sresources.GenerateNewDeploymentForControlPlane(k8sresources.GenerateNewDeploymentForControlPlaneParams{
+		ControlPlane:                   params.ControlPlane,
+		ControlPlaneImage:              controlplaneImage,
+		ServiceAccountName:             params.ServiceAccountName,
+		AdminMTLSCertSecretName:        params.AdminMTLSCertSecretName,
+		AdmissionWebhookCertSecretName: params.AdmissionWebhookCertSecretName,
+	})
 	if err != nil {
 		return op.Noop, nil, err
 	}
@@ -204,7 +217,7 @@ func (r *Reconciler) ensureDeployment(
 		}
 
 		// ensure that replication strategy is up to date
-		replicas := controlPlane.Spec.ControlPlaneOptions.Deployment.Replicas
+		replicas := params.ControlPlane.Spec.ControlPlaneOptions.Deployment.Replicas
 		switch {
 		case !dataplaneIsSet && (replicas == nil || *replicas != numReplicasWhenNoDataPlane):
 			// DataPlane was just unset, so we need to scale down the Deployment.
@@ -222,7 +235,7 @@ func (r *Reconciler) ensureDeployment(
 			}
 		}
 
-		return patch.ApplyPatchIfNonEmpty(ctx, r.Client, logger, existingDeployment, oldExistingDeployment, controlPlane, updated)
+		return patch.ApplyPatchIfNonEmpty(ctx, r.Client, logger, existingDeployment, oldExistingDeployment, params.ControlPlane, updated)
 	}
 
 	if !dataplaneIsSet {
@@ -232,7 +245,7 @@ func (r *Reconciler) ensureDeployment(
 		return op.Noop, nil, fmt.Errorf("failed creating ControlPlane Deployment %s: %w", generatedDeployment.Name, err)
 	}
 
-	log.Debug(logger, "deployment for ControlPlane created", controlPlane, "deployment", generatedDeployment.Name)
+	log.Debug(logger, "deployment for ControlPlane created", params.ControlPlane, "deployment", generatedDeployment.Name)
 	return op.Created, generatedDeployment, nil
 }
 
@@ -390,13 +403,23 @@ func (r *Reconciler) ensureClusterRoleBinding(
 	return true, generatedClusterRoleBinding, r.Client.Create(ctx, generatedClusterRoleBinding)
 }
 
-func (r *Reconciler) ensureCertificate(
+// ensureAdminMTLSCertificateSecret ensures that a Secret is created with the certificate for mTLS communication between the
+// ControlPlane and the DataPlane.
+func (r *Reconciler) ensureAdminMTLSCertificateSecret(
 	ctx context.Context,
 	controlplane *operatorv1beta1.ControlPlane,
-) (op.CreatedUpdatedOrNoop, *corev1.Secret, error) {
+) (
+	op.CreatedUpdatedOrNoop,
+	*corev1.Secret,
+	error,
+) {
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
-		certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth,
+		certificatesv1.UsageDigitalSignature,
+		certificatesv1.UsageClientAuth,
+	}
+	matchingLabels := client.MatchingLabels{
+		consts.SecretUsedByServiceLabel: consts.ControlPlaneServiceKindAdmin,
 	}
 	// this subject is arbitrary. data planes only care that client certificates are signed by the trusted CA, and will
 	// accept a certificate with any subject
@@ -409,7 +432,39 @@ func (r *Reconciler) ensureCertificate(
 		},
 		usages,
 		r.Client,
-		nil,
+		matchingLabels,
+	)
+}
+
+// ensureAdmissionWebhookCertificateSecret ensures that a Secret is created with the serving certificate for the
+// ControlPlane's admission webhook.
+func (r *Reconciler) ensureAdmissionWebhookCertificateSecret(
+	ctx context.Context,
+	cp *operatorv1beta1.ControlPlane,
+	admissionWebhookService *corev1.Service,
+) (
+	op.CreatedUpdatedOrNoop,
+	*corev1.Secret,
+	error,
+) {
+	usages := []certificatesv1.KeyUsage{
+		certificatesv1.UsageKeyEncipherment,
+		certificatesv1.UsageServerAuth,
+		certificatesv1.UsageDigitalSignature,
+	}
+	matchingLabels := client.MatchingLabels{
+		consts.SecretUsedByServiceLabel: consts.ControlPlaneServiceKindWebhook,
+	}
+	return secrets.EnsureCertificate(ctx,
+		cp,
+		fmt.Sprintf("%s.%s.svc", admissionWebhookService.Name, admissionWebhookService.Namespace),
+		k8stypes.NamespacedName{
+			Namespace: r.ClusterCASecretNamespace,
+			Name:      r.ClusterCASecretName,
+		},
+		usages,
+		r.Client,
+		matchingLabels,
 	)
 }
 
@@ -477,4 +532,66 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 	}
 
 	return deleted, errors.Join(errs...)
+}
+
+func (r *Reconciler) ensureAdmissionWebhookService(
+	ctx context.Context,
+	cl client.Client,
+	controlPlane *operatorv1beta1.ControlPlane,
+) (op.CreatedUpdatedOrNoop, *corev1.Service, error) {
+	matchingLabels := k8sresources.GetManagedLabelForOwner(controlPlane)
+	matchingLabels[consts.ControlPlaneServiceLabel] = consts.ControlPlaneServiceKindWebhook
+
+	services, err := k8sutils.ListServicesForOwner(
+		ctx,
+		cl,
+		controlPlane.Namespace,
+		controlPlane.UID,
+		matchingLabels,
+	)
+	if err != nil {
+		return op.Noop, nil, fmt.Errorf("failed listing admission webhook Services for ControlPlane %s/%s: %w", controlPlane.Namespace, controlPlane.Name, err)
+	}
+
+	count := len(services)
+	if count > 1 {
+		if err := k8sreduce.ReduceServices(ctx, cl, services); err != nil {
+			return op.Noop, nil, err
+		}
+		return op.Noop, nil, errors.New("number of ControlPlane admission webhook Services reduced")
+	}
+
+	generatedService, err := k8sresources.GenerateNewAdmissionWebhookServiceForControlPlane(controlPlane)
+	if err != nil {
+		return op.Noop, nil, err
+	}
+
+	if count == 1 {
+		var updated bool
+		existingService := &services[0]
+		updated, existingService.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingService.ObjectMeta, generatedService.ObjectMeta)
+
+		if !cmp.Equal(existingService.Spec.Selector, generatedService.Spec.Selector) {
+			existingService.Spec.Selector = generatedService.Spec.Selector
+			updated = true
+		}
+		if !cmp.Equal(existingService.Spec.Ports, generatedService.Spec.Ports) {
+			existingService.Spec.Ports = generatedService.Spec.Ports
+			updated = true
+		}
+
+		if updated {
+			if err := cl.Update(ctx, existingService); err != nil {
+				return op.Noop, existingService, fmt.Errorf("failed updating ControlPlane admission webhook Service %s: %w", existingService.Name, err)
+			}
+			return op.Updated, existingService, nil
+		}
+		return op.Noop, existingService, nil
+	}
+
+	if err := cl.Create(ctx, generatedService); err != nil {
+		return op.Noop, nil, fmt.Errorf("failed creating ControlPlane admission webhook Service: %w", err)
+	}
+
+	return op.Created, generatedService, nil
 }

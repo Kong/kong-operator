@@ -222,8 +222,6 @@ func EnsureCertificate[
 	// Otherwise there is already 1 certificate matching specified selectors.
 	existingSecret := &secrets[0]
 
-	// Check if existing certificate is for a different subject.
-	// If that's the case, delete the old certificate and create a new one.
 	block, _ := pem.Decode(existingSecret.Data["tls.crt"])
 	if block == nil {
 		// The existing secret has a broken certificate, delete it and recreate it.
@@ -234,6 +232,8 @@ func EnsureCertificate[
 		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl)
 	}
 
+	// Check if existing certificate is for a different subject.
+	// If that's the case, delete the old certificate and create a new one.
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		return op.Noop, nil, err

@@ -27,7 +27,13 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				Name:      "cp-1",
 			},
 		}
-		d, err := GenerateNewDeploymentForControlPlane(cp, consts.DefaultControlPlaneImage, "kong-sa", "kong-cert-secret")
+		d, err := GenerateNewDeploymentForControlPlane(GenerateNewDeploymentForControlPlaneParams{
+			ControlPlane:                   cp,
+			ControlPlaneImage:              consts.DefaultControlPlaneImage,
+			ServiceAccountName:             "kong-sa",
+			AdminMTLSCertSecretName:        "kong-cert-secret",
+			AdmissionWebhookCertSecretName: "kong-admission-cert-secret",
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -292,6 +298,11 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 							Name: consts.ClusterCertificateVolume,
 						},
 						{
+							// NOTE: we need to provide the existing entry in the slice
+							// to prevent merging the provided new entry with existing entries.
+							Name: consts.ControlPlaneAdmissionWebhookVolumeName,
+						},
+						{
 							Name: "volume1",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{
@@ -309,6 +320,12 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 									// to prevent merging the provided new entry with existing entries.
 									Name:      consts.ClusterCertificateVolume,
 									MountPath: consts.ClusterCertificateVolumeMountPath,
+								},
+								{
+									// NOTE: we need to provide the existing entry in the slice
+									// to prevent merging the provided new entry with existing entries.
+									Name:      consts.ControlPlaneAdmissionWebhookVolumeName,
+									MountPath: consts.ControlPlaneAdmissionWebhookVolumeMountPath,
 								},
 								{
 									Name:      "volume1",
@@ -423,6 +440,11 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 							// NOTE: we need to provide the existing entry in the slice
 							// to prevent merging the provided new entry with existing entries.
 							Name: consts.ClusterCertificateVolume,
+						},
+						{
+							// NOTE: we need to provide the existing entry in the slice
+							// to prevent merging the provided new entry with existing entries.
+							Name: consts.ControlPlaneAdmissionWebhookVolumeName,
 						},
 						{
 							Name: "new_volume",
@@ -555,6 +577,12 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 									MountPath: consts.ClusterCertificateVolumeMountPath,
 								},
 								{
+									// NOTE: we need to provide the existing entry in the slice
+									// to prevent merging the provided new entry with existing entries.
+									Name:      consts.ControlPlaneAdmissionWebhookVolumeName,
+									MountPath: consts.ControlPlaneAdmissionWebhookVolumeMountPath,
+								},
+								{
 									Name:      "new_volume",
 									MountPath: "/new_volume",
 								},
@@ -566,6 +594,11 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 							// NOTE: we need to provide the existing entry in the slice
 							// to prevent merging the provided new entry with existing entries.
 							Name: consts.ClusterCertificateVolume,
+						},
+						{
+							// NOTE: we need to provide the existing entry in the slice
+							// to prevent merging the provided new entry with existing entries.
+							Name: consts.ControlPlaneAdmissionWebhookVolumeName,
 						},
 						{
 							Name: "new_volume",
@@ -615,6 +648,12 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 									MountPath: consts.ClusterCertificateVolumeMountPath,
 								},
 								{
+									// NOTE: we need to provide the existing entry in the slice
+									// to prevent merging the provided new entry with existing entries.
+									Name:      consts.ControlPlaneAdmissionWebhookVolumeName,
+									MountPath: consts.ControlPlaneAdmissionWebhookVolumeMountPath,
+								},
+								{
 									Name:      "hostpath-volumemount",
 									MountPath: "/var/log/hostpath",
 								},
@@ -623,7 +662,14 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					},
 					Volumes: []corev1.Volume{
 						{
+							// NOTE: we need to provide the existing entry in the slice
+							// to prevent merging the provided new entry with existing entries.
 							Name: consts.ClusterCertificateVolume,
+						},
+						{
+							// NOTE: we need to provide the existing entry in the slice
+							// to prevent merging the provided new entry with existing entries.
+							Name: consts.ControlPlaneAdmissionWebhookVolumeName,
 						},
 						{
 							Name: "hostpath-volume",
@@ -657,6 +703,25 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 									{
 										Key:  "ca.crt",
 										Path: "ca.crt",
+									},
+								},
+								DefaultMode: lo.ToPtr(corev1.SecretVolumeSourceDefaultMode),
+							},
+						},
+					},
+					{
+						Name: consts.ControlPlaneAdmissionWebhookVolumeName,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: "kong-admission-cert-secret",
+								Items: []corev1.KeyToPath{
+									{
+										Key:  "tls.crt",
+										Path: "tls.crt",
+									},
+									{
+										Key:  "tls.key",
+										Path: "tls.key",
 									},
 								},
 								DefaultMode: lo.ToPtr(corev1.SecretVolumeSourceDefaultMode),

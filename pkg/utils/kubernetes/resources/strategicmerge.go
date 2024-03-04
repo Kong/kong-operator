@@ -100,7 +100,7 @@ func SetDefaultsVolume(v *corev1.Volume) {
 	// and DataPlanes so we're good for now.
 	//
 	// TODO: https://github.com/Kong/gateway-operator/issues/1226
-	if v.Name != consts.ClusterCertificateVolume {
+	if v.Name != consts.ClusterCertificateVolume && v.Name != consts.ControlPlaneAdmissionWebhookVolumeName {
 		pkgapiscorev1.SetDefaults_Volume(v)
 		if v.HostPath != nil {
 			pkgapiscorev1.SetDefaults_HostPathVolumeSource(v.HostPath)

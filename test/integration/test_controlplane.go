@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -308,6 +309,15 @@ func TestControlPlaneEssentials(t *testing.T) {
 	t.Log("verifying controlplane Deployment.Pods.Env vars")
 	checkControlPlaneDeploymentEnvVars(t, deployment, controlplane.Name)
 
+	t.Log("verifying controlplane has a validating webhook service created")
+	require.Eventually(t, testutils.ControlPlaneHasAdmissionWebhookService(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+
+	t.Log("verifying controlplane has a validating webhook certificate secret created")
+	require.Eventually(t, testutils.ControlPlaneHasAdmissionWebhookCertificateSecret(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+
+	t.Log("verifying controlplane Deployment has validating webhook certificates mounted")
+	verifyControlPlaneDeploymentAdmissionWebhookMount(t, deployment)
+
 	// delete controlplane and verify that cluster wide resources removed.
 	t.Log("verifying cluster wide resources removed after controlplane deleted")
 	err = controlplaneClient.Delete(GetCtx(), controlplane.Name, metav1.DeleteOptions{})
@@ -354,6 +364,32 @@ func checkControlPlaneDeploymentEnvVars(t *testing.T, deployment *appsv1.Deploym
 	t.Log("verifying custom env TEST_ENV has value configured in controlplane")
 	testEnvValue := getEnvValueByName(envs, "TEST_ENV")
 	require.Equal(t, "test", testEnvValue)
+
+	t.Log("verifying that control plane has a validating webhook env var set")
+	admissionWebhookListen := getEnvValueByName(envs, "CONTROLLER_ADMISSION_WEBHOOK_LISTEN")
+	require.Equal(t, consts.ControlPlaneAdmissionWebhookEnvVarValue, admissionWebhookListen)
+}
+
+func verifyControlPlaneDeploymentAdmissionWebhookMount(t *testing.T, deployment *appsv1.Deployment) {
+	volumes := deployment.Spec.Template.Spec.Volumes
+	volumeFound := lo.ContainsBy(volumes, func(v corev1.Volume) bool {
+		return v.Name == consts.ControlPlaneAdmissionWebhookVolumeName
+	})
+	require.Truef(t, volumeFound, "volume %s not found in deployment, actual: %s", consts.ControlPlaneAdmissionWebhookVolumeName, deployment.Spec.Template.Spec.Volumes)
+
+	controllerContainer := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
+	require.NotNil(t, controllerContainer, "container %s not found in deployment", consts.ControlPlaneControllerContainerName)
+
+	volumeMount, ok := lo.Find(controllerContainer.VolumeMounts, func(vm corev1.VolumeMount) bool {
+		return vm.Name == consts.ControlPlaneAdmissionWebhookVolumeName
+	})
+	require.Truef(t, ok,
+		"volume mount %s not found in container %s, actual: %v",
+		consts.ControlPlaneAdmissionWebhookVolumeName,
+		consts.ControlPlaneControllerContainerName,
+		controllerContainer.VolumeMounts,
+	)
+	require.Equal(t, consts.ControlPlaneAdmissionWebhookVolumeMountPath, volumeMount.MountPath)
 }
 
 func TestControlPlaneUpdate(t *testing.T) {

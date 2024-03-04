@@ -43,14 +43,16 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 									Image: consts.DefaultControlPlaneImage,
 									Env: []corev1.EnvVar{
 										{
-											Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+											Name: "POD_NAMESPACE",
+											ValueFrom: &corev1.EnvVarSource{
 												FieldRef: &corev1.ObjectFieldSelector{
 													APIVersion: "v1", FieldPath: "metadata.namespace",
 												},
 											},
 										},
 										{
-											Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
+											Name: "POD_NAME",
+											ValueFrom: &corev1.EnvVarSource{
 												FieldRef: &corev1.ObjectFieldSelector{
 													APIVersion: "v1", FieldPath: "metadata.name",
 												},
@@ -87,14 +89,16 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 									Image: consts.DefaultControlPlaneImage,
 									Env: []corev1.EnvVar{
 										{
-											Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+											Name: "POD_NAMESPACE",
+											ValueFrom: &corev1.EnvVarSource{
 												FieldRef: &corev1.ObjectFieldSelector{
 													APIVersion: "v1", FieldPath: "metadata.namespace",
 												},
 											},
 										},
 										{
-											Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
+											Name: "POD_NAME",
+											ValueFrom: &corev1.EnvVarSource{
 												FieldRef: &corev1.ObjectFieldSelector{
 													APIVersion: "v1", FieldPath: "metadata.name",
 												},
@@ -134,14 +138,16 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 									Image: consts.DefaultControlPlaneImage,
 									Env: []corev1.EnvVar{
 										{
-											Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+											Name: "POD_NAMESPACE",
+											ValueFrom: &corev1.EnvVarSource{
 												FieldRef: &corev1.ObjectFieldSelector{
 													APIVersion: "v1", FieldPath: "metadata.namespace",
 												},
 											},
 										},
 										{
-											Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
+											Name: "POD_NAME",
+											ValueFrom: &corev1.EnvVarSource{
 												FieldRef: &corev1.ObjectFieldSelector{
 													APIVersion: "v1", FieldPath: "metadata.name",
 												},
@@ -209,14 +215,16 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 									Image: consts.DefaultControlPlaneImage,
 									Env: []corev1.EnvVar{
 										{
-											Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+											Name: "POD_NAMESPACE",
+											ValueFrom: &corev1.EnvVarSource{
 												FieldRef: &corev1.ObjectFieldSelector{
 													APIVersion: "v1", FieldPath: "metadata.namespace",
 												},
 											},
 										},
 										{
-											Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
+											Name: "POD_NAME",
+											ValueFrom: &corev1.EnvVarSource{
 												FieldRef: &corev1.ObjectFieldSelector{
 													APIVersion: "v1", FieldPath: "metadata.name",
 												},
@@ -308,14 +316,16 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 									Env: []corev1.EnvVar{
 										{Name: "TEST_ENV", Value: "test"},
 										{
-											Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+											Name: "POD_NAMESPACE",
+											ValueFrom: &corev1.EnvVarSource{
 												FieldRef: &corev1.ObjectFieldSelector{
 													APIVersion: "v1", FieldPath: "metadata.namespace",
 												},
 											},
 										},
 										{
-											Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
+											Name: "POD_NAME",
+											ValueFrom: &corev1.EnvVarSource{
 												FieldRef: &corev1.ObjectFieldSelector{
 													APIVersion: "v1", FieldPath: "metadata.name",
 												},
@@ -369,14 +379,16 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 									Image: consts.DefaultControlPlaneImage,
 									Env: []corev1.EnvVar{
 										{
-											Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+											Name: "POD_NAMESPACE",
+											ValueFrom: &corev1.EnvVarSource{
 												FieldRef: &corev1.ObjectFieldSelector{
 													APIVersion: "v1", FieldPath: "metadata.namespace",
 												},
 											},
 										},
 										{
-											Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
+											Name: "POD_NAME",
+											ValueFrom: &corev1.EnvVarSource{
 												FieldRef: &corev1.ObjectFieldSelector{
 													APIVersion: "v1", FieldPath: "metadata.name",
 												},
@@ -417,6 +429,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 										{
 											Name:  "CONTROLLER_ANONYMOUS_REPORTS",
 											Value: "true",
+										},
+										{
+											Name:  "CONTROLLER_ADMISSION_WEBHOOK_LISTEN",
+											Value: consts.ControlPlaneAdmissionWebhookEnvVarValue,
 										},
 									},
 								},
@@ -440,14 +456,16 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 									Image: consts.DefaultControlPlaneImage,
 									Env: []corev1.EnvVar{
 										{
-											Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{
+											Name: "POD_NAMESPACE",
+											ValueFrom: &corev1.EnvVarSource{
 												FieldRef: &corev1.ObjectFieldSelector{
 													APIVersion: "v1", FieldPath: "metadata.namespace",
 												},
 											},
 										},
 										{
-											Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
+											Name: "POD_NAME",
+											ValueFrom: &corev1.EnvVarSource{
 												FieldRef: &corev1.ObjectFieldSelector{
 													APIVersion: "v1", FieldPath: "metadata.name",
 												},
@@ -488,6 +506,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 										{
 											Name:  "CONTROLLER_ANONYMOUS_REPORTS",
 											Value: "true",
+										},
+										{
+											Name:  "CONTROLLER_ADMISSION_WEBHOOK_LISTEN",
+											Value: consts.ControlPlaneAdmissionWebhookEnvVarValue,
 										},
 									},
 								},

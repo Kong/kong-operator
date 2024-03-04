@@ -44,5 +44,21 @@ const (
 	DataPlaneInitRetryDelay = "5s"
 )
 
+// -----------------------------------------------------------------------------
+// Consts - ControlPlane webhook-related parameters
+// -----------------------------------------------------------------------------
+
+const (
+	// ControlPlaneAdmissionWebhookListenPort is the port on which the control plane admission webhook listens.
+	ControlPlaneAdmissionWebhookListenPort = 8080
+	// ControlPlaneAdmissionWebhookEnvVarValue is the default value for the admission webhook env var.
+	ControlPlaneAdmissionWebhookEnvVarValue = "0.0.0.0:8080"
+	// ControlPlaneAdmissionWebhookVolumeName is the name of the volume that holds the certificate that's used
+	// for serving the admission webhook in control plane.
+	ControlPlaneAdmissionWebhookVolumeName = "admission-webhook-certificate"
+	// ControlPlaneAdmissionWebhookVolumeMountPath is the path where the admission webhook certificate will be mounted.
+	ControlPlaneAdmissionWebhookVolumeMountPath = "/admission-webhook"
+)
+
 // TODO: https://github.com/Kong/gateway-operator/issues/1331
 // Extract as constants all the Env var Keys used to configure the ControlPlane.

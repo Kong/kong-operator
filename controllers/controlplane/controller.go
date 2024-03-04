@@ -68,6 +68,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ServiceAccount{}).
 		// watch for changes in Deployments created by the controlplane controller
 		Owns(&appsv1.Deployment{}).
+		// watch for changes in Services created by the controlplane controller
+		Owns(&corev1.Service{}).
 		// watch for changes in ClusterRoles created by the controlplane controller.
 		// Since the ClusterRoles are cluster-wide but controlplanes are namespaced,
 		// we need to manually detect the owner by means of the UID
@@ -311,7 +313,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "creating mTLS certificate", cp)
-	res, certSecret, err := r.ensureCertificate(ctx, cp)
+	res, adminCertificate, err := r.ensureAdminMTLSCertificateSecret(ctx, cp)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -320,8 +322,32 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
+	res, admissionWebhookService, err := r.ensureAdmissionWebhookService(ctx, r.Client, cp)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to ensure admission webhook service: %w", err)
+	}
+	if res != op.Noop {
+		log.Debug(logger, "admission webhook service created/updated", cp)
+		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+	}
+
+	log.Trace(logger, "creating admission webhook certificate", cp)
+	res, admissionWebhookCertificateSecret, err := r.ensureAdmissionWebhookCertificateSecret(ctx, cp, admissionWebhookService)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if res != op.Noop {
+		log.Debug(logger, "admission webhook certificate created/updated", cp)
+		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+	}
+
 	log.Trace(logger, "looking for existing Deployments for ControlPlane resource", cp)
-	res, controlplaneDeployment, err := r.ensureDeployment(ctx, logger, cp, controlplaneServiceAccount.Name, certSecret.Name)
+	res, controlplaneDeployment, err := r.ensureDeployment(ctx, logger, ensureDeploymentParams{
+		ControlPlane:                   cp,
+		ServiceAccountName:             controlplaneServiceAccount.Name,
+		AdminMTLSCertSecretName:        adminCertificate.Name,
+		AdmissionWebhookCertSecretName: admissionWebhookCertificateSecret.Name,
+	})
 	if err != nil {
 		return ctrl.Result{}, err
 	}
