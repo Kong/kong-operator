@@ -225,18 +225,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	anonymousReportsEnabled := true
-	if r.DevelopmentMode {
-		anonymousReportsEnabled = false
-	}
-
 	log.Trace(logger, "configuring ControlPlane resource", cp)
 	defaultArgs := controlplane.DefaultsArgs{
 		Namespace:                   cp.Namespace,
 		ControlPlaneName:            cp.Name,
 		DataPlaneIngressServiceName: dataplaneIngressServiceName,
 		DataPlaneAdminServiceName:   dataplaneAdminServiceName,
-		AnonymousReportsEnabled:     anonymousReportsEnabled,
+		AnonymousReportsEnabled:     controlplane.DeduceAnonymousReportsEnabled(r.DevelopmentMode, &cp.Spec.ControlPlaneOptions),
 	}
 	for _, owner := range cp.OwnerReferences {
 		if strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) && owner.Kind == "Gateway" {

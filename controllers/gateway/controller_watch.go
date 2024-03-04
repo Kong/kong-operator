@@ -278,6 +278,7 @@ func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 			DataPlaneAdminServiceName:   dataplaneAdminServiceName,
 			OwnedByGateway:              gateway.Name,
 			ControlPlaneName:            controlPlaneName,
+			AnonymousReportsEnabled:     controlplane.DeduceAnonymousReportsEnabled(r.DevelopmentMode, gatewayConfig.Spec.ControlPlaneOptions),
 		})
 
 	setControlPlaneOptionsDefaults(gatewayConfig.Spec.ControlPlaneOptions)
