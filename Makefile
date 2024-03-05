@@ -486,7 +486,8 @@ SKAFFOLD_RUN_PROFILE ?= dev
 
 .PHONY: _skaffold
 _skaffold: skaffold
-	$(SKAFFOLD) $(CMD) --port-forward=pods --profile=$(SKAFFOLD_PROFILE) $(SKAFFOLD_FLAGS)
+	GOCACHE=$(shell go env GOCACHE) \
+		$(SKAFFOLD) $(CMD) --port-forward=pods --profile=$(SKAFFOLD_PROFILE) $(SKAFFOLD_FLAGS)
 
 .PHONY: run.skaffold
 run.skaffold:
