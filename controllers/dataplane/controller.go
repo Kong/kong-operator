@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/controllers/pkg/ctxinjector"
 	"github.com/kong/gateway-operator/controllers/pkg/log"
 	"github.com/kong/gateway-operator/controllers/pkg/op"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -40,6 +41,7 @@ type Reconciler struct {
 	DevelopmentMode          bool
 	Validator                dataPlaneValidator
 	Callbacks                DataPlaneCallbacks
+	ContextInjector          ctxinjector.CtxInjector
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -56,6 +58,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// Calling it here ensures that evaluated values will be used for the duration of this function.
+	ctx = r.ContextInjector.InjectKeyValues(ctx)
 	logger := log.GetLogger(ctx, "dataplane", r.DevelopmentMode)
 
 	log.Trace(logger, "reconciling DataPlane resource", req)
