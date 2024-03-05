@@ -322,8 +322,14 @@ jobs:
           username: ${{ inputs.username }}
           password: ${{ secrets.dockerhub-token }}
 
-      # For a release full version is not empty and should be used, because meta.outputs.tags
-      # contains a list of tags.
+      # Prepare today's date in the same format as the pattern used in the metadata-action above for schedule trigger.
+      - name: Prepare today's date string
+        id: date
+        run: echo "today=$(date '+%Y%m%d')" >> "$GITHUB_OUTPUT"
+
+      # When building with `inputs.tag` set, `steps.meta.outputs.tags` contains multiple entries, so it cannot be used
+      # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
+      # `needs.semver.outputs.fullversion`.
       - uses: int128/docker-manifest-create-action@v2
         if: ${{ inputs.tag != '' }}
         with:
@@ -331,9 +337,22 @@ jobs:
           sources: |
             ${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}-amd64
             ${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}-arm64
-      # When build on main tags contain only a single tag, so it can be used directly.
+
+      # When building on schedule, `steps.meta.outputs.tags` contains multiple entries, so it cannot be used
+      # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
+      # the current date.
       - uses: int128/docker-manifest-create-action@v2
-        if: ${{ inputs.tag == '' }}
+        if: ${{ inputs.tag == '' && github.event_name == "schedule" }}
+        with:
+          tags: ${{ steps.meta.outputs.tags }}
+          sources: |
+            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.date.outputs.today }}"-amd64
+            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.date.outputs.today }}"-arm64
+
+      # When building on push (e.g. on main), `steps.meta.outputs.tags` contains only a single entry, so it can be used
+      # directly in sources.
+      - uses: int128/docker-manifest-create-action@v2
+        if: ${{ inputs.tag == '' && github.event_name == 'push' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
           sources: |
