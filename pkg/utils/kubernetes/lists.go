@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -241,4 +242,33 @@ func ListSecretsForOwner(ctx context.Context,
 	}
 
 	return secrets, nil
+}
+
+// ListValidatingWebhookConfigurationsForOwner is a helper function to map a list of ValidatingWebhookConfiguration
+// by list options and reduce by OwnerReference UID to efficiently list only the objects owned by the provided UID.
+func ListValidatingWebhookConfigurationsForOwner(
+	ctx context.Context,
+	c client.Client,
+	uid types.UID,
+	listOpts ...client.ListOption,
+) ([]admregv1.ValidatingWebhookConfiguration, error) {
+	cfgList := &admregv1.ValidatingWebhookConfigurationList{}
+	err := c.List(
+		ctx,
+		cfgList,
+		listOpts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var webhookConfigurations []admregv1.ValidatingWebhookConfiguration
+	for _, cfg := range cfgList.Items {
+		cfg := cfg
+		if IsOwnedByRefUID(&cfg, uid) {
+			webhookConfigurations = append(webhookConfigurations, cfg)
+		}
+	}
+
+	return webhookConfigurations, nil
 }

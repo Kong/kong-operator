@@ -8,6 +8,7 @@ import (
 	"github.com/Masterminds/semver"
 	webhook "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources/validatingwebhookconfig"
 	admregv1 "k8s.io/api/admissionregistration/v1"
+	pkgapisadmregv1 "k8s.io/kubernetes/pkg/apis/admissionregistration/v1"
 )
 
 // GenerateValidatingWebhookConfigurationForControlPlane generates a ValidatingWebhookConfiguration for a control plane
@@ -32,6 +33,7 @@ func GenerateValidatingWebhookConfigurationForControlPlane(webhookName string, c
 	}
 	if constraint.Check(cpVersion) {
 		cfg := webhook.GenerateValidatingWebhookConfigurationForKIC_ge3_1(webhookName, clientConfig)
+		pkgapisadmregv1.SetObjectDefaults_ValidatingWebhookConfiguration(cfg)
 		LabelObjectAsControlPlaneManaged(cfg)
 		return cfg, nil
 	}	

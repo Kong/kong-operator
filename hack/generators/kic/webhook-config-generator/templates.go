@@ -31,7 +31,10 @@ func GenerateValidatingWebhookConfigurationForKIC_{{ .SanitizedVersionConstraint
 			{
 				Name: "{{ .Name }}",
 				ClientConfig: clientConfig,
-				FailurePolicy: lo.ToPtr(admregv1.FailurePolicyType("{{ .FailurePolicy }}")),
+				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
+				// Deployments (ControlPlane and DataPlane) are not available.
+				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				FailurePolicy: lo.ToPtr(admregv1.Ignore),
 				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("{{ .MatchPolicy }}")),
 				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("{{ .SideEffects }}")),
 				AdmissionReviewVersions: []string{
@@ -88,6 +91,7 @@ import (
 	"github.com/Masterminds/semver"
 	webhook "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources/validatingwebhookconfig"
 	admregv1 "k8s.io/api/admissionregistration/v1"
+	pkgapisadmregv1 "k8s.io/kubernetes/pkg/apis/admissionregistration/v1"
 )
 
 // GenerateValidatingWebhookConfigurationForControlPlane generates a ValidatingWebhookConfiguration for a control plane
@@ -112,6 +116,7 @@ func GenerateValidatingWebhookConfigurationForControlPlane(webhookName string, c
 	}
 	if constraint.Check(cpVersion) {
 		cfg := webhook.GenerateValidatingWebhookConfigurationForKIC_{{ $suffix }}(webhookName, clientConfig)
+		pkgapisadmregv1.SetObjectDefaults_ValidatingWebhookConfiguration(cfg)
 		LabelObjectAsControlPlaneManaged(cfg)
 		return cfg, nil
 	}	

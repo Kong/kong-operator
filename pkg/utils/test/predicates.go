@@ -259,6 +259,17 @@ func ControlPlaneHasAdmissionWebhookCertificateSecret(t *testing.T, ctx context.
 	}
 }
 
+// ControlPlaneHasAdmissionWebhookConfiguration is a helper function for tests that returns a function
+// that can be used to check if a ControlPlane has an admission webhook configuration.
+func ControlPlaneHasAdmissionWebhookConfiguration(t *testing.T, ctx context.Context, cp *operatorv1beta1.ControlPlane, clients K8sClients) func() bool {
+	return func() bool {
+		services, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(ctx, clients.MgrClient, cp.UID)
+		require.NoError(t, err)
+		t.Logf("%d validating webhook configurations", len(services))
+		return len(services) > 0
+	}
+}
+
 // DataPlaneHasActiveDeployment is a helper function for tests that returns a function
 // that can be used to check if a DataPlane has an active deployment (that is,
 // a Deployment that has at least 1 Replica and that all Replicas as marked as Available).

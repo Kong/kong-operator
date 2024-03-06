@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -318,12 +319,19 @@ func TestControlPlaneEssentials(t *testing.T) {
 	t.Log("verifying controlplane Deployment has validating webhook certificates mounted")
 	verifyControlPlaneDeploymentAdmissionWebhookMount(t, deployment)
 
+	t.Log("verifying controlplane has a validating webhook configuration created")
+	require.Eventually(t, testutils.ControlPlaneHasAdmissionWebhookConfiguration(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+
+	t.Log("verifying controlplane's webhook is functional")
+	verifyControlPlaneWebhookIsFunctional(t, GetCtx(), clients)
+
 	// delete controlplane and verify that cluster wide resources removed.
 	t.Log("verifying cluster wide resources removed after controlplane deleted")
 	err = controlplaneClient.Delete(GetCtx(), controlplane.Name, metav1.DeleteOptions{})
 	require.NoError(t, err)
 	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasClusterRole(t, GetCtx(), controlplane, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasClusterRoleBinding(t, GetCtx(), controlplane, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasAdmissionWebhookConfiguration(t, GetCtx(), controlplane, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 	t.Log("verifying controlplane disappears after cluster resources are deleted")
 	require.Eventually(t, func() bool {
 		_, err := GetClients().OperatorClient.ApisV1beta1().ControlPlanes(controlplaneName.Namespace).Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
@@ -390,6 +398,24 @@ func verifyControlPlaneDeploymentAdmissionWebhookMount(t *testing.T, deployment 
 		controllerContainer.VolumeMounts,
 	)
 	require.Equal(t, consts.ControlPlaneAdmissionWebhookVolumeMountPath, volumeMount.MountPath)
+}
+
+// verifyControlPlaneWebhookIsFunctional verifies that the controlplane validating webhook is functional by
+// creating a resource that should be rejected by the webhook and verifying that it is rejected.
+func verifyControlPlaneWebhookIsFunctional(t *testing.T, ctx context.Context, clients testutils.K8sClients) {
+	keyAuthSecretWithNoKey := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "test-cred-",
+			Namespace:    "default",
+			Labels: map[string]string{
+				"konghq.com/credential": "key-auth",
+			},
+		},
+	}
+
+	err := clients.MgrClient.Create(ctx, &keyAuthSecretWithNoKey)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "admission webhook \"secrets.validation.ingress-controller.konghq.com\" denied the request")
 }
 
 func TestControlPlaneUpdate(t *testing.T) {

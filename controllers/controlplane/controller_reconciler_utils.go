@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -534,6 +536,33 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 	return deleted, errors.Join(errs...)
 }
 
+func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx context.Context, cp *operatorv1beta1.ControlPlane) (deletions bool, err error) {
+	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(
+		ctx,
+		r.Client,
+		cp.UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
+		},
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed listing webhook configurations for owner: %w", err)
+	}
+
+	var (
+		deleted bool
+		errs    []error
+	)
+	for i := range validatingWebhookConfigurations {
+		err = r.Client.Delete(ctx, &validatingWebhookConfigurations[i])
+		if err != nil && !k8serrors.IsNotFound(err) {
+			errs = append(errs, err)
+		}
+		deleted = true
+	}
+	return deleted, errors.Join(errs...)
+}
+
 func (r *Reconciler) ensureAdmissionWebhookService(
 	ctx context.Context,
 	cl client.Client,
@@ -594,4 +623,94 @@ func (r *Reconciler) ensureAdmissionWebhookService(
 	}
 
 	return op.Created, generatedService, nil
+}
+
+func (r *Reconciler) ensureValidatingWebhookConfiguration(
+	ctx context.Context,
+	cp *operatorv1beta1.ControlPlane,
+	certSecret *corev1.Secret,
+	webhookServiceName string,
+) (op.CreatedUpdatedOrNoop, error) {
+	logger := log.GetLogger(ctx, "controlplane.ensureValidatingWebhookConfiguration", r.DevelopmentMode)
+
+	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(
+		ctx,
+		r.Client,
+		cp.UID,
+		client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
+		},
+	)
+	if err != nil {
+		return op.Noop, err
+	}
+
+	count := len(validatingWebhookConfigurations)
+	if count > 1 {
+		if err := k8sreduce.ReduceValidatingWebhookConfigurations(ctx, r.Client, validatingWebhookConfigurations); err != nil {
+			return op.Noop, err
+		}
+		return op.Noop, errors.New("number of validatingWebhookConfigurations reduced")
+	}
+
+	cpContainer := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+	if cpContainer == nil {
+		return op.Noop, errors.New("controller container not found")
+	}
+	cpVersion, err := imageToSemverVersion(cpContainer.Image)
+	if err != nil {
+		return op.Noop, fmt.Errorf("failed to parse control plane image version: %w", err)
+	}
+
+	caBundle, ok := certSecret.Data["ca.crt"]
+	if !ok {
+		return op.Noop, errors.New("ca.crt not found in secret")
+	}
+	generatedWebhookConfiguration, err := k8sresources.GenerateValidatingWebhookConfigurationForControlPlane(
+		cp.Name,
+		cpVersion,
+		admregv1.WebhookClientConfig{
+			Service: &admregv1.ServiceReference{
+				Namespace: cp.Namespace,
+				Name:      webhookServiceName,
+				Port:      lo.ToPtr(int32(consts.ControlPlaneAdmissionWebhookListenPort)),
+			},
+			CABundle: caBundle,
+		},
+	)
+	if err != nil {
+		return op.Noop, fmt.Errorf("failed generating ControlPlane's ValidatingWebhookConfiguration: %w", err)
+	}
+	k8sutils.SetOwnerForObject(generatedWebhookConfiguration, cp)
+
+	if count == 1 {
+		var updated bool
+		webhookConfiguration := validatingWebhookConfigurations[0]
+		oldWebhookConfiguration := webhookConfiguration.DeepCopy()
+
+		updated, generatedWebhookConfiguration.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(webhookConfiguration.ObjectMeta, generatedWebhookConfiguration.ObjectMeta)
+		if !cmp.Equal(webhookConfiguration.Webhooks, generatedWebhookConfiguration.Webhooks) {
+			webhookConfiguration.Webhooks = generatedWebhookConfiguration.Webhooks
+			updated = true
+		}
+
+		if updated {
+			log.Debug(logger, "patching existing ValidatingWebhookConfiguration", webhookConfiguration)
+			return op.Updated, r.Client.Patch(ctx, &webhookConfiguration, client.MergeFrom(oldWebhookConfiguration))
+		}
+
+		return op.Noop, nil
+	}
+
+	return op.Created, r.Client.Create(ctx, generatedWebhookConfiguration)
+}
+
+func imageToSemverVersion(image string) (*semver.Version, error) {
+	// First, parse the image to get the version string.
+	v, err := versions.FromImage(image)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse control plane image version: %w", err)
+	}
+	// Construct a semver version from the version string.
+	return semver.NewVersion(v.String())
 }

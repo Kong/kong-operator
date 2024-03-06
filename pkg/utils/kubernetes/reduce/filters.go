@@ -2,6 +2,7 @@ package reduce
 
 import (
 	"github.com/samber/lo"
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -307,4 +308,25 @@ func FilterHPAs(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.Ho
 	}
 
 	return append(hpas[:best], hpas[best+1:]...)
+}
+
+// -----------------------------------------------------------------------------
+// Filter functions - ValidatingWebhookConfigurations
+// -----------------------------------------------------------------------------
+
+// filterValidatingWebhookConfigurations filters out the ValidatingWebhookConfigurations to be kept and returns
+// all the ValidatingWebhookConfigurations to be deleted. The oldest ValidatingWebhookConfiguration is kept.
+func filterValidatingWebhookConfigurations(webhookConfigurations []admregv1.ValidatingWebhookConfiguration) []admregv1.ValidatingWebhookConfiguration {
+	if len(webhookConfigurations) < 2 {
+		return []admregv1.ValidatingWebhookConfiguration{}
+	}
+
+	best := 0
+	for i, webhookConfig := range webhookConfigurations {
+		if webhookConfig.CreationTimestamp.Before(&webhookConfigurations[best].CreationTimestamp) {
+			best = i
+		}
+	}
+
+	return append(webhookConfigurations[:best], webhookConfigurations[best+1:]...)
 }

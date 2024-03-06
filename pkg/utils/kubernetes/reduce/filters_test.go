@@ -6,6 +6,7 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -767,6 +768,48 @@ func TestFilterServices(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			filteredServices := filterServices(tc.services, tc.endpointSlices)
 			require.Equal(t, filteredServices, tc.filteredServices)
+		})
+	}
+}
+
+func TestFilterValidatingWebhookConfigurations(t *testing.T) {
+	now := metav1.Now()
+	nowPlus := func(d time.Duration) metav1.Time {
+		return metav1.NewTime(now.Add(d))
+	}
+	testCases := []struct {
+		name                         string
+		webhooks                     []admregv1.ValidatingWebhookConfiguration
+		expectedFilteredWebhookNames []string
+	}{
+		{
+			name: "the older webhook must be filtered out",
+			webhooks: []admregv1.ValidatingWebhookConfiguration{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older",
+						CreationTimestamp: nowPlus(-time.Second),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer",
+						CreationTimestamp: now,
+					},
+				},
+			},
+			expectedFilteredWebhookNames: []string{"newer"},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			filteredWebhooks := filterValidatingWebhookConfigurations(tc.webhooks)
+			filteredWebhookNames := lo.Map(filteredWebhooks, func(w admregv1.ValidatingWebhookConfiguration, _ int) string {
+				return w.Name
+			})
+			require.ElementsMatch(t, filteredWebhookNames, tc.expectedFilteredWebhookNames)
 		})
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -52,6 +53,22 @@ func (r *Reconciler) clusterRoleBindingHasControlPlaneOwner(obj client.Object) b
 	}
 
 	return r.objHasControlPlaneOwner(ctx, clusterRoleBinding)
+}
+
+func (r *Reconciler) validatingWebhookConfigurationHasControlPlaneOwner(obj client.Object) bool {
+	ctx := context.Background()
+
+	validatingWebhookConfig, ok := obj.(*admregv1.ValidatingWebhookConfiguration)
+	if !ok {
+		log.FromContext(ctx).Error(
+			operatorerrors.ErrUnexpectedObject,
+			"failed to run predicate function",
+			"expected", "ValidatingWebhookConfiguration", "found", reflect.TypeOf(obj),
+		)
+		return false
+	}
+
+	return r.objHasControlPlaneOwner(ctx, validatingWebhookConfig)
 }
 
 func (r *Reconciler) objHasControlPlaneOwner(ctx context.Context, obj client.Object) bool {
@@ -103,6 +120,20 @@ func (r *Reconciler) getControlPlaneForClusterRoleBinding(ctx context.Context, o
 	}
 
 	return r.getControlPlaneRequestFromRefUID(ctx, clusterRoleBinding)
+}
+
+func (r *Reconciler) getControlPlaneForValidatingWebhookConfiguration(ctx context.Context, obj client.Object) []reconcile.Request {
+	validatingWebhookConfig, ok := obj.(*admregv1.ValidatingWebhookConfiguration)
+	if !ok {
+		log.FromContext(ctx).Error(
+			operatorerrors.ErrUnexpectedObject,
+			"failed to run map funcs",
+			"expected", "ValidatingWebhookConfiguration", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+
+	return r.getControlPlaneRequestFromRefUID(ctx, validatingWebhookConfig)
 }
 
 func (r *Reconciler) getControlPlaneRequestFromRefUID(ctx context.Context, obj client.Object) (recs []reconcile.Request) {

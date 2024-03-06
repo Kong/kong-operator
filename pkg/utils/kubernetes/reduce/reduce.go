@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -16,7 +17,7 @@ import (
 // PreDeleteHook is a function that can be executed before deleting an object.
 type PreDeleteHook func(ctx context.Context, cl client.Client, obj client.Object) error
 
-//+kubebuilder:rbac:groups=core,resources=secrets,verbs=delete
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=delete
 
 // ReduceSecrets detects the best secret in the set and deletes all the others.
 // It accepts optional preDeleteHooks which are executed before every Secret delete operation.
@@ -36,7 +37,7 @@ func ReduceSecrets(ctx context.Context, k8sClient client.Client, secrets []corev
 	return nil
 }
 
-//+kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=delete
+// +kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=delete
 
 // ReduceServiceAccounts detects the best serviceAccount in the set and deletes all the others.
 func ReduceServiceAccounts(ctx context.Context, k8sClient client.Client, serviceAccounts []corev1.ServiceAccount) error {
@@ -50,7 +51,7 @@ func ReduceServiceAccounts(ctx context.Context, k8sClient client.Client, service
 	return nil
 }
 
-//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=delete
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=delete
 
 // ReduceClusterRoles detects the best ClusterRole in the set and deletes all the others.
 func ReduceClusterRoles(ctx context.Context, k8sClient client.Client, clusterRoles []rbacv1.ClusterRole) error {
@@ -64,7 +65,7 @@ func ReduceClusterRoles(ctx context.Context, k8sClient client.Client, clusterRol
 	return nil
 }
 
-//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=delete
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=delete
 
 // ReduceClusterRoleBindings detects the best ClusterRoleBinding in the set and deletes all the others.
 func ReduceClusterRoleBindings(ctx context.Context, k8sClient client.Client, clusterRoleBindings []rbacv1.ClusterRoleBinding) error {
@@ -78,7 +79,7 @@ func ReduceClusterRoleBindings(ctx context.Context, k8sClient client.Client, clu
 	return nil
 }
 
-//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=delete
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=delete
 
 // ReduceDeployments detects the best Deployment in the set and deletes all the others.
 // It accepts optional preDeleteHooks which are executed before every Deployment delete operation.
@@ -98,8 +99,8 @@ func ReduceDeployments(ctx context.Context, k8sClient client.Client, deployments
 	return nil
 }
 
-//+kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=list;watch
-//+kubebuilder:rbac:groups=core,resources=services,verbs=delete
+// +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=list;watch
+// +kubebuilder:rbac:groups=core,resources=services,verbs=delete
 
 // ReduceServices detects the best Service in the set and deletes all the others.
 // It accepts optional preDeleteHooks which are executed before every Service delete operation.
@@ -132,7 +133,7 @@ func ReduceServices(ctx context.Context, k8sClient client.Client, services []cor
 	return nil
 }
 
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=delete
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=delete
 
 // ReduceNetworkPolicies detects the best NetworkPolicy in the set and deletes all the others.
 func ReduceNetworkPolicies(ctx context.Context, k8sClient client.Client, networkPolicies []networkingv1.NetworkPolicy) error {
@@ -146,7 +147,7 @@ func ReduceNetworkPolicies(ctx context.Context, k8sClient client.Client, network
 	return nil
 }
 
-//+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=delete
+// +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=delete
 
 // HPAFilterFunc filters a list of HorizontalPodAutoscalers.
 type HPAFilterFunc func(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.HorizontalPodAutoscaler
@@ -156,6 +157,20 @@ func ReduceHPAs(ctx context.Context, k8sClient client.Client, hpas []autoscaling
 	for _, hpa := range filter(hpas) {
 		hpa := hpa
 		if err := k8sClient.Delete(ctx, &hpa); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=delete
+
+// ReduceValidatingWebhookConfigurations detects the best ValidatingWebhookConfiguration in the set and deletes all the others.
+func ReduceValidatingWebhookConfigurations(ctx context.Context, k8sClient client.Client, webhookConfigurations []admregv1.ValidatingWebhookConfiguration) error {
+	filteredWebhookConfigurations := filterValidatingWebhookConfigurations(webhookConfigurations)
+	for _, webhookConfiguration := range filteredWebhookConfigurations {
+		webhookConfiguration := webhookConfiguration
+		if err := k8sClient.Delete(ctx, &webhookConfiguration); err != nil {
 			return err
 		}
 	}

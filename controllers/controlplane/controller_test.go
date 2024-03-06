@@ -79,6 +79,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 					Finalizers: []string{
 						string(ControlPlaneFinalizerCleanupClusterRole),
 						string(ControlPlaneFinalizerCleanupClusterRoleBinding),
+						string(ControlPlaneFinalizerCleanupValidatingWebhookConfiguration),
 					},
 				},
 				Spec: operatorv1beta1.ControlPlaneSpec{
@@ -260,6 +261,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 					Finalizers: []string{
 						string(ControlPlaneFinalizerCleanupClusterRole),
 						string(ControlPlaneFinalizerCleanupClusterRoleBinding),
+						string(ControlPlaneFinalizerCleanupValidatingWebhookConfiguration),
 					},
 				},
 				Spec: operatorv1beta1.ControlPlaneSpec{
