@@ -346,8 +346,8 @@ jobs:
         with:
           tags: ${{ steps.meta.outputs.tags }}
           sources: |
-            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.date.outputs.today }}"-amd64
-            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.date.outputs.today }}"-arm64
+            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.date.outputs.today }}-amd64
+            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.date.outputs.today }}-arm64
 
       # When building on push (e.g. on main), `steps.meta.outputs.tags` contains only a single entry, so it can be used
       # directly in sources.
