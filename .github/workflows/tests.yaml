@@ -195,6 +195,7 @@ jobs:
         WEBHOOK_ENABLED: ${{ matrix.webhook-enabled }}
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: integration-tests-webhook-enabled-${{ matrix.webhook-enabled }}.xml
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -243,6 +244,7 @@ jobs:
         WEBHOOK_ENABLED: ${{ matrix.webhook-enabled }}
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: integration-tests-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}.xml
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: upload diagnostics
       if: always()
