@@ -48,7 +48,16 @@ func generateHelpersForAllConfiguredVersions() {
 		}
 
 		// Render template.
-		tpl, err := template.New("tpl").Parse(generateValidatingWebhookConfigurationForKICVersionTemplate)
+		tpl, err := template.New("tpl").Funcs(map[string]any{
+			// Inject a function that filters out Delete operations from the list of operations.
+			// It's used to make sure we do not generate webhooks that handle DELETE operations.
+			// We will be able to drop this workaround once we release KIC 3.1.2 or 3.2.0.
+			"withoutDeletes": func(operations []admregv1.OperationType) []admregv1.OperationType {
+				return lo.Reject(operations, func(operation admregv1.OperationType, _ int) bool {
+					return operation == admregv1.Delete
+				})
+			},
+		}).Parse(generateValidatingWebhookConfigurationForKICVersionTemplate)
 		if err != nil {
 			log.Fatalf("Failed to parse 'generateValidatingWebhookConfigurationForKICTemplate' template: %s", err)
 		}

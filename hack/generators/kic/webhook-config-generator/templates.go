@@ -63,7 +63,7 @@ func GenerateValidatingWebhookConfigurationForKIC_{{ .SanitizedVersionConstraint
 							},
 						},
 						Operations: []admregv1.OperationType{
-							{{- range .Operations }}
+							{{- range (withoutDeletes .Operations) }}
 							"{{ . }}",
 							{{- end }}
 						},

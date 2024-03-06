@@ -44,7 +44,6 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_1(name string, clientConfi
 						Operations: []admregv1.OperationType{
 							"CREATE",
 							"UPDATE",
-							"DELETE",
 						},
 					},
 				},
@@ -77,7 +76,6 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_1(name string, clientConfi
 						Operations: []admregv1.OperationType{
 							"CREATE",
 							"UPDATE",
-							"DELETE",
 						},
 					},
 				},
@@ -110,7 +108,6 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_1(name string, clientConfi
 						Operations: []admregv1.OperationType{
 							"CREATE",
 							"UPDATE",
-							"DELETE",
 						},
 					},
 				},
@@ -143,7 +140,6 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_1(name string, clientConfi
 						Operations: []admregv1.OperationType{
 							"CREATE",
 							"UPDATE",
-							"DELETE",
 						},
 					},
 				},
@@ -208,7 +204,6 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_1(name string, clientConfi
 						Operations: []admregv1.OperationType{
 							"CREATE",
 							"UPDATE",
-							"DELETE",
 						},
 					},
 				},
@@ -241,7 +236,6 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_1(name string, clientConfi
 						Operations: []admregv1.OperationType{
 							"CREATE",
 							"UPDATE",
-							"DELETE",
 						},
 					},
 				},
@@ -274,7 +268,6 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_1(name string, clientConfi
 						Operations: []admregv1.OperationType{
 							"CREATE",
 							"UPDATE",
-							"DELETE",
 						},
 					},
 				},
@@ -339,7 +332,6 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_1(name string, clientConfi
 						Operations: []admregv1.OperationType{
 							"CREATE",
 							"UPDATE",
-							"DELETE",
 						},
 					},
 				},
