@@ -342,7 +342,7 @@ jobs:
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # the current date.
       - uses: int128/docker-manifest-create-action@v2
-        if: ${{ inputs.tag == '' && github.event_name == "schedule" }}
+        if: ${{ inputs.tag == '' && github.event_name == 'schedule' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
           sources: |
