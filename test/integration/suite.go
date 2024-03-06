@@ -13,6 +13,9 @@ import (
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/certmanager"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +40,8 @@ var (
 	bluegreenController  = strings.ToLower(os.Getenv("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER")) == "true"
 	webhookServerPort    = 9443
 	disableCalicoCNI     = strings.ToLower(os.Getenv("KONG_TEST_DISABLE_CALICO")) == "true"
+	disableCertManager   = strings.ToLower(os.Getenv("KONG_TEST_DISABLE_CERTMANAGER")) == "true"
+	disableMetalLB       = strings.ToLower(os.Getenv("KONG_TEST_DISABLE_METALLB")) == "true"
 )
 
 // -----------------------------------------------------------------------------
@@ -113,9 +118,15 @@ func TestMain(
 
 	fmt.Println("INFO: configuring cluster for testing environment")
 	env, err = testutils.BuildEnvironment(GetCtx(), existingCluster,
-		func(b *environments.Builder) {
+		func(b *environments.Builder, ct clusters.Type) {
 			if !disableCalicoCNI {
 				b.WithCalicoCNI()
+			}
+			if !disableCertManager {
+				b.WithAddons(certmanager.New())
+			}
+			if !disableMetalLB && ct == kind.KindClusterType {
+				b.WithAddons(metallb.New())
 			}
 		},
 	)

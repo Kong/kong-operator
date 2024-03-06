@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/certmanager"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
@@ -71,7 +69,7 @@ func SetupControllerLogger(controllerManagerOut string) (func() error, error) {
 }
 
 // BuilderOpt is an option function for an environment builder.
-type BuilderOpt func(*environments.Builder)
+type BuilderOpt func(*environments.Builder, clusters.Type)
 
 // BuildEnvironment builds the k8s environment for the tests.
 // Args:
@@ -92,11 +90,9 @@ func BuildEnvironment(ctx context.Context, existingCluster string, builderOpts .
 
 func buildEnvironmentOnNewKindCluster(ctx context.Context, builderOpts ...BuilderOpt) (environments.Environment, error) {
 	builder := environments.NewBuilder()
-	builder.WithAddons(metallb.New())
-	builder.WithAddons(certmanager.New())
 
 	for _, o := range builderOpts {
-		o(builder)
+		o(builder, kind.KindClusterType)
 	}
 	return builder.Build(ctx)
 }
@@ -118,21 +114,18 @@ func buildEnvironmentOnExistingCluster(ctx context.Context, existingCluster stri
 			return nil, err
 		}
 		builder.WithExistingCluster(cluster)
-		builder.WithAddons(metallb.New())
-		builder.WithAddons(certmanager.New())
 	case string(gke.GKEClusterType):
 		cluster, err := gke.NewFromExistingWithEnv(ctx, clusterName)
 		if err != nil {
 			return nil, err
 		}
 		builder.WithExistingCluster(cluster)
-		builder.WithAddons(certmanager.New())
 	default:
 		return nil, fmt.Errorf("unknown cluster type: %s", clusterType)
 	}
 
 	for _, o := range builderOpts {
-		o(builder)
+		o(builder, clusters.Type(clusterType))
 	}
 
 	return builder.Build(ctx)
