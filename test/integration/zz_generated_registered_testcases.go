@@ -3,6 +3,7 @@ package integration
 
 func init() {
 	addTestsToTestSuite(
+		TestAIGatewayCreation,
 		TestControlPlaneEssentials,
 		TestControlPlaneUpdate,
 		TestControlPlaneWhenNoDataPlane,

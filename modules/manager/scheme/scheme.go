@@ -1,6 +1,7 @@
 package scheme
 
 import (
+	configurationv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -19,5 +20,6 @@ func Get() *runtime.Scheme {
 	utilruntime.Must(operatorv1beta1.AddToScheme(scheme))
 	utilruntime.Must(gatewayv1.AddToScheme(scheme))
 	utilruntime.Must(gatewayv1beta1.AddToScheme(scheme))
+	utilruntime.Must(configurationv1.AddToScheme(scheme))
 	return scheme
 }

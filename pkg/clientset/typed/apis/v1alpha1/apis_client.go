@@ -28,12 +28,17 @@ import (
 
 type ApisV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	AIGatewaysGetter
 	DataPlaneMetricsExtensionsGetter
 }
 
 // ApisV1alpha1Client is used to interact with features provided by the apis group.
 type ApisV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *ApisV1alpha1Client) AIGateways(namespace string) AIGatewayInterface {
+	return newAIGateways(c, namespace)
 }
 
 func (c *ApisV1alpha1Client) DataPlaneMetricsExtensions(namespace string) DataPlaneMetricsExtensionInterface {

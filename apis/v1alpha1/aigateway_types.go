@@ -46,6 +46,8 @@ import (
 //
 // See: https://kubernetes.io/docs/reference/using-api/cel/
 //
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Endpoint",type="string",JSONPath=".status.endpoint",description="The URL endpoint for the AIGateway"
@@ -161,7 +163,7 @@ type CloudHostedLargeLanguageModel struct {
 	// with your consumer credentials to authenticate requests.
 	//
 	// +kubebuilder:validation:Required
-	Identifier string `json:"name"`
+	Identifier string `json:"identifier"`
 
 	// Model is the model name of the LLM (e.g. gpt-3.5-turbo, phi-2, e.t.c.).
 	//
@@ -208,6 +210,12 @@ type CloudHostedLargeLanguageModel struct {
 	//
 	// +kubebuilder:validation:Optional
 	DefaultPromptParams *LLMPromptParams `json:"defaultPromptParams"`
+
+	// AICloudProvider defines the cloud provider that will fulfill the LLM
+	// requests for this CloudHostedLargeLanguageModel
+	//
+	// +kubebuilder:validation:Required
+	AICloudProvider AICloudProvider `json:"aiCloudProvider"`
 }
 
 // -----------------------------------------------------------------------------

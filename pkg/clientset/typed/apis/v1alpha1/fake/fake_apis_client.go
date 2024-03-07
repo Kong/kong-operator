@@ -28,6 +28,10 @@ type FakeApisV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeApisV1alpha1) AIGateways(namespace string) v1alpha1.AIGatewayInterface {
+	return &FakeAIGateways{c, namespace}
+}
+
 func (c *FakeApisV1alpha1) DataPlaneMetricsExtensions(namespace string) v1alpha1.DataPlaneMetricsExtensionInterface {
 	return &FakeDataPlaneMetricsExtensions{c, namespace}
 }

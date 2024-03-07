@@ -10,7 +10,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -47,6 +46,9 @@ func (r *AIGatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(r.listAIGatewaysForGatewayClass),
 			builder.WithPredicates(predicate.NewPredicateFuncs(watch.GatewayClassMatchesController)),
 		).
+		// TODO watch on Gateways, KongPlugins, e.t.c.
+		//
+		// See: https://github.com/Kong/gateway-operator/issues/1368
 		Complete(r)
 }
 
@@ -82,9 +84,9 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	log.Trace(logger, "handling any necessary aigateway cleanup", aigateway)
-	cleanupPerformed, result, err := r.cleanup(ctx, logger, &aigateway)
-	if cleanupPerformed {
-		return result, err
+	if aigateway.GetDeletionTimestamp() != nil {
+		log.Debug(logger, "aigateway is being deleted, ignoring", aigateway)
+		return ctrl.Result{}, nil
 	}
 
 	log.Trace(logger, "marking aigateway as accepted", aigateway)
@@ -98,32 +100,27 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil // update will re-queue
 	}
 
-	log.Trace(logger, "managing finalizers for aigateway", aigateway)
-	if finalizersUpdated := controllerutil.AddFinalizer(&aigateway, string(AIGatewayCleanupFinalizer)); finalizersUpdated {
-		log.Info(logger, "setting finalizers for aigateway", aigateway)
-		if err := r.Client.Patch(ctx, &aigateway, client.MergeFrom(oldAIGateway)); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed updating finalizers for aigateway: %w", err)
-		}
-		return ctrl.Result{}, nil // update will re-queue
-	}
-
 	log.Info(logger, "managing gateway resources for aigateway", aigateway)
-	gatewayResourcesChanged, result, err := r.manageGateway()
+	gatewayResourcesChanged, err := r.manageGateway(ctx, logger, &aigateway)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	if gatewayResourcesChanged {
-		return result, err
+		return ctrl.Result{Requeue: true}, nil
 	}
 
-	log.Info(logger, "configuring kongplugins for aigateway", aigateway)
-	pluginsChanged, result, err := r.managePlugins()
-	if pluginsChanged {
-		return result, err
+	log.Info(logger, "configuring plugin and route resources for aigateway", aigateway)
+	pluginResourcesChanged, err := r.configurePlugins(ctx, logger, &aigateway)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if pluginResourcesChanged {
+		return ctrl.Result{Requeue: true}, err
 	}
 
-	log.Trace(logger, "ensuring aigateway status up-to-date", aigateway)
-	statusChanged, result, err := r.manageStatus()
-	if statusChanged {
-		return result, err
-	}
+	// TODO: manage status updates
+	//
+	// See: https://github.com/Kong/gateway-operator/issues/1368
 
 	log.Info(logger, "reconciliation complete for aigateway resource", aigateway)
 	return ctrl.Result{}, nil

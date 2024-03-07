@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -168,14 +169,14 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 
 	require.Eventually(
 		t, testutils.GetResponseBodyContains(
-			t, GetCtx(), clients, httpc, "http://"+gatewayIPAddress+"/prefix-test-http-route", "<title>httpbin.org</title>",
+			t, GetCtx(), clients, httpc, "http://"+gatewayIPAddress+"/prefix-test-http-route", http.MethodGet, "<title>httpbin.org</title>",
 		),
 		httpRouteAccessTimeout, time.Second,
 	)
 	// will route to path /1234 of service httpbin, but httpbin will return a 404 page on this path.
 	require.Eventually(
 		t, testutils.GetResponseBodyContains(
-			t, GetCtx(), clients, httpc, "http://"+gatewayIPAddress+"/prefix-test-http-route/1234", "<h1>Not Found</h1>",
+			t, GetCtx(), clients, httpc, "http://"+gatewayIPAddress+"/prefix-test-http-route/1234", http.MethodGet, "<h1>Not Found</h1>",
 		),
 		httpRouteAccessTimeout, time.Second,
 	)

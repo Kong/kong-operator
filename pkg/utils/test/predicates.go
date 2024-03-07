@@ -725,9 +725,9 @@ func GatewayIPAddressExist(t *testing.T, ctx context.Context, gatewayNSN types.N
 }
 
 // GetResponseBodyContains issues an HTTP request and checks if a response body contains a string.
-func GetResponseBodyContains(t *testing.T, ctx context.Context, clients K8sClients, httpc http.Client, url string, responseContains string) func() bool {
+func GetResponseBodyContains(t *testing.T, ctx context.Context, clients K8sClients, httpc http.Client, url string, method string, responseContains string) func() bool {
 	return func() bool {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		req, err := http.NewRequestWithContext(ctx, method, url, nil)
 		require.NoError(t, err)
 
 		resp, err := httpc.Do(req)

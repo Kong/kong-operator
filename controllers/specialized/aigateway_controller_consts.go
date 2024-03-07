@@ -13,4 +13,9 @@ const (
 	// needs to be processed for an AIGateway resource prior to garbage
 	// collection.
 	AIGatewayCleanupFinalizer AIGatewayFinalizer = "gateway-operator.konghq.com/aigateway-cleanup"
+
+	// AIGatewayEgressServicePort defines a static Kubernetes endpoint port
+	// that can be attached to all Services, HTTPRoutes, and other managed
+	// resources in an AIGateway.
+	AIGatewayEgressServicePort int = 80
 )

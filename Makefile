@@ -487,6 +487,7 @@ _run:
 		-zap-time-encoding iso8601 \
 		-enable-controller-controlplane \
 		-enable-controller-gateway \
+		-enable-controller-aigateway \
 		-zap-log-level 2
 
 SKAFFOLD_RUN_PROFILE ?= dev
@@ -508,6 +509,7 @@ debug: webhook-certs-dir manifests generate install _ensure-kong-system-namespac
 	CONTROLLER_DEVELOPMENT_MODE=true dlv debug ./main.go -- \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
+		--enable-controller-aigateway \
 		-zap-time-encoding iso8601
 
 .PHONY: debug.skaffold

@@ -1,12 +1,32 @@
-## TODO: once the reconciler is implemented, add some usage examples here
-## with curl using kubectl to grab the credentials.
+# USAGE: take a copy of this manifest and then in your copy update the provided
+# Secret to include your OpenAI API token and/or add tokens for other supported
+# providers.
+#
+# Then `kubectl apply -f $manifest` the manifest and wait for the AIGateway to
+# be fully deployed.
+#
+# FIXME: currently you'll need to find the Gateway resource that was created
+# on behalf of the AIGateway to determine the address by which the Kong
+# Gateway can be reached. In later iterations we'll have endpoints provided via
+# the AIGateway resource status.
+# See: https://github.com/Kong/gateway-operator/issues/1368
+#
+# Once you have the endpoint, the path to your backends are based on the
+# identifiers provided in the AIGateway below, and then you should be able to
+# access them with curl or other tools, e.g.:
+#
+#   curl -X POST -d 'prompt=hi' https://${GATEWAY_ADDR}/devteam-chatgpt
+#
+# You can also modify the defaultPrompts in the examples below to change the
+# overall behavior of the models on responses.
+---
 apiVersion: v1
 kind: Secret
 metadata:
   name: acme-ai-cloud-providers
 type: Opaque
 stringData:
-  apiToken: "<your-api-token-here>"
+  openai: "<INSERT TOKEN HERE>"
 ---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1
@@ -14,18 +34,25 @@ metadata:
   name: kong-ai-gateways
 spec:
   controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: kong
+    namespace: default
 ---
 apiVersion: gateway-operator.konghq.com/v1alpha1
 kind: AIGateway
 metadata:
-  name: kong-aigateway-example
+  name: kong-aigateway
 spec:
   gatewayClassName: kong-ai-gateways
   largeLanguageModels:
     cloudHosted:
     - identifier: marketing-team-classic-chatgpt
-      model: gpt-3.5-turbo
+      model: gpt-3.5-turbo-instruct
       promptType: completions
+      aiCloudProvider:
+        name: openai
     - identifier: devteam-chatgpt
       model: gpt-4
       promptType: chat
@@ -33,8 +60,47 @@ spec:
       - role: system
         content: "You are a helpful assistant who responds in the style of Sherlock Holmes."
       defaultPromptParams:
-        temperature: "0.5" # higher confidence predictions
+        # temperature: "0.5" # higher confidence predictions
         maxTokens: 50 # shorter responses
-        TopP: "0.9" # higher diversity
+        # topP: "0.9" # higher diversity
+      aiCloudProvider:
+        name: openai
   cloudProviderCredentials:
     name: acme-ai-cloud-providers
+---
+# TODO: eventually we want to be able to provide GatewayConfiguration resources
+# at the individual Gateway level so that these can be created automatically
+# and owned by the AIGateway resource.
+#
+# See: https://github.com/Kong/gateway-operator/issues/1368
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: GatewayConfiguration
+metadata:
+  name: kong
+spec:
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            image: kong:3.6.0
+            imagePullPolicy: Always
+            readinessProbe:
+              initialDelaySeconds: 1
+              periodSeconds: 1
+            env:
+            - name: KONG_ADMIN_GUI_LISTEN
+              value: 0.0.0.0:8002
+            - name: KONG_ADMIN_LISTEN
+              value: 0.0.0.0:8001, 0.0.0.0:8444 ssl reuseport backlog=16384
+  controlPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: controller
+            image: kong/kubernetes-ingress-controller:3.1.0
+            env:
+            - name: CONTROLLER_LOG_LEVEL
+              value: debug

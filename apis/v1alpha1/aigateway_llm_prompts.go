@@ -13,8 +13,6 @@ package v1alpha1
 // something like "you are a helpful assistant who responds in the style of
 // Sherlock Holmes".
 type LLMPrompt struct {
-	LLMPromptParams `json:",inline"`
-
 	// Content is the prompt text sent for inference.
 	//
 	// +kubebuilder:validation:Required
@@ -93,11 +91,15 @@ type LLMPromptParams struct {
 type LLMPromptRole string
 
 const (
-	// LLMPromptRoleUser indicates that the prompt is for a user.
+	// LLMPromptRoleUser indicates that the prompt is for the user.
 	LLMPromptRoleUser LLMPromptRole = "user"
 
-	// LLMPromptRoleSystem indicates that the prompt is for a system.
+	// LLMPromptRoleSystem indicates that the prompt is for the system.
 	LLMPromptRoleSystem LLMPromptRole = "system"
+
+	// LLMPromptRoleAssistant indicates that the prompt is for the 'virtual assistant'.
+	// It represents something that the chat bot "did", or "theoretically could have," said.
+	LLMPromptRoleAssistant LLMPromptRole = "assistance"
 )
 
 // LLMPromptType indicates the type of prompt to be used for a large
@@ -109,5 +111,5 @@ const (
 	LLMPromptTypeChat LLMPromptType = "chat"
 
 	// LLMPromptTypeCompletion indicates that the prompt is for a completion.
-	LLMPromptTypeCompletion LLMPromptType = "completion"
+	LLMPromptTypeCompletion LLMPromptType = "completions"
 )

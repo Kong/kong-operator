@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -23,6 +24,8 @@ import (
 	"github.com/kong/gateway-operator/modules/manager"
 	operatorclient "github.com/kong/gateway-operator/pkg/clientset"
 )
+
+const kicCRDsKustomizeURL = "https://github.com/Kong/kubernetes-ingress-controller/config/crd"
 
 func noOpClose() error {
 	return nil
@@ -181,6 +184,7 @@ func BuildMTLSCredentials(ctx context.Context, k8sClient *kubernetes.Clientset, 
 
 // DeployCRDs deploys the CRDs commonly used in tests.
 func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorclient.Clientset, env environments.Environment) error {
+	// CRDs for stable features
 	kubectlFlags := []string{"--server-side", "-v5"}
 	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), crdPath, kubectlFlags...); err != nil {
 		return err
@@ -188,6 +192,15 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), GatewayExperimentalCRDsKustomizeURL); err != nil {
 		return err
 	}
+	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kicCRDsKustomizeURL); err != nil {
+		return err
+	}
+
+	// CRDs for alpha/experimental features
+	if err := clusters.ApplyManifestByURL(ctx, env.Cluster(), path.Join(crdPath, AIGatewayCRDPath)); err != nil {
+		return err
+	}
+
 	// NOTE: this check is not ideal, because we don't know if CRDs were deployed, it assumes that all for KGO are deployed
 	// and checks it by waiting for a single arbitrary chosen CRDs for each API group.
 	if err := waitForOperatorCRDs(ctx, operatorClient); err != nil {

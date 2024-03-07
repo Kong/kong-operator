@@ -12,17 +12,22 @@ const (
 	// AICloudProviderOpenAI is the OpenAI cloud provider.
 	//
 	// They are known for models such as ChatGPT 3.5, 4, Dall-e, e.t.c.
-	AICloudProviderOpenAI AICloudProviderName = "OpenAI"
+	AICloudProviderOpenAI AICloudProviderName = "openai"
 
 	// AICloudProviderAzure is the Azure cloud provider.
 	//
 	// They are known for models such as PHI-2.
-	AICloudProviderAzure AICloudProviderName = "Azure"
+	AICloudProviderAzure AICloudProviderName = "azure"
 
 	// AICloudProviderCohere is the Cohere cloud provider.
 	//
 	// They are known for models such as Cohere-Embed, and Cohere-Rerank.
-	AICloudProviderCohere AICloudProviderName = "Cohere"
+	AICloudProviderCohere AICloudProviderName = "cohere"
+
+	// AICloudProviderMistral is the Mistral.AI cloud provider.
+	//
+	// They are known for models such as mistral-tiny.
+	AICloudProviderMistral AICloudProviderName = "mistral"
 )
 
 // -----------------------------------------------------------------------------
@@ -35,15 +40,8 @@ type AICloudProvider struct {
 	// Name is the unique name of an LLM provider.
 	//
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum=OpenAI;Azure;Cohere
+	// +kubebuilder:validation:Enum=openai;azure;cohere;mistral
 	Name AICloudProviderName `json:"name"`
-
-	// APITokenRef indicates the reference to the API token to communicate with
-	// and enable access to the API provided by the cloud provider for access
-	// to their AI models.
-	//
-	// +kubebuilder:validation:Required
-	APITokenRef AICloudProviderAPITokenRef `json:"apiTokenRef"`
 }
 
 // AICloudProviderAPITokenRef is an reference to another object which contains
