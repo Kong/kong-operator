@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/serializers"
 	"github.com/kong/kubernetes-telemetry/pkg/telemetry"
 	"github.com/kong/kubernetes-telemetry/pkg/types"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -36,19 +38,25 @@ func prepareScheme(t *testing.T) *runtime.Scheme {
 
 func createRESTMapper() meta.RESTMapper {
 	restMapper := meta.NewDefaultRESTMapper(nil)
-	// Register DataPlane GVK in REST mapper.
+	// Register GVKs in REST mapper.
 	restMapper.Add(schema.GroupVersionKind{
 		Group:   operatorv1beta1.SchemeGroupVersion.Group,
 		Version: operatorv1beta1.SchemeGroupVersion.Version,
 		Kind:    "DataPlane",
 	}, meta.RESTScopeNamespace)
+	restMapper.Add(schema.GroupVersionKind{
+		Group:   operatorv1beta1.SchemeGroupVersion.Group,
+		Version: operatorv1beta1.SchemeGroupVersion.Version,
+		Kind:    "ControlPlane",
+	}, meta.RESTScopeNamespace)
 	return restMapper
 }
 
-func prepareControllerClient(scheme *runtime.Scheme) client.Client {
+func prepareControllerClient(scheme *runtime.Scheme, objects ...runtime.Object) client.Client {
 	return fakeclient.NewClientBuilder().
 		WithScheme(scheme).
 		WithRESTMapper(createRESTMapper()).
+		WithRuntimeObjects(objects...).
 		Build()
 }
 
@@ -120,7 +128,7 @@ func TestCreateManager(t *testing.T) {
 			},
 		},
 		{
-			name: "3 dataplanes, 2 nodes, 1 node",
+			name: "4 dataplanes (1 owned), 3 controlplanes (1 owned), 2 nodes, 1 pod",
 			objects: []runtime.Object{
 				&corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -156,6 +164,32 @@ func TestCreateManager(t *testing.T) {
 						Name:      "cloud-gateway-2",
 					},
 				},
+				&operatorv1beta1.DataPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:       "kong",
+						Name:            "owned-cloud-gateway-3",
+						OwnerReferences: []metav1.OwnerReference{{}}, // Owned by something, we don't care what.
+					},
+				},
+				&operatorv1beta1.ControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "control-plane-0",
+					},
+				},
+				&operatorv1beta1.ControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "control-plane-1",
+					},
+				},
+				&operatorv1beta1.ControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:       "kong",
+						Name:            "owned-control-plane-2",
+						OwnerReferences: []metav1.OwnerReference{{}}, // Owned by something, we don't care what.
+					},
+				},
 			},
 			expectedReportParts: []string{
 				"signal=test-signal",
@@ -163,7 +197,87 @@ func TestCreateManager(t *testing.T) {
 				"k8sv=v1.27.2",
 				"k8s_nodes_count=2",
 				"k8s_pods_count=1",
-				"k8s_dataplanes_count=3",
+				"k8s_dataplanes_count=4",
+				"k8s_controlplanes_count=3",
+				"k8s_standalone_dataplanes_count=3",
+				"k8s_standalone_controlplanes_count=2",
+			},
+		},
+		{
+			name: "dataplanes replicas count",
+			objects: []runtime.Object{
+				&operatorv1beta1.DataPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "dp-10-replicas",
+					},
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									Replicas: lo.ToPtr[int32](10),
+								},
+							},
+						},
+					},
+				},
+				&operatorv1beta1.DataPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "dp-5-scaling-max-replicas",
+					},
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									Scaling: &operatorv1beta1.Scaling{
+										HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+											MaxReplicas: 5,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				&operatorv1beta1.DataPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "dp-no-replicas", // No replicas or scaling defined counts as 1.
+					},
+				},
+			},
+			expectedReportParts: []string{
+				"signal=test-signal",
+				"k8s_dataplanes_requested_replicas_count=16",
+			},
+		},
+		{
+			name: "controlplane replicas count",
+			objects: []runtime.Object{
+				&operatorv1beta1.ControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "cp-10-replicas",
+					},
+					Spec: operatorv1beta1.ControlPlaneSpec{
+						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+							Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
+								Replicas: lo.ToPtr[int32](10),
+							},
+						},
+					},
+				},
+				&operatorv1beta1.ControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "cp-no-replicas", // No replicas counts as 1.
+					},
+				},
+			},
+			expectedReportParts: []string{
+				"signal=test-signal",
+				"k8s_controlplanes_requested_replicas_count=11",
 			},
 		},
 	}
@@ -173,7 +287,8 @@ func TestCreateManager(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			scheme := prepareScheme(t)
 			k8sclient := testk8sclient.NewSimpleClientset()
-			ctrlClient := prepareControllerClient(scheme)
+
+			ctrlClient := prepareControllerClient(scheme, tc.objects...)
 
 			d, ok := k8sclient.Discovery().(*fakediscovery.FakeDiscovery)
 			require.True(t, ok)
@@ -200,12 +315,7 @@ func TestCreateManager(t *testing.T) {
 			require.NoError(t, m.TriggerExecute(ctx, "test-signal"), "failed triggering signal execution")
 
 			t.Log("checking received report...")
-			select {
-			case buf := <-ch:
-				checkTelemetryReportContent(t, string(buf), tc.expectedReportParts...)
-			case <-ctx.Done():
-				t.Fatalf("context closed with error %v", ctx.Err())
-			}
+			requireReportContainsValuesEventually(t, ch, tc.expectedReportParts...)
 		})
 	}
 }
@@ -329,32 +439,35 @@ func TestTelemetryUpdates(t *testing.T) {
 			require.NoError(t, m.TriggerExecute(ctx, "test-signal"), "failed triggering signal execution")
 
 			t.Log("checking received report...")
-			select {
-			case buf := <-ch:
-				checkTelemetryReportContent(t, string(buf), tc.expectedReportParts...)
-			case <-ctx.Done():
-				t.Fatalf("context closed with error %v", ctx.Err())
-			}
+			requireReportContainsValuesEventually(t, ch, tc.expectedReportParts...)
 
 			tc.action(t, context.Background(), dyn)
 
 			require.NoError(t, m.TriggerExecute(ctx, "test-signal"), "failed triggering signal execution")
 
 			t.Log("checking received report...")
-			select {
-			case buf := <-ch:
-				checkTelemetryReportContent(t, string(buf), tc.expectedReportPartsAfterAction...)
-			case <-ctx.Done():
-				t.Fatalf("context closed with error %v", ctx.Err())
-			}
+			requireReportContainsValuesEventually(t, ch, tc.expectedReportPartsAfterAction...)
 		})
 	}
 }
 
-func checkTelemetryReportContent(t *testing.T, report string, containValue ...string) {
-	t.Helper()
-
-	for _, v := range containValue {
-		require.Containsf(t, report, v, "report should contain %s", v)
-	}
+func requireReportContainsValuesEventually(t *testing.T, ch <-chan []byte, containValue ...string) {
+	const (
+		waitTime = 3 * time.Second
+		tickTime = 10 * time.Millisecond
+	)
+	require.Eventuallyf(t, func() bool {
+		select {
+		case report := <-ch:
+			for _, v := range containValue {
+				if !strings.Contains(string(report), v) {
+					t.Logf("report should contain %s, actual: %s", v, string(report))
+					return false
+				}
+			}
+		case <-time.After(tickTime):
+			return false
+		}
+		return true
+	}, waitTime, tickTime, "telemetry report never matched expected value")
 }

@@ -109,6 +109,41 @@ func createManager(
 		}
 		w.AddProvider(p)
 
+		// Add controlplane count provider to monitor number of controlplanes in the cluster.
+		p, err = NewControlPlaneCountProvider(dyn, cl.RESTMapper())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create controlplane count provider: %w", err)
+		}
+		w.AddProvider(p)
+
+		// Add dataplane count not from gateway.
+		p, err = NewStandaloneDataPlaneCountProvider(cl)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create dataplane count provider: %w", err)
+		}
+		w.AddProvider(p)
+
+		// Add controlplane count not from gateway.
+		p, err = NewStandaloneControlPlaneCountProvider(cl)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create controlplane count provider: %w", err)
+		}
+		w.AddProvider(p)
+
+		// Add dataplane requested replicas count provider to monitor number of requested replicas for dataplanes.
+		p, err = NewDataPlaneRequestedReplicasCountProvider(cl)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create dataplane requested replicas count provider: %w", err)
+		}
+		w.AddProvider(p)
+
+		// Add contorlplane requested replicas count provider to monitor number of requested replicas for controlplanes.
+		p, err = NewControlPlaneRequestedReplicasCountProvider(cl)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create controlplane requested replicas count provider: %w", err)
+		}
+		w.AddProvider(p)
+
 		m.AddWorkflow(w)
 	}
 	// Add state workflow
