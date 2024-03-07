@@ -20,6 +20,7 @@ func init() {
 		TestGatewayDataPlaneNetworkPolicy,
 		TestGatewayEssentials,
 		TestGatewayMultiple,
+		TestGatewayProvisionDataPlaneFail,
 		TestGatewayWithMultipleListeners,
 		TestHTTPRouteV1Beta1,
 		TestIngressEssentials,

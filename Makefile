@@ -361,7 +361,7 @@ _test.integration: webhook-certs-dir gotestsum
 .PHONY: test.integration
 test.integration:
 	@$(MAKE) _test.integration \
-		GOTESTFLAGS="-skip=BlueGreen $(GOTESTFLAGS)" \
+		GOTESTFLAGS="-skip='BlueGreen|TestGatewayProvisionDataPlaneFail' $(GOTESTFLAGS)" \
 		COVERPROFILE="coverage.integration.out"
 
 .PHONY: test.integration_bluegreen
@@ -370,6 +370,13 @@ test.integration_bluegreen:
 		GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER="true" \
 		GOTESTFLAGS="-run=BlueGreen $(GOTESTFLAGS)" \
 		COVERPROFILE="coverage.integration-bluegreen.out" \
+
+.PHONY: test.integration_provision_dataplane_fail
+test.integration_provision_dataplane_fail:
+	@$(MAKE) _test.integration \
+		WEBHOOK_ENABLED=true \
+		GOTESTFLAGS="-run=TestGatewayProvisionDataPlaneFail $(GOTESTFLAGS)" \
+		COVERPROFILE="coverage.integration.out"	
 
 .PHONY: _test.e2e
 _test.e2e: gotestsum

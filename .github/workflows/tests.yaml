@@ -266,7 +266,52 @@ jobs:
       with:
         name: tests-report
         path: integration-tests-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}.xml
+  
+  # Test reconciling Gateway with provisioning DataPlane failures.
+  # This test introduces a wrong gateway that will have errors on validation all `DataPlane`s, so it should run isolated.
+  integration-tests-provision-fail:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    name: integration-tests-provision-dataplane-fail
+    steps:
+    - name: checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
+    - name: setup golang
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    - name: run integration tests
+      run: make test.integration_provision_dataplane_fail
+      env:
+        KONG_CONTROLLER_OUT: stdout
+        GOTESTSUM_JUNITFILE: integration-tests-provision-dataplane-fail.xml
+    
+    - name: upload diagnostics
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: diagnostics-integration
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
+    - name: collect test coverage
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage
+        path: coverage.integration-provision-dataplane-fail.out
+
+    - name: collect test report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: integration-tests-provision-dataplane-fai.xml
+  
   e2e-tests:
     runs-on: ubuntu-latest
     steps:
@@ -354,6 +399,7 @@ jobs:
       # - conformance-tests
       - integration-tests
       - integration-tests-bluegreen
+      - integration-tests-provision-fail
       - e2e-tests
       - buildpulse-report
     if: always()

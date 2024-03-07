@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -49,6 +50,10 @@ type Reconciler struct {
 	Scheme          *runtime.Scheme
 	DevelopmentMode bool
 }
+
+// provisionDataPlaneFailRequeueAfter is the time duration after which we retry provisioning
+// of managed `DataPlane` when reconciling a `Gateway`.
+const provisionDataPlaneFailRetryAfter = 5 * time.Second
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -172,7 +177,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// Provision dataplane creates a dataplane and adds the DataPlaneReady=True
 	// condition to the Gateway status if the dataplane is ready. If not ready
 	// the status DataPlaneReady=False will be set instead.
-	dataplane, err := r.provisionDataPlane(ctx, logger, &gateway, gatewayConfig)
+	dataplane, provisionErr := r.provisionDataPlane(ctx, logger, &gateway, gatewayConfig)
 	// Set the DataPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no DataPlaneReady condition in the old gateway, or
 	// * the new status is false and the previous status was true
@@ -181,9 +186,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// with the WaitingToBecomeReadyReason statuc condition because when using
 	// Kong Gateway's readiness status /status/ready we need to provision the
 	// ControlPlane as well to make DataPlane ready.
-	if c, ok := k8sutils.GetCondition(DataPlaneReadyType, gwConditionAware); !ok || c.Status == metav1.ConditionFalse || err != nil {
-		if err != nil {
-			log.Error(logger, err, "failed to provision dataplane", gateway)
+	if c, ok := k8sutils.GetCondition(DataPlaneReadyType, gwConditionAware); !ok || c.Status == metav1.ConditionFalse || provisionErr != nil {
+		if provisionErr != nil {
+			log.Error(logger, provisionErr, "failed to provision dataplane", gateway)
 		}
 
 		oldCondition, oldFound := k8sutils.GetCondition(DataPlaneReadyType, oldGwConditionsAware)
@@ -200,8 +205,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			// Having the dataplane==nil here is a corner-case that can be happening sometimes,
 			// in case the dataplane provisioning has had some errors, the dataplane ReadyCondition
 			// has already been patched with the ConditionFalse, and a new reconciliation loop is triggered.
-			log.Trace(logger, "dataplane is not ready yet, and the dataplane ready condition has already been set in the gateway", gateway)
-			return ctrl.Result{}, nil
+			log.Debug(logger,
+				fmt.Sprintf(
+					"dataplane is not ready yet, and the dataplane ready condition has already been set in the gateway, requeue after %s",
+					provisionDataPlaneFailRetryAfter,
+				),
+				gateway)
+			return ctrl.Result{RequeueAfter: provisionDataPlaneFailRetryAfter}, nil
 		}
 
 		// If the dataplane is not ready yet we requeue.
