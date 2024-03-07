@@ -13,6 +13,7 @@ import (
 
 	"github.com/kong/gateway-operator/apis/v1alpha1"
 	"github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -36,8 +37,8 @@ func TestAIGatewayCreation(t *testing.T) {
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{{
-									Name:            "proxy",
-									Image:           "kong:3.6.0",
+									Name:            consts.DataPlaneProxyContainerName,
+									Image:           helpers.GetDefaultDataPlaneImage(),
 									ImagePullPolicy: corev1.PullAlways,
 									ReadinessProbe: &corev1.Probe{
 										InitialDelaySeconds: 1,
@@ -64,8 +65,8 @@ func TestAIGatewayCreation(t *testing.T) {
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{{
-								Name:  "controller",
-								Image: "kong/kubernetes-ingress-controller:3.1.0",
+								Name:  consts.ControlPlaneControllerContainerName,
+								Image: consts.DefaultControlPlaneImage,
 								Env: []corev1.EnvVar{{
 									Name:  "CONTROLLER_LOG_LEVEL",
 									Value: "debug",
