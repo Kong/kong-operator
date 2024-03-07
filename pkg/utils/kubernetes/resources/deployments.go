@@ -222,7 +222,7 @@ func GenerateNewDeploymentForDataPlane(
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					Volumes:                       []corev1.Volume{},
 					Containers: []corev1.Container{
-						GenerateDataPlaneContainer(dataplane.Spec.Deployment, dataplaneImage),
+						GenerateDataPlaneContainer(dataplaneImage),
 					},
 				},
 			},
@@ -273,7 +273,7 @@ func GenerateNewDeploymentForDataPlane(
 }
 
 // GenerateDataPlaneContainer generates a DataPlane container.
-func GenerateDataPlaneContainer(opts operatorv1beta1.DataPlaneDeploymentOptions, image string) corev1.Container {
+func GenerateDataPlaneContainer(image string) corev1.Container {
 	return corev1.Container{
 		Name:            consts.DataPlaneProxyContainerName,
 		VolumeMounts:    []corev1.VolumeMount{},

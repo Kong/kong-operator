@@ -59,7 +59,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 								Containers: []corev1.Container{
 									{
 										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
+										Image: helpers.GetDefaultDataPlaneImage(),
 										Env: []corev1.EnvVar{
 											{
 												Name:  testEnvVar,

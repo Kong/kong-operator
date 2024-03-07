@@ -9,6 +9,7 @@ import (
 	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/test/helpers"
 	"github.com/kong/gateway-operator/test/integration"
 )
@@ -16,6 +17,9 @@ import (
 var testSuiteToRun = integration.GetTestSuite()
 
 func TestMain(m *testing.M) {
+	helpers.SetDefaultDataPlaneImage(consts.DefaultDataPlaneImage)
+	helpers.SetDefaultDataPlaneBaseImage(consts.DefaultDataPlaneBaseImage)
+
 	testSuiteToRun = helpers.ParseGoTestFlags(TestIntegration, testSuiteToRun)
 	cfg := integration.DefaultControllerConfigForTests()
 	managerToTest := func(startedChan chan struct{}) error {

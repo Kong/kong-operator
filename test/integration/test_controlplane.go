@@ -80,7 +80,7 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 								Containers: []corev1.Container{
 									{
 										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
+										Image: helpers.GetDefaultDataPlaneImage(),
 									},
 								},
 							},
@@ -168,7 +168,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 								Containers: []corev1.Container{
 									{
 										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
+										Image: helpers.GetDefaultDataPlaneImage(),
 									},
 								},
 							},
@@ -443,7 +443,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 								Containers: []corev1.Container{
 									{
 										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
+										Image: helpers.GetDefaultDataPlaneImage(),
 										ReadinessProbe: &corev1.Probe{
 											InitialDelaySeconds: 1,
 											PeriodSeconds:       1,

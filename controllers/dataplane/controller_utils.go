@@ -24,9 +24,9 @@ import (
 // DataPlane - Private Functions - Generators
 // -----------------------------------------------------------------------------
 
-func generateDataPlaneImage(dataplane *operatorv1beta1.DataPlane, validators ...versions.VersionValidationOption) (string, error) {
+func generateDataPlaneImage(dataplane *operatorv1beta1.DataPlane, defaultImage string, validators ...versions.VersionValidationOption) (string, error) {
 	if dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec == nil {
-		return consts.DefaultDataPlaneImage, nil // TODO: https://github.com/Kong/gateway-operator/issues/20
+		return defaultImage, nil // TODO: https://github.com/Kong/gateway-operator/issues/20
 	}
 
 	container := k8sutils.GetPodContainerByName(&dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
@@ -49,7 +49,7 @@ func generateDataPlaneImage(dataplane *operatorv1beta1.DataPlane, validators ...
 		return relatedKongImage, nil
 	}
 
-	return consts.DefaultDataPlaneImage, nil // TODO: https://github.com/Kong/gateway-operator/issues/20
+	return defaultImage, nil // TODO: https://github.com/Kong/gateway-operator/issues/20
 }
 
 // -----------------------------------------------------------------------------

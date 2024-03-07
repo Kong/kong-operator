@@ -35,6 +35,7 @@ type DeploymentBuilder struct {
 	logger                 logr.Logger
 	client                 client.Client
 	additionalLabels       client.MatchingLabels
+	defaultImage           string
 	opts                   []k8sresources.DeploymentOpt
 }
 
@@ -67,6 +68,12 @@ func (d *DeploymentBuilder) WithClusterCertificate(name string) *DeploymentBuild
 // WithAdditionalLabels configures additional labels for a DeploymentBuilder.
 func (d *DeploymentBuilder) WithAdditionalLabels(labels client.MatchingLabels) *DeploymentBuilder {
 	d.additionalLabels = labels
+	return d
+}
+
+// WithDefaultImage configures the default image.
+func (d *DeploymentBuilder) WithDefaultImage(image string) *DeploymentBuilder {
+	d.defaultImage = image
 	return d
 }
 
@@ -104,7 +111,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	}
 
 	// generate the initial Deployment struct
-	desiredDeployment, err := generateDataPlaneDeployment(developmentMode, dataplane, d.additionalLabels, d.opts...)
+	desiredDeployment, err := generateDataPlaneDeployment(developmentMode, dataplane, d.defaultImage, d.additionalLabels, d.opts...)
 	if err != nil {
 		return nil, op.Noop, fmt.Errorf("could not generate Deployment: %w", err)
 	}
@@ -150,6 +157,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 func generateDataPlaneDeployment(
 	developmentMode bool,
 	dataplane *operatorv1beta1.DataPlane,
+	defaultImage string,
 	additionalDeploymentLabels client.MatchingLabels,
 	opts ...k8sresources.DeploymentOpt,
 ) (deployment *k8sresources.Deployment, err error) {
@@ -161,7 +169,7 @@ func generateDataPlaneDeployment(
 	if !developmentMode {
 		versionValidationOptions = append(versionValidationOptions, versions.IsDataPlaneImageVersionSupported)
 	}
-	dataplaneImage, err := generateDataPlaneImage(dataplane, versionValidationOptions...)
+	dataplaneImage, err := generateDataPlaneImage(dataplane, defaultImage, versionValidationOptions...)
 	if err != nil {
 		return nil, err
 	}

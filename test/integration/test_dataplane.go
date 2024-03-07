@@ -58,7 +58,7 @@ func TestDataPlaneEssentials(t *testing.T) {
 											},
 										},
 										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
+										Image: helpers.GetDefaultDataPlaneImage(),
 									},
 								},
 							},
@@ -253,7 +253,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 											},
 										},
 										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
+										Image: helpers.GetDefaultDataPlaneImage(),
 									},
 								},
 							},
@@ -505,7 +505,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 								Containers: []corev1.Container{
 									{
 										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
+										Image: helpers.GetDefaultDataPlaneImage(),
 									},
 								},
 							},
@@ -669,7 +669,7 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 								Containers: []corev1.Container{
 									{
 										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
+										Image: helpers.GetDefaultDataPlaneImage(),
 										VolumeMounts: []corev1.VolumeMount{
 											{
 												Name:      consts.ClusterCertificateVolume,

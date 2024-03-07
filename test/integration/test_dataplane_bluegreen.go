@@ -85,7 +85,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 		})
 	})
 
-	const dataplaneImageToPatch = "kong:3.1"
+	dataplaneImageToPatch := helpers.GetDefaultDataPlaneBaseImage() + ":3.4"
 
 	t.Run("after patching", func(t *testing.T) {
 		patchDataPlaneImage(GetCtx(), t, dataplane, GetClients().MgrClient, dataplaneImageToPatch)
@@ -283,7 +283,7 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 	t.Logf("verifying DataPlane %s gets marked ready", dataplane.Name)
 	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), waitTime, tickTime)
 
-	const dataplaneImageToPatch = "kong:3.2"
+	dataplaneImageToPatch := helpers.GetDefaultDataPlaneBaseImage() + ":3.4"
 	patchDataPlaneImage(GetCtx(), t, dataplane, GetClients().MgrClient, dataplaneImageToPatch)
 	var previewDeployment appsv1.Deployment
 	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, &previewDeployment, dataplanePreviewDeploymentLabels(), clients), waitTime, tickTime)
@@ -373,7 +373,7 @@ func TestDataPlaneBlueGreen_ResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T)
 	require.NotNil(t, liveTLSSecret)
 
 	t.Log("patching dataplane with another dataplane image to trigger rollout")
-	const dataplaneImageToPatch = "kong:3.1"
+	dataplaneImageToPatch := helpers.GetDefaultDataPlaneBaseImage() + ":3.4"
 	patchDataPlaneImage(GetCtx(), t, dataplane, GetClients().MgrClient, dataplaneImageToPatch)
 
 	t.Log("ensuring all preview dependent resources are created")
@@ -459,7 +459,7 @@ func testBlueGreenDataPlaneSpec() operatorv1beta1.DataPlaneSpec {
 							Containers: []corev1.Container{
 								{
 									Name:  consts.DataPlaneProxyContainerName,
-									Image: consts.DefaultDataPlaneImage,
+									Image: helpers.GetDefaultDataPlaneImage(),
 									// Make the test a bit faster.
 									ReadinessProbe: &corev1.Probe{
 										InitialDelaySeconds: 0,

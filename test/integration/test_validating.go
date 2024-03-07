@@ -81,7 +81,7 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 										Containers: []corev1.Container{
 											{
 												Name:  consts.DataPlaneProxyContainerName,
-												Image: consts.DefaultDataPlaneImage,
+												Image: helpers.GetDefaultDataPlaneImage(),
 												Env: []corev1.EnvVar{
 													{
 														Name:  "KONG_DATABASE",
@@ -117,7 +117,7 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 										Containers: []corev1.Container{
 											{
 												Name:  consts.DataPlaneProxyContainerName,
-												Image: consts.DefaultDataPlaneImage,
+												Image: helpers.GetDefaultDataPlaneImage(),
 												Env: []corev1.EnvVar{
 													{
 														Name:  "KONG_DATABASE",
@@ -152,7 +152,7 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 										Containers: []corev1.Container{
 											{
 												Name:  consts.DataPlaneProxyContainerName,
-												Image: consts.DefaultDataPlaneImage,
+												Image: helpers.GetDefaultDataPlaneImage(),
 												Env: []corev1.EnvVar{
 													{
 														Name: "KONG_DATABASE",
@@ -281,7 +281,7 @@ func testDataPlaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 										Containers: []corev1.Container{
 											{
 												Name:  consts.DataPlaneProxyContainerName,
-												Image: consts.DefaultDataPlaneImage,
+												Image: helpers.GetDefaultDataPlaneImage(),
 											},
 										},
 									},
@@ -309,7 +309,7 @@ func testDataPlaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 										Containers: []corev1.Container{
 											{
 												Name:  consts.DataPlaneProxyContainerName,
-												Image: consts.DefaultDataPlaneImage,
+												Image: helpers.GetDefaultDataPlaneImage(),
 												Env: []corev1.EnvVar{
 													{
 														Name:  "KONG_DATABASE",
@@ -343,7 +343,7 @@ func testDataPlaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 										Containers: []corev1.Container{
 											{
 												Name:  consts.DataPlaneProxyContainerName,
-												Image: consts.DefaultDataPlaneImage,
+												Image: helpers.GetDefaultDataPlaneImage(),
 												Env: []corev1.EnvVar{
 													{
 														Name:  "KONG_DATABASE",
@@ -377,7 +377,7 @@ func testDataPlaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 										Containers: []corev1.Container{
 											{
 												Name:  consts.DataPlaneProxyContainerName,
-												Image: consts.DefaultDataPlaneImage,
+												Image: helpers.GetDefaultDataPlaneImage(),
 												Env: []corev1.EnvVar{
 													{
 														Name: "KONG_DATABASE",

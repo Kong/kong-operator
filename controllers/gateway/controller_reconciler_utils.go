@@ -51,7 +51,7 @@ func (r *Reconciler) createDataPlane(ctx context.Context,
 	if gatewayConfig.Spec.DataPlaneOptions != nil {
 		dataplane.Spec.DataPlaneOptions = *gatewayConfigDataPlaneOptionsToDataPlaneOptions(*gatewayConfig.Spec.DataPlaneOptions)
 	}
-	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions)
+	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions, r.DefaultDataPlaneImage)
 	if err := setDataPlaneIngressServicePorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners); err != nil {
 		return nil, err
 	}

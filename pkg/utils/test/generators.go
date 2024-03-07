@@ -12,6 +12,7 @@ import (
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/pkg/vars"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 // GenerateGatewayClass generates the default GatewayClass to be used in tests
@@ -95,7 +96,7 @@ func GenerateGatewayConfiguration(gatewayConfigurationNSN types.NamespacedName) 
 								Containers: []corev1.Container{
 									{
 										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
+										Image: helpers.GetDefaultDataPlaneImage(),
 										ReadinessProbe: &corev1.Probe{
 											FailureThreshold:    3,
 											InitialDelaySeconds: 0,

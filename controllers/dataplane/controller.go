@@ -42,6 +42,7 @@ type Reconciler struct {
 	Validator                dataPlaneValidator
 	Callbacks                DataPlaneCallbacks
 	ContextInjector          ctxinjector.CtxInjector
+	DefaultImage             string
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -182,6 +183,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		WithAfterCallbacks(r.Callbacks.AfterDeployment).
 		WithClusterCertificate(certSecret.Name).
 		WithOpts(deploymentOpts...).
+		WithDefaultImage(r.DefaultImage).
 		WithAdditionalLabels(deploymentLabels)
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.DevelopmentMode)

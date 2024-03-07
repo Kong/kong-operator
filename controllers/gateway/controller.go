@@ -47,8 +47,9 @@ import (
 // Reconciler reconciles a Gateway object.
 type Reconciler struct {
 	client.Client
-	Scheme          *runtime.Scheme
-	DevelopmentMode bool
+	Scheme                *runtime.Scheme
+	DevelopmentMode       bool
+	DefaultDataPlaneImage string
 }
 
 // provisionDataPlaneFailRequeueAfter is the time duration after which we retry provisioning
@@ -415,7 +416,7 @@ func (r *Reconciler) provisionDataPlane(
 		expectedDataPlaneOptions = gatewayConfigDataPlaneOptionsToDataPlaneOptions(*gatewayConfig.Spec.DataPlaneOptions)
 	}
 	// Don't require setting defaults for DataPlane when using Gateway CRD.
-	setDataPlaneOptionsDefaults(expectedDataPlaneOptions)
+	setDataPlaneOptionsDefaults(expectedDataPlaneOptions, r.DefaultDataPlaneImage)
 	err = setDataPlaneIngressServicePorts(expectedDataPlaneOptions, gateway.Spec.Listeners)
 	if err != nil {
 		errWrap := fmt.Errorf("dataplane creation failed - error: %w", err)
@@ -593,7 +594,7 @@ func setControlPlaneOptionsDefaults(opts *operatorv1beta1.ControlPlaneOptions) {
 
 // setDataPlaneOptionsDefaults sets the default DataPlane options not overriding
 // what's been provided only filling in those fields that were unset or empty.
-func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions) {
+func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions, defaultImage string) {
 	if opts.Deployment.PodTemplateSpec == nil {
 		opts.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}
@@ -601,7 +602,7 @@ func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions) {
 	container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 	if container != nil {
 		if container.Image == "" {
-			container.Image = consts.DefaultDataPlaneImage
+			container.Image = defaultImage
 		}
 		container.ReadinessProbe = k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint)
 	} else {
@@ -613,7 +614,7 @@ func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions) {
 		// - https://github.com/Kong/gateway-operator/issues/754
 		opts.Deployment.PodTemplateSpec.Spec.Containers = append(opts.Deployment.PodTemplateSpec.Spec.Containers, corev1.Container{
 			Name:           consts.DataPlaneProxyContainerName,
-			Image:          consts.DefaultDataPlaneImage,
+			Image:          defaultImage,
 			ReadinessProbe: k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 		})
 	}

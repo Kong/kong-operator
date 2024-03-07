@@ -26,6 +26,7 @@ import (
 	"github.com/kong/gateway-operator/controllers/specialized"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	dataplanevalidator "github.com/kong/gateway-operator/internal/validation/dataplane"
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 const (
@@ -167,9 +168,10 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		GatewayControllerName: {
 			Enabled: c.GatewayControllerEnabled,
 			Controller: &gateway.Reconciler{
-				Client:          mgr.GetClient(),
-				Scheme:          mgr.GetScheme(),
-				DevelopmentMode: c.DevelopmentMode,
+				Client:                mgr.GetClient(),
+				Scheme:                mgr.GetScheme(),
+				DevelopmentMode:       c.DevelopmentMode,
+				DefaultDataPlaneImage: consts.DefaultDataPlaneImage,
 			},
 		},
 		// ControlPlane controller
@@ -197,6 +199,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					BeforeDeployment: dataplane.CreateCallbackManager(),
 					AfterDeployment:  dataplane.CreateCallbackManager(),
 				},
+				DefaultImage: consts.DefaultDataPlaneImage,
 			},
 		},
 		// DataPlaneBlueGreen controller
@@ -214,11 +217,13 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 					DevelopmentMode:          c.DevelopmentMode,
 					Validator:                dataplanevalidator.NewValidator(mgr.GetClient()),
+					DefaultImage:             consts.DefaultDataPlaneImage,
 				},
 				Callbacks: dataplane.DataPlaneCallbacks{
 					BeforeDeployment: dataplane.CreateCallbackManager(),
 					AfterDeployment:  dataplane.CreateCallbackManager(),
 				},
+				DefaultImage: consts.DefaultDataPlaneImage,
 			},
 		},
 		DataPlaneOwnedServiceFinalizerControllerName: {

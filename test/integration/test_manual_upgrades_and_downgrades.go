@@ -31,7 +31,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	originalControlPlaneImageVersion := "3.1.1"
 	originalControlPlaneImage := fmt.Sprintf("%s:%s", originalControlPlaneImageName, originalControlPlaneImageVersion)
 
-	originalDataPlaneImageName := "kong/kong"
+	originalDataPlaneImageName := helpers.GetDefaultDataPlaneBaseImage()
 	originalDataPlaneImageVersion := "2.7.0"
 	originalDataPlaneImage := fmt.Sprintf("%s:%s", originalDataPlaneImageName, originalDataPlaneImageVersion)
 

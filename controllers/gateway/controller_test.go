@@ -591,7 +591,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			setDataPlaneOptionsDefaults(&tc.input)
+			setDataPlaneOptionsDefaults(&tc.input, consts.DefaultDataPlaneImage)
 			require.Equal(t, tc.expected, tc.input)
 		})
 	}
