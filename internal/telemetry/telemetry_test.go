@@ -71,7 +71,8 @@ func versionInfo() *version.Info {
 
 func TestCreateManager(t *testing.T) {
 	payload := types.ProviderReport{
-		"v": "0.6.2",
+		"v":                       "0.6.2",
+		"experimental_ai_gateway": true,
 	}
 
 	testcases := []struct {
@@ -95,6 +96,7 @@ func TestCreateManager(t *testing.T) {
 				"k8s_nodes_count=1",
 				"k8s_pods_count=0",
 				"k8s_dataplanes_count=0",
+				"experimental_ai_gateway=true",
 			},
 		},
 		{
@@ -125,6 +127,7 @@ func TestCreateManager(t *testing.T) {
 				"k8s_nodes_count=1",
 				"k8s_pods_count=1",
 				"k8s_dataplanes_count=1",
+				"experimental_ai_gateway=true",
 			},
 		},
 		{
@@ -201,6 +204,7 @@ func TestCreateManager(t *testing.T) {
 				"k8s_controlplanes_count=3",
 				"k8s_standalone_dataplanes_count=3",
 				"k8s_standalone_controlplanes_count=2",
+				"experimental_ai_gateway=true",
 			},
 		},
 		{
@@ -250,6 +254,7 @@ func TestCreateManager(t *testing.T) {
 			expectedReportParts: []string{
 				"signal=test-signal",
 				"k8s_dataplanes_requested_replicas_count=16",
+				"experimental_ai_gateway=true",
 			},
 		},
 		{
@@ -278,6 +283,7 @@ func TestCreateManager(t *testing.T) {
 			expectedReportParts: []string{
 				"signal=test-signal",
 				"k8s_controlplanes_requested_replicas_count=11",
+				"experimental_ai_gateway=true",
 			},
 		},
 	}
