@@ -21,7 +21,7 @@ func TestGenerateValidatingWebhookConfigurationForControlPlane(t *testing.T) {
 			version: semver.MustParse("3.2.0"),
 		},
 		{
-			version: semver.MustParse("3.1.1"),
+			version: semver.MustParse("3.1.2"),
 		},
 		{
 			version:       semver.MustParse("3.0.0"),
