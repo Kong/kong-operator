@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -355,6 +356,198 @@ func TestValidateDeployOptions(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
+			v := &Validator{
+				c: b.Build(),
+			}
+			err := v.Validate(tc.dataplane)
+			if !tc.hasError {
+				require.NoError(t, err, tc.msg)
+			} else {
+				require.EqualError(t, err, tc.errMsg, tc.msg)
+			}
+		})
+	}
+}
+
+func TestDataPlaneIngressServiceOptions(t *testing.T) {
+	testCases := []struct {
+		msg       string
+		dataplane *operatorv1beta1.DataPlane
+		hasError  bool
+		errMsg    string
+	}{
+		{
+			msg: "dataplane with ingress service options but KONG_PORT_MAPS and KONG_PROXY_LISTEN not specified should be valid",
+			dataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-db-off-in-secret",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+											},
+										},
+									},
+								},
+							},
+						},
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									Ports: []operatorv1beta1.DataPlaneServicePort{
+										{Name: "http", Port: int32(80), TargetPort: intstr.FromInt(8080)},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			hasError: false,
+		},
+		{
+			msg: "dataplane with ingress service options having target port name not found in proxy container should be invalid",
+			dataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-db-off-in-secret",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+												Ports: []corev1.ContainerPort{
+													{Name: "http", ContainerPort: int32(8080)},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									Ports: []operatorv1beta1.DataPlaneServicePort{
+										{Name: "http", Port: int32(80), TargetPort: intstr.FromString("http")},
+										{Name: "https", Port: int32(443), TargetPort: intstr.FromString("https")}, // container port name not found
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			hasError: true,
+			errMsg:   "failed to get target port of port 443 (port name https) of ingress service: port https not found in container",
+		},
+		{
+			msg: "dataplane with ingress service options having target port not in KONG_PORT_MAPS should be invalid",
+			dataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-db-off-in-secret",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+												Env: []corev1.EnvVar{
+													{Name: "KONG_PORT_MAPS", Value: "80:8080"},
+													{Name: "KONG_PORT_LISTEN", Value: "0.0.0.0:8080"},
+												},
+												Image: consts.DefaultDataPlaneImage,
+											},
+										},
+									},
+								},
+							},
+						},
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									Ports: []operatorv1beta1.DataPlaneServicePort{
+										{Name: "http", Port: int32(80), TargetPort: intstr.FromInt(8080)},
+										{Name: "https", Port: int32(443), TargetPort: intstr.FromInt(8443)},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			hasError: true,
+			errMsg:   "KONG_PORT_MAPS specified but target port 8443 not properly set",
+		},
+		{
+			msg: "dataplane with ingress service options having target port not in KONG_PROXY_LISTEN should be invalid",
+			dataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-db-off-in-secret",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+												Env: []corev1.EnvVar{
+													{Name: "KONG_PORT_MAPS", Value: "80:8080,443:8443,8888:8888"},
+													{Name: "KONG_PROXY_LISTEN", Value: "0.0.0.0:8080 reuseport backlog=16384, 0.0.0.0:8443 http2 ssl reuseport backlog=16384"},
+												},
+												Image: consts.DefaultDataPlaneImage,
+											},
+										},
+									},
+								},
+							},
+						},
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									Ports: []operatorv1beta1.DataPlaneServicePort{
+										{Name: "http", Port: int32(80), TargetPort: intstr.FromInt(8080)},
+										{Name: "https", Port: int32(443), TargetPort: intstr.FromInt(8443)},
+										{Name: "tcp", Port: int32(8888), TargetPort: intstr.FromInt(8888)},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			hasError: true,
+			errMsg:   "target port 8888 not included in KONG_PROXY_LISTEN",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.msg, func(t *testing.T) {
+			b := fakeclient.NewClientBuilder()
 			v := &Validator{
 				c: b.Build(),
 			}

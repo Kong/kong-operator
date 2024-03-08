@@ -2,14 +2,16 @@ package dataplane
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
+	"net"
+	"strconv"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
-	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
@@ -41,6 +43,14 @@ func (v *Validator) Validate(dataplane *operatorv1beta1.DataPlane) error {
 
 	if err := v.ValidateDataPlaneDeploymentRollout(dataplane.Spec.Deployment.Rollout); err != nil {
 		return err
+	}
+
+	if dataplane.Spec.Network.Services != nil && dataplane.Spec.Network.Services.Ingress != nil &&
+		dataplane.Spec.Deployment.PodTemplateSpec != nil {
+		proxyContainer := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+		if err := v.ValidateDataPlaneIngressServiceOptions(dataplane.Namespace, dataplane.Spec.Network.Services.Ingress, proxyContainer); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -107,17 +117,9 @@ func (v *Validator) ValidateDataPlaneDeploymentOptions(namespace string, opts *o
 	}
 
 	// validate db mode.
-	dbMode, dbModeFound, err := v.getDBModeFromEnv(namespace, container.Env)
+	dbMode, _, err := k8sutils.GetEnvValueFromContainer(context.Background(), container, namespace, consts.EnvVarKongDatabase, v.c)
 	if err != nil {
 		return err
-	}
-
-	// if dbMode not found in envVar, search for it in EnvVarFrom.
-	if !dbModeFound {
-		dbMode, _, err = v.getDBModeFromEnvFrom(namespace, container.EnvFrom)
-		if err != nil {
-			return err
-		}
 	}
 
 	// only support dbless mode.
@@ -128,137 +130,119 @@ func (v *Validator) ValidateDataPlaneDeploymentOptions(namespace string, opts *o
 	return nil
 }
 
-// getDBModeFromEnv gets the dbmode from Env.
-// If the second return value is false, the dbMode is not found in Env.
-func (v *Validator) getDBModeFromEnv(namespace string, envs []corev1.EnvVar) (string, bool, error) {
-	dbMode := ""
-	dbModeFound := false
-	for _, envVar := range envs {
-		// use the last appearance of the same key as the result since k8s takes this precedence.
-		if envVar.Name == consts.EnvVarKongDatabase {
-			// value is non-empty.
-			if envVar.Value != "" {
-				dbMode = envVar.Value
-				dbModeFound = true
-			} else if envVar.ValueFrom != nil {
-				// value is empty,get from ValueFrom from configmap/secret.
-				if envVar.ValueFrom.ConfigMapKeyRef != nil {
-					var err error
-					dbMode, dbModeFound, err = v.getValueFromConfigMapKeyRef(namespace, envVar.ValueFrom.ConfigMapKeyRef)
-					if err != nil {
-						return "", false, err
-					}
-				}
-				if envVar.ValueFrom.SecretKeyRef != nil {
-					var err error
-					dbMode, dbModeFound, err = v.getValueFromSecretRef(namespace, envVar.ValueFrom.SecretKeyRef)
-					if err != nil {
-						return "", false, err
-					}
-				}
+// ValidateDataPlaneIngressServiceOptions validates spec.serviceOptions of given DataPlane.
+func (v *Validator) ValidateDataPlaneIngressServiceOptions(
+	namespace string, opts *operatorv1beta1.DataPlaneServiceOptions, proxyContainer *corev1.Container,
+) error {
+	if len(opts.Ports) > 0 {
+		kongPortMaps, hasKongPortMaps, err := k8sutils.GetEnvValueFromContainer(context.Background(), proxyContainer, namespace, "KONG_PORT_MAPS", v.c)
+		if err != nil {
+			return err
+		}
+		kongProxyListen, hasProxyListen, err := k8sutils.GetEnvValueFromContainer(context.Background(), proxyContainer, namespace, "KONG_PROXY_LISTEN", v.c)
+		if err != nil {
+			return err
+		}
+
+		var portNumberMap map[int32]int32 = make(map[int32]int32, 0)
+		if hasKongPortMaps {
+			portNumberMap, err = parseKongPortMaps(kongPortMaps)
+			if err != nil {
+				return err
+			}
+
+		}
+
+		var listenPortNumbers []int32 = make([]int32, 0)
+		if hasProxyListen {
+			listenPortNumbers, err = parseKongProxyListenPortNumbers(kongProxyListen)
+			if err != nil {
+				return err
+			}
+
+		}
+
+		for _, port := range opts.Ports {
+			targetPortNumber, err := getTargetPortNumber(port.TargetPort, proxyContainer)
+			if err != nil {
+				return fmt.Errorf("failed to get target port of port %d (port name %s) of ingress service: %w",
+					port.Port, port.Name, err)
+			}
+			if hasKongPortMaps && portNumberMap[port.Port] != targetPortNumber {
+				return fmt.Errorf("KONG_PORT_MAPS specified but target port %s not properly set", port.TargetPort.String())
+			}
+			if hasProxyListen && !lo.Contains(listenPortNumbers, targetPortNumber) {
+				return fmt.Errorf("target port %s not included in KONG_PROXY_LISTEN", port.TargetPort.String())
 			}
 		}
 	}
-	return dbMode, dbModeFound, nil
+
+	return nil
 }
 
-func (v *Validator) getDBModeFromEnvFrom(namespace string, envFroms []corev1.EnvFromSource) (string, bool, error) {
-	dbMode := ""
-	dbModeFound := false
-	for _, envFrom := range envFroms {
-		// if the envFrom.Prefix is the prefix of KONG_DATABASE,
-		// it is possible that this envFrom contains values of KONG_DATABASE.
-		if strings.HasPrefix(consts.EnvVarKongDatabase, envFrom.Prefix) {
-			if envFrom.ConfigMapRef != nil {
-				var err error
-				dbMode, dbModeFound, err = v.getDBModeFromConfigMapRef(namespace, envFrom.Prefix, envFrom.ConfigMapRef)
-				// technically it goes slightly against eventual-consistency to throw an error here,
-				// but the alternative is that we would need to validate ALL ConfigMaps on create
-				// and do relational mapping to DataPlane resources to validate that they aren't
-				// going to introduce a new violation, or we would have to do an additional level
-				// of validation that could only run during reconciliation.
-				if err != nil {
-					return "", false, err
-				}
-			}
-			if envFrom.SecretRef != nil {
-				var err error
-				dbMode, dbModeFound, err = v.getDBModeFromSecretRef(namespace, envFrom.Prefix, envFrom.SecretRef)
-				if err != nil {
-					return "", false, err
-				}
+func getTargetPortNumber(targetPort intstr.IntOrString, container *corev1.Container) (int32, error) {
+	switch targetPort.Type {
+	case intstr.Int:
+		return targetPort.IntVal, nil
+	case intstr.String:
+		for _, containerPort := range container.Ports {
+			if containerPort.Name == targetPort.StrVal {
+				return containerPort.ContainerPort, nil
 			}
 		}
+		return 0, fmt.Errorf("port %s not found in container", targetPort.StrVal)
 	}
-	return dbMode, dbModeFound, nil
+
+	return 0, fmt.Errorf("unknown targetPort Type: %v", targetPort.Type)
 }
 
-func (v *Validator) getValueFromConfigMapKeyRef(namespace string, cmKeyRef *corev1.ConfigMapKeySelector) (string, bool, error) {
-	cm := &corev1.ConfigMap{}
-	namespacedName := k8stypes.NamespacedName{Namespace: namespace, Name: cmKeyRef.Name}
-	err := v.c.Get(context.Background(), namespacedName, cm)
-	if err != nil {
-		return "", false, fmt.Errorf("failed to get configMap %s in configMapKeyRef: %w", cmKeyRef.Name, err)
-	}
-	if cm.Data != nil && cm.Data[cmKeyRef.Key] != "" {
-		return cm.Data[cmKeyRef.Key], true, nil
-	}
-	return "", false, nil
-}
-
-func (v *Validator) getValueFromSecretRef(namespace string, secretKeyRef *corev1.SecretKeySelector) (string, bool, error) {
-	secret := &corev1.Secret{}
-	namespacedName := k8stypes.NamespacedName{Namespace: namespace, Name: secretKeyRef.Name}
-	err := v.c.Get(context.Background(), namespacedName, secret)
-	if err != nil {
-		return "", false, fmt.Errorf("failed to get secret %s in secretRef: %w", secretKeyRef.Name, err)
-	}
-	if secret.Data != nil && len(secret.Data[secretKeyRef.Key]) > 0 {
-		decoded, err := base64.StdEncoding.DecodeString(string(secret.Data[secretKeyRef.Key]))
-		if err == nil {
-			return string(decoded), true, nil
+// parseKongPortMaps parses port maps specified in `proxy_maps` configuration.
+// and returns a map with expose port -> listening port.
+// For example, "80:8000,443:8443" will be parsed into map{80:8000,443:8443}.
+func parseKongPortMaps(kongPortMapEnv string) (map[int32]int32, error) {
+	portMaps := strings.Split(kongPortMapEnv, ",")
+	portNumberMap := map[int32]int32{}
+	for _, port := range portMaps {
+		parts := strings.SplitN(port, ":", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("port map item %s cannot be parsed into 'port:port' format", port)
 		}
+		servicePort, err := strconv.ParseInt(parts[0], 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("port %s cannot be parsed into number: %w", parts[0], err)
+		}
+		targetPort, err := strconv.ParseInt(parts[1], 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("port %s cannot be parsed into number: %w", parts[1], err)
+		}
+		portNumberMap[int32(servicePort)] = int32(targetPort)
 	}
-	return "", false, nil
+	return portNumberMap, nil
 }
 
-func (v *Validator) getDBModeFromConfigMapRef(namespace string, prefix string, cmRef *corev1.ConfigMapEnvSource) (string, bool, error) {
-	cm := &corev1.ConfigMap{}
-	namespacedName := k8stypes.NamespacedName{Namespace: namespace, Name: cmRef.Name}
-	err := v.c.Get(context.Background(), namespacedName, cm)
-	if err != nil {
-		return "", false, fmt.Errorf("failed to get configMap %s in configMapRef: %w", cmRef.Name, err)
+// parseKongProxyListenPortNumbers parses `proxy_listen` configuration to listening ports.
+// It returns the list of listening port numbers.  For example,
+// `"0.0.0.0:8000 reuseport backlog=16384, 0.0.0.0:8443 http2 ssl reuseport backlog=16384`
+// will be parsed into []int32{8000,8443}.
+func parseKongProxyListenPortNumbers(kongProxyListenEnv string) ([]int32, error) {
+	listenAddresses := strings.Split(kongProxyListenEnv, ",")
+	retPorts := make([]int32, 0, len(listenAddresses))
+	for _, addr := range listenAddresses {
+		addr = strings.Trim(addr, " ")
+		// The splitted single listen address would be a list of strings starting with the host and port
+		// and following with options of listening separated by spaces, like `0.0.0.0:8000 reuseport backlog=16384`.
+		// So we extract the part before the first space as the host and port.
+		// It is possible that the listen port have only one part like `0.0.0.0:8000` so we do not check presence of space.
+		hostPort, _, _ := strings.Cut(addr, " ")
+		_, port, err := net.SplitHostPort(hostPort)
+		if err != nil {
+			return nil, fmt.Errorf("listening address %s cannot be parsed into host:port format: %w", hostPort, err)
+		}
+		portNum, err := strconv.ParseInt(port, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("listening port %s cannot be parsed to number: %w", port, err)
+		}
+		retPorts = append(retPorts, int32(portNum))
 	}
-
-	if cm.Data == nil {
-		return "", false, nil
-	}
-
-	// find the key in the Data that would become `KONG_DATABASE` after concatenation with the prefix.
-	suffix := strings.TrimPrefix(consts.EnvVarKongDatabase, prefix)
-	dbMode, ok := cm.Data[suffix]
-	return dbMode, ok, nil
-}
-
-func (v *Validator) getDBModeFromSecretRef(namespace string, prefix string, secretRef *corev1.SecretEnvSource) (string, bool, error) {
-	secret := &corev1.Secret{}
-	namespacedName := k8stypes.NamespacedName{Namespace: namespace, Name: secretRef.Name}
-	err := v.c.Get(context.Background(), namespacedName, secret)
-	if err != nil {
-		return "", false, fmt.Errorf("failed to get secret %s in secretRef: %w", secretRef, err)
-	}
-	if secret.Data == nil {
-		return "", false, nil
-	}
-
-	suffix := strings.TrimPrefix(consts.EnvVarKongDatabase, prefix)
-	value, ok := secret.Data[suffix]
-	if !ok {
-		return "", false, nil
-	}
-	decoded, decodeErr := base64.RawStdEncoding.DecodeString(string(value))
-	if decodeErr == nil {
-		return string(decoded), true, nil
-	}
-	return "", false, nil
+	return retPorts, nil
 }
