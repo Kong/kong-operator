@@ -6,7 +6,7 @@ toolchain go1.22.0
 
 require (
 	github.com/Masterminds/semver v1.5.0
-	github.com/cert-manager/cert-manager v1.14.1
+	github.com/cert-manager/cert-manager v1.14.3
 	github.com/cloudflare/cfssl v1.6.4
 	github.com/go-logr/logr v1.4.1
 	github.com/google/uuid v1.6.0
