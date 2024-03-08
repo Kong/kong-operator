@@ -11,6 +11,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	operatorv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 )
 
@@ -24,6 +25,11 @@ const (
 	ControlPlaneK8sResourceName = "controlplanes"
 	// ControlPlaneCountKind is the kind of provider reporting number of controlplanes.
 	ControlPlaneCountKind = provider.Kind("controlplanes_count")
+
+	// AIGatewayK8sResourceName is the registered name of resource in kubernetes for AIgateways.
+	AIGatewayK8sResourceName = "aigatewaies"
+	// AIGatewayCountKind is the kind of provider reporting number of AIGateways.
+	AIGatewayCountKind = provider.Kind("aigatewaies_count")
 
 	// StandaloneDataPlaneCountProviderName is the name of the standalone dataplane count provider.
 	StandaloneDataPlaneCountProviderName = "standalone_dataplanes"
@@ -49,6 +55,11 @@ var (
 		Version:  operatorv1beta1.SchemeGroupVersion.Version,
 		Resource: ControlPlaneK8sResourceName,
 	}
+	aiGatewayGVR = schema.GroupVersionResource{
+		Group:    operatorv1alpha1.SchemeGroupVersion.Group,
+		Version:  operatorv1alpha1.SchemeGroupVersion.Version,
+		Resource: AIGatewayK8sResourceName,
+	}
 )
 
 // NewDataPlaneCountProvider creates a provider for number of dataplanes in the cluster.
@@ -62,6 +73,13 @@ func NewDataPlaneCountProvider(dyn dynamic.Interface, restMapper meta.RESTMapper
 func NewControlPlaneCountProvider(dyn dynamic.Interface, restMapper meta.RESTMapper) (provider.Provider, error) {
 	return provider.NewK8sObjectCountProviderWithRESTMapper(
 		ControlPlaneK8sResourceName, ControlPlaneCountKind, dyn, controlplaneGVR, restMapper,
+	)
+}
+
+// NewControlPlaneCountProvider creates a provider for number of dataplanes in the cluster.
+func NewAIgatewayCountProvider(dyn dynamic.Interface, restMapper meta.RESTMapper) (provider.Provider, error) {
+	return provider.NewK8sObjectCountProviderWithRESTMapper(
+		AIGatewayK8sResourceName, AIGatewayCountKind, dyn, aiGatewayGVR, restMapper,
 	)
 }
 

@@ -82,7 +82,7 @@ type Config struct {
 	DataPlaneControllerEnabled          bool
 	DataPlaneBlueGreenControllerEnabled bool
 
-	// controllers for speciality APIs and experimental features
+	// Controllers for speciality APIs and experimental features.
 	AIGatewayControllerEnabled bool
 
 	// webhook and validation options
@@ -376,8 +376,7 @@ func setupAnonymousReports(ctx context.Context, cfg Config, logger logr.Logger) 
 	}
 
 	telemetryPayload := telemetry.Payload{
-		"v":                       metadata.Release,
-		"experimental_ai_gateway": cfg.AIGatewayControllerEnabled,
+		"v": metadata.Release,
 	}
 
 	tMgr, err := telemetry.CreateManager(telemetry.SignalPing, restConfig, logger, telemetryPayload)

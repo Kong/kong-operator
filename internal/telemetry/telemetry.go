@@ -116,6 +116,13 @@ func createManager(
 		}
 		w.AddProvider(p)
 
+		// Add aigateway count provider to monitor number of aigateways in the cluster.
+		p, err = NewAIgatewayCountProvider(dyn, cl.RESTMapper())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create aigateway count provider: %w", err)
+		}
+		w.AddProvider(p)
+
 		// Add dataplane count not from gateway.
 		p, err = NewStandaloneDataPlaneCountProvider(cl)
 		if err != nil {
