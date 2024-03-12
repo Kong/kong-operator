@@ -303,18 +303,19 @@ func TestDataPlaneUpdate(t *testing.T) {
 	testEnv := GetEnvValueByName(container.Env, "TEST_ENV")
 	require.Equal(t, "before_update", testEnv)
 
-	t.Logf("updating dataplane resource")
-	dataplane, err = dataplaneClient.Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	container = k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
-	require.NotNil(t, container)
-	container.Env = []corev1.EnvVar{
-		{
-			Name: "TEST_ENV", Value: "after_update",
-		},
-	}
-	dataplane, err = dataplaneClient.Update(GetCtx(), dataplane, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	t.Logf("updating TEST_ENV in dataplane")
+	require.Eventually(t,
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+			container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+			require.NotNil(t, container)
+			container.Env = []corev1.EnvVar{
+				{
+					Name: "TEST_ENV", Value: "after_update",
+				},
+			}
+		}),
+		time.Minute, time.Second,
+	)
 
 	t.Logf("verifying environment variable TEST_ENV in deployment after update")
 	require.Eventually(t, func() bool {
@@ -348,25 +349,30 @@ func TestDataPlaneUpdate(t *testing.T) {
 	}
 
 	t.Run("dataplane is not Ready when the underlying deployment changes state to not Ready", func(t *testing.T) {
-		dataplane, err = dataplaneClient.Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
-		require.NotNil(t, container)
-		container.ReadinessProbe = &corev1.Probe{
-			InitialDelaySeconds: 0,
-			PeriodSeconds:       1,
-			FailureThreshold:    3,
-			SuccessThreshold:    1,
-			TimeoutSeconds:      1,
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path:   "/status_which_will_always_return_404",
-					Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
-					Scheme: corev1.URISchemeHTTP,
-				},
-			},
-		}
-		dataplane, err = dataplaneClient.Update(GetCtx(), dataplane, metav1.UpdateOptions{})
+		require.Eventually(t,
+			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+				require.NotNil(t, container)
+				container.ReadinessProbe = &corev1.Probe{
+					InitialDelaySeconds: 0,
+					PeriodSeconds:       1,
+					FailureThreshold:    3,
+					SuccessThreshold:    1,
+					TimeoutSeconds:      1,
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path:   "/status_which_will_always_return_404",
+							Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+							Scheme: corev1.URISchemeHTTP,
+						},
+					},
+				}
+			}),
+			time.Minute, time.Second,
+		)
+
+		// Get the dataplane after it's been updated to have an up to date generation which can be used in condition predicate.
+		dataplane, err := clients.OperatorClient.ApisV1beta1().DataPlanes(dataplaneName.Namespace).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		isNotReady := dataPlaneConditionPredicate(t, &metav1.Condition{
@@ -381,25 +387,30 @@ func TestDataPlaneUpdate(t *testing.T) {
 		)
 	})
 	t.Run("dataplane gets Ready when the underlying deployment changes state to Ready", func(t *testing.T) {
-		dataplane, err = dataplaneClient.Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
-		require.NotNil(t, container)
-		container.ReadinessProbe = &corev1.Probe{
-			InitialDelaySeconds: 0,
-			PeriodSeconds:       1,
-			FailureThreshold:    3,
-			SuccessThreshold:    1,
-			TimeoutSeconds:      1,
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path:   "/status",
-					Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
-					Scheme: corev1.URISchemeHTTP,
-				},
-			},
-		}
-		dataplane, err = dataplaneClient.Update(GetCtx(), dataplane, metav1.UpdateOptions{})
+		require.Eventually(t,
+			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+				require.NotNil(t, container)
+				container.ReadinessProbe = &corev1.Probe{
+					InitialDelaySeconds: 0,
+					PeriodSeconds:       1,
+					FailureThreshold:    3,
+					SuccessThreshold:    1,
+					TimeoutSeconds:      1,
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path:   "/status",
+							Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+							Scheme: corev1.URISchemeHTTP,
+						},
+					},
+				}
+			}),
+			time.Minute, time.Second,
+		)
+
+		// Get the dataplane after it's been updated to have an up to date generation which can be used in condition predicate.
+		dataplane, err := clients.OperatorClient.ApisV1beta1().DataPlanes(dataplaneName.Namespace).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
@@ -415,24 +426,28 @@ func TestDataPlaneUpdate(t *testing.T) {
 	})
 
 	t.Run("dataplane Ready condition gets properly update with correct ObservedGeneration", func(t *testing.T) {
-		dataplane, err = dataplaneClient.Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
-		require.NotNil(t, container)
-		container.StartupProbe = &corev1.Probe{
-			InitialDelaySeconds: 0,
-			PeriodSeconds:       2,
-			FailureThreshold:    30,
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path:   "/status",
-					Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
-					Scheme: corev1.URISchemeHTTP,
-				},
-			},
-		}
+		require.Eventually(t,
+			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+				require.NotNil(t, container)
+				container.StartupProbe = &corev1.Probe{
+					InitialDelaySeconds: 0,
+					PeriodSeconds:       2,
+					FailureThreshold:    30,
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path:   "/status",
+							Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+							Scheme: corev1.URISchemeHTTP,
+						},
+					},
+				}
+			}),
+			time.Minute, time.Second,
+		)
 
-		dataplane, err = dataplaneClient.Update(GetCtx(), dataplane, metav1.UpdateOptions{})
+		// Get the dataplane after it's been updated to have an up to date generation which can be used in condition predicate.
+		dataplane, err := clients.OperatorClient.ApisV1beta1().DataPlanes(dataplaneName.Namespace).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
@@ -448,24 +463,28 @@ func TestDataPlaneUpdate(t *testing.T) {
 	})
 
 	t.Run("dataplane gets properly updated with a ReadinessProbe using port names instead of numbers", func(t *testing.T) {
-		dataplane, err = dataplaneClient.Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
-		require.NotNil(t, container)
-		container.ReadinessProbe = &corev1.Probe{
-			InitialDelaySeconds: 0,
-			PeriodSeconds:       2,
-			FailureThreshold:    30,
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path:   "/status",
-					Port:   intstr.FromString("metrics"),
-					Scheme: corev1.URISchemeHTTP,
-				},
-			},
-		}
+		require.Eventually(t,
+			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+				require.NotNil(t, container)
+				container.StartupProbe = &corev1.Probe{
+					InitialDelaySeconds: 0,
+					PeriodSeconds:       2,
+					FailureThreshold:    30,
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path:   "/status",
+							Port:   intstr.FromString("metrics"),
+							Scheme: corev1.URISchemeHTTP,
+						},
+					},
+				}
+			}),
+			time.Minute, time.Second,
+		)
 
-		dataplane, err = dataplaneClient.Update(GetCtx(), dataplane, metav1.UpdateOptions{})
+		// Get the dataplane after it's been updated to have an up to date generation which can be used in condition predicate.
+		dataplane, err := clients.OperatorClient.ApisV1beta1().DataPlanes(dataplaneName.Namespace).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
