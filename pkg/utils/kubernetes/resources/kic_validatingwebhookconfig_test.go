@@ -3,7 +3,6 @@ package resources_test
 import (
 	"testing"
 
-	"github.com/Masterminds/semver"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,29 +13,43 @@ import (
 
 func TestGenerateValidatingWebhookConfigurationForControlPlane(t *testing.T) {
 	testCases := []struct {
-		version       *semver.Version
+		image         string
 		expectedError error
+		devMode       bool
 	}{
 		{
-			version: semver.MustParse("3.2.0"),
+			image: "kong/kubernetes-ingress-controller:3.2.0",
 		},
 		{
-			version: semver.MustParse("3.1.2"),
+			image: "kong/kubernetes-ingress-controller:3.1.2",
 		},
 		{
-			version:       semver.MustParse("3.0.0"),
+			image:         "kong/kubernetes-ingress-controller:3.0.0",
 			expectedError: resources.ErrControlPlaneVersionNotSupported,
+		},
+		{
+			image:   "kong/kubernetes-ingress-controller:febecdfe",
+			devMode: true,
+		},
+		{
+			image:   "kong/nightly-ingress-controller:nightly",
+			devMode: true,
 		},
 	}
 	for _, tc := range testCases {
 		tc := tc
-		t.Run(tc.version.String(), func(t *testing.T) {
-			cfg, err := resources.GenerateValidatingWebhookConfigurationForControlPlane("webhook", tc.version, admregv1.WebhookClientConfig{
-				Service: &admregv1.ServiceReference{
-					Name:      "svc",
-					Namespace: "ns",
+		t.Run(tc.image, func(t *testing.T) {
+			cfg, err := resources.GenerateValidatingWebhookConfigurationForControlPlane(
+				"webhook",
+				tc.image,
+				tc.devMode,
+				admregv1.WebhookClientConfig{
+					Service: &admregv1.ServiceReference{
+						Name:      "svc",
+						Namespace: "ns",
+					},
 				},
-			})
+			)
 			if tc.expectedError != nil {
 				require.Equal(t, tc.expectedError, err)
 				return

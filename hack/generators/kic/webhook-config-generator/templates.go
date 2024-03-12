@@ -89,32 +89,59 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver"
-	webhook "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources/validatingwebhookconfig"
+	semverv4 "github.com/kong/semver/v4"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	pkgapisadmregv1 "k8s.io/kubernetes/pkg/apis/admissionregistration/v1"
+
+	webhook "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources/validatingwebhookconfig"
+	"github.com/kong/gateway-operator/internal/versions"
 )
 
 // GenerateValidatingWebhookConfigurationForControlPlane generates a ValidatingWebhookConfiguration for a control plane
 // based on the control plane version. It also overrides all webhooks' client configurations with the provided service
 // details.
-func GenerateValidatingWebhookConfigurationForControlPlane(webhookName string, cpVersion *semver.Version, clientConfig admregv1.WebhookClientConfig) (*admregv1.ValidatingWebhookConfiguration, error) {
+func GenerateValidatingWebhookConfigurationForControlPlane(webhookName string, image string, devMode bool, clientConfig admregv1.WebhookClientConfig) (*admregv1.ValidatingWebhookConfiguration, error) {
 	if webhookName == "" {
 		return nil, fmt.Errorf("webhook name is required")
 	}
-	if cpVersion == nil {
-		return nil, fmt.Errorf("control plane version is required")
+	if image == "" {
+		return nil, fmt.Errorf("control plane image required")
 	}
 
-	var (
-		constraint *semver.Constraints
-		err        error
-	)
+	// In dev mode we run in unsafe mode, to allow trying nightly or testing versions
+	// of the controlplane. When an invalid or unsupported image is used in dev mode,
+	// the clusterRole associated to the default ControlPlane image is used instead.
+	v, err := versions.FromImage(image)
+	if err != nil && !devMode {
+		return nil, err
+	}
+
+	supported, err := versions.IsControlPlaneImageVersionSupported(image)
+	if err != nil && !devMode {
+		return nil, err
+	}
+	if !devMode && !supported {
+		return nil, ErrControlPlaneVersionNotSupported
+	}
+	if devMode && !supported {
+		v, err = semverv4.Parse(versions.DefaultControlPlaneVersion)
+		if err != nil {
+			return nil, fmt.Errorf("error when creating semver from the default controlplane version: %w", err)
+		}
+	}
+
+	semVersion, err := semver.NewVersion(v.String())
+	if err != nil {
+		return nil, err
+	}
+
+	var constraint *semver.Constraints
 	{{ range $constraint, $suffix := .Constraints}}
 	constraint, err = semver.NewConstraint("{{ $constraint }}")
 	if err != nil {
 		return nil, err
 	}
-	if constraint.Check(cpVersion) {
+	if constraint.Check(semVersion) {
 		cfg := webhook.GenerateValidatingWebhookConfigurationForKIC_{{ $suffix }}(webhookName, clientConfig)
 		pkgapisadmregv1.SetObjectDefaults_ValidatingWebhookConfiguration(cfg)
 		LabelObjectAsControlPlaneManaged(cfg)

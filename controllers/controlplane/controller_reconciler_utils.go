@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
@@ -657,10 +656,6 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	if cpContainer == nil {
 		return op.Noop, errors.New("controller container not found")
 	}
-	cpVersion, err := imageToSemverVersion(cpContainer.Image)
-	if err != nil {
-		return op.Noop, fmt.Errorf("failed to parse control plane image version: %w", err)
-	}
 
 	caBundle, ok := certSecret.Data["ca.crt"]
 	if !ok {
@@ -668,7 +663,8 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	}
 	generatedWebhookConfiguration, err := k8sresources.GenerateValidatingWebhookConfigurationForControlPlane(
 		cp.Name,
-		cpVersion,
+		cpContainer.Image,
+		r.DevelopmentMode,
 		admregv1.WebhookClientConfig{
 			Service: &admregv1.ServiceReference{
 				Namespace: cp.Namespace,
@@ -703,14 +699,4 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	}
 
 	return op.Created, r.Client.Create(ctx, generatedWebhookConfiguration)
-}
-
-func imageToSemverVersion(image string) (*semver.Version, error) {
-	// First, parse the image to get the version string.
-	v, err := versions.FromImage(image)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse control plane image version: %w", err)
-	}
-	// Construct a semver version from the version string.
-	return semver.NewVersion(v.String())
 }
