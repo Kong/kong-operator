@@ -17,8 +17,8 @@ resources:
   controller: true
   group: gateway-operator.konghq.com
   kind: ControlPlane
-  path: github.com/kong/gateway-operator/apis/v1alpha1
-  version: v1alpha1
+  path: github.com/kong/gateway-operator/apis/v1beta1
+  version: v1beta1
 - api:
     crdVersion: v1
     namespaced: true
@@ -32,16 +32,7 @@ resources:
     namespaced: true
   group: gateway-operator.konghq.com
   kind: GatewayConfiguration
-  path: github.com/kong/gateway-operator/apis/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: networking.k8s.io
-  group: gateway
-  kind: Gateway
-  path: github.com/kubernetes-sigs/gateway-api/apis/v1beta1
+  path: github.com/kong/gateway-operator/apis/v1beta1
   version: v1beta1
 - api:
     crdVersion: v1

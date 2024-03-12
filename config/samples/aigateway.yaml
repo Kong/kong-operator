@@ -37,7 +37,7 @@ spec:
   parametersRef:
     group: gateway-operator.konghq.com
     kind: GatewayConfiguration
-    name: kong
+    name: kong-ai
     namespace: default
 ---
 apiVersion: gateway-operator.konghq.com/v1alpha1
@@ -76,7 +76,7 @@ spec:
 apiVersion: gateway-operator.konghq.com/v1beta1
 kind: GatewayConfiguration
 metadata:
-  name: kong
+  name: kong-ai
 spec:
   dataPlaneOptions:
     deployment:
@@ -100,7 +100,7 @@ spec:
         spec:
           containers:
           - name: controller
-            image: kong/kubernetes-ingress-controller:3.1.0
+            image: kong/kubernetes-ingress-controller:3.1.2
             env:
             - name: CONTROLLER_LOG_LEVEL
               value: debug

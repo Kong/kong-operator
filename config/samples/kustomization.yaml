@@ -6,6 +6,12 @@ resources:
 - gateway.yaml
 - gatewayconfiguration.yaml
 - controlplane.yaml
-- aigateway.yaml
+# NOTE: Exclude AIGateway sample becuase it's not included in the bundle yet
+# and that causes the following bundle generation error:
+# /Users/patryk.malek@konghq.com/code_/gateway-operator-enterprise/gateway-operator/bin/operator-sdk bundle validate bundle --select-optional suite=operatorframework
+# ERRO[0000] Error: Value gateway-operator.konghq.com/v1alpha1, Kind=AIGateway: CRD "gateway-operator.konghq.com/v1alpha1, Kind=AIGateway" is present in bundle "kong-gateway-operator.v1.2.0-alpha.2" but not defined in CSV
+#
+# When AIGateway graduates and is included in the bundle then this line can be uncommented.
+# - aigateway.yaml
 - dataplanemetricsextension.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
