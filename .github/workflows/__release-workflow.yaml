@@ -16,6 +16,9 @@ on:
       gh-pat:
         required: true
         description: "The GitHub Personal Access Token to create the release PR"
+      kong-license-data:
+        required: false
+        description: "The Kong License to use in the tests (required by EE build)"
     inputs:
       dockerhub-push-username:
         description: "The username to push images to Docker Hub"
@@ -132,6 +135,7 @@ jobs:
       - name: integration tests
         run: make test.integration
         env:
+          KONG_LICENSE_DATA: ${{ secrets.kong-license-data }}
           WEBHOOK_ENABLED: ${{ matrix.webhook-enabled }}
 
   test-e2e-current-kubernetes:
@@ -159,6 +163,7 @@ jobs:
       - name: E2E Tests
         run: make test.e2e
         env:
+          KONG_LICENSE_DATA: ${{ secrets.kong-license-data }}
           KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE: ${{ needs.build-push-images.outputs.full_tag }}
 
   create-release-pr:
