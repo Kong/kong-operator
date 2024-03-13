@@ -25,6 +25,11 @@ func (kcp KustomizeDir) Tests() string {
 	return filepath.Join(string(kcp), "tests")
 }
 
+// TestsKustomization returns the path to the tests/kustomization dir in the temporary kustomize directory.
+func (kcp KustomizeDir) TestsKustomization() string {
+	return filepath.Join(string(kcp), "tests/kustomization.yaml")
+}
+
 // CRD returns the path to the crd/ dir in the temporary kustomize directory.
 func (kcp KustomizeDir) CRD() string {
 	return filepath.Join(string(kcp), "crd")
@@ -44,11 +49,11 @@ func PrepareKustomizeDir(t *testing.T, image string) KustomizeDir {
 	t.Helper()
 
 	const (
-		gatewayOperatorDefaultImage               = "docker.io/kong/gateway-operator"
+		gatewayOperatorDefaultImage               = "docker.io/kong/gateway-operator-oss"
 		gatewayOperatorDefaultTag                 = "main"
 		gatewayOperatorImageKustomizationContents = "\n" +
 			"images:\n" +
-			"- name: docker.io/kong/gateway-operator\n" +
+			"- name: docker.io/kong/gateway-operator-oss\n" +
 			"  newName: %v\n" +
 			"  newTag: '%v'\n"
 	)

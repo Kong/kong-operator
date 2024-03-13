@@ -110,51 +110,6 @@ SKAFFOLD = $(PROJECT_DIR)/bin/skaffold
 skaffold: ## Download skaffold locally if necessary.
 	@$(MAKE) _download_tool_own TOOL=skaffold
 
-# It seems that there's problem with operator-sdk dependencies when imported from a different project.
-# After spending some time on it, decided to just use a 'thing that works' which is to download
-# its repo and build the binary separately, not via third_party/go.mod as it's done for other tools.
-#
-# github.com/kong/gateway-operator/third_party imports
-#         github.com/operator-framework/operator-registry/cmd/opm imports
-#         github.com/operator-framework/operator-registry/pkg/registry tested by
-#         github.com/operator-framework/operator-registry/pkg/registry.test imports
-#         github.com/operator-framework/operator-registry/pkg/lib/bundle imports
-#         github.com/operator-framework/api/pkg/validation imports
-#         github.com/operator-framework/api/pkg/validation/internal imports
-#         k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation imports
-#         k8s.io/apiserver/pkg/util/webhook imports
-#         k8s.io/component-base/traces imports
-#         go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp imports
-#         go.opentelemetry.io/otel/semconv: module go.opentelemetry.io/otel@latest found (v1.9.0), but does not contain package go.opentelemetry.io/otel/semconv
-# github.com/kong/gateway-operator/third_party imports
-#         github.com/operator-framework/operator-registry/cmd/opm imports
-#         github.com/operator-framework/operator-registry/pkg/registry tested by
-#         github.com/operator-framework/operator-registry/pkg/registry.test imports
-#         github.com/operator-framework/operator-registry/pkg/lib/bundle imports
-#         github.com/operator-framework/api/pkg/validation imports
-#         github.com/operator-framework/api/pkg/validation/internal imports
-#         k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation imports
-#         k8s.io/apiserver/pkg/util/webhook imports
-#         k8s.io/component-base/traces imports
-#         go.opentelemetry.io/otel/exporters/otlp imports
-#         go.opentelemetry.io/otel/sdk/metric/controller/basic imports
-#         go.opentelemetry.io/otel/metric/registry: module go.opentelemetry.io/otel/metric@latest found (v0.31.0), but does not contain package go.opentelemetry.io/otel/metric/registry
-OPERATOR_SDK = $(PROJECT_DIR)/bin/operator-sdk
-OPERATOR_SDK_VERSION ?= v1.23.0
-.PHONY: operator-sdk
-operator-sdk:
-	@[ -f $(OPERATOR_SDK) ] || { \
-	set -e ;\
-	TMP_DIR=$$(mktemp -d) ;\
-	cd $$TMP_DIR ;\
-	git clone https://github.com/operator-framework/operator-sdk ;\
-	cd operator-sdk ;\
-	git checkout -q $(OPERATOR_SDK_VERSION) ;\
-	echo "Checked out operator-sdk at $(OPERATOR_SDK_VERSION)" ;\
-	make build/operator-sdk BUILD_DIR=$(PROJECT_DIR)/bin ;\
-	rm -rf $$TMP_DIR ;\
-	}
-
 YQ = $(PROJECT_DIR)/bin/yq
 .PHONY: yq
 yq: ## Download yq locally if necessary.
@@ -289,11 +244,8 @@ manifests: controller-gen manifests.versions ## Generate WebhookConfiguration, C
 
 # manifests.versions ensures that image versions are set in the manifests according to the current version.
 .PHONY: manifests.versions
-manifests.versions: kustomize yq operator-sdk
-	$(OPERATOR_SDK) generate kustomize manifests --apis-dir=$(APIS_DIR)/
-	cd config/manager && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
-	$(YQ) -i e '.metadata.annotations.containerImage |= "$(IMG):$(VERSION)"' \
-		 config/manifests/bases/kong-gateway-operator.clusterserviceversion.yaml
+manifests.versions: kustomize yq
+	cd config/components/manager-image/ && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
 
 # ------------------------------------------------------------------------------
 # Build - Container Images
@@ -541,7 +493,7 @@ uninstall: manifests kustomize uninstall-gateway-api-crds
 deploy: manifests kustomize
 	$(eval TMP := $(shell mktemp -d))
 	cp -R config $(TMP)
-	cd $(TMP)/config/manager && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
+	cd $(TMP)/config/components/manager-image/ && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
 	cd $(TMP)/config/default && $(KUSTOMIZE) build . | kubectl apply -f -
 	kubectl wait --timeout=1m deploy -n kong-system gateway-operator-controller-manager --for=condition=Available=true
 

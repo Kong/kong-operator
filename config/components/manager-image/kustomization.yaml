@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+images:
+- name: docker.io/kong/gateway-operator-oss
+  newName: docker.io/kong/gateway-operator-oss
+  newTag: 1.2.0-rc.3

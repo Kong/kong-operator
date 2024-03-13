@@ -12,7 +12,5 @@ configMapGenerator:
   - controller_manager_config.yaml
   name: manager-config
 
-images:
-- name: docker.io/kong/gateway-operator-oss
-  newName: docker.io/kong/gateway-operator-oss
-  newTag: 1.2.0-rc.3
+components:
+- ../components/manager-image/

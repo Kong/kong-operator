@@ -40,21 +40,31 @@ func TestDeployAndUpgradeFromLatestTagToOverride(t *testing.T) {
 	}
 	var image string
 	if imageLoad != "" {
+		t.Logf("KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD set to %q, using it to upgrade", imageLoad)
 		image = imageLoad
 	} else {
+		t.Logf("KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE set to %q, using it to upgrade", imageOverride)
 		image = imageOverride
 	}
 
 	// Read the last tag that was released, that's present in manager's kustomization.yaml.
 	var k ktypes.Kustomization
-	kustomizeManagerKustomizationFilePath := PrepareKustomizeDir(t, image).ManagerKustomizationYAML()
+	kustomizeDir := PrepareKustomizeDir(t, image)
+	kustomizeManagerKustomizationFilePath := kustomizeDir.ManagerKustomizationYAML()
 	kbytes, err := os.ReadFile(kustomizeManagerKustomizationFilePath)
 	require.NoError(t, err)
 	require.NoError(t, k.Unmarshal(kbytes))
-	require.Len(t, k.Images, 1)
-	fromImage := fmt.Sprintf("%s:%s", k.Images[0].NewName, k.Images[0].NewTag)
 
-	t.Logf("got latest tag %q from %q", fromImage, kustomizeManagerKustomizationFilePath)
+	// NOTE: We now use a component to set the image so it's not readily available from manager's manifest.
+	var ktests ktypes.Kustomization
+	kustomizeTests := kustomizeDir.TestsKustomization()
+	kTestsBytes, err := os.ReadFile(kustomizeTests)
+	require.NoError(t, err)
+	require.NoError(t, ktests.Unmarshal(kTestsBytes))
+	require.Len(t, ktests.Images, 1)
+	fromImage := fmt.Sprintf("%s:%s", ktests.Images[0].NewName, ktests.Images[0].NewTag)
+
+	t.Logf("got latest tag %q from %q", fromImage, kustomizeTests)
 	testManifestsUpgrade(t, context.Background(), upgradeTestParams{
 		fromImage: fromImage,
 		toImage:   image,
