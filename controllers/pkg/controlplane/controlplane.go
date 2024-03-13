@@ -269,5 +269,5 @@ func DeduceAnonymousReportsEnabled(developmentMode bool, cpOpts *operatorv1beta1
 		return v
 	}
 
-	return developmentMode
+	return !developmentMode
 }
