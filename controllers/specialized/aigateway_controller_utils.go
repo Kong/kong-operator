@@ -201,7 +201,7 @@ func aiCloudGatewayToHTTPRoute(
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{
 					{
-						Name:      gatewayv1.ObjectName(aigateway.Spec.GatewayClassName),
+						Name:      gatewayv1.ObjectName(aigateway.Name),
 						Namespace: (*gatewayv1.Namespace)(&aigateway.Namespace),
 					},
 				},
