@@ -207,11 +207,11 @@ verify: verify.manifests verify.generators
 
 .PHONY: verify.diff
 verify.diff:
-	@./scripts/verify-diff.sh
+	@$(PROJECT_DIR)/scripts/verify-diff.sh $(PROJECT_DIR)
 
 .PHONY: verify.repo
 verify.repo:
-	@./scripts/verify-repo.sh
+	@$(PROJECT_DIR)/scripts/verify-repo.sh
 
 .PHONY: verify.manifests
 verify.manifests: verify.repo manifests verify.diff

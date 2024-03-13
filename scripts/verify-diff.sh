@@ -4,14 +4,14 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-SCRIPT_ROOT="$(dirname "${BASH_SOURCE}")/.."
+DIR="${1}"
 
-if git diff --quiet "${SCRIPT_ROOT}"
+if git diff --quiet "${DIR}"
 then
-  echo "${SCRIPT_ROOT} up to date."
+  echo "${DIR} up to date."
 else
-  echo "${SCRIPT_ROOT} appears to be out of date (make sure you've run 'make manifests' and 'make generate')"
+  echo "${DIR} appears to be out of date (make sure you've run 'make manifests' and 'make generate')"
   echo "Diff output:"
-  git --no-pager diff "${SCRIPT_ROOT}"
+  git --no-pager diff "${DIR}"
   exit 1
 fi
