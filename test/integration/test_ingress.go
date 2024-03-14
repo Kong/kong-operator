@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -157,7 +158,17 @@ func TestIngressEssentials(t *testing.T) {
 			annotations.IngressClassKey: ingressClass,
 			"konghq.com/strip-path":     "true",
 		}, service)
-	require.NoError(t, clusters.DeployIngress(GetCtx(), GetEnv().Cluster(), namespace.Name, ingress))
+	require.EventuallyWithT(t,
+		func(c *assert.CollectT) {
+			err := clusters.DeployIngress(GetCtx(), GetEnv().Cluster(), namespace.Name, ingress)
+			if err != nil {
+				t.Logf("failed to deploy ingress: %v", err)
+				c.Errorf("failed to deploy ingress: %v", err)
+			}
+		},
+		testutils.DefaultIngressWait, testutils.WaitIngressTick,
+	)
+
 	cleaner.Add(ingress.(client.Object))
 
 	t.Log("waiting for updated ingress status to include IP")
