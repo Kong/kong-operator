@@ -320,7 +320,7 @@ test.integration:
 test.integration_bluegreen:
 	@$(MAKE) _test.integration \
 		GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER="true" \
-		GOTESTFLAGS="-run=BlueGreen $(GOTESTFLAGS)" \
+		GOTESTFLAGS="-run='BlueGreen|TestDataPlane' $(GOTESTFLAGS)" \
 		COVERPROFILE="coverage.integration-bluegreen.out" \
 
 .PHONY: test.integration_provision_dataplane_fail

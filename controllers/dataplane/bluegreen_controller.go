@@ -68,6 +68,11 @@ type BlueGreenReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *BlueGreenReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	delegate, ok := r.DataPlaneController.(*Reconciler)
+	if !ok {
+		return fmt.Errorf("incorrect delegate controller type: %T", r.DataPlaneController)
+	}
+	delegate.eventRecorder = mgr.GetEventRecorderFor("dataplane")
 	return DataPlaneWatchBuilder(mgr).
 		Complete(r)
 }
