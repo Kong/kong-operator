@@ -41,7 +41,7 @@ spec:
       spec:
         containers:
         - name: proxy
-          image: kong:3.4
+          image: kong:3.6
           env:
           - name: KONG_LOG_LEVEL
             value: debug

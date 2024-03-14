@@ -34,7 +34,7 @@ spec:
       spec:
         containers:
         - name: proxy
-          image: kong/kong-gateway:3.4
+          image: kong/kong-gateway:3.6
           env:
             - name: KONG_ROLE
               value: data_plane
