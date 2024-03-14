@@ -218,6 +218,10 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					DevelopmentMode:          c.DevelopmentMode,
 					Validator:                dataplanevalidator.NewValidator(mgr.GetClient()),
 					DefaultImage:             consts.DefaultDataPlaneImage,
+					Callbacks: dataplane.DataPlaneCallbacks{
+						BeforeDeployment: dataplane.CreateCallbackManager(),
+						AfterDeployment:  dataplane.CreateCallbackManager(),
+					},
 				},
 				Callbacks: dataplane.DataPlaneCallbacks{
 					BeforeDeployment: dataplane.CreateCallbackManager(),
