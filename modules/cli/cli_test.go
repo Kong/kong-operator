@@ -59,6 +59,22 @@ func TestParse(t *testing.T) {
 				return cfg
 			},
 		},
+		{
+			name: "command line arguments takes precedence over environment variables",
+			args: []string{
+				"--metrics-bind-address=:18080",
+			},
+			envVars: map[string]string{
+				"GATEWAY_OPERATOR_METRIC_BIND_ADDRESS":       ":28080",
+				"GATEWAY_OPERATOR_HEALTH_PROBE_BIND_ADDRESS": ":28081",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.MetricsAddr = ":18080" // values from cli args takes precedence
+				cfg.ProbeAddr = ":28081"   // env var is present but no cli args is given, use the value from env var
+				return cfg
+			},
+		},
 	}
 
 	for _, tC := range testCases {
@@ -81,6 +97,7 @@ func TestParse(t *testing.T) {
 func TestParseWithAdditionalFlags(t *testing.T) {
 	type additionalConfig struct {
 		OptionBool   bool
+		OptionalInt  int
 		OptionString string
 	}
 
@@ -88,7 +105,14 @@ func TestParseWithAdditionalFlags(t *testing.T) {
 	cli := New()
 	cli.FlagSet().BoolVar(&additionalCfg.OptionBool, "additional-bool", true, "Additional bool flag")
 	cli.FlagSet().StringVar(&additionalCfg.OptionString, "additional-string", "additional", "Additional string flag")
+	cli.FlagSet().IntVar(&additionalCfg.OptionalInt, "additional-int", 0, "Additional integer flag")
 	// Pass existing flag and a new one to ensure that both work as expected.
+	t.Setenv(
+		"GATEWAY_OPERATOR_ADDITIONAL_STRING", "failed",
+	)
+	t.Setenv(
+		"GATEWAY_OPERATOR_ADDITIONAL_INT", "1",
+	)
 	cfg := cli.Parse([]string{"--additional-string=passed", "--metrics-bind-address=:9090"})
 
 	expectedCfg := expectedDefaultCfg()
@@ -99,7 +123,7 @@ func TestParseWithAdditionalFlags(t *testing.T) {
 		// Those fields contain functions that are not comparable in Go.
 		cmpopts.IgnoreFields(manager.Config{}, "LoggerOpts.EncoderConfigOptions", "LoggerOpts.TimeEncoder")),
 	)
-	require.Equal(t, additionalConfig{OptionBool: true, OptionString: "passed"}, additionalCfg)
+	require.Equal(t, additionalConfig{OptionBool: true, OptionString: "passed", OptionalInt: 1}, additionalCfg)
 }
 
 func expectedDefaultCfg() manager.Config {

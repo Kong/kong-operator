@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/logging"
@@ -69,6 +70,34 @@ type flagsForFurtherEvaluation struct {
 	Version                  bool
 }
 
+const (
+	envVarFlagPrefix = "GATEWAY_OPERATOR_"
+)
+
+// bindEnvVarsToFlags, for each flag defined on `cmd` (local or parent persistent), looks up the corresponding environment
+// variable and (if the flag is unset) takes that environment variable value as the flag value.
+
+func (c *CLI) bindEnvVarsToFlags() (err error) {
+	var envKey string
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("environment binding failed for variable %s: %v", envKey, r)
+		}
+	}()
+
+	c.flagSet.VisitAll(func(f *flag.Flag) {
+		envKey = fmt.Sprintf("%s%s", envVarFlagPrefix, strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_")))
+
+		if envValue, envSet := os.LookupEnv(envKey); envSet {
+			if err := f.Value.Set(envValue); err != nil {
+				panic(err)
+			}
+		}
+	})
+
+	return err
+}
+
 // Parse parses flag definitions from the argument list, which should not include the command name.
 // Must be called after all additional flags in the FlagSet() are defined and before flags are accessed
 // by the program. It returns config for controller manager.
@@ -86,6 +115,13 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	loggerOpts := manager.DefaultConfig().LoggerOpts
 	loggerOpts.Development = developmentModeEnabled
 	loggerOpts.BindFlags(c.flagSet)
+
+	// Flags take precedence over environment variables,
+	// so we bind env vars first then parse aruments to override the values from flags.
+	if err := c.bindEnvVarsToFlags(); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 
 	if err := c.flagSet.Parse(arguments); err != nil {
 		fmt.Println(err.Error())
