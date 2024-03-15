@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
@@ -13,6 +14,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -188,6 +190,47 @@ func ControlPlaneHasClusterRole(t *testing.T, ctx context.Context, controlplane 
 		clusterRoles := MustListControlPlaneClusterRoles(t, ctx, controlplane, clients)
 		t.Logf("%d clusterroles", len(clusterRoles))
 		return len(clusterRoles) > 0
+	}
+}
+
+// ControlPlanesClusterRoleHasPolicyRule is a helper function for tests that returns a function
+// that can be used to check if ControlPlane's ClusterRole contains the provided PolicyRule.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func ControlPlanesClusterRoleHasPolicyRule(t *testing.T, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, clients K8sClients, pr rbacv1.PolicyRule) func() bool {
+	return func() bool {
+		clusterRoles := MustListControlPlaneClusterRoles(t, ctx, controlplane, clients)
+		t.Logf("%d clusterroles", len(clusterRoles))
+		if len(clusterRoles) == 0 {
+			return false
+		}
+		t.Logf("got %s clusterrole, checking if it contains the requested PolicyRule", clusterRoles[0].Name)
+		return slices.ContainsFunc(clusterRoles[0].Rules, func(e rbacv1.PolicyRule) bool {
+			return slices.Equal(e.APIGroups, pr.APIGroups) &&
+				slices.Equal(e.ResourceNames, pr.ResourceNames) &&
+				slices.Equal(e.Resources, pr.Resources) &&
+				slices.Equal(e.Verbs, pr.Verbs) &&
+				slices.Equal(e.NonResourceURLs, pr.NonResourceURLs)
+		})
+	}
+}
+
+// ControlPlanesClusterRoleBindingHasSubject is a helper function for tests that returns a function
+// that can be used to check if ControlPlane's ClusterRoleBinding contains the provided Subject.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func ControlPlanesClusterRoleBindingHasSubject(t *testing.T, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, clients K8sClients, subject rbacv1.Subject) func() bool {
+	return func() bool {
+		clusterRoleBindings := MustListControlPlaneClusterRoleBindings(t, ctx, controlplane, clients)
+		t.Logf("%d clusterrolesbindings", len(clusterRoleBindings))
+		if len(clusterRoleBindings) == 0 {
+			return false
+		}
+		t.Logf("got %s clusterrolebinding, checking if it contains the requested Subject", clusterRoleBindings[0].Name)
+		return slices.ContainsFunc(clusterRoleBindings[0].Subjects, func(e rbacv1.Subject) bool {
+			return e.Kind == subject.Kind &&
+				e.APIGroup == subject.APIGroup &&
+				e.Name == subject.Name &&
+				e.Namespace == subject.Namespace
+		})
 	}
 }
 
