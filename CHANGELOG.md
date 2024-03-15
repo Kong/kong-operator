@@ -19,13 +19,22 @@
 
 ## [v1.2.0]
 
-> Release date: 2024-03-08
+> Release date: 2024-03-15
+
+## Highlights
+
+- 🎓 The Managed `Gateway`s feature is now GA.
+- 🎓 `ControlPlane` and `GatewayConfig` APIs have been promoted to `v1beta1`.
+- ✨ `DataPlane`s managed by `Gateway`s can be now scaled horizontally through the
+  `GatewayConfiguration` API.
+- ✨ `Gateway` listeners are dynamically mapped to the `DataPlane` proxy service ports.
+- 🧠 The new feature `AIGateway` has been released in `alpha` stage.
 
 ## Added
 
-- Added support of specifying values of command line flags by environment
-  variables starting with `GATEWAY_OPERATOR_`. For example, you can specify
-  value of flag `--controller-name` by environment variable `GATEWAY_OPERATOR_CONTROLLER_NAME`.
+- Added support for specifying command line flags through environment
+  variables having the `GATEWAY_OPERATOR_` prefix. For example, you can specify the
+  value of flag `--controller-name` through the environment variable `GATEWAY_OPERATOR_CONTROLLER_NAME`.
   [Kong/gateway-operator-archive#1616](https://github.com/Kong/gateway-operator-archive/pull/1616)
 - Add horizontal autoscaling for `DataPlane`s using its `scaling.horizontal` spec
   field.
