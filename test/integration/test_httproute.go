@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -156,9 +157,16 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 		},
 	}
 	t.Logf("creating httproute %s/%s to access deployment %s via kong", httpRoute.Namespace, httpRoute.Name, deployment.Name)
-	httpRoute, err = GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).
-		Create(GetCtx(), httpRoute, metav1.CreateOptions{})
-	require.NoError(t, err)
+	require.EventuallyWithT(t,
+		func(c *assert.CollectT) {
+			httpRoute, err = GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).Create(GetCtx(), httpRoute, metav1.CreateOptions{})
+			if err != nil {
+				t.Logf("failed to deploy httproute: %v", err)
+				c.Errorf("failed to deploy httproute: %v", err)
+			}
+		},
+		testutils.DefaultIngressWait, testutils.WaitIngressTick,
+	)
 	cleaner.Add(httpRoute)
 
 	t.Log("verifying connectivity to the HTTPRoute")
