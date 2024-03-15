@@ -194,10 +194,11 @@ func TestGatewayEssentials(t *testing.T) {
 func TestGatewayMultiple(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	gatewayV1Client := GetClients().GatewayClient.GatewayV1()
 
 	t.Log("deploying a GatewayClass resource")
 	gatewayClass := testutils.GenerateGatewayClass()
-	gatewayClass, err := GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err := gatewayV1Client.GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -211,11 +212,11 @@ func TestGatewayMultiple(t *testing.T) {
 		Namespace: namespace.Name,
 	}
 	gatewayOne := testutils.GenerateGateway(gatewayOneNN, gatewayClass)
-	gatewayOne, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gatewayOne, metav1.CreateOptions{})
+	gatewayOne, err = gatewayV1Client.Gateways(namespace.Name).Create(GetCtx(), gatewayOne, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayOne)
 	gatewayTwo := testutils.GenerateGateway(gatewayTwoNN, gatewayClass)
-	gatewayTwo, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gatewayTwo, metav1.CreateOptions{})
+	gatewayTwo, err = gatewayV1Client.Gateways(namespace.Name).Create(GetCtx(), gatewayTwo, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayTwo)
 
@@ -306,62 +307,35 @@ func TestGatewayMultiple(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
-	httpPort := gatewayv1.PortNumber(80)
-	pathMatchPrefix := gatewayv1.PathMatchPathPrefix
-	kindService := gatewayv1.Kind("Service")
-	pathOne := "/path-test-one"
-	pathTwo := "/path-test-two"
 
-	httpRoute := gatewayv1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      uuid.NewString(),
-			Annotations: map[string]string{
-				"konghq.com/strip-path": "true",
-			},
+	const pathOne = "/path-test-one"
+	httpRouteOne := createHTTPRoute(gatewayOne, service, pathOne)
+	require.EventuallyWithT(t,
+		func(c *assert.CollectT) {
+			var err error
+			httpRouteOne, err = gatewayV1Client.HTTPRoutes(namespace.Name).Create(GetCtx(), httpRouteOne, metav1.CreateOptions{})
+			if err != nil {
+				t.Logf("failed to deploy httproute: %v", err)
+				c.Errorf("failed to deploy httproute: %v", err)
+			}
 		},
-		Spec: gatewayv1.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1.CommonRouteSpec{
-				ParentRefs: []gatewayv1.ParentReference{{
-					Name: gatewayv1.ObjectName(gatewayOne.Name),
-				}},
-			},
-			Rules: []gatewayv1.HTTPRouteRule{
-				{
-					Matches: []gatewayv1.HTTPRouteMatch{
-						{
-							Path: &gatewayv1.HTTPPathMatch{
-								Type:  &pathMatchPrefix,
-								Value: &pathOne,
-							},
-						},
-					},
-					BackendRefs: []gatewayv1.HTTPBackendRef{
-						{
-							BackendRef: gatewayv1.BackendRef{
-								BackendObjectReference: gatewayv1.BackendObjectReference{
-									Name: gatewayv1.ObjectName(service.Name),
-									Port: &httpPort,
-									Kind: &kindService,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	httpRouteOne, err := GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).
-		Create(GetCtx(), &httpRoute, metav1.CreateOptions{})
-	require.NoError(t, err)
+		30*time.Second, time.Second,
+	)
 	cleaner.Add(httpRouteOne)
 
-	httpRoute.ObjectMeta.Name = uuid.NewString()
-	httpRoute.Spec.CommonRouteSpec.ParentRefs[0].Name = gatewayv1.ObjectName(gatewayTwo.Name)
-	httpRoute.Spec.Rules[0].Matches[0].Path.Value = lo.ToPtr(pathTwo)
-	httpRouteTwo, err := GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).
-		Create(GetCtx(), &httpRoute, metav1.CreateOptions{})
-	require.NoError(t, err)
+	const pathTwo = "/path-test-two"
+	httpRouteTwo := createHTTPRoute(gatewayTwo, service, pathTwo)
+	require.EventuallyWithT(t,
+		func(c *assert.CollectT) {
+			var err error
+			httpRouteTwo, err = gatewayV1Client.HTTPRoutes(namespace.Name).Create(GetCtx(), httpRouteTwo, metav1.CreateOptions{})
+			if err != nil {
+				t.Logf("failed to deploy httproute: %v", err)
+				c.Errorf("failed to deploy httproute: %v", err)
+			}
+		},
+		30*time.Second, time.Second,
+	)
 	cleaner.Add(httpRouteTwo)
 
 	t.Log("verifying connectivity to the HTTPRoute")
@@ -415,8 +389,8 @@ func TestGatewayMultiple(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("deleting Gateway resource")
-	require.NoError(t, GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Delete(GetCtx(), gatewayOne.Name, metav1.DeleteOptions{}))
-	require.NoError(t, GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Delete(GetCtx(), gatewayTwo.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayV1Client.Gateways(namespace.Name).Delete(GetCtx(), gatewayOne.Name, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayV1Client.Gateways(namespace.Name).Delete(GetCtx(), gatewayTwo.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that DataPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
@@ -441,6 +415,48 @@ func TestGatewayMultiple(t *testing.T) {
 	t.Log("verifying that gateways are deleted")
 	require.Eventually(t, testutils.GatewayNotExist(t, GetCtx(), gatewayOneNN, clients), time.Minute, time.Second)
 	require.Eventually(t, testutils.GatewayNotExist(t, GetCtx(), gatewayTwoNN, clients), time.Minute, time.Second)
+}
+
+func createHTTPRoute(parentRef metav1.Object, svc metav1.Object, path string) *gatewayv1.HTTPRoute {
+	return &gatewayv1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: parentRef.GetNamespace(),
+			Name:      uuid.NewString(),
+			Annotations: map[string]string{
+				"konghq.com/strip-path": "true",
+			},
+		},
+		Spec: gatewayv1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{
+					Name: gatewayv1.ObjectName(parentRef.GetName()),
+				}},
+			},
+			Rules: []gatewayv1.HTTPRouteRule{
+				{
+					Matches: []gatewayv1.HTTPRouteMatch{
+						{
+							Path: &gatewayv1.HTTPPathMatch{
+								Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
+								Value: lo.ToPtr(path),
+							},
+						},
+					},
+					BackendRefs: []gatewayv1.HTTPBackendRef{
+						{
+							BackendRef: gatewayv1.BackendRef{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Name: gatewayv1.ObjectName(svc.GetName()),
+									Port: lo.ToPtr(gatewayv1.PortNumber(80)),
+									Kind: lo.ToPtr(gatewayv1.Kind("Service")),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 func TestGatewayWithMultipleListeners(t *testing.T) {
