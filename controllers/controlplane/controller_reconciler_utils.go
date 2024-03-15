@@ -319,28 +319,34 @@ func (r *Reconciler) ensureClusterRole(
 	}
 
 	controlplaneContainer := k8sutils.GetPodContainerByName(&controlplane.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-	generatedClusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane(controlplane.Name, controlplaneContainer.Image, r.DevelopmentMode)
+	generated, err := k8sresources.GenerateNewClusterRoleForControlPlane(controlplane.Name, controlplaneContainer.Image, r.DevelopmentMode)
 	if err != nil {
 		return false, nil, err
 	}
-	k8sutils.SetOwnerForObject(generatedClusterRole, controlplane)
+	k8sutils.SetOwnerForObject(generated, controlplane)
 
 	if count == 1 {
-		var updated bool
-		existingClusterRole := &clusterRoles[0]
-		updated, generatedClusterRole.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingClusterRole.ObjectMeta, generatedClusterRole.ObjectMeta)
+		var (
+			updated  bool
+			existing = &clusterRoles[0]
+			old      = existing.DeepCopy()
+		)
+
+		updated, existing.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existing.ObjectMeta, generated.ObjectMeta)
 		if updated ||
-			!cmp.Equal(existingClusterRole.Rules, generatedClusterRole.Rules) ||
-			!cmp.Equal(existingClusterRole.AggregationRule, generatedClusterRole.AggregationRule) {
-			if err := r.Client.Patch(ctx, generatedClusterRole, client.MergeFrom(existingClusterRole)); err != nil {
-				return false, existingClusterRole, fmt.Errorf("failed patching ControlPlane's ClusterRole %s: %w", existingClusterRole.Name, err)
+			!cmp.Equal(existing.Rules, generated.Rules) ||
+			!cmp.Equal(existing.AggregationRule, generated.AggregationRule) {
+			existing.Rules = generated.Rules
+			existing.AggregationRule = generated.AggregationRule
+			if err := r.Client.Patch(ctx, existing, client.MergeFrom(old)); err != nil {
+				return false, existing, fmt.Errorf("failed patching ControlPlane's ClusterRole %s: %w", existing.Name, err)
 			}
-			return true, generatedClusterRole, nil
+			return true, existing, nil
 		}
-		return false, generatedClusterRole, nil
+		return false, existing, nil
 	}
 
-	return true, generatedClusterRole, r.Client.Create(ctx, generatedClusterRole)
+	return true, generated, r.Client.Create(ctx, generated)
 }
 
 func (r *Reconciler) ensureClusterRoleBinding(
@@ -371,37 +377,47 @@ func (r *Reconciler) ensureClusterRoleBinding(
 		return false, nil, errors.New("number of clusterRoleBindings reduced")
 	}
 
-	generatedClusterRoleBinding := k8sresources.GenerateNewClusterRoleBindingForControlPlane(controlplane.Namespace, controlplane.Name, serviceAccountName, clusterRoleName)
-	k8sutils.SetOwnerForObject(generatedClusterRoleBinding, controlplane)
+	generated := k8sresources.GenerateNewClusterRoleBindingForControlPlane(controlplane.Namespace, controlplane.Name, serviceAccountName, clusterRoleName)
+	k8sutils.SetOwnerForObject(generated, controlplane)
 
 	if count == 1 {
-		existingClusterRoleBinding := &clusterRoleBindings[0]
+		existing := &clusterRoleBindings[0]
 		// Delete and re-create ClusterRoleBinding if name of ClusterRole changed because RoleRef is immutable.
-		if !k8sresources.CompareClusterRoleName(existingClusterRoleBinding, clusterRoleName) {
+		if !k8sresources.CompareClusterRoleName(existing, clusterRoleName) {
 			log.Debug(logger, "ClusterRole name changed, delete and re-create a ClusterRoleBinding",
-				existingClusterRoleBinding,
-				"old_cluster_role", existingClusterRoleBinding.RoleRef.Name,
+				existing,
+				"old_cluster_role", existing.RoleRef.Name,
 				"new_cluster_role", clusterRoleName,
 			)
-			if err := r.Client.Delete(ctx, existingClusterRoleBinding); err != nil {
+			if err := r.Client.Delete(ctx, existing); err != nil {
 				return false, nil, err
 			}
 			return false, nil, errors.New("name of ClusterRole changed, out of date ClusterRoleBinding deleted")
 		}
-		var updated bool
-		updated, generatedClusterRoleBinding.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingClusterRoleBinding.ObjectMeta, generatedClusterRoleBinding.ObjectMeta)
-		if updated ||
-			!k8sresources.ClusterRoleBindingContainsServiceAccount(existingClusterRoleBinding, controlplane.Namespace, serviceAccountName) {
-			if err := r.Client.Patch(ctx, generatedClusterRoleBinding, client.MergeFrom(existingClusterRoleBinding)); err != nil {
-				return false, existingClusterRoleBinding, fmt.Errorf("failed patching ControlPlane's ClusterRoleBinding %s: %w", existingClusterRoleBinding.Name, err)
-			}
-			return true, generatedClusterRoleBinding, nil
+
+		var (
+			old                   = existing.DeepCopy()
+			updated               bool
+			updatedServiceAccount bool
+		)
+		updated, existing.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existing.ObjectMeta, generated.ObjectMeta)
+
+		if !k8sresources.ClusterRoleBindingContainsServiceAccount(existing, controlplane.Namespace, serviceAccountName) {
+			existing.Subjects = generated.Subjects
+			updatedServiceAccount = true
 		}
-		return false, generatedClusterRoleBinding, nil
+
+		if updated || updatedServiceAccount {
+			if err := r.Client.Patch(ctx, existing, client.MergeFrom(old)); err != nil {
+				return false, existing, fmt.Errorf("failed patching ControlPlane's ClusterRoleBinding %s: %w", existing.Name, err)
+			}
+			return true, existing, nil
+		}
+		return false, existing, nil
 
 	}
 
-	return true, generatedClusterRoleBinding, r.Client.Create(ctx, generatedClusterRoleBinding)
+	return true, generated, r.Client.Create(ctx, generated)
 }
 
 // ensureAdminMTLSCertificateSecret ensures that a Secret is created with the certificate for mTLS communication between the
