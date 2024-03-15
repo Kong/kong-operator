@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -169,6 +171,13 @@ func TestControlPlaneEssentials(t *testing.T) {
 									{
 										Name:  consts.DataPlaneProxyContainerName,
 										Image: helpers.GetDefaultDataPlaneImage(),
+										// Speed up the test.
+										ReadinessProbe: func() *corev1.Probe {
+											p := k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusEndpoint)
+											p.InitialDelaySeconds = 1
+											p.PeriodSeconds = 1
+											return p
+										}(),
 									},
 								},
 							},
@@ -209,6 +218,13 @@ func TestControlPlaneEssentials(t *testing.T) {
 									},
 									Name:  consts.ControlPlaneControllerContainerName,
 									Image: consts.DefaultControlPlaneImage,
+									// Speed up the test.
+									ReadinessProbe: func() *corev1.Probe {
+										p := k8sresources.GenerateControlPlaneProbe("/readyz", intstr.FromInt(10254))
+										p.InitialDelaySeconds = 1
+										p.PeriodSeconds = 1
+										return p
+									}(),
 								},
 							},
 						},
@@ -325,10 +341,39 @@ func TestControlPlaneEssentials(t *testing.T) {
 	t.Log("verifying controlplane's webhook is functional")
 	verifyControlPlaneWebhookIsFunctional(t, GetCtx(), clients)
 
+	t.Log("verifying that controlplane's ClusterRole is patched if it goes out of sync")
+	clusterRoles = testutils.MustListControlPlaneClusterRoles(t, GetCtx(), controlplane, clients)
+	require.Len(t, clusterRoles, 1, "There must be only one ControlPlane ClusterRole")
+	clusterRole := clusterRoles[0]
+	idx := slices.IndexFunc(clusterRole.Rules, func(pr rbacv1.PolicyRule) bool {
+		return pr.Resources != nil && slices.Contains(pr.Resources, "endpointslices")
+	})
+	require.GreaterOrEqual(t, idx, 0)
+	endpointSlicesRule := clusterRole.Rules[idx]
+	oldClusterRole := clusterRole.DeepCopy()
+	require.NotEmpty(t, clusterRole.Rules)
+	clusterRole.Rules = slices.Delete(clusterRole.Rules, idx, idx+1)
+	t.Logf("deleting endpointslices policyrule form %s clusterrole", clusterRole.Name)
+	require.NoError(t, clients.MgrClient.Patch(GetCtx(), &clusterRole, client.MergeFrom(oldClusterRole)))
+	t.Log("verifying that controlplane's ClusterRole is patched with the policy rule that was removed")
+	require.Eventually(t, testutils.ControlPlanesClusterRoleHasPolicyRule(t, GetCtx(), controlplane, clients, endpointSlicesRule), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+
+	t.Log("verifying that controlplane's ClusterRoleBinding is patched if it goes out of sync")
+	clusterRoleBindings = testutils.MustListControlPlaneClusterRoleBindings(t, GetCtx(), controlplane, clients)
+	require.Len(t, clusterRoleBindings, 1, "There must be only one ControlPlane ClusterRoleBinding")
+	clusterRoleBinding := clusterRoleBindings[0]
+	require.NotEmpty(t, clusterRoleBinding.Subjects)
+	subject := clusterRoleBinding.Subjects[0]
+	oldClusterRoleBinding := clusterRoleBinding.DeepCopy()
+	clusterRoleBinding.Subjects = slices.Delete(clusterRoleBinding.Subjects, 0, 1)
+	t.Logf("deleting %s/%s subject form %s clusterrolebinding", subject.Namespace, subject.Name, clusterRoleBinding.Name)
+	require.NoError(t, clients.MgrClient.Patch(GetCtx(), &clusterRoleBinding, client.MergeFrom(oldClusterRoleBinding)))
+	t.Log("verifying that controlplane's ClusterRoleBinding is patched with the subject that was removed")
+	require.Eventually(t, testutils.ControlPlanesClusterRoleBindingHasSubject(t, GetCtx(), controlplane, clients, subject), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+
 	// delete controlplane and verify that cluster wide resources removed.
 	t.Log("verifying cluster wide resources removed after controlplane deleted")
-	err = controlplaneClient.Delete(GetCtx(), controlplane.Name, metav1.DeleteOptions{})
-	require.NoError(t, err)
+	require.NoError(t, controlplaneClient.Delete(GetCtx(), controlplane.Name, metav1.DeleteOptions{}))
 	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasClusterRole(t, GetCtx(), controlplane, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasClusterRoleBinding(t, GetCtx(), controlplane, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasAdmissionWebhookConfiguration(t, GetCtx(), controlplane, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
