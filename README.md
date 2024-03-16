@@ -1,7 +1,6 @@
-<a href="https://docs.konghq.com/gateway-operator/latest/">
-  <h1>Kong Gateway Operator</h1>
-  <img src="./logo/logo.png" alt="KGO logo" title="Kong Gateway Operator" height="150" width="150" />
-</a>
+# [Kong Gateway Operator](https://docs.konghq.com/gateway-operator/latest/)
+
+<img src="./logo/logo.png" alt="KGO logo" title="Kong Gateway Operator" height="150" width="150" />
 
 ## Current Features
 
