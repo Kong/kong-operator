@@ -3,8 +3,10 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -25,6 +27,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -96,6 +100,8 @@ func WithOperatorImage(image string) TestEnvOption {
 		opts.Image = image
 	}
 }
+
+var loggerOnce sync.Once
 
 // CreateEnvironment creates a new independent testing environment for running isolated e2e test.
 func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption) TestEnvironment {
@@ -169,7 +175,17 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 	clients.GatewayClient, err = gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
-	t.Log("intializing manager client")
+	t.Log("initializing manager client")
+	loggerOnce.Do(func() {
+		// A new client from package "sigs.k8s.io/controller-runtime/pkg/client" is created per execution
+		// of this function (see the line below this block). It requires a logger to be set, otherwise it logs
+		// "[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed" with a stack trace.
+		// Since setting logger is a package level operation not safe for concurrent use, ensure it is set
+		// only once.
+		ctrllog.SetLogger(zap.New(func(o *zap.Options) {
+			o.DestWriter = io.Discard
+		}))
+	})
 	clients.MgrClient, err = client.New(env.Cluster().Config(), client.Options{})
 	require.NoError(t, err)
 
