@@ -42,8 +42,7 @@ tools: kic-role-generator controller-gen kustomize client-gen golangci-lint gote
 MISE := $(shell which mise)
 .PHONY: mise
 mise:
-	@mise -V >/dev/null || (echo "mise not found. Please install it." && exit 1) 
-
+	@mise -V >/dev/null || (echo "mise - https://github.com/jdx/mise - not found. Please install it." && exit 1)
 
 KIC_ROLE_GENERATOR = $(PROJECT_DIR)/bin/kic-role-generator
 .PHONY: kic-role-generator
