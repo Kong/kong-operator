@@ -74,7 +74,7 @@ type Config struct {
 	KubeconfigPath           string
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
-	LoggerOpts               zap.Options
+	LoggerOpts               *zap.Options
 
 	// controllers for standard APIs and features
 	GatewayControllerEnabled            bool
@@ -107,7 +107,7 @@ func DefaultConfig() Config {
 		ClusterCASecretName:           "kong-operator-ca",
 		ClusterCASecretNamespace:      defaultNamespace,
 		ControllerNamespace:           defaultNamespace,
-		LoggerOpts:                    zap.Options{},
+		LoggerOpts:                    &zap.Options{},
 		GatewayControllerEnabled:      true,
 		ControlPlaneControllerEnabled: true,
 		DataPlaneControllerEnabled:    true,

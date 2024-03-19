@@ -32,7 +32,7 @@ func main() {
 	cli := cli.New()
 	cfg := cli.Parse(os.Args[1:])
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&cfg.LoggerOpts)))
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(cfg.LoggerOpts)))
 
 	if err := manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, admission.NewRequestHandler, nil); err != nil {
 		ctrl.Log.Error(err, "failed to run manager")
