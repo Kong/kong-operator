@@ -181,7 +181,7 @@ verify.generators: verify.repo generate verify.diff
 APIS_DIR ?= apis
 
 .PHONY: generate
-generate: controller-gen generate.apis generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config
+generate: controller-gen generate.apis generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config generate.cli-arguments-docs
 
 .PHONY: generate.apis
 generate.apis:
@@ -219,6 +219,10 @@ generate.testcases-registration:
 .PHONY: generate.kic-webhook-config
 generate.kic-webhook-config: kic-webhook-config-generator
 	$(KIC_WEBHOOKCONFIG_GENERATOR)
+
+.PHONY: generate.cli-arguments-docs
+generate.cli-arguments-docs:
+	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments.md
 
 # ------------------------------------------------------------------------------
 # Files generation checks
