@@ -333,8 +333,8 @@ func TestCreateManager(t *testing.T) {
 			dyn := testdynclient.NewSimpleDynamicClient(scheme, tc.objects...)
 			m, err := createManager(
 				types.Signal(SignalPing), k8sclient, ctrlClient, dyn, payload,
+				logr.Discard(),
 				telemetry.OptManagerPeriod(time.Hour),
-				telemetry.OptManagerLogger(logr.Discard()),
 			)
 			require.NoError(t, err, "creating telemetry manager failed")
 			ch := make(chan []byte)
@@ -457,8 +457,8 @@ func TestTelemetryUpdates(t *testing.T) {
 			dyn := testdynclient.NewSimpleDynamicClient(scheme, tc.objects...)
 			m, err := createManager(
 				types.Signal(SignalPing), k8sclient, ctrlClient, dyn, payload,
+				logr.Discard(),
 				telemetry.OptManagerPeriod(time.Hour),
-				telemetry.OptManagerLogger(logr.Discard()),
 			)
 			require.NoError(t, err, "creating telemetry manager failed")
 			ch := make(chan []byte)
