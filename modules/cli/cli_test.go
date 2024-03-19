@@ -6,6 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/logging"
@@ -41,15 +42,15 @@ func TestParse(t *testing.T) {
 			name: "no command line arguments, many environment variables",
 			args: []string{},
 			envVars: map[string]string{
-				"POD_NAMESPACE":               "test",
-				"CONTROLLER_DEVELOPMENT_MODE": "true",
+				"POD_NAMESPACE":                     "test",
+				"GATEWAY_OPERATOR_DEVELOPMENT_MODE": "true",
 			},
 			expectedCfg: func() manager.Config {
 				cfg := expectedDefaultCfg()
 				cfg.LeaderElectionNamespace = "test"
 				cfg.ClusterCASecretNamespace = "test"
 				cfg.ControllerNamespace = "test"
-				// All the below config changes are the result of CONTROLLER_DEVELOPMENT_MODE=true.
+				// All the below config changes are the result of GATEWAY_OPERATOR_DEVELOPMENT_MODE=true.
 				cfg.DevelopmentMode = true
 				cfg.ValidatingWebhookEnabled = false
 				loggerOpts := manager.DefaultConfig().LoggerOpts
@@ -147,5 +148,6 @@ func expectedDefaultCfg() manager.Config {
 		DataPlaneControllerEnabled:          true,
 		DataPlaneBlueGreenControllerEnabled: true,
 		ValidatingWebhookEnabled:            true,
+		LoggerOpts:                          &zap.Options{},
 	}
 }
