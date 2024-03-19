@@ -27,7 +27,7 @@ spec:
             - -enable-validating-webhook=true
           name: manager
           env:
-          - name: CONTROLLER_DEVELOPMENT_MODE
+          - name: GATEWAY_OPERATOR_DEVELOPMENT_MODE
             value: "true"
           resources:
             limits:
