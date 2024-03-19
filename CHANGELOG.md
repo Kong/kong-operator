@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v1.2.1](#v121)
 - [v1.2.0](#v120)
 - [v1.1.0](#v101)
 - [v1.0.3](#v103)
@@ -16,6 +17,30 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
+
+## [v1.2.1]
+
+> Release date: 2024-03-19
+
+### Fixes
+
+- Fixed an issue where operator wasn't able to update `ControlPlane` `ClusterRole` or `ClusterRoleBinding`
+  when they got out of date.
+  [#11](https://github.com/Kong/gateway-operator/pull/11)
+
+### Changes
+
+- KGO now uses `GATEWAY_OPERATOR_` prefix for all flags, including the `zap` related logging flags.
+  This means that the following can now be set:
+  - `-zap-devel` (env: `GATEWAY_OPERATOR_ZAP_DEVEL`)
+  - `-zap-encoder` (env: `GATEWAY_OPERATOR_ZAP_ENCODER`)
+  - `-zap-log-level` (env: `GATEWAY_OPERATOR_ZAP_LOG_LEVEL`)
+  - `-zap-stacktrace-level` (env: `GATEWAY_OPERATOR_ZAP_STACKTRACE_LEVEL`)
+  - `-zap-time-encoding` (env: `GATEWAY_OPERATOR_ZAP_TIME_ENCODING`)
+
+  For more details about those please consult [`zap.Options` pkg.go.dev][zap_bindflags]
+
+[zap_bindflags]: https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.2/pkg/log/zap#Options.BindFlags
 
 ## [v1.2.0]
 
@@ -575,6 +600,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v1.2.1]: https://github.com/Kong/gateway-operator-archive/compare/v1.2.0..v1.2.1
 [v1.2.0]: https://github.com/Kong/gateway-operator-archive/compare/v1.1.0..v1.2.0
 [v1.1.0]: https://github.com/Kong/gateway-operator-archive/compare/v1.0.3..v1.1.0
 [v1.0.3]: https://github.com/Kong/gateway-operator-archive/compare/v1.0.2..v1.0.3
