@@ -36,6 +36,7 @@ import (
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/compare"
+	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -382,11 +383,16 @@ func (r *Reconciler) provisionDataPlane(
 
 	count := len(dataplanes)
 	if count > 1 {
-		err = fmt.Errorf("data plane deployments found: %d, expected: 1", count)
+		err = fmt.Errorf("data planes found: %d, expected: 1", count)
 		k8sutils.SetCondition(
 			createDataPlaneCondition(metav1.ConditionFalse, k8sutils.UnableToProvisionReason, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
+		log.Debug(logger, "reducing dataplanes", gateway, "count", count)
+		rErr := k8sreduce.ReduceDataPlanes(ctx, r.Client, dataplanes)
+		if rErr != nil {
+			return nil, fmt.Errorf("failed reducing data planes: %w", rErr)
+		}
 		return nil, err
 	}
 	if count == 0 {
