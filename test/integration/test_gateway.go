@@ -312,31 +312,31 @@ func TestGatewayMultiple(t *testing.T) {
 	httpRouteOne := createHTTPRoute(gatewayOne, service, pathOne)
 	require.EventuallyWithT(t,
 		func(c *assert.CollectT) {
-			var err error
-			httpRouteOne, err = gatewayV1Client.HTTPRoutes(namespace.Name).Create(GetCtx(), httpRouteOne, metav1.CreateOptions{})
+			result, err := gatewayV1Client.HTTPRoutes(namespace.Name).Create(GetCtx(), httpRouteOne, metav1.CreateOptions{})
 			if err != nil {
 				t.Logf("failed to deploy httproute: %v", err)
 				c.Errorf("failed to deploy httproute: %v", err)
+				return
 			}
+			cleaner.Add(result)
 		},
 		30*time.Second, time.Second,
 	)
-	cleaner.Add(httpRouteOne)
 
 	const pathTwo = "/path-test-two"
 	httpRouteTwo := createHTTPRoute(gatewayTwo, service, pathTwo)
 	require.EventuallyWithT(t,
 		func(c *assert.CollectT) {
-			var err error
-			httpRouteTwo, err = gatewayV1Client.HTTPRoutes(namespace.Name).Create(GetCtx(), httpRouteTwo, metav1.CreateOptions{})
+			result, err := gatewayV1Client.HTTPRoutes(namespace.Name).Create(GetCtx(), httpRouteTwo, metav1.CreateOptions{})
 			if err != nil {
 				t.Logf("failed to deploy httproute: %v", err)
 				c.Errorf("failed to deploy httproute: %v", err)
+				return
 			}
+			cleaner.Add(result)
 		},
 		30*time.Second, time.Second,
 	)
-	cleaner.Add(httpRouteTwo)
 
 	t.Log("verifying connectivity to the HTTPRoute")
 
