@@ -2,6 +2,14 @@
 
 <img src="./logo/logo.png" alt="KGO logo" title="Kong Gateway Operator" height="150" width="150" />
 
+Kong Gateway Operator is a [Kubernetes Operator][operator-concept] that can manage your Kong Ingress Controller, Kong Gateway Data Planes, or both together when running on Kubernetes.
+
+With Kong Gateway Operator, users can:
+
+* Deploy and configure Kong Gateway services
+* Customise deployments using PodTemplateSpec to deploy sidecars, set node affinity and more.
+* Upgrade Data Planes using a rolling restart or blue/green deployments
+
 ## Current Features
 
 The following features are considered supported:
@@ -78,3 +86,4 @@ and [Zoom][zoom] links.
 [zoom]:https://zoom.us
 [docs]:https://docs.konghq.com/gateway-operator/latest/
 [docsqs]:https://docs.konghq.com/gateway-operator/latest/get-started/kic/install/
+[operator-concept]:https://kubernetes.io/docs/concepts/extend-kubernetes/operator/
