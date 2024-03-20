@@ -12,6 +12,8 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 )
 
 // PreDeleteHook is a function that can be executed before deleting an object.
@@ -171,6 +173,20 @@ func ReduceValidatingWebhookConfigurations(ctx context.Context, k8sClient client
 	for _, webhookConfiguration := range filteredWebhookConfigurations {
 		webhookConfiguration := webhookConfiguration
 		if err := k8sClient.Delete(ctx, &webhookConfiguration); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=dataplanes,verbs=delete
+
+// ReduceDataPlanes detects the best DataPlane in the set and deletes all the others.
+func ReduceDataPlanes(ctx context.Context, k8sClient client.Client, dataplanes []operatorv1beta1.DataPlane) error {
+	filteredDataPlanes := filterDataPlanes(dataplanes)
+	for _, dataplane := range filteredDataPlanes {
+		dataplane := dataplane
+		if err := k8sClient.Delete(ctx, &dataplane); err != nil {
 			return err
 		}
 	}

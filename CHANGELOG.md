@@ -18,6 +18,14 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- Fixes an issue where managed `Gateway`s controller wasn't able to reduce
+  the created `DataPlane` objects when too many have been created.
+  [#43](https://github.com/Kong/gateway-operator/pull/43)
+
 ## [v1.2.1]
 
 > Release date: 2024-03-19

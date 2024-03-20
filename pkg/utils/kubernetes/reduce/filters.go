@@ -10,6 +10,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 )
 
@@ -329,4 +330,25 @@ func filterValidatingWebhookConfigurations(webhookConfigurations []admregv1.Vali
 	}
 
 	return append(webhookConfigurations[:best], webhookConfigurations[best+1:]...)
+}
+
+// -----------------------------------------------------------------------------
+// Filter functions - DataPlanes
+// -----------------------------------------------------------------------------
+
+// filterDataPlanes filters out the DataPlanes to be kept and returns all the DataPlanes
+// to be deleted. The oldest DataPlane is kept.
+func filterDataPlanes(dataplanes []operatorv1beta1.DataPlane) []operatorv1beta1.DataPlane {
+	if len(dataplanes) < 2 {
+		return []operatorv1beta1.DataPlane{}
+	}
+
+	best := 0
+	for i, dataplane := range dataplanes {
+		if dataplane.CreationTimestamp.Before(&dataplanes[best].CreationTimestamp) {
+			best = i
+		}
+	}
+
+	return append(dataplanes[:best], dataplanes[best+1:]...)
 }
