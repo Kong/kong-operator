@@ -50,7 +50,9 @@ func New() *CLI {
 	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information.")
 
 	developmentModeEnabled := manager.DefaultConfig().DevelopmentMode
-	if v := os.Getenv(envVarFlagPrefix + "DEVELOPMENT_MODE"); v == "true" { // TODO: clean env handling https://github.com/Kong/gateway-operator/issues/19
+	// TODO: clean env handling https://github.com/Kong/gateway-operator-archive/issues/19
+	if os.Getenv(envVarFlagPrefix+"DEVELOPMENT_MODE") == "true" ||
+		os.Getenv("CONTROLLER_DEVELOPMENT_MODE") == "true" {
 		developmentModeEnabled = true
 	}
 	loggerOpts := lo.ToPtr(*manager.DefaultConfig().LoggerOpts)
@@ -116,12 +118,15 @@ func (c *CLI) bindEnvVarsToFlags() (err error) {
 // by the program. It returns config for controller manager.
 func (c *CLI) Parse(arguments []string) manager.Config {
 	developmentModeEnabled := manager.DefaultConfig().DevelopmentMode
-	if v := os.Getenv(envVarFlagPrefix + "DEVELOPMENT_MODE"); v == "true" { // TODO: clean env handling https://github.com/Kong/gateway-operator/issues/19
+	// TODO: clean env handling https://github.com/Kong/gateway-operator-archive/issues/19
+	if os.Getenv(envVarFlagPrefix+"DEVELOPMENT_MODE") == "true" ||
+		os.Getenv("CONTROLLER_DEVELOPMENT_MODE") == "true" {
 		developmentModeEnabled = true
 	}
 
 	webhookCertDir := manager.DefaultConfig().WebhookCertDir
-	if certDir := os.Getenv("WEBHOOK_CERT_DIR"); certDir != "" { // TODO: clean env handling https://github.com/Kong/gateway-operator/issues/19
+	// TODO: clean env handling https://github.com/Kong/gateway-operator-archive/issues/19
+	if certDir := os.Getenv("WEBHOOK_CERT_DIR"); certDir != "" {
 		webhookCertDir = certDir
 	}
 
