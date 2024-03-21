@@ -7,7 +7,7 @@ toolchain go1.22.0
 require (
 	github.com/elastic/crd-ref-docs v0.0.12
 	github.com/go-delve/delve v1.22.1
-	github.com/golangci/golangci-lint v1.57.0
+	github.com/golangci/golangci-lint v1.57.1
 	github.com/operator-framework/operator-registry v1.37.0
 	gotest.tools/gotestsum v1.11.0
 	k8s.io/code-generator v0.29.3
@@ -128,7 +128,7 @@ require (
 	github.com/golangci/dupl v0.0.0-20180902072040-3e9179ac440a // indirect
 	github.com/golangci/gofmt v0.0.0-20231018234816-f50ced29576e // indirect
 	github.com/golangci/misspell v0.4.1 // indirect
-	github.com/golangci/plugin-module-register v0.1.0 // indirect
+	github.com/golangci/plugin-module-register v0.1.1 // indirect
 	github.com/golangci/revgrep v0.5.2 // indirect
 	github.com/golangci/unconvert v0.0.0-20240309020433-c5143eacb3ed // indirect
 	github.com/google/cel-go v0.17.7 // indirect
@@ -218,7 +218,7 @@ require (
 	github.com/operator-framework/api v0.21.0 // indirect
 	github.com/otiai10/copy v1.14.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/pelletier/go-toml/v2 v2.1.1 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/polyfloyd/go-errorlint v1.4.8 // indirect
