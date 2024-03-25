@@ -2,31 +2,42 @@
 
 <img src="./logo/logo.png" alt="KGO logo" title="Kong Gateway Operator" height="150" width="150" />
 
+Kong Gateway Operator is a [Kubernetes Operator][operator-concept] that can manage
+your Kong Ingress Controller, Kong Gateway Data Planes, or both together when running
+on Kubernetes.
+
+With Kong Gateway Operator, users can:
+
+* Deploy and configure Kong Gateway services.
+* Customise deployments using PodTemplateSpec to deploy sidecars, set node affinity
+  and more.
+* Upgrade Data Planes using a rolling restart or blue/green deployments.
+
 ## Current Features
 
 The following features are considered supported:
 
-- Kong Gateway Deployment & Configuration Management using the [Gateway API][gwapi]
-- Creation of [Kong Gateways][konggw] using the `DataPlane` API
-- [Kong Gateways][konggw] upgrades, downgrades and autoscaling
-- Creation of [Kong Ingress Controller][kic] instances using the `ControlPlane` API
-- Hybrid Mode Attachment using the `DataPlane` API
-- Configuration and management of `AIGateway`s (experimental feature)
+* Kong Gateway Deployment & Configuration Management using the [Gateway API][gwapi]
+* Creation of [Kong Gateways][konggw] using the `DataPlane` API
+* [Kong Gateways][konggw] upgrades, downgrades and autoscaling
+* Creation of [Kong Ingress Controller][kic] instances using the `ControlPlane` API
+* Hybrid Mode Attachment using the `DataPlane` API
+* Configuration and management of `AIGateway`s (experimental feature)
 
 See our [Features Page](/FEATURES.md) for details on these capabilities.
 
 ## Quick Start and documentation
 
 If you are eager to start with the operator, you can visit the quick start [section][docsqs]
-of the documentation. Alternatively, the complete [docs][docs] provide a full and detailed
-description of how to thoroughly use this project.
+of the documentation. Alternatively, the complete [docs][docs] provide a full and
+detailed description of how to thoroughly use this project.
 
 ## Development
 
 ### Prerequisites
 
 In order to build the operator you'll have to have Go installed on your machine.
-In order to do so, follow instructions on [its website][go-dev-site].
+In order to do so, follow the instructions on its website][go-dev-site].
 
 ### Build process
 
@@ -38,7 +49,7 @@ make build
 
 This `Makefile` target will take care of everything from generating client side code,
 generating Kubernetes manifests, downloading the dependencies and the tools used
-in the build process and finally it will build the binary.
+in the build process and finally, it will build the binary.
 
 After this step has finished successfully you should see the operator's binary `bin/manager`.
 
@@ -78,3 +89,4 @@ and [Zoom][zoom] links.
 [zoom]:https://zoom.us
 [docs]:https://docs.konghq.com/gateway-operator/latest/
 [docsqs]:https://docs.konghq.com/gateway-operator/latest/get-started/kic/install/
+[operator-concept]:https://kubernetes.io/docs/concepts/extend-kubernetes/operator/

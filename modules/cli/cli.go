@@ -7,6 +7,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/samber/lo"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
@@ -19,7 +22,7 @@ func New() *CLI {
 	var cfg manager.Config
 	var deferCfg flagsForFurtherEvaluation
 
-	flagSet.BoolVar(&cfg.AnonymousReports, "anonymous-reports", true, "Send anonymized usage data to help improve Kong")
+	flagSet.BoolVar(&cfg.AnonymousReports, "anonymous-reports", true, "Send anonymized usage data to help improve Kong.")
 	flagSet.StringVar(&cfg.APIServerPath, "apiserver-host", "", "The Kubernetes API server URL. If not set, the operator will use cluster config discovery.")
 	flagSet.StringVar(&cfg.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 
@@ -28,9 +31,9 @@ func New() *CLI {
 	flagSet.BoolVar(&deferCfg.DisableLeaderElection, "no-leader-election", false,
 		"Disable leader election for controller manager. Disabling this will not ensure there is only one active controller manager.")
 
-	flagSet.StringVar(&cfg.ControllerName, "controller-name", "", "a controller name to use if other than the default, only needed for multi-tenancy")
-	flagSet.StringVar(&cfg.ClusterCASecretName, "cluster-ca-secret", "kong-operator-ca", "name of the Secret containing the cluster CA certificate")
-	flagSet.StringVar(&deferCfg.ClusterCASecretNamespace, "cluster-ca-secret-namespace", "", "name of the namespace for Secret containing the cluster CA certificate")
+	flagSet.StringVar(&cfg.ControllerName, "controller-name", "", "Controller name to use if other than the default, only needed for multi-tenancy.")
+	flagSet.StringVar(&cfg.ClusterCASecretName, "cluster-ca-secret", "kong-operator-ca", "Name of the Secret containing the cluster CA certificate.")
+	flagSet.StringVar(&deferCfg.ClusterCASecretNamespace, "cluster-ca-secret-namespace", "", "Name of the namespace for Secret containing the cluster CA certificate.")
 
 	// controllers for standard APIs and features
 	flagSet.BoolVar(&cfg.GatewayControllerEnabled, "enable-controller-gateway", true, "Enable the Gateway controller.")
@@ -39,23 +42,35 @@ func New() *CLI {
 	flagSet.BoolVar(&cfg.DataPlaneBlueGreenControllerEnabled, "enable-controller-dataplane-bluegreen", true, "Enable the DataPlane BlueGreen controller. Mutually exclusive with DataPlane controller.")
 
 	// controllers for specialized APIs and features
-	flagSet.BoolVar(&cfg.AIGatewayControllerEnabled, "enable-controller-aigateway", false, "Enable the AIGateway controller. (Experimental)")
+	flagSet.BoolVar(&cfg.AIGatewayControllerEnabled, "enable-controller-aigateway", false, "Enable the AIGateway controller. (Experimental).")
 
 	// webhook and validation options
 	flagSet.BoolVar(&deferCfg.ValidatingWebhookEnabled, "enable-validating-webhook", true, "Enable the validating webhook.")
 
-	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information")
+	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information.")
+
+	developmentModeEnabled := manager.DefaultConfig().DevelopmentMode
+	// TODO: clean env handling https://github.com/Kong/gateway-operator-archive/issues/19
+	if os.Getenv(envVarFlagPrefix+"DEVELOPMENT_MODE") == "true" ||
+		os.Getenv("CONTROLLER_DEVELOPMENT_MODE") == "true" {
+		developmentModeEnabled = true
+	}
+	loggerOpts := lo.ToPtr(*manager.DefaultConfig().LoggerOpts)
+	loggerOpts.Development = developmentModeEnabled
+	loggerOpts.BindFlags(flagSet)
 
 	return &CLI{
 		flagSet:         flagSet,
 		cfg:             &cfg,
+		loggerOpts:      loggerOpts,
 		deferFlagValues: &deferCfg,
 	}
 }
 
 // CLI represents command line interface for the operator.
 type CLI struct {
-	flagSet *flag.FlagSet
+	flagSet    *flag.FlagSet
+	loggerOpts *zap.Options
 
 	// deferFlagValues contains values of flags that require additional
 	// logic after parsing flagSet to determine desired configuration.
@@ -103,18 +118,17 @@ func (c *CLI) bindEnvVarsToFlags() (err error) {
 // by the program. It returns config for controller manager.
 func (c *CLI) Parse(arguments []string) manager.Config {
 	developmentModeEnabled := manager.DefaultConfig().DevelopmentMode
-	if v := os.Getenv("CONTROLLER_DEVELOPMENT_MODE"); v == "true" { // TODO: clean env handling https://github.com/Kong/gateway-operator/issues/19
+	// TODO: clean env handling https://github.com/Kong/gateway-operator-archive/issues/19
+	if os.Getenv(envVarFlagPrefix+"DEVELOPMENT_MODE") == "true" ||
+		os.Getenv("CONTROLLER_DEVELOPMENT_MODE") == "true" {
 		developmentModeEnabled = true
 	}
 
 	webhookCertDir := manager.DefaultConfig().WebhookCertDir
-	if certDir := os.Getenv("WEBHOOK_CERT_DIR"); certDir != "" { // TODO: clean env handling https://github.com/Kong/gateway-operator/issues/19
+	// TODO: clean env handling https://github.com/Kong/gateway-operator-archive/issues/19
+	if certDir := os.Getenv("WEBHOOK_CERT_DIR"); certDir != "" {
 		webhookCertDir = certDir
 	}
-
-	loggerOpts := manager.DefaultConfig().LoggerOpts
-	loggerOpts.Development = developmentModeEnabled
-	loggerOpts.BindFlags(c.flagSet)
 
 	// Flags take precedence over environment variables,
 	// so we bind env vars first then parse aruments to override the values from flags.
@@ -186,7 +200,7 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	c.cfg.ClusterCASecretNamespace = clusterCASecretNamespace
 	c.cfg.WebhookCertDir = webhookCertDir
 	c.cfg.ValidatingWebhookEnabled = validatingWebhookEnabled
-	c.cfg.LoggerOpts = logging.SetupLogEncoder(c.cfg.DevelopmentMode, loggerOpts)
+	c.cfg.LoggerOpts = logging.SetupLogEncoder(c.cfg.DevelopmentMode || c.loggerOpts.Development, c.loggerOpts)
 	c.cfg.WebhookPort = manager.DefaultConfig().WebhookPort
 	c.cfg.LeaderElectionNamespace = controllerNamespace
 	c.cfg.AnonymousReports = anonymousReportsEnabled

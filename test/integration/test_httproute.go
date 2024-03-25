@@ -159,15 +159,16 @@ func TestHTTPRouteV1Beta1(t *testing.T) {
 	t.Logf("creating httproute %s/%s to access deployment %s via kong", httpRoute.Namespace, httpRoute.Name, deployment.Name)
 	require.EventuallyWithT(t,
 		func(c *assert.CollectT) {
-			httpRoute, err = GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).Create(GetCtx(), httpRoute, metav1.CreateOptions{})
+			result, err := GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).Create(GetCtx(), httpRoute, metav1.CreateOptions{})
 			if err != nil {
 				t.Logf("failed to deploy httproute: %v", err)
 				c.Errorf("failed to deploy httproute: %v", err)
+				return
 			}
+			cleaner.Add(result)
 		},
 		testutils.DefaultIngressWait, testutils.WaitIngressTick,
 	)
-	cleaner.Add(httpRoute)
 
 	t.Log("verifying connectivity to the HTTPRoute")
 	const (

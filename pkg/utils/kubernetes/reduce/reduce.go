@@ -12,6 +12,8 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
 )
 
 // PreDeleteHook is a function that can be executed before deleting an object.
@@ -30,7 +32,7 @@ func ReduceSecrets(ctx context.Context, k8sClient client.Client, secrets []corev
 				return fmt.Errorf("failed to execute pre delete hook: %w", err)
 			}
 		}
-		if err := k8sClient.Delete(ctx, &secret); err != nil {
+		if err := k8sClient.Delete(ctx, &secret); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -44,7 +46,7 @@ func ReduceServiceAccounts(ctx context.Context, k8sClient client.Client, service
 	filteredServiceAccounts := filterServiceAccounts(serviceAccounts)
 	for _, serviceAccount := range filteredServiceAccounts {
 		serviceAccount := serviceAccount
-		if err := k8sClient.Delete(ctx, &serviceAccount); err != nil {
+		if err := k8sClient.Delete(ctx, &serviceAccount); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -58,7 +60,7 @@ func ReduceClusterRoles(ctx context.Context, k8sClient client.Client, clusterRol
 	filteredClusterRoles := filterClusterRoles(clusterRoles)
 	for _, clusterRole := range filteredClusterRoles {
 		clusterRole := clusterRole
-		if err := k8sClient.Delete(ctx, &clusterRole); err != nil {
+		if err := k8sClient.Delete(ctx, &clusterRole); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -72,7 +74,7 @@ func ReduceClusterRoleBindings(ctx context.Context, k8sClient client.Client, clu
 	filteredCLusterRoleBindings := filterClusterRoleBindings(clusterRoleBindings)
 	for _, clusterRoleBinding := range filteredCLusterRoleBindings {
 		clusterRoleBinding := clusterRoleBinding
-		if err := k8sClient.Delete(ctx, &clusterRoleBinding); err != nil {
+		if err := k8sClient.Delete(ctx, &clusterRoleBinding); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -92,7 +94,7 @@ func ReduceDeployments(ctx context.Context, k8sClient client.Client, deployments
 				return fmt.Errorf("failed to execute pre delete hook: %w", err)
 			}
 		}
-		if err := k8sClient.Delete(ctx, &deployment); err != nil {
+		if err := k8sClient.Delete(ctx, &deployment); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -126,7 +128,7 @@ func ReduceServices(ctx context.Context, k8sClient client.Client, services []cor
 				return fmt.Errorf("failed to execute pre delete hook: %w", err)
 			}
 		}
-		if err := k8sClient.Delete(ctx, &service); err != nil {
+		if err := k8sClient.Delete(ctx, &service); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -140,7 +142,7 @@ func ReduceNetworkPolicies(ctx context.Context, k8sClient client.Client, network
 	filteredNetworkPolicies := filterNetworkPolicies(networkPolicies)
 	for _, networkPolicy := range filteredNetworkPolicies {
 		networkPolicy := networkPolicy
-		if err := k8sClient.Delete(ctx, &networkPolicy); err != nil {
+		if err := k8sClient.Delete(ctx, &networkPolicy); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -156,7 +158,7 @@ type HPAFilterFunc func(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscal
 func ReduceHPAs(ctx context.Context, k8sClient client.Client, hpas []autoscalingv2.HorizontalPodAutoscaler, filter HPAFilterFunc) error {
 	for _, hpa := range filter(hpas) {
 		hpa := hpa
-		if err := k8sClient.Delete(ctx, &hpa); err != nil {
+		if err := k8sClient.Delete(ctx, &hpa); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -170,7 +172,21 @@ func ReduceValidatingWebhookConfigurations(ctx context.Context, k8sClient client
 	filteredWebhookConfigurations := filterValidatingWebhookConfigurations(webhookConfigurations)
 	for _, webhookConfiguration := range filteredWebhookConfigurations {
 		webhookConfiguration := webhookConfiguration
-		if err := k8sClient.Delete(ctx, &webhookConfiguration); err != nil {
+		if err := k8sClient.Delete(ctx, &webhookConfiguration); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=dataplanes,verbs=delete
+
+// ReduceDataPlanes detects the best DataPlane in the set and deletes all the others.
+func ReduceDataPlanes(ctx context.Context, k8sClient client.Client, dataplanes []operatorv1beta1.DataPlane) error {
+	filteredDataPlanes := filterDataPlanes(dataplanes)
+	for _, dataplane := range filteredDataPlanes {
+		dataplane := dataplane
+		if err := k8sClient.Delete(ctx, &dataplane); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
