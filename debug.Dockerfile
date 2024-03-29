@@ -4,6 +4,9 @@
 
 FROM golang:1.22.1 as debug
 
+ARG GOPATH
+ARG GOCACHE
+
 ARG TAG
 ARG NAME="Kong Gateway Operator"
 ARG DESCRIPTION="Kong Gateway Operator debug image"
@@ -30,15 +33,18 @@ RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
 
 WORKDIR /workspace
 
-COPY go.mod go.mod
-COPY go.sum go.sum
-RUN go mod download
+RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+    --mount=type=cache,target=$GOCACHE \
+    go install github.com/go-delve/delve/cmd/dlv@v1.22.1
 
-COPY Makefile Makefile
-COPY third_party/go.mod third_party/go.mod
-COPY third_party/go.sum third_party/go.sum
-COPY third_party/dlv.go third_party/dlv.go
-RUN make dlv
+# Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
+# layers when using COPY instructions for go.mod and go.sum.
+# https://docs.docker.com/build/guide/mounts/
+RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+    --mount=type=cache,target=$GOCACHE \
+    --mount=type=bind,source=go.sum,target=go.sum \
+    --mount=type=bind,source=go.mod,target=go.mod \
+    go mod download -x
 
 COPY main.go main.go
 COPY modules/ modules/
@@ -49,11 +55,17 @@ COPY internal/ internal/
 COPY Makefile Makefile
 COPY .git/ .git/
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
+# Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
+# layers when using COPY instructions for go.mod and go.sum.
+# https://docs.docker.com/build/guide/mounts/
+RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+    --mount=type=cache,target=$GOCACHE \
+    --mount=type=bind,source=go.sum,target=go.sum \
+    --mount=type=bind,source=go.mod,target=go.mod \
+    CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
     TAG="${TAG}" COMMIT="${COMMIT}" REPO_INFO="${REPO_INFO}" \
     make build.operator.debug && \
-    mv ./bin/manager /go/bin/manager && \
-    mv ./bin/dlv /go/bin/dlv
+    mv ./bin/manager /go/bin/manager
 
-ENTRYPOINT [ "/go/bin/dlv" ]
+ENTRYPOINT [ "dlv" ]
 CMD [ "--continue", "--accept-multiclient", "--listen=:40000", "--check-go-version=false", "--headless=true", "--api-version=2", "--log=true", "--log-output=debugger,debuglineerr,gdbwire", "exec", "/go/bin/manager", "--" ]

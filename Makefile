@@ -471,11 +471,13 @@ debug: webhook-certs-dir manifests generate install _ensure-kong-system-namespac
 
 .PHONY: debug.skaffold
 debug.skaffold: _ensure-kong-system-namespace
+	GOCACHE=$(shell go env GOCACHE) \
 	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
 		$(SKAFFOLD) debug --port-forward=pods --profile=debug
 
 .PHONY: debug.skaffold.continuous
 debug.skaffold.continuous: _ensure-kong-system-namespace
+	GOCACHE=$(shell go env GOCACHE) \
 	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
 		$(SKAFFOLD) debug --port-forward=pods --profile=debug --auto-build --auto-deploy --auto-sync
 
