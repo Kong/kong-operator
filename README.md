@@ -37,7 +37,7 @@ detailed description of how to thoroughly use this project.
 ### Prerequisites
 
 In order to build the operator you'll have to have Go installed on your machine.
-In order to do so, follow the instructions on its website][go-dev-site].
+In order to do so, follow the instructions on its website[go-dev-site].
 
 ### Build process
 
@@ -55,6 +55,14 @@ After this step has finished successfully you should see the operator's binary `
 
 You can also run it directly via `make run` which will run the operator on your
 machine against the cluster that you have configured via your `KUBECONFIG`.
+
+### Adding new CRDs
+
+Whenever you add a new CRD ensure that it is included in project's [`PROJECT`](./PROJECT) file.
+
+This is necessary for creation of a bundle for external hubs like [Operator Hub's community operators][community-operators].
+
+[community-operators]: https://github.com/k8s-operatorhub/community-operators/
 
 ## Seeking Help
 
