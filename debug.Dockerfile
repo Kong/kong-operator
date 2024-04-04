@@ -2,7 +2,7 @@
 # Debug image
 # ------------------------------------------------------------------------------
 
-FROM golang:1.22.1 as debug
+FROM golang:1.22.2 as debug
 
 ARG GOPATH
 ARG GOCACHE
