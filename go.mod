@@ -58,7 +58,7 @@ require (
 	golang.org/x/tools v0.17.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240311132316-a219d84964c2 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240314234333-6e1732d8331c // indirect
-	gopkg.in/evanphx/json-patch.v5 v5.6.0 // indirect
+	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	k8s.io/apiserver v0.29.3 // indirect
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e // indirect
 )
@@ -89,8 +89,8 @@ require (
 	google.golang.org/api v0.171.0 // indirect
 	google.golang.org/grpc v1.62.1 // indirect
 	sigs.k8s.io/kind v0.22.0 // indirect
-	sigs.k8s.io/kustomize/api v0.16.0
-	sigs.k8s.io/kustomize/kyaml v0.16.0 // indirect
+	sigs.k8s.io/kustomize/api v0.17.1
+	sigs.k8s.io/kustomize/kyaml v0.17.0 // indirect
 )
 
 require (
