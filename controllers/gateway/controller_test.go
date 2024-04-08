@@ -586,6 +586,42 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "defining scaling strategy should not set default replicas",
+			input: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						Scaling: &operatorv1beta1.Scaling{
+							HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+								MaxReplicas: 10,
+							},
+						},
+					},
+				},
+			},
+			expected: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						Scaling: &operatorv1beta1.Scaling{
+							HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+								MaxReplicas: 10,
+							},
+						},
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:           consts.DataPlaneProxyContainerName,
+										Image:          consts.DefaultDataPlaneImage,
+										ReadinessProbe: resources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testcases {
