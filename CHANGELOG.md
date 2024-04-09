@@ -25,6 +25,12 @@
 - Fixes an issue where managed `Gateway`s controller wasn't able to reduce
   the created `DataPlane` objects when too many have been created.
   [#43](https://github.com/Kong/gateway-operator/pull/43)
+- `Gateway` controller will no longer set `DataPlane` deployment's replicas
+  to default value when `DataPlaneOptions` in `GatewayConfiguration` define
+  scaling strategy. This effectively allows users to use `DataPlane` horizontal
+  autoscaling with `GatewayConfiguration` as the generated `DataPlane` deployment
+  will no longer be rejected.
+  [#79](https://github.com/Kong/gateway-operator/pull/79)
 
 ## [v1.2.1]
 

@@ -532,10 +532,6 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
-	// dataplaneReplicasUpdates contains the number of replicas the dataplane is configured with
-	// at each testing iteration.
-	dataplaneReplicasUpdates := []int32{3, 0, 5, 1}
-
 	gatewayConfigurationName := uuid.NewString()
 	t.Logf("deploying the GatewayConfiguration %s", gatewayConfigurationName)
 	gatewayConfiguration := testutils.GenerateGatewayConfiguration(types.NamespacedName{Namespace: namespace.Name, Name: gatewayConfigurationName})
@@ -578,39 +574,88 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 	t.Log("verifying that the DataPlane becomes ready")
 	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 
-	for _, replicas := range dataplaneReplicasUpdates {
-		replicas := replicas
-		gatewayConfiguration, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Get(GetCtx(), gatewayConfigurationName, metav1.GetOptions{})
-		require.NoError(t, err)
-		gatewayConfiguration.Spec.DataPlaneOptions.Deployment.Replicas = &replicas
-		t.Logf("changing the GatewayConfiguration to change dataplane replicas to %d", replicas)
-		_, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Update(GetCtx(), gatewayConfiguration, metav1.UpdateOptions{})
-		require.NoError(t, err)
-
-		t.Log("verifying the deployment managed by the controlplane is ready")
-		controlplanes := testutils.MustListControlPlanesForGateway(t, GetCtx(), gateway, clients)
-		require.Len(t, controlplanes, 1)
-		controlplaneNN := client.ObjectKeyFromObject(&controlplanes[0])
-		require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t,
-			GetCtx(),
-			controlplaneNN,
-			clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
-
-		t.Logf("verifying the deployment managed by the dataplane is ready and has %d available replicas", replicas)
-		dataplanes := testutils.MustListDataPlanesForGateway(t, GetCtx(), gateway, clients)
-		require.Len(t, dataplanes, 1)
-		dataplane := dataplanes[0]
-		require.Equal(t, *dataplane.Spec.DataPlaneOptions.Deployment.DeploymentOptions.Replicas, replicas)
-		dataplaneNN := client.ObjectKeyFromObject(&dataplane)
-		require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t,
-			GetCtx(),
-			dataplaneNN,
-			&appsv1.Deployment{},
-			client.MatchingLabels{
-				consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+	testCases := []struct {
+		name                       string
+		dataplaneDeploymentOptions operatorv1beta1.DeploymentOptions
+		expectedReplicasCount      int
+	}{
+		{
+			name: "replicas=3",
+			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
+				Replicas: lo.ToPtr[int32](3),
 			},
-			clients), testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
-		require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneNN, clients, int(replicas)), time.Minute, time.Second)
+			expectedReplicasCount: 3,
+		},
+		{
+			name: "replicas=0",
+			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
+				Replicas: lo.ToPtr[int32](0),
+			},
+			expectedReplicasCount: 0,
+		},
+		{
+			name: "replicas=5",
+			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
+				Replicas: lo.ToPtr[int32](5),
+			},
+			expectedReplicasCount: 5,
+		},
+		{
+			name: "replicas=1",
+			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
+				Replicas: lo.ToPtr[int32](1),
+			},
+			expectedReplicasCount: 1,
+		},
+		{
+			name: "horizontal scaling with minReplicas=3",
+			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
+				Scaling: &operatorv1beta1.Scaling{
+					HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+						MinReplicas: lo.ToPtr[int32](3),
+						MaxReplicas: 5,
+					},
+				},
+			},
+			expectedReplicasCount: 3,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			deploymentOptions := tc.dataplaneDeploymentOptions
+			gatewayConfiguration, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Get(GetCtx(), gatewayConfigurationName, metav1.GetOptions{})
+			require.NoError(t, err)
+			gatewayConfiguration.Spec.DataPlaneOptions.Deployment.DeploymentOptions = deploymentOptions
+			t.Logf("changing the GatewayConfiguration to change dataplane deploymentOptions to %v", deploymentOptions)
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				_, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Update(GetCtx(), gatewayConfiguration, metav1.UpdateOptions{})
+				assert.NoError(c, err)
+			}, time.Minute, time.Second)
+
+			t.Log("verifying the deployment managed by the controlplane is ready")
+			controlplanes := testutils.MustListControlPlanesForGateway(t, GetCtx(), gateway, clients)
+			require.Len(t, controlplanes, 1)
+			controlplaneNN := client.ObjectKeyFromObject(&controlplanes[0])
+			require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t,
+				GetCtx(),
+				controlplaneNN,
+				clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+
+			t.Logf("verifying the deployment managed by the dataplane is ready and has %d available dataplane replicas", tc.expectedReplicasCount)
+			dataplanes := testutils.MustListDataPlanesForGateway(t, GetCtx(), gateway, clients)
+			require.Len(t, dataplanes, 1)
+			dataplane := dataplanes[0]
+			dataplaneNN := client.ObjectKeyFromObject(&dataplane)
+			require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t,
+				GetCtx(),
+				dataplaneNN,
+				&appsv1.Deployment{},
+				client.MatchingLabels{
+					consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+				},
+				clients), testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
+			require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneNN, clients, tc.expectedReplicasCount), time.Minute, time.Second)
+		})
 	}
 }
 
