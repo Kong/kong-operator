@@ -1,8 +1,3 @@
-# Usage:
-# -----
-# go run internal/cmd/main.go
-# kubectl apply -f examples/httpbin.yaml
-# kubectl get secrets kong-config -o=go-template='{{index .data "networking.k8s.io-v1-Ingress-default-httpbin-ingress" }}' | base64 -d
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -22,7 +17,7 @@ spec:
     spec:
       containers:
       - name: httpbin
-        image: kennethreitz/httpbin
+        image: kong/httpbin
         ports:
         - containerPort: 80
 ---
