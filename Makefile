@@ -157,7 +157,7 @@ _build.operator:
 build: generate
 	$(MAKE) build.operator
 
-GOLANGCI_LINT_CONFIG = $(PROJECT_DIR)/.golangci.yaml
+GOLANGCI_LINT_CONFIG ?= $(PROJECT_DIR)/.golangci.yaml
 .PHONY: lint
 lint: golangci-lint
 	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) $(GOLANGCI_LINT_FLAGS)
