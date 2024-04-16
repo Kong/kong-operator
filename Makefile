@@ -144,7 +144,7 @@ _build.operator:
 		-X $(REPO)/modules/manager/metadata.Release=$(TAG) \
 		-X $(REPO)/modules/manager/metadata.Commit=$(COMMIT) \
 		-X $(REPO)/modules/manager/metadata.Repo=$(REPO_INFO)" \
-		main.go
+		cmd/main.go
 
 .PHONY: build
 build: generate
@@ -176,28 +176,35 @@ verify.generators: verify.repo generate verify.diff
 # Build - Generators
 # ------------------------------------------------------------------------------
 
-APIS_DIR ?= apis
+API_DIR ?= api
 
 .PHONY: generate
-generate: controller-gen generate.apis generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config
+generate: generate.api generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config
 
-.PHONY: generate.apis
-generate.apis:
-	$(CONTROLLER_GEN) object:headerFile="hack/generators/boilerplate.go.txt" paths="./$(APIS_DIR)/..."
+.PHONY: generate.api
+generate.api: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="hack/generators/boilerplate.go.txt" paths="./$(API_DIR)/..."
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 .PHONY: generate.clientsets
 generate.clientsets: client-gen
+	# We create a symlink to the apis/ directory as a hack because currently
+	# client-gen does not properly support the use of api/ as your API
+	# directory.
+	#
+	# See: https://github.com/kubernetes/code-generator/issues/167
+	ln -s api apis
 	$(CLIENT_GEN) \
 		--go-header-file ./hack/generators/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base '' \
-		--input $(REPO)/$(APIS_DIR)/v1alpha1 \
-		--input $(REPO)/$(APIS_DIR)/v1beta1 \
+		--input $(REPO)/apis/v1alpha1 \
+		--input $(REPO)/apis/v1beta1 \
 		--output-base pkg/ \
 		--output-package $(REPO)/pkg/ \
 		--trim-path-prefix pkg/$(REPO)/
-
+	rm apis
+	find ./pkg/clientset/ -type f -name '*.go' -exec sed -i '' -e 's/github.com\/kong\/gateway-operator\/apis/github.com\/kong\/gateway-operator\/api/gI' {} \; &> /dev/null
 .PHONY: generate.rbacs
 generate.rbacs: kic-role-generator
 	$(KIC_ROLE_GENERATOR) --force
@@ -231,7 +238,7 @@ check.rbacs: kic-role-generator
 # ------------------------------------------------------------------------------
 
 CONTROLLER_GEN_CRD_OPTIONS ?= "+crd:generateEmbeddedObjectMeta=true"
-CONTROLLER_GEN_PATHS_RAW := ./pkg/utils/kubernetes/resources/clusterroles/ ./pkg/utils/kubernetes/reduce/ ./controllers/... ./$(APIS_DIR)/...
+CONTROLLER_GEN_PATHS_RAW := ./pkg/utils/kubernetes/resources/clusterroles/ ./pkg/utils/kubernetes/reduce/ ./controller/... ./$(API_DIR)/...
 CONTROLLER_GEN_PATHS := $(patsubst %,%;,$(strip $(CONTROLLER_GEN_PATHS_RAW)))
 
 .PHONY: manifests
@@ -280,7 +287,7 @@ CONFORMANCE_TEST_TIMEOUT ?= "20m"
 .PHONY: test
 test: test.unit
 
-UNIT_TEST_PATHS := ./controllers/... ./internal/... ./pkg/... ./modules/...
+UNIT_TEST_PATHS := ./controller/... ./internal/... ./pkg/... ./modules/...
 
 .PHONY: _test.unit
 _test.unit: gotestsum
@@ -431,7 +438,7 @@ run: webhook-certs-dir manifests generate install-gateway-api-crds install _ensu
 # etc didn't change in between the runs.
 .PHONY: _run
 _run:
-	GATEWAY_OPERATOR_DEVELOPMENT_MODE=true go run ./main.go \
+	GATEWAY_OPERATOR_DEVELOPMENT_MODE=true go run ./cmd/main.go \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		-enable-controller-controlplane \

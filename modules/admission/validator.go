@@ -5,7 +5,7 @@ import (
 
 	admissionv1 "k8s.io/api/admission/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	controlplanevalidation "github.com/kong/gateway-operator/internal/validation/controlplane"
 	dataplanevalidation "github.com/kong/gateway-operator/internal/validation/dataplane"
 )

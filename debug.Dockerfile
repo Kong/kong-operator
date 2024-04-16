@@ -46,10 +46,10 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
     --mount=type=bind,source=go.mod,target=go.mod \
     go mod download -x
 
-COPY main.go main.go
+COPY cmd/main.go cmd/main.go
 COPY modules/ modules/
-COPY apis/ apis/
-COPY controllers/ controllers/
+COPY api/ api/
+COPY controller/ controller/
 COPY pkg/ pkg/
 COPY internal/ internal/
 COPY Makefile Makefile
