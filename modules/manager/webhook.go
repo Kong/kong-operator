@@ -259,7 +259,7 @@ func (m *webhookManager) createCertificateConfigJobs(ctx context.Context) error 
 	jobCertificateConfigImage := consts.WebhookCertificateConfigBaseImage
 	if relatedJobImage := os.Getenv("RELATED_IMAGE_CERTIFICATE_CONFIG"); relatedJobImage != "" {
 		// RELATED_IMAGE_CERTIFICATE_CONFIG is set by the operator-sdk when building the operator bundle.
-		// https://github.com/Kong/gateway-operator/issues/261
+		// https://github.com/Kong/gateway-operator-archive/issues/261
 		jobCertificateConfigImage = relatedJobImage
 	}
 	job := k8sresources.GenerateNewWebhookCertificateConfigJob(
