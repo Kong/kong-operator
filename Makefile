@@ -157,9 +157,10 @@ _build.operator:
 build: generate
 	$(MAKE) build.operator
 
+GOLANGCI_LINT_CONFIG ?= $(PROJECT_DIR)/.golangci.yaml
 .PHONY: lint
 lint: golangci-lint
-	$(GOLANGCI_LINT) run -v --config .golangci.yaml $(GOLANGCI_LINT_FLAGS)
+	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) $(GOLANGCI_LINT_FLAGS)
 
 .PHONY: verify
 verify: verify.manifests verify.generators
@@ -332,7 +333,7 @@ test.integration_provision_dataplane_fail:
 	@$(MAKE) _test.integration \
 		WEBHOOK_ENABLED=true \
 		GOTESTFLAGS="-run=TestGatewayProvisionDataPlaneFail $(GOTESTFLAGS)" \
-		COVERPROFILE="coverage.integration.out"	
+		COVERPROFILE="coverage.integration.out"
 
 .PHONY: _test.e2e
 _test.e2e: gotestsum
