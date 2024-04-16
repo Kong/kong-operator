@@ -10,8 +10,6 @@ golangci-lint: "1.57.2"
 skaffold: "2.11.1"
 # renovate: datasource=github-releases depName=go-delve/delve
 dlv: "1.22.1"
-# renovate: datasource=github-releases depName=operator-framework/operator-sdk
-operator-sdk: "1.23.0"
 # renovate: datasource=github-releases depName=mikefarah/yq
 yq: "4.43.1"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum

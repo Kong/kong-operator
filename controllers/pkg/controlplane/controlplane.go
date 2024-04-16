@@ -224,7 +224,7 @@ func GenerateImage(opts *operatorv1beta1.ControlPlaneOptions, validators ...vers
 
 	if relatedKongControllerImage := os.Getenv("RELATED_IMAGE_KONG_CONTROLLER"); relatedKongControllerImage != "" {
 		// RELATED_IMAGE_KONG_CONTROLLER is set by the operator-sdk when building the operator bundle.
-		// https://github.com/Kong/gateway-operator/issues/261
+		// https://github.com/Kong/gateway-operator-archive/issues/261
 		return relatedKongControllerImage, nil
 	}
 

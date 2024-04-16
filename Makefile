@@ -34,7 +34,7 @@ endif
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
-TOOLS_VERSIONS_FILE = .tools_versions.yaml
+TOOLS_VERSIONS_FILE = $(PROJECT_DIR)/.tools_versions.yaml
 
 .PHONY: tools
 tools: kic-role-generator controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq crd-ref-docs
@@ -54,7 +54,7 @@ KIC_WEBHOOKCONFIG_GENERATOR = $(PROJECT_DIR)/bin/kic-webhook-config-generator
 kic-webhook-config-generator:
 	( cd ./hack/generators/kic/webhook-config-generator && go build -o $(KIC_WEBHOOKCONFIG_GENERATOR) . )
 
-export MISE_DATA_DIR = bin/
+export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
 
 CONTROLLER_GEN_VERSION = $(shell yq -ojson -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/kube-controller-tools/$(CONTROLLER_GEN_VERSION)/bin/controller-gen
@@ -83,13 +83,6 @@ GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/golangci-lint/$(GOLANGCI_LINT_VERSIO
 golangci-lint: mise ## Download golangci-lint locally if necessary.
 	@$(MISE) plugin install --yes -q golangci-lint
 	@$(MISE) install -q golangci-lint@$(GOLANGCI_LINT_VERSION)
-
-OPERATOR_SDK_VERSION = $(shell yq -ojson -r '.operator-sdk' < $(TOOLS_VERSIONS_FILE))
-OPERATOR_SDK = $(PROJECT_DIR)/bin/installs/operator-sdk/$(OPERATOR_SDK_VERSION)/bin/operator-sdk
-.PHONY: operator-sdk
-operator-sdk: mise ## Download operator-sdk locally if necessary.
-	@$(MISE) plugin install --yes -q operator-sdk https://github.com/Medium/asdf-operator-sdk.git
-	@$(MISE) install -q operator-sdk@$(OPERATOR_SDK_VERSION)
 
 GOTESTSUM_VERSION = $(shell yq -ojson -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum

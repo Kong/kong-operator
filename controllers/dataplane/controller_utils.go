@@ -45,7 +45,7 @@ func generateDataPlaneImage(dataplane *operatorv1beta1.DataPlane, defaultImage s
 
 	if relatedKongImage := os.Getenv("RELATED_IMAGE_KONG"); relatedKongImage != "" {
 		// RELATED_IMAGE_KONG is set by the operator-sdk when building the operator bundle.
-		// https://github.com/Kong/gateway-operator/issues/261
+		// https://github.com/Kong/gateway-operator-archive/issues/261
 		return relatedKongImage, nil
 	}
 
