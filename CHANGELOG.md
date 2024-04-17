@@ -20,6 +20,12 @@
 
 ## Unreleased
 
+### Breaking Changes
+
+- Changes project layout to match `kubebuilder` `v4`. Some import paths (due to dir renames) have changed
+  `apis` -> `api` and `controllers` -> `controller`.
+  [#84](https://github.com/Kong/gateway-operator/pull/84)
+
 ### Fixes
 
 - Fixes an issue where managed `Gateway`s controller wasn't able to reduce
@@ -571,10 +577,10 @@
 
 ### Added
 
-- `HTTPRoute` support was added. If version of control plane image is at 
-  least 2.6, the `Gateway=true` feature gate is enabled, so the 
+- `HTTPRoute` support was added. If version of control plane image is at
+  least 2.6, the `Gateway=true` feature gate is enabled, so the
   control plane can pick up the `HTTPRoute` and configure it on data plane.
-  [Kong/gateway-operator-archive#302](https://github.com/Kong/gateway-operator-archive/pull/302)  
+  [Kong/gateway-operator-archive#302](https://github.com/Kong/gateway-operator-archive/pull/302)
 
 ## [v0.1.0]
 
