@@ -19,8 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	apisv1alpha1 "github.com/kong/gateway-operator/apis/v1alpha1"
-	apisv1beta1 "github.com/kong/gateway-operator/apis/v1beta1"
+	apisv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	apisv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

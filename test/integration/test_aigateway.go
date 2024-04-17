@@ -11,8 +11,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/apis/v1alpha1"
-	"github.com/kong/gateway-operator/apis/v1beta1"
+	"github.com/kong/gateway-operator/api/v1alpha1"
+	"github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"

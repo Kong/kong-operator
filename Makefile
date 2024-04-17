@@ -34,7 +34,7 @@ endif
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
-TOOLS_VERSIONS_FILE = .tools_versions.yaml
+TOOLS_VERSIONS_FILE = $(PROJECT_DIR)/.tools_versions.yaml
 
 .PHONY: tools
 tools: kic-role-generator controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq crd-ref-docs
@@ -54,7 +54,7 @@ KIC_WEBHOOKCONFIG_GENERATOR = $(PROJECT_DIR)/bin/kic-webhook-config-generator
 kic-webhook-config-generator:
 	( cd ./hack/generators/kic/webhook-config-generator && go build -o $(KIC_WEBHOOKCONFIG_GENERATOR) . )
 
-export MISE_DATA_DIR = bin/
+export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
 
 CONTROLLER_GEN_VERSION = $(shell yq -ojson -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/kube-controller-tools/$(CONTROLLER_GEN_VERSION)/bin/controller-gen
@@ -83,13 +83,6 @@ GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/golangci-lint/$(GOLANGCI_LINT_VERSIO
 golangci-lint: mise ## Download golangci-lint locally if necessary.
 	@$(MISE) plugin install --yes -q golangci-lint
 	@$(MISE) install -q golangci-lint@$(GOLANGCI_LINT_VERSION)
-
-OPERATOR_SDK_VERSION = $(shell yq -ojson -r '.operator-sdk' < $(TOOLS_VERSIONS_FILE))
-OPERATOR_SDK = $(PROJECT_DIR)/bin/installs/operator-sdk/$(OPERATOR_SDK_VERSION)/bin/operator-sdk
-.PHONY: operator-sdk
-operator-sdk: mise ## Download operator-sdk locally if necessary.
-	@$(MISE) plugin install --yes -q operator-sdk https://github.com/Medium/asdf-operator-sdk.git
-	@$(MISE) install -q operator-sdk@$(OPERATOR_SDK_VERSION)
 
 GOTESTSUM_VERSION = $(shell yq -ojson -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum
@@ -151,15 +144,16 @@ _build.operator:
 		-X $(REPO)/modules/manager/metadata.Release=$(TAG) \
 		-X $(REPO)/modules/manager/metadata.Commit=$(COMMIT) \
 		-X $(REPO)/modules/manager/metadata.Repo=$(REPO_INFO)" \
-		main.go
+		cmd/main.go
 
 .PHONY: build
 build: generate
 	$(MAKE) build.operator
 
+GOLANGCI_LINT_CONFIG ?= $(PROJECT_DIR)/.golangci.yaml
 .PHONY: lint
 lint: golangci-lint
-	$(GOLANGCI_LINT) run -v --config .golangci.yaml $(GOLANGCI_LINT_FLAGS)
+	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) $(GOLANGCI_LINT_FLAGS)
 
 .PHONY: verify
 verify: verify.manifests verify.generators
@@ -182,28 +176,35 @@ verify.generators: verify.repo generate verify.diff
 # Build - Generators
 # ------------------------------------------------------------------------------
 
-APIS_DIR ?= apis
+API_DIR ?= api
 
 .PHONY: generate
-generate: controller-gen generate.apis generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config
+generate: generate.api generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config
 
-.PHONY: generate.apis
-generate.apis:
-	$(CONTROLLER_GEN) object:headerFile="hack/generators/boilerplate.go.txt" paths="./$(APIS_DIR)/..."
+.PHONY: generate.api
+generate.api: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="hack/generators/boilerplate.go.txt" paths="./$(API_DIR)/..."
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 .PHONY: generate.clientsets
 generate.clientsets: client-gen
+	# We create a symlink to the apis/ directory as a hack because currently
+	# client-gen does not properly support the use of api/ as your API
+	# directory.
+	#
+	# See: https://github.com/kubernetes/code-generator/issues/167
+	ln -s api apis
 	$(CLIENT_GEN) \
 		--go-header-file ./hack/generators/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base '' \
-		--input $(REPO)/$(APIS_DIR)/v1alpha1 \
-		--input $(REPO)/$(APIS_DIR)/v1beta1 \
+		--input $(REPO)/apis/v1alpha1 \
+		--input $(REPO)/apis/v1beta1 \
 		--output-base pkg/ \
 		--output-package $(REPO)/pkg/ \
 		--trim-path-prefix pkg/$(REPO)/
-
+	rm apis
+	find ./pkg/clientset/ -type f -name '*.go' -exec sed -i '' -e 's/github.com\/kong\/gateway-operator\/apis/github.com\/kong\/gateway-operator\/api/gI' {} \; &> /dev/null
 .PHONY: generate.rbacs
 generate.rbacs: kic-role-generator
 	$(KIC_ROLE_GENERATOR) --force
@@ -237,7 +238,7 @@ check.rbacs: kic-role-generator
 # ------------------------------------------------------------------------------
 
 CONTROLLER_GEN_CRD_OPTIONS ?= "+crd:generateEmbeddedObjectMeta=true"
-CONTROLLER_GEN_PATHS_RAW := ./pkg/utils/kubernetes/resources/clusterroles/ ./pkg/utils/kubernetes/reduce/ ./controllers/... ./$(APIS_DIR)/...
+CONTROLLER_GEN_PATHS_RAW := ./pkg/utils/kubernetes/resources/clusterroles/ ./pkg/utils/kubernetes/reduce/ ./controller/... ./$(API_DIR)/...
 CONTROLLER_GEN_PATHS := $(patsubst %,%;,$(strip $(CONTROLLER_GEN_PATHS_RAW)))
 
 .PHONY: manifests
@@ -286,7 +287,7 @@ CONFORMANCE_TEST_TIMEOUT ?= "20m"
 .PHONY: test
 test: test.unit
 
-UNIT_TEST_PATHS := ./controllers/... ./internal/... ./pkg/... ./modules/...
+UNIT_TEST_PATHS := ./controller/... ./internal/... ./pkg/... ./modules/...
 
 .PHONY: _test.unit
 _test.unit: gotestsum
@@ -332,7 +333,7 @@ test.integration_provision_dataplane_fail:
 	@$(MAKE) _test.integration \
 		WEBHOOK_ENABLED=true \
 		GOTESTFLAGS="-run=TestGatewayProvisionDataPlaneFail $(GOTESTFLAGS)" \
-		COVERPROFILE="coverage.integration.out"	
+		COVERPROFILE="coverage.integration.out"
 
 .PHONY: _test.e2e
 _test.e2e: gotestsum
@@ -437,7 +438,7 @@ run: webhook-certs-dir manifests generate install-gateway-api-crds install _ensu
 # etc didn't change in between the runs.
 .PHONY: _run
 _run:
-	GATEWAY_OPERATOR_DEVELOPMENT_MODE=true go run ./main.go \
+	GATEWAY_OPERATOR_DEVELOPMENT_MODE=true go run ./cmd/main.go \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		-enable-controller-controlplane \

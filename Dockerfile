@@ -16,10 +16,10 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
     --mount=type=bind,source=go.mod,target=go.mod \
     go mod download -x
 
-COPY main.go main.go
+COPY cmd/main.go cmd/main.go
 COPY modules/ modules/
-COPY apis/ apis/
-COPY controllers/ controllers/
+COPY api/ api/
+COPY controller/ controller/
 COPY pkg/ pkg/
 COPY internal/ internal/
 COPY Makefile Makefile
@@ -62,13 +62,13 @@ ARG NAME="Kong Gateway Operator"
 ARG DESCRIPTION="Kong Gateway Operator drives deployment via the Gateway resource. You can deploy a Gateway resource to the cluster which will result in the underlying control-plane (the Kong Kubernetes Ingress Controller) and the data-plane (the Kong Gateway)."
 
 LABEL name="${NAME}" \
-      description="${DESCRIPTION}" \
-      org.opencontainers.image.description="${DESCRIPTION}" \
-      vendor="Kong" \
-      version="${TAG}" \
-      release="1" \
-      url="https://github.com/Kong/gateway-operator" \
-      summary="A Kubernetes Operator for the Kong Gateway."
+    description="${DESCRIPTION}" \
+    org.opencontainers.image.description="${DESCRIPTION}" \
+    vendor="Kong" \
+    version="${TAG}" \
+    release="1" \
+    url="https://github.com/Kong/gateway-operator" \
+    summary="A Kubernetes Operator for the Kong Gateway."
 
 WORKDIR /
 COPY --from=builder /workspace/bin/manager .
@@ -87,15 +87,15 @@ ARG NAME="Kong Gateway Operator"
 ARG DESCRIPTION="Kong Gateway Operator drives deployment via the Gateway resource. You can deploy a Gateway resource to the cluster which will result in the underlying control-plane (the Kong Kubernetes Ingress Controller) and the data-plane (the Kong Gateway)."
 
 LABEL name="${NAME}" \
-      io.k8s.display-name="${NAME}" \
-      description="${DESCRIPTION}" \
-      io.k8s.description="${DESCRIPTION}" \
-      org.opencontainers.image.description="${DESCRIPTION}" \
-      vendor="Kong" \
-      version="${TAG}" \
-      release="1" \
-      url="https://github.com/Kong/gateway-operator" \
-      summary="A Kubernetes Operator for the Kong Gateway."
+    io.k8s.display-name="${NAME}" \
+    description="${DESCRIPTION}" \
+    io.k8s.description="${DESCRIPTION}" \
+    org.opencontainers.image.description="${DESCRIPTION}" \
+    vendor="Kong" \
+    version="${TAG}" \
+    release="1" \
+    url="https://github.com/Kong/gateway-operator" \
+    summary="A Kubernetes Operator for the Kong Gateway."
 
 # Create the user (ID 1000) and group that will be used in the
 # running container to run the process as an unprivileged user.
