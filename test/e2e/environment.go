@@ -91,7 +91,8 @@ type TestEnvironment struct {
 type TestEnvOption func(opt *testEnvOptions)
 
 type testEnvOptions struct {
-	Image string
+	Image               string
+	InstallViaKustomize bool
 }
 
 // WithOperatorImage allows configuring the operator image to use in the test environment.
@@ -101,9 +102,18 @@ func WithOperatorImage(image string) TestEnvOption {
 	}
 }
 
+// WithInstallViaKustomize makes the test environment install the operator and all the
+// dependencies via kustomize.
+func WithInstallViaKustomize() TestEnvOption {
+	return func(opts *testEnvOptions) {
+		opts.InstallViaKustomize = true
+	}
+}
+
 var loggerOnce sync.Once
 
 // CreateEnvironment creates a new independent testing environment for running isolated e2e test.
+// When running with helm caller is responsible for cleaning up the environment.
 func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption) TestEnvironment {
 	t.Helper()
 	var opt testEnvOptions
@@ -154,12 +164,21 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 	if len(opt.Image) == 0 {
 		opt.Image = getOperatorImage(t)
 	}
-	kustomizeDir := PrepareKustomizeDir(t, opt.Image)
+
+	var kustomizeDir KustomizeDir
+	if opt.InstallViaKustomize {
+		kustomizeDir = PrepareKustomizeDir(t, opt.Image)
+	}
 
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+
 	t.Cleanup(func() {
-		cleanupEnvironment(t, context.Background(), env, kustomizeDir.Tests())
+		if opt.InstallViaKustomize {
+			cleanupEnvironment(t, context.Background(), env, kustomizeDir.Tests())
+		} else { //nolint:revive,staticcheck
+			// TODO: using helm for installation, don't clean up because we do not know the release name.
+		}
 	})
 
 	t.Logf("waiting for cluster %s and all addons to become ready", env.Cluster().Name())
@@ -193,28 +212,32 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 	require.NoError(t, operatorv1alpha1.AddToScheme(clients.MgrClient.Scheme()))
 	require.NoError(t, operatorv1beta1.AddToScheme(clients.MgrClient.Scheme()))
 
-	t.Logf("deploying Gateway APIs CRDs from %s", testutils.GatewayExperimentalCRDsKustomizeURL)
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), testutils.GatewayExperimentalCRDsKustomizeURL))
+	if opt.InstallViaKustomize {
+		t.Logf("deploying Gateway APIs CRDs from %s", testutils.GatewayExperimentalCRDsKustomizeURL)
+		require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), testutils.GatewayExperimentalCRDsKustomizeURL))
 
-	kicCRDsKustomizeURL := getCRDsKustomizeURLForKIC(t, versions.DefaultControlPlaneVersion)
-	t.Logf("deploying KIC CRDs from %s", kicCRDsKustomizeURL)
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kicCRDsKustomizeURL))
+		kicCRDsKustomizeURL := getCRDsKustomizeURLForKIC(t, versions.DefaultControlPlaneVersion)
+		t.Logf("deploying KIC CRDs from %s", kicCRDsKustomizeURL)
+		require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kicCRDsKustomizeURL))
 
-	t.Log("creating system namespaces and serviceaccounts")
-	require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
+		t.Log("creating system namespaces and serviceaccounts")
+		require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
 
-	t.Log("deploying operator CRDs to test cluster via kustomize")
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizeDir.CRD(), "--server-side"))
+		t.Log("deploying operator CRDs to test cluster via kustomize")
+		require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizeDir.CRD(), "--server-side"))
 
-	t.Log("deploying operator to test cluster via kustomize")
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizeDir.Tests(), "--server-side"))
+		t.Log("deploying operator to test cluster via kustomize")
+		require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizeDir.Tests(), "--server-side"))
 
-	t.Log("waiting for operator deployment to complete")
-	require.NoError(t, waitForOperatorDeployment(ctx, clients.K8sClient))
+		t.Log("waiting for operator deployment to complete")
+		require.NoError(t, waitForOperatorDeployment(ctx, "kong-system", clients.K8sClient))
 
-	t.Log("waiting for operator webhook service to be connective")
-	require.Eventually(t, waitForOperatorWebhookEventually(t, ctx, clients.K8sClient),
-		webhookReadinessTimeout, webhookReadinessTick)
+		t.Log("waiting for operator webhook service to be connective")
+		require.Eventually(t, waitForOperatorWebhookEventually(t, ctx, clients.K8sClient),
+			webhookReadinessTimeout, webhookReadinessTick)
+	} else {
+		t.Log("not deploying operator to test cluster via kustomize")
+	}
 
 	t.Log("environment is ready, starting tests")
 
@@ -269,17 +292,26 @@ func deploymentAssertConditions(conds ...appsv1.DeploymentCondition) deploymentA
 	}
 }
 
-func waitForOperatorDeployment(ctx context.Context, k8sClient *kubernetes.Clientset, opts ...deploymentAssertOptions) error {
+func waitForOperatorDeployment(ctx context.Context, ns string, k8sClient *kubernetes.Clientset, opts ...deploymentAssertOptions) error {
 outer:
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			deployment, err := k8sClient.AppsV1().Deployments("kong-system").Get(ctx, "gateway-operator-controller-manager", metav1.GetOptions{})
+			listOpts := metav1.ListOptions{
+				LabelSelector: "app.kubernetes.io/name=gateway-operator",
+			}
+			deploymentList, err := k8sClient.AppsV1().Deployments(ns).List(ctx, listOpts)
 			if err != nil {
 				return err
 			}
+			if len(deploymentList.Items) == 0 {
+				continue
+			}
+
+			deployment := &deploymentList.Items[0]
+
 			if deployment.Status.AvailableReplicas <= 0 {
 				continue
 			}

@@ -72,7 +72,7 @@ func TestOperatorLogs(t *testing.T) {
 
 	// createEnvironment will queue up environment cleanup if necessary
 	// and dumping diagnostics if the test fails.
-	e := CreateEnvironment(t, ctx)
+	e := CreateEnvironment(t, ctx, WithInstallViaKustomize())
 	clients, testNamespace, cleaner := e.Clients, e.Namespace, e.Cleaner
 
 	t.Log("finding the Pod for the Gateway Operator")

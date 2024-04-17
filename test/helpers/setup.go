@@ -75,13 +75,19 @@ func ParseGoTestFlags(testRunner func(t *testing.T), testSuiteToRun []func(t *te
 		os.Exit(1)
 	}
 
+	fmt.Printf("test.run: %s\n", fRun.Value.String())
+
 	// Hack - set test.run flag to the name of the test function that runs the test suite
 	// to execute it with tests that are returned from this function.
 	// They are explicitly passed to RunTestSuite(...) as an argument.
-	if err := fRun.Value.Set(getFunctionName(testRunner)); err != nil {
+	if err := fRun.Value.Set(getFunctionName(testRunner) + "/" + fRun.Value.String()); err != nil {
 		fmt.Println("testing: unexpected error happened (it should never happen, check the code)", err)
 		os.Exit(1)
 	}
+
+	fmt.Printf("test.run: %s\n", fRun.Value.String())
+
+	// os.Exit(0)
 
 	return testSuiteToRun
 }
