@@ -31,7 +31,7 @@ func Expect404WithNoRouteFunc(t *testing.T, ctx context.Context, url string) fun
 			t.Logf("failed creating request for %s: %v", url, err)
 			return false
 		}
-		resp, err := httpc.Do(req)
+		resp, err := sharedHTTPClient.Do(req)
 		if err != nil {
 			t.Logf("failed issuing HTTP GET for %s: %v", url, err)
 			return false

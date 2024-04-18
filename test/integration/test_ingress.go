@@ -183,7 +183,7 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name())))
+		resp, err := sharedHTTPClient.Get(fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name())))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
@@ -262,7 +262,7 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational after reintroducing ingress class annotation")
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name())))
+		resp, err := sharedHTTPClient.Get(fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name())))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false

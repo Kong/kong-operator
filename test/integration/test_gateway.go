@@ -36,7 +36,7 @@ func TestGatewayEssentials(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := testutils.GenerateGatewayClass()
+	gatewayClass := helpers.GenerateGatewayClass(nil)
 	gatewayClass, err := GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
@@ -46,13 +46,13 @@ func TestGatewayEssentials(t *testing.T) {
 		Name:      uuid.NewString(),
 		Namespace: namespace.Name,
 	}
-	gateway := testutils.GenerateGateway(gatewayNN, gatewayClass)
+	gateway := helpers.GenerateGateway(gatewayNN, gatewayClass)
 	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying Gateway gets marked as Scheduled")
-	require.Eventually(t, testutils.GatewayIsScheduled(t, GetCtx(), gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets marked as Programmed")
 	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
@@ -197,7 +197,7 @@ func TestGatewayMultiple(t *testing.T) {
 	gatewayV1Client := GetClients().GatewayClient.GatewayV1()
 
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := testutils.GenerateGatewayClass()
+	gatewayClass := helpers.GenerateGatewayClass(nil)
 	gatewayClass, err := gatewayV1Client.GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
@@ -211,18 +211,18 @@ func TestGatewayMultiple(t *testing.T) {
 		Name:      uuid.NewString(),
 		Namespace: namespace.Name,
 	}
-	gatewayOne := testutils.GenerateGateway(gatewayOneNN, gatewayClass)
+	gatewayOne := helpers.GenerateGateway(gatewayOneNN, gatewayClass)
 	gatewayOne, err = gatewayV1Client.Gateways(namespace.Name).Create(GetCtx(), gatewayOne, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayOne)
-	gatewayTwo := testutils.GenerateGateway(gatewayTwoNN, gatewayClass)
+	gatewayTwo := helpers.GenerateGateway(gatewayTwoNN, gatewayClass)
 	gatewayTwo, err = gatewayV1Client.Gateways(namespace.Name).Create(GetCtx(), gatewayTwo, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayTwo)
 
 	t.Log("verifying Gateways marked as Scheduled")
-	require.Eventually(t, testutils.GatewayIsScheduled(t, GetCtx(), gatewayOneNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
-	require.Eventually(t, testutils.GatewayIsScheduled(t, GetCtx(), gatewayTwoNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayOneNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayTwoNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateways marked as Programmed")
 	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayOneNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
@@ -347,7 +347,7 @@ func TestGatewayMultiple(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		resp, err := httpc.Do(req)
+		resp, err := sharedHTTPClient.Do(req)
 		if err != nil {
 			return false
 		}
@@ -356,7 +356,7 @@ func TestGatewayMultiple(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		badResp, err := httpc.Do(badReq)
+		badResp, err := sharedHTTPClient.Do(badReq)
 		if err != nil {
 			return false
 		}
@@ -371,7 +371,7 @@ func TestGatewayMultiple(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		resp, err := httpc.Do(req)
+		resp, err := sharedHTTPClient.Do(req)
 		if err != nil {
 			return false
 		}
@@ -380,7 +380,7 @@ func TestGatewayMultiple(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		badResp, err := httpc.Do(badReq)
+		badResp, err := sharedHTTPClient.Do(badReq)
 		if err != nil {
 			return false
 		}
@@ -464,7 +464,7 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := testutils.GenerateGatewayClass()
+	gatewayClass := helpers.GenerateGatewayClass(nil)
 	gatewayClass, err := clients.GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
@@ -475,7 +475,7 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 		Namespace: namespace.Name,
 	}
 	const port8080 = 8080
-	gateway := testutils.GenerateGateway(gatewayNN, gatewayClass, func(gateway *gatewayv1.Gateway) {
+	gateway := helpers.GenerateGateway(gatewayNN, gatewayClass, func(gateway *gatewayv1.Gateway) {
 		gateway.Spec.Listeners = append(gateway.Spec.Listeners,
 			gatewayv1.Listener{
 				Name:     "http2",
@@ -489,7 +489,7 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 	cleaner.Add(gateway)
 
 	t.Log("verifying Gateway gets marked as Scheduled")
-	require.Eventually(t, testutils.GatewayIsScheduled(t, ctx, gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsAccepted(t, ctx, gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets marked as Programmed")
 	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
@@ -532,18 +532,17 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
-	gatewayConfigurationName := uuid.NewString()
-	t.Logf("deploying the GatewayConfiguration %s", gatewayConfigurationName)
-	gatewayConfiguration := testutils.GenerateGatewayConfiguration(types.NamespacedName{Namespace: namespace.Name, Name: gatewayConfigurationName})
-	gatewayConfiguration, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfiguration, metav1.CreateOptions{})
+	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
+	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
+	gatewayConfig, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
-	cleaner.Add(gatewayConfiguration)
+	cleaner.Add(gatewayConfig)
 
-	gatewayClass := testutils.GenerateGatewayClass()
+	gatewayClass := helpers.GenerateGatewayClass(nil)
 	gatewayClass.Spec.ParametersRef = &gatewayv1.ParametersReference{
 		Group:     "gateway-operator.konghq.com",
 		Kind:      "GatewayConfiguration",
-		Name:      gatewayConfigurationName,
+		Name:      gatewayConfig.Name,
 		Namespace: (*gatewayv1.Namespace)(&namespace.Name),
 	}
 	t.Logf("deploying the GatewayClass %s", gatewayClass.Name)
@@ -556,13 +555,13 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 		Name:      uuid.NewString(),
 		Namespace: namespace.Name,
 	}
-	gateway := testutils.GenerateGateway(gatewayNN, gatewayClass)
+	gateway := helpers.GenerateGateway(gatewayNN, gatewayClass)
 	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying Gateway gets marked as Scheduled")
-	require.Eventually(t, testutils.GatewayIsScheduled(t, GetCtx(), gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets marked as Programmed")
 	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
@@ -623,7 +622,7 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			deploymentOptions := tc.dataplaneDeploymentOptions
-			gatewayConfiguration, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Get(GetCtx(), gatewayConfigurationName, metav1.GetOptions{})
+			gatewayConfiguration, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Get(GetCtx(), gatewayConfig.Name, metav1.GetOptions{})
 			require.NoError(t, err)
 			gatewayConfiguration.Spec.DataPlaneOptions.Deployment.DeploymentOptions = deploymentOptions
 			t.Logf("changing the GatewayConfiguration to change dataplane deploymentOptions to %v", deploymentOptions)
@@ -664,19 +663,18 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	var err error
-	gatewayConfigurationName := uuid.NewString()
-	t.Log("deploying a GatewayConfiguration resource")
-	gatewayConfiguration := testutils.GenerateGatewayConfiguration(types.NamespacedName{Namespace: namespace.Name, Name: gatewayConfigurationName})
-	gatewayConfiguration, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfiguration, metav1.CreateOptions{})
+	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
+	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
+	gatewayConfig, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
-	cleaner.Add(gatewayConfiguration)
+	cleaner.Add(gatewayConfig)
 
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := testutils.GenerateGatewayClass()
+	gatewayClass := helpers.GenerateGatewayClass(nil)
 	gatewayClass.Spec.ParametersRef = &gatewayv1.ParametersReference{
 		Group:     "gateway-operator.konghq.com",
 		Kind:      "GatewayConfiguration",
-		Name:      gatewayConfigurationName,
+		Name:      gatewayConfig.Name,
 		Namespace: (*gatewayv1.Namespace)(&namespace.Name),
 	}
 	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
@@ -688,13 +686,13 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 		Name:      uuid.NewString(),
 		Namespace: namespace.Name,
 	}
-	gateway := testutils.GenerateGateway(gatewayNN, gatewayClass)
+	gateway := helpers.GenerateGateway(gatewayNN, gatewayClass)
 	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying Gateway gets marked as Scheduled")
-	require.Eventually(t, testutils.GatewayIsScheduled(t, GetCtx(), gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets marked as Programmed")
 	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
@@ -766,8 +764,8 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 
 		gwcClient := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name)
 
-		setGatewayConfigurationEnvProxyPort(t, gatewayConfiguration, 8005, 8999)
-		gatewayConfiguration, err = gwcClient.Update(GetCtx(), gatewayConfiguration, metav1.UpdateOptions{})
+		setGatewayConfigurationEnvProxyPort(t, gatewayConfig, 8005, 8999)
+		gatewayConfig, err = gwcClient.Update(GetCtx(), gatewayConfig, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		t.Log("ingress rules get updated with configured proxy listen port")
@@ -786,8 +784,8 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 			testutils.SubresourceReadinessWait, time.Second)
 
 		t.Log("ingress rules get updated with configured admin listen port")
-		setGatewayConfigurationEnvAdminAPIPort(t, gatewayConfiguration, 8555)
-		_, err = gwcClient.Update(GetCtx(), gatewayConfiguration, metav1.UpdateOptions{})
+		setGatewayConfigurationEnvAdminAPIPort(t, gatewayConfig, 8555)
+		_, err = gwcClient.Update(GetCtx(), gatewayConfig, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		var expectedUpdatedLimitedAdminAPI networkPolicyIngressRuleDecorator
@@ -897,7 +895,7 @@ func TestGatewayProvisionDataPlaneFail(t *testing.T) {
 
 	t.Log("creating a Gateway and verify that it does not get Programmed")
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := testutils.GenerateGatewayClass()
+	gatewayClass := helpers.GenerateGatewayClass(nil)
 	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
@@ -907,13 +905,13 @@ func TestGatewayProvisionDataPlaneFail(t *testing.T) {
 		Name:      uuid.NewString(),
 		Namespace: namespace.Name,
 	}
-	gateway := testutils.GenerateGateway(gatewayNN, gatewayClass)
+	gateway := helpers.GenerateGateway(gatewayNN, gatewayClass)
 	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying Gateway gets marked as Scheduled")
-	require.Eventually(t, testutils.GatewayIsScheduled(t, GetCtx(), gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway does not get marked as Programmed")
 	require.Never(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
