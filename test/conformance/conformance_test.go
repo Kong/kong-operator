@@ -28,7 +28,7 @@ var skippedTests = []string{
 	tests.GatewayModifyListeners.ShortName,
 	tests.GatewayWithAttachedRoutes.ShortName,
 
-	//httproute
+	// httproute
 	tests.HTTPRouteHeaderMatching.ShortName,
 }
 
@@ -96,7 +96,7 @@ func TestGatewayConformance(t *testing.T) {
 	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a
 	// single test only, e.g.:
 	//
-	//cSuite.Run(t, []suite.ConformanceTest{tests.HTTPRouteRedirectPortAndScheme})
+	// cSuite.Run(t, []suite.ConformanceTest{tests.HTTPRouteRedirectPortAndScheme})
 	require.NoError(t, cSuite.Run(t, tests.ConformanceTests))
 
 	// In the future we'll likely change the file name as https://github.com/kubernetes-sigs/gateway-api/issues/2740 will be implemented.

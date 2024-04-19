@@ -668,9 +668,7 @@ func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVa
 	}
 
 	opts := []cmp.Option{
-		cmp.Comparer(func(a, b corev1.ResourceRequirements) bool {
-			return k8sresources.ResourceRequirementsEqual(a, b)
-		}),
+		cmp.Comparer(k8sresources.ResourceRequirementsEqual),
 		cmp.Comparer(func(a, b []corev1.EnvVar) bool {
 			// Throw out env vars that we ignore.
 			a = lo.Filter(a, func(e corev1.EnvVar, _ int) bool {

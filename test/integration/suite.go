@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -108,6 +109,14 @@ func TestMain(
 	m *testing.M,
 	setUpAndRunManager SetUpAndRunManagerFunc,
 ) {
+	var code int
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("%v stack trace:\n%s\n", r, debug.Stack())
+			code = 1
+		}
+		os.Exit(code)
+	}()
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
@@ -179,14 +188,12 @@ func TestMain(
 	}
 
 	fmt.Println("INFO: environment is ready, starting tests")
-	code := m.Run()
+	code = m.Run()
 
 	if !skipClusterCleanup && existingCluster == "" {
 		fmt.Println("INFO: cleaning up testing cluster and environment")
 		exitOnErr(GetEnv().Cleanup(GetCtx()))
 	}
-
-	os.Exit(code)
 }
 
 // -----------------------------------------------------------------------------

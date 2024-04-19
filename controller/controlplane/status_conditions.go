@@ -10,17 +10,17 @@ import (
 // markAsProvisioned marks the provided resource as ready by the means of Provisioned
 // Status Condition.
 func markAsProvisioned[T *operatorv1beta1.ControlPlane](resource T) {
-	switch resource := any(resource).(type) {
-	case *operatorv1beta1.ControlPlane:
+	cp, ok := any(resource).(*operatorv1beta1.ControlPlane)
+	if ok {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				ConditionTypeProvisioned,
 				metav1.ConditionTrue,
 				ConditionReasonPodsReady,
 				"pods for all Deployments are ready",
-				resource.Generation,
+				cp.Generation,
 			),
-			resource,
+			cp,
 		)
 	}
 }
