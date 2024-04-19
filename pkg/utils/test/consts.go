@@ -31,7 +31,7 @@ const (
 	// ControlPlaneCondDeadline is the default timeout for checking on controlplane resources.
 	ControlPlaneCondDeadline = time.Minute
 	// ControlPlaneCondTick is the default tick for checking on controlplane resources.
-	ControlPlaneCondTick = time.Second
+	ControlPlaneCondTick = 250 * time.Millisecond
 	// ControlPlaneSchedulingTimeLimit is the maximum amount of time to wait for
 	// a supported ControlPlane to be created after a Gateway resource is
 	// created
