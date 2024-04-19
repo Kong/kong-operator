@@ -116,24 +116,19 @@ func setControlPlaneEnvOnDataPlaneChange(
 	namespace string,
 	dataplaneServiceName string,
 ) bool {
-	var changed bool
-
-	dataplaneIsSet := spec.DataPlane != nil && *spec.DataPlane != ""
 	container := k8sutils.GetPodContainerByName(&spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-	if dataplaneIsSet {
+	if dataplaneIsSet := spec.DataPlane != nil && *spec.DataPlane != ""; dataplaneIsSet {
 		newPublishServiceValue := k8stypes.NamespacedName{Namespace: namespace, Name: dataplaneServiceName}.String()
 		if k8sutils.EnvValueByName(container.Env, "CONTROLLER_PUBLISH_SERVICE") != newPublishServiceValue {
 			container.Env = k8sutils.UpdateEnv(container.Env, "CONTROLLER_PUBLISH_SERVICE", newPublishServiceValue)
-			changed = true
+			return true
 		}
-	} else {
-		if k8sutils.EnvValueByName(container.Env, "CONTROLLER_PUBLISH_SERVICE") != "" {
-			container.Env = k8sutils.RejectEnvByName(container.Env, "CONTROLLER_PUBLISH_SERVICE")
-			changed = true
-		}
+	} else if k8sutils.EnvValueByName(container.Env, "CONTROLLER_PUBLISH_SERVICE") != "" {
+		container.Env = k8sutils.RejectEnvByName(container.Env, "CONTROLLER_PUBLISH_SERVICE")
+		return true
 	}
 
-	return changed
+	return false
 }
 
 // -----------------------------------------------------------------------------
@@ -208,7 +203,7 @@ func (r *Reconciler) ensureDeployment(
 		// some custom comparison rules are needed for some PodTemplateSpec sub-attributes, in particular
 		// resources and affinity.
 		opts := []cmp.Option{
-			cmp.Comparer(func(a, b corev1.ResourceRequirements) bool { return k8sresources.ResourceRequirementsEqual(a, b) }),
+			cmp.Comparer(k8sresources.ResourceRequirementsEqual),
 		}
 
 		// ensure that PodTemplateSpec is up to date

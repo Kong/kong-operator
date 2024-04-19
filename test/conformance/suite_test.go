@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"runtime/debug"
 	"testing"
 	"time"
 
@@ -54,6 +55,14 @@ var (
 // -----------------------------------------------------------------------------
 
 func TestMain(m *testing.M) {
+	var code int
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("%v stack trace:\n%s\n", r, debug.Stack())
+			code = 1
+		}
+		os.Exit(code)
+	}()
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 
@@ -103,7 +112,7 @@ func TestMain(m *testing.M) {
 	exitOnErr(testutils.BuildMTLSCredentials(ctx, clients.K8sClient, &httpc))
 
 	fmt.Println("INFO: environment is ready, starting tests")
-	code := m.Run()
+	code = m.Run()
 	if code != 0 {
 		output, err := env.Cluster().DumpDiagnostics(ctx, "gateway_api_conformance")
 		if err != nil {
@@ -125,8 +134,6 @@ func TestMain(m *testing.M) {
 		fmt.Println("INFO: cleaning up testing cluster and environment")
 		exitOnErr(env.Cleanup(ctx))
 	}
-
-	os.Exit(code)
 }
 
 // -----------------------------------------------------------------------------

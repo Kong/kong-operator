@@ -72,7 +72,7 @@ func TrimGenerateName(name string) string {
 		name = name[:62]
 	}
 	if !strings.HasSuffix(name, "-") {
-		name = name + "-"
+		name += "-"
 	}
 	return name
 }

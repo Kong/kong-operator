@@ -22,21 +22,18 @@ func (v *validator) ValidateControlPlane(ctx context.Context, controlPlane opera
 
 // ValidateDataPlane validates the DataPlane resource.
 func (v *validator) ValidateDataPlane(ctx context.Context, dataPlane, old operatorv1beta1.DataPlane, operation admissionv1.Operation) error {
-	//nolint:exhaustive
 	switch operation {
 	case admissionv1.Update, admissionv1.Create:
 		if err := v.dataplaneValidator.Validate(&dataPlane); err != nil {
 			return err
 		}
-	}
-
-	//nolint:exhaustive
-	switch operation {
-	case admissionv1.Update:
-		if err := v.dataplaneValidator.ValidateUpdate(&dataPlane, &old); err != nil {
-			return err
+		if operation == admissionv1.Update {
+			if err := v.dataplaneValidator.ValidateUpdate(&dataPlane, &old); err != nil {
+				return err
+			}
 		}
+		return nil
+	default:
+		return nil
 	}
-
-	return nil
 }

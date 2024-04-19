@@ -307,7 +307,7 @@ func reconcileDataPlaneDeployment(
 		// some custom comparison rules are needed for some PodTemplateSpec sub-attributes, in particular
 		// resources and affinity.
 		opts := []cmp.Option{
-			cmp.Comparer(func(a, b corev1.ResourceRequirements) bool { return k8sresources.ResourceRequirementsEqual(a, b) }),
+			cmp.Comparer(k8sresources.ResourceRequirementsEqual),
 		}
 
 		// ensure that PodTemplateSpec is up to date
