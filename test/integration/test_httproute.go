@@ -97,13 +97,11 @@ func TestHTTPRoute(t *testing.T) {
 		waitTick               = time.Second
 	)
 
-	httpClient := helpers.MustCreateHTTPClient(t, nil, "")
-
 	// route to /test path of service httpbin should receive a 200 OK response.
 	request := helpers.MustBuildRequest(t, GetCtx(), http.MethodGet, "http://"+gatewayIPAddress+"/test", "")
 	require.Eventually(
 		t,
-		testutils.GetResponseBodyContains(t, clients, httpClient, request, "<title>httpbin.org</title>"),
+		testutils.GetResponseBodyContains(t, clients, sharedHTTPClient, request, "<title>httpbin.org</title>"),
 		httpRouteAccessTimeout,
 		time.Second,
 	)
@@ -112,7 +110,7 @@ func TestHTTPRoute(t *testing.T) {
 	request = helpers.MustBuildRequest(t, GetCtx(), http.MethodGet, "http://"+gatewayIPAddress+"/test/1234", "")
 	require.Eventually(
 		t,
-		testutils.GetResponseBodyContains(t, clients, httpClient, request, "<h1>Not Found</h1>"),
+		testutils.GetResponseBodyContains(t, clients, sharedHTTPClient, request, "<h1>Not Found</h1>"),
 		httpRouteAccessTimeout,
 		time.Second,
 	)
