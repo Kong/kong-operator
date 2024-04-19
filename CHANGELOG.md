@@ -37,6 +37,10 @@
   autoscaling with `GatewayConfiguration` as the generated `DataPlane` deployment
   will no longer be rejected.
   [#79](https://github.com/Kong/gateway-operator/pull/79)
+- Make creating a `DataPlane` index conditional based on enabling the `ControlPlane`
+  controller. This allows running KGO without `ControlPlane` CRD with its controller
+  disabled.
+  [#103](https://github.com/Kong/gateway-operator/pull/103)
 
 ## [v1.2.1]
 
