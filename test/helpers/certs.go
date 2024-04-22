@@ -5,10 +5,14 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
+	"io"
 	"math/big"
+	"net"
 	"testing"
 	"time"
 
@@ -16,7 +20,7 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Certificate test helper functions and types
+// CP-DP mTLS Certificate test helper functions and types
 // -----------------------------------------------------------------------------
 
 // Cert represents a TLS certificate that can be used for testing purposes.
@@ -147,4 +151,66 @@ func TLSSecretData(t *testing.T, ca Cert, c Cert) map[string][]byte {
 		"tls.crt": c.CertPEM.Bytes(),
 		"tls.key": c.KeyPEM.Bytes(),
 	}
+}
+
+// -----------------------------------------------------------------------------
+// TLS Certificate test helper functions and types
+// -----------------------------------------------------------------------------
+
+const (
+	rsaBits  = 2048
+	validFor = 365 * 24 * time.Hour
+)
+
+// generateRSACert generates a basic self signed certificate valid for a year
+func generateRSACert(hosts []string, keyOut, certOut io.Writer) error {
+	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
+	if err != nil {
+		return fmt.Errorf("failed to generate key: %w", err)
+	}
+	notBefore := time.Now()
+	notAfter := notBefore.Add(validFor)
+
+	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return fmt.Errorf("failed to generate serial number: %w", err)
+	}
+
+	template := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			CommonName:   "default",
+			Organization: []string{"Acme Co"},
+		},
+		NotBefore: notBefore,
+		NotAfter:  notAfter,
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+
+	for _, h := range hosts {
+		if ip := net.ParseIP(h); ip != nil {
+			template.IPAddresses = append(template.IPAddresses, ip)
+		} else {
+			template.DNSNames = append(template.DNSNames, h)
+		}
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return fmt.Errorf("failed to create certificate: %w", err)
+	}
+
+	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
+		return fmt.Errorf("failed creating cert: %w", err)
+	}
+
+	if err := pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)}); err != nil {
+		return fmt.Errorf("failed creating key: %w", err)
+	}
+
+	return nil
 }

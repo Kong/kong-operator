@@ -628,10 +628,10 @@ func GatewayNotExist(t *testing.T, ctx context.Context, gatewayNSN types.Namespa
 	}
 }
 
-// GatewayIsScheduled returns a function that checks if a Gateway is scheduled.
-func GatewayIsScheduled(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
+// GatewayIsAccepted returns a function that checks if a Gateway is scheduled.
+func GatewayIsAccepted(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
-		return gatewayutils.IsScheduled(MustGetGateway(t, ctx, gatewayNSN, clients))
+		return gatewayutils.IsAccepted(MustGetGateway(t, ctx, gatewayNSN, clients))
 	}
 }
 
@@ -768,12 +768,9 @@ func GatewayIPAddressExist(t *testing.T, ctx context.Context, gatewayNSN types.N
 }
 
 // GetResponseBodyContains issues an HTTP request and checks if a response body contains a string.
-func GetResponseBodyContains(t *testing.T, ctx context.Context, clients K8sClients, httpc http.Client, url string, method string, responseContains string) func() bool {
+func GetResponseBodyContains(t *testing.T, clients K8sClients, httpc *http.Client, request *http.Request, responseContains string) func() bool {
 	return func() bool {
-		req, err := http.NewRequestWithContext(ctx, method, url, nil)
-		require.NoError(t, err)
-
-		resp, err := httpc.Do(req)
+		resp, err := httpc.Do(request)
 		if err != nil {
 			return false
 		}

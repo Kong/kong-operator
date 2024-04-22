@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"reflect"
 
-	"golang.org/x/exp/maps"
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -58,7 +58,7 @@ func SetupControllersShim(mgr manager.Manager, c *Config) ([]ControllerDef, erro
 		return []ControllerDef{}, err
 	}
 
-	return maps.Values(controllers), nil
+	return lo.Values(controllers), nil
 }
 
 // -----------------------------------------------------------------------------

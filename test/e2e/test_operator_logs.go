@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func init() {
@@ -143,7 +144,7 @@ func TestOperatorLogs(t *testing.T) {
 	}()
 
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := testutils.GenerateGatewayClass()
+	gatewayClass := helpers.MustGenerateGatewayClass(t)
 	gatewayClass, err = clients.GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
@@ -154,7 +155,7 @@ func TestOperatorLogs(t *testing.T) {
 			Name:      uuid.NewString(),
 			Namespace: testNamespace.Name,
 		}
-		gateway := testutils.GenerateGateway(gatewayNN, gatewayClass)
+		gateway := helpers.GenerateGateway(gatewayNN, gatewayClass)
 		gateway, err = clients.GatewayClient.GatewayV1().Gateways(testNamespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 		require.NoError(t, err)
 		cleaner.Add(gateway)
