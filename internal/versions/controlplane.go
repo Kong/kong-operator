@@ -14,7 +14,7 @@ const (
 	// and those tests create KIC's URLs for things like roles or CRDs.
 	// Since KIC only defines the full tags in its repo (as expected) we cannot use
 	// a partial version here, as it would not match KIC's tag.
-	DefaultControlPlaneVersion = "3.1.2"
+	DefaultControlPlaneVersion = "3.1.3"
 )
 
 // minimumControlPlaneVersion indicates the bare minimum version of the
@@ -35,7 +35,7 @@ var minimumControlPlaneVersion = semver.MustParse("3.1.2")
 // the release 5.0, a new entry '">=5.0": "5.0"' should be added to this map, and the previous most
 // updated entry should be limited to "<5.0".
 var ManifestsVersionsForKICVersions = map[string]semver.Version{
-	">=3.1": semver.MustParse("3.1.2"),
+	">=3.1": semver.MustParse("3.1.3"),
 }
 
 // IsControlPlaneImageVersionSupported is a helper intended to validate the
