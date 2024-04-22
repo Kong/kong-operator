@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -93,8 +94,13 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 	return c.Controller.SetupWithManager(mgr)
 }
 
-func setupIndexes(mgr manager.Manager) error {
-	return index.IndexDataPlaneNameOnControlPlane(mgr.GetCache())
+func setupIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
+	if cfg.ControlPlaneControllerEnabled || cfg.GatewayControllerEnabled {
+		if err := index.DataPlaneNameOnControlPlane(ctx, mgr.GetCache()); err != nil {
+			return fmt.Errorf("failed to setup index for DataPlane names on ControlPlane: %w", err)
+		}
+	}
+	return nil
 }
 
 // SetupControllers returns a list of ControllerDefs based on config.
