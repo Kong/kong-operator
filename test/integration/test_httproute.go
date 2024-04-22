@@ -67,7 +67,7 @@ func TestHTTPRoute(t *testing.T) {
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Log("deploying backend deployment (httpbin) of HTTPRoute")
-	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, testutils.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(GetCtx(), deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -77,7 +77,7 @@ func TestHTTPRoute(t *testing.T) {
 	_, err = GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(GetCtx(), service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	httpRoute := helpers.GenerateHTTPRoute(namespace.Name, gateway.Name, service.Name)
+	httpRoute := helpers.GenerateHTTPRoute(namespace.Name, gateway.Name, service.Name, testutils.HTTPBinPort)
 	t.Logf("creating httproute %s/%s to access deployment %s via kong", httpRoute.Namespace, httpRoute.Name, deployment.Name)
 	require.EventuallyWithT(t,
 		func(c *assert.CollectT) {
@@ -146,7 +146,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 		Namespace: namespace.Name,
 	}
 
-	const host = "integration.tests.org"
+	const host = "httproute.integration.tests.org"
 	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithDNSNames(host))
 
 	secret := &corev1.Secret{
@@ -166,7 +166,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 
 	gateway := helpers.GenerateGateway(gatewayNSN, gatewayClass, func(gateway *gatewayv1.Gateway) {
 		gateway.Spec.Listeners[0].Protocol = gatewayv1.HTTPSProtocolType
-		gateway.Spec.Listeners[0].Port = gatewayv1.PortNumber(443)
+		gateway.Spec.Listeners[0].Port = gatewayv1.PortNumber(testutils.DefaultHTTPSListenerPort)
 		gateway.Spec.Listeners[0].TLS = &gatewayv1.GatewayTLSConfig{
 			CertificateRefs: []gatewayv1.SecretObjectReference{
 				{
@@ -196,7 +196,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Log("deploying httpbin backend deployment")
-	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, testutils.DefaultHTTPListenerPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(GetCtx(), deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -206,7 +206,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	_, err = GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(GetCtx(), service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	httpRoute := helpers.GenerateHTTPRoute(namespace.Name, gateway.Name, service.Name, func(h *gatewayv1.HTTPRoute) {
+	httpRoute := helpers.GenerateHTTPRoute(namespace.Name, gateway.Name, service.Name, testutils.HTTPBinPort, func(h *gatewayv1.HTTPRoute) {
 		h.Spec.Hostnames = []gatewayv1.Hostname{gatewayv1.Hostname(host)}
 	})
 

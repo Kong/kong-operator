@@ -66,7 +66,7 @@ func TestIngressEssentials(t *testing.T) {
 			Listeners: []gatewayv1.Listener{{
 				Name:     "http",
 				Protocol: gatewayv1.HTTPProtocolType,
-				Port:     gatewayv1.PortNumber(80),
+				Port:     gatewayv1.PortNumber(testutils.DefaultHTTPListenerPort),
 			}},
 		},
 	}
@@ -137,7 +137,7 @@ func TestIngressEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, testutils.DefaultHTTPListenerPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(GetCtx(), deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

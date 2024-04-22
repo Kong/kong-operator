@@ -434,6 +434,14 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 											Name:  "CONTROLLER_ADMISSION_WEBHOOK_LISTEN",
 											Value: consts.ControlPlaneAdmissionWebhookEnvVarValue,
 										},
+										{
+											Name:  "",
+											Value: consts.ControlPlaneAdmissionWebhookEnvVarValue,
+										},
+										{
+											Name:  "CONTROLLER_FEATURE_GATES",
+											Value: "GatewayAlpha=true",
+										},
 									},
 								},
 							},
@@ -510,6 +518,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 										{
 											Name:  "CONTROLLER_ADMISSION_WEBHOOK_LISTEN",
 											Value: consts.ControlPlaneAdmissionWebhookEnvVarValue,
+										},
+										{
+											Name:  "CONTROLLER_FEATURE_GATES",
+											Value: "GatewayAlpha=true",
 										},
 									},
 								},

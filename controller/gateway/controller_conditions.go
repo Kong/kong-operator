@@ -32,4 +32,10 @@ const (
 	// to express that more than one TLS secret has been set in the listener
 	// TLS configuration.
 	ListenerReasonTooManyTLSSecrets k8sutils.ConditionReason = "TooManyTLSSecrets"
+
+	// ListenereReasonInvalidTLSMode must be used with the Accepted condition
+	// to express that the listener has an invalid TLS mode.
+	// HTTPS can only be configured with mode Terminate, while TLS can only be
+	// be configured with mode Passthrough.
+	ListenereReasonInvalidTLSMode k8sutils.ConditionReason = "InvalidTLSMode"
 )

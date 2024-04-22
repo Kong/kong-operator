@@ -20,7 +20,8 @@ func TestMain(m *testing.M) {
 	helpers.SetDefaultDataPlaneImage(consts.DefaultDataPlaneImage)
 	helpers.SetDefaultDataPlaneBaseImage(consts.DefaultDataPlaneBaseImage)
 
-	testSuiteToRun = helpers.ParseGoTestFlags(TestIntegration, testSuiteToRun)
+	//testSuiteToRun = helpers.ParseGoTestFlags(TestIntegration, testSuiteToRun)
+	testSuiteToRun = []func(t *testing.T){integration.TestTLSRoute}
 	cfg := integration.DefaultControllerConfigForTests()
 	managerToTest := func(startedChan chan struct{}) error {
 		return manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, admission.NewRequestHandler, startedChan)

@@ -91,13 +91,13 @@ var DefaultDataPlaneIngressServicePorts = []corev1.ServicePort{
 		Name:       "http",
 		Protocol:   corev1.ProtocolTCP,
 		Port:       consts.DefaultHTTPPort,
-		TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
+		TargetPort: intstr.FromInt(consts.DataPlaneProxyHTTPPort),
 	},
 	{
 		Name:       "https",
 		Protocol:   corev1.ProtocolTCP,
 		Port:       consts.DefaultHTTPSPort,
-		TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
+		TargetPort: intstr.FromInt(consts.DataPlaneProxyHTTPSPort),
 	},
 }
 
@@ -145,7 +145,7 @@ func ServicePortsFromDataPlaneIngressOpt(dataplane *operatorv1beta1.DataPlane) S
 		newPorts := make([]corev1.ServicePort, 0)
 		alreadyUsedPorts := make(map[int32]struct{})
 		for _, p := range dataplane.Spec.Network.Services.Ingress.Ports {
-			targetPort := intstr.FromInt(consts.DataPlaneProxyPort)
+			targetPort := intstr.FromInt(consts.DataPlaneProxyHTTPPort)
 			if !cmp.Equal(p.TargetPort, intstr.IntOrString{}) {
 				targetPort = p.TargetPort
 			}

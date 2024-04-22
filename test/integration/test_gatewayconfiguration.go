@@ -151,7 +151,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			Listeners: []gatewayv1.Listener{{
 				Name:     "http",
 				Protocol: gatewayv1.HTTPProtocolType,
-				Port:     gatewayv1.PortNumber(80),
+				Port:     gatewayv1.PortNumber(testutils.DefaultHTTPListenerPort),
 			}},
 		},
 	}

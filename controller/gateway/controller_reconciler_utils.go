@@ -299,8 +299,8 @@ func generateDataPlaneNetworkPolicy(
 	var (
 		protocolTCP     = corev1.ProtocolTCP
 		adminAPISSLPort = intstr.FromInt(consts.DataPlaneAdminAPIPort)
-		proxyPort       = intstr.FromInt(consts.DataPlaneProxyPort)
-		proxySSLPort    = intstr.FromInt(consts.DataPlaneProxySSLPort)
+		proxyPort       = intstr.FromInt(consts.DataPlaneProxyHTTPPort)
+		proxySSLPort    = intstr.FromInt(consts.DataPlaneProxyHTTPSPort)
 		metricsPort     = intstr.FromInt(consts.DataPlaneMetricsPort)
 	)
 
@@ -527,9 +527,9 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 	return map[gatewayv1.ProtocolType]map[gatewayv1.Kind]struct{}{
 		gatewayv1.HTTPProtocolType:  {"HTTPRoute": {}},
 		gatewayv1.HTTPSProtocolType: {"HTTPRoute": {}},
+		gatewayv1.TLSProtocolType:   {"TLSRoute": {}},
 
-		// L4 routes not supported yet
-		// gatewayv1.TLSProtocolType:   {"TLSRoute": {}},
+		// TCP and UDP routes not supported yet
 		// gatewayv1.TCPProtocolType:   {"TCPRoute": {}},
 		// gatewayv1.UDPProtocolType:   {"UDPRoute": {}},
 	}
@@ -590,9 +590,24 @@ func (g *gatewayConditionsAndListenersAwareT) setAccepted() {
 			LastTransitionTime: metav1.Now(),
 			ObservedGeneration: g.Generation,
 		}
-		if listener.Protocol != gatewayv1.HTTPProtocolType && listener.Protocol != gatewayv1.HTTPSProtocolType {
+		if listener.Protocol != gatewayv1.HTTPProtocolType &&
+			listener.Protocol != gatewayv1.HTTPSProtocolType &&
+			listener.Protocol != gatewayv1.TLSProtocolType {
 			acceptedCondition.Status = metav1.ConditionFalse
 			acceptedCondition.Reason = string(gatewayv1.ListenerReasonUnsupportedProtocol)
+		}
+		// Only TLS terminate mode supported with HTTPS	Listeners.
+		if listener.Protocol == gatewayv1.HTTPSProtocolType && *listener.TLS.Mode != gatewayv1.TLSModeTerminate {
+			acceptedCondition.Status = metav1.ConditionFalse
+			acceptedCondition.Reason = string(ListenereReasonInvalidTLSMode)
+			acceptedCondition.Message = "Only Terminate mode is supported with HTTPS listeners"
+		}
+
+		// Only TLS passthrough mode supported with TLS	Listeners.
+		if listener.Protocol == gatewayv1.TLSProtocolType && *listener.TLS.Mode != gatewayv1.TLSModePassthrough {
+			acceptedCondition.Status = metav1.ConditionFalse
+			acceptedCondition.Reason = string(ListenereReasonInvalidTLSMode)
+			acceptedCondition.Message = "Only Passthrough mode is supported with TLS listeners"
 		}
 		listenerConditionsAware := listenerConditionsAware(&g.Status.Listeners[i])
 		listenerConditionsAware.SetConditions(append(listenerConditionsAware.Conditions, acceptedCondition))
@@ -685,9 +700,11 @@ func setDataPlaneIngressServicePorts(opts *operatorv1beta1.DataPlaneOptions, lis
 		}
 		switch l.Protocol {
 		case gatewayv1.HTTPSProtocolType:
-			port.TargetPort = intstr.FromInt(consts.DataPlaneProxySSLPort)
+			port.TargetPort = intstr.FromInt(consts.DataPlaneProxyHTTPSPort)
 		case gatewayv1.HTTPProtocolType:
-			port.TargetPort = intstr.FromInt(consts.DataPlaneProxyPort)
+			port.TargetPort = intstr.FromInt(consts.DataPlaneProxyHTTPPort)
+		case gatewayv1.TLSProtocolType:
+			port.TargetPort = intstr.FromInt(consts.DataPlaneProxyTLSPort)
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
 			continue
@@ -712,67 +729,66 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 
 	message := ""
 	if listener.TLS != nil {
-		// We currently do not support TLSRoutes, hence only TLS termination supported.
-		if *listener.TLS.Mode != gatewayv1.TLSModeTerminate {
-			resolvedRefsCondition.Status = metav1.ConditionFalse
-			resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
-			message = conditionMessage(message, "Only Terminate mode is supported")
-		}
 		// We currently do not support more that one listener certificate.
-		if len(listener.TLS.CertificateRefs) != 1 {
+		if len(listener.TLS.CertificateRefs) > 1 {
 			resolvedRefsCondition.Reason = string(ListenerReasonTooManyTLSSecrets)
 			message = conditionMessage(message, "Only one certificate per listener is supported")
 		} else {
-			isValidGroupKind := true
-			certificateRef := listener.TLS.CertificateRefs[0]
-			if certificateRef.Group != nil && *certificateRef.Group != "" && *certificateRef.Group != gatewayv1.Group(corev1.SchemeGroupVersion.Group) {
-				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
-				message = conditionMessage(message, fmt.Sprintf("Group %s not supported in CertificateRef", *certificateRef.Group))
-				isValidGroupKind = false
-			}
-			if certificateRef.Kind != nil && *certificateRef.Kind != "" && *certificateRef.Kind != gatewayv1.Kind("Secret") {
-				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
-				message = conditionMessage(message, fmt.Sprintf("Kind %s not supported in CertificateRef", *certificateRef.Kind))
-				isValidGroupKind = false
-			}
-			secretNamespace := gatewayNamespace
-			if certificateRef.Namespace != nil && *certificateRef.Namespace != "" {
-				secretNamespace = string(*certificateRef.Namespace)
-			}
-
-			var secretExists bool
-			if isValidGroupKind {
-				// Get the secret and check it exists.
-				certificateSecret := &corev1.Secret{}
-				err = c.Get(ctx, types.NamespacedName{
-					Namespace: secretNamespace,
-					Name:      string(certificateRef.Name),
-				}, certificateSecret)
-				if err != nil {
-					if !k8serrors.IsNotFound(err) {
-						return
-					}
+			// check certificate references only when Terminate mode is used.
+			// Passthrough mode does not need a certificate.
+			if len(listener.TLS.CertificateRefs) != 0 {
+				isValidGroupKind := true
+				certificateRef := listener.TLS.CertificateRefs[0]
+				if certificateRef.Group != nil && *certificateRef.Group != "" && *certificateRef.Group != gatewayv1.Group(corev1.SchemeGroupVersion.Group) {
 					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
-					message = conditionMessage(message, fmt.Sprintf("Referenced secret %s/%s does not exist", secretNamespace, certificateRef.Name))
-				} else {
-					secretExists = true
+					message = conditionMessage(message, fmt.Sprintf("Group %s not supported in CertificateRef", *certificateRef.Group))
+					isValidGroupKind = false
+				}
+				if certificateRef.Kind != nil && *certificateRef.Kind != "" && *certificateRef.Kind != gatewayv1.Kind("Secret") {
+					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
+					message = conditionMessage(message, fmt.Sprintf("Kind %s not supported in CertificateRef", *certificateRef.Kind))
+					isValidGroupKind = false
+				}
+				secretNamespace := gatewayNamespace
+				if certificateRef.Namespace != nil && *certificateRef.Namespace != "" {
+					secretNamespace = string(*certificateRef.Namespace)
+				}
+
+				var secretExists bool
+				if isValidGroupKind {
+					// Get the secret and check it exists.
+					certificateSecret := &corev1.Secret{}
+					err = c.Get(ctx, types.NamespacedName{
+						Namespace: secretNamespace,
+						Name:      string(certificateRef.Name),
+					}, certificateSecret)
+					if err != nil {
+						if !k8serrors.IsNotFound(err) {
+							return
+						}
+						resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
+						message = conditionMessage(message, fmt.Sprintf("Referenced secret %s/%s does not exist", secretNamespace, certificateRef.Name))
+					} else {
+						secretExists = true
+					}
+				}
+
+				if secretExists {
+					// In case there is a cross-namespace reference, check if there is any referenceGrant allowing it.
+					if secretNamespace != gatewayNamespace {
+						referenceGrantList := &gatewayv1beta1.ReferenceGrantList{}
+						err = c.List(ctx, referenceGrantList, client.InNamespace(secretNamespace))
+						if err != nil {
+							return
+						}
+						if !isSecretCrossReferenceGranted(gatewayv1.Namespace(gatewayNamespace), certificateRef.Name, referenceGrantList.Items) {
+							resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonRefNotPermitted)
+							message = conditionMessage(message, fmt.Sprintf("Secret %s/%s reference not allowed by any referenceGrant", secretNamespace, certificateRef.Name))
+						}
+					}
 				}
 			}
 
-			if secretExists {
-				// In case there is a cross-namespace reference, check if there is any referenceGrant allowing it.
-				if secretNamespace != gatewayNamespace {
-					referenceGrantList := &gatewayv1beta1.ReferenceGrantList{}
-					err = c.List(ctx, referenceGrantList, client.InNamespace(secretNamespace))
-					if err != nil {
-						return
-					}
-					if !isSecretCrossReferenceGranted(gatewayv1.Namespace(gatewayNamespace), certificateRef.Name, referenceGrantList.Items) {
-						resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonRefNotPermitted)
-						message = conditionMessage(message, fmt.Sprintf("Secret %s/%s reference not allowed by any referenceGrant", secretNamespace, certificateRef.Name))
-					}
-				}
-			}
 		}
 	}
 

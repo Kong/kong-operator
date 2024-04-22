@@ -92,6 +92,16 @@ func SetDefaults(
 		changed = true
 	}
 
+	// If the feature gates are not set, set them to the default value.
+	const (
+		featureGates        = "CONTROLLER_FEATURE_GATES"
+		defaultFeatureGates = "GatewayAlpha=true"
+	)
+	if k8sutils.EnvValueByName(container.Env, featureGates) == "" {
+		container.Env = k8sutils.UpdateEnv(container.Env, featureGates, defaultFeatureGates)
+		changed = true
+	}
+
 	if args.Namespace != "" && args.DataPlaneIngressServiceName != "" {
 		if _, isOverrideDisabled := dontOverride["CONTROLLER_PUBLISH_SERVICE"]; !isOverrideDisabled {
 			publishServiceNN := k8stypes.NamespacedName{Namespace: args.Namespace, Name: args.DataPlaneIngressServiceName}.String()

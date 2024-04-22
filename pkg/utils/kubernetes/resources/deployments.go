@@ -295,12 +295,17 @@ func GenerateDataPlaneContainer(image string) corev1.Container {
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          "proxy",
-				ContainerPort: consts.DataPlaneProxyPort,
+				ContainerPort: consts.DataPlaneProxyHTTPPort,
 				Protocol:      corev1.ProtocolTCP,
 			},
 			{
 				Name:          "proxy-ssl",
-				ContainerPort: consts.DataPlaneProxySSLPort,
+				ContainerPort: consts.DataPlaneProxyHTTPSPort,
+				Protocol:      corev1.ProtocolTCP,
+			},
+			{
+				Name:          "proxy-tls",
+				ContainerPort: consts.DataPlaneProxyTLSPort,
 				Protocol:      corev1.ProtocolTCP,
 			},
 			{

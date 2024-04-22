@@ -69,7 +69,28 @@ const (
 	// Running on Pod tcp-echo-58ccd6b78d-hn9t8.
 	// In namespace foo.
 	// With IP address 10.244.0.13.
-	TCPEchoImage = "kong/go-echo:0.1.0"
+	TCPEchoImage = "kong/go-echo:0.4.0"
+
+	// HTTPBinPort is the port that the HTTPBin container listens on.
+	HTTPBinPort int32 = 80
+
+	// TCPEchoTLSPort is the port that the TCPEcho container listens on for TLS traffic.
+	TCPEchoTLSPort int32 = 1030
+)
+
+// -----------------------------------------------------------------------------
+// Global Gateway API Testing Vars & Consts
+// -----------------------------------------------------------------------------
+
+const (
+	// DefaultHTTPListenerPort is the default port for HTTP listeners.
+	DefaultHTTPListenerPort int32 = 80
+
+	// DefaultHTTPSListenerPort is the default port for HTTPS listeners.
+	DefaultHTTPSListenerPort int32 = 443
+
+	// DefaultTLSListenerPort is the default port for TLS listeners.
+	DefaultTLSListenerPort int32 = 9443
 )
 
 // -----------------------------------------------------------------------------

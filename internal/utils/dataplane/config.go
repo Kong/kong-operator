@@ -26,8 +26,9 @@ var KongDefaults = map[string]string{
 	"KONG_PORT_MAPS":              "80:8000, 443:8443",
 	"KONG_PROXY_ACCESS_LOG":       "/dev/stdout",
 	"KONG_PROXY_ERROR_LOG":        "/dev/stderr",
-	"KONG_PROXY_LISTEN":           fmt.Sprintf("0.0.0.0:%d reuseport backlog=16384, 0.0.0.0:%d http2 ssl reuseport backlog=16384", consts.DataPlaneProxyPort, consts.DataPlaneProxySSLPort),
+	"KONG_PROXY_LISTEN":           fmt.Sprintf("0.0.0.0:%d reuseport backlog=16384, 0.0.0.0:%d http2 ssl reuseport backlog=16384", consts.DataPlaneProxyHTTPPort, consts.DataPlaneProxyHTTPSPort),
 	"KONG_STATUS_LISTEN":          fmt.Sprintf("0.0.0.0:%d", consts.DataPlaneStatusPort),
+	"KONG_STREAM_LISTEN":          fmt.Sprintf("0.0.0.0:%d ssl", consts.DataPlaneProxyTLSPort),
 
 	// TODO: reconfigure following https://github.com/Kong/gateway-operator/issues/7
 	"KONG_ADMIN_LISTEN": fmt.Sprintf("0.0.0.0:%d ssl reuseport backlog=16384", consts.DataPlaneAdminAPIPort),

@@ -729,8 +729,8 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 
 	t.Log("verifying that the DataPlane's proxy ingress traffic is allowed")
 	var expectAllowProxyIngress networkPolicyIngressRuleDecorator
-	expectAllowProxyIngress.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneProxyPort)
-	expectAllowProxyIngress.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneProxySSLPort)
+	expectAllowProxyIngress.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneProxyHTTPPort)
+	expectAllowProxyIngress.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneProxyHTTPSPort)
 
 	t.Log("verifying that the DataPlane's metrics ingress traffic is allowed")
 	var expectAllowMetricsIngress networkPolicyIngressRuleDecorator
@@ -778,7 +778,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 			testutils.GatewayNetworkPolicyForGatewayContainsRules(t, GetCtx(), gateway, clients, expectedUpdatedProxyListenPort.Rule),
 			testutils.SubresourceReadinessWait, time.Second)
 		var notExpectedUpdatedProxyListenPort networkPolicyIngressRuleDecorator
-		notExpectedUpdatedProxyListenPort.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneProxyPort)
+		notExpectedUpdatedProxyListenPort.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneProxyHTTPPort)
 		require.Eventually(t,
 			testutils.Not(
 				testutils.GatewayNetworkPolicyForGatewayContainsRules(t, GetCtx(), gateway, clients, notExpectedUpdatedProxyListenPort.Rule),

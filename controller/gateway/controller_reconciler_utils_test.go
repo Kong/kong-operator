@@ -553,12 +553,12 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 				{
 					Name:       "http",
 					Port:       80,
-					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
+					TargetPort: intstr.FromInt(consts.DataPlaneProxyHTTPPort),
 				},
 				{
 					Name:       "https",
 					Port:       443,
-					TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
+					TargetPort: intstr.FromInt(consts.DataPlaneProxyHTTPSPort),
 				},
 			},
 		},
@@ -580,7 +580,7 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 				{
 					Name:       "http",
 					Port:       80,
-					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
+					TargetPort: intstr.FromInt(consts.DataPlaneProxyHTTPPort),
 				},
 			},
 			expectedError: errors.New("listener 1 uses unsupported protocol UDP"),
@@ -976,42 +976,6 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 				Status:             metav1.ConditionTrue,
 				Reason:             string(gatewayv1.ListenerReasonResolvedRefs),
 				Message:            "Listeners' references are accepted.",
-				ObservedGeneration: generation,
-			},
-		},
-		{
-			name:             "tls with passthrough, HTTPS protocol, no allowed routes",
-			gatewayNamespace: "default",
-			listener: gatewayv1.Listener{
-				Protocol: gatewayv1.HTTPSProtocolType,
-				TLS: &gatewayv1.GatewayTLSConfig{
-					Mode: lo.ToPtr(gatewayv1.TLSModePassthrough),
-					CertificateRefs: []gatewayv1.SecretObjectReference{
-						{
-							Name: "test-secret",
-						},
-					},
-				},
-			},
-			secrets: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "default",
-					},
-				},
-			},
-			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
-				{
-					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
-					Kind:  "HTTPRoute",
-				},
-			},
-			expectedResolvedRefsCondition: metav1.Condition{
-				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
-				Status:             metav1.ConditionFalse,
-				Reason:             string(gatewayv1.ListenerReasonInvalidCertificateRef),
-				Message:            "Only Terminate mode is supported.",
 				ObservedGeneration: generation,
 			},
 		},
