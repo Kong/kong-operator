@@ -83,7 +83,7 @@ func TestAIGatewayCreation(t *testing.T) {
 	cleaner.Add(gatewayConfiguration)
 
 	t.Log("deploying a GatewayClass resource, [", &gatewayConfiguration.Name, "]")
-	gatewayClass := helpers.GenerateGatewayClass(nil)
+	gatewayClass := helpers.MustGenerateGatewayClass(t)
 	gatewayClass.Spec.ParametersRef = &gatewayv1.ParametersReference{
 		Group:     gatewayv1.Group("gateway-operator.konghq.com"),
 		Kind:      gatewayv1.Kind("GatewayConfiguration"),

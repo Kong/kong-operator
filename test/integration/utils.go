@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -16,12 +17,16 @@ import (
 
 	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 // Expect404WithNoRouteFunc is used to check whether a given URL responds
 // with 404 and a standard Kong no route message.
 func Expect404WithNoRouteFunc(t *testing.T, ctx context.Context, url string) func() bool {
 	t.Helper()
+
+	httpClient, err := helpers.CreateHTTPClient(nil, "")
+	require.NoError(t, err)
 
 	return func() bool {
 		t.Logf("verifying connectivity to the dataplane %v", url)
@@ -31,7 +36,7 @@ func Expect404WithNoRouteFunc(t *testing.T, ctx context.Context, url string) fun
 			t.Logf("failed creating request for %s: %v", url, err)
 			return false
 		}
-		resp, err := sharedHTTPClient.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			t.Logf("failed issuing HTTP GET for %s: %v", url, err)
 			return false

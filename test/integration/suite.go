@@ -28,12 +28,6 @@ import (
 	"github.com/kong/gateway-operator/test/helpers/certificate"
 )
 
-func init() {
-	var err error
-	sharedHTTPClient, err = helpers.CreateHTTPClient(nil, "")
-	exitOnErr(err)
-}
-
 // -----------------------------------------------------------------------------
 // Testing Vars - Environment Overrideable
 // -----------------------------------------------------------------------------
@@ -67,10 +61,9 @@ func addTestsToTestSuite(tests ...func(*testing.T)) {
 }
 
 var (
-	ctx              context.Context
-	env              environments.Environment
-	clients          testutils.K8sClients
-	sharedHTTPClient *http.Client
+	ctx     context.Context
+	env     environments.Environment
+	clients testutils.K8sClients
 )
 
 // GetCtx returns the context used by the test suite.
@@ -183,7 +176,9 @@ func TestMain(
 	}()
 	<-startedChan
 
-	exitOnErr(testutils.BuildMTLSCredentials(GetCtx(), GetClients().K8sClient, sharedHTTPClient))
+	httpClient, err := helpers.CreateHTTPClient(nil, "")
+	exitOnErr(err)
+	exitOnErr(testutils.BuildMTLSCredentials(GetCtx(), GetClients().K8sClient, httpClient))
 
 	// Wait for webhook server in controller to be ready after controller started.
 	if webhookEnabled {

@@ -11,11 +11,14 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // MustCreateHTTPClient creates an HTTP client with the given TLS secret and host
 func MustCreateHTTPClient(t *testing.T, tlsSecret *corev1.Secret, host string) *http.Client {
+	t.Helper()
+
 	httpClient, err := createHTTPClient(tlsSecret, host)
 	assert.NoError(t, err)
 	return httpClient
@@ -77,8 +80,10 @@ func createTLSClientConfig(tlsSecret *corev1.Secret, server string) (*tls.Config
 
 // MustBuildRequest creates an HTTP request with the given method, URL, and host
 func MustBuildRequest(t *testing.T, ctx context.Context, method, url, host string) *http.Request {
+	t.Helper()
+
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	if host != "" {
 		req.Host = host
 	}

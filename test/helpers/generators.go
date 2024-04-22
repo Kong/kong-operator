@@ -19,8 +19,17 @@ import (
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
-// GenerateGatewayClass generates the default GatewayClass to be used in tests
-func GenerateGatewayClass(parametersRef *gatewayv1.ParametersReference) *gatewayv1.GatewayClass {
+// MustGenerateGatewayClass generates the default GatewayClass to be used in tests
+func MustGenerateGatewayClass(t *testing.T, parametersRefs ...gatewayv1.ParametersReference) *gatewayv1.GatewayClass {
+	t.Helper()
+
+	if len(parametersRefs) > 1 {
+		require.Fail(t, "only one ParametersReference is allowed")
+	}
+	var parametersRef *gatewayv1.ParametersReference
+	if len(parametersRefs) == 1 {
+		parametersRef = &parametersRefs[0]
+	}
 	gatewayClass := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
@@ -184,6 +193,8 @@ func GenerateHTTPRoute(namespace string, gatewayName, serviceName string, opts .
 
 // MustGenerateTLSSecret generates a TLS secret to be used in tests
 func MustGenerateTLSSecret(t *testing.T, namespace, secretName string, hosts []string) *corev1.Secret {
+	t.Helper()
+
 	var serverKey, serverCert bytes.Buffer
 	require.NoError(t, generateRSACert(hosts, &serverKey, &serverCert), "failed to generate RSA certificate")
 

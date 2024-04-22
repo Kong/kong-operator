@@ -36,7 +36,7 @@ func TestGatewayEssentials(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := helpers.GenerateGatewayClass(nil)
+	gatewayClass := helpers.MustGenerateGatewayClass(t)
 	gatewayClass, err := GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
@@ -197,7 +197,7 @@ func TestGatewayMultiple(t *testing.T) {
 	gatewayV1Client := GetClients().GatewayClient.GatewayV1()
 
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := helpers.GenerateGatewayClass(nil)
+	gatewayClass := helpers.MustGenerateGatewayClass(t)
 	gatewayClass, err := gatewayV1Client.GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
@@ -340,6 +340,8 @@ func TestGatewayMultiple(t *testing.T) {
 
 	t.Log("verifying connectivity to the HTTPRoute")
 
+	httpClient, err := helpers.CreateHTTPClient(nil, "")
+	require.NoError(t, err)
 	require.Eventually(t, func() bool {
 		url := fmt.Sprintf("http://%s%s", gatewayOneIPAddress, pathOne)
 		bad := fmt.Sprintf("http://%s%s", gatewayOneIPAddress, pathTwo)
@@ -347,7 +349,7 @@ func TestGatewayMultiple(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		resp, err := sharedHTTPClient.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			return false
 		}
@@ -356,7 +358,7 @@ func TestGatewayMultiple(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		badResp, err := sharedHTTPClient.Do(badReq)
+		badResp, err := httpClient.Do(badReq)
 		if err != nil {
 			return false
 		}
@@ -371,7 +373,7 @@ func TestGatewayMultiple(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		resp, err := sharedHTTPClient.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			return false
 		}
@@ -380,7 +382,7 @@ func TestGatewayMultiple(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		badResp, err := sharedHTTPClient.Do(badReq)
+		badResp, err := httpClient.Do(badReq)
 		if err != nil {
 			return false
 		}
@@ -464,7 +466,7 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := helpers.GenerateGatewayClass(nil)
+	gatewayClass := helpers.MustGenerateGatewayClass(t)
 	gatewayClass, err := clients.GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
@@ -538,7 +540,7 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
-	gatewayClass := helpers.GenerateGatewayClass(nil)
+	gatewayClass := helpers.MustGenerateGatewayClass(t)
 	gatewayClass.Spec.ParametersRef = &gatewayv1.ParametersReference{
 		Group:     "gateway-operator.konghq.com",
 		Kind:      "GatewayConfiguration",
@@ -670,7 +672,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	cleaner.Add(gatewayConfig)
 
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := helpers.GenerateGatewayClass(nil)
+	gatewayClass := helpers.MustGenerateGatewayClass(t)
 	gatewayClass.Spec.ParametersRef = &gatewayv1.ParametersReference{
 		Group:     "gateway-operator.konghq.com",
 		Kind:      "GatewayConfiguration",
@@ -895,7 +897,7 @@ func TestGatewayProvisionDataPlaneFail(t *testing.T) {
 
 	t.Log("creating a Gateway and verify that it does not get Programmed")
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := helpers.GenerateGatewayClass(nil)
+	gatewayClass := helpers.MustGenerateGatewayClass(t)
 	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)

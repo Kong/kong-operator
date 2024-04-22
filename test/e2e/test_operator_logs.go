@@ -144,7 +144,7 @@ func TestOperatorLogs(t *testing.T) {
 	}()
 
 	t.Log("deploying a GatewayClass resource")
-	gatewayClass := helpers.GenerateGatewayClass(nil)
+	gatewayClass := helpers.MustGenerateGatewayClass(t)
 	gatewayClass, err = clients.GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)

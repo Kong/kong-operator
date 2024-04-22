@@ -30,7 +30,7 @@ func TestHTTPRoute(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
-	gatewayClass := helpers.GenerateGatewayClass(&gatewayv1.ParametersReference{
+	gatewayClass := helpers.MustGenerateGatewayClass(t, gatewayv1.ParametersReference{
 		Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
 		Kind:      gatewayv1.Kind("GatewayConfiguration"),
 		Namespace: (*gatewayv1.Namespace)(&gatewayConfig.Namespace),
@@ -97,20 +97,23 @@ func TestHTTPRoute(t *testing.T) {
 		waitTick               = time.Second
 	)
 
-	// route to /test path of service httpbin should receive a 200 OK response.
+	httpClient, err := helpers.CreateHTTPClient(nil, "")
+	require.NoError(t, err)
+
+	t.Log("route to /test path of service httpbin should receive a 200 OK response")
 	request := helpers.MustBuildRequest(t, GetCtx(), http.MethodGet, "http://"+gatewayIPAddress+"/test", "")
 	require.Eventually(
 		t,
-		testutils.GetResponseBodyContains(t, clients, sharedHTTPClient, request, "<title>httpbin.org</title>"),
+		testutils.GetResponseBodyContains(t, clients, httpClient, request, "<title>httpbin.org</title>"),
 		httpRouteAccessTimeout,
 		time.Second,
 	)
 
-	// route to /test/1234 path of service httpbin should receive a 404 OK response.
+	t.Log("route to /test/1234 path of service httpbin should receive a 404 OK response")
 	request = helpers.MustBuildRequest(t, GetCtx(), http.MethodGet, "http://"+gatewayIPAddress+"/test/1234", "")
 	require.Eventually(
 		t,
-		testutils.GetResponseBodyContains(t, clients, sharedHTTPClient, request, "<h1>Not Found</h1>"),
+		testutils.GetResponseBodyContains(t, clients, httpClient, request, "<h1>Not Found</h1>"),
 		httpRouteAccessTimeout,
 		time.Second,
 	)
@@ -126,7 +129,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
-	gatewayClass := helpers.GenerateGatewayClass(&gatewayv1.ParametersReference{
+	gatewayClass := helpers.MustGenerateGatewayClass(t, gatewayv1.ParametersReference{
 		Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
 		Kind:      gatewayv1.Kind("GatewayConfiguration"),
 		Namespace: (*gatewayv1.Namespace)(&gatewayConfig.Namespace),
@@ -217,7 +220,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 
 	httpClient := helpers.MustCreateHTTPClient(t, secret, host)
 
-	// route to /test path of service httpbin should receive a 200 OK response.
+	t.Log("route to /test path of service httpbin should receive a 200 OK response")
 	request := helpers.MustBuildRequest(t, GetCtx(), http.MethodGet, "https://"+gatewayIPAddress+"/test", host)
 	require.Eventually(
 		t,
@@ -225,7 +228,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 		httpRouteAccessTimeout,
 		time.Second,
 	)
-	// route to /test/1234 path of service httpbin should receive a 404 OK response.
+	t.Log("route to /test/1234 path of service httpbin should receive a 404 OK response")
 	request = helpers.MustBuildRequest(t, GetCtx(), http.MethodGet, "https://"+gatewayIPAddress+"/test/1234", host)
 	require.Eventually(
 		t,
