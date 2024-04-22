@@ -186,7 +186,7 @@ func Run(
 		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
-	if err := setupIndexes(mgr); err != nil {
+	if err := setupIndexes(context.Background(), mgr, cfg); err != nil {
 		return err
 	}
 
