@@ -17,7 +17,6 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/samber/lo v1.39.0
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b
 	k8s.io/api v0.29.4
 	k8s.io/apimachinery v0.29.4
 	k8s.io/client-go v0.29.4
@@ -52,6 +51,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect
 	go.opentelemetry.io/otel/trace v1.24.0 // indirect
 	go4.org/netipx v0.0.0-20230728184502-ec4c8b891b28 // indirect
+	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b // indirect
 	golang.org/x/mod v0.16.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240314234333-6e1732d8331c // indirect

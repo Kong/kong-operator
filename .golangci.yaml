@@ -93,6 +93,11 @@ linters-settings:
   gomodguard:
     blocked:
       modules:
+      - golang.org/x/exp:
+         recommendations:
+          - maps
+          - slices
+          - github.com/samber/lo
       - github.com/pkg/errors:
           recommendations:
           - fmt
