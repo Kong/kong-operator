@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v1.2.2](#v122)
 - [v1.2.1](#v121)
 - [v1.2.0](#v120)
 - [v1.1.0](#v101)
@@ -26,7 +27,11 @@
   `apis` -> `api` and `controllers` -> `controller`.
   [#84](https://github.com/Kong/gateway-operator/pull/84)
 
+## [v1.2.2]
+
 ### Fixes
+
+> Release date: 2024-04-22
 
 - Fixes an issue where managed `Gateway`s controller wasn't able to reduce
   the created `DataPlane` objects when too many have been created.
@@ -624,6 +629,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v1.2.2]: https://github.com/Kong/gateway-operator-archive/compare/v1.2.1..v1.2.2
 [v1.2.1]: https://github.com/Kong/gateway-operator-archive/compare/v1.2.0..v1.2.1
 [v1.2.0]: https://github.com/Kong/gateway-operator-archive/compare/v1.1.0..v1.2.0
 [v1.1.0]: https://github.com/Kong/gateway-operator-archive/compare/v1.0.3..v1.1.0
