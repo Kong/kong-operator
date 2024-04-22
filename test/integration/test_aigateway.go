@@ -83,7 +83,7 @@ func TestAIGatewayCreation(t *testing.T) {
 	cleaner.Add(gatewayConfiguration)
 
 	t.Log("deploying a GatewayClass resource, [", &gatewayConfiguration.Name, "]")
-	gatewayClass := testutils.GenerateGatewayClass()
+	gatewayClass := helpers.MustGenerateGatewayClass(t)
 	gatewayClass.Spec.ParametersRef = &gatewayv1.ParametersReference{
 		Group:     gatewayv1.Group("gateway-operator.konghq.com"),
 		Kind:      gatewayv1.Kind("GatewayConfiguration"),
@@ -170,7 +170,7 @@ func TestAIGatewayCreation(t *testing.T) {
 
 	t.Log("verifying Gateway gets marked as Scheduled")
 	gatewayExpectedNN := types.NamespacedName{Name: gateway.Name, Namespace: gateway.Namespace}
-	require.Eventually(t, testutils.GatewayIsScheduled(t, GetCtx(), gatewayExpectedNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayExpectedNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets marked as Programmed")
 	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayExpectedNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
@@ -212,7 +212,7 @@ func TestAIGatewayCreation(t *testing.T) {
 	require.Eventually(t, func() bool {
 		gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(GetCtx(), gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		return gatewayutils.IsScheduled(gateway)
+		return gatewayutils.IsAccepted(gateway)
 	}, testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	// TODO - for now we don't have AI Cloud provider credentials in CI,

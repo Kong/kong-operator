@@ -74,7 +74,7 @@ func TestGatewayClassUpdates(t *testing.T) {
 	for timeout.After(time.Now()) {
 		gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(GetCtx(), gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		require.False(t, gatewayutils.IsScheduled(gateway))
+		require.False(t, gatewayutils.IsAccepted(gateway))
 	}
 
 	t.Log("updating unsupported Gateway to use the supported GatewayClass")
@@ -90,7 +90,7 @@ func TestGatewayClassUpdates(t *testing.T) {
 	require.Eventually(t, func() bool {
 		gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(GetCtx(), gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		return gatewayutils.IsScheduled(gateway)
+		return gatewayutils.IsAccepted(gateway)
 	}, testutils.GatewaySchedulingTimeLimit, time.Second)
 }
 
@@ -123,7 +123,7 @@ func TestGatewayClassCreation(t *testing.T) {
 	for timeout.After(time.Now()) {
 		gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(GetCtx(), gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		require.False(t, gatewayutils.IsScheduled(gateway))
+		require.False(t, gatewayutils.IsAccepted(gateway))
 	}
 
 	t.Log("creating a supported GatewayClass using the non-existent GatewayClass name")
@@ -147,6 +147,6 @@ func TestGatewayClassCreation(t *testing.T) {
 	require.Eventually(t, func() bool {
 		gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(GetCtx(), gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		return gatewayutils.IsScheduled(gateway)
+		return gatewayutils.IsAccepted(gateway)
 	}, testutils.GatewaySchedulingTimeLimit, time.Second)
 }
