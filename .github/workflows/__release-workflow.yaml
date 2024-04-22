@@ -132,6 +132,10 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
       - name: integration tests
         run: make test.integration
         env:
@@ -159,6 +163,10 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
 
       - name: E2E Tests
         run: make test.e2e
@@ -202,6 +210,10 @@ jobs:
         run: |
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo ${VERSION} > VERSION
+
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
 
       # Generated manifests are part of the release PR.
       - name: Generate manifests
