@@ -2,7 +2,9 @@ package index
 
 import (
 	"context"
+	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -14,10 +16,17 @@ const (
 	DataPlaneNameIndex = "dataplane"
 )
 
-// IndexDataPlaneNameOnControlPlane indexes the ControlPlane .spec.dataplaneName field
+// DataPlaneNameOnControlPlane indexes the ControlPlane .spec.dataplaneName field
 // on the "dataplane" key.
-func IndexDataPlaneNameOnControlPlane(c cache.Cache) error {
-	return c.IndexField(context.Background(), &operatorv1beta1.ControlPlane{}, DataPlaneNameIndex, func(o client.Object) []string {
+func DataPlaneNameOnControlPlane(ctx context.Context, c cache.Cache) error {
+	if _, err := c.GetInformer(ctx, &operatorv1beta1.ControlPlane{}); err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to get informer for v1beta1 ControlPlane: %w, disabling indexing DataPlanes for ControlPlanes' .spec.dataplaneName", err)
+	}
+
+	return c.IndexField(ctx, &operatorv1beta1.ControlPlane{}, DataPlaneNameIndex, func(o client.Object) []string {
 		controlPlane, ok := o.(*operatorv1beta1.ControlPlane)
 		if !ok {
 			return []string{}
