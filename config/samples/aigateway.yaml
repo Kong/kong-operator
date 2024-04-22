@@ -100,7 +100,7 @@ spec:
         spec:
           containers:
           - name: controller
-            image: kong/kubernetes-ingress-controller:3.1.2
+            image: kong/kubernetes-ingress-controller:3.1
             env:
             - name: CONTROLLER_LOG_LEVEL
               value: debug
