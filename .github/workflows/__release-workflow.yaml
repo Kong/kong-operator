@@ -230,6 +230,7 @@ jobs:
           echo ${VERSION} > VERSION
 
       - uses: jdx/mise-action@v2
+        if: ${{ (inputs.base == 'main' && matrix.base == 'main') || (inputs.base != 'main') }}
         with:
           install: false
 
@@ -261,7 +262,7 @@ jobs:
           # NOTE: If the base branch set for workflow is not main (it's a release branch)
           # then create a commit message which will not trigger the release workflow
           # (via release-bot.yaml) but which will only update VERSION and config/.
-          MSG: "${{ inputs.base != 'main' && matrix.base == 'main' && format('chore( {0} ): [main] {1}', inputs.release-type, env.VERSION) || format('chore( {0} ): [bot] {1}', inputs.release-type, env.VERSION) }}"
+          MSG: "${{ inputs.base != 'main' && matrix.base == 'main' && format('chore({0}): [main] {1}', inputs.release-type, env.VERSION) || format('chore({0}): [bot] {1}', inputs.release-type, env.VERSION) }}"
         run: |
           echo "MSG=${MSG}" >> $GITHUB_ENV
 
@@ -272,6 +273,7 @@ jobs:
         with:
           token: ${{ secrets.gh-pat }}
           path: .
+          branch: release/${{ needs.semver.outputs.fullversion }}/pr-${{ matrix.base }}
           base: ${{ matrix.base }}
           add-paths: |
             VERSION
