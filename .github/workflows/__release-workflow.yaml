@@ -178,6 +178,11 @@ jobs:
           KONG_LICENSE_DATA: ${{ secrets.kong-license-data }}
           KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE: ${{ needs.build-push-images.outputs.full_tag }}
 
+  # NOTE: This job's steps are run when:
+  # - input.base is 'main': then 1 PR is created targeting 'main'
+  # - input.base is not 'main': then 2 PRs will be created:
+  #   - 1 PR targeting 'main' to update VERSION and config/
+  #   - 1 PR targeting the release branch to update VERSION and config/ and trigger the release workflow
   create-release-pr:
     runs-on: ubuntu-latest
     needs:
@@ -185,29 +190,39 @@ jobs:
       - build-push-images
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
+    strategy:
+      matrix:
+        base:
+          - ${{ inputs.base }}
+          - main
     steps:
       # Use the branch set via inputs as a base for the release.
       # If anything needs to be fixed before the release, it should be done on the base branch
       # before the release workflow is triggered.
       - name: Checkout repository
+        if: ${{ (inputs.base == 'main' && matrix.base == 'main') || (inputs.base != 'main') }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ inputs.base }}
+          ref: ${{ matrix.base }}
 
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
+        if: ${{ (inputs.base == 'main' && matrix.base == 'main') || (inputs.base != 'main') }}
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
 
       - name: Checkout KGO submodule
+        if: ${{ (inputs.base == 'main' && matrix.base == 'main') || (inputs.base != 'main') }}
         run: git submodule update --init
 
       - name: Setup golang
+        if: ${{ (inputs.base == 'main' && matrix.base == 'main') || (inputs.base != 'main') }}
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
       # The bumped version file is included in the release PR.
       - name: Ensure version is set
+        if: ${{ (inputs.base == 'main' && matrix.base == 'main') || (inputs.base != 'main') }}
         env:
           VERSION: ${{ needs.semver.outputs.fullversion }}
         run: |
@@ -220,7 +235,7 @@ jobs:
 
       # Generated manifests are part of the release PR.
       - name: Generate manifests
-        if: ${{ inputs.regenerate-manifests }}
+        if: ${{ inputs.regenerate-manifests && ((inputs.base == 'main' && matrix.base == 'main') || (inputs.base != 'main')) }}
         run: make manifests
 
       # The generated bundle is part of the release PR.
@@ -228,10 +243,11 @@ jobs:
       # If anything needs to be fixed before the release, it should be done on the base branch
       # before the release workflow is triggered.
       - name: Generate bundle
-        if: ${{ inputs.regenerate-bundle }}
+        if: ${{ inputs.regenerate-bundle && ((inputs.base == 'main' && matrix.base == 'main') || (inputs.base != 'main')) }}
         run: make bundle
 
       - name: GPG sign the commits
+        if: ${{ (inputs.base == 'main' && matrix.base == 'main') || (inputs.base != 'main') }}
         uses: crazy-max/ghaction-import-gpg@01dd5d3ca463c7f10f7f4f7b4f177225ac661ee4
         with:
           gpg_private_key: ${{ secrets.gpg-private-key }}
@@ -239,24 +255,31 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
 
+      - name: Commit message
+        if: ${{ (inputs.base == 'main' && matrix.base == 'main') || (inputs.base != 'main') }}
+        env:
+          # NOTE: If the base branch set for workflow is not main (it's a release branch)
+          # then create a commit message which will not trigger the release workflow
+          # (via release-bot.yaml) but which will only update VERSION and config/.
+          MSG: "${{ inputs.base != 'main' && matrix.base == 'main' && format('chore( {0} ): [main] {1}', inputs.release-type, env.VERSION) || format('chore( {0} ): [bot] {1}', inputs.release-type, env.VERSION) }}"
+        run: |
+          echo "MSG=${MSG}" >> $GITHUB_ENV
+
       # PRs to the base branch will update the version file and manifests
-      # NOTE: This will not update the VERSION and config on the main branch when a release
-      # on release branch is made.
-      # This could be improved to trigger PRs for both main and release branch but
-      # using a different commit message to not cause the release-bot.yaml to trigger.
       - name: Create a release PR
         uses: peter-evans/create-pull-request@9153d834b60caba6d51c9b9510b087acf9f33f83
+        if: ${{ (inputs.base == 'main' && matrix.base == 'main') || (inputs.base != 'main') }}
         with:
           token: ${{ secrets.gh-pat }}
           path: .
-          base: ${{ inputs.base }}
+          base: ${{ matrix.base }}
           add-paths: |
             VERSION
             config
-          commit-message: "chore(${{ inputs.release-type }}): [bot] ${{ env.VERSION }}"
+          commit-message: "${{ env.MSG }}"
           committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           signoff: true
           delete-branch: true
-          title: "chore(${{ inputs.release-type }}): [bot] ${{ env.VERSION }}"
-          body: "chore(${{ inputs.release-type }}): [bot] ${{ env.VERSION }}"
+          title: "${{ env.MSG }}"
+          body: "${{ env.MSG }}"
