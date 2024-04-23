@@ -120,7 +120,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configure Git for private repositories (temporary until making KGO public)
+      - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
 
       - name: Checkout KGO submodule
@@ -152,7 +152,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configure Git for private repositories (temporary until making KGO public)
+      - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
 
       - name: Checkout KGO submodule
@@ -191,7 +191,7 @@ jobs:
           fetch-depth: 0
           ref: main
 
-      - name: Configure Git for private repositories (temporary until making KGO public)
+      - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
 
       - name: Checkout KGO submodule
