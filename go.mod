@@ -4,13 +4,11 @@ go 1.22
 
 toolchain go1.22.0
 
-retract (
-	// 1.2.2 was released on main branch with a breaking change that was not
-	// intended to be released in 1.2.x:
-	// https://github.com/Kong/gateway-operator/commit/3876430e09e61edce58bd8464989e33236bd1872
-	// This retraction is to prevent it from being used and from breaking builds of dependent projects.
-	v1.2.2
-)
+// 1.2.2 was released on main branch with a breaking change that was not
+// intended to be released in 1.2.x:
+// https://github.com/Kong/gateway-operator/commit/3876430e09e61edce58bd8464989e33236bd1872
+// This retraction is to prevent it from being used and from breaking builds of dependent projects.
+retract v1.2.2
 
 require (
 	github.com/Masterminds/semver v1.5.0
