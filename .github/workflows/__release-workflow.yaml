@@ -1,5 +1,5 @@
 name: Reusable release
-run-name: "Release ${{ format('{0} (type: {1})', inputs.tag, inputs.release-type) }} "
+run-name: "Release ${{ format('{0} (type: {1}) (branch: {2})', inputs.tag, inputs.release-type, inputs.base) }} "
 
 on:
   workflow_call:
@@ -28,6 +28,11 @@ on:
         description: The version to release (e.g. v1.2.3)
         type: string
         required: true
+      base:
+        description: The base branch from which to release and against which to create a release PR.
+        type: string
+        default: 'main'
+        required: false
       latest:
         description: Whether to mark this release latest
         type: boolean
@@ -181,15 +186,14 @@ jobs:
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
     steps:
-      # Use the main branch as a base for the release.
-      # Any changes made on the branch that the workflow was triggered on will not be included
-      # in the release PR. If anything needs to be fixed before a release, it should be
-      # done on the main branch.
+      # Use the branch set via inputs as a base for the release.
+      # If anything needs to be fixed before the release, it should be done on the base branch
+      # before the release workflow is triggered.
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main
+          ref: ${{ inputs.base }}
 
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
@@ -221,7 +225,8 @@ jobs:
 
       # The generated bundle is part of the release PR.
       # This is done locally in this job, to avoid including unintended changes.
-      # If anything needs to be fixed before a release, it should be done on the main branch.
+      # If anything needs to be fixed before the release, it should be done on the base branch
+      # before the release workflow is triggered.
       - name: Generate bundle
         if: ${{ inputs.regenerate-bundle }}
         run: make bundle
@@ -234,12 +239,17 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
 
-      # PRs to the main branch will update the version file and manifests
+      # PRs to the base branch will update the version file and manifests
+      # NOTE: This will not update the VERSION and config on the main branch when a release
+      # on release branch is made.
+      # This could be improved to trigger PRs for both main and release branch but
+      # using a different commit message to not cause the release-bot.yaml to trigger.
       - name: Create a release PR
         uses: peter-evans/create-pull-request@9153d834b60caba6d51c9b9510b087acf9f33f83
         with:
           token: ${{ secrets.gh-pat }}
           path: .
+          base: ${{ inputs.base }}
           add-paths: |
             VERSION
             config

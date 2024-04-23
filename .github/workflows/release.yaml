@@ -1,5 +1,5 @@
 name: release
-run-name: "Release ${{ format('{0} (type: {1})', inputs.tag, inputs.release_type) }} "
+run-name: "Release ${{ format('{0} (type: {1}) (branch: {2})', inputs.tag, inputs.release-type, inputs.base) }} "
 
 on:
   workflow_dispatch:
@@ -7,6 +7,11 @@ on:
       tag:
         description: The version to release (e.g. v1.2.3)
         required: true
+      base:
+        description: The base branch from which to release and against which to create a release PR.
+        type: string
+        default: 'main'
+        required: false
       latest:
         description: Whether to tag this build latest
         type: boolean
@@ -33,5 +38,6 @@ jobs:
       image-name: ${{ vars.DOCKERHUB_IMAGE_NAME }}
       latest: ${{ inputs.latest }}
       tag: ${{ inputs.tag }}
+      base: ${{ inputs.base }}
       release-type: ${{ inputs.release_type }}
       regenerate-manifests: true
