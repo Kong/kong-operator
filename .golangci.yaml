@@ -128,10 +128,6 @@ issues:
         - revive
       text: "exported: exported"
     # Test cases are self-explanatory, thus no need a docstring.
-    - path: test/helpers/certificate
-      linters:
-        - revive
-      text: "exported: exported"
     - path: test/integration
       linters:
         - revive

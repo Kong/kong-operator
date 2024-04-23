@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/google/uuid"
@@ -189,26 +188,4 @@ func GenerateHTTPRoute(namespace string, gatewayName, serviceName string, opts .
 	}
 
 	return httpRoute
-}
-
-// MustGenerateTLSSecret generates a TLS secret to be used in tests
-func MustGenerateTLSSecret(t *testing.T, namespace, secretName string, hosts []string) *corev1.Secret {
-	t.Helper()
-
-	var serverKey, serverCert bytes.Buffer
-	require.NoError(t, generateRSACert(hosts, &serverKey, &serverCert), "failed to generate RSA certificate")
-
-	data := map[string][]byte{
-		corev1.TLSCertKey:       serverCert.Bytes(),
-		corev1.TLSPrivateKeyKey: serverKey.Bytes(),
-	}
-
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      secretName,
-		},
-		Type: corev1.SecretTypeTLS,
-		Data: data,
-	}
 }
