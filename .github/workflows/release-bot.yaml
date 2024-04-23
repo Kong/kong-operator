@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'release/*'
 
 jobs:
   look_for_release:
