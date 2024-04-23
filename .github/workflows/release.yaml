@@ -1,5 +1,5 @@
 name: release
-run-name: "Release ${{ format('{0} (type: {1}) (branch: {2})', inputs.tag, inputs.release-type, inputs.base) }} "
+run-name: "Release ${{ format('{0} (type: {1}) (branch: {2})', inputs.tag, inputs.release_type, inputs.base) }} "
 
 on:
   workflow_dispatch:
