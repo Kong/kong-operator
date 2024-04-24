@@ -18,6 +18,7 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
+	"github.com/kong/gateway-operator/test/helpers/certificate"
 )
 
 func TestHTTPRoute(t *testing.T) {
@@ -145,9 +146,20 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 		Namespace: namespace.Name,
 	}
 
-	host := "integration.tests.org"
+	const host = "integration.tests.org"
+	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithDNSNames(host))
 
-	secret := helpers.MustGenerateTLSSecret(t, namespace.Name, host, []string{host})
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace.Name,
+			Name:      host,
+		},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{
+			corev1.TLSCertKey:       cert,
+			corev1.TLSPrivateKeyKey: key,
+		},
+	}
 	t.Logf("deploying Secret %s/%s", secret.Namespace, secret.Name)
 	secret, err = GetClients().K8sClient.CoreV1().Secrets(namespace.Name).Create(GetCtx(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
