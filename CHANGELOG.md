@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v1.2.3](#v123)
 - [v1.2.2](#v122)
 - [v1.2.1](#v121)
 - [v1.2.0](#v120)
@@ -52,6 +53,14 @@
 > Release date: 2024-04-23
 
 ### **NOTE: Retracted**
+
+[v1.2.2][rel_122] was retracted due to a misplaced git tag.
+Due to [golang proxy caching modules indefinitely][goproxy] we needed to retract this version.
+[v1.2.3][rel_123] contains all the changes that v1.2.2 intended to contain.
+
+[goproxy]: https://sum.golang.org/#faq-retract-version
+[rel_122]: https://github.com/Kong/gateway-operator/releases/tag/v1.2.2
+[rel_123]: https://github.com/Kong/gateway-operator/releases/tag/v1.2.3
 
 ## [v1.2.1]
 
@@ -635,20 +644,20 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
-[v1.2.3]: https://github.com/Kong/gateway-operator-archive/compare/v1.2.2..v1.2.3
-[v1.2.2]: https://github.com/Kong/gateway-operator-archive/compare/v1.2.1..v1.2.2
-[v1.2.1]: https://github.com/Kong/gateway-operator-archive/compare/v1.2.0..v1.2.1
-[v1.2.0]: https://github.com/Kong/gateway-operator-archive/compare/v1.1.0..v1.2.0
-[v1.1.0]: https://github.com/Kong/gateway-operator-archive/compare/v1.0.3..v1.1.0
-[v1.0.3]: https://github.com/Kong/gateway-operator-archive/compare/v1.0.2..v1.0.3
-[v1.0.2]: https://github.com/Kong/gateway-operator-archive/compare/v1.0.1..v1.0.2
-[v1.0.1]: https://github.com/Kong/gateway-operator-archive/compare/v1.0.0..v1.0.1
-[v1.0.0]: https://github.com/Kong/gateway-operator-archive/compare/v0.7.0..v1.0.0
-[v0.7.0]: https://github.com/Kong/gateway-operator-archive/compare/v0.6.0..v0.7.0
-[v0.6.0]: https://github.com/Kong/gateway-operator-archive/compare/v0.5.0..v0.6.0
-[v0.5.0]: https://github.com/Kong/gateway-operator-archive/compare/v0.4.0..v0.5.0
-[v0.4.0]: https://github.com/Kong/gateway-operator-archive/compare/v0.3.0..v0.4.0
-[v0.3.0]: https://github.com/Kong/gateway-operator-archive/compare/v0.2.0..v0.3.0
-[v0.2.0]: https://github.com/Kong/gateway-operator-archive/compare/v0.1.0..v0.2.0
-[v0.1.1]: https://github.com/Kong/gateway-operator-archive/compare/v0.0.1..v0.1.1
-[v0.1.0]: https://github.com/Kong/gateway-operator-archive/compare/v0.0.0..v0.1.0
+[v1.2.3]: https://github.com/Kong/gateway-operator/compare/v1.2.2..v1.2.3
+[v1.2.2]: https://github.com/Kong/gateway-operator/compare/v1.2.1..v1.2.2
+[v1.2.1]: https://github.com/Kong/gateway-operator/compare/v1.2.0..v1.2.1
+[v1.2.0]: https://github.com/Kong/gateway-operator/compare/v1.1.0..v1.2.0
+[v1.1.0]: https://github.com/Kong/gateway-operator/compare/v1.0.3..v1.1.0
+[v1.0.3]: https://github.com/Kong/gateway-operator/compare/v1.0.2..v1.0.3
+[v1.0.2]: https://github.com/Kong/gateway-operator/compare/v1.0.1..v1.0.2
+[v1.0.1]: https://github.com/Kong/gateway-operator/compare/v1.0.0..v1.0.1
+[v1.0.0]: https://github.com/Kong/gateway-operator/compare/v0.7.0..v1.0.0
+[v0.7.0]: https://github.com/Kong/gateway-operator/compare/v0.6.0..v0.7.0
+[v0.6.0]: https://github.com/Kong/gateway-operator/compare/v0.5.0..v0.6.0
+[v0.5.0]: https://github.com/Kong/gateway-operator/compare/v0.4.0..v0.5.0
+[v0.4.0]: https://github.com/Kong/gateway-operator/compare/v0.3.0..v0.4.0
+[v0.3.0]: https://github.com/Kong/gateway-operator/compare/v0.2.0..v0.3.0
+[v0.2.0]: https://github.com/Kong/gateway-operator/compare/v0.1.0..v0.2.0
+[v0.1.1]: https://github.com/Kong/gateway-operator/compare/v0.0.1..v0.1.1
+[v0.1.0]: https://github.com/Kong/gateway-operator/compare/v0.0.0..v0.1.0
