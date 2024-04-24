@@ -211,11 +211,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	crbFinalizerSet := controllerutil.AddFinalizer(cp, string(ControlPlaneFinalizerCleanupClusterRoleBinding))
 	vwcFinalizerSet := controllerutil.AddFinalizer(cp, string(ControlPlaneFinalizerCleanupValidatingWebhookConfiguration))
 	if crFinalizerSet || crbFinalizerSet || vwcFinalizerSet {
-		log.Trace(logger, "Setting finalizers", cp)
+		log.Trace(logger, "setting finalizers", cp)
 		if err := r.Client.Update(ctx, cp); err != nil {
+			if k8serrors.IsConflict(err) {
+				log.Debug(logger, "conflict found when updating ControlPlane, retrying", cp)
+				return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+			}
 			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane's finalizers : %w", err)
 		}
-		return ctrl.Result{}, nil
+		// Requeue to ensure that we do not miss next reconciliation request in case
+		// AddFinalizer calls returned true but the update resulted in a noop.
+		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
 	}
 
 	k8sutils.InitReady(cp)
