@@ -1,4 +1,4 @@
-package manager
+package kubernetes
 
 import (
 	"testing"
@@ -94,9 +94,7 @@ func TestCRDChecker(t *testing.T) {
 				WithRESTMapper(tc.restMapper()).
 				Build()
 
-			checker := crdChecker{
-				client: fakeClient,
-			}
+			checker := CRDChecker{Client: fakeClient}
 			ok, err := checker.CRDExists(tc.CRD)
 
 			if tc.expectedErr != nil {

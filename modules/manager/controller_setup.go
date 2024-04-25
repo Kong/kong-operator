@@ -2,18 +2,13 @@ package manager
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/url"
 	"reflect"
 
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/discovery"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -28,6 +23,7 @@ import (
 	"github.com/kong/gateway-operator/internal/utils/index"
 	dataplanevalidator "github.com/kong/gateway-operator/internal/validation/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 const (
@@ -145,7 +141,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			},
 		},
 	}
-	checker := crdChecker{client: mgr.GetClient()}
+	checker := k8sutils.CRDChecker{Client: mgr.GetClient()}
 	for _, check := range crdChecks {
 		if !check.Condition {
 			continue
@@ -269,45 +265,4 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 	}
 
 	return controllers, nil
-}
-
-// crdChecker verifies whether the resource type defined by GVR is supported by the k8s apiserver.
-type crdChecker struct {
-	client client.Client
-}
-
-// CRDExists returns true if the apiserver supports the specified group/version/resource.
-func (c crdChecker) CRDExists(gvr schema.GroupVersionResource) (bool, error) {
-	_, err := c.client.RESTMapper().KindFor(gvr)
-
-	if meta.IsNoMatchError(err) {
-		return false, nil
-	}
-
-	if errD := (&discovery.ErrGroupDiscoveryFailed{}); errors.As(err, &errD) {
-		for _, e := range errD.Groups {
-
-			// If this is an API StatusError:
-			if errS := (&k8serrors.StatusError{}); errors.As(e, &errS) {
-				switch errS.ErrStatus.Code {
-				case 404:
-					// If it's a 404 status code then we're sure that it's just
-					// a missing CRD. Don't report an error, just false.
-					return false, nil
-				default:
-					return false, fmt.Errorf("unexpected API error status code when looking up CRD (%v): %w", gvr, err)
-				}
-			}
-
-			// It is a network error.
-			if errU := (&url.Error{}); errors.As(e, &errU) {
-				return false, fmt.Errorf("unexpected network error when looking up CRD (%v): %w", gvr, err)
-			}
-		}
-
-		// Otherwise it's a different error, report a missing CRD.
-		return false, err
-	}
-
-	return true, nil
 }
