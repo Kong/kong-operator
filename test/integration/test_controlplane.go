@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -339,7 +340,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 	require.Eventually(t, testutils.ControlPlaneHasAdmissionWebhookConfiguration(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("verifying controlplane's webhook is functional")
-	verifyControlPlaneWebhookIsFunctional(t, GetCtx(), clients)
+	eventuallyVerifyControlPlaneWebhookIsFunctional(t, GetCtx(), clients)
 
 	t.Log("verifying that controlplane's ClusterRole is patched if it goes out of sync")
 	clusterRoles = testutils.MustListControlPlaneClusterRoles(t, GetCtx(), controlplane, clients)
@@ -445,22 +446,32 @@ func verifyControlPlaneDeploymentAdmissionWebhookMount(t *testing.T, deployment 
 	require.Equal(t, consts.ControlPlaneAdmissionWebhookVolumeMountPath, volumeMount.MountPath)
 }
 
-// verifyControlPlaneWebhookIsFunctional verifies that the controlplane validating webhook is functional by
-// creating a resource that should be rejected by the webhook and verifying that it is rejected.
-func verifyControlPlaneWebhookIsFunctional(t *testing.T, ctx context.Context, clients testutils.K8sClients) {
-	keyAuthSecretWithNoKey := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "test-cred-",
-			Namespace:    "default",
-			Labels: map[string]string{
-				"konghq.com/credential": "key-auth",
+// eventuallyVerifyControlPlaneWebhookIsFunctional verifies that the controlplane validating webhook
+// is functional by creating a resource that should be rejected by the webhook and verifying that
+// it is rejected.
+func eventuallyVerifyControlPlaneWebhookIsFunctional(t *testing.T, ctx context.Context, clients testutils.K8sClients) {
+	require.Eventually(t, func() bool {
+		keyAuthSecretWithNoKey := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "test-cred-",
+				Namespace:    "default",
+				Labels: map[string]string{
+					"konghq.com/credential": "key-auth",
+				},
 			},
-		},
-	}
+		}
 
-	err := clients.MgrClient.Create(ctx, &keyAuthSecretWithNoKey)
-	require.Error(t, err)
-	require.ErrorContains(t, err, "admission webhook \"secrets.validation.ingress-controller.konghq.com\" denied the request")
+		err := clients.MgrClient.Create(ctx, &keyAuthSecretWithNoKey)
+		if err == nil {
+			t.Log("ControlPlane webhook accepted an invalid secret, retrying and waiting for webhook to become functional")
+			return false
+		}
+		if !strings.Contains(err.Error(), "admission webhook \"secrets.validation.ingress-controller.konghq.com\" denied the request") {
+			t.Logf("unexpected error: %v", err)
+			return false
+		}
+		return true
+	}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 }
 
 func TestControlPlaneUpdate(t *testing.T) {
