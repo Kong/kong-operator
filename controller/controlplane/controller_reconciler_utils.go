@@ -693,9 +693,10 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	if count == 1 {
 		var updated bool
 		webhookConfiguration := validatingWebhookConfigurations[0]
-		oldWebhookConfiguration := webhookConfiguration.DeepCopy()
+		old := webhookConfiguration.DeepCopy()
 
-		updated, generatedWebhookConfiguration.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(webhookConfiguration.ObjectMeta, generatedWebhookConfiguration.ObjectMeta)
+		updated, webhookConfiguration.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(webhookConfiguration.ObjectMeta, generatedWebhookConfiguration.ObjectMeta)
+
 		if !cmp.Equal(webhookConfiguration.Webhooks, generatedWebhookConfiguration.Webhooks) {
 			webhookConfiguration.Webhooks = generatedWebhookConfiguration.Webhooks
 			updated = true
@@ -703,7 +704,7 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 
 		if updated {
 			log.Debug(logger, "patching existing ValidatingWebhookConfiguration", webhookConfiguration)
-			return op.Updated, r.Client.Patch(ctx, &webhookConfiguration, client.MergeFrom(oldWebhookConfiguration))
+			return op.Updated, r.Client.Patch(ctx, &webhookConfiguration, client.MergeFrom(old))
 		}
 
 		return op.Noop, nil
