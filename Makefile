@@ -200,9 +200,8 @@ generate.clientsets: client-gen
 		--input-base '' \
 		--input $(REPO)/apis/v1alpha1 \
 		--input $(REPO)/apis/v1beta1 \
-		--output-base pkg/ \
-		--output-package $(REPO)/pkg/ \
-		--trim-path-prefix pkg/$(REPO)/
+		--output-dir pkg/ \
+		--output-pkg $(REPO)/pkg/
 	rm apis
 	find ./pkg/clientset/ -type f -name '*.go' -exec sed -i '' -e 's/github.com\/kong\/gateway-operator\/apis/github.com\/kong\/gateway-operator\/api/gI' {} \; &> /dev/null
 .PHONY: generate.rbacs
