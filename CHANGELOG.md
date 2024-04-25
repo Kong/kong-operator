@@ -28,6 +28,11 @@
   `apis` -> `api` and `controllers` -> `controller`.
   [#84](https://github.com/Kong/gateway-operator/pull/84)
 
+### Fixes
+
+- Fix enforcing up to date `ControlPlane`'s `ValidatingWebhookConfiguration`
+  [#225](https://github.com/Kong/gateway-operator/pull/225)
+
 ## [v1.2.3]
 
 ### Fixes
