@@ -56,61 +56,63 @@ kic-webhook-config-generator:
 
 export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
 
-CONTROLLER_GEN_VERSION = $(shell yq -ojson -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
+# Do not store yq's version in .tools_versions.yaml as it is used to get tool versions.
+# renovate: datasource=github-releases depName=mikefarah/yq
+YQ_VERSION = 4.43.1
+YQ = $(PROJECT_DIR)/bin/installs/yq/$(YQ_VERSION)/bin/yq
+.PHONY: yq
+yq: mise # Download yq locally if necessary.
+	$(MISE) plugin install --yes -q yq
+	$(MISE) install -q yq@$(YQ_VERSION)
+
+CONTROLLER_GEN_VERSION = $(shell $(YQ) -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/kube-controller-tools/$(CONTROLLER_GEN_VERSION)/bin/controller-gen
 .PHONY: controller-gen
-controller-gen: mise ## Download controller-gen locally if necessary.
-	@$(MISE) plugin install --yes -q kube-controller-tools
-	@$(MISE) install -q kube-controller-tools@$(CONTROLLER_GEN_VERSION)
+controller-gen: mise yq ## Download controller-gen locally if necessary.
+	$(MISE) plugin install --yes -q kube-controller-tools
+	$(MISE) install -q kube-controller-tools@$(CONTROLLER_GEN_VERSION)
 
-KUSTOMIZE_VERSION = $(shell yq -ojson -r '.kustomize' < $(TOOLS_VERSIONS_FILE))
+KUSTOMIZE_VERSION = $(shell $(YQ) -r '.kustomize' < $(TOOLS_VERSIONS_FILE))
 KUSTOMIZE = $(PROJECT_DIR)/bin/installs/kustomize/$(KUSTOMIZE_VERSION)/bin/kustomize
 .PHONY: kustomize
-kustomize: mise ## Download kustomize locally if necessary.
+kustomize: mise yq ## Download kustomize locally if necessary.
 	@$(MISE) plugin install --yes -q kustomize
 	@$(MISE) install -q kustomize@$(KUSTOMIZE_VERSION)
 
-CLIENT_GEN_VERSION = $(shell yq -ojson -r '.code-generator' < $(TOOLS_VERSIONS_FILE))
+CLIENT_GEN_VERSION = $(shell $(YQ) -r '.code-generator' < $(TOOLS_VERSIONS_FILE))
 CLIENT_GEN = $(PROJECT_DIR)/bin/installs/kube-code-generator/$(CLIENT_GEN_VERSION)/bin/client-gen
 .PHONY: client-gen
-client-gen: mise ## Download client-gen locally if necessary.
+client-gen: mise yq ## Download client-gen locally if necessary.
 	@$(MISE) plugin install --yes -q kube-code-generator
 	@$(MISE) install -q kube-code-generator@$(CLIENT_GEN_VERSION)
 
-GOLANGCI_LINT_VERSION = $(shell yq -ojson -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
+GOLANGCI_LINT_VERSION = $(shell $(YQ) -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
 GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/golangci-lint/$(GOLANGCI_LINT_VERSION)/bin/golangci-lint
 .PHONY: golangci-lint
-golangci-lint: mise ## Download golangci-lint locally if necessary.
+golangci-lint: mise yq ## Download golangci-lint locally if necessary.
 	@$(MISE) plugin install --yes -q golangci-lint
 	@$(MISE) install -q golangci-lint@$(GOLANGCI_LINT_VERSION)
 
-GOTESTSUM_VERSION = $(shell yq -ojson -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
+GOTESTSUM_VERSION = $(shell $(YQ) -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum
 .PHONY: gotestsum
-gotestsum: ## Download gotestsum locally if necessary.
+gotestsum: mise yq ## Download gotestsum locally if necessary.
 	@$(MISE) plugin install --yes -q gotestsum https://github.com/pmalek/mise-gotestsum.git
 	@$(MISE) install -q gotestsum
 
-CRD_REF_DOCS_VERSION = $(shell yq -ojson -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
+CRD_REF_DOCS_VERSION = $(shell $(YQ) -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
 CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
 .PHONY: crd-ref-docs
 crd-ref-docs: ## Download crd-ref-docs locally if necessary.
 	GOBIN=$(PROJECT_DIR)/bin go install -v \
 		github.com/elastic/crd-ref-docs@v$(CRD_REF_DOCS_VERSION)
 
-SKAFFOLD_VERSION = $(shell yq -ojson -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
+SKAFFOLD_VERSION = $(shell $(YQ) -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
 SKAFFOLD = $(PROJECT_DIR)/bin/installs/skaffold/$(SKAFFOLD_VERSION)/bin/skaffold
 .PHONY: skaffold
-skaffold: mise ## Download skaffold locally if necessary.
+skaffold: mise yq ## Download skaffold locally if necessary.
 	@$(MISE) plugin install --yes -q skaffold
 	@$(MISE) install -q skaffold@$(SKAFFOLD_VERSION)
-
-YQ_VERSION = $(shell yq -ojson -r '.yq' < $(TOOLS_VERSIONS_FILE))
-YQ = $(PROJECT_DIR)/bin/installs/yq/$(YQ_VERSION)/bin/yq
-.PHONY: yq
-yq: mise # Download yq locally if necessary.
-	@$(MISE) plugin install --yes -q yq
-	@$(MISE) install -q yq@$(YQ_VERSION)
 
 # ------------------------------------------------------------------------------
 # Build
