@@ -173,7 +173,7 @@ jobs:
 
   #   - name: upload diagnostics
   #     if: ${{ always() }}
-  #     uses: actions/upload-artifact@v3
+  #     uses: actions/upload-artifact@v4
   #     with:
   #       name: diagnostics-conformance
   #       path: /tmp/ktf-diag*
@@ -219,10 +219,10 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      if: always()
+      uses: actions/upload-artifact@v4
       with:
-        name: diagnostics-integration
+        name: diagnostics-integration-webhook-enabled-${{ matrix.webhook-enabled }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
@@ -273,9 +273,9 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: diagnostics-integration
+        name: diagnostics-integration-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
@@ -322,9 +322,9 @@ jobs:
     
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: diagnostics-integration
+        name: diagnostics-integration-provision-fail-webhook-enabled-${{ matrix.webhook-enabled }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
@@ -371,8 +371,8 @@ jobs:
         GOTESTSUM_JUNITFILE: "e2e-tests.xml"
 
     - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      if: always()
+      uses: actions/upload-artifact@v4
       with:
         name: diagnostics-e2e
         path: /tmp/ktf-diag*
