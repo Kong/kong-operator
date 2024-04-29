@@ -116,6 +116,11 @@ var loggerOnce sync.Once
 // When running with helm caller is responsible for cleaning up the environment.
 func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption) TestEnvironment {
 	t.Helper()
+
+	const (
+		waitTime = 1 * time.Minute
+	)
+
 	var opt testEnvOptions
 	for _, o := range opts {
 		o(&opt)
@@ -230,7 +235,7 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 		require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizeDir.Tests(), "--server-side"))
 
 		t.Log("waiting for operator deployment to complete")
-		require.NoError(t, waitForOperatorDeployment(ctx, "kong-system", clients.K8sClient))
+		require.NoError(t, waitForOperatorDeployment(t, ctx, "kong-system", clients.K8sClient, waitTime))
 
 		t.Log("waiting for operator webhook service to be connective")
 		require.Eventually(t, waitForOperatorWebhookEventually(t, ctx, clients.K8sClient),
@@ -280,26 +285,55 @@ func cleanupEnvironment(t *testing.T, ctx context.Context, env environments.Envi
 
 type deploymentAssertOptions func(*appsv1.Deployment) bool
 
-func deploymentAssertConditions(conds ...appsv1.DeploymentCondition) deploymentAssertOptions {
+func deploymentAssertConditions(t *testing.T, conds ...appsv1.DeploymentCondition) deploymentAssertOptions {
+	t.Helper()
+
 	return func(deployment *appsv1.Deployment) bool {
 		return lo.EveryBy(conds, func(cond appsv1.DeploymentCondition) bool {
-			return lo.ContainsBy(deployment.Status.Conditions, func(c appsv1.DeploymentCondition) bool {
+			if !lo.ContainsBy(deployment.Status.Conditions, func(c appsv1.DeploymentCondition) bool {
 				return c.Type == cond.Type &&
 					c.Status == cond.Status &&
 					c.Reason == cond.Reason
-			})
+			}) {
+				t.Logf("Deployment %s/%s does not have condition %#v", deployment.Namespace, deployment.Name, cond)
+				t.Logf("Deployment %s/%s current status: %#v", deployment.Namespace, deployment.Name, deployment.Status)
+				return false
+			}
+			return true
 		})
 	}
 }
 
-func waitForOperatorDeployment(ctx context.Context, ns string, k8sClient *kubernetes.Clientset, opts ...deploymentAssertOptions) error {
-outer:
+func waitForOperatorDeployment(
+	t *testing.T,
+	ctx context.Context,
+	ns string,
+	k8sClient *kubernetes.Clientset,
+	waitTime time.Duration,
+	opts ...deploymentAssertOptions,
+) error {
+	t.Helper()
+
+	timer := time.NewTimer(waitTime)
+	defer timer.Stop()
+	pollTimer := time.NewTicker(time.Second)
+	defer pollTimer.Stop()
+
 	for {
 		select {
+		case <-timer.C:
+			logOperatorPodLogs(t, ctx, k8sClient, ns)
+			return fmt.Errorf("timed out waiting for operator deployment in namespace %s", ns)
 		case <-ctx.Done():
+			logOperatorPodLogs(t, context.Background(), k8sClient, ns)
 			return ctx.Err()
-		default:
+		case <-pollTimer.C:
 			listOpts := metav1.ListOptions{
+				// NOTE: This is a common label used by:
+				// - kustomize https://github.com/Kong/gateway-operator/blob/f98ef9358078ac100e143ab677a9ca836d0222a0/config/manager/manager.yaml#L15
+				// - helm https://github.com/Kong/charts/blob/4968b34ae7c252ab056b37cc137eaeb7a071e101/charts/gateway-operator/templates/deployment.yaml#L5-L6
+				//
+				// As long as kustomize is used for tests let's use this label selector.
 				LabelSelector: "app.kubernetes.io/name=gateway-operator",
 			}
 			deploymentList, err := k8sClient.AppsV1().Deployments(ns).List(ctx, listOpts)
@@ -307,23 +341,60 @@ outer:
 				return err
 			}
 			if len(deploymentList.Items) == 0 {
+				t.Logf("No operator deployment found in namespace %s", ns)
 				continue
 			}
 
 			deployment := &deploymentList.Items[0]
 
 			if deployment.Status.AvailableReplicas <= 0 {
+				t.Logf("Deployment %s/%s has no AvailableReplicas", ns, deployment.Name)
 				continue
 			}
 
 			for _, opt := range opts {
 				if !opt(deployment) {
-					continue outer
+					continue
 				}
 			}
 			return nil
 		}
 	}
+}
+
+func logOperatorPodLogs(t *testing.T, ctx context.Context, k8sClient *kubernetes.Clientset, ns string) {
+	t.Helper()
+
+	pods, err := k8sClient.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{
+		LabelSelector: "app.kubernetes.io/name=gateway-operator",
+	})
+	if err != nil {
+		t.Logf("Failed to list operator pods in namespace %s: %v", ns, err)
+		return
+	}
+
+	if len(pods.Items) == 0 {
+		t.Logf("No operator pod found in namespace %s", ns)
+		return
+	}
+
+	result := k8sClient.CoreV1().Pods(ns).GetLogs(pods.Items[0].Name, &corev1.PodLogOptions{
+		Container:                    "manager",
+		InsecureSkipTLSVerifyBackend: true,
+	}).Do(ctx)
+
+	if result.Error() != nil {
+		t.Logf("Failed to get logs from operator pod %s/%s: %v", ns, pods.Items[0].Name, result.Error())
+		return
+	}
+
+	b, err := result.Raw()
+	if err != nil {
+		t.Logf("Failed to read logs from operator pod %s/%s: %v", ns, pods.Items[0].Name, err)
+		return
+	}
+
+	t.Logf("Operator pod logs:\n%s", string(b))
 }
 
 func waitForOperatorWebhookEventually(t *testing.T, ctx context.Context, k8sClient *kubernetes.Clientset) func() bool {
