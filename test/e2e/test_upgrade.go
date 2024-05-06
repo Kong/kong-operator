@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/require"
@@ -76,14 +77,18 @@ func testManifestsUpgrade(
 	ctx context.Context,
 	testParams upgradeTestParams,
 ) {
-	e := CreateEnvironment(t, ctx, WithOperatorImage(testParams.fromImage))
+	const (
+		waitTime = 3 * time.Minute
+	)
+
+	e := CreateEnvironment(t, ctx, WithOperatorImage(testParams.fromImage), WithInstallViaKustomize())
 
 	kustomizationDir := PrepareKustomizeDir(t, testParams.toImage)
 	t.Logf("deploying operator %q to test cluster %q via kustomize", testParams.toImage, e.Environment.Name())
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, e.Environment.Cluster(), kustomizationDir.Tests(), "--server-side", "-v5"))
 	t.Log("waiting for operator deployment to complete")
-	require.NoError(t, waitForOperatorDeployment(ctx, e.Clients.K8sClient,
-		deploymentAssertConditions(
+	require.NoError(t, waitForOperatorDeployment(t, ctx, "kong-system", e.Clients.K8sClient, waitTime,
+		deploymentAssertConditions(t,
 			appsv1.DeploymentCondition{
 				Reason: "NewReplicaSetAvailable",
 				Status: "True",

@@ -12,6 +12,7 @@ metadata:
   namespace: system
   labels:
     control-plane: controller-manager
+    app.kubernetes.io/name: gateway-operator
 spec:
   strategy:
     type: Recreate

@@ -66,7 +66,7 @@ func TestParse(t *testing.T) {
 				"--metrics-bind-address=:18080",
 			},
 			envVars: map[string]string{
-				"GATEWAY_OPERATOR_METRIC_BIND_ADDRESS":       ":28080",
+				"GATEWAY_OPERATOR_METRICS_BIND_ADDRESS":      ":28080",
 				"GATEWAY_OPERATOR_HEALTH_PROBE_BIND_ADDRESS": ":28081",
 			},
 			expectedCfg: func() manager.Config {
