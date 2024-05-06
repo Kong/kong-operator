@@ -113,7 +113,7 @@ func WithInstallViaKustomize() TestEnvOption {
 var loggerOnce sync.Once
 
 // CreateEnvironment creates a new independent testing environment for running isolated e2e test.
-// When running with helm caller is responsible for cleaning up the environment.
+// When running with Helm, the caller is responsible for cleaning up the environment.
 func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption) TestEnvironment {
 	t.Helper()
 
