@@ -1,0 +1,66 @@
+name: Release
+description: Release checklist
+title: "Replace with your release version (e.g: 1.2.0)"
+labels:
+- area/release
+body:
+- type: dropdown
+  id: release_type
+  attributes:
+    label: Release Type
+    description: which type of release is this release?
+    options:
+    - major
+    - minor
+    - patch
+  validations:
+    required: true
+- type: checkboxes
+  id: create_release_branch
+  attributes:
+    label: "**For major/minor releases** Create `release/<MAJOR>.<MINOR>.x` Branch"
+    options:
+      - label: "Create the `release/<MAJOR>.<MINOR>.x` branch at the place where you want to branch of off main"
+- type: checkboxes
+  id: prepare_release_branch
+  attributes:
+    label: "**For all releases** Create `prepare-release/x.y.z` Branch"
+    options:
+      - label: "Ensure that you have up to date copy of `main`: `git checkout main; git pull` or a targeted release branch e.g. `release/1.2.x`: `git checkout release/1.2.x; git pull`"
+      - label: "Create the `prepare-release` branch for the version (e.g. `prepare-release/1.2.1`): `git branch -m prepare-release/1.2.1`"
+- type: checkboxes
+  id: review_changelog_and_fossa
+  attributes:
+    label: "**For all releases** Review CHANGELOG.md and FOSSA status"
+    options:
+      - label: Review carefully CHANGELOG.md. Manually reorder entries for relevance, common topic, adjust description, etc. - make it clear and easy to follow for users. Optionally headline notable changes (emojis are allowed). Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the GitHub compare link at the end. If there were any RC releases before this version, fold their changes into the final release entry.
+      - label: Resolve all licensing issues that FOSSA has detected. Go to Issues tab in FOSSA's KIC project and resolve every issue, inspecting if it's a false positive or not. [ignored.go](https://github.com/Kong/team-k8s/blob/main/fossa/ignored.go) script should be useful to look for issues that have been already resolved and reappeared due to version changes.
+      - label: Update [ignored.json](https://github.com/Kong/team-k8s/blob/main/fossa/kubernetes-ingress-controller/ignored.json) following instructions in [README](https://github.com/Kong/team-k8s/blob/main/fossa/README.md).
+      - label: Retrieve the latest license report from FOSSA and save it to LICENSES (go to Reports tab in FOSSA's KIC project, select 'plain text' format, tick 'direct dependencies' and download it).
+      - label: "Push the branch up to the remote: `git push --set-upstream origin prepare-release/x.y.z`"
+- type: checkboxes
+  id: ensure_sample_manifests
+  attributes:
+    label: "**For all releases** Ensure the sample manifests are up to date"
+    options:
+    - label: Ensure that the sample manifests in the `config/samples` directory are up to date with the latest changes (e.g., CP and DP versions). If not, update them.
+- type: checkboxes
+  id: release_pr
+  attributes:
+    label: "**For all releases** Run the release pipeline"
+    options:
+      - label: Check the [latest nightly test run](https://github.com/Kong/gateway-operator/actions/workflows/nightly.yaml) to confirm that nightly tests are succeeding.
+      - label: From [GitHub release action](https://github.com/Kong/gateway-operator/actions/workflows/release.yaml), start a new workflow run with the `release` input set to the release tag (e.g. `v1.2.0`).
+      - label: Wait for the workflow to complete.
+      - label: The CI should create a PR in the [Gateway Operator][kgo-prs] repo that syncs the release branch to the `main` branch. Merge it.
+      - label: After the PR is merged, a new release should be created automatically. Check the [releases][https://github.com/Kong/gateway-operator/releases] page. The release has to be marked manually as `latest` if this is the case.
+- type: textarea
+  id: verify_default_versions
+  attributes:
+    label: Verify default hardcoded versions
+    value: |
+      The package [internal/consts][consts-pkg] contains a list of default versions for the operator. These versions should be updated to match the new release. The example consts to look for:
+
+      - `DefaultDataPlaneTag`
+      - `DefaultControlPlaneTag`
+      - `WebhookCertificateConfigBaseImage`

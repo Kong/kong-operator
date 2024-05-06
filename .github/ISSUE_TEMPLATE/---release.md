@@ -1,26 +1,8 @@
----
-name: "🚀 Release"
-about: 'Tracking a new release of the Kong Kubernetes Gateway Operator'
-title: ''
-labels: 'area/release'
-assignees: ''
 
----
 
-## Steps
 
-This release pipeline is under continous improvement. If you encounter any problem, please refer to the [troubleshooting](#troubleshooting) section of this document.
-If the troubleshooting section does not contain the answer to the problem you encountered, please create an issue to improve either the pipeline (if the problem is a bug), or this document (if the problem is caused by human error).
 
-- [ ] Check the existing [releases][releases] and determine the next version number.
-- [ ] Check [default versions](#verify-default-hardcoded-versions) of images (see below).
-- [ ] Check the `CHANGELOG.md` and update it with the new version number. Make sure the log is up to date.
-- [ ] Ensure that all generators have run properly (e.g. `make generate manifests`) so that updates to things like CRDs are handled for the release, double check that all manifests from `config/samples/` still work as intended.
-- [ ] Ensure GitHub PAT is still valid (see [GitHub PAT](#github-pat) below).
-- [ ] From [GitHub release action][release-action], start a new workflow run with the `release` input set to the release tag (e.g. `v0.1.0`).
-- [ ] Wait for the workflow to complete.
-- [ ] The CI should create a PR in the [Gateway Operator][kgo-prs] repo that syncs the release branch to the `main` branch. Merge it.
-- [ ] After the PR is merged, a new release should be created automatically. Check the [releases][releases] page. The release has to be marked manually as `latest` if this is the case.
+
 - [ ] Update the official documentation at [github.com/Kong/docs.konghq.com][docs_repo]
   - [ ] Run post processing script for `docs/api-reference.md`, providing a tagged version of CRD reference from docs repo as an argument, e.g. `app/_src/gateway-operator/reference/custom-resources/1.2.x.md`. This will add the necessary skaffolding so that the reference is rendered correctly on docs.konghq.com.
     Example: `${GATEWAY_OPERATOR_REPO}/scripts/apidocs-gen/post-process-for-konghq.sh ~/docs.konghq.com/app/_src/gateway-operator/reference/custom-resources/1.2.x.md`
@@ -38,20 +20,6 @@ The package [internal/consts][consts-pkg] contains a list of default versions fo
 - `DefaultDataPlaneTag`
 - `DefaultControlPlaneTag`
 - `WebhookCertificateConfigBaseImage`
-
-## GitHub PAT
-
-**Next expiration date**: 2024-10-02
-
-The release workflow uses @team-k8s-bot's GitHub PAT to create a GitHub release and PRs related to it (in [KGO docs][operator-docs],
-[OperatorHub][community-operators], etc.). It's named `Kong Gateway operator release pipeline` and is stored in `PAT_GITHUB`
-GitHub repository secret to give workflows access to it. It's always generated with 1-year expiration date.
-
-If you find it's expired, make sure to generate a new one and update the `PAT_GITHUB` secret as well as its 1Pass item
-`Github team k8s bot - PAT - Kong Gateway operator release token` for redundancy.
-
-[operator-docs]: https://github.com/Kong/gateway-operator-docs
-[community-operators]: https://github.com/Kong/k8s-operatorhub-community-operators
 
 ## Troubleshooting
 
