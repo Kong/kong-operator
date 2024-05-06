@@ -22,6 +22,11 @@
 
 ## Unreleased
 
+### Added
+
+- Add `ExternalTrafficPolicy` to `DataPlane`'s `ServiceOptions`
+  [#241](https://github.com/Kong/gateway-operator/pull/241)
+
 ### Breaking Changes
 
 - Changes project layout to match `kubebuilder` `v4`. Some import paths (due to dir renames) have changed
