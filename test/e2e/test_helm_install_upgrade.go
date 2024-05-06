@@ -14,6 +14,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -52,12 +53,12 @@ func TestHelmUpgrade(t *testing.T) {
 	}
 
 	testcases := []struct {
-		name             string
-		fromVersion      string
-		toVersion        string
-		objectsToDeploy  []client.Object
-		upgradeToCurrent bool
-		assertions       []assertion
+		name                   string
+		fromVersion            string
+		toVersion              string
+		objectsToDeploy        []client.Object
+		upgradeToCurrent       bool
+		assertionsAfterUpgrade []assertion
 	}{
 		// NOTE: We do not support versions earlier than 1.2 with the helm chart.
 		// The initial version of the chart contained CRDs from KGO 1.2. which
@@ -105,18 +106,11 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 			},
-			assertions: []assertion{
+			assertionsAfterUpgrade: []assertion{
 				{
 					Name: "gateway is programmed",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gws, err := cl.GatewayClient.GatewayV1().Gateways(e.Namespace.Name).List(ctx, metav1.ListOptions{
-							LabelSelector: "gw-upgrade-120-123=true",
-						})
-						require.NoError(c, err)
-						require.Len(c, gws.Items, 1)
-						gw := &gws.Items[0]
-						assert.True(c, gateway.IsProgrammed(gw))
-						assert.True(c, gateway.AreListenersProgrammed(gw))
+						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-120-123=true")(ctx, c, cl.MgrClient)
 					},
 				},
 			},
@@ -165,18 +159,11 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 			},
-			assertions: []assertion{
+			assertionsAfterUpgrade: []assertion{
 				{
 					Name: "gateway is programmed",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gws, err := cl.GatewayClient.GatewayV1().Gateways(e.Namespace.Name).List(ctx, metav1.ListOptions{
-							LabelSelector: "gw-upgrade-123-current=true",
-						})
-						require.NoError(c, err)
-						require.Len(c, gws.Items, 1)
-						gw := &gws.Items[0]
-						assert.True(c, gateway.IsProgrammed(gw))
-						assert.True(c, gateway.AreListenersProgrammed(gw))
+						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-123-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 			},
@@ -223,18 +210,11 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 			},
-			assertions: []assertion{
+			assertionsAfterUpgrade: []assertion{
 				{
 					Name: "gateway is programmed",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gws, err := cl.GatewayClient.GatewayV1().Gateways(e.Namespace.Name).List(ctx, metav1.ListOptions{
-							LabelSelector: "gw-upgrade-nightly-to-current=true",
-						})
-						require.NoError(c, err)
-						require.Len(c, gws.Items, 1)
-						gw := &gws.Items[0]
-						assert.True(c, gateway.IsProgrammed(gw))
-						assert.True(c, gateway.AreListenersProgrammed(gw))
+						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 			},
@@ -327,7 +307,7 @@ func TestHelmUpgrade(t *testing.T) {
 			),
 			)
 
-			for _, assertion := range tc.assertions {
+			for _, assertion := range tc.assertionsAfterUpgrade {
 				t.Run(assertion.Name, func(t *testing.T) {
 					require.EventuallyWithT(t, func(c *assert.CollectT) {
 						assertion.Func(c, e.Clients)
@@ -401,5 +381,32 @@ func baseGatewayConfigurationSpec() operatorv1beta1.GatewayConfigurationSpec {
 				},
 			},
 		},
+	}
+}
+
+// gatewayAndItsListenersAreProgrammedAssertion returns a predicate that checks
+// if the Gateway and its listeners are programmed.
+func gatewayAndItsListenersAreProgrammedAssertion(labelSelector string) func(context.Context, *assert.CollectT, client.Client) {
+	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+		var gws gatewayv1.GatewayList
+		lReq, err := labels.ParseToRequirements(labelSelector)
+		if err != nil {
+			c.Errorf("failed to parse label selector %q: %v", labelSelector, err)
+			c.FailNow()
+		}
+		lSel := labels.NewSelector()
+		for _, req := range lReq {
+			lSel = lSel.Add(req)
+		}
+
+		require.NoError(c,
+			cl.List(ctx, &gws, &client.ListOptions{
+				LabelSelector: lSel,
+			}),
+		)
+		require.Len(c, gws.Items, 1)
+		gw := &gws.Items[0]
+		assert.True(c, gateway.IsProgrammed(gw))
+		assert.True(c, gateway.AreListenersProgrammed(gw))
 	}
 }
