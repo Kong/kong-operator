@@ -91,7 +91,11 @@ type TestEnvironment struct {
 type TestEnvOption func(opt *testEnvOptions)
 
 type testEnvOptions struct {
-	Image               string
+	Image string
+	// InstallViaKustomize makes the test environment install the operator and all the
+	// dependencies via kustomize.
+	// NOTE: when this is false the caller is responsible for installing the operator
+	// in the test environment.
 	InstallViaKustomize bool
 }
 
