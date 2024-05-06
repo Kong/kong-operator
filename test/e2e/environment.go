@@ -94,8 +94,8 @@ type testEnvOptions struct {
 	Image string
 	// InstallViaKustomize makes the test environment install the operator and all the
 	// dependencies via kustomize.
-	// NOTE: when this is false the caller is responsible for installing the operator
-	// in the test environment.
+	// NOTE: when this is false the caller is responsible for installing (and cleaning up)
+	// the operator in the test environment.
 	InstallViaKustomize bool
 }
 
@@ -185,8 +185,6 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 	t.Cleanup(func() {
 		if opt.InstallViaKustomize {
 			cleanupEnvironment(t, context.Background(), env, kustomizeDir.Tests())
-		} else { //nolint:revive,staticcheck
-			// TODO: using helm for installation, don't clean up because we do not know the release name.
 		}
 	})
 
