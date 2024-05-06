@@ -122,6 +122,8 @@ func TestHelmUpgrade(t *testing.T) {
 			},
 		},
 		{
+			// TODO: use renovate to bump the version in these 2 lines.
+			// https://github.com/Kong/gateway-operator/issues/121
 			name:             "upgrade from 1.2.3 to current",
 			fromVersion:      "1.2.3",
 			upgradeToCurrent: true,
