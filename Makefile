@@ -242,12 +242,15 @@ check.rbacs: kic-role-generator
 CONTROLLER_GEN_CRD_OPTIONS ?= "+crd:generateEmbeddedObjectMeta=true"
 CONTROLLER_GEN_PATHS_RAW := ./pkg/utils/kubernetes/resources/clusterroles/ ./pkg/utils/kubernetes/reduce/ ./controller/... ./$(API_DIR)/...
 CONTROLLER_GEN_PATHS := $(patsubst %,%;,$(strip $(CONTROLLER_GEN_PATHS_RAW)))
+CONFIG_CRD_PATH = config/crd
+CONFIG_CRD_BASE_PATH = $(CONFIG_CRD_PATH)/bases
 
 .PHONY: manifests
 manifests: controller-gen manifests.versions ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" rbac:roleName=manager-role output:rbac:dir=config/rbac/role
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" webhook
-	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" $(CONTROLLER_GEN_CRD_OPTIONS) +output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" $(CONTROLLER_GEN_CRD_OPTIONS) +output:crd:artifacts:config=$(CONFIG_CRD_BASE_PATH)
+	cp $(CONFIG_CRD_BASE_PATH)/gateway-operator.konghq.com_dataplanes.yaml $(CONFIG_CRD_PATH)/dataplane/
 
 # manifests.versions ensures that image versions are set in the manifests according to the current version.
 .PHONY: manifests.versions
