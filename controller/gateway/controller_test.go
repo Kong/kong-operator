@@ -181,7 +181,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 
 				var currentGateway gwtypes.Gateway
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
-				require.False(t, k8sutils.IsReady(gatewayConditionsAndListenersAware(&currentGateway)))
+				require.False(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found := k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionFalse)
@@ -200,7 +200,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err, "reconciliation returned an error")
 				// the dataplane service now has a clusterIP assigned, the gateway must be ready
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
-				require.True(t, k8sutils.IsReady(gatewayConditionsAndListenersAware(&currentGateway)))
+				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
@@ -234,7 +234,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				_, err = reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
-				require.True(t, k8sutils.IsReady(gatewayConditionsAndListenersAware(&currentGateway)))
+				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
@@ -267,7 +267,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				_, err = reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
-				require.True(t, k8sutils.IsReady(gatewayConditionsAndListenersAware(&currentGateway)))
+				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
@@ -289,7 +289,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
 				// the dataplane service has no clusterIP assigned, the gateway must be not ready
 				// and no addresses must be assigned
-				require.False(t, k8sutils.IsReady(gatewayConditionsAndListenersAware(&currentGateway)))
+				require.False(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionFalse)

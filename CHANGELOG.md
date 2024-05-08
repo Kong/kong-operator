@@ -28,6 +28,12 @@
   `apis` -> `api` and `controllers` -> `controller`.
   [#84](https://github.com/Kong/gateway-operator/pull/84)
 
+### Changes
+
+- `Gateway` do not have their `Ready` status condition set anymore.
+  This aligns with Gateway API and its conformance test suite.
+  [#246](https://github.com/Kong/gateway-operator/pull/246)
+
 ### Fixes
 
 - Fix enforcing up to date `ControlPlane`'s `ValidatingWebhookConfiguration`
