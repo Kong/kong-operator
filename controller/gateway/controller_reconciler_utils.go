@@ -535,12 +535,11 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 	}
 }
 
-// initReadyAndProgrammed initializes the gateway Programmed and Ready conditions
-// by setting the underlying Gateway Programmed and Ready status to false.
-// Furthermore, it sets the supportedKinds and initializes the readiness to false with reason
-// Pending for each Gateway listener.
-func (g *gatewayConditionsAndListenersAwareT) initReadyAndProgrammed() {
-	k8sutils.InitReady(g)
+// initProgrammedAndListenersStatus initializes the gateway Programmed condition
+// by setting the underlying Gateway Programmed status to false.
+// It also sets the listeners Programmed condition by setting the underlying
+// Listener Programmed status to false.
+func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus() {
 	k8sutils.InitProgrammed(g)
 	for i := range g.Spec.Listeners {
 		lStatus := listenerConditionsAware(&g.Status.Listeners[i])
@@ -634,12 +633,11 @@ func (g *gatewayConditionsAndListenersAwareT) setConflicted() {
 	}
 }
 
-// setReadyAndProgrammed sets the gateway Programmed and Ready conditions by
-// setting the underlying Gateway Programmed and Ready status to true.
-// Furthermore, it sets the supportedKinds and initializes the readiness to true with reason
-// Ready or false with reason Invalid for each Gateway listener.
-func (g *gatewayConditionsAndListenersAwareT) setReadyAndProgrammed() {
-	k8sutils.SetReady(g)
+// setProgrammedAndListenersConditions sets the gateway Programmed condition by setting the underlying
+// Gateway Programmed status to true.
+// It also sets the listeners Programmed condition by setting the underlying
+// Listener Programmed status to true.
+func (g *gatewayConditionsAndListenersAwareT) setProgrammedAndListenersConditions() {
 	k8sutils.SetProgrammed(g)
 
 	for i := range g.Spec.Listeners {
