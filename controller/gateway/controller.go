@@ -147,7 +147,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	gwConditionAware.initListenersStatus()
 	gwConditionAware.setConflicted()
 	gwConditionAware.setAccepted()
-	gwConditionAware.initReadyAndProgrammed()
+	gwConditionAware.initProgrammedAndListenersStatus()
 	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -340,7 +340,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			gatewayConditionsAndListenersAware(&gateway))
 	}
 
-	gwConditionAware.setReadyAndProgrammed()
+	gwConditionAware.setProgrammedAndListenersConditions()
 	res, err := patch.ApplyGatewayStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
 	if err != nil {
 		return ctrl.Result{}, err
