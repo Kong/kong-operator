@@ -135,6 +135,11 @@ func (r *Reconciler) cleanup(
 }
 
 func handleGatewayFinalizerPatchOrUpdateError(err error, gateway *gatewayv1.Gateway, logger logr.Logger) (ctrl.Result, error) {
+	// Short cirtcuit.
+	if err == nil {
+		return ctrl.Result{}, nil
+	}
+
 	// If the Gateway is not found, then requeue without an error.
 	if k8serrors.IsNotFound(err) {
 		return ctrl.Result{
@@ -153,8 +158,7 @@ func handleGatewayFinalizerPatchOrUpdateError(err error, gateway *gatewayv1.Gate
 			RequeueAfter: requeueWithoutBackoff,
 		}, nil
 	}
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	return ctrl.Result{}, nil
+
+	// Return the error as is.
+	return ctrl.Result{}, err
 }
