@@ -319,6 +319,7 @@ jobs:
       env:
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: integration-tests-provision-dataplane-fail.xml
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: upload diagnostics
       if: always()
