@@ -3,8 +3,6 @@ package gateway
 import (
 	"context"
 	"errors"
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/samber/lo"
@@ -13,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -21,20 +18,21 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
+	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
-func init() {
-	if err := gatewayv1.Install(scheme.Scheme); err != nil {
-		fmt.Println("error while adding gatewayv1 scheme")
-		os.Exit(1)
-	}
-	if err := gatewayv1beta1.Install(scheme.Scheme); err != nil {
-		fmt.Println("error while adding gatewayv1 scheme")
-		os.Exit(1)
-	}
-}
+// func init() {
+// 	if err := gatewayv1.Install(scheme.Scheme); err != nil {
+// 		fmt.Println("error while adding gatewayv1 scheme")
+// 		os.Exit(1)
+// 	}
+// 	if err := gatewayv1beta1.Install(scheme.Scheme); err != nil {
+// 		fmt.Println("error while adding gatewayv1 scheme")
+// 		os.Exit(1)
+// 	}
+// }
 
 func TestParseKongProxyListenEnv(t *testing.T) {
 	testcases := []struct {
@@ -528,7 +526,7 @@ func TestSetAcceptedOnGateway(t *testing.T) {
 func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 	testCases := []struct {
 		name          string
-		listeners     []gatewayv1.Listener
+		listeners     []gwtypes.Listener
 		expectedPorts []operatorv1beta1.DataPlaneServicePort
 		expectedError error
 	}{
@@ -537,10 +535,10 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 		},
 		{
 			name: "only valid listeners",
-			listeners: []gatewayv1.Listener{
+			listeners: []gwtypes.Listener{
 				{
 					Name:     "http",
-					Protocol: gatewayv1.HTTPProtocolType,
+					Protocol: gwtypes.HTTPProtocolType,
 					Port:     gatewayv1.PortNumber(80),
 				},
 				{
@@ -564,10 +562,10 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 		},
 		{
 			name: "some invalid listeners",
-			listeners: []gatewayv1.Listener{
+			listeners: []gwtypes.Listener{
 				{
 					Name:     "http",
-					Protocol: gatewayv1.HTTPProtocolType,
+					Protocol: gwtypes.HTTPProtocolType,
 					Port:     gatewayv1.PortNumber(80),
 				},
 				{
@@ -609,9 +607,9 @@ func TestIsSecretCrossReferenceGranted(t *testing.T) {
 		return rg
 	}
 
-	badSecretName := gatewayv1.ObjectName("wrong-secret")
-	emptySecretName := gatewayv1.ObjectName("")
-	goodSecretName := gatewayv1.ObjectName("good-secret")
+	badSecretName := gwtypes.ObjectName("wrong-secret")
+	emptySecretName := gwtypes.ObjectName("")
+	goodSecretName := gwtypes.ObjectName("good-secret")
 	referenceGrant := gatewayv1beta1.ReferenceGrant{
 		Spec: gatewayv1beta1.ReferenceGrantSpec{
 			From: []gatewayv1beta1.ReferenceGrantFrom{
@@ -730,7 +728,7 @@ func TestGatewayStatusNeedsUpdate(t *testing.T) {
 	}
 
 	listenerStatus := gatewayv1.ListenerStatus{
-		SupportedKinds: []gatewayv1.RouteGroupKind{
+		SupportedKinds: []gwtypes.RouteGroupKind{
 			{
 				Kind: "HTTPRoute",
 			},
@@ -820,7 +818,7 @@ func TestGatewayStatusNeedsUpdate(t *testing.T) {
 			name:        "update needed, different supportedkinds",
 			needsUpdate: true,
 			oldGateway: gatewayConditionsAndListenersAware(customizeGateway(gateway, func(g *gatewayv1.Gateway) {
-				g.Status.Listeners[0].SupportedKinds = []gatewayv1.RouteGroupKind{}
+				g.Status.Listeners[0].SupportedKinds = []gwtypes.RouteGroupKind{}
 			})),
 			newGateway: gatewayConditionsAndListenersAware(&gateway),
 		},
@@ -873,20 +871,20 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 	testCases := []struct {
 		name                          string
 		gatewayNamespace              string
-		listener                      gatewayv1.Listener
+		listener                      gwtypes.Listener
 		referenceGrants               []client.Object
 		secrets                       []client.Object
-		expectedSupportedKinds        []gatewayv1.RouteGroupKind
+		expectedSupportedKinds        []gwtypes.RouteGroupKind
 		expectedResolvedRefsCondition metav1.Condition
 	}{
 		{
 			name: "no tls, HTTP protocol, no allowed routes",
-			listener: gatewayv1.Listener{
-				Protocol: gatewayv1.HTTPProtocolType,
+			listener: gwtypes.Listener{
+				Protocol: gwtypes.HTTPProtocolType,
 			},
-			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				{
-					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
 				},
 			},
@@ -900,10 +898,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 		},
 		{
 			name: "no tls, UDP protocol, no allowed routes",
-			listener: gatewayv1.Listener{
+			listener: gwtypes.Listener{
 				Protocol: gatewayv1.UDPProtocolType,
 			},
-			expectedSupportedKinds: []gatewayv1.RouteGroupKind{},
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{},
 			expectedResolvedRefsCondition: metav1.Condition{
 				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
 				Status:             metav1.ConditionTrue,
@@ -914,24 +912,24 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 		},
 		{
 			name: "no tls, HTTP protocol, HTTP and UDP routes",
-			listener: gatewayv1.Listener{
-				Protocol: gatewayv1.HTTPProtocolType,
-				AllowedRoutes: &gatewayv1.AllowedRoutes{
-					Kinds: []gatewayv1.RouteGroupKind{
+			listener: gwtypes.Listener{
+				Protocol: gwtypes.HTTPProtocolType,
+				AllowedRoutes: &gwtypes.AllowedRoutes{
+					Kinds: []gwtypes.RouteGroupKind{
 						{
-							Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+							Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 							Kind:  "HTTPRoute",
 						},
 						{
-							Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+							Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 							Kind:  "UDPRoute",
 						},
 					},
 				},
 			},
-			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				{
-					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
 				},
 			},
@@ -946,7 +944,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 		{
 			name:             "tls well-formed, no cross-namespace reference",
 			gatewayNamespace: "default",
-			listener: gatewayv1.Listener{
+			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.GatewayTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
@@ -965,9 +963,9 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 					},
 				},
 			},
-			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				{
-					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
 				},
 			},
@@ -982,7 +980,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 		{
 			name:             "tls with passthrough, HTTPS protocol, no allowed routes",
 			gatewayNamespace: "default",
-			listener: gatewayv1.Listener{
+			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.GatewayTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModePassthrough),
@@ -1001,9 +999,9 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 					},
 				},
 			},
-			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				{
-					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
 				},
 			},
@@ -1018,7 +1016,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 		{
 			name:             "tls bad-formed, multiple TLS secrets no cross-namespace reference",
 			gatewayNamespace: "default",
-			listener: gatewayv1.Listener{
+			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.GatewayTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
@@ -1032,9 +1030,9 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 					},
 				},
 			},
-			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				{
-					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
 				},
 			},
@@ -1049,7 +1047,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 		{
 			name:             "tls bad-formed, no tls secret, no cross-namespace reference",
 			gatewayNamespace: "default",
-			listener: gatewayv1.Listener{
+			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.GatewayTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
@@ -1060,9 +1058,9 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 					},
 				},
 			},
-			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				{
-					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
 				},
 			},
@@ -1077,22 +1075,22 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 		{
 			name:             "tls bad-formed, bad group and kind of tls secret, no cross-namespace reference",
 			gatewayNamespace: "default",
-			listener: gatewayv1.Listener{
+			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.GatewayTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
 							Name:  "test-secret",
-							Group: (*gatewayv1.Group)(lo.ToPtr("bad-group")),
-							Kind:  (*gatewayv1.Kind)(lo.ToPtr("bad-kind")),
+							Group: (*gwtypes.Group)(lo.ToPtr("bad-group")),
+							Kind:  (*gwtypes.Kind)(lo.ToPtr("bad-kind")),
 						},
 					},
 				},
 			},
-			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				{
-					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
 				},
 			},
@@ -1107,7 +1105,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 		{
 			name:             "tls well-formed, with allowed cross-namespace reference",
 			gatewayNamespace: "default",
-			listener: gatewayv1.Listener{
+			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.GatewayTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
@@ -1144,15 +1142,15 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 							{
 								Group: "",
 								Kind:  "Secret",
-								Name:  (*gatewayv1.ObjectName)(lo.ToPtr("test-secret")),
+								Name:  (*gwtypes.ObjectName)(lo.ToPtr("test-secret")),
 							},
 						},
 					},
 				},
 			},
-			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				{
-					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
 				},
 			},
@@ -1167,7 +1165,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 		{
 			name:             "tls well-formed, with unallowed cross-namespace reference",
 			gatewayNamespace: "default",
-			listener: gatewayv1.Listener{
+			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.GatewayTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
@@ -1187,9 +1185,9 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 					},
 				},
 			},
-			expectedSupportedKinds: []gatewayv1.RouteGroupKind{
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				{
-					Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
 				},
 			},
@@ -1205,10 +1203,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 
 	for _, tc := range testCases {
 		tc := tc
-		ctx := context.TODO()
+		ctx := context.Background()
 		client := fakectrlruntimeclient.
 			NewClientBuilder().
-			WithScheme(scheme.Scheme).
+			WithScheme(scheme.Get()).
 			WithObjects(tc.referenceGrants...).
 			WithObjects(tc.secrets...).
 			Build()
@@ -1225,6 +1223,442 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			// force the transitionTimes to be equal to properly assert the conditions are equal
 			resolvedRefsCondition.LastTransitionTime = tc.expectedResolvedRefsCondition.LastTransitionTime
 			assert.Equal(t, tc.expectedResolvedRefsCondition, resolvedRefsCondition)
+		})
+	}
+}
+
+func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
+	testCases := []struct {
+		Name           string
+		Gateway        gwtypes.Gateway
+		Objects        []client.Object
+		ExpectedRoutes []int32
+		ExpectedError  []error
+	}{
+		{
+			Name: "no routes",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: lo.ToPtr(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{0},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "1 HTTPRoute in the same namespace as the Gateway",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: lo.ToPtr(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "1 HTTPRoute in a different namespace than the Gateway",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: lo.ToPtr(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "route-1",
+						Namespace: "test-namespace-2",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{0},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "1 HTTPRoute in a different namespace than the Gateway but allowed through 'All' namespace selector",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: lo.ToPtr(gwtypes.NamespacesFromAll),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "route-1",
+						Namespace: "test-namespace-2",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "2 HTTPRoutes, 1 matching the Gateway's namespace and 1 not",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: lo.ToPtr(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "route-1",
+						Namespace: "test-namespace-2",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "route-2",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "2 HTTPRoutes, both matching due to 'All' selector used",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: lo.ToPtr(gwtypes.NamespacesFromAll),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "route-1",
+						Namespace: "test-namespace-2",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "route-2",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{2},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "1 HTTPRoute, not matching due to namespace label selector not matching",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: lo.ToPtr(gwtypes.NamespacesFromSelector),
+									Selector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"kubernetes.io/metadata.name": "test-namespace-non-existing",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{0},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "1 HTTPRoute, matching thanks to namespace label selector matching",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: lo.ToPtr(gwtypes.NamespacesFromSelector),
+									Selector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"kubernetes.io/metadata.name": "test-namespace-2",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-namespace-2",
+						Labels: map[string]string{
+							"kubernetes.io/metadata.name": "test-namespace-2",
+						},
+					},
+				},
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "route-1",
+						Namespace: "test-namespace-2",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			client := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(&tc.Gateway).
+				WithObjects(tc.Objects...).
+				Build()
+
+			ctx := context.Background()
+			for i, listener := range tc.Gateway.Spec.Listeners {
+				routes, err := countAttachedRoutesForGatewayListener(ctx, &tc.Gateway, listener, client)
+				assert.Equal(t, tc.ExpectedRoutes[i], routes, "#%d", i)
+				assert.Equal(t, tc.ExpectedError[i], err, "#%d", i)
+			}
 		})
 	}
 }

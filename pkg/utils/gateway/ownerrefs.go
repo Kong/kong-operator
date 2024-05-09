@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/samber/lo"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -85,6 +86,45 @@ func ListControlPlanesForGateway(
 	}
 
 	return controlplanes, nil
+}
+
+// ListHTTPRoutesForGateway is a helper function which returns a list of HTTPRoutes
+// that have the provided Gateway set as parent in their status.
+func ListHTTPRoutesForGateway(
+	ctx context.Context,
+	c client.Client,
+	gateway *gwtypes.Gateway,
+	opts ...client.ListOption,
+) ([]gwtypes.HTTPRoute, error) {
+	if gateway.Namespace == "" {
+		return nil, fmt.Errorf("can't list HTTPRoutes for gateway: gateway resource was missing namespace")
+	}
+
+	var httpRoutesList gwtypes.HTTPRouteList
+	err := c.List(
+		ctx,
+		&httpRoutesList,
+		opts...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("can't list HTTPRoutes for gateway: %w", err)
+	}
+
+	httpRoutes := make([]gwtypes.HTTPRoute, 0)
+	for _, httpRoute := range httpRoutesList.Items {
+		if !lo.ContainsBy(httpRoute.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
+			gwGVK := gateway.GroupVersionKind()
+			return (parentRef.Group != nil && string(*parentRef.Group) == gwGVK.Group) &&
+				(parentRef.Kind != nil && string(*parentRef.Kind) == gwGVK.Kind) &&
+				string(parentRef.Name) == gateway.Name
+		}) {
+			continue
+		}
+
+		httpRoutes = append(httpRoutes, httpRoute)
+	}
+
+	return httpRoutes, nil
 }
 
 // GetDataPlaneForControlPlane retrieves the DataPlane object referenced by a ControlPlane

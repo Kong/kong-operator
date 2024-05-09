@@ -222,6 +222,89 @@ func (r *Reconciler) listReferenceGrantsForGateway(ctx context.Context, obj clie
 	return recs
 }
 
+// listManagedGatewaysInNamespace is a watch predicate which finds all Gateways
+// in provided namespace.
+func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := log.FromContext(ctx)
+
+	ns, ok := obj.(*corev1.Namespace)
+	if !ok {
+		logger.Error(
+			fmt.Errorf("unexpected object type"),
+			"Namespace watch predicate received unexpected object type",
+			"expected", "*corev1.Namespace", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	gateways := &gatewayv1.GatewayList{}
+	if err := r.Client.List(ctx, gateways, &client.ListOptions{
+		Namespace: ns.Name,
+	}); err != nil {
+		logger.Error(err, "Failed to list gateways in watch", "namespace", ns.Name)
+		return nil
+	}
+	recs := make([]reconcile.Request, 0, len(gateways.Items))
+	for _, gateway := range gateways.Items {
+		objKey := client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}
+
+		var gatewaClass gatewayv1.GatewayClass
+		if err := r.Client.Get(ctx, objKey, &gatewaClass); err != nil {
+			logger.Error(
+				fmt.Errorf("failed to get GatewayClass"),
+				"failed to Get Gateway's GatewayClass",
+				"gatewayClass", objKey.Name, "gateway", gateway.Name, "namespace", gateway.Namespace,
+			)
+			continue
+		}
+		if string(gatewaClass.Spec.ControllerName) == vars.ControllerName() {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: gateway.Namespace,
+					Name:      gateway.Name,
+				},
+			})
+		}
+	}
+	return recs
+}
+
+// listHTTPRoutesForGateway is a watch predicate which finds all Gateways mentioned
+// in HTTPRoutes' Parents field.
+func (r *Reconciler) listHTTPRoutesForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := log.FromContext(ctx)
+
+	httpRoute, ok := obj.(*gatewayv1beta1.HTTPRoute)
+	if !ok {
+		logger.Error(
+			fmt.Errorf("unexpected object type"),
+			"HTTPRoute watch predicate received unexpected object type",
+			"expected", "*gatewayapi.HTTPRoute", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	gateways := &gatewayv1.GatewayList{}
+	if err := r.Client.List(ctx, gateways); err != nil {
+		logger.Error(err, "Failed to list gateways in watch", "HTTPRoute", httpRoute.Name)
+		return nil
+	}
+	recs := []reconcile.Request{}
+	for _, gateway := range gateways.Items {
+		for _, parentRef := range httpRoute.Spec.ParentRefs {
+			if parentRef.Group != nil && string(*parentRef.Group) == gatewayv1.GroupName &&
+				parentRef.Kind != nil && string(*parentRef.Kind) == "Gateway" &&
+				string(parentRef.Name) == gateway.Name {
+				recs = append(recs, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: gateway.Namespace,
+						Name:      gateway.Name,
+					},
+				})
+			}
+		}
+	}
+	return recs
+}
+
 // -----------------------------------------------------------------------------
 // GatewayReconciler - Config Defaults
 // -----------------------------------------------------------------------------

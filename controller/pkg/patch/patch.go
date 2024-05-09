@@ -68,7 +68,8 @@ func ApplyGatewayStatusPatchIfNotEmpty(ctx context.Context,
 	cl client.Client,
 	logger logr.Logger,
 	existingGateway *gatewayv1.Gateway,
-	oldExistingGateway *gatewayv1.Gateway) (res op.CreatedUpdatedOrNoop, err error) {
+	oldExistingGateway *gatewayv1.Gateway,
+) (res op.CreatedUpdatedOrNoop, err error) {
 	// Check if the patch to be applied is empty.
 	patch := client.MergeFrom(oldExistingGateway)
 	b, err := patch.Data(existingGateway)
@@ -81,7 +82,7 @@ func ApplyGatewayStatusPatchIfNotEmpty(ctx context.Context,
 		return op.Noop, nil
 	}
 
-	if err := cl.Status().Patch(ctx, existingGateway, client.MergeFrom(oldExistingGateway)); err != nil {
+	if err := cl.Status().Patch(ctx, existingGateway, patch); err != nil {
 		return op.Noop, fmt.Errorf("failed patching gateway %s/%s: %w", existingGateway.Namespace, existingGateway.Name, err)
 	}
 	log.Debug(logger, "Resource modified", existingGateway)

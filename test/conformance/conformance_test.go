@@ -24,6 +24,7 @@ var skippedTests = []string{
 	// gateway
 	tests.GatewayInvalidTLSConfiguration.ShortName,
 	tests.GatewayModifyListeners.ShortName,
+	// TODO: https://github.com/Kong/gateway-operator/issues/56
 	tests.GatewayWithAttachedRoutes.ShortName,
 
 	// httproute
