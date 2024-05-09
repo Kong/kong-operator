@@ -228,10 +228,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	log.Trace(logger, "validating ControlPlane resource conditions", cp)
 	if r.ensureIsMarkedScheduled(cp) {
-		err := r.patchStatus(ctx, logger, cp)
+		res, err := r.patchStatus(ctx, logger, cp)
 		if err != nil {
+			log.Debug(logger, "unable to update ControlPlane resource", cp, "error", err)
+			return res, err
+		}
+		if res.Requeue {
 			log.Debug(logger, "unable to update ControlPlane resource", cp)
-			return ctrl.Result{}, err
+			return res, nil
 		}
 
 		log.Debug(logger, "ControlPlane resource now marked as scheduled", cp)
@@ -401,11 +405,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if res != op.Noop {
 		if !dataplaneIsSet {
 			log.Debug(logger, "DataPlane not set, deployment for ControlPlane has been scaled down to 0 replicas", cp)
-			err := r.patchStatus(ctx, logger, cp)
+			res, err := r.patchStatus(ctx, logger, cp)
 			if err != nil {
-				log.Debug(logger, "unable to reconcile ControlPlane status", cp)
+				log.Debug(logger, "unable to reconcile ControlPlane status", cp, "error", err)
+				return ctrl.Result{}, err
 			}
-			return ctrl.Result{}, err
+			if res.Requeue {
+				log.Debug(logger, "unable to update ControlPlane resource", cp)
+				return res, nil
+			}
+			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
@@ -418,15 +427,30 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			k8sutils.NewCondition(k8sutils.ReadyType, metav1.ConditionFalse, k8sutils.WaitingToBecomeReadyReason, k8sutils.WaitingToBecomeReadyMessage),
 			cp,
 		)
-		return ctrl.Result{}, r.patchStatus(ctx, logger, cp)
+
+		res, err := r.patchStatus(ctx, logger, cp)
+		if err != nil {
+			log.Debug(logger, "unable to patch ControlPlane status", cp, "error", err)
+			return ctrl.Result{}, err
+		}
+		if res.Requeue {
+			log.Debug(logger, "unable to patch ControlPlane status", cp)
+			return res, nil
+		}
+		return ctrl.Result{}, nil
 	}
 
 	markAsProvisioned(cp)
 	k8sutils.SetReady(cp)
 
-	if err = r.patchStatus(ctx, logger, cp); err != nil {
-		log.Debug(logger, "unable to reconcile the ControlPlane resource", cp)
+	result, err := r.patchStatus(ctx, logger, cp)
+	if err != nil {
+		log.Debug(logger, "unable to patch ControlPlane status", cp, "error", err)
 		return ctrl.Result{}, err
+	}
+	if result.Requeue {
+		log.Debug(logger, "unable to patch ControlPlane status", cp)
+		return result, nil
 	}
 
 	log.Debug(logger, "reconciliation complete for ControlPlane resource", cp)
@@ -444,18 +468,25 @@ func validateControlPlane(controlPlane *operatorv1beta1.ControlPlane, devMode bo
 }
 
 // patchStatus Patches the resource status only when there are changes in the Conditions
-func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, updated *operatorv1beta1.ControlPlane) error {
+func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, updated *operatorv1beta1.ControlPlane) (ctrl.Result, error) {
 	current := &operatorv1beta1.ControlPlane{}
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)
 	if err != nil && !k8serrors.IsNotFound(err) {
-		return err
+		return ctrl.Result{}, err
 	}
 
 	if k8sutils.NeedsUpdate(current, updated) {
 		log.Debug(logger, "patching ControlPlane status", updated, "status", updated.Status)
-		return r.Client.Status().Patch(ctx, updated, client.MergeFrom(current))
+		if err := r.Client.Status().Patch(ctx, updated, client.MergeFrom(current)); err != nil {
+			if k8serrors.IsConflict(err) {
+				log.Debug(logger, "conflict found when updating ControlPlane, retrying", current)
+				return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane's status : %w", err)
+		}
+		return ctrl.Result{}, nil
 	}
 
-	return nil
+	return ctrl.Result{}, nil
 }
