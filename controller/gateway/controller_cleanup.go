@@ -20,7 +20,7 @@ import (
 // Reconciler - Cleanup
 // ----------------------------------------------------------------------------
 
-const requeueWithoutBackoff = time.Millisecond * 200
+const requeueWithoutBackoff = 200 * time.Millisecond
 
 // cleanup determines whether cleanup is needed/underway for a Gateway and
 // performs all necessary cleanup steps. Namely, it cleans up resources
