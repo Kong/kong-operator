@@ -62,15 +62,15 @@ YQ_VERSION = 4.43.1
 YQ = $(PROJECT_DIR)/bin/installs/yq/$(YQ_VERSION)/bin/yq
 .PHONY: yq
 yq: mise # Download yq locally if necessary.
-	$(MISE) plugin install --yes -q yq
-	$(MISE) install -q yq@$(YQ_VERSION)
+	@$(MISE) plugin install --yes -q yq
+	@$(MISE) install -q yq@$(YQ_VERSION)
 
 CONTROLLER_GEN_VERSION = $(shell $(YQ) -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/kube-controller-tools/$(CONTROLLER_GEN_VERSION)/bin/controller-gen
 .PHONY: controller-gen
 controller-gen: mise yq ## Download controller-gen locally if necessary.
-	$(MISE) plugin install --yes -q kube-controller-tools
-	$(MISE) install -q kube-controller-tools@$(CONTROLLER_GEN_VERSION)
+	@$(MISE) plugin install --yes -q kube-controller-tools
+	@$(MISE) install -q kube-controller-tools@$(CONTROLLER_GEN_VERSION)
 
 KUSTOMIZE_VERSION = $(shell $(YQ) -r '.kustomize' < $(TOOLS_VERSIONS_FILE))
 KUSTOMIZE = $(PROJECT_DIR)/bin/installs/kustomize/$(KUSTOMIZE_VERSION)/bin/kustomize

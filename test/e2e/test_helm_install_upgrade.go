@@ -108,9 +108,15 @@ func TestHelmUpgrade(t *testing.T) {
 			},
 			assertionsAfterUpgrade: []assertion{
 				{
-					Name: "gateway is programmed",
+					Name: "Gateway is programmed",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-120-123=true")(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "DataPlane deployment is not patched after operator upgrade",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-120-123=true")(ctx, c, cl.MgrClient)
 					},
 				},
 			},
@@ -161,9 +167,15 @@ func TestHelmUpgrade(t *testing.T) {
 			},
 			assertionsAfterUpgrade: []assertion{
 				{
-					Name: "gateway is programmed",
+					Name: "Gateway is programmed",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-123-current=true")(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "DataPlane deployment is not patched after operator upgrade",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-123-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 			},
@@ -212,9 +224,15 @@ func TestHelmUpgrade(t *testing.T) {
 			},
 			assertionsAfterUpgrade: []assertion{
 				{
-					Name: "gateway is programmed",
+					Name: "Gateway is programmed",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "DataPlane deployment is not patched after operator upgrade",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 			},
@@ -386,12 +404,12 @@ func baseGatewayConfigurationSpec() operatorv1beta1.GatewayConfigurationSpec {
 
 // gatewayAndItsListenersAreProgrammedAssertion returns a predicate that checks
 // if the Gateway and its listeners are programmed.
-func gatewayAndItsListenersAreProgrammedAssertion(labelSelector string) func(context.Context, *assert.CollectT, client.Client) {
+func gatewayAndItsListenersAreProgrammedAssertion(gatewayLabelSelector string) func(context.Context, *assert.CollectT, client.Client) {
 	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
 		var gws gatewayv1.GatewayList
-		lReq, err := labels.ParseToRequirements(labelSelector)
+		lReq, err := labels.ParseToRequirements(gatewayLabelSelector)
 		if err != nil {
-			c.Errorf("failed to parse label selector %q: %v", labelSelector, err)
+			c.Errorf("failed to parse label selector %q: %v", gatewayLabelSelector, err)
 			c.FailNow()
 		}
 		lSel := labels.NewSelector()
@@ -408,5 +426,43 @@ func gatewayAndItsListenersAreProgrammedAssertion(labelSelector string) func(con
 		gw := &gws.Items[0]
 		assert.True(c, gateway.IsProgrammed(gw))
 		assert.True(c, gateway.AreListenersProgrammed(gw))
+	}
+}
+
+// gatewayDataPlaneDeploymentIsNotPatched returns a predicate that checks if the
+// DataPlane deployment is not patched.
+func gatewayDataPlaneDeploymentIsNotPatched(gatewayLabelSelector string) func(context.Context, *assert.CollectT, client.Client) {
+	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+		// gateway-operator.konghq.com/managed-by: dataplane
+		var gws gatewayv1.GatewayList
+		lReq, err := labels.ParseToRequirements(gatewayLabelSelector)
+		if err != nil {
+			c.Errorf("failed to parse label selector %q: %v", gatewayLabelSelector, err)
+			c.FailNow()
+		}
+		lSel := labels.NewSelector()
+		for _, req := range lReq {
+			lSel = lSel.Add(req)
+		}
+
+		require.NoError(c,
+			cl.List(ctx, &gws, &client.ListOptions{
+				LabelSelector: lSel,
+			}),
+		)
+		require.Len(c, gws.Items, 1)
+		gw := &gws.Items[0]
+
+		dataplanes, err := gateway.ListDataPlanesForGateway(ctx, cl, gw)
+		if err != nil {
+			c.Errorf("failed to list DataPlanes for Gateway %q: %v", client.ObjectKeyFromObject(gw), err)
+			c.FailNow()
+		}
+		require.Len(c, dataplanes, 1)
+		dp := &dataplanes[0]
+		if dp.Generation != 1 {
+			c.Errorf("DataPlane %q got patched but it shouldn't: %v", client.ObjectKeyFromObject(dp), err)
+			c.FailNow()
+		}
 	}
 }
