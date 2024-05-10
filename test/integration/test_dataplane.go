@@ -674,9 +674,6 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 							Spec: corev1.PodSpec{
 								Volumes: []corev1.Volume{
 									{
-										Name: consts.ClusterCertificateVolume,
-									},
-									{
 										Name: "test-volume",
 										VolumeSource: corev1.VolumeSource{
 											Secret: &corev1.SecretVolumeSource{
@@ -690,11 +687,6 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 										Name:  consts.DataPlaneProxyContainerName,
 										Image: helpers.GetDefaultDataPlaneImage(),
 										VolumeMounts: []corev1.VolumeMount{
-											{
-												Name:      consts.ClusterCertificateVolume,
-												MountPath: consts.ClusterCertificateVolumeMountPath,
-												ReadOnly:  true,
-											},
 											{
 												Name:      "test-volume",
 												MountPath: "/var/test",
