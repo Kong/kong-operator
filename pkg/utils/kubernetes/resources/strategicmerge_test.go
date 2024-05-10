@@ -243,7 +243,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			},
 		},
 		{
-			Name: "overwrite and add env vars",
+			Name: "overwrite 1 base env value and add 1 new env var",
 			Patch: &corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -288,7 +288,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			},
 		},
 		{
-			Name: "add and overwrite env vars",
+			Name: "add 1 new env var and overwrite 1 base env value",
 			Patch: &corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -333,7 +333,63 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			},
 		},
 		{
-			Name: "append a volume and volume mount",
+			Name: "patch volume and volume mount prepends them",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{
+						{
+							Name: "volume1",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{
+									SizeLimit: resource.NewQuantity(1000, resource.DecimalSI),
+								},
+							},
+						},
+					},
+					Containers: []corev1.Container{
+						{
+							Name: "controller",
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "volume1",
+									MountPath: "/volume1",
+								},
+							},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeControlPlaneDeployment()
+				require.NoError(t, err)
+				d.Spec.Template.Spec.Volumes = []corev1.Volume{
+					{
+						Name: "volume1",
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{
+								SizeLimit: resource.NewQuantity(1000, resource.DecimalSI),
+							},
+						},
+					},
+					clusterCertificateVolume(),
+					controlPlaneAdmissionWebhookCertificateVolume("kong-admission-cert-secret"),
+				}
+
+				d.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
+					{
+						Name:      "volume1",
+						MountPath: "/volume1",
+					},
+					clusterCertificateVolumeMount(),
+					admissionWebhookVolumeMount(),
+				}
+
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
+				return d.Spec.Template
+			},
+		},
+		{
+			Name: "patch volume and volume mount restating the base works",
 			Patch: &corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Volumes: []corev1.Volume{
@@ -685,6 +741,88 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			},
 		},
 		{
+			Name: "restating the base volumes and volume mounts does not work",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{
+						{
+							// NOTE: This was required in 1.2.x and older verisons of the operator.
+							// Now this only checks that this approach still works.
+							Name: consts.ClusterCertificateVolume,
+						},
+						{
+							// NOTE: This was required in 1.2.x and older verisons of the operator.
+							// Now this only checks that this approach still works.
+							Name: consts.ControlPlaneAdmissionWebhookVolumeName,
+						},
+						{
+							Name: "volume1",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "configmap-1",
+									},
+								},
+							},
+						},
+					},
+					Containers: []corev1.Container{
+						{
+							Name: "controller",
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									// NOTE: This was required in 1.2.x and older verisons of the operator.
+									// Now this only checks that this approach still works.
+									Name:      consts.ClusterCertificateVolume,
+									MountPath: consts.ClusterCertificateVolumeMountPath,
+								},
+								{
+									// NOTE: This was required in 1.2.x and older verisons of the operator.
+									// Now this only checks that this approach still works.
+									Name:      consts.ControlPlaneAdmissionWebhookVolumeName,
+									MountPath: consts.ControlPlaneAdmissionWebhookVolumeMountPath,
+								},
+								{
+									Name:      "volume1",
+									MountPath: "/volume1",
+								},
+							},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeControlPlaneDeployment()
+				require.NoError(t, err)
+				volume := corev1.Volume{
+					Name: "volume1",
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "configmap-1",
+							},
+						},
+					},
+				}
+
+				d.Spec.Template.Spec.Volumes = []corev1.Volume{
+					clusterCertificateVolume(),
+					controlPlaneAdmissionWebhookCertificateVolume("kong-admission-cert-secret"),
+					volume,
+				}
+				d.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
+					clusterCertificateVolumeMount(),
+					admissionWebhookVolumeMount(),
+					{
+						Name:      "volume1",
+						MountPath: "/volume1",
+					},
+				}
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
+				return d.Spec.Template
+			},
+		},
+		{
 			Name: "append a secret volume and volume mount",
 			Patch: &corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
@@ -849,7 +987,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			},
 		},
 		{
-			Name: "add envs with fieldRef re-stating the base",
+			Name: "add envs with fieldRef re-stating the base values",
 			Patch: &corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -905,6 +1043,186 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 								Divisor:  *resource.NewQuantity(1, resource.DecimalSI),
 							},
 						},
+					},
+				}
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
+
+				return d.Spec.Template
+			},
+		},
+		{
+			Name: "add env without restating the base prepends the new env",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: consts.ControlPlaneControllerContainerName,
+							Env: []corev1.EnvVar{
+								{
+									Name: "LIMIT",
+									ValueFrom: &corev1.EnvVarSource{
+										ResourceFieldRef: &corev1.ResourceFieldSelector{
+											Resource: "limits.cpu",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeControlPlaneDeployment()
+				require.NoError(t, err)
+				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+					{
+						Name: "LIMIT",
+						ValueFrom: &corev1.EnvVarSource{
+							ResourceFieldRef: &corev1.ResourceFieldSelector{
+								Resource: "limits.cpu",
+								Divisor:  *resource.NewQuantity(1, resource.DecimalSI),
+							},
+						},
+					},
+					{
+						Name:  "ENV1",
+						Value: "VALUE1",
+					},
+					{
+						Name:  "ENV2",
+						Value: "VALUE2",
+					},
+					{
+						Name:  "ENV3",
+						Value: "VALUE3",
+					},
+				}
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
+
+				return d.Spec.Template
+			},
+		},
+		{
+			Name: "add env with restating the base first, appends the new env",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: consts.ControlPlaneControllerContainerName,
+							Env: []corev1.EnvVar{
+								{
+									Name:  "ENV1",
+									Value: "VALUE1",
+								},
+								{
+									Name:  "ENV2",
+									Value: "VALUE2",
+								},
+								{
+									Name:  "ENV3",
+									Value: "VALUE3",
+								},
+								{
+									Name: "LIMIT",
+									ValueFrom: &corev1.EnvVarSource{
+										ResourceFieldRef: &corev1.ResourceFieldSelector{
+											Resource: "limits.cpu",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeControlPlaneDeployment()
+				require.NoError(t, err)
+				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+					{
+						Name:  "ENV1",
+						Value: "VALUE1",
+					},
+					{
+						Name:  "ENV2",
+						Value: "VALUE2",
+					},
+					{
+						Name:  "ENV3",
+						Value: "VALUE3",
+					},
+					{
+						Name: "LIMIT",
+						ValueFrom: &corev1.EnvVarSource{
+							ResourceFieldRef: &corev1.ResourceFieldSelector{
+								Resource: "limits.cpu",
+								Divisor:  *resource.NewQuantity(1, resource.DecimalSI),
+							},
+						},
+					},
+				}
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
+
+				return d.Spec.Template
+			},
+		},
+		{
+			Name: "add env and change the order of the env vars",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: consts.ControlPlaneControllerContainerName,
+							Env: []corev1.EnvVar{
+								{
+									Name:  "ENV1",
+									Value: "VALUE1",
+								},
+								{
+									Name:  "ENV3",
+									Value: "VALUE3",
+								},
+								{
+									Name: "LIMIT",
+									ValueFrom: &corev1.EnvVarSource{
+										ResourceFieldRef: &corev1.ResourceFieldSelector{
+											Resource: "limits.cpu",
+										},
+									},
+								},
+								{
+									Name:  "ENV2",
+									Value: "XXX",
+								},
+							},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeControlPlaneDeployment()
+				require.NoError(t, err)
+				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+					{
+						Name:  "ENV1",
+						Value: "VALUE1",
+					},
+					{
+						Name:  "ENV3",
+						Value: "VALUE3",
+					},
+					{
+						Name: "LIMIT",
+						ValueFrom: &corev1.EnvVarSource{
+							ResourceFieldRef: &corev1.ResourceFieldSelector{
+								Resource: "limits.cpu",
+								Divisor:  *resource.NewQuantity(1, resource.DecimalSI),
+							},
+						},
+					},
+					{
+						Name:  "ENV2",
+						Value: "XXX",
 					},
 				}
 				SetDefaultsPodTemplateSpec(&d.Spec.Template)
