@@ -746,14 +746,28 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Volumes: []corev1.Volume{
 						{
-							// NOTE: This was required in 1.2.x and older verisons of the operator.
+							// NOTE: This was required in 1.2.x and older versions of the operator.
 							// Now this only checks that this approach still works.
 							Name: consts.ClusterCertificateVolume,
+							// 1.3.x introduced a change in how strategic merge patch is applied for PodTemplateSpec
+							// and the only discovered "breaking change" is that volume entries missing the
+							// volume source will result in removing the volume source from the base.
+							// Including the volume source in the patch (even empty like below) will keep the volume source.
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{},
+							},
 						},
 						{
-							// NOTE: This was required in 1.2.x and older verisons of the operator.
+							// NOTE: This was required in 1.2.x and older versions of the operator.
 							// Now this only checks that this approach still works.
 							Name: consts.ControlPlaneAdmissionWebhookVolumeName,
+							// 1.3.x introduced a change in how strategic merge patch is applied for PodTemplateSpec
+							// and the only discovered "breaking change" is that volume entries missing the
+							// volume source will result in removing the volume source from the base.
+							// Including the volume source in the patch (even empty like below) will keep the volume source.
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{},
+							},
 						},
 						{
 							Name: "volume1",
@@ -771,13 +785,13 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 							Name: "controller",
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									// NOTE: This was required in 1.2.x and older verisons of the operator.
+									// NOTE: This was required in 1.2.x and older versions of the operator.
 									// Now this only checks that this approach still works.
 									Name:      consts.ClusterCertificateVolume,
 									MountPath: consts.ClusterCertificateVolumeMountPath,
 								},
 								{
-									// NOTE: This was required in 1.2.x and older verisons of the operator.
+									// NOTE: This was required in 1.2.x and older versions of the operator.
 									// Now this only checks that this approach still works.
 									Name:      consts.ControlPlaneAdmissionWebhookVolumeName,
 									MountPath: consts.ControlPlaneAdmissionWebhookVolumeMountPath,
