@@ -26,7 +26,6 @@ spec:
           dataplane-pod-annotation: example
       spec:
         volumes:
-        - name: cluster-certificate
         - name: sidecar-vector-config-volume
           configMap:
             name: sidecar-vector-config
@@ -41,9 +40,6 @@ spec:
             mountPath: /etc/vector
           - name: proxy-logs
             mountPath: /etc/kong/log/
-          readinessProbe:
-            initialDelaySeconds: 1
-            periodSeconds: 1
         - name: proxy
           image: kong:3.6
           volumeMounts:

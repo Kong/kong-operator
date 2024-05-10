@@ -66,16 +66,10 @@ spec:
             initialDelaySeconds: 1
             periodSeconds: 1
           volumeMounts:
-          # We need to specify the cluster-certificate volume-mount because otherwise
-          # strategic merge patch would merge its entry with provided
-          # konnect-client-tls volume mount.
-          - name: cluster-certificate
-            mountPath: /var/cluster-certificate
           - name: konnect-client-tls
             mountPath: /etc/secrets/kong-cluster-cert/
             readOnly: true
         volumes:
-        - name: cluster-certificate
         - name: konnect-client-tls
           secret:
             secretName: konnect-client-tls
