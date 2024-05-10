@@ -1,5 +1,7 @@
 // This is a copy from https://github.com/kubernetes/apimachinery/blob/v0.29.2/pkg/util/strategicpatch/patch.go#L139
 // to make one small change which is not allowed by the API, namely: to set the diff option to ignore deletions.
+//
+//nolint:gocritic,revive
 package resources
 
 import (

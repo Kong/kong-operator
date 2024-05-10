@@ -25,6 +25,7 @@ func StrategicMergePatchPodTemplateSpec(base, patch *corev1.PodTemplateSpec) (*c
 		patch.Spec.Containers = base.Spec.Containers
 	}
 
+	SetDefaultsPodTemplateSpec(base)
 	baseBytes, err := json.Marshal(base)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal JSON for base %s: %w", base.Name, err)
@@ -49,9 +50,6 @@ func StrategicMergePatchPodTemplateSpec(base, patch *corev1.PodTemplateSpec) (*c
 	}
 
 	out, err := CreateTwoWayMergeMapPatchUsingLookupPatchMeta(baseMap, patchMap, schema)
-	if err != nil {
-		return nil, err
-	}
 	if err != nil {
 		return nil, err
 	}

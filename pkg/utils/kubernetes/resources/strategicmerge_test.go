@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgapiscorev1 "k8s.io/kubernetes/pkg/apis/core/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -54,11 +55,12 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			}...,
 		)
 
+		SetDefaultsPodTemplateSpec(&d.Spec.Template)
 		return d, nil
 	}
 
 	clusterCertificateVolume := func() corev1.Volume {
-		return corev1.Volume{
+		v := corev1.Volume{
 			Name: consts.ClusterCertificateVolume,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
@@ -77,10 +79,12 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 							Path: "ca.crt",
 						},
 					},
-					DefaultMode: lo.ToPtr(corev1.SecretVolumeSourceDefaultMode),
 				},
 			},
 		}
+
+		pkgapiscorev1.SetDefaults_Volume(&v)
+		return v
 	}
 
 	clusterCertificateVolumeMount := func() corev1.VolumeMount {
@@ -88,6 +92,13 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			Name:      consts.ClusterCertificateVolume,
 			MountPath: consts.ClusterCertificateVolumeMountPath,
 			ReadOnly:  true,
+		}
+	}
+	admissionWebhookVolumeMount := func() corev1.VolumeMount {
+		return corev1.VolumeMount{
+			Name:      consts.ControlPlaneAdmissionWebhookVolumeName,
+			ReadOnly:  true,
+			MountPath: consts.ControlPlaneAdmissionWebhookVolumeMountPath,
 		}
 	}
 
@@ -361,6 +372,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						},
 					},
 					clusterCertificateVolume(),
+					controlPlaneAdmissionWebhookCertificateVolume("kong-admission-cert-secret"),
 				}
 
 				d.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
@@ -369,8 +381,10 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						MountPath: "/volume1",
 					},
 					clusterCertificateVolumeMount(),
+					admissionWebhookVolumeMount(),
 				}
 
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
 				return d.Spec.Template
 			},
 		},
@@ -411,16 +425,16 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						},
 					},
 				}
-				SetDefaultsContainer(&sidecarContainer)
 				d.Spec.Template.Spec.Containers = []corev1.Container{
 					sidecarContainer,
 					d.Spec.Template.Spec.Containers[0],
 				}
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
 				return d.Spec.Template
 			},
 		},
 		{
-			Name: "append a sidecar and a volume mount",
+			Name: "append a sidecar and a volume",
 			Patch: &corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -478,7 +492,6 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						},
 					},
 				}
-				SetDefaultsContainer(&sidecarContainer)
 				d.Spec.Template.Spec.Containers = append([]corev1.Container{sidecarContainer}, d.Spec.Template.Spec.Containers...)
 				d.Spec.Template.Spec.Volumes = []corev1.Volume{
 					{
@@ -491,7 +504,9 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						},
 					},
 					clusterCertificateVolume(),
+					controlPlaneAdmissionWebhookCertificateVolume("kong-admission-cert-secret"),
 				}
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
 				return d.Spec.Template
 			},
 		},
@@ -540,11 +555,11 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						},
 					},
 				}
-				SetDefaultsContainer(&sidecarContainer)
 				d.Spec.Template.Spec.Containers = []corev1.Container{
 					sidecarContainer,
 					d.Spec.Template.Spec.Containers[0],
 				}
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
 				return d.Spec.Template
 			},
 		},
@@ -593,11 +608,11 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						},
 					},
 				}
-				SetDefaultsContainer(&sidecarContainer)
 				d.Spec.Template.Spec.Containers = []corev1.Container{
 					d.Spec.Template.Spec.Containers[0],
 					sidecarContainer,
 				}
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
 				return d.Spec.Template
 			},
 		},
@@ -665,6 +680,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					},
 				}
 
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
 				return d.Spec.Template
 			},
 		},
@@ -706,11 +722,11 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						},
 					},
 				}
-				SetDefaultsVolume(&volume)
 
 				d.Spec.Template.Spec.Volumes = []corev1.Volume{
 					volume,
 					clusterCertificateVolume(),
+					controlPlaneAdmissionWebhookCertificateVolume("kong-admission-cert-secret"),
 				}
 				d.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
 					{
@@ -718,7 +734,9 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						MountPath: "/new_volume",
 					},
 					clusterCertificateVolumeMount(),
+					admissionWebhookVolumeMount(),
 				}
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
 				return d.Spec.Template
 			},
 		},
@@ -763,6 +781,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						},
 					},
 					clusterCertificateVolume(),
+					controlPlaneAdmissionWebhookCertificateVolume("kong-admission-cert-secret"),
 				}
 				d.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
 					{
@@ -770,7 +789,9 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						MountPath: "/var/log/hostpath",
 					},
 					clusterCertificateVolumeMount(),
+					admissionWebhookVolumeMount(),
 				}
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
 
 				return d.Spec.Template
 			},
@@ -822,6 +843,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						Value: "VALUE3",
 					},
 				}
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
 
 				return d.Spec.Template
 			},
@@ -885,6 +907,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						},
 					},
 				}
+				SetDefaultsPodTemplateSpec(&d.Spec.Template)
 
 				return d.Spec.Template
 			},

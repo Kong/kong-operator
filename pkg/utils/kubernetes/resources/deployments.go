@@ -101,7 +101,6 @@ func GenerateNewDeploymentForControlPlane(params GenerateNewDeploymentForControl
 			},
 		},
 	}
-	SetDefaultsPodTemplateSpec(&deployment.Spec.Template)
 	LabelObjectAsControlPlaneManaged(deployment)
 
 	if params.ControlPlane.Spec.Deployment.PodTemplateSpec != nil {
