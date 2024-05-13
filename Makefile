@@ -372,6 +372,10 @@ test.conformance:
 		KGO_RELEASE=$(TAG)
 		GOTESTFLAGS="$(GOTESTFLAGS)"
 
+.PHONY: test.samples
+test.samples: kustomize
+	find ./config/samples -not -name "kustomization.*" -type f | xargs -I{} bash -c "kubectl apply -f {}; kubectl delete -f {}"
+
 # ------------------------------------------------------------------------------
 # Gateway API
 # ------------------------------------------------------------------------------
@@ -492,11 +496,22 @@ debug.skaffold.continuous: _ensure-kong-system-namespace
 install: manifests kustomize install-gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
 
+# Install standard and experimental CRDs into the K8s cluster specified in ~/.kube/config.
+.PHONY: install.all
+install.all: manifests kustomize install-gateway-api-crds
+	kubectl apply --server-side -f $(PROJECT_DIR)/config/crd/bases/
+
 # Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall
 uninstall: manifests kustomize uninstall-gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
+# Uninstall standard and experimental CRDs from the K8s cluster specified in ~/.kube/config.
+# Call with ignore-not-found=true to ignore resource not found errors during deletion.
+.PHONY: uninstall.all
+uninstall.all: manifests kustomize uninstall-gateway-api-crds
+	kubectl delete --ignore-not-found=$(ignore-not-found) -f $(PROJECT_DIR)/config/crd/bases/
 
 # Deploy controller to the K8s cluster specified in ~/.kube/config.
 # This will wait for operator's Deployment to get Available.
