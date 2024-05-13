@@ -134,8 +134,9 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(opts operatorv1beta1.Gatewa
 			Services: &operatorv1beta1.DataPlaneServices{
 				Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 					ServiceOptions: operatorv1beta1.ServiceOptions{
-						Type:        opts.Network.Services.Ingress.Type,
-						Annotations: opts.Network.Services.Ingress.Annotations,
+						Type:                  opts.Network.Services.Ingress.Type,
+						Annotations:           opts.Network.Services.Ingress.Annotations,
+						ExternalTrafficPolicy: opts.Network.Services.Ingress.ExternalTrafficPolicy,
 					},
 				},
 			},
