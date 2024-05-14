@@ -57,9 +57,12 @@ func GenerateNewIngressServiceForDataPlane(dataplane *operatorv1beta1.DataPlane,
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type:     getDataPlaneIngressServiceType(dataplane),
-			Selector: map[string]string{"app": dataplane.Name},
-			Ports:    DefaultDataPlaneIngressServicePorts,
+			Type: getDataPlaneIngressServiceType(dataplane),
+			Selector: map[string]string{
+				"app": dataplane.Name,
+			},
+			Ports:                 DefaultDataPlaneIngressServicePorts,
+			ExternalTrafficPolicy: getDataPlaneIngressServiceExternalTrafficPolicy(dataplane),
 		},
 	}
 	LabelObjectAsDataPlaneManaged(svc)
@@ -107,6 +110,14 @@ func getDataPlaneIngressServiceType(dataplane *operatorv1beta1.DataPlane) corev1
 	}
 
 	return dataplane.Spec.Network.Services.Ingress.Type
+}
+
+func getDataPlaneIngressServiceExternalTrafficPolicy(dataplane *operatorv1beta1.DataPlane) corev1.ServiceExternalTrafficPolicy {
+	if dataplane == nil || dataplane.Spec.Network.Services == nil {
+		return corev1.ServiceExternalTrafficPolicyCluster
+	}
+
+	return dataplane.Spec.Network.Services.Ingress.ExternalTrafficPolicy
 }
 
 // ServiceOpt is an option function for a Service.

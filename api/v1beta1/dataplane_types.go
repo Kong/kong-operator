@@ -172,6 +172,27 @@ type ServiceOptions struct {
 	//
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,12,rep,name=annotations"`
+
+	// ExternalTrafficPolicy describes how nodes distribute service traffic they
+	// receive on one of the Service's "externally-facing" addresses (NodePorts,
+	// ExternalIPs, and LoadBalancer IPs). If set to "Local", the proxy will configure
+	// the service in a way that assumes that external load balancers will take care
+	// of balancing the service traffic between nodes, and so each node will deliver
+	// traffic only to the node-local endpoints of the service, without masquerading
+	// the client source IP. (Traffic mistakenly sent to a node with no endpoints will
+	// be dropped.) The default value, "Cluster", uses the standard behavior of
+	// routing to all endpoints evenly (possibly modified by topology and other
+	// features). Note that traffic sent to an External IP or LoadBalancer IP from
+	// within the cluster will always get "Cluster" semantics, but clients sending to
+	// a NodePort from within the cluster may need to take traffic policy into account
+	// when picking a node.
+	//
+	// More info: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+	//
+	// +optional
+	// +kubebuilder:default=Cluster
+	// +kubebuilder:validation:Enum=Cluster;Local
+	ExternalTrafficPolicy corev1.ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
 }
 
 // DataPlaneStatus defines the observed state of DataPlane

@@ -25,8 +25,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Setup go
       uses: actions/setup-go@v5
@@ -70,13 +68,40 @@ jobs:
         max_attempts: 3
         command: make verify.generators
 
+  samples:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    - name: Create k8s KinD Cluster
+      uses: helm/kind-action@v1.10.0
+
+    - uses: jdx/mise-action@v2
+      with:
+        install: false
+
+    # We use install.all to install all CRDs and resources also the ones that are not bundled
+    # in base kustomization (e.g. currently AIGateway) but which have samples defined.
+    - name: Verify installing CRDs via kustomize works
+      run: make install.all
+
+    - name: Install and delete each sample one by one
+      run: make test.samples
+
+    - name: Verify that uninstalling operator CRDs via kustomize works
+      run: make uninstall.all
+
   install-with-kustomize:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Setup go
       uses: actions/setup-go@v5
@@ -122,8 +147,6 @@ jobs:
     steps:
     - name: checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v5
@@ -198,8 +221,6 @@ jobs:
     steps:
     - name: checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v5
@@ -251,8 +272,6 @@ jobs:
     steps:
     - name: checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v5
@@ -400,8 +419,6 @@ jobs:
 
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: download tests report
         id: download-coverage
@@ -431,6 +448,7 @@ jobs:
       - install-with-kustomize
       - build
       - unit-tests
+      - samples
       # - conformance-tests
       - integration-tests
       - integration-tests-bluegreen
