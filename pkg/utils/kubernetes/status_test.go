@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 type TestResource struct {
@@ -72,7 +74,7 @@ func TestGetCondition(t *testing.T) {
 			resource := &TestResource{
 				Conditions: tt.conditions,
 			}
-			current, exists := GetCondition(ConditionType(tt.condition), resource)
+			current, exists := GetCondition(consts.ConditionType(tt.condition), resource)
 			assert.Equal(t, current, tt.expected)
 			assert.Equal(t, exists, tt.expectedFound)
 		})
@@ -333,7 +335,7 @@ func TestIsValidCondition(t *testing.T) {
 	} {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			current := IsConditionTrue(ConditionType(tt.input), resource)
+			current := IsConditionTrue(consts.ConditionType(tt.input), resource)
 			assert.Equal(t, current, tt.expected)
 		})
 	}
@@ -354,7 +356,7 @@ func TestIsReady(t *testing.T) {
 			"true",
 			[]metav1.Condition{
 				{
-					Type:   string(ReadyType),
+					Type:   string(consts.ReadyType),
 					Status: metav1.ConditionTrue,
 				},
 			},
@@ -378,7 +380,7 @@ func TestIsReady(t *testing.T) {
 					Status: metav1.ConditionTrue,
 				},
 				{
-					Type:   string(ReadyType),
+					Type:   string(consts.ReadyType),
 					Status: metav1.ConditionFalse,
 				},
 			},
@@ -411,7 +413,7 @@ func TestSetReady(t *testing.T) {
 			"override_no_other_conditions",
 			[]metav1.Condition{
 				{
-					Type:   string(ReadyType),
+					Type:   string(consts.ReadyType),
 					Status: metav1.ConditionFalse,
 				},
 			},
@@ -455,7 +457,7 @@ func TestSetReady(t *testing.T) {
 					Status: metav1.ConditionTrue,
 				},
 				{
-					Type:   string(ReadyType),
+					Type:   string(consts.ReadyType),
 					Status: metav1.ConditionFalse,
 				},
 			},
@@ -469,7 +471,7 @@ func TestSetReady(t *testing.T) {
 					Status: metav1.ConditionFalse,
 				},
 				{
-					Type:   string(ReadyType),
+					Type:   string(consts.ReadyType),
 					Status: metav1.ConditionTrue,
 				},
 			},
@@ -483,7 +485,7 @@ func TestSetReady(t *testing.T) {
 					Status: metav1.ConditionUnknown,
 				},
 				{
-					Type:   string(ReadyType),
+					Type:   string(consts.ReadyType),
 					Status: metav1.ConditionTrue,
 				},
 			},
@@ -507,9 +509,9 @@ func TestInitReady(t *testing.T) {
 	InitReady(resource)
 	conditions := resource.GetConditions()
 	assert.Equal(t, 1, len(conditions))
-	assert.Equal(t, string(ReadyType), conditions[0].Type)
-	assert.Equal(t, string(DependenciesNotReadyReason), conditions[0].Reason)
-	assert.Equal(t, DependenciesNotReadyMessage, conditions[0].Message)
+	assert.Equal(t, string(consts.ReadyType), conditions[0].Type)
+	assert.Equal(t, string(consts.DependenciesNotReadyReason), conditions[0].Reason)
+	assert.Equal(t, consts.DependenciesNotReadyMessage, conditions[0].Message)
 	assert.NotEmpty(t, conditions[0].LastTransitionTime)
 }
 

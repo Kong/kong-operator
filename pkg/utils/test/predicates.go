@@ -101,7 +101,7 @@ func ControlPlaneIsScheduled(t *testing.T, ctx context.Context, controlPlane typ
 func DataPlaneIsReady(t *testing.T, ctx context.Context, dataplane types.NamespacedName, operatorClient *clientset.Clientset) func() bool {
 	return DataPlanePredicate(t, ctx, dataplane, func(c *operatorv1beta1.DataPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(k8sutils.ReadyType) && condition.Status == metav1.ConditionTrue {
+			if condition.Type == string(consts.ReadyType) && condition.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -146,7 +146,7 @@ func ControlPlaneIsProvisioned(t *testing.T, ctx context.Context, controlPlane t
 func ControlPlaneIsNotReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
 	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(k8sutils.ReadyType) &&
+			if condition.Type == string(consts.ReadyType) &&
 				condition.Status == metav1.ConditionFalse {
 				return true
 			}
@@ -161,7 +161,7 @@ func ControlPlaneIsNotReady(t *testing.T, ctx context.Context, controlplane type
 func ControlPlaneIsReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
 	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(k8sutils.ReadyType) &&
+			if condition.Type == string(consts.ReadyType) &&
 				condition.Status == metav1.ConditionTrue {
 				return true
 			}
@@ -306,10 +306,10 @@ func ControlPlaneHasAdmissionWebhookCertificateSecret(t *testing.T, ctx context.
 // that can be used to check if a ControlPlane has an admission webhook configuration.
 func ControlPlaneHasAdmissionWebhookConfiguration(t *testing.T, ctx context.Context, cp *operatorv1beta1.ControlPlane, clients K8sClients) func() bool {
 	return func() bool {
-		services, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(ctx, clients.MgrClient, cp.UID)
+		configs, err := k8sutils.ListValidatingWebhookConfigurations(ctx, clients.MgrClient, client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)))
 		require.NoError(t, err)
-		t.Logf("%d validating webhook configurations", len(services))
-		return len(services) > 0
+		t.Logf("%d validating webhook configurations", len(configs))
+		return len(configs) > 0
 	}
 }
 
@@ -661,7 +661,7 @@ func GatewayDataPlaneIsReady(t *testing.T, ctx context.Context, gateway *gwtypes
 				return false
 			}
 			for _, condition := range dataplanes[0].Status.Conditions {
-				if condition.Type == string(k8sutils.ReadyType) &&
+				if condition.Type == string(consts.ReadyType) &&
 					condition.Status == metav1.ConditionTrue {
 					return true
 				}

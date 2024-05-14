@@ -503,7 +503,7 @@ func TestSetAcceptedOnGateway(t *testing.T) {
 			}
 
 			k8sutils.SetAcceptedConditionOnGateway(gateway)
-			acceptedCondition, found := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayConditionAccepted), gateway)
+			acceptedCondition, found := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayConditionAccepted), gateway)
 			require.True(t, found)
 			// force the lastTransitionTime to be equal to properly compare the two conditions
 			tc.expectedAcceptedCondition.LastTransitionTime = acceptedCondition.LastTransitionTime

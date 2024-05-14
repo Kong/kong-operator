@@ -143,10 +143,10 @@ func ensureDataPlaneReadyStatus(
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				k8sutils.ReadyType,
+				consts.ReadyType,
 				metav1.ConditionFalse,
-				k8sutils.WaitingToBecomeReadyReason,
-				k8sutils.WaitingToBecomeReadyMessage,
+				consts.WaitingToBecomeReadyReason,
+				consts.WaitingToBecomeReadyMessage,
 				generation,
 			),
 			dataplane,
@@ -177,10 +177,10 @@ func ensureDataPlaneReadyStatus(
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				k8sutils.ReadyType,
+				consts.ReadyType,
 				metav1.ConditionFalse,
-				k8sutils.WaitingToBecomeReadyReason,
-				fmt.Sprintf("%s: Deployment %s is not ready yet", k8sutils.WaitingToBecomeReadyMessage, deployment.Name),
+				consts.WaitingToBecomeReadyReason,
+				fmt.Sprintf("%s: Deployment %s is not ready yet", consts.WaitingToBecomeReadyMessage, deployment.Name),
 				generation,
 			),
 			dataplane,
@@ -204,10 +204,10 @@ func ensureDataPlaneReadyStatus(
 		// Set Ready to false for dataplane as the Service is not ready yet.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				k8sutils.ReadyType,
+				consts.ReadyType,
 				metav1.ConditionFalse,
-				k8sutils.WaitingToBecomeReadyReason,
-				k8sutils.WaitingToBecomeReadyMessage,
+				consts.WaitingToBecomeReadyReason,
+				consts.WaitingToBecomeReadyMessage,
 				generation,
 			),
 			dataplane,
@@ -233,10 +233,10 @@ func ensureDataPlaneReadyStatus(
 		// Set Ready to false for dataplane as the Service is not ready yet.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				k8sutils.ReadyType,
+				consts.ReadyType,
 				metav1.ConditionFalse,
-				k8sutils.WaitingToBecomeReadyReason,
-				fmt.Sprintf("%s: ingress Service %s is not ready yet", k8sutils.WaitingToBecomeReadyMessage, ingressService.Name),
+				consts.WaitingToBecomeReadyReason,
+				fmt.Sprintf("%s: ingress Service %s is not ready yet", consts.WaitingToBecomeReadyMessage, ingressService.Name),
 				generation,
 			),
 			dataplane,

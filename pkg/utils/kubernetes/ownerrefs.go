@@ -5,6 +5,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 // -----------------------------------------------------------------------------
@@ -35,6 +37,24 @@ func SetOwnerForObject(obj, owner client.Object) {
 	}
 	if !foundOwnerRef {
 		obj.SetOwnerReferences(append(obj.GetOwnerReferences(), GenerateOwnerReferenceForObject(owner)))
+	}
+}
+
+// SetOwnerForObjectThroughLabels sets the owner of the provided object through a label.
+func SetOwnerForObjectThroughLabels(obj, owner client.Object) {
+	labels := obj.GetLabels()
+	for k, v := range GetManagedByLabelSet(owner) {
+		labels[k] = v
+	}
+	obj.SetLabels(labels)
+}
+
+// GetManagedByLabelSet returns a map of labels with the managing object's metadata.
+func GetManagedByLabelSet(obj client.Object) map[string]string {
+	return map[string]string{
+		consts.GatewayOperatorManagedByLabel:          obj.GetObjectKind().GroupVersionKind().GroupKind().String(),
+		consts.GatewayOperatorManagedByNamespaceLabel: obj.GetNamespace(),
+		consts.GatewayOperatorManagedByNameLabel:      obj.GetName(),
 	}
 }
 

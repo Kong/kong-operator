@@ -313,7 +313,7 @@ func (r *BlueGreenReconciler) ensureDataPlaneLiveReadyStatus(
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 ) (ctrl.Result, error) {
-	c, ok := k8sutils.GetCondition(k8sutils.ReadyType, dataplane)
+	c, ok := k8sutils.GetCondition(consts.ReadyType, dataplane)
 	if !ok {
 		// No Ready condition yet, it will be set by the DataPlane controller.
 		return ctrl.Result{}, nil
@@ -339,7 +339,7 @@ func shouldDelegateToDataPlaneController(
 	// - any other reason for rollout status condition "RolledOut" should not trigger
 	//   the delegation because that either means that we're waiting for the promotion,
 	//   we're in the process of promotion or the promotion failed.
-	cReady, okReady := k8sutils.GetCondition(k8sutils.ReadyType, dataplane)
+	cReady, okReady := k8sutils.GetCondition(consts.ReadyType, dataplane)
 	cRolledOut, okRolledOut := k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
 	if okReady && okRolledOut &&
 		cReady.ObservedGeneration == cRolledOut.ObservedGeneration &&
@@ -492,7 +492,7 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 	// If we're running the exact same Generation as "live" version is then:
 	// - the rollout resource plan is set to ScaleDownOnPromotionScaleUpOnRollout
 	//   then  scale down the Deployment to 0 replicas.
-	cReady, okReady := k8sutils.GetCondition(k8sutils.ReadyType, dataplane)
+	cReady, okReady := k8sutils.GetCondition(consts.ReadyType, dataplane)
 	cRolledOut, okRolledOut := k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
 	if okReady && okRolledOut && cReady.ObservedGeneration == cRolledOut.ObservedGeneration {
 		dPlan := dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen.Resources.Plan.Deployment
@@ -600,7 +600,7 @@ func (r *BlueGreenReconciler) ensureRolledOutCondition(
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 	status metav1.ConditionStatus,
-	reason k8sutils.ConditionReason,
+	reason consts.ConditionReason,
 	message string,
 ) error {
 	c, ok := k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)

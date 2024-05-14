@@ -15,6 +15,7 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/address"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
@@ -90,10 +91,10 @@ func (r *Reconciler) ensureDataPlaneIsMarkedNotReady(
 	ctx context.Context,
 	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
-	reason k8sutils.ConditionReason, message string,
+	reason consts.ConditionReason, message string,
 ) error {
 	notReadyCondition := metav1.Condition{
-		Type:               string(k8sutils.ReadyType),
+		Type:               string(consts.ReadyType),
 		Status:             metav1.ConditionFalse,
 		Reason:             string(reason),
 		Message:            message,
@@ -105,7 +106,7 @@ func (r *Reconciler) ensureDataPlaneIsMarkedNotReady(
 	shouldUpdate := false
 	for i, condition := range dataplane.Status.Conditions {
 		// update the condition if condition has type `Ready`, and the condition is not the same.
-		if condition.Type == string(k8sutils.ReadyType) {
+		if condition.Type == string(consts.ReadyType) {
 			conditionFound = true
 			// update the slice if the condition is not the same as we expected.
 			if !isSameDataPlaneCondition(notReadyCondition, condition) {

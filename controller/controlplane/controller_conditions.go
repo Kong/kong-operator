@@ -1,6 +1,6 @@
 package controlplane
 
-import k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+import "github.com/kong/gateway-operator/pkg/consts"
 
 // -----------------------------------------------------------------------------
 // ControlPlane - Status Condition Types
@@ -10,7 +10,7 @@ const (
 	// ConditionTypeProvisioned is a condition type indicating whether or
 	// not all Deployments (or Daemonsets) for the ControlPlane have been provisioned
 	// successfully.
-	ConditionTypeProvisioned k8sutils.ConditionType = "Provisioned"
+	ConditionTypeProvisioned consts.ConditionType = "Provisioned"
 )
 
 // -----------------------------------------------------------------------------
@@ -23,13 +23,13 @@ type ConditionReason string
 const (
 	// ConditionReasonPodsNotReady is a reason which indicates why a ControlPlane
 	// has not yet reached a fully Provisioned status.
-	ConditionReasonPodsNotReady k8sutils.ConditionReason = "PodsNotReady"
+	ConditionReasonPodsNotReady consts.ConditionReason = "PodsNotReady"
 
 	// ConditionReasonPodsReady is a reason which indicates how a ControlPlane
 	// reached fully Provisioned status.
-	ConditionReasonPodsReady k8sutils.ConditionReason = "PodsReady"
+	ConditionReasonPodsReady consts.ConditionReason = "PodsReady"
 
 	// ControlPlaneConditionsReasonNoDataPlane is a reason which indicates that no DataPlane
 	// has been provisioned.
-	ConditionReasonNoDataPlane k8sutils.ConditionReason = "NoDataPlane"
+	ConditionReasonNoDataPlane consts.ConditionReason = "NoDataPlane"
 )

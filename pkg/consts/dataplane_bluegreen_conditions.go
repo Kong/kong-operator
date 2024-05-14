@@ -1,11 +1,9 @@
 package consts
 
-import k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-
 const (
 	// DataPlaneConditionTypeRolledOut is a condition type indicating whether or
 	// not, DataPlane's rollout has been successful or not.
-	DataPlaneConditionTypeRolledOut k8sutils.ConditionType = "RolledOut"
+	DataPlaneConditionTypeRolledOut ConditionType = "RolledOut"
 )
 
 const (
@@ -14,32 +12,32 @@ const (
 	// If this Reason is present and no automated rollout is disabled, user can
 	// use the preview services and deployment to inspect the state of those
 	// make a judgement call if the promotion should happen.
-	DataPlaneConditionReasonRolloutAwaitingPromotion k8sutils.ConditionReason = "AwaitingPromotion"
+	DataPlaneConditionReasonRolloutAwaitingPromotion ConditionReason = "AwaitingPromotion"
 
 	// DataPlaneConditionReasonRolloutFailed is a reason which indicates a DataPlane
 	// has failed to roll out. This may be caused for example by a Deployment or
 	// a Service failing to get created during a rollout.
-	DataPlaneConditionReasonRolloutFailed k8sutils.ConditionReason = "Failed"
+	DataPlaneConditionReasonRolloutFailed ConditionReason = "Failed"
 
 	// DataPlaneConditionReasonRolloutProgressing is a reason which indicates a DataPlane's
 	// new version is being rolled out.
-	DataPlaneConditionReasonRolloutProgressing k8sutils.ConditionReason = "Progressing"
+	DataPlaneConditionReasonRolloutProgressing ConditionReason = "Progressing"
 
 	// DataPlaneConditionReasonRolloutWaitingForChange is a reason which indicates a DataPlane
 	// is waiting for a change to trigger new version to be made available before promotion.
-	DataPlaneConditionReasonRolloutWaitingForChange k8sutils.ConditionReason = "WaitingForChange"
+	DataPlaneConditionReasonRolloutWaitingForChange ConditionReason = "WaitingForChange"
 
 	// DataPlaneConditionReasonRolloutPromotionInProgress is a reason which
 	// indicates that a promotion is in progress.
-	DataPlaneConditionReasonRolloutPromotionInProgress k8sutils.ConditionReason = "PromotionInProgress"
+	DataPlaneConditionReasonRolloutPromotionInProgress ConditionReason = "PromotionInProgress"
 
 	// DataPlaneConditionReasonRolloutPromotionFailed is a reason which indicates
 	// a DataPlane has failed to promote. This may be caused for example by
 	// a failure in updating a live Service.
-	DataPlaneConditionReasonRolloutPromotionFailed k8sutils.ConditionReason = "PromotionFailed"
+	DataPlaneConditionReasonRolloutPromotionFailed ConditionReason = "PromotionFailed"
 
 	// DataPlaneConditionReasonRolloutPromotionDone is a reason which indicates that a promotion is done.
-	DataPlaneConditionReasonRolloutPromotionDone k8sutils.ConditionReason = "PromotionDone"
+	DataPlaneConditionReasonRolloutPromotionDone ConditionReason = "PromotionDone"
 )
 
 const (

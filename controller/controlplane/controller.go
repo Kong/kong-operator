@@ -404,7 +404,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		log.Trace(logger, "deployment for ControlPlane not ready yet", controlplaneDeployment)
 		// Set Ready to false for controlplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
-			k8sutils.NewCondition(k8sutils.ReadyType, metav1.ConditionFalse, k8sutils.WaitingToBecomeReadyReason, k8sutils.WaitingToBecomeReadyMessage),
+			k8sutils.NewCondition(consts.ReadyType, metav1.ConditionFalse, consts.WaitingToBecomeReadyReason, consts.WaitingToBecomeReadyMessage),
 			cp,
 		)
 

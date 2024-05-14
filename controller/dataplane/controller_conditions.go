@@ -1,6 +1,6 @@
 package dataplane
 
-import k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+import "github.com/kong/gateway-operator/pkg/consts"
 
 // -----------------------------------------------------------------------------
 // DataPlane - Status Condition Reasons
@@ -9,5 +9,5 @@ import k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 const (
 	// DataPlaneConditionValidationFailed is a reason which indicates validation of
 	// a dataplane is failed.
-	DataPlaneConditionValidationFailed k8sutils.ConditionReason = "ValidationFailed"
+	DataPlaneConditionValidationFailed consts.ConditionReason = "ValidationFailed"
 )
