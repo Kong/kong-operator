@@ -215,7 +215,7 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 	clients.MgrClient, err = client.New(env.Cluster().Config(), client.Options{})
 	require.NoError(t, err)
 
-	require.NoError(t, gatewayv1.AddToScheme(clients.MgrClient.Scheme()))
+	require.NoError(t, gatewayv1.Install(clients.MgrClient.Scheme()))
 	require.NoError(t, operatorv1alpha1.AddToScheme(clients.MgrClient.Scheme()))
 	require.NoError(t, operatorv1beta1.AddToScheme(clients.MgrClient.Scheme()))
 

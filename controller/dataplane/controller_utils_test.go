@@ -381,7 +381,7 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 			require.NoError(t, corev1.AddToScheme(scheme))
 			require.NoError(t, appsv1.AddToScheme(scheme))
 			require.NoError(t, operatorv1beta1.AddToScheme(scheme))
-			require.NoError(t, gatewayv1.AddToScheme(scheme))
+			require.NoError(t, gatewayv1.Install(scheme))
 
 			fakeClient := fakectrlruntimeclient.
 				NewClientBuilder().
