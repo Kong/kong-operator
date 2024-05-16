@@ -40,16 +40,16 @@ func NewK8sClients(env environments.Environment) (K8sClients, error) {
 	if err != nil {
 		return clients, err
 	}
-	if err := gatewayv1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
+	if err := gatewayv1.Install(clients.MgrClient.Scheme()); err != nil {
 		return clients, err
 	}
-	if err := gatewayv1beta1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
+	if err := gatewayv1beta1.Install(clients.MgrClient.Scheme()); err != nil {
 		return clients, err
 	}
 
 	// TODO: remove this when support for v1alpha2 is dropped in GW API. For now
 	// we need to add it to the scheme so that we can pass conformance tests.
-	if err := gatewayv1alpha2.AddToScheme(clients.MgrClient.Scheme()); err != nil {
+	if err := gatewayv1alpha2.Install(clients.MgrClient.Scheme()); err != nil {
 		return clients, err
 	}
 

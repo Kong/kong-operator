@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	conformancev1alpha1 "sigs.k8s.io/gateway-api/conformance/apis/v1alpha1"
+	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
@@ -60,20 +60,18 @@ func TestGatewayConformance(t *testing.T) {
 	t.Log("starting the gateway conformance test suite")
 	conformanceTestsBaseManifests := fmt.Sprintf("%s/conformance/base/manifests.yaml", testutils.GatewayRawRepoURL)
 
-	cSuite, err := suite.NewExperimentalConformanceTestSuite(
-		suite.ExperimentalConformanceOptions{
-			Options: suite.Options{
-				Client:               clients.MgrClient,
-				GatewayClassName:     gwc.Name,
-				Debug:                *showDebug,
-				CleanupBaseResources: *shouldCleanup,
-				BaseManifests:        conformanceTestsBaseManifests,
-				SkipTests:            skippedTests,
-			},
+	cSuite, err := suite.NewConformanceTestSuite(
+		suite.ConformanceOptions{
+			Client:               clients.MgrClient,
+			GatewayClassName:     gwc.Name,
+			Debug:                *showDebug,
+			CleanupBaseResources: *shouldCleanup,
+			BaseManifests:        conformanceTestsBaseManifests,
+			SkipTests:            skippedTests,
 			ConformanceProfiles: sets.New(
-				suite.HTTPConformanceProfileName,
+				suite.GatewayHTTPConformanceProfileName,
 			),
-			Implementation: conformancev1alpha1.Implementation{
+			Implementation: conformancev1.Implementation{
 				Organization: metadata.Organization,
 				Project:      metadata.ProjectName,
 				URL:          metadata.ProjectURL,
@@ -87,7 +85,7 @@ func TestGatewayConformance(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("starting the gateway conformance test suite")
-	cSuite.Setup(t)
+	cSuite.Setup(t, nil)
 
 	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a
 	// single test only, e.g.:
