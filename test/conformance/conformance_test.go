@@ -1,7 +1,6 @@
 package conformance
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path"
@@ -15,6 +14,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
+	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	"github.com/kong/gateway-operator/internal/metadata"
@@ -31,11 +31,6 @@ var skippedTests = []string{
 	// httproute
 	tests.HTTPRouteHeaderMatching.ShortName,
 }
-
-var (
-	shouldCleanup = flag.Bool("cleanup", true, "indicates whether or not the base test resources such as Gateways should be cleaned up after the run.")
-	showDebug     = flag.Bool("debug", false, "indicates whether to execute the conformance tests in debug mode.")
-)
 
 func TestGatewayConformance(t *testing.T) {
 	t.Parallel()
@@ -64,8 +59,8 @@ func TestGatewayConformance(t *testing.T) {
 		suite.ConformanceOptions{
 			Client:               clients.MgrClient,
 			GatewayClassName:     gwc.Name,
-			Debug:                *showDebug,
-			CleanupBaseResources: *shouldCleanup,
+			Debug:                *flags.ShowDebug,
+			CleanupBaseResources: *flags.CleanupBaseResources,
 			BaseManifests:        conformanceTestsBaseManifests,
 			SkipTests:            skippedTests,
 			ConformanceProfiles: sets.New(
@@ -85,7 +80,7 @@ func TestGatewayConformance(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("starting the gateway conformance test suite")
-	cSuite.Setup(t, nil)
+	cSuite.Setup(t, tests.ConformanceTests)
 
 	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a
 	// single test only, e.g.:
