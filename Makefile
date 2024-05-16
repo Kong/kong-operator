@@ -499,6 +499,7 @@ install: manifests kustomize install-gateway-api-crds
 .PHONY: install.all
 install.all: manifests kustomize install-gateway-api-crds
 	kubectl apply --server-side -f $(PROJECT_DIR)/config/crd/bases/
+	kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
 
 # Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
