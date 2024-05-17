@@ -2,6 +2,7 @@ package test
 
 import (
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kubernetesclient "k8s.io/client-go/kubernetes"
 	ctrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -38,6 +39,10 @@ func NewK8sClients(env environments.Environment) (K8sClients, error) {
 	}
 	clients.MgrClient, err = ctrlruntimeclient.New(env.Cluster().Config(), ctrlruntimeclient.Options{})
 	if err != nil {
+		return clients, err
+	}
+
+	if err := apiextensionsv1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
 		return clients, err
 	}
 	if err := gatewayv1.Install(clients.MgrClient.Scheme()); err != nil {
