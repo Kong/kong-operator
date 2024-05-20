@@ -34,6 +34,7 @@ spec:
       spec:
         containers:
         - name: proxy
+          # renovate: datasource=docker depName=kong/kong-gateway packageName=kong/kong-gateway versioning=docker
           image: kong/kong-gateway:3.6
           env:
             - name: KONG_ROLE

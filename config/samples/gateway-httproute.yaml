@@ -131,7 +131,8 @@ spec:
         spec:
           containers:
           - name: proxy
-            image: kong:3.6
+          # renovate: datasource=docker depName=kong/kong-gateway packageName=kong/kong-gateway versioning=docker
+            image: kong/kong-gateway:3.6
             readinessProbe:
               initialDelaySeconds: 1
               periodSeconds: 1
@@ -141,6 +142,7 @@ spec:
         spec:
           containers:
           - name: controller
+            # renovate: datasource=docker depName=kong/kubernetes-ingress-controller packageName=kong/kubernetes-ingress-controller versioning=docker
             image: kong/kubernetes-ingress-controller:3.1
             readinessProbe:
               initialDelaySeconds: 1

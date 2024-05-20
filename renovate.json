@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "automerge": false,
+  "separateMinorPatch": true,
+  "labels": [
+    "dependencies"
+  ],
+  "schedule": "before 5am every weekday",
+  "customManagers": [
+    {
+      "description": "Match dependencies in config/samples/.*.yaml that are properly annotated with `# renovate: datasource={} depName={} [packageName={}] [registryUrl={}] versioning={}.`",
+      "customType": "regex",
+      "fileMatch": [
+        "^config/samples/.*.yaml$"
+      ],
+      "matchStrings": [
+        "#\\s+renovate:\\s+datasource=(?<datasource>.*?)\\s+depName=(?<depName>.*?)\\s+(packageName=(?<packageName>.*)\\s+)?(registryUrl=(?<registryUrl>.*)\\s+)?versioning=(?<versioning>.*?)\\n.+'(?<currentValue>.*?)'"
+      ]
+    }
+  ]
+}
