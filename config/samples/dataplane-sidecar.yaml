@@ -45,7 +45,7 @@ spec:
             initialDelaySeconds: 1
             periodSeconds: 1
         - name: proxy
-          # renovate: datasource=docker depName=kong/kong-gateway packageName=kong/kong-gateway versioning=docker
+          # renovate: datasource=docker versioning=docker
           image: kong/kong-gateway:3.6
           volumeMounts:
           - name: proxy-logs

@@ -3,6 +3,10 @@
   "extends": [
     "config:recommended"
   ],
+  "enabledManagers": [
+    "custom.regex",
+    "kustomize"
+  ],
   "automerge": false,
   "separateMinorPatch": true,
   "labels": [
@@ -11,13 +15,23 @@
   "schedule": "before 5am every weekday",
   "customManagers": [
     {
-      "description": "Match dependencies in config/samples/.*.yaml that are properly annotated with `# renovate: datasource={} depName={} [packageName={}] [registryUrl={}] versioning={}.`",
+      "description": "Match dependencies in config/samples/.*.yaml that are properly annotated with `# renovate: datasource={} versioning={}.`",
       "customType": "regex",
       "fileMatch": [
-        "^config/samples/.*.yaml$"
+        "^config/samples/.*\\.yaml$"
       ],
       "matchStrings": [
-        "#\\s+renovate:\\s+datasource=(?<datasource>.*?)\\s+depName=(?<depName>.*?)\\s+(packageName=(?<packageName>.*)\\s+)?(registryUrl=(?<registryUrl>.*)\\s+)?versioning=(?<versioning>.*?)\\n.+'(?<currentValue>.*?)'"
+        "#\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+versioning=(?<versioning>.*?)\\n.+image:\\s+(?<depName>.+?):(?<currentValue>.+)"
+      ]
+    },
+    {
+      "description": "Match dependencies in .tools_verisons.yaml that are properly annotated with `# renovate: datasource={} depName={}.`",
+      "customType": "regex",
+      "fileMatch": [
+        "\\.tools_versions\\.yaml$"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\n.+\"(?<currentValue>.*?)\""
       ]
     }
   ]
