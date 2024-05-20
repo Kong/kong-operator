@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -78,7 +79,9 @@ func TestMain(m *testing.M) {
 	// Gateway API conformance tests do not create resources like NetworkPolicy
 	// that would allow e.g. cross namespace traffic.
 	// Related upstream discussion: https://github.com/kubernetes-sigs/gateway-api/discussions/2137
-	env, err = testutils.BuildEnvironment(ctx, existingCluster)
+	env, err = testutils.BuildEnvironment(ctx, existingCluster, func(b *environments.Builder, t clusters.Type) {
+		b.WithAddons(metallb.New())
+	})
 	exitOnErr(err)
 
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())

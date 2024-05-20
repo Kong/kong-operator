@@ -309,7 +309,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil // requeue will be triggered by the update of the controlplane status
 	}
 
-	// if the controlplane wasnt't ready before this reconciliation loop and now is ready, log this event
+	// if the controlplane wasn't ready before this reconciliation loop and now is ready, log this event
 	if !k8sutils.IsConditionTrue(ControlPlaneReadyType, oldGwConditionsAware) {
 		log.Debug(logger, "controlplane is ready", gateway)
 	}
