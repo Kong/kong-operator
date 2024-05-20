@@ -1,7 +1,6 @@
 package conformance
 
 import (
-	"fmt"
 	"path"
 	"testing"
 
@@ -14,6 +13,7 @@ import (
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/pkg/features"
 
 	"github.com/kong/gateway-operator/internal/metadata"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
@@ -55,17 +55,20 @@ func TestGatewayConformance(t *testing.T) {
 	// There are no explicit conformance tests for GatewayClass, but we can
 	// still run the conformance test suite setup to ensure that the
 	// GatewayClass gets accepted.
-	t.Log("starting the gateway conformance test suite")
+	t.Log("configuring the Gateway API conformance test suite")
 	const reportFileName = "kong-gateway-operator.yaml" // TODO: https://github.com/Kong/gateway-operator/issues/268
 
 	opts := conformance.DefaultOptions(t)
 	opts.ReportOutputPath = "../../" + reportFileName
 	opts.Client = clients.MgrClient
 	opts.GatewayClassName = gwc.Name
-	opts.BaseManifests = fmt.Sprintf("%s/conformance/base/manifests.yaml", testutils.GatewayRawRepoURL)
+	opts.BaseManifests = testutils.GatewayRawRepoURL + "/conformance/base/manifests.yaml"
 	opts.SkipTests = skippedTests
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
+	)
+	opts.SupportedFeatures = sets.New(
+		features.SupportHTTPRouteResponseHeaderModification,
 	)
 	opts.Implementation = conformancev1.Implementation{
 		Organization: metadata.Organization,
@@ -77,6 +80,6 @@ func TestGatewayConformance(t *testing.T) {
 		},
 	}
 
-	t.Log("starting the gateway conformance test suite")
+	t.Log("running the Gateway API conformance test suite")
 	conformance.RunConformanceWithOptions(t, opts)
 }
