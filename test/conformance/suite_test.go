@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	gwapiv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
 	"github.com/kong/gateway-operator/config"
@@ -126,7 +127,7 @@ func TestMain(m *testing.M) {
 	// for the operator to handle Gateway finalizers.
 	// If we don't do it then we'll be left with Gateways that have a deleted
 	// timestamp and finalizers set but no operator running which could handle those.
-	if *shouldCleanup {
+	if *flags.CleanupBaseResources {
 		exitOnErr(waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1()))
 	}
 

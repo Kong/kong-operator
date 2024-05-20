@@ -26,11 +26,11 @@ import (
 )
 
 func init() {
-	if err := gatewayv1.AddToScheme(scheme.Scheme); err != nil {
+	if err := gatewayv1.Install(scheme.Scheme); err != nil {
 		fmt.Println("error while adding gatewayv1 scheme")
 		os.Exit(1)
 	}
-	if err := gatewayv1beta1.AddToScheme(scheme.Scheme); err != nil {
+	if err := gatewayv1beta1.Install(scheme.Scheme); err != nil {
 		fmt.Println("error while adding gatewayv1 scheme")
 		os.Exit(1)
 	}

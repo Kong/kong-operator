@@ -172,7 +172,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	// If the Gateway is not accepted, do not move on in the reconciliation logic.
 	if acceptedCondition.Status == metav1.ConditionFalse {
-		// TODO: clean up Dataplane and Controlplane https://github.com/Kong/gateway-operator/issues/1511
+		// TODO: clean up Dataplane and Controlplane https://github.com/Kong/gateway-operator/issues/126
 		return ctrl.Result{}, nil
 	}
 
