@@ -97,7 +97,7 @@ func ListHTTPRoutesForGateway(
 	opts ...client.ListOption,
 ) ([]gwtypes.HTTPRoute, error) {
 	if gateway.Namespace == "" {
-		return nil, fmt.Errorf("can't list HTTPRoutes for gateway: gateway resource was missing namespace")
+		return nil, fmt.Errorf("can't list HTTPRoutes for gateway: Gateway %s was missing namespace", gateway.Name)
 	}
 
 	var httpRoutesList gwtypes.HTTPRouteList
