@@ -5,7 +5,7 @@ controller-tools: "0.15.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
 kustomize: "5.4.1"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-golangci-lint: "1.57.2"
+golangci-lint: "1.58.2"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 skaffold: "2.11.1"
 # renovate: datasource=github-releases depName=go-delve/delve

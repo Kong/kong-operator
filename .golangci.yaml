@@ -21,7 +21,6 @@ linters:
   - govet
   - importas
   - ineffassign
-  - megacheck
   - misspell
   - nilerr
   - nolintlint
@@ -118,7 +117,6 @@ issues:
   exclude-dirs:
     - pkg/clientset
     - config/
-    - third_party/
   include:
     - EXC0012
   exclude-rules:

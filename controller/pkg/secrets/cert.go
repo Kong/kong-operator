@@ -421,7 +421,7 @@ func ensureContainerImageUpdated(container *corev1.Container, imageVersionStr st
 
 	// This is a special case for registries that specify a non default port,
 	// e.g. localhost:5000 or myregistry.io:8000. We do look for '/' since the
-	// contianer.Image will contain it as a separator between the registry+image
+	// container.Image will contain it as a separator between the registry+image
 	// and the version.
 	if len(imageParts) == 3 {
 		if !strings.Contains(container.Image, "/") {

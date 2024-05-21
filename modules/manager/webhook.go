@@ -130,19 +130,19 @@ func (m *webhookManager) Start(ctx context.Context) error {
 	// write the webhook certificate files on the filesystem
 	{
 		p := path.Join(m.cfg.WebhookCertDir, caCertFilename)
-		if err := os.WriteFile(p, certSecret.Data[consts.CAFieldSecret], os.ModePerm); err != nil {
+		if err := os.WriteFile(p, certSecret.Data[consts.CAFieldSecret], os.ModePerm); err != nil { //nolint:gosec
 			return fmt.Errorf("failed writing CA to %s: %w", p, err)
 		}
 	}
 	{
 		p := path.Join(m.cfg.WebhookCertDir, tlsCertFilename)
-		if err := os.WriteFile(p, certSecret.Data[consts.CertFieldSecret], os.ModePerm); err != nil {
+		if err := os.WriteFile(p, certSecret.Data[consts.CertFieldSecret], os.ModePerm); err != nil { //nolint:gosec
 			return fmt.Errorf("failed writing certificate to %s: %w", p, err)
 		}
 	}
 	{
 		p := path.Join(m.cfg.WebhookCertDir, tlsKeyFilename)
-		if err := os.WriteFile(p, certSecret.Data[consts.KeyFieldSecret], os.ModePerm); err != nil {
+		if err := os.WriteFile(p, certSecret.Data[consts.KeyFieldSecret], os.ModePerm); err != nil { //nolint:gosec
 			return fmt.Errorf("failed writing key to %s: %w", p, err)
 		}
 	}
