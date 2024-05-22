@@ -596,8 +596,7 @@ func (g *gatewayConditionsAndListenersAwareT) setAcceptedAndAttachedRoutes(ctx c
 			ObservedGeneration: g.Generation,
 		}
 
-		_, protocolSupported := supportedRoutesByProtocol()[listener.Protocol]
-		if !protocolSupported {
+		if _, protocolSupported := supportedRoutesByProtocol()[listener.Protocol]; !protocolSupported {
 			acceptedCondition.Status = metav1.ConditionFalse
 			acceptedCondition.Reason = string(gatewayv1.ListenerReasonUnsupportedProtocol)
 		}

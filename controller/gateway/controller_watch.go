@@ -287,7 +287,7 @@ func (r *Reconciler) listHTTPRoutesForGateway(ctx context.Context, obj client.Ob
 		logger.Error(err, "Failed to list gateways in watch", "HTTPRoute", httpRoute.Name)
 		return nil
 	}
-	recs := []reconcile.Request{}
+	var recs []reconcile.Request
 	for _, gateway := range gateways.Items {
 		for _, parentRef := range httpRoute.Spec.ParentRefs {
 			if parentRef.Group != nil && string(*parentRef.Group) == gatewayv1.GroupName &&

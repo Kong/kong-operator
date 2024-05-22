@@ -172,8 +172,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	acceptedCondition, _ := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayConditionAccepted), gwConditionAware)
 	// If the static Gateway API conditions (Accepted, ResolvedRefs, Conflicted) changed, we need to update the Gateway status
 	if gatewayStatusNeedsUpdate(oldGwConditionsAware, gwConditionAware) {
-		_, err := patch.ApplyGatewayStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway) // requeue will be triggered by the update of the gateway status
-		if err != nil {
+		 // Requeue will be triggered by the update of the gateway status.
+		if _, err := patch.ApplyGatewayStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway); err != nil {
 			return ctrl.Result{}, err
 		}
 		if acceptedCondition.Status == metav1.ConditionTrue {
