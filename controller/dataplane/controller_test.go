@@ -52,7 +52,7 @@ func init() {
 // test writers will be able to rely on the reconciler running against an apiserver
 // and just asserting on the actual desired effect.
 //
-// Ref: https://github.com/Kong/gateway-operator/issues/933
+// Ref: https://github.com/Kong/gateway-operator/issues/172
 func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 	ca := helpers.CreateCA(t)
 	mtlsSecret := &corev1.Secret{

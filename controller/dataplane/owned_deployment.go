@@ -130,7 +130,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 		return nil, op.Noop, fmt.Errorf("after generation callbacks failed")
 	}
 
-	// TODO https://github.com/Kong/gateway-operator/issues/1495
+	// TODO https://github.com/Kong/gateway-operator/issues/128
 	// This is a a workaround to avoid patches clobbering the wrong EnvVar. We want to find an improved patch mechanism
 	// that doesn't clobber EnvVars (and other array fields) it shouldn't.
 	existingEnvVars := desiredDeployment.Spec.Template.Spec.Containers[0].Env

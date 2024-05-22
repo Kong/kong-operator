@@ -142,7 +142,7 @@ func ensureAdminServiceForDataPlane(
 	additionalServiceLabels client.MatchingLabels,
 	opts ...k8sresources.ServiceOpt,
 ) (res op.CreatedUpdatedOrNoop, svc *corev1.Service, err error) {
-	// TODO: https://github.com/Kong/gateway-operator/pull/1101.
+	// TODO: https://github.com/Kong/gateway-operator/issues/156.
 	// Use only new labels after several minor version of soak time.
 
 	// Below we list both the Services with the new labels and the legacy labels
@@ -253,7 +253,7 @@ func ensureIngressServiceForDataPlane(
 	additionalServiceLabels client.MatchingLabels,
 	opts ...k8sresources.ServiceOpt,
 ) (op.CreatedUpdatedOrNoop, *corev1.Service, error) {
-	// TODO: https://github.com/Kong/gateway-operator/pull/1101.
+	// TODO: https://github.com/Kong/gateway-operator/issues/156.
 	// Use only new labels after several minor version of soak time.
 
 	// Below we list both the Services with the new labels and the legacy labels

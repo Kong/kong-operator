@@ -167,7 +167,7 @@ func EnsureCertificate[
 ) (op.CreatedUpdatedOrNoop, *corev1.Secret, error) {
 	setCALogger(ctrlruntimelog.Log)
 
-	// TODO: https://github.com/Kong/gateway-operator/pull/1101.
+	// TODO: https://github.com/Kong/gateway-operator-archive/pull/156.
 	// Use only new labels after several minor version of soak time.
 
 	// Below we list both the Secrets with the new labels and the legacy labels

@@ -48,7 +48,7 @@ func (r *AIGatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		).
 		// TODO watch on Gateways, KongPlugins, e.t.c.
 		//
-		// See: https://github.com/Kong/gateway-operator/issues/1368
+		// See: https://github.com/Kong/gateway-operator/issues/137
 		Complete(r)
 }
 
@@ -120,7 +120,7 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// TODO: manage status updates
 	//
-	// See: https://github.com/Kong/gateway-operator/issues/1368
+	// See: https://github.com/Kong/gateway-operator/issues/137
 
 	log.Info(logger, "reconciliation complete for aigateway resource", aigateway)
 	return ctrl.Result{}, nil

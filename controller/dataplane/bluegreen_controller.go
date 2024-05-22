@@ -210,7 +210,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// TODO: Perform promotion condition checks to verify we can proceed
-	// Ref: https://github.com/Kong/gateway-operator/issues/974
+	// Ref: https://github.com/Kong/gateway-operator/issues/170
 
 	if proceedWithPromotion, err := canProceedWithPromotion(dataplane); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed checking if DataPlane %s/%s can be promoted: %w", dataplane.Namespace, dataplane.Name, err)
@@ -502,7 +502,7 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 			})
 		}
 		// TODO: implemented DeleteOnPromotionRecreateOnRollout
-		// Ref: https://github.com/Kong/gateway-operator/issues/1010
+		// Ref: https://github.com/Kong/gateway-operator/issues/163
 	}
 	deploymentLabels := client.MatchingLabels{
 		consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,

@@ -29,11 +29,8 @@ func AddressesFromService(service *corev1.Service) ([]operatorv1beta1.Address, e
 	)
 
 	for _, ingress := range service.Status.LoadBalancer.Ingress {
-		// TODO Since currently we don't support Gateway listeners spec:
-		// https://github.com/Kong/gateway-operator/issues/482, we don't take into
-		// account Ingress.Ports.
-		// When #482 gets implemented we should take those into account and format
-		// the addresses accordingly.
+		// TODO https://github.com/Kong/gateway-operator-archive/issues/482 is now resolved.
+		// We should take ingress.Ports into account and format the addresses accordingly.
 
 		if ingress.IP != "" {
 			ip, err := netip.ParseAddr(ingress.IP)

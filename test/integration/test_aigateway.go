@@ -105,7 +105,7 @@ func TestAIGatewayCreation(t *testing.T) {
 		Data: map[string][]byte{
 			// TODO get real credentials from a vault...
 			//
-			// See: https://github.com/Kong/gateway-operator/issues/1368
+			// See: https://github.com/Kong/gateway-operator-archive/issues/137
 			"openai": []byte("openai-key"),
 			"cohere": []byte("cohere-key"),
 		},
@@ -221,12 +221,12 @@ func TestAIGatewayCreation(t *testing.T) {
 	// test hit the real cloud provider, we test manually for now after
 	// at least verifying that all the resources are in place.
 	//
-	// See:  https://github.com/Kong/gateway-operator/issues/1368
+	// See:  https://github.com/Kong/gateway-operator/issues/137
 }
 
 // This is temporary while we work on statuses for AIGateways.
 //
-// See: https://github.com/Kong/gateway-operator/issues/1368
+// See: https://github.com/Kong/gateway-operator/issues/137
 func eventuallyDetermineGatewayForAIGateway(
 	t *testing.T,
 	aigateway *v1alpha1.AIGateway,

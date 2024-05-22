@@ -23,7 +23,7 @@ func LabelObjectAsDataPlaneManaged(obj metav1.Object) {
 	}
 	labels[consts.GatewayOperatorManagedByLabel] = consts.DataPlaneManagedLabelValue
 	// TODO: Remove adding this to managed resources after several versions with
-	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/1101
+	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/156
 	labels[consts.GatewayOperatorManagedByLabelLegacy] = consts.DataPlaneManagedLabelValue
 	obj.SetLabels(labels)
 }
@@ -38,7 +38,7 @@ func LabelObjectAsControlPlaneManaged(obj metav1.Object) {
 	}
 	labels[consts.GatewayOperatorManagedByLabel] = consts.ControlPlaneManagedLabelValue
 	// TODO: Remove adding this to managed resources after several versions with
-	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/1101
+	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/156
 	labels[consts.GatewayOperatorManagedByLabelLegacy] = consts.ControlPlaneManagedLabelValue
 	obj.SetLabels(labels)
 }
@@ -62,7 +62,7 @@ func GetManagedLabelForOwner(owner metav1.Object) client.MatchingLabels {
 // provided owner.
 //
 // Deprecated: use getManagedLabelForOwner instead.
-// Removed when https://github.com/Kong/gateway-operator/issues/1101 is closed.
+// Removed when https://github.com/Kong/gateway-operator/issues/156 is closed.
 func GetManagedLabelForOwnerLegacy(owner metav1.Object) client.MatchingLabels {
 	switch owner.(type) {
 	case *operatorv1beta1.ControlPlane:

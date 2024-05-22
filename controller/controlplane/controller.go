@@ -265,7 +265,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "validating ControlPlane configuration", cp)
-	// TODO: complete validation here: https://github.com/Kong/gateway-operator/issues/109
 	if err := validateControlPlane(cp, r.DevelopmentMode); err != nil {
 		return ctrl.Result{}, err
 	}
