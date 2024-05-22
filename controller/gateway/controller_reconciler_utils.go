@@ -17,7 +17,6 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -651,20 +650,26 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 	case gatewayv1.NamespacesFromSelector:
 		var nsList corev1.NamespaceList
 
-		labelSelector := labels.SelectorFromSet(labels.Set(namespaces.Selector.MatchLabels))
-		for _, v := range namespaces.Selector.MatchExpressions {
-			r, err := labels.NewRequirement(v.Key, selection.Operator(v.Operator), v.Values)
-			if err != nil {
-				return 0, fmt.Errorf("failed to create requirement for namespace selector (for Gateway %s): %w",
-					client.ObjectKeyFromObject(g), err,
-				)
-			}
-			labelSelector = labelSelector.Add(*r)
-
+		s, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
+		if err != nil {
+			return 0, fmt.Errorf("failed to create requirement for namespace selector (for Gateway %s): %w",
+				client.ObjectKeyFromObject(g), err,
+			)
+		}
+		reqs, selectable := s.Requirements()
+		if !selectable {
+			return 0, fmt.Errorf("namespace selector is not selectable (for Gateway %s)", client.ObjectKeyFromObject(g))
+		}
+		labelSelector := labels.NewSelector()
+		for _, req := range reqs {
+			labelSelector = labelSelector.Add(req)
 		}
 		if err := cl.List(ctx, &nsList, &client.ListOptions{
 			LabelSelector: labelSelector,
 		}); err != nil {
+			if k8serrors.IsNotFound(err) {
+				return 0, nil
+			}
 			return 0, fmt.Errorf("failed to list namespaces for gateway %s: %w", g.Name, err)
 		}
 
