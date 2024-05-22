@@ -14,7 +14,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/cert-manager/cert-manager v1.14.5
 	github.com/cloudflare/cfssl v1.6.5
-	github.com/go-logr/logr v1.4.1
+	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
 	github.com/kong/kubernetes-ingress-controller/v3 v3.1.5
 	github.com/kong/kubernetes-telemetry v0.1.3
