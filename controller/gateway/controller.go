@@ -88,8 +88,17 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&gatewayv1beta1.ReferenceGrant{},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
-			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom)),
-		).
+			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom))).
+		// watch HTTPRoutes so that Gateway listener status can be updated.
+		Watches(
+			&gatewayv1beta1.HTTPRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByHTTPRoute)).
+		// watch Namespaces so that managed routes have correct status reflected in Gateway's
+		// status in status.listeners.attachedRoutes
+		// This is required to properly support Gateway's listeners.allowedRoutes.namespaces.selector.
+		Watches(
+			&corev1.Namespace{},
+			handler.EnqueueRequestsFromMapFunc(r.listManagedGatewaysInNamespace)).
 		Complete(r)
 }
 
@@ -152,7 +161,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log.Trace(logger, "resource is supported, ensuring that it gets marked as accepted", gateway)
 	gwConditionAware.initListenersStatus()
 	gwConditionAware.setConflicted()
-	gwConditionAware.setAccepted()
+	if err = gwConditionAware.setAcceptedAndAttachedRoutes(ctx, r.Client); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	gwConditionAware.initProgrammedAndListenersStatus()
 	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client); err != nil {
 		return ctrl.Result{}, err
@@ -160,7 +172,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	acceptedCondition, _ := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayConditionAccepted), gwConditionAware)
 	// If the static Gateway API conditions (Accepted, ResolvedRefs, Conflicted) changed, we need to update the Gateway status
 	if gatewayStatusNeedsUpdate(oldGwConditionsAware, gwConditionAware) {
-		if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil { // requeue will be triggered by the update of the dataplane status
+		// Requeue will be triggered by the update of the gateway status.
+		if _, err := patch.ApplyGatewayStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway); err != nil {
 			return ctrl.Result{}, err
 		}
 		if acceptedCondition.Status == metav1.ConditionTrue {
@@ -346,7 +359,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			gatewayConditionsAndListenersAware(&gateway))
 	}
 
-	gwConditionAware.setProgrammedAndListenersConditions()
+	gwConditionAware.setProgrammed()
 	res, err := patch.ApplyGatewayStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
 	if err != nil {
 		return ctrl.Result{}, err

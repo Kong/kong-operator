@@ -38,6 +38,8 @@
 - `Gateway` do not have their `Ready` status condition set anymore.
   This aligns with Gateway API and its conformance test suite.
   [#246](https://github.com/Kong/gateway-operator/pull/246)
+- `Gateway`s' listeners now have their `attachedRoutes` count filled in in status.
+  [#251](https://github.com/Kong/gateway-operator/pull/251)
 
 ### Fixes
 
