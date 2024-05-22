@@ -14,7 +14,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/cert-manager/cert-manager v1.14.5
 	github.com/cloudflare/cfssl v1.6.5
-	github.com/go-logr/logr v1.4.1
+	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
 	github.com/kong/kubernetes-ingress-controller/v3 v3.1.5
 	github.com/kong/kubernetes-telemetry v0.1.3
@@ -150,7 +150,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/gruntwork-io/terratest v0.46.14
+	github.com/gruntwork-io/terratest v0.46.15
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
