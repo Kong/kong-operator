@@ -110,7 +110,7 @@ func ListHTTPRoutesForGateway(
 		return nil, fmt.Errorf("can't list HTTPRoutes for gateway: %w", err)
 	}
 
-	httpRoutes := make([]gwtypes.HTTPRoute, 0)
+	var httpRoutes []gwtypes.HTTPRoute
 	for _, httpRoute := range httpRoutesList.Items {
 		if !lo.ContainsBy(httpRoute.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
 			gwGVK := gateway.GroupVersionKind()
