@@ -268,9 +268,9 @@ func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj cli
 	return recs
 }
 
-// listHTTPRoutesForGateway is a watch predicate which finds all Gateways mentioned
+// listGatewaysAttachedByHTTPRoute is a watch predicate which finds all Gateways mentioned
 // in HTTPRoutes' Parents field.
-func (r *Reconciler) listHTTPRoutesForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
+func (r *Reconciler) listGatewaysAttachedByHTTPRoute(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
 
 	httpRoute, ok := obj.(*gatewayv1beta1.HTTPRoute)

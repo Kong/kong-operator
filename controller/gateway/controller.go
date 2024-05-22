@@ -92,7 +92,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// watch HTTPRoutes so that Gateway listener status can be updated.
 		Watches(
 			&gatewayv1beta1.HTTPRoute{},
-			handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForGateway)).
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByHTTPRoute)).
 		// watch Namespaces so that managed routes have correct status reflected in Gateway's
 		// status in status.listeners.attachedRoutes
 		// This is required to properly support Gateway's listeners.allowedRoutes.namespaces.selector.
@@ -172,7 +172,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	acceptedCondition, _ := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayConditionAccepted), gwConditionAware)
 	// If the static Gateway API conditions (Accepted, ResolvedRefs, Conflicted) changed, we need to update the Gateway status
 	if gatewayStatusNeedsUpdate(oldGwConditionsAware, gwConditionAware) {
-		 // Requeue will be triggered by the update of the gateway status.
+		// Requeue will be triggered by the update of the gateway status.
 		if _, err := patch.ApplyGatewayStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway); err != nil {
 			return ctrl.Result{}, err
 		}
