@@ -23,17 +23,6 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
-// func init() {
-// 	if err := gatewayv1.Install(scheme.Scheme); err != nil {
-// 		fmt.Println("error while adding gatewayv1 scheme")
-// 		os.Exit(1)
-// 	}
-// 	if err := gatewayv1beta1.Install(scheme.Scheme); err != nil {
-// 		fmt.Println("error while adding gatewayv1 scheme")
-// 		os.Exit(1)
-// 	}
-// }
-
 func TestParseKongProxyListenEnv(t *testing.T) {
 	testcases := []struct {
 		Name            string
