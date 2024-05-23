@@ -780,6 +780,12 @@ func (g *gatewayConditionsAndListenersAwareT) setProgrammed() {
 			LastTransitionTime: metav1.Now(),
 		}
 		listenerStatus := listenerConditionsAware(listener)
+		rCond, ok := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.ListenerConditionResolvedRefs), listenerStatus)
+		if ok && rCond.Status == metav1.ConditionFalse {
+			programmedCondition.Status = metav1.ConditionFalse
+			programmedCondition.Reason = string(gatewayv1.ListenerReasonPending)
+			programmedCondition.Message = "Listener references are not resolved yet."
+		}
 		k8sutils.SetCondition(programmedCondition, listenerStatus)
 	}
 }
