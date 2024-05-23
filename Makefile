@@ -22,6 +22,15 @@ SHELL = bash
 IMG ?= docker.io/kong/gateway-operator-oss
 KUSTOMIZE_IMG_NAME = docker.io/kong/gateway-operator-oss
 
+ifeq (Darwin,$(shell uname -s))
+LDFLAGS_COMMON ?= -extldflags=-Wl,-ld_classic
+endif
+
+LDFLAGS_METADATA ?= \
+	-X $(REPO)/modules/manager/metadata.Release=$(TAG) \
+	-X $(REPO)/modules/manager/metadata.Commit=$(COMMIT) \
+	-X $(REPO)/modules/manager/metadata.Repo=$(REPO_INFO)
+
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
 # ------------------------------------------------------------------------------
@@ -142,10 +151,8 @@ build.operator.debug:
 
 .PHONY: _build.operator
 _build.operator:
-	go build -o bin/manager $(GCFLAGS) -ldflags "$(LDFLAGS) \
-		-X $(REPO)/modules/manager/metadata.Release=$(TAG) \
-		-X $(REPO)/modules/manager/metadata.Commit=$(COMMIT) \
-		-X $(REPO)/modules/manager/metadata.Repo=$(REPO_INFO)" \
+	go build -o bin/manager $(GCFLAGS) \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		cmd/main.go
 
 .PHONY: build
@@ -315,6 +322,7 @@ _test.integration: webhook-certs-dir gotestsum
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		-race \
 		-coverprofile=$(COVERPROFILE) \
 		./test/integration/...
@@ -343,6 +351,7 @@ test.integration_provision_dataplane_fail:
 _test.e2e: gotestsum
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		-race \
 		./test/e2e/...
 
@@ -359,6 +368,7 @@ _test.conformance: gotestsum
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-timeout $(CONFORMANCE_TEST_TIMEOUT) \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		-race \
 		-parallel $(PARALLEL) \
 		./test/conformance/...
@@ -368,7 +378,7 @@ test.conformance:
 	@$(MAKE) _test.conformance \
 		KGO_PROJECT_URL=$(REPO) \
 		KGO_PROJECT_NAME=$(REPO_NAME) \
-		KGO_RELEASE=$(TAG)
+		KGO_RELEASE=$(TAG) \
 		GOTESTFLAGS="$(GOTESTFLAGS)"
 
 .PHONY: test.samples
