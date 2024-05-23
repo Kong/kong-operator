@@ -16,6 +16,7 @@ type (
 	ParentReference      = gatewayv1.ParentReference
 	CommonRouteSpec      = gatewayv1.CommonRouteSpec
 	Kind                 = gatewayv1.Kind
+	Namespace            = gatewayv1.Namespace
 	Group                = gatewayv1.Group
 	Namespace            = gatewayv1.Namespace
 	AllowedRoutes        = gatewayv1.AllowedRoutes
