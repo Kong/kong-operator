@@ -124,8 +124,8 @@ require (
 	google.golang.org/api v0.172.0 // indirect
 	google.golang.org/grpc v1.63.2 // indirect
 	sigs.k8s.io/kind v0.22.0 // indirect
-	sigs.k8s.io/kustomize/api v0.17.1
-	sigs.k8s.io/kustomize/kyaml v0.17.0 // indirect
+	sigs.k8s.io/kustomize/api v0.17.2
+	sigs.k8s.io/kustomize/kyaml v0.17.1 // indirect
 )
 
 require (
