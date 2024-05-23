@@ -180,6 +180,9 @@ jobs:
     steps:
     - name: checkout repository
       uses: actions/checkout@v4
+      with:
+        # Fetch all history so that we can get the correct commit hash for the conformance tests.
+        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v5

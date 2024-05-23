@@ -18,8 +18,8 @@ import (
 	"sigs.k8s.io/gateway-api/pkg/features"
 
 	v1beta1 "github.com/kong/gateway-operator/api/v1beta1"
-	"github.com/kong/gateway-operator/internal/metadata"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
+	"github.com/kong/gateway-operator/modules/manager/metadata"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -157,10 +157,10 @@ func TestGatewayConformance(t *testing.T) {
 	opts.Implementation = conformancev1.Implementation{
 		Organization: metadata.Organization,
 		Project:      metadata.ProjectName,
-		URL:          metadata.ProjectURL,
+		URL:          metadata.RepoURL,
 		Version:      metadata.Release,
 		Contact: []string{
-			path.Join(metadata.ProjectURL, "/issues/new/choose"),
+			path.Join(metadata.RepoURL, "/issues/new/choose"),
 		},
 	}
 

@@ -15,6 +15,15 @@ var (
 	// Repo returns the git repository URL.
 	Repo = "NOT_SET"
 
+	// RepoURL returns the repository URL.
+	RepoURL = "NOT_SET"
+
 	// Commit returns the SHA from the current branch HEAD.
 	Commit = "NOT_SET"
+
+	// ProjectName is the name of the project.
+	ProjectName = "NOT_SET"
+
+	// Organization is the Kong organization
+	Organization = "Kong"
 )
