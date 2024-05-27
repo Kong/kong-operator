@@ -114,9 +114,31 @@ func ListHTTPRoutesForGateway(
 	for _, httpRoute := range httpRoutesList.Items {
 		if !lo.ContainsBy(httpRoute.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
 			gwGVK := gateway.GroupVersionKind()
-			return (parentRef.Group != nil && string(*parentRef.Group) == gwGVK.Group) &&
-				(parentRef.Kind != nil && string(*parentRef.Kind) == gwGVK.Kind) &&
-				string(parentRef.Name) == gateway.Name
+			if parentRef.Group != nil && string(*parentRef.Group) != gwGVK.Group {
+				return false
+			}
+			if parentRef.Kind != nil && string(*parentRef.Kind) != gwGVK.Kind {
+				return false
+			}
+			if string(parentRef.Name) != gateway.Name {
+				return false
+			}
+
+			if parentRef.SectionName != nil {
+				if !lo.ContainsBy(gateway.Spec.Listeners, func(listener gwtypes.Listener) bool {
+					if listener.Name != *parentRef.SectionName {
+						return false
+					}
+					if parentRef.Port != nil && listener.Port != *parentRef.Port {
+						return false
+					}
+					return true
+				}) {
+					return false
+				}
+			}
+
+			return true
 		}) {
 			continue
 		}
