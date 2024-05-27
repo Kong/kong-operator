@@ -107,7 +107,8 @@ func TestGatewayConformance(t *testing.T) {
 											Value: "debug",
 										},
 									},
-									Image: "kong/nightly-ingress-controller:2024-05-27",
+									// TODO: change nightly to 3.2 when that's released
+									Image: "kong/nightly-ingress-controller:2024-05-28",
 								},
 							},
 						},
