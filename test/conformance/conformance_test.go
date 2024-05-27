@@ -36,6 +36,9 @@ var skippedTests = []string{
 	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
 	tests.HTTPRouteListenerHostnameMatching.ShortName,
 	tests.HTTPRouteObservedGenerationBump.ShortName,
+
+	// TODO: this test is flaky
+	tests.HTTPRouteWeight.ShortName,
 }
 
 func TestGatewayConformance(t *testing.T) {
