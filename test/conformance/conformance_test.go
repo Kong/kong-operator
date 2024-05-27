@@ -104,6 +104,7 @@ func TestGatewayConformance(t *testing.T) {
 											Value: "debug",
 										},
 									},
+									Image: "kong/nightly-ingress-controller:2024-05-27",
 								},
 							},
 						},
