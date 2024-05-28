@@ -228,7 +228,7 @@ func GenerateImage(opts *operatorv1beta1.ControlPlaneOptions, validators ...vers
 		return relatedKongControllerImage, nil
 	}
 
-	return consts.DefaultControlPlaneImage, nil // TODO: https://github.com/Kong/gateway-operator/issues/20
+	return consts.DefaultControlPlaneImage, nil // TODO: https://github.com/Kong/gateway-operator-archive/issues/20
 }
 
 // -----------------------------------------------------------------------------

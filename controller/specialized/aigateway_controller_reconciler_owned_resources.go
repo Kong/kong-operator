@@ -29,7 +29,7 @@ func (r *AIGatewayReconciler) createOrUpdateHttpRoute(
 
 	// TODO - use GenerateName
 	//
-	// See: https://github.com/Kong/gateway-operator/issues/1368
+	// See: https://github.com/Kong/gateway-operator/issues/137
 	found := &gatewayv1.HTTPRoute{}
 	err := r.Client.Get(ctx, types.NamespacedName{
 		Name:      httpRoute.Name,
@@ -45,7 +45,7 @@ func (r *AIGatewayReconciler) createOrUpdateHttpRoute(
 
 	// TODO - implement patching
 	//
-	// See: https://github.com/Kong/gateway-operator/issues/1368
+	// See: https://github.com/Kong/gateway-operator/issues/137
 
 	return false, nil
 }
@@ -60,7 +60,7 @@ func (r *AIGatewayReconciler) createOrUpdatePlugin(
 
 	// TODO - use GenerateName
 	//
-	// See: https://github.com/Kong/gateway-operator/issues/1368
+	// See: https://github.com/Kong/gateway-operator/issues/137
 	found := &configurationv1.KongPlugin{}
 	err := r.Client.Get(ctx, types.NamespacedName{
 		Name:      kongPlugin.Name,
@@ -76,7 +76,7 @@ func (r *AIGatewayReconciler) createOrUpdatePlugin(
 
 	// TODO - implement patching
 	//
-	// See: https://github.com/Kong/gateway-operator/issues/1368
+	// See: https://github.com/Kong/gateway-operator/issues/137
 
 	return false, nil
 }
@@ -92,7 +92,7 @@ func (r *AIGatewayReconciler) createOrUpdateGateway(
 
 	// TODO - use GenerateName
 	//
-	// See: https://github.com/Kong/gateway-operator/issues/1368
+	// See: https://github.com/Kong/gateway-operator/issues/137
 	err := r.Client.Get(ctx, types.NamespacedName{
 		Name:      gateway.Name,
 		Namespace: gateway.Namespace,
@@ -108,7 +108,7 @@ func (r *AIGatewayReconciler) createOrUpdateGateway(
 
 	// TODO - implement patching
 	//
-	// See: https://github.com/Kong/gateway-operator/issues/1368
+	// See: https://github.com/Kong/gateway-operator/issues/137
 
 	return false, nil
 }
@@ -123,7 +123,7 @@ func (r *AIGatewayReconciler) createOrUpdateSvc(
 
 	// TODO - use GenerateName
 	//
-	// See: https://github.com/Kong/gateway-operator/issues/1368
+	// See: https://github.com/Kong/gateway-operator/issues/137
 	found := &corev1.Service{}
 	err := r.Client.Get(ctx, types.NamespacedName{
 		Name:      service.Name,
@@ -140,7 +140,7 @@ func (r *AIGatewayReconciler) createOrUpdateSvc(
 
 	// TODO - implement patching
 	//
-	// See: https://github.com/Kong/gateway-operator/issues/1368
+	// See: https://github.com/Kong/gateway-operator/issues/137
 
 	return false, nil
 }

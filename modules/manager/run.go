@@ -282,7 +282,7 @@ func (m *caManager) Start(ctx context.Context) error {
 }
 
 func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
-	// TODO https://github.com/Kong/gateway-operator/issues/108 this also needs to check if the CA is expired and
+	// TODO https://github.com/Kong/gateway-operator/issues/199 this also needs to check if the CA is expired and
 	// managed, and needs to reissue it (and all issued certificates) if so
 	ca := &corev1.Secret{}
 	ctx, cancel := context.WithTimeout(ctx, time.Second*30)

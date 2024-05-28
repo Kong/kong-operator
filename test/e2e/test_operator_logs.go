@@ -65,7 +65,7 @@ var (
 )
 
 func TestOperatorLogs(t *testing.T) {
-	t.Skip() // TODO: https://github.com/kong/gateway-operator/issues/908
+	t.Skip() // TODO: https://github.com/kong/gateway-operator-archive/issues/908
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
