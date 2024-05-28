@@ -1,11 +1,12 @@
 package conformance
 
 import (
-	"path"
 	"testing"
 
-	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -15,7 +16,9 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	"github.com/kong/gateway-operator/internal/metadata"
+	v1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
+	"github.com/kong/gateway-operator/modules/manager/metadata"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -32,24 +35,112 @@ var skippedTests = []string{
 	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
 	tests.HTTPRouteListenerHostnameMatching.ShortName,
 	tests.HTTPRouteObservedGenerationBump.ShortName,
+
+	// TODO: remove the skip https://github.com/Kong/gateway-operator/issues/295
+	// This test is flaky.
+	tests.HTTPRouteWeight.ShortName,
 }
 
 func TestGatewayConformance(t *testing.T) {
 	t.Parallel()
 
 	t.Log("creating GatewayClass for gateway conformance tests")
+	gwconf := v1beta1.GatewayConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "kgo-gwconf-conformance-",
+			Namespace:    "default",
+		},
+		Spec: v1beta1.GatewayConfigurationSpec{
+			DataPlaneOptions: &v1beta1.GatewayConfigDataPlaneOptions{
+				Deployment: v1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: v1beta1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name: "proxy",
+										ReadinessProbe: &corev1.Probe{
+											InitialDelaySeconds: 1,
+											PeriodSeconds:       1,
+										},
+										Resources: corev1.ResourceRequirements{
+											Requests: corev1.ResourceList{
+												corev1.ResourceCPU:    resource.MustParse("10m"),
+												corev1.ResourceMemory: resource.MustParse("128Mi"),
+											},
+											Limits: corev1.ResourceList{
+												corev1.ResourceCPU:    resource.MustParse("500m"),
+												corev1.ResourceMemory: resource.MustParse("1024Mi"),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			ControlPlaneOptions: &v1beta1.ControlPlaneOptions{
+				Deployment: v1beta1.ControlPlaneDeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "controller",
+									ReadinessProbe: &corev1.Probe{
+										InitialDelaySeconds: 1,
+										PeriodSeconds:       1,
+									},
+									Resources: corev1.ResourceRequirements{
+										Requests: corev1.ResourceList{
+											corev1.ResourceCPU:    resource.MustParse("10m"),
+											corev1.ResourceMemory: resource.MustParse("32Mi"),
+										},
+										Limits: corev1.ResourceList{
+											corev1.ResourceCPU:    resource.MustParse("200m"),
+											corev1.ResourceMemory: resource.MustParse("256Mi"),
+										},
+									},
+									Env: []corev1.EnvVar{
+										{
+											Name:  "CONTROLLER_LOG_LEVEL",
+											Value: "debug",
+										},
+									},
+									// TODO: https://github.com/Kong/gateway-operator/issues/294
+									// change nightly to 3.2 when that's released
+									Image: "kong/nightly-ingress-controller:2024-05-28",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, clients.MgrClient.Create(ctx, &gwconf))
+	t.Cleanup(func() {
+		require.NoError(t, clients.MgrClient.Delete(ctx, &gwconf))
+	})
+
 	gwc := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
+			GenerateName: "kgo-gwclass-conformance-",
 		},
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
+			ParametersRef: &gatewayv1.ParametersReference{
+				Group:     "gateway-operator.konghq.com",
+				Kind:      "GatewayConfiguration",
+				Name:      gwconf.Name,
+				Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+			},
 		},
 	}
 	require.NoError(t, clients.MgrClient.Create(ctx, gwc))
-	defer func() {
+	t.Cleanup(func() {
 		require.NoError(t, clients.MgrClient.Delete(ctx, gwc))
-	}()
+	})
 
 	// There are no explicit conformance tests for GatewayClass, but we can
 	// still run the conformance test suite setup to ensure that the
@@ -72,10 +163,10 @@ func TestGatewayConformance(t *testing.T) {
 	opts.Implementation = conformancev1.Implementation{
 		Organization: metadata.Organization,
 		Project:      metadata.ProjectName,
-		URL:          metadata.ProjectURL,
+		URL:          metadata.RepoURL,
 		Version:      metadata.Release,
 		Contact: []string{
-			path.Join(metadata.ProjectURL, "/issues/new/choose"),
+			metadata.RepoURL + "/issues/new/choose",
 		},
 	}
 

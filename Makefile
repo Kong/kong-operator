@@ -3,7 +3,8 @@
 # ------------------------------------------------------------------------------
 
 REPO ?= github.com/kong/gateway-operator
-REPO_NAME ?= $(echo ${REPO} | cut -d / -f 3)
+REPO_URL ?= https://$(REPO)
+REPO_NAME ?= $(shell echo $(REPO) | cut -d / -f 3)
 REPO_INFO ?= $(shell git config --get remote.origin.url)
 TAG ?= $(shell git describe --tags)
 VERSION ?= $(shell cat VERSION)
@@ -27,9 +28,11 @@ LDFLAGS_COMMON ?= -extldflags=-Wl,-ld_classic
 endif
 
 LDFLAGS_METADATA ?= \
+	-X $(REPO)/modules/manager/metadata.ProjectName=$(REPO_NAME) \
 	-X $(REPO)/modules/manager/metadata.Release=$(TAG) \
 	-X $(REPO)/modules/manager/metadata.Commit=$(COMMIT) \
-	-X $(REPO)/modules/manager/metadata.Repo=$(REPO_INFO)
+	-X $(REPO)/modules/manager/metadata.Repo=$(REPO_INFO) \
+	-X $(REPO)/modules/manager/metadata.RepoURL=$(REPO_URL)
 
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
@@ -376,9 +379,6 @@ _test.conformance: gotestsum
 .PHONY: test.conformance
 test.conformance:
 	@$(MAKE) _test.conformance \
-		KGO_PROJECT_URL=$(REPO) \
-		KGO_PROJECT_NAME=$(REPO_NAME) \
-		KGO_RELEASE=$(TAG) \
 		GOTESTFLAGS="$(GOTESTFLAGS)"
 
 .PHONY: test.samples
