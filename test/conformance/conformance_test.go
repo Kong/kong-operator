@@ -37,7 +37,8 @@ var skippedTests = []string{
 	tests.HTTPRouteListenerHostnameMatching.ShortName,
 	tests.HTTPRouteObservedGenerationBump.ShortName,
 
-	// TODO: this test is flaky
+	// TODO: remove the skip https://github.com/Kong/gateway-operator/issues/295
+	// This test is flaky.
 	tests.HTTPRouteWeight.ShortName,
 }
 
@@ -107,7 +108,8 @@ func TestGatewayConformance(t *testing.T) {
 											Value: "debug",
 										},
 									},
-									// TODO: change nightly to 3.2 when that's released
+									// TODO: https://github.com/Kong/gateway-operator/issues/294
+									// change nightly to 3.2 when that's released
 									Image: "kong/nightly-ingress-controller:2024-05-28",
 								},
 							},
