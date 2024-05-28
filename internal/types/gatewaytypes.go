@@ -17,11 +17,16 @@ type (
 	CommonRouteSpec      = gatewayv1.CommonRouteSpec
 	Kind                 = gatewayv1.Kind
 	Group                = gatewayv1.Group
+	Namespace            = gatewayv1.Namespace
 	AllowedRoutes        = gatewayv1.AllowedRoutes
 	RouteGroupKind       = gatewayv1.RouteGroupKind
 	RouteNamespaces      = gatewayv1.RouteNamespaces
 	ObjectName           = gatewayv1.ObjectName
+	SectionName          = gatewayv1.SectionName
+	PortNumber           = gatewayv1.PortNumber
 )
+
+var GroupVersion = gatewayv1.GroupVersion
 
 const (
 	HTTPProtocolType = gatewayv1.HTTPProtocolType
