@@ -15,7 +15,9 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 const (
@@ -124,12 +126,18 @@ func createManager(
 			w.AddProvider(p)
 		}
 
-		// Add aigateway count provider to monitor number of aigateways in the cluster.
-		p, err = NewAIgatewayCountProvider(dyn, cl.RESTMapper())
-		if err != nil {
-			log.Info("failed to create aigateway count provider", "error", err)
-		} else {
-			w.AddProvider(p)
+		checker := k8sutils.CRDChecker{Client: cl}
+		// AIGateway is optional so check if it exists before enabling the count provider.
+		if exists, err := checker.CRDExists(operatorv1alpha1.AIGatewayGVR()); err != nil {
+			log.Info("failed to check if aigateway CRD exists ", "error", err)
+		} else if exists {
+			// Add aigateway count provider to monitor number of aigateways in the cluster.
+			p, err = NewAIgatewayCountProvider(dyn, cl.RESTMapper())
+			if err != nil {
+				log.Info("failed to create aigateway count provider", "error", err)
+			} else {
+				w.AddProvider(p)
+			}
 		}
 
 		// Add dataplane count not from gateway.

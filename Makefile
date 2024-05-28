@@ -463,9 +463,11 @@ run: webhook-certs-dir manifests generate install-gateway-api-crds install _ensu
 # etc didn't change in between the runs.
 .PHONY: _run
 _run:
-	GATEWAY_OPERATOR_DEVELOPMENT_MODE=true go run ./cmd/main.go \
+	 go run ./cmd/main.go \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
+		-anonymous-reports=true \
+		-enable-validating-webhook=false \
 		-enable-controller-controlplane \
 		-enable-controller-gateway \
 		-enable-controller-aigateway \

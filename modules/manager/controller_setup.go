@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/controlplane"
 	"github.com/kong/gateway-operator/controller/dataplane"
@@ -138,6 +139,12 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					Version:  gatewayv1.SchemeGroupVersion.Version,
 					Resource: "gateways",
 				},
+			},
+		},
+		{
+			Condition: c.AIGatewayControllerEnabled,
+			GVRs: []schema.GroupVersionResource{
+				operatorv1alpha1.AIGatewayGVR(),
 			},
 		},
 	}
