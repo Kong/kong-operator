@@ -31,7 +31,6 @@ var skippedTests = []string{
 	// httproute
 	tests.HTTPRouteHeaderMatching.ShortName,
 	tests.HTTPRouteHTTPSListener.ShortName,
-	tests.HTTPRouteHostnameIntersection.ShortName,
 	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
 	tests.HTTPRouteListenerHostnameMatching.ShortName,
 	tests.HTTPRouteObservedGenerationBump.ShortName,
