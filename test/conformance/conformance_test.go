@@ -1,7 +1,6 @@
 package conformance
 
 import (
-	"path"
 	"testing"
 
 	"github.com/samber/lo"
