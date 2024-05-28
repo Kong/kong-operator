@@ -167,7 +167,7 @@ func TestGatewayConformance(t *testing.T) {
 		URL:          metadata.RepoURL,
 		Version:      metadata.Release,
 		Contact: []string{
-			path.Join(metadata.RepoURL, "/issues/new/choose"),
+			metadata.RepoURL + "/issues/new/choose",
 		},
 	}
 
