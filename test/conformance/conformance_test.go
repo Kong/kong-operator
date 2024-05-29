@@ -33,7 +33,6 @@ var skippedTests = []string{
 	tests.HTTPRouteHTTPSListener.ShortName,
 	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
 	tests.HTTPRouteListenerHostnameMatching.ShortName,
-	tests.HTTPRouteObservedGenerationBump.ShortName,
 
 	// TODO: remove the skip https://github.com/Kong/gateway-operator/issues/295
 	// This test is flaky.
