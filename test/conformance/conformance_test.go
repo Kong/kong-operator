@@ -26,7 +26,6 @@ import (
 var skippedTests = []string{
 	// gateway
 	tests.GatewayInvalidTLSConfiguration.ShortName,
-	tests.GatewayModifyListeners.ShortName,
 
 	// httproute
 	tests.HTTPRouteHeaderMatching.ShortName,
