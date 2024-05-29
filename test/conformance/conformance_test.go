@@ -21,6 +21,7 @@ import (
 	"github.com/kong/gateway-operator/api/v1beta1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
+	"github.com/kong/gateway-operator/pkg/consts"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -28,9 +29,6 @@ import (
 var skippedTestsForExpressionsRouter = []string{
 	// gateway
 	tests.GatewayInvalidTLSConfiguration.ShortName,
-
-	// httproute
-	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
 
 	// TODO: remove the skip https://github.com/Kong/gateway-operator/issues/295
 	// This test is flaky.
@@ -130,7 +128,7 @@ func createGatewayConfiguration(ctx context.Context, t *testing.T, c Conformance
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
 									{
-										Name: "proxy",
+										Name: consts.DataPlaneProxyContainerName,
 										ReadinessProbe: &corev1.Probe{
 											InitialDelaySeconds: 1,
 											PeriodSeconds:       1,
@@ -164,7 +162,7 @@ func createGatewayConfiguration(ctx context.Context, t *testing.T, c Conformance
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
 								{
-									Name: "controller",
+									Name: consts.ControlPlaneControllerContainerName,
 									ReadinessProbe: &corev1.Probe{
 										InitialDelaySeconds: 1,
 										PeriodSeconds:       1,
@@ -184,10 +182,15 @@ func createGatewayConfiguration(ctx context.Context, t *testing.T, c Conformance
 											Name:  "CONTROLLER_LOG_LEVEL",
 											Value: "debug",
 										},
+										{
+											// NOTE: we disable the admission webhook to allow broken
+											// resources to be created so that their status can be
+											// filled to satisfy conformance suite expectations.
+											Name:  "CONTROLLER_ADMISSION_WEBHOOK_LISTEN",
+											Value: "off",
+										},
 									},
-									// TODO: https://github.com/Kong/gateway-operator/issues/294
-									// change nightly to 3.2 when that's released
-									Image: "kong/nightly-ingress-controller:2024-05-28",
+									Image: "kong/kubernetes-ingress-controller:3.2.0",
 								},
 							},
 						},
