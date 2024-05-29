@@ -46,7 +46,7 @@ spec:
             periodSeconds: 1
         - name: proxy
           # renovate: datasource=docker versioning=docker
-          image: kong/kong-gateway:3.6
+          image: kong/kong-gateway:3.7
           volumeMounts:
           - name: proxy-logs
             mountPath: /etc/kong/log/
