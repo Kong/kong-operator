@@ -49,10 +49,14 @@ If the troubleshooting section does not contain the answer to the problem you en
 
 ## Verify default hardcoded versions
 
-The package [internal/consts][consts-pkg] contains a list of default versions for the operator. These versions should be updated to match the new release. The example consts to look for:
+> **NOTE**: These versions should be automatically updated via Renovate.
+> As part of the release workflow please verify that this is indeed the case and the automation still works.
+
+The packages [internal/consts][consts-pkg] and [pkg/versions][versions-pkg] contains a list of default versions for the operator.
+These versions should be updated to match the new release. The example consts to look for:
 
 - `DefaultDataPlaneTag`
-- `DefaultControlPlaneTag`
+- `DefaultControlPlaneVersion`
 - `WebhookCertificateConfigBaseImage`
 
 ## GitHub PAT
@@ -88,5 +92,6 @@ Steps:
 
 [releases]: https://github.com/Kong/gateway-operator/releases
 [release-action]: https://github.com/Kong/gateway-operator/actions/workflows/release.yaml
-[consts-pkg]: https://github.com/Kong/gateway-operator/blob/main/internal/consts/consts.go
+[consts-pkg]: https://github.com/Kong/gateway-operator/blob/main/pkg/consts/consts.go
+[versions-pkg]: https://github.com/Kong/gateway-operator/blob/main/internal/versions/
 [kgo-prs]: https://github.com/Kong/gateway-operator/pulls
