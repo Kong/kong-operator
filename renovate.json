@@ -33,6 +33,18 @@
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\n.+\"(?<currentValue>.*?)\""
       ]
+    },
+    {
+      "description": "Match versions in pkg/consts/dataplane.go that are properly annotated with `# renovate: datasource={} versioning={}.`",
+      "customType": "regex",
+      "datasourceTemplate": "docker",
+      "fileMatch": [
+        "^pkg/consts/dataplane\\.go$",
+        "^internal/versions/controlplane\\.go$"
+      ],
+      "matchStrings": [
+        ".+\\s+=\\s+\"(?<currentValue>.+)\"\\s+//\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+(?<depName>.+?)"
+      ]
     }
   ]
 }

@@ -6,7 +6,6 @@ import (
 
 const (
 	// DefaultControlPlaneVersion is the default version of the ControlPlane to use.
-	// TODO: automatically update this via renovate https://github.com/Kong/gateway-operator/issues/121
 	//
 	// NOTE: This needs to be a full semver version (i.e. it needs to include
 	// the minor and the patch version). The reason for this is that it's used in the
@@ -14,7 +13,7 @@ const (
 	// and those tests create KIC's URLs for things like roles or CRDs.
 	// Since KIC only defines the full tags in its repo (as expected) we cannot use
 	// a partial version here, as it would not match KIC's tag.
-	DefaultControlPlaneVersion = "3.1.3"
+	DefaultControlPlaneVersion = "3.1.3" // renovate: datasource=docker depName=kong/kubernetes-ingress-controller
 )
 
 // minimumControlPlaneVersion indicates the bare minimum version of the
