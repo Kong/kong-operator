@@ -110,7 +110,7 @@ GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotes
 .PHONY: gotestsum
 gotestsum: mise yq ## Download gotestsum locally if necessary.
 	@$(MISE) plugin install --yes -q gotestsum https://github.com/pmalek/mise-gotestsum.git
-	@$(MISE) install -q gotestsum
+	@$(MISE) install -q gotestsum@$(GOTESTSUM_VERSION)
 
 CRD_REF_DOCS_VERSION = $(shell $(YQ) -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
 CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
