@@ -30,7 +30,6 @@ var skippedTestsForExpressionsRouter = []string{
 	tests.GatewayInvalidTLSConfiguration.ShortName,
 
 	// httproute
-	tests.HTTPRouteHeaderMatching.ShortName,
 	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
 
 	// TODO: remove the skip https://github.com/Kong/gateway-operator/issues/295
