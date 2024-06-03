@@ -1,6 +1,8 @@
 package conformance
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	"github.com/samber/lo"
@@ -16,14 +18,14 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	v1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/api/v1beta1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
-var skippedTests = []string{
+var skippedTestsForExpressionsRouter = []string{
 	// gateway
 	tests.GatewayInvalidTLSConfiguration.ShortName,
 
@@ -36,10 +38,86 @@ var skippedTests = []string{
 	tests.HTTPRouteWeight.ShortName,
 }
 
+var skippedTestsForTraditionalCompatibleRouter = []string{
+	// gateway
+	tests.GatewayInvalidTLSConfiguration.ShortName,
+
+	// httproute
+	tests.HTTPRouteHeaderMatching.ShortName,
+	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
+
+	// TODO: remove the skip https://github.com/Kong/gateway-operator/issues/295
+	// This test is flaky.
+	tests.HTTPRouteWeight.ShortName,
+}
+
+type ConformanceConfig struct {
+	KongRouterFlavor RouterFlavor
+}
+
 func TestGatewayConformance(t *testing.T) {
 	t.Parallel()
 
-	t.Log("creating GatewayClass for gateway conformance tests")
+	// Conformance tests are run for both available router flavours:
+	// traditional_compatible and expressions.
+	var (
+		config       ConformanceConfig
+		skippedTests []string
+	)
+	switch rf := KongRouterFlavor(t); rf {
+	case RouterFlavorTraditionalCompatible:
+		skippedTests = skippedTestsForTraditionalCompatibleRouter
+		config.KongRouterFlavor = RouterFlavorTraditionalCompatible
+	case RouterFlavorExpressions:
+		skippedTests = skippedTestsForExpressionsRouter
+		config.KongRouterFlavor = RouterFlavorExpressions
+	default:
+		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
+	}
+
+	t.Logf("using the following configuration for the conformance tests: %+v", config)
+
+	t.Log("creating GatewayConfiguration and GatewayClass for gateway conformance tests")
+	gwconf := createGatewayConfiguration(ctx, t, config)
+	gwc := createGatewayClass(ctx, t, gwconf)
+
+	// There are no explicit conformance tests for GatewayClass, but we can
+	// still run the conformance test suite setup to ensure that the
+	// GatewayClass gets accepted.
+	t.Log("configuring the Gateway API conformance test suite")
+	// Currently mode only relies on the KongRouterFlavor, but in the future
+	// we may want to add more modes.
+	mode := string(config.KongRouterFlavor)
+	reportFileName := fmt.Sprintf("kong-gateway-operator-%s.yaml", mode) // TODO: https://github.com/Kong/gateway-operator/issues/268
+
+	opts := conformance.DefaultOptions(t)
+	opts.ReportOutputPath = "../../" + reportFileName
+	opts.Client = clients.MgrClient
+	opts.GatewayClassName = gwc.Name
+	opts.BaseManifests = testutils.GatewayRawRepoURL + "/conformance/base/manifests.yaml"
+	opts.SkipTests = skippedTests
+	opts.Mode = mode
+	opts.ConformanceProfiles = sets.New(
+		suite.GatewayHTTPConformanceProfileName,
+	)
+	opts.SupportedFeatures = sets.New(
+		features.SupportHTTPRouteResponseHeaderModification,
+	)
+	opts.Implementation = conformancev1.Implementation{
+		Organization: metadata.Organization,
+		Project:      metadata.ProjectName,
+		URL:          metadata.RepoURL,
+		Version:      metadata.Release,
+		Contact: []string{
+			metadata.RepoURL + "/issues/new/choose",
+		},
+	}
+
+	t.Log("running the Gateway API conformance test suite")
+	conformance.RunConformanceWithOptions(t, opts)
+}
+
+func createGatewayConfiguration(ctx context.Context, t *testing.T, c ConformanceConfig) *v1beta1.GatewayConfiguration {
 	gwconf := v1beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "kgo-gwconf-conformance-",
@@ -66,6 +144,12 @@ func TestGatewayConformance(t *testing.T) {
 											Limits: corev1.ResourceList{
 												corev1.ResourceCPU:    resource.MustParse("500m"),
 												corev1.ResourceMemory: resource.MustParse("1024Mi"),
+											},
+										},
+										Env: []corev1.EnvVar{
+											{
+												Name:  "KONG_ROUTER_FLAVOR",
+												Value: string(c.KongRouterFlavor),
 											},
 										},
 									},
@@ -113,11 +197,15 @@ func TestGatewayConformance(t *testing.T) {
 			},
 		},
 	}
+
 	require.NoError(t, clients.MgrClient.Create(ctx, &gwconf))
 	t.Cleanup(func() {
 		require.NoError(t, clients.MgrClient.Delete(ctx, &gwconf))
 	})
+	return &gwconf
+}
 
+func createGatewayClass(ctx context.Context, t *testing.T, gwconf *v1beta1.GatewayConfiguration) *gatewayv1.GatewayClass {
 	gwc := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "kgo-gwclass-conformance-",
@@ -128,7 +216,7 @@ func TestGatewayConformance(t *testing.T) {
 				Group:     "gateway-operator.konghq.com",
 				Kind:      "GatewayConfiguration",
 				Name:      gwconf.Name,
-				Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+				Namespace: lo.ToPtr(gwtypes.Namespace(gwconf.Namespace)),
 			},
 		},
 	}
@@ -137,34 +225,5 @@ func TestGatewayConformance(t *testing.T) {
 		require.NoError(t, clients.MgrClient.Delete(ctx, gwc))
 	})
 
-	// There are no explicit conformance tests for GatewayClass, but we can
-	// still run the conformance test suite setup to ensure that the
-	// GatewayClass gets accepted.
-	t.Log("configuring the Gateway API conformance test suite")
-	const reportFileName = "kong-gateway-operator.yaml" // TODO: https://github.com/Kong/gateway-operator/issues/268
-
-	opts := conformance.DefaultOptions(t)
-	opts.ReportOutputPath = "../../" + reportFileName
-	opts.Client = clients.MgrClient
-	opts.GatewayClassName = gwc.Name
-	opts.BaseManifests = testutils.GatewayRawRepoURL + "/conformance/base/manifests.yaml"
-	opts.SkipTests = skippedTests
-	opts.ConformanceProfiles = sets.New(
-		suite.GatewayHTTPConformanceProfileName,
-	)
-	opts.SupportedFeatures = sets.New(
-		features.SupportHTTPRouteResponseHeaderModification,
-	)
-	opts.Implementation = conformancev1.Implementation{
-		Organization: metadata.Organization,
-		Project:      metadata.ProjectName,
-		URL:          metadata.RepoURL,
-		Version:      metadata.Release,
-		Contact: []string{
-			metadata.RepoURL + "/issues/new/choose",
-		},
-	}
-
-	t.Log("running the Gateway API conformance test suite")
-	conformance.RunConformanceWithOptions(t, opts)
+	return gwc
 }

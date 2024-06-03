@@ -177,6 +177,12 @@ jobs:
 
   conformance-tests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - router-flavor: traditional_compatible
+        - router-flavor: expressions
     steps:
     - name: checkout repository
       uses: actions/checkout@v4
@@ -196,7 +202,8 @@ jobs:
     - name: run conformance tests
       run: make test.conformance
       env:
-        GOTESTSUM_JUNITFILE: "conformance-tests.xml"
+        GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}.xml
+        TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -211,7 +218,13 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
-        path: conformance-tests.xml
+        path: conformance-tests-${{ matrix.router-flavor }}.xml
+
+    - name: collect conformance report
+      uses: actions/upload-artifact@v4
+      with:
+        name: conformance-report-${{ matrix.router-flavor }}
+        path: kong-gateway-operator*.yaml
 
   integration-tests:
     runs-on: ubuntu-latest
