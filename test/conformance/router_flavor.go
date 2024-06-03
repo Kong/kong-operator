@@ -17,9 +17,8 @@ const (
 )
 
 // KongRouterFlavor returns router mode of Kong in tests. Currently supports:
-// - `traditional`
-// - `traditional_compatible`.
-// - `expressions` (experimental, only for testing expression route related tests).
+// - `traditional_compatible`
+// - `expressions`
 func KongRouterFlavor(t *testing.T) RouterFlavor {
 	rf := os.Getenv("TEST_KONG_ROUTER_FLAVOR")
 	switch {
