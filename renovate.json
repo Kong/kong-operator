@@ -35,7 +35,7 @@
       ]
     },
     {
-      "description": "Match versions in pkg/consts/dataplane.go that are properly annotated with `# renovate: datasource={} versioning={}.`",
+      "description": "Match versions in selected *.go files that are properly annotated with `// renovate: datasource={} depName={}.`",
       "customType": "regex",
       "datasourceTemplate": "docker",
       "fileMatch": [
@@ -43,7 +43,7 @@
         "^internal/versions/controlplane\\.go$"
       ],
       "matchStrings": [
-        ".+\\s+=\\s+\"(?<currentValue>.+)\"\\s+//\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+(?<depName>.+?)"
+        ".+\\s+=\\s+\"(?<currentValue>.+)\"\\s+//\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+depName=(?<depName>.+?)"
       ]
     }
   ]
