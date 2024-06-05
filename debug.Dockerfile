@@ -2,7 +2,7 @@
 # Debug image
 # ------------------------------------------------------------------------------
 
-FROM --platform=$BUILDPLATFORM golang:1.22.3 as debug
+FROM --platform=$BUILDPLATFORM golang:1.22.4 as debug
 
 ARG GOPATH
 ARG GOCACHE
