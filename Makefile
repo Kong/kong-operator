@@ -406,6 +406,11 @@ GATEWAY_API_CRDS_STANDARD_URL = github.com/$(GATEWAY_API_REPO)/config/crd/standa
 GATEWAY_API_CRDS_EXPERIMENTAL_URL = github.com/$(GATEWAY_API_REPO)/config/crd/experimental?ref=$(GATEWAY_API_VERSION)
 GATEWAY_API_RAW_REPO_URL = $(GATEWAY_API_RAW_REPO)/$(GATEWAY_API_VERSION)
 
+KIC_REPO ?= kong/kubernetes-ingress-controller
+KIC_PACKAGE ?= github.com/$(KIC_REPO)/v3
+KIC_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(KIC_PACKAGE))
+KIC_CRDS_URL ?= github.com/$(KIC_REPO)/config/crd?ref=$(KIC_VERSION)
+
 .PHONY: generate.gateway-api-urls
 generate.gateway-api-urls:
 	CRDS_STANDARD_URL="$(GATEWAY_API_CRDS_STANDARD_URL)" \
@@ -503,11 +508,13 @@ debug.skaffold.continuous: _ensure-kong-system-namespace
 # Install CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install
 install: manifests kustomize install-gateway-api-crds
+	$(KUSTOMIZE) build $(KIC_CRDS_URL) | kubectl apply -f -
 	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
 
 # Install standard and experimental CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.all
 install.all: manifests kustomize install-gateway-api-crds
+	$(KUSTOMIZE) build $(KIC_CRDS_URL) | kubectl apply -f -
 	kubectl apply --server-side -f $(PROJECT_DIR)/config/crd/bases/
 	kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
 
@@ -515,12 +522,14 @@ install.all: manifests kustomize install-gateway-api-crds
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall
 uninstall: manifests kustomize uninstall-gateway-api-crds
+	$(KUSTOMIZE) build $(KIC_CRDS_URL) | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 # Uninstall standard and experimental CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall.all
 uninstall.all: manifests kustomize uninstall-gateway-api-crds
+	$(KUSTOMIZE) build $(KIC_CRDS_URL) | kubectl apply -f -
 	kubectl delete --ignore-not-found=$(ignore-not-found) -f $(PROJECT_DIR)/config/crd/bases/
 
 # Deploy controller to the K8s cluster specified in ~/.kube/config.
