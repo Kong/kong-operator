@@ -405,7 +405,11 @@ GATEWAY_API_RAW_REPO ?= https://raw.githubusercontent.com/$(GATEWAY_API_REPO)
 GATEWAY_API_CRDS_STANDARD_URL = github.com/$(GATEWAY_API_REPO)/config/crd/standard?ref=$(GATEWAY_API_VERSION)
 GATEWAY_API_CRDS_EXPERIMENTAL_URL = github.com/$(GATEWAY_API_REPO)/config/crd/experimental?ref=$(GATEWAY_API_VERSION)
 GATEWAY_API_RAW_REPO_URL = $(GATEWAY_API_RAW_REPO)/$(GATEWAY_API_VERSION)
-KIC_CRDS_URL ?= github.com/kong/kubernetes-ingress-controller/config/crd
+
+KIC_REPO ?= kong/kubernetes-ingress-controller
+KIC_PACKAGE ?= github.com/$(KIC_REPO)/v3
+KIC_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(KIC_PACKAGE))
+KIC_CRDS_URL ?= github.com/$(KIC_REPO)/config/crd?ref=$(KIC_VERSION)
 
 .PHONY: generate.gateway-api-urls
 generate.gateway-api-urls:
