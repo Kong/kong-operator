@@ -35,6 +35,9 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 		{
 			name: "creating validating webhook configuration",
 			cp: &operatorv1beta1.ControlPlane{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "ControlPlane",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cp",
 				},
@@ -98,6 +101,9 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 		{
 			name: "updating validating webhook configuration enforces ObjectMeta",
 			cp: &operatorv1beta1.ControlPlane{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "ControlPlane",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cp",
 				},

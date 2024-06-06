@@ -306,7 +306,9 @@ func ControlPlaneHasAdmissionWebhookCertificateSecret(t *testing.T, ctx context.
 // that can be used to check if a ControlPlane has an admission webhook configuration.
 func ControlPlaneHasAdmissionWebhookConfiguration(t *testing.T, ctx context.Context, cp *operatorv1beta1.ControlPlane, clients K8sClients) func() bool {
 	return func() bool {
-		configs, err := k8sutils.ListValidatingWebhookConfigurations(ctx, clients.MgrClient, client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)))
+		managedByLabelSet, err := k8sutils.GetManagedByLabelSet(cp)
+		require.NoError(t, err)
+		configs, err := k8sutils.ListValidatingWebhookConfigurations(ctx, clients.MgrClient, client.MatchingLabels(managedByLabelSet))
 		require.NoError(t, err)
 		t.Logf("%d validating webhook configurations", len(configs))
 		return len(configs) > 0

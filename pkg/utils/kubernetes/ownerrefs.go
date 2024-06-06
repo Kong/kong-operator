@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -41,21 +43,37 @@ func SetOwnerForObject(obj, owner client.Object) {
 }
 
 // SetOwnerForObjectThroughLabels sets the owner of the provided object through a label.
-func SetOwnerForObjectThroughLabels(obj, owner client.Object) {
+func SetOwnerForObjectThroughLabels(obj, owner client.Object) error {
 	labels := obj.GetLabels()
-	for k, v := range GetManagedByLabelSet(owner) {
+	managedByLabelSet, err := GetManagedByLabelSet(owner)
+	if err != nil {
+		return err
+	}
+	for k, v := range managedByLabelSet {
 		labels[k] = v
 	}
 	obj.SetLabels(labels)
+	return nil
 }
 
 // GetManagedByLabelSet returns a map of labels with the managing object's metadata.
-func GetManagedByLabelSet(obj client.Object) map[string]string {
+func GetManagedByLabelSet(obj client.Object) (map[string]string, error) {
+	var kindLabel string
+	switch obj.GetObjectKind().GroupVersionKind().Kind {
+	case "Gateway":
+		kindLabel = consts.GatewayManagedLabelValue
+	case "ControlPlane":
+		kindLabel = consts.ControlPlaneManagedLabelValue
+	case "DataPlane":
+		kindLabel = consts.DataPlaneManagedLabelValue
+	default:
+		return nil, fmt.Errorf("unsupported owner of kind %q", obj.GetObjectKind().GroupVersionKind().Kind)
+	}
 	return map[string]string{
-		consts.GatewayOperatorManagedByLabel:          obj.GetObjectKind().GroupVersionKind().GroupKind().String(),
+		consts.GatewayOperatorManagedByLabel:          kindLabel,
 		consts.GatewayOperatorManagedByNamespaceLabel: obj.GetNamespace(),
 		consts.GatewayOperatorManagedByNameLabel:      obj.GetName(),
-	}
+	}, nil
 }
 
 // GetOwnerReferencer retrieves owner references.
