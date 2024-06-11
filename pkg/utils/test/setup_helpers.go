@@ -189,7 +189,7 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), crdPath, kubectlFlags...); err != nil {
 		return err
 	}
-	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), GatewayExperimentalCRDsKustomizeURL); err != nil {
+	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), GatewayStandardCRDsKustomizeURL); err != nil {
 		return err
 	}
 	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kicCRDsKustomizeURL); err != nil {
