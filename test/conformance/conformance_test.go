@@ -87,7 +87,7 @@ func TestGatewayConformance(t *testing.T) {
 	// Currently mode only relies on the KongRouterFlavor, but in the future
 	// we may want to add more modes.
 	mode := string(config.KongRouterFlavor)
-	reportFileName := fmt.Sprintf("kong-gateway-operator-%s.yaml", mode) // TODO: https://github.com/Kong/gateway-operator/issues/268
+	reportFileName := fmt.Sprintf("standard-%s-%s-report.yaml", metadata.Release, mode)
 
 	opts := conformance.DefaultOptions(t)
 	opts.ReportOutputPath = "../../" + reportFileName
