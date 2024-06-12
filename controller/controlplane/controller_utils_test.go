@@ -527,7 +527,6 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			changed := controlplane.SetDefaults(
 				tc.spec,
-				map[string]struct{}{},
 				controlplane.DefaultsArgs{
 					Namespace:                   tc.namespace,
 					DataPlaneIngressServiceName: tc.dataplaneIngressServiceName,

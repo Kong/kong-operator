@@ -320,7 +320,6 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					controlPlane := gatewaySubResource.(*operatorv1beta1.ControlPlane)
 					_ = controlplane.SetDefaults(
 						&controlPlane.Spec.ControlPlaneOptions,
-						map[string]struct{}{},
 						controlplane.DefaultsArgs{
 							Namespace:                   "test-namespace",
 							DataPlaneIngressServiceName: "test-ingress-service",

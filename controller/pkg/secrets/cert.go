@@ -164,7 +164,7 @@ func EnsureCertificate[
 	usages []certificatesv1.KeyUsage,
 	cl client.Client,
 	additionalMatchingLabels client.MatchingLabels,
-) (op.CreatedUpdatedOrNoop, *corev1.Secret, error) {
+) (op.Result, *corev1.Secret, error) {
 	setCALogger(ctrlruntimelog.Log)
 
 	// TODO: https://github.com/Kong/gateway-operator-archive/pull/156.
@@ -313,7 +313,7 @@ func generateTLSDataSecret(
 	mtlsCASecret types.NamespacedName,
 	usages []certificatesv1.KeyUsage,
 	k8sClient client.Client,
-) (op.CreatedUpdatedOrNoop, *corev1.Secret, error) {
+) (op.Result, *corev1.Secret, error) {
 	template := x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:   subject,

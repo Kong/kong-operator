@@ -19,7 +19,11 @@ import (
 )
 
 func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
-	const webhookSvcName = "webhook-svc"
+	webhookSvc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "webhook-svc",
+		},
+	}
 
 	testCases := []struct {
 		name    string
@@ -41,7 +45,20 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 							PodTemplateSpec: &corev1.PodTemplateSpec{
 								Spec: corev1.PodSpec{
 									Containers: []corev1.Container{
-										resources.GenerateControlPlaneContainer(consts.DefaultControlPlaneImage),
+										func() corev1.Container {
+											c := resources.GenerateControlPlaneContainer(
+												resources.GenerateContainerForControlPlaneParams{
+													Image:                          consts.DefaultControlPlaneImage,
+													AdmissionWebhookCertSecretName: lo.ToPtr("cert-secret"),
+												})
+											// Envs are set elsewhere so fill in the CONTROLLER_ADMISSION_WEBHOOK_LISTEN
+											// here so that the webhook is enabled.
+											c.Env = append(c.Env, corev1.EnvVar{
+												Name:  "CONTROLLER_ADMISSION_WEBHOOK_LISTEN",
+												Value: "0.0.0.0:8080",
+											})
+											return c
+										}(),
 									},
 								},
 							},
@@ -59,23 +76,23 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 
 				certSecret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "cert-cecret",
+						Name: "cert-secret",
 					},
 					Data: map[string][]byte{
 						"ca.crt": []byte("ca"), // dummy
 					},
 				}
 
-				res, err := r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvcName)
+				res, err := r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
 				require.NoError(t, err)
-				require.Equal(t, res, op.Created)
+				require.Equal(t, op.Created, res)
 
 				require.NoError(t, r.Client.List(ctx, &webhooks))
 				require.Len(t, webhooks.Items, 1)
 
-				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvcName)
+				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
 				require.NoError(t, err)
-				require.Equal(t, res, op.Noop)
+				require.Equal(t, op.Noop, res)
 			},
 		},
 		{
@@ -91,7 +108,20 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 							PodTemplateSpec: &corev1.PodTemplateSpec{
 								Spec: corev1.PodSpec{
 									Containers: []corev1.Container{
-										resources.GenerateControlPlaneContainer(consts.DefaultControlPlaneImage),
+										func() corev1.Container {
+											c := resources.GenerateControlPlaneContainer(
+												resources.GenerateContainerForControlPlaneParams{
+													Image:                          consts.DefaultControlPlaneImage,
+													AdmissionWebhookCertSecretName: lo.ToPtr("cert-secret"),
+												})
+											// Envs are set elsewhere so fill in the CONTROLLER_ADMISSION_WEBHOOK_LISTEN
+											// here so that the webhook is enabled.
+											c.Env = append(c.Env, corev1.EnvVar{
+												Name:  "CONTROLLER_ADMISSION_WEBHOOK_LISTEN",
+												Value: "0.0.0.0:8080",
+											})
+											return c
+										}(),
 									},
 								},
 							},
@@ -109,21 +139,21 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 
 				certSecret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "cert-cecret",
+						Name: "cert-secret",
 					},
 					Data: map[string][]byte{
 						"ca.crt": []byte("ca"), // dummy
 					},
 				}
 
-				res, err := r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvcName)
+				res, err := r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
 				require.NoError(t, err)
 				require.Equal(t, res, op.Created)
 
 				require.NoError(t, r.Client.List(ctx, &webhooks))
 				require.Len(t, webhooks.Items, 1, "webhook configuration should be created")
 
-				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvcName)
+				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
 				require.NoError(t, err)
 				require.Equal(t, res, op.Noop)
 
@@ -135,7 +165,7 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 				}
 
 				t.Log("running ensureValidatingWebhookConfiguration to enforce ObjectMeta")
-				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvcName)
+				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
 				require.NoError(t, err)
 				require.Equal(t, res, op.Updated)
 

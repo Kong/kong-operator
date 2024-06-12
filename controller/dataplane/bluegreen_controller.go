@@ -484,7 +484,7 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 	certSecret *corev1.Secret,
-) (*appsv1.Deployment, op.CreatedUpdatedOrNoop, error) {
+) (*appsv1.Deployment, op.Result, error) {
 	deploymentOpts := []k8sresources.DeploymentOpt{
 		labelSelectorFromDataPlaneRolloutStatusSelectorDeploymentOpt(dataplane),
 	}
@@ -747,7 +747,7 @@ func (r *BlueGreenReconciler) ensurePreviewAdminAPIService(
 	ctx context.Context,
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
-) (op.CreatedUpdatedOrNoop, *corev1.Service, error) {
+) (op.Result, *corev1.Service, error) {
 	additionalServiceLabels := map[string]string{
 		consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 	}
@@ -768,6 +768,7 @@ func (r *BlueGreenReconciler) ensurePreviewAdminAPIService(
 		log.Debug(logger, "preview admin service modified", dataplane, "service", svc.Name, "reason", res)
 	case op.Noop:
 		log.Trace(logger, "no need for preview Admin API service update", dataplane)
+	case op.Deleted:
 	}
 	return res, svc, nil // dataplane admin service creation/update will trigger reconciliation
 }
@@ -778,7 +779,7 @@ func (r *BlueGreenReconciler) ensurePreviewIngressService(
 	ctx context.Context,
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
-) (op.CreatedUpdatedOrNoop, *corev1.Service, error) {
+) (op.Result, *corev1.Service, error) {
 	additionalServiceLabels := map[string]string{
 		consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 	}
@@ -800,6 +801,7 @@ func (r *BlueGreenReconciler) ensurePreviewIngressService(
 		log.Debug(logger, "preview ingress service modified", dataplane, "service", svc.Name, "reason", res)
 	case op.Noop:
 		log.Trace(logger, "no need for preview ingress service update", dataplane)
+	case op.Deleted:
 	}
 
 	return res, svc, nil

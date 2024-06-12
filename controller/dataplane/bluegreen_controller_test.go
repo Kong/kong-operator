@@ -448,7 +448,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 		name                     string
 		dataplane                *operatorv1beta1.DataPlane
 		existingServiceModifier  func(*testing.T, context.Context, client.Client, *corev1.Service)
-		expectedCreatedOrUpdated op.CreatedUpdatedOrNoop
+		expectedCreatedOrUpdated op.Result
 		expectedService          *corev1.Service
 		// expectedErrorMessage is empty if we expect no error, otherwise returned error must contain it.
 		expectedErrorMessage string

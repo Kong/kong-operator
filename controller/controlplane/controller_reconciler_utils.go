@@ -150,7 +150,7 @@ func (r *Reconciler) ensureDeployment(
 	ctx context.Context,
 	logger logr.Logger,
 	params ensureDeploymentParams,
-) (op.CreatedUpdatedOrNoop, *appsv1.Deployment, error) {
+) (op.Result, *appsv1.Deployment, error) {
 	dataplaneIsSet := params.ControlPlane.Spec.DataPlane != nil && *params.ControlPlane.Spec.DataPlane != ""
 
 	deployments, err := k8sutils.ListDeploymentsForOwner(ctx,
@@ -421,7 +421,7 @@ func (r *Reconciler) ensureAdminMTLSCertificateSecret(
 	ctx context.Context,
 	controlplane *operatorv1beta1.ControlPlane,
 ) (
-	op.CreatedUpdatedOrNoop,
+	op.Result,
 	*corev1.Secret,
 	error,
 ) {
@@ -452,10 +452,11 @@ func (r *Reconciler) ensureAdminMTLSCertificateSecret(
 // ControlPlane's admission webhook.
 func (r *Reconciler) ensureAdmissionWebhookCertificateSecret(
 	ctx context.Context,
+	logger logr.Logger,
 	cp *operatorv1beta1.ControlPlane,
 	admissionWebhookService *corev1.Service,
 ) (
-	op.CreatedUpdatedOrNoop,
+	op.Result,
 	*corev1.Secret,
 	error,
 ) {
@@ -467,6 +468,24 @@ func (r *Reconciler) ensureAdmissionWebhookCertificateSecret(
 	matchingLabels := client.MatchingLabels{
 		consts.SecretUsedByServiceLabel: consts.ControlPlaneServiceKindWebhook,
 	}
+	if !isAdmissionWebhookEnabled(ctx, r.Client, logger, cp) {
+		labels := k8sresources.GetManagedLabelForOwner(cp)
+		labels[consts.SecretUsedByServiceLabel] = consts.ControlPlaneServiceKindWebhook
+		secrets, err := k8sutils.ListSecretsForOwner(ctx, r.Client, cp.GetUID(), matchingLabels)
+		if err != nil {
+			return op.Noop, nil, fmt.Errorf("failed listing Secrets for ControlPlane %s/: %w", client.ObjectKeyFromObject(cp), err)
+		}
+		for _, svc := range secrets {
+			if err := r.Client.Delete(ctx, &svc); err != nil {
+				return op.Noop, nil, fmt.Errorf("failed deleting ControlPlane admission webhook Secret %s: %w", svc.Name, err)
+			}
+		}
+		if len(secrets) == 0 {
+			return op.Noop, nil, nil
+		}
+		return op.Deleted, nil, nil
+	}
+
 	return secrets.EnsureCertificate(ctx,
 		cp,
 		fmt.Sprintf("%s.%s.svc", admissionWebhookService.Name, admissionWebhookService.Namespace),
@@ -575,9 +594,10 @@ func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx contex
 
 func (r *Reconciler) ensureAdmissionWebhookService(
 	ctx context.Context,
+	logger logr.Logger,
 	cl client.Client,
 	controlPlane *operatorv1beta1.ControlPlane,
-) (op.CreatedUpdatedOrNoop, *corev1.Service, error) {
+) (op.Result, *corev1.Service, error) {
 	matchingLabels := k8sresources.GetManagedLabelForOwner(controlPlane)
 	matchingLabels[consts.ControlPlaneServiceLabel] = consts.ControlPlaneServiceKindWebhook
 
@@ -590,6 +610,19 @@ func (r *Reconciler) ensureAdmissionWebhookService(
 	)
 	if err != nil {
 		return op.Noop, nil, fmt.Errorf("failed listing admission webhook Services for ControlPlane %s/%s: %w", controlPlane.Namespace, controlPlane.Name, err)
+	}
+
+	if !isAdmissionWebhookEnabled(ctx, cl, logger, controlPlane) {
+		for _, svc := range services {
+			svc := svc
+			if err := cl.Delete(ctx, &svc); err != nil && !k8serrors.IsNotFound(err) {
+				return op.Noop, nil, fmt.Errorf("failed deleting ControlPlane admission webhook Service %s: %w", svc.Name, err)
+			}
+		}
+		if len(services) == 0 {
+			return op.Noop, nil, nil
+		}
+		return op.Deleted, nil, nil
 	}
 
 	count := len(services)
@@ -639,8 +672,8 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 	certSecret *corev1.Secret,
-	webhookServiceName string,
-) (op.CreatedUpdatedOrNoop, error) {
+	webhookService *corev1.Service,
+) (op.Result, error) {
 	logger := log.GetLogger(ctx, "controlplane.ensureValidatingWebhookConfiguration", r.DevelopmentMode)
 
 	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(
@@ -663,6 +696,18 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 		return op.Noop, errors.New("number of validatingWebhookConfigurations reduced")
 	}
 
+	if !isAdmissionWebhookEnabled(ctx, r.Client, logger, cp) {
+		for _, webhookConfiguration := range validatingWebhookConfigurations {
+			if err := r.Client.Delete(ctx, &webhookConfiguration); err != nil && !k8serrors.IsNotFound(err) {
+				return op.Noop, fmt.Errorf("failed deleting ControlPlane admission webhook ValidatingWebhookConfiguration %s: %w", webhookConfiguration.Name, err)
+			}
+		}
+		if len(validatingWebhookConfigurations) == 0 {
+			return op.Noop, nil
+		}
+		return op.Deleted, nil
+	}
+
 	cpContainer := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
 	if cpContainer == nil {
 		return op.Noop, errors.New("controller container not found")
@@ -679,7 +724,7 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 		admregv1.WebhookClientConfig{
 			Service: &admregv1.ServiceReference{
 				Namespace: cp.Namespace,
-				Name:      webhookServiceName,
+				Name:      webhookService.GetName(),
 				Port:      lo.ToPtr(int32(consts.ControlPlaneAdmissionWebhookListenPort)),
 			},
 			CABundle: caBundle,

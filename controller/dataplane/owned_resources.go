@@ -36,7 +36,7 @@ func ensureDataPlaneCertificate(
 	dataplane *operatorv1beta1.DataPlane,
 	clusterCASecretNN types.NamespacedName,
 	adminServiceNN types.NamespacedName,
-) (op.CreatedUpdatedOrNoop, *corev1.Secret, error) {
+) (op.Result, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
 		certificatesv1.UsageDigitalSignature, certificatesv1.UsageServerAuth,
@@ -57,7 +57,7 @@ func ensureHPAForDataPlane(
 	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 	deploymentName string,
-) (res op.CreatedUpdatedOrNoop, hpa *autoscalingv2.HorizontalPodAutoscaler, err error) {
+) (res op.Result, hpa *autoscalingv2.HorizontalPodAutoscaler, err error) {
 	matchingLabels := k8sresources.GetManagedLabelForOwner(dataplane)
 	hpas, err := k8sutils.ListHPAsForOwner(
 		ctx,
@@ -141,7 +141,7 @@ func ensureAdminServiceForDataPlane(
 	dataPlane *operatorv1beta1.DataPlane,
 	additionalServiceLabels client.MatchingLabels,
 	opts ...k8sresources.ServiceOpt,
-) (res op.CreatedUpdatedOrNoop, svc *corev1.Service, err error) {
+) (res op.Result, svc *corev1.Service, err error) {
 	// TODO: https://github.com/Kong/gateway-operator/issues/156.
 	// Use only new labels after several minor version of soak time.
 
@@ -252,7 +252,7 @@ func ensureIngressServiceForDataPlane(
 	dataPlane *operatorv1beta1.DataPlane,
 	additionalServiceLabels client.MatchingLabels,
 	opts ...k8sresources.ServiceOpt,
-) (op.CreatedUpdatedOrNoop, *corev1.Service, error) {
+) (op.Result, *corev1.Service, error) {
 	// TODO: https://github.com/Kong/gateway-operator/issues/156.
 	// Use only new labels after several minor version of soak time.
 
