@@ -43,7 +43,7 @@
         "^internal/versions/controlplane\\.go$"
       ],
       "matchStrings": [
-        ".+\\s+=\\s+\"(?<currentValue>.+)\"\\s+//\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+depName=(?<depName>.+?)"
+        ".+\\s+=\\s+\"(?<currentValue>.+)\"\\s+//\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+depName=(?<depName>.+)"
       ]
     }
   ]
