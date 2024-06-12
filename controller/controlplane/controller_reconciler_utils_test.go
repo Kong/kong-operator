@@ -83,14 +83,14 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 					},
 				}
 
-				res, err := r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc, true)
+				res, err := r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
 				require.NoError(t, err)
 				require.Equal(t, op.Created, res)
 
 				require.NoError(t, r.Client.List(ctx, &webhooks))
 				require.Len(t, webhooks.Items, 1)
 
-				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc, true)
+				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
 				require.NoError(t, err)
 				require.Equal(t, op.Noop, res)
 			},
@@ -146,14 +146,14 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 					},
 				}
 
-				res, err := r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc, true)
+				res, err := r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
 				require.NoError(t, err)
 				require.Equal(t, res, op.Created)
 
 				require.NoError(t, r.Client.List(ctx, &webhooks))
 				require.Len(t, webhooks.Items, 1, "webhook configuration should be created")
 
-				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc, true)
+				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
 				require.NoError(t, err)
 				require.Equal(t, res, op.Noop)
 
@@ -165,7 +165,7 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 				}
 
 				t.Log("running ensureValidatingWebhookConfiguration to enforce ObjectMeta")
-				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc, true)
+				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
 				require.NoError(t, err)
 				require.Equal(t, res, op.Updated)
 

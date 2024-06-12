@@ -482,7 +482,7 @@ func (r *Reconciler) ensureWebhookResources(
 	}
 
 	log.Trace(logger, "ensuring admission webhook service", cp)
-	res, admissionWebhookService, err := r.ensureAdmissionWebhookService(ctx, r.Client, cp, webhookEnabled)
+	res, admissionWebhookService, err := r.ensureAdmissionWebhookService(ctx, logger, r.Client, cp)
 	if err != nil {
 		return "", res, fmt.Errorf("failed to ensure admission webhook service: %w", err)
 	}
@@ -496,7 +496,7 @@ func (r *Reconciler) ensureWebhookResources(
 	}
 
 	log.Trace(logger, "ensuring admission webhook certificate", cp)
-	res, admissionWebhookCertificateSecret, err := r.ensureAdmissionWebhookCertificateSecret(ctx, cp, admissionWebhookService, webhookEnabled)
+	res, admissionWebhookCertificateSecret, err := r.ensureAdmissionWebhookCertificateSecret(ctx, logger, cp, admissionWebhookService)
 	if err != nil {
 		return "", res, err
 	}
@@ -510,7 +510,7 @@ func (r *Reconciler) ensureWebhookResources(
 	}
 
 	log.Trace(logger, "ensuring admission webhook configuration", cp)
-	res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, admissionWebhookCertificateSecret, admissionWebhookService, webhookEnabled)
+	res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, admissionWebhookCertificateSecret, admissionWebhookService)
 	if err != nil {
 		return "", res, err
 	}

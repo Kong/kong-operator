@@ -452,9 +452,9 @@ func (r *Reconciler) ensureAdminMTLSCertificateSecret(
 // ControlPlane's admission webhook.
 func (r *Reconciler) ensureAdmissionWebhookCertificateSecret(
 	ctx context.Context,
+	logger logr.Logger,
 	cp *operatorv1beta1.ControlPlane,
 	admissionWebhookService *corev1.Service,
-	webhookEnabled bool,
 ) (
 	op.Result,
 	*corev1.Secret,
@@ -468,7 +468,7 @@ func (r *Reconciler) ensureAdmissionWebhookCertificateSecret(
 	matchingLabels := client.MatchingLabels{
 		consts.SecretUsedByServiceLabel: consts.ControlPlaneServiceKindWebhook,
 	}
-	if !webhookEnabled {
+	if !isAdmissionWebhookEnabled(ctx, r.Client, logger, cp) {
 		labels := k8sresources.GetManagedLabelForOwner(cp)
 		labels[consts.SecretUsedByServiceLabel] = consts.ControlPlaneServiceKindWebhook
 		secrets, err := k8sutils.ListSecretsForOwner(ctx, r.Client, cp.GetUID(), matchingLabels)
@@ -594,9 +594,9 @@ func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx contex
 
 func (r *Reconciler) ensureAdmissionWebhookService(
 	ctx context.Context,
+	logger logr.Logger,
 	cl client.Client,
 	controlPlane *operatorv1beta1.ControlPlane,
-	webhookEnabled bool,
 ) (op.Result, *corev1.Service, error) {
 	matchingLabels := k8sresources.GetManagedLabelForOwner(controlPlane)
 	matchingLabels[consts.ControlPlaneServiceLabel] = consts.ControlPlaneServiceKindWebhook
@@ -612,7 +612,7 @@ func (r *Reconciler) ensureAdmissionWebhookService(
 		return op.Noop, nil, fmt.Errorf("failed listing admission webhook Services for ControlPlane %s/%s: %w", controlPlane.Namespace, controlPlane.Name, err)
 	}
 
-	if !webhookEnabled {
+	if !isAdmissionWebhookEnabled(ctx, cl, logger, controlPlane) {
 		for _, svc := range services {
 			svc := svc
 			if err := cl.Delete(ctx, &svc); err != nil && !k8serrors.IsNotFound(err) {
@@ -673,7 +673,6 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	cp *operatorv1beta1.ControlPlane,
 	certSecret *corev1.Secret,
 	webhookService *corev1.Service,
-	webhookEnabled bool,
 ) (op.Result, error) {
 	logger := log.GetLogger(ctx, "controlplane.ensureValidatingWebhookConfiguration", r.DevelopmentMode)
 
@@ -697,7 +696,7 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 		return op.Noop, errors.New("number of validatingWebhookConfigurations reduced")
 	}
 
-	if !webhookEnabled {
+	if !isAdmissionWebhookEnabled(ctx, r.Client, logger, cp) {
 		for _, webhookConfiguration := range validatingWebhookConfigurations {
 			if err := r.Client.Delete(ctx, &webhookConfiguration); err != nil && !k8serrors.IsNotFound(err) {
 				return op.Noop, fmt.Errorf("failed deleting ControlPlane admission webhook ValidatingWebhookConfiguration %s: %w", webhookConfiguration.Name, err)
