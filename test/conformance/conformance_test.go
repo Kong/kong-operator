@@ -190,7 +190,6 @@ func createGatewayConfiguration(ctx context.Context, t *testing.T, c Conformance
 											Value: "off",
 										},
 									},
-									Image: "kong/kubernetes-ingress-controller:3.2.0",
 								},
 							},
 						},

@@ -60,12 +60,22 @@ func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string
 		return nil, err
 	}
 
-	constraint, err = semver.NewConstraint(">=3.1")
+	constraint, err = semver.NewConstraint(">=3.1, <3.2")
 	if err != nil {
 		return nil, err
 	}
 	if constraint.Check(semVersion) {
-		cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_1(controlplaneName)
+		cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_1_lt3_2(controlplaneName)
+		LabelObjectAsControlPlaneManaged(cr)
+		return cr, nil
+	}
+
+	constraint, err = semver.NewConstraint(">=3.2")
+	if err != nil {
+		return nil, err
+	}
+	if constraint.Check(semVersion) {
+		cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_2(controlplaneName)
 		LabelObjectAsControlPlaneManaged(cr)
 		return cr, nil
 	}
