@@ -218,10 +218,10 @@ github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnr
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
-github.com/kong/go-kong v0.54.0 h1:HZkZJRREJs/azkgJxMWr2jANQQfg8xXsAiFKu+d1nrs=
-github.com/kong/go-kong v0.54.0/go.mod h1:51rSSjgSZKukXgn5nNYbJUx0Et/islqR+LTltwCyjG8=
-github.com/kong/kubernetes-ingress-controller/v3 v3.1.5 h1:fkrt2p6/8uavGUqo+OpUJ9jjGDHvyfZQa4sLzu0a1HU=
-github.com/kong/kubernetes-ingress-controller/v3 v3.1.5/go.mod h1:+ZBwo4iHZDPagoZVYiYjUCJF+umEZydiqRDDFGxR5wc=
+github.com/kong/go-kong v0.55.0 h1:lonKRzsDGk12dh9E+y+pWnY2ThXhKuMHjzBHSpCvQLw=
+github.com/kong/go-kong v0.55.0/go.mod h1:i1cMgTu6RYPHSyMpviShddRnc+DML/vlpgKC00hr8kU=
+github.com/kong/kubernetes-ingress-controller/v3 v3.1.6 h1:ceN+4jImst0jaudhZ7W1yaV5wg6xDt3wRuA5p26LNiM=
+github.com/kong/kubernetes-ingress-controller/v3 v3.1.6/go.mod h1:benXnoC4KaGG6tlmNCSg6wnbANkS5/+lFC1Esczuf90=
 github.com/kong/kubernetes-telemetry v0.1.3 h1:Hz2tkHGIIUqbn1x46QRDmmNjbEtJyxyOvHSPne3uPto=
 github.com/kong/kubernetes-telemetry v0.1.3/go.mod h1:wB7o8dOKa5R396CyiU0sPa8am/g3c5DKd/qrn/Vmb+k=
 github.com/kong/kubernetes-testing-framework v0.47.0 h1:+9AfTinsGwtxVOcQ/dsDDpwHr4YPpXogKc0THauYJjA=
