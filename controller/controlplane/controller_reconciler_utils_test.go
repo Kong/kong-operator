@@ -49,7 +49,7 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 											c := resources.GenerateControlPlaneContainer(
 												resources.GenerateContainerForControlPlaneParams{
 													Image:                          consts.DefaultControlPlaneImage,
-													AdmissionWebhookCertSecretName: "cert-secret",
+													AdmissionWebhookCertSecretName: lo.ToPtr("cert-secret"),
 												})
 											// Envs are set elsewhere so fill in the CONTROLLER_ADMISSION_WEBHOOK_LISTEN
 											// here so that the webhook is enabled.
@@ -112,7 +112,7 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 											c := resources.GenerateControlPlaneContainer(
 												resources.GenerateContainerForControlPlaneParams{
 													Image:                          consts.DefaultControlPlaneImage,
-													AdmissionWebhookCertSecretName: "cert-secret",
+													AdmissionWebhookCertSecretName: lo.ToPtr("cert-secret"),
 												})
 											// Envs are set elsewhere so fill in the CONTROLLER_ADMISSION_WEBHOOK_LISTEN
 											// here so that the webhook is enabled.

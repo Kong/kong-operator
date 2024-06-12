@@ -96,7 +96,7 @@ func GenerateNewDeploymentForControlPlane(params GenerateNewDeploymentForControl
 					Containers: []corev1.Container{
 						GenerateControlPlaneContainer(GenerateContainerForControlPlaneParams{
 							Image:                          params.ControlPlaneImage,
-							AdmissionWebhookCertSecretName: params.AdmissionWebhookCertSecretName,
+							AdmissionWebhookCertSecretName: lo.ToPtr(params.AdmissionWebhookCertSecretName),
 						}),
 					},
 				},
@@ -131,8 +131,10 @@ func GenerateNewDeploymentForControlPlane(params GenerateNewDeploymentForControl
 
 // GenerateContainerForControlPlaneParams is a parameter struct for GenerateControlPlaneContainer function.
 type GenerateContainerForControlPlaneParams struct {
-	Image                          string
-	AdmissionWebhookCertSecretName string
+	Image string
+	// AdmissionWebhookCertSecretName is the name of the Secret that holds the certificate for the admission webhook.
+	// If this is nil, the admission webhook will not be enabled.
+	AdmissionWebhookCertSecretName *string
 }
 
 // GenerateControlPlaneContainer generates a control plane container.
@@ -162,7 +164,7 @@ func GenerateControlPlaneContainer(params GenerateContainerForControlPlaneParams
 		Resources:      *DefaultControlPlaneResources(),
 	}
 	// Only add the admission webhook volume mount and port if the secret name is provided.
-	if params.AdmissionWebhookCertSecretName != "" {
+	if params.AdmissionWebhookCertSecretName != nil && *params.AdmissionWebhookCertSecretName != "" {
 		c.VolumeMounts = append(c.VolumeMounts, corev1.VolumeMount{
 			Name:      consts.ControlPlaneAdmissionWebhookVolumeName,
 			ReadOnly:  true,
