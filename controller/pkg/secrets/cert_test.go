@@ -230,7 +230,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 		subject                  string
 		mtlsCASecretNN           NN
 		additionalMatchingLabels client.MatchingLabels
-		expectedResult           op.CreatedUpdatedOrNoop
+		expectedResult           op.Result
 		expectedError            error
 		objectList               client.ObjectList
 	}{

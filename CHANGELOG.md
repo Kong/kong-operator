@@ -22,6 +22,8 @@
 
 ## Unreleased
 
+> Release date: TBA
+
 ### Added
 
 - Add `ExternalTrafficPolicy` to `DataPlane`'s `ServiceOptions`
@@ -40,6 +42,10 @@
   [#246](https://github.com/Kong/gateway-operator/pull/246)
 - `Gateway`s' listeners now have their `attachedRoutes` count filled in in status.
   [#251](https://github.com/Kong/gateway-operator/pull/251)
+- Detect when `ControlPlane` has its admission webhook disabled via
+  `CONTROLLER_ADMISSION_WEBHOOK_LISTEN` environment variable and ensure that
+  relevant webhook resources are not created/deleted.
+  [#326](https://github.com/Kong/gateway-operator/pull/326)
 
 ### Fixes
 

@@ -34,7 +34,7 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 		assertHPAFunc   func(t *testing.T, hpa *autoscalingv2.HorizontalPodAutoscaler)
 		updated         bool
 		wantErr         bool
-		wantResult      op.CreatedUpdatedOrNoop
+		wantResult      op.Result
 	}{
 		{
 			name: "when no changes are needed no patch is being made",

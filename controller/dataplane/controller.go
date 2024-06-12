@@ -108,6 +108,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		log.Debug(logger, "DataPlane admin service modified", dataplane, "service", dataplaneAdminService.Name, "reason", res)
 		return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
 	case op.Noop:
+	case op.Deleted: // This should not happen.
 	}
 
 	log.Trace(logger, "exposing DataPlane deployment via service", dataplane)

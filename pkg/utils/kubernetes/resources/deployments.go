@@ -92,14 +92,22 @@ func GenerateNewDeploymentForControlPlane(params GenerateNewDeploymentForControl
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					Volumes: []corev1.Volume{
 						ClusterCertificateVolume(params.AdminMTLSCertSecretName),
-						controlPlaneAdmissionWebhookCertificateVolume(params.AdmissionWebhookCertSecretName),
 					},
 					Containers: []corev1.Container{
-						GenerateControlPlaneContainer(params.AdmissionWebhookCertSecretName),
+						GenerateControlPlaneContainer(GenerateContainerForControlPlaneParams{
+							Image:                          params.ControlPlaneImage,
+							AdmissionWebhookCertSecretName: params.AdmissionWebhookCertSecretName,
+						}),
 					},
 				},
 			},
 		},
+	}
+	// Only add the admission webhook volume if the secret name is provided.
+	if params.AdmissionWebhookCertSecretName != "" {
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes,
+			controlPlaneAdmissionWebhookCertificateVolume(params.AdmissionWebhookCertSecretName),
+		)
 	}
 	SetDefaultsPodTemplateSpec(&deployment.Spec.Template)
 	LabelObjectAsControlPlaneManaged(deployment)
@@ -121,11 +129,17 @@ func GenerateNewDeploymentForControlPlane(params GenerateNewDeploymentForControl
 	return deployment, nil
 }
 
+// GenerateContainerForControlPlaneParams is a parameter struct for GenerateControlPlaneContainer function.
+type GenerateContainerForControlPlaneParams struct {
+	Image                          string
+	AdmissionWebhookCertSecretName string
+}
+
 // GenerateControlPlaneContainer generates a control plane container.
-func GenerateControlPlaneContainer(image string) corev1.Container {
-	return corev1.Container{
+func GenerateControlPlaneContainer(params GenerateContainerForControlPlaneParams) corev1.Container {
+	c := corev1.Container{
 		Name:                     consts.ControlPlaneControllerContainerName,
-		Image:                    image,
+		Image:                    params.Image,
 		ImagePullPolicy:          corev1.PullIfNotPresent,
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
@@ -135,11 +149,6 @@ func GenerateControlPlaneContainer(image string) corev1.Container {
 				ReadOnly:  true,
 				MountPath: consts.ClusterCertificateVolumeMountPath,
 			},
-			{
-				Name:      consts.ControlPlaneAdmissionWebhookVolumeName,
-				ReadOnly:  true,
-				MountPath: consts.ControlPlaneAdmissionWebhookVolumeMountPath,
-			},
 		},
 		Ports: []corev1.ContainerPort{
 			{
@@ -147,16 +156,25 @@ func GenerateControlPlaneContainer(image string) corev1.Container {
 				ContainerPort: 10254,
 				Protocol:      corev1.ProtocolTCP,
 			},
-			{
-				Name:          "webhook",
-				ContainerPort: consts.ControlPlaneAdmissionWebhookListenPort,
-				Protocol:      corev1.ProtocolTCP,
-			},
 		},
 		LivenessProbe:  GenerateControlPlaneProbe("/healthz", intstr.FromInt(10254)),
 		ReadinessProbe: GenerateControlPlaneProbe("/readyz", intstr.FromInt(10254)),
 		Resources:      *DefaultControlPlaneResources(),
 	}
+	// Only add the admission webhook volume mount and port if the secret name is provided.
+	if params.AdmissionWebhookCertSecretName != "" {
+		c.VolumeMounts = append(c.VolumeMounts, corev1.VolumeMount{
+			Name:      consts.ControlPlaneAdmissionWebhookVolumeName,
+			ReadOnly:  true,
+			MountPath: consts.ControlPlaneAdmissionWebhookVolumeMountPath,
+		})
+		c.Ports = append(c.Ports, corev1.ContainerPort{
+			Name:          consts.ControlPlaneAdmissionWebhookPortName,
+			ContainerPort: consts.ControlPlaneAdmissionWebhookListenPort,
+			Protocol:      corev1.ProtocolTCP,
+		})
+	}
+	return c
 }
 
 const (

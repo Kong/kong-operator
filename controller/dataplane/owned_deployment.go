@@ -90,7 +90,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	ctx context.Context,
 	dataplane *operatorv1beta1.DataPlane,
 	developmentMode bool,
-) (*appsv1.Deployment, op.CreatedUpdatedOrNoop, error) {
+) (*appsv1.Deployment, op.Result, error) {
 	// run any preparatory callbacks
 	beforeDeploymentCallbacks := NewCallbackRunner(d.client)
 	cbErrors := beforeDeploymentCallbacks.For(dataplane).Runs(d.beforeCallbacks).Do(ctx, nil)
@@ -294,7 +294,7 @@ func reconcileDataPlaneDeployment(
 	dataplane *operatorv1beta1.DataPlane,
 	existing *appsv1.Deployment,
 	desired *appsv1.Deployment,
-) (res op.CreatedUpdatedOrNoop, deploy *appsv1.Deployment, err error) {
+) (res op.Result, deploy *appsv1.Deployment, err error) {
 	if existing != nil {
 		var updated bool
 		original := existing.DeepCopy()

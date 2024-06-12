@@ -34,7 +34,7 @@ func ApplyPatchIfNonEmpty[
 	oldExistingResource ResourceT,
 	owner OwnerT,
 	updated bool,
-) (res op.CreatedUpdatedOrNoop, deploy ResourceT, err error) {
+) (res op.Result, deploy ResourceT, err error) {
 	kind := existingResource.GetObjectKind().GroupVersionKind().Kind
 
 	if !updated {
@@ -69,7 +69,7 @@ func ApplyGatewayStatusPatchIfNotEmpty(ctx context.Context,
 	logger logr.Logger,
 	existingGateway *gatewayv1.Gateway,
 	oldExistingGateway *gatewayv1.Gateway,
-) (res op.CreatedUpdatedOrNoop, err error) {
+) (res op.Result, err error) {
 	// Check if the patch to be applied is empty.
 	patch := client.MergeFrom(oldExistingGateway)
 	b, err := patch.Data(existingGateway)

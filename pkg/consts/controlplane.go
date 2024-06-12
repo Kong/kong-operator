@@ -49,6 +49,8 @@ const (
 // -----------------------------------------------------------------------------
 
 const (
+	// ControlPlaneAdmissionWebhookPortName is the name of the port on which the control plane admission webhook listens.
+	ControlPlaneAdmissionWebhookPortName = "webhook"
 	// ControlPlaneAdmissionWebhookListenPort is the port on which the control plane admission webhook listens.
 	ControlPlaneAdmissionWebhookListenPort = 8080
 	// ControlPlaneAdmissionWebhookEnvVarValue is the default value for the admission webhook env var.

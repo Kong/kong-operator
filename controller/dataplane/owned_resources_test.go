@@ -28,7 +28,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 		dataplane                *operatorv1beta1.DataPlane
 		additionalLabels         map[string]string
 		existingServiceModifier  func(*testing.T, context.Context, client.Client, *corev1.Service)
-		expectedCreatedOrUpdated op.CreatedUpdatedOrNoop
+		expectedCreatedOrUpdated op.Result
 		expectedServiceType      corev1.ServiceType
 		expectedServicePorts     []corev1.ServicePort
 		expectedAnnotations      map[string]string

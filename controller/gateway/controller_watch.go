@@ -322,7 +322,6 @@ func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 	dataplaneAdminServiceName,
 	controlPlaneName string,
 ) {
-	dontOverride := make(map[string]struct{})
 	if gatewayConfig.Spec.ControlPlaneOptions == nil {
 		gatewayConfig.Spec.ControlPlaneOptions = new(operatorv1beta1.ControlPlaneOptions)
 	}
@@ -345,16 +344,17 @@ func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 		// This change will not be saved in the API server (i.e. user applied resource
 		// will not be changed) - which is the desired behavior - since the caller
 		// only uses the changed GatewayConfiguration to generate ControlPlane resource.
-		container = lo.ToPtr[corev1.Container](resources.GenerateControlPlaneContainer(consts.DefaultControlPlaneImage))
+		container = lo.ToPtr[corev1.Container](resources.GenerateControlPlaneContainer(
+			resources.GenerateContainerForControlPlaneParams{
+				Image: consts.DefaultControlPlaneImage,
+			},
+		))
 		controlPlanePodTemplateSpec.Spec.Containers = append(controlPlanePodTemplateSpec.Spec.Containers, *container)
-	}
-	for _, env := range container.Env {
-		dontOverride[env.Name] = struct{}{}
 	}
 
 	// an actual ControlPlane will have ObjectMeta populated with ownership information. this includes a stand-in to
 	// satisfy the signature
-	_ = controlplane.SetDefaults(gatewayConfig.Spec.ControlPlaneOptions, dontOverride,
+	_ = controlplane.SetDefaults(gatewayConfig.Spec.ControlPlaneOptions,
 		controlplane.DefaultsArgs{
 			Namespace:                   gateway.Namespace,
 			DataPlaneIngressServiceName: dataplaneIngressServiceName,
