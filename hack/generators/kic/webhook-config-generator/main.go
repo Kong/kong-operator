@@ -2,11 +2,13 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"text/template"
 
+	"github.com/kong/semver/v4"
 	"github.com/samber/lo"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -18,25 +20,41 @@ import (
 
 const (
 	validatingWebhookConfigurationPath                          = "config/webhook/manifests.yaml"
+	validatingWebhookConfigurationKustomizeURL                  = "https://github.com/kong/kubernetes-ingress-controller/config/webhook"
 	validatingWebhookConfigurationGeneratorForVersionOutputPath = "pkg/utils/kubernetes/resources/validatingwebhookconfig/zz_generated_kic_%s.go"
 	validatingWebhookConfigurationGeneratorMasterOutputPath     = "pkg/utils/kubernetes/resources/zz_generated_kic_validatingwebhookconfig.go"
 )
 
 func main() {
-	generateHelpersForAllConfiguredVersions()
+	generateHelpersForAllConfiguredVersions(context.Background())
 	generateMasterHelper()
 }
 
 // generateHelpersForAllConfiguredVersions iterates over kicversions.ManifestsVersionsForKICVersions map and generates
 // GenerateValidatingWebhookConfigurationForKIC_{versionConstraint} function for each configured version.
-func generateHelpersForAllConfiguredVersions() {
+func generateHelpersForAllConfiguredVersions(ctx context.Context) {
 	for versionConstraint, version := range kicversions.ManifestsVersionsForKICVersions {
 		log.Printf("Generating ValidatingWebhook Configuration for KIC versions %s (using manifests: %s)\n", versionConstraint, version)
 
-		// Download KIC-generated ValidatingWebhookConfiguration.
-		manifestContent, err := kic.GetFileFromKICRepositoryForVersion(validatingWebhookConfigurationPath, version)
-		if err != nil {
-			log.Fatalf("Failed to download %s from KIC repository: %s", validatingWebhookConfigurationPath, err)
+		var (
+			manifestContent []byte
+			err             error
+		)
+		// Before KIC 3.2 config/webhook directory contained only the generated manifes YAML.
+		// 3.2 and later versions contain a kustomization.yaml file that use the patches from config/webhook
+		// directory to generate the ValidatingWebhookConfiguration.
+		if version.LT(semver.MustParse("3.2.0")) {
+			// Download KIC-generated ValidatingWebhookConfiguration.
+			manifestContent, err = kic.GetFileFromKICRepositoryForVersion(validatingWebhookConfigurationPath, version)
+			if err != nil {
+				log.Fatalf("Failed to download %s from KIC repository: %s", validatingWebhookConfigurationPath, err)
+			}
+		} else {
+			// Generate ValidatingWebhookConfiguration using KIC's webhook kustomize dir.
+			manifestContent, err = kic.BuildKustomizeForURLAndRef(ctx, validatingWebhookConfigurationKustomizeURL, "v"+version.String())
+			if err != nil {
+				log.Fatalf("Failed to generate KIC's ValidatingWebhookConfiguration based on %s: %s", validatingWebhookConfigurationKustomizeURL, err)
+			}
 		}
 
 		// Get rid of the YAML objects separator as we know there's only one ValidatingWebhookConfiguration in the file.

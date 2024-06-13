@@ -16,6 +16,70 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_2(name string, clientConfi
 		},
 		Webhooks: []admregv1.ValidatingWebhook{
 			{
+				Name: "secrets.credentials.validation.ingress-controller.konghq.com",
+				ClientConfig: clientConfig,
+				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
+				// Deployments (ControlPlane and DataPlane) are not available.
+				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				FailurePolicy: lo.ToPtr(admregv1.Ignore),
+				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
+				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("None")),
+				AdmissionReviewVersions: []string{
+					"v1",
+				},
+				Rules: []admregv1.RuleWithOperations{
+					{
+						Rule: admregv1.Rule{
+							APIGroups: []string{
+								"",
+							},
+							APIVersions: []string{
+								"v1",
+							},
+							Resources: []string{
+								"secrets",
+							},
+						},
+						Operations: []admregv1.OperationType{
+							"CREATE",
+							"UPDATE",
+						},
+					},
+				},
+			},
+			{
+				Name: "secrets.plugins.validation.ingress-controller.konghq.com",
+				ClientConfig: clientConfig,
+				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
+				// Deployments (ControlPlane and DataPlane) are not available.
+				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				FailurePolicy: lo.ToPtr(admregv1.Ignore),
+				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
+				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("None")),
+				AdmissionReviewVersions: []string{
+					"v1",
+				},
+				Rules: []admregv1.RuleWithOperations{
+					{
+						Rule: admregv1.Rule{
+							APIGroups: []string{
+								"",
+							},
+							APIVersions: []string{
+								"v1",
+							},
+							Resources: []string{
+								"secrets",
+							},
+						},
+						Operations: []admregv1.OperationType{
+							"CREATE",
+							"UPDATE",
+						},
+					},
+				},
+			},
+			{
 				Name: "httproutes.validation.ingress-controller.konghq.com",
 				ClientConfig: clientConfig,
 				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
