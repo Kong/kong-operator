@@ -460,7 +460,7 @@ func eventuallyVerifyControlPlaneWebhookIsFunctional(t *testing.T, ctx context.C
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "test-ingress-",
 				Annotations: map[string]string{
-					"konghq.com/protocols":      "invalid",
+					"konghq.com/protocols": "invalid",
 				},
 			},
 			Spec: netv1.IngressSpec{
