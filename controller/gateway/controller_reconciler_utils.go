@@ -545,7 +545,7 @@ func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus()
 	k8sutils.InitProgrammed(g)
 	for i := range g.Spec.Listeners {
 		lStatus := listenerConditionsAware(&g.Status.Listeners[i])
-		_, ok := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.ListenerConditionProgrammed), lStatus)
+		_, ok := k8sutils.GetCondition(consts.ConditionType(gatewayv1.ListenerConditionProgrammed), lStatus)
 		if !ok {
 			k8sutils.SetCondition(metav1.Condition{
 				Type:               string(gatewayv1.ListenerConditionProgrammed),
@@ -780,7 +780,7 @@ func (g *gatewayConditionsAndListenersAwareT) setProgrammed() {
 			LastTransitionTime: metav1.Now(),
 		}
 		listenerStatus := listenerConditionsAware(listener)
-		rCond, ok := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.ListenerConditionResolvedRefs), listenerStatus)
+		rCond, ok := k8sutils.GetCondition(consts.ConditionType(gatewayv1.ListenerConditionResolvedRefs), listenerStatus)
 		if ok && rCond.Status == metav1.ConditionFalse {
 			programmedCondition.Status = metav1.ConditionFalse
 			programmedCondition.Reason = string(gatewayv1.ListenerReasonPending)
@@ -1050,8 +1050,8 @@ func parseKongListenEnv(str string) (kongListenConfig, error) {
 }
 
 func gatewayStatusNeedsUpdate(oldGateway, newGateway gatewayConditionsAndListenersAwareT) bool {
-	oldCondAccepted, okOld := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayConditionAccepted), oldGateway)
-	newCondAccepted, _ := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayConditionAccepted), newGateway)
+	oldCondAccepted, okOld := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayConditionAccepted), oldGateway)
+	newCondAccepted, _ := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayConditionAccepted), newGateway)
 
 	if !okOld || !areConditionsEqual(oldCondAccepted, newCondAccepted) {
 		return true

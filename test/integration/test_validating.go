@@ -13,7 +13,6 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
@@ -235,7 +234,7 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 
 						var cond metav1.Condition
 						for _, condition := range dataplane.Status.Conditions {
-							if condition.Type == string(k8sutils.ReadyType) {
+							if condition.Type == string(consts.ReadyType) {
 								cond = condition
 								break
 							}

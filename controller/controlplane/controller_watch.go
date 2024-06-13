@@ -16,7 +16,7 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/index"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 // -----------------------------------------------------------------------------
@@ -36,7 +36,7 @@ func (r *Reconciler) clusterRoleHasControlPlaneOwner(obj client.Object) bool {
 		return false
 	}
 
-	return r.objHasControlPlaneOwner(ctx, clusterRole)
+	return r.ClusterScopedObjHasControlPlaneOwner(ctx, clusterRole)
 }
 
 func (r *Reconciler) clusterRoleBindingHasControlPlaneOwner(obj client.Object) bool {
@@ -52,7 +52,7 @@ func (r *Reconciler) clusterRoleBindingHasControlPlaneOwner(obj client.Object) b
 		return false
 	}
 
-	return r.objHasControlPlaneOwner(ctx, clusterRoleBinding)
+	return r.ClusterScopedObjHasControlPlaneOwner(ctx, clusterRoleBinding)
 }
 
 func (r *Reconciler) validatingWebhookConfigurationHasControlPlaneOwner(obj client.Object) bool {
@@ -68,10 +68,12 @@ func (r *Reconciler) validatingWebhookConfigurationHasControlPlaneOwner(obj clie
 		return false
 	}
 
-	return r.objHasControlPlaneOwner(ctx, validatingWebhookConfig)
+	return r.ClusterScopedObjHasControlPlaneOwner(ctx, validatingWebhookConfig)
 }
 
-func (r *Reconciler) objHasControlPlaneOwner(ctx context.Context, obj client.Object) bool {
+// ClusterScopedObjHasControlPlaneOwner checks if the cluster-scoped object has a control plane owner.
+// The check is performed through the managed-by-name label.
+func (r *Reconciler) ClusterScopedObjHasControlPlaneOwner(ctx context.Context, obj client.Object) bool {
 	controlplaneList := &operatorv1beta1.ControlPlaneList{}
 	if err := r.Client.List(ctx, controlplaneList); err != nil {
 		// filtering here is just an optimization. If we fail here it's most likely because of some failure
@@ -82,7 +84,8 @@ func (r *Reconciler) objHasControlPlaneOwner(ctx context.Context, obj client.Obj
 	}
 
 	for _, controlplane := range controlplaneList.Items {
-		if k8sutils.IsOwnedByRefUID(obj, controlplane.GetUID()) {
+		// When resources are cluster-scoped, the owner is set through a label.
+		if obj.GetLabels()[consts.GatewayOperatorManagedByNameLabel] == controlplane.Name {
 			return true
 		}
 	}
@@ -105,7 +108,7 @@ func (r *Reconciler) getControlPlaneForClusterRole(ctx context.Context, obj clie
 		return
 	}
 
-	return r.getControlPlaneRequestFromRefUID(ctx, clusterRole)
+	return r.getControlPlaneRequestFromManagedByNameLabel(ctx, clusterRole)
 }
 
 func (r *Reconciler) getControlPlaneForClusterRoleBinding(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
@@ -119,7 +122,7 @@ func (r *Reconciler) getControlPlaneForClusterRoleBinding(ctx context.Context, o
 		return
 	}
 
-	return r.getControlPlaneRequestFromRefUID(ctx, clusterRoleBinding)
+	return r.getControlPlaneRequestFromManagedByNameLabel(ctx, clusterRoleBinding)
 }
 
 func (r *Reconciler) getControlPlaneForValidatingWebhookConfiguration(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -133,10 +136,10 @@ func (r *Reconciler) getControlPlaneForValidatingWebhookConfiguration(ctx contex
 		return nil
 	}
 
-	return r.getControlPlaneRequestFromRefUID(ctx, validatingWebhookConfig)
+	return r.getControlPlaneRequestFromManagedByNameLabel(ctx, validatingWebhookConfig)
 }
 
-func (r *Reconciler) getControlPlaneRequestFromRefUID(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
+func (r *Reconciler) getControlPlaneRequestFromManagedByNameLabel(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	controlplanes := &operatorv1beta1.ControlPlaneList{}
 	if err := r.Client.List(ctx, controlplanes); err != nil {
 		log.FromContext(ctx).Error(err, "could not list controlplanes in map func")
@@ -144,7 +147,8 @@ func (r *Reconciler) getControlPlaneRequestFromRefUID(ctx context.Context, obj c
 	}
 
 	for _, controlplane := range controlplanes.Items {
-		if k8sutils.IsOwnedByRefUID(obj, controlplane.GetUID()) {
+		// For cluster-scoped resources, the owner is set through a label.
+		if obj.GetLabels()[consts.GatewayOperatorManagedByNameLabel] == controlplane.Name {
 			return []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{

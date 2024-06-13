@@ -256,6 +256,10 @@ func TestControlPlaneEssentials(t *testing.T) {
 	controlplane, err = controlplaneClient.Create(GetCtx(), controlplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(controlplane)
+	controlplane.TypeMeta = metav1.TypeMeta{
+		APIVersion: operatorv1beta1.SchemeGroupVersion.String(),
+		Kind:       "ControlPlane",
+	}
 
 	t.Log("verifying controlplane gets marked scheduled")
 	require.Eventually(t, testutils.ControlPlaneIsScheduled(t, GetCtx(), controlplaneName, GetClients().OperatorClient), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)

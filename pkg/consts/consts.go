@@ -76,9 +76,6 @@ const (
 
 	// CertPurposeLabel indicates the purpose of a certificate.
 	CertPurposeLabel = OperatorLabelPrefix + "cert-purpose"
-
-	// OwnerIDLabel indicates a resource's owner ID when references are not available.
-	OwnerIDLabel = OperatorLabelPrefix + "owner-id"
 )
 
 // -----------------------------------------------------------------------------

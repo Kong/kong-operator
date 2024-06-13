@@ -376,9 +376,9 @@ func TestDataPlaneUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		isNotReady := dataPlaneConditionPredicate(t, &metav1.Condition{
-			Type:               string(k8sutils.ReadyType),
+			Type:               string(consts.ReadyType),
 			Status:             metav1.ConditionFalse,
-			Reason:             string(k8sutils.WaitingToBecomeReadyReason),
+			Reason:             string(consts.WaitingToBecomeReadyReason),
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
@@ -414,9 +414,9 @@ func TestDataPlaneUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
-			Type:               string(k8sutils.ReadyType),
+			Type:               string(consts.ReadyType),
 			Status:             metav1.ConditionTrue,
-			Reason:             string(k8sutils.ResourceReadyReason),
+			Reason:             string(consts.ResourceReadyReason),
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
@@ -451,9 +451,9 @@ func TestDataPlaneUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
-			Type:               string(k8sutils.ReadyType),
+			Type:               string(consts.ReadyType),
 			Status:             metav1.ConditionTrue,
-			Reason:             string(k8sutils.ResourceReadyReason),
+			Reason:             string(consts.ResourceReadyReason),
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
@@ -488,9 +488,9 @@ func TestDataPlaneUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
-			Type:               string(k8sutils.ReadyType),
+			Type:               string(consts.ReadyType),
 			Status:             metav1.ConditionTrue,
-			Reason:             string(k8sutils.ResourceReadyReason),
+			Reason:             string(consts.ResourceReadyReason),
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,

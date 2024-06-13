@@ -27,7 +27,6 @@ import (
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -95,7 +94,7 @@ func TestIngressEssentials(t *testing.T) {
 		}
 		if len(dataplanes) == 1 {
 			for _, condition := range dataplanes[0].Status.Conditions {
-				if condition.Type == string(k8sutils.ReadyType) && condition.Status == metav1.ConditionTrue {
+				if condition.Type == string(consts.ReadyType) && condition.Status == metav1.ConditionTrue {
 					dataplane = &dataplanes[0]
 					return true
 				}

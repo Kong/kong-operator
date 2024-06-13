@@ -5,6 +5,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 // -----------------------------------------------------------------------------
@@ -35,6 +39,46 @@ func SetOwnerForObject(obj, owner client.Object) {
 	}
 	if !foundOwnerRef {
 		obj.SetOwnerReferences(append(obj.GetOwnerReferences(), GenerateOwnerReferenceForObject(owner)))
+	}
+}
+
+// managingObjectT is type constraint that is used to represent a managing object.
+// Currently it can be one of: Gateway, ControlPlane, or DataPlane.
+type managingObjectT interface {
+	client.Object
+
+	*gatewayv1.Gateway |
+		*operatorv1beta1.ControlPlane |
+		*operatorv1beta1.DataPlane
+}
+
+// SetOwnerForObjectThroughLabels sets the owner of the provided object through a label.
+func SetOwnerForObjectThroughLabels[managingObject managingObjectT](obj client.Object, owner managingObject) {
+	labels := obj.GetLabels()
+	managedByLabelSet := GetManagedByLabelSet(owner)
+	for k, v := range managedByLabelSet {
+		labels[k] = v
+	}
+	obj.SetLabels(labels)
+}
+
+// GetManagedByLabelSet returns a map of labels with the provided object's metadata.
+// These can be applied to other objects that are owned by the object provided as an argument.
+func GetManagedByLabelSet[managingObject managingObjectT](object managingObject) map[string]string {
+	var kindLabel string
+	switch any(object).(type) {
+	case *gatewayv1.Gateway:
+		kindLabel = consts.GatewayManagedLabelValue
+	case *operatorv1beta1.ControlPlane:
+		kindLabel = consts.ControlPlaneManagedLabelValue
+	case *operatorv1beta1.DataPlane:
+		kindLabel = consts.DataPlaneManagedLabelValue
+	}
+
+	return map[string]string{
+		consts.GatewayOperatorManagedByLabel:          kindLabel,
+		consts.GatewayOperatorManagedByNamespaceLabel: object.GetNamespace(),
+		consts.GatewayOperatorManagedByNameLabel:      object.GetName(),
 	}
 }
 

@@ -46,6 +46,10 @@
   `CONTROLLER_ADMISSION_WEBHOOK_LISTEN` environment variable and ensure that
   relevant webhook resources are not created/deleted.
   [#326](https://github.com/Kong/gateway-operator/pull/326)
+- The `OwnerReferences` on cluster-wide resources to indicate their owner are now
+  replaced by a proper set of labels to identify `kind`, `namespace`, and
+  `name` of the owning object.
+  [#259](https://github.com/Kong/gateway-operator/pull/259)
 
 ### Fixes
 

@@ -103,10 +103,10 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 			expectedDataPlaneStatus: operatorv1beta1.DataPlaneStatus{
 				Conditions: []metav1.Condition{
 					k8sutils.NewConditionWithGeneration(
-						k8sutils.ReadyType,
+						consts.ReadyType,
 						metav1.ConditionFalse,
-						k8sutils.WaitingToBecomeReadyReason,
-						fmt.Sprintf("%s: Deployment %s is not ready yet", k8sutils.WaitingToBecomeReadyMessage, "dataplane-deployment-1"),
+						consts.WaitingToBecomeReadyReason,
+						fmt.Sprintf("%s: Deployment %s is not ready yet", consts.WaitingToBecomeReadyMessage, "dataplane-deployment-1"),
 						102,
 					),
 				},
@@ -229,10 +229,10 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 			expectedDataPlaneStatus: operatorv1beta1.DataPlaneStatus{
 				Conditions: []metav1.Condition{
 					k8sutils.NewConditionWithGeneration(
-						k8sutils.ReadyType,
+						consts.ReadyType,
 						metav1.ConditionFalse,
-						k8sutils.WaitingToBecomeReadyReason,
-						fmt.Sprintf("%s: ingress Service %s is not ready yet", k8sutils.WaitingToBecomeReadyMessage, "dataplane-service-1"),
+						consts.WaitingToBecomeReadyReason,
+						fmt.Sprintf("%s: ingress Service %s is not ready yet", consts.WaitingToBecomeReadyMessage, "dataplane-service-1"),
 						102,
 					),
 				},
@@ -359,7 +359,7 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 			expectedDataPlaneStatus: operatorv1beta1.DataPlaneStatus{
 				Conditions: []metav1.Condition{
 					k8sutils.NewConditionWithGeneration(
-						k8sutils.ReadyType,
+						consts.ReadyType,
 						metav1.ConditionTrue,
 						"Ready",
 						"",
