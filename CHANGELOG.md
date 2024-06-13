@@ -50,7 +50,7 @@
   replaced by a proper set of labels to identify `kind`, `namespace`, and
   `name` of the owning object.
   [#259](https://github.com/Kong/gateway-operator/pull/259)
-- Default version of `ConntrolPlane` is bumped to 3.2.0
+- Default version of `ControlPlane` is bumped to 3.2.0
   [#327](https://github.com/Kong/gateway-operator/pull/327)
 
 ### Fixes
