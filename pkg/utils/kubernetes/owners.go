@@ -42,8 +42,8 @@ func SetOwnerForObject(obj, owner client.Object) {
 	}
 }
 
-// managingObjectT is an interface that is used to represent a managing object.
-// managingObjects can be of type Gateway, ControlPlane, or DataPlane.
+// managingObjectT is type constraint that is used to represent a managing object.
+// Currently it can be one of: Gateway, ControlPlane, or DataPlane.
 type managingObjectT interface {
 	client.Object
 

@@ -451,7 +451,9 @@ func gatewayDataPlaneDeploymentIsNotPatched(gatewayLabelSelector string) func(co
 			c.Errorf("failed to list DataPlanes for Gateway %q: %v", client.ObjectKeyFromObject(gw), err)
 			c.FailNow()
 		}
-		require.Len(c, dataplanes, 1)
+		if !assert.Len(c, dataplanes, 1) {
+			return
+		}
 		dp := &dataplanes[0]
 		if dp.Generation != 1 {
 			c.Errorf("DataPlane %q got patched but it shouldn't: %v", client.ObjectKeyFromObject(dp), err)
@@ -468,7 +470,9 @@ func clusterWideResourcesAreProperlyManaged(gatewayLabelSelector string) func(ct
 			c.Errorf("failed to list ControlPlanes for Gateway %q: %v", client.ObjectKeyFromObject(gw), err)
 			c.FailNow()
 		}
-		require.Len(c, controlplanes, 1)
+		if !assert.Len(c, controlplanes, 1) {
+			return
+		}
 		cp := &controlplanes[0]
 
 		managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
@@ -478,23 +482,23 @@ func clusterWideResourcesAreProperlyManaged(gatewayLabelSelector string) func(ct
 			cl,
 			client.MatchingLabels(managedByLabelSet),
 		)
-		require.NoError(c, err)
-		require.Len(c, clusterRoles, 1)
+		assert.NoError(c, err)
+		assert.Len(c, clusterRoles, 1)
 
 		clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
 			ctx,
 			cl,
 			client.MatchingLabels(managedByLabelSet),
 		)
-		require.NoError(c, err)
-		require.Len(c, clusterRoleBindings, 1)
+		assert.NoError(c, err)
+		assert.Len(c, clusterRoleBindings, 1)
 
 		validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
 			ctx,
 			cl,
 			client.MatchingLabels(managedByLabelSet),
 		)
-		require.NoError(c, err)
-		require.Len(c, validatingWebhookConfigurations, 1)
+		assert.NoError(c, err)
+		assert.Len(c, validatingWebhookConfigurations, 1)
 	}
 }
