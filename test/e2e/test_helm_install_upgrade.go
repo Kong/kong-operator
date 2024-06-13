@@ -24,7 +24,6 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
-	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func init() {
@@ -360,10 +359,11 @@ func deploymentReadyConditions() []appsv1.DeploymentCondition {
 
 func splitRepoVersionFromImage(t *testing.T, image string) (string, string) {
 	splitImage := strings.Split(image, ":")
-	if len(splitImage) != 2 {
+	l := len(splitImage)
+	if l < 2 {
 		t.Fatalf("image %q does not contain a tag", image)
 	}
-	return splitImage[0], splitImage[1]
+	return strings.Join(splitImage[:l-1], ":"), splitImage[l-1]
 }
 
 func baseGatewayConfigurationSpec() operatorv1beta1.GatewayConfigurationSpec {
@@ -375,8 +375,7 @@ func baseGatewayConfigurationSpec() operatorv1beta1.GatewayConfigurationSpec {
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
 								{
-									Name:  consts.DataPlaneProxyContainerName,
-									Image: helpers.GetDefaultDataPlaneImage(),
+									Name: consts.DataPlaneProxyContainerName,
 									ReadinessProbe: &corev1.Probe{
 										InitialDelaySeconds: 1,
 										PeriodSeconds:       1,
@@ -394,8 +393,7 @@ func baseGatewayConfigurationSpec() operatorv1beta1.GatewayConfigurationSpec {
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
 							{
-								Name:  consts.ControlPlaneControllerContainerName,
-								Image: consts.DefaultControlPlaneImage,
+								Name: consts.ControlPlaneControllerContainerName,
 								ReadinessProbe: &corev1.Probe{
 									InitialDelaySeconds: 1,
 									PeriodSeconds:       1,
