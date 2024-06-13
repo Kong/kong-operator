@@ -1,13 +1,13 @@
 package kubernetes
 
 import (
-	"fmt"
-
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 )
 
@@ -42,38 +42,44 @@ func SetOwnerForObject(obj, owner client.Object) {
 	}
 }
 
+// managingObjectT is an interface that is used to represent a managing object.
+// managingObjects can be of type Gateway, ControlPlane, or DataPlane.
+type managingObjectT interface {
+	client.Object
+
+	*gatewayv1.Gateway |
+		*operatorv1beta1.ControlPlane |
+		*operatorv1beta1.DataPlane
+}
+
 // SetOwnerForObjectThroughLabels sets the owner of the provided object through a label.
-func SetOwnerForObjectThroughLabels(obj, owner client.Object) error {
+func SetOwnerForObjectThroughLabels[managingObject managingObjectT](obj client.Object, owner managingObject) {
 	labels := obj.GetLabels()
-	managedByLabelSet, err := GetManagedByLabelSet(owner)
-	if err != nil {
-		return err
-	}
+	managedByLabelSet := GetManagedByLabelSet(owner)
 	for k, v := range managedByLabelSet {
 		labels[k] = v
 	}
 	obj.SetLabels(labels)
-	return nil
 }
 
-// GetManagedByLabelSet returns a map of labels with the managing object's metadata.
-func GetManagedByLabelSet(obj client.Object) (map[string]string, error) {
+// GetManagedByLabelSet returns a map of labels with the provided object's metadata.
+// These can be applied to other objects that are owned by the object provided as an argument.
+func GetManagedByLabelSet[managingObject managingObjectT](object managingObject) map[string]string {
 	var kindLabel string
-	switch obj.GetObjectKind().GroupVersionKind().Kind {
-	case "Gateway":
+	switch any(object).(type) {
+	case *gatewayv1.Gateway:
 		kindLabel = consts.GatewayManagedLabelValue
-	case "ControlPlane":
+	case *operatorv1beta1.ControlPlane:
 		kindLabel = consts.ControlPlaneManagedLabelValue
-	case "DataPlane":
+	case *operatorv1beta1.DataPlane:
 		kindLabel = consts.DataPlaneManagedLabelValue
-	default:
-		return nil, fmt.Errorf("unsupported owner of kind %q", obj.GetObjectKind().GroupVersionKind().Kind)
 	}
+
 	return map[string]string{
 		consts.GatewayOperatorManagedByLabel:          kindLabel,
-		consts.GatewayOperatorManagedByNamespaceLabel: obj.GetNamespace(),
-		consts.GatewayOperatorManagedByNameLabel:      obj.GetName(),
-	}, nil
+		consts.GatewayOperatorManagedByNamespaceLabel: object.GetNamespace(),
+		consts.GatewayOperatorManagedByNameLabel:      object.GetName(),
+	}
 }
 
 // GetOwnerReferencer retrieves owner references.

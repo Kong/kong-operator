@@ -21,6 +21,7 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/pkg/utils/gateway"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -176,6 +177,12 @@ func TestHelmUpgrade(t *testing.T) {
 					Name: "DataPlane deployment is not patched after operator upgrade",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-123-current=true")(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "Cluster wide resources owned by the ControlPlane get the proper set of labels",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						clusterWideResourcesAreProperlyManaged("gw-upgrade-123-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 			},
@@ -402,28 +409,32 @@ func baseGatewayConfigurationSpec() operatorv1beta1.GatewayConfigurationSpec {
 	}
 }
 
+func getGatewayByLabelSelector(gatewayLabelSelector string, ctx context.Context, c *assert.CollectT, cl client.Client) *gatewayv1.Gateway {
+	var gws gatewayv1.GatewayList
+	lReq, err := labels.ParseToRequirements(gatewayLabelSelector)
+	if err != nil {
+		c.Errorf("failed to parse label selector %q: %v", gatewayLabelSelector, err)
+		c.FailNow()
+	}
+	lSel := labels.NewSelector()
+	for _, req := range lReq {
+		lSel = lSel.Add(req)
+	}
+
+	require.NoError(c,
+		cl.List(ctx, &gws, &client.ListOptions{
+			LabelSelector: lSel,
+		}),
+	)
+	require.Len(c, gws.Items, 1)
+	return &gws.Items[0]
+}
+
 // gatewayAndItsListenersAreProgrammedAssertion returns a predicate that checks
 // if the Gateway and its listeners are programmed.
 func gatewayAndItsListenersAreProgrammedAssertion(gatewayLabelSelector string) func(context.Context, *assert.CollectT, client.Client) {
 	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
-		var gws gatewayv1.GatewayList
-		lReq, err := labels.ParseToRequirements(gatewayLabelSelector)
-		if err != nil {
-			c.Errorf("failed to parse label selector %q: %v", gatewayLabelSelector, err)
-			c.FailNow()
-		}
-		lSel := labels.NewSelector()
-		for _, req := range lReq {
-			lSel = lSel.Add(req)
-		}
-
-		require.NoError(c,
-			cl.List(ctx, &gws, &client.ListOptions{
-				LabelSelector: lSel,
-			}),
-		)
-		require.Len(c, gws.Items, 1)
-		gw := &gws.Items[0]
+		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, c, cl)
 		assert.True(c, gateway.IsProgrammed(gw))
 		assert.True(c, gateway.AreListenersProgrammed(gw))
 	}
@@ -433,25 +444,7 @@ func gatewayAndItsListenersAreProgrammedAssertion(gatewayLabelSelector string) f
 // DataPlane deployment is not patched.
 func gatewayDataPlaneDeploymentIsNotPatched(gatewayLabelSelector string) func(context.Context, *assert.CollectT, client.Client) {
 	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
-		// gateway-operator.konghq.com/managed-by: dataplane
-		var gws gatewayv1.GatewayList
-		lReq, err := labels.ParseToRequirements(gatewayLabelSelector)
-		if err != nil {
-			c.Errorf("failed to parse label selector %q: %v", gatewayLabelSelector, err)
-			c.FailNow()
-		}
-		lSel := labels.NewSelector()
-		for _, req := range lReq {
-			lSel = lSel.Add(req)
-		}
-
-		require.NoError(c,
-			cl.List(ctx, &gws, &client.ListOptions{
-				LabelSelector: lSel,
-			}),
-		)
-		require.Len(c, gws.Items, 1)
-		gw := &gws.Items[0]
+		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, c, cl)
 
 		dataplanes, err := gateway.ListDataPlanesForGateway(ctx, cl, gw)
 		if err != nil {
@@ -464,5 +457,44 @@ func gatewayDataPlaneDeploymentIsNotPatched(gatewayLabelSelector string) func(co
 			c.Errorf("DataPlane %q got patched but it shouldn't: %v", client.ObjectKeyFromObject(dp), err)
 			c.FailNow()
 		}
+	}
+}
+
+func clusterWideResourcesAreProperlyManaged(gatewayLabelSelector string) func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, c, cl)
+		controlplanes, err := gateway.ListControlPlanesForGateway(ctx, cl, gw)
+		if err != nil {
+			c.Errorf("failed to list ControlPlanes for Gateway %q: %v", client.ObjectKeyFromObject(gw), err)
+			c.FailNow()
+		}
+		require.Len(c, controlplanes, 1)
+		cp := &controlplanes[0]
+
+		managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
+
+		clusterRoles, err := k8sutils.ListClusterRoles(
+			ctx,
+			cl,
+			client.MatchingLabels(managedByLabelSet),
+		)
+		require.NoError(c, err)
+		require.Len(c, clusterRoles, 1)
+
+		clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
+			ctx,
+			cl,
+			client.MatchingLabels(managedByLabelSet),
+		)
+		require.NoError(c, err)
+		require.Len(c, clusterRoleBindings, 1)
+
+		validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
+			ctx,
+			cl,
+			client.MatchingLabels(managedByLabelSet),
+		)
+		require.NoError(c, err)
+		require.Len(c, validatingWebhookConfigurations, 1)
 	}
 }

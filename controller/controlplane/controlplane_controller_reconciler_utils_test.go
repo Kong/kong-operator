@@ -72,8 +72,7 @@ func TestEnsureClusterRole(t *testing.T) {
 		},
 	}
 
-	err = k8sutils.SetOwnerForObjectThroughLabels(clusterRole, &controlplane)
-	assert.NoError(t, err)
+	k8sutils.SetOwnerForObjectThroughLabels(clusterRole, &controlplane)
 
 	testCases := []struct {
 		Name                string
@@ -112,8 +111,7 @@ func TestEnsureClusterRole(t *testing.T) {
 		}
 
 		if tc.existingClusterRole != nil {
-			err = k8sutils.SetOwnerForObjectThroughLabels(tc.existingClusterRole, &tc.controlplane)
-			assert.NoError(t, err)
+			k8sutils.SetOwnerForObjectThroughLabels(tc.existingClusterRole, &tc.controlplane)
 			ObjectsToAdd = append(ObjectsToAdd, tc.existingClusterRole)
 		}
 
@@ -251,8 +249,7 @@ func TestEnsureClusterRoleBinding(t *testing.T) {
 			controlPlane,
 		}
 		for _, crb := range tc.existingCRBs {
-			err := k8sutils.SetOwnerForObjectThroughLabels(crb, controlPlane)
-			assert.NoError(t, err)
+			k8sutils.SetOwnerForObjectThroughLabels(crb, controlPlane)
 			objectsToAdd = append(objectsToAdd, crb)
 		}
 

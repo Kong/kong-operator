@@ -293,10 +293,7 @@ func (r *Reconciler) ensureClusterRole(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 ) (createdOrUpdated bool, cr *rbacv1.ClusterRole, err error) {
-	managedByLabelSet, err := k8sutils.GetManagedByLabelSet(cp)
-	if err != nil {
-		return false, nil, err
-	}
+	managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
 	clusterRoles, err := k8sutils.ListClusterRoles(
 		ctx,
 		r.Client,
@@ -319,10 +316,7 @@ func (r *Reconciler) ensureClusterRole(
 	if err != nil {
 		return false, nil, err
 	}
-	err = k8sutils.SetOwnerForObjectThroughLabels(generated, cp)
-	if err != nil {
-		return false, nil, err
-	}
+	k8sutils.SetOwnerForObjectThroughLabels(generated, cp)
 
 	if count == 1 {
 		var (
@@ -356,10 +350,8 @@ func (r *Reconciler) ensureClusterRoleBinding(
 ) (createdOrUpdate bool, crb *rbacv1.ClusterRoleBinding, err error) {
 	logger := log.GetLogger(ctx, "controlplane.ensureClusterRoleBinding", r.DevelopmentMode)
 
-	managedByLabelSet, err := k8sutils.GetManagedByLabelSet(cp)
-	if err != nil {
-		return false, nil, err
-	}
+	managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
+
 	clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
 		ctx,
 		r.Client,
@@ -378,10 +370,7 @@ func (r *Reconciler) ensureClusterRoleBinding(
 	}
 
 	generated := k8sresources.GenerateNewClusterRoleBindingForControlPlane(cp.Namespace, cp.Name, serviceAccountName, clusterRoleName)
-	err = k8sutils.SetOwnerForObjectThroughLabels(generated, cp)
-	if err != nil {
-		return false, nil, err
-	}
+	k8sutils.SetOwnerForObjectThroughLabels(generated, cp)
 
 	if count == 1 {
 		existing := &clusterRoleBindings[0]
@@ -514,10 +503,8 @@ func (r *Reconciler) ensureOwnedClusterRolesDeleted(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 ) (deletions bool, err error) {
-	managedByLabelSet, err := k8sutils.GetManagedByLabelSet(cp)
-	if err != nil {
-		return false, err
-	}
+	managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
+
 	clusterRoles, err := k8sutils.ListClusterRoles(
 		ctx, r.Client,
 		client.MatchingLabels(managedByLabelSet),
@@ -548,10 +535,8 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 ) (deletions bool, err error) {
-	managedByLabelSet, err := k8sutils.GetManagedByLabelSet(cp)
-	if err != nil {
-		return false, err
-	}
+	managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
+
 	clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
 		ctx, r.Client,
 		client.MatchingLabels(managedByLabelSet),
@@ -577,10 +562,8 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 
 func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx context.Context,
 	cp *operatorv1beta1.ControlPlane) (deletions bool, err error) {
-	managedByLabelSet, err := k8sutils.GetManagedByLabelSet(cp)
-	if err != nil {
-		return false, err
-	}
+	managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
+
 	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
 		ctx,
 		r.Client,
@@ -624,7 +607,7 @@ func (r *Reconciler) ensureAdmissionWebhookService(
 		return op.Noop, nil, fmt.Errorf("failed listing admission webhook Services for ControlPlane %s/%s: %w", cp.Namespace, cp.Name, err)
 	}
 
-	if !isAdmissionWebhookEnabled(ctx, cl, logger, controlPlane) {
+	if !isAdmissionWebhookEnabled(ctx, cl, logger, cp) {
 		for _, svc := range services {
 			svc := svc
 			if err := cl.Delete(ctx, &svc); err != nil && !k8serrors.IsNotFound(err) {
@@ -688,10 +671,8 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 ) (op.Result, error) {
 	logger := log.GetLogger(ctx, "controlplane.ensureValidatingWebhookConfiguration", r.DevelopmentMode)
 
-	managedByLabelSet, err := k8sutils.GetManagedByLabelSet(cp)
-	if err != nil {
-		return op.Noop, err
-	}
+	managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
+
 	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
 		ctx,
 		r.Client,
@@ -746,10 +727,7 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	if err != nil {
 		return op.Noop, fmt.Errorf("failed generating ControlPlane's ValidatingWebhookConfiguration: %w", err)
 	}
-	err = k8sutils.SetOwnerForObjectThroughLabels(generatedWebhookConfiguration, cp)
-	if err != nil {
-		return op.Noop, err
-	}
+	k8sutils.SetOwnerForObjectThroughLabels(generatedWebhookConfiguration, cp)
 
 	if count == 1 {
 		var updated bool
