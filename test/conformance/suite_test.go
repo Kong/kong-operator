@@ -24,6 +24,7 @@ import (
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
+	"github.com/kong/gateway-operator/test"
 )
 
 // -----------------------------------------------------------------------------
@@ -80,7 +81,9 @@ func TestMain(m *testing.M) {
 	// that would allow e.g. cross namespace traffic.
 	// Related upstream discussion: https://github.com/kubernetes-sigs/gateway-api/discussions/2137
 	env, err = testutils.BuildEnvironment(ctx, existingCluster, func(b *environments.Builder, t clusters.Type) {
-		b.WithAddons(metallb.New())
+		if !test.IsMetalLBDisabled() {
+			b.WithAddons(metallb.New())
+		}
 	})
 	exitOnErr(err)
 

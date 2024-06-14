@@ -37,6 +37,7 @@ import (
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/clientset"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
+	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
@@ -147,27 +148,37 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 			cluster, err := kind.NewFromExisting(clusterName)
 			require.NoError(t, err)
 			builder.WithExistingCluster(cluster)
-			builder.WithAddons(metallb.New())
-			builder.WithAddons(certmanager.New())
+
+			if !test.IsCertManagerDisabled() {
+				builder.WithAddons(certmanager.New())
+			}
+			if !test.IsMetalLBDisabled() {
+				builder.WithAddons(metallb.New())
+			}
 		case string(gke.GKEClusterType):
 			cluster, err := gke.NewFromExistingWithEnv(ctx, clusterName)
 			require.NoError(t, err)
 			builder.WithExistingCluster(cluster)
-			builder.WithAddons(certmanager.New())
+			if !test.IsCertManagerDisabled() {
+				builder.WithAddons(certmanager.New())
+			}
 		default:
 			t.Fatal(fmt.Errorf("unknown cluster type: %s", clusterType))
 		}
 	} else {
 		t.Log("no existing cluster found, deploying using Kubernetes In Docker (KIND)")
-		builder.WithAddons(metallb.New())
-		builder.WithAddons(certmanager.New())
+		if !test.IsCertManagerDisabled() {
+			builder.WithAddons(certmanager.New())
+		}
+		if !test.IsMetalLBDisabled() {
+			builder.WithAddons(metallb.New())
+		}
 	}
 	if imageLoad != "" {
 		imageLoader, err := loadimage.NewBuilder().WithImage(imageLoad)
 		require.NoError(t, err)
 		t.Logf("loading image: %s", imageLoad)
 		builder.WithAddons(imageLoader.Build())
-		builder.WithAddons(certmanager.New())
 	}
 
 	if len(opt.Image) == 0 {
