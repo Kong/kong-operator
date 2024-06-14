@@ -24,6 +24,7 @@ import (
 	"github.com/kong/gateway-operator/config"
 	"github.com/kong/gateway-operator/modules/manager"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
+	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
 	"github.com/kong/gateway-operator/test/helpers/certificate"
 )
@@ -40,9 +41,6 @@ var (
 	webhookServerIP      = os.Getenv("GATEWAY_OPERATOR_WEBHOOK_IP")
 	bluegreenController  = strings.ToLower(os.Getenv("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER")) == "true"
 	webhookServerPort    = 9443
-	disableCalicoCNI     = strings.ToLower(os.Getenv("KONG_TEST_DISABLE_CALICO")) == "true"
-	disableCertManager   = strings.ToLower(os.Getenv("KONG_TEST_DISABLE_CERTMANAGER")) == "true"
-	disableMetalLB       = strings.ToLower(os.Getenv("KONG_TEST_DISABLE_METALLB")) == "true"
 )
 
 // -----------------------------------------------------------------------------
@@ -124,13 +122,13 @@ func TestMain(
 	fmt.Println("INFO: configuring cluster for testing environment")
 	env, err = testutils.BuildEnvironment(GetCtx(), existingCluster,
 		func(b *environments.Builder, ct clusters.Type) {
-			if !disableCalicoCNI {
+			if !test.IsCalicoCNIDisabled() {
 				b.WithCalicoCNI()
 			}
-			if !disableCertManager {
+			if !test.IsCertManagerDisabled() {
 				b.WithAddons(certmanager.New())
 			}
-			if !disableMetalLB && ct == kind.KindClusterType {
+			if !test.IsMetalLBDisabled() && ct == kind.KindClusterType {
 				b.WithAddons(metallb.New())
 			}
 		},
