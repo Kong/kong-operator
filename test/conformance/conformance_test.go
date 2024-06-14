@@ -49,15 +49,23 @@ var skippedTestsForTraditionalCompatibleRouter = []string{
 }
 
 var traditionalCompatibleRouterSupportedFeatures = sets.New(
+	// core features
+	features.SupportHTTPRoute,
 	// extended
 	features.SupportHTTPRouteResponseHeaderModification,
+	features.SupportHTTPRoutePathRewrite,
+	features.SupportHTTPRouteHostRewrite,
 )
 
 var expressionsRouterSupportedFeatures = sets.New(
+	// core features
+	features.SupportHTTPRoute,
 	// extended
 	features.SupportHTTPRouteResponseHeaderModification,
 	features.SupportHTTPRouteMethodMatching,
 	features.SupportHTTPRouteQueryParamMatching,
+	features.SupportHTTPRoutePathRewrite,
+	features.SupportHTTPRouteHostRewrite,
 )
 
 type ConformanceConfig struct {
