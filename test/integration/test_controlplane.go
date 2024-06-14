@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -344,7 +345,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 	require.Eventually(t, testutils.ControlPlaneHasAdmissionWebhookConfiguration(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("verifying controlplane's webhook is functional")
-	eventuallyVerifyControlPlaneWebhookIsFunctional(t, GetCtx(), clients)
+	eventuallyVerifyControlPlaneWebhookIsFunctional(t, GetCtx(), client.NewNamespacedClient(clients.MgrClient, namespace.Name))
 
 	t.Log("verifying that controlplane's ClusterRole is patched if it goes out of sync")
 	clusterRoles = testutils.MustListControlPlaneClusterRoles(t, GetCtx(), controlplane, clients)
@@ -453,24 +454,34 @@ func verifyControlPlaneDeploymentAdmissionWebhookMount(t *testing.T, deployment 
 // eventuallyVerifyControlPlaneWebhookIsFunctional verifies that the controlplane validating webhook
 // is functional by creating a resource that should be rejected by the webhook and verifying that
 // it is rejected.
-func eventuallyVerifyControlPlaneWebhookIsFunctional(t *testing.T, ctx context.Context, clients testutils.K8sClients) {
+func eventuallyVerifyControlPlaneWebhookIsFunctional(t *testing.T, ctx context.Context, cl client.Client) {
 	require.Eventually(t, func() bool {
-		keyAuthSecretWithNoKey := corev1.Secret{
+		ing := netv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "test-cred-",
-				Namespace:    "default",
-				Labels: map[string]string{
-					"konghq.com/credential": "key-auth",
+				GenerateName: "test-ingress-",
+				Annotations: map[string]string{
+					"konghq.com/protocols": "invalid",
+				},
+			},
+			Spec: netv1.IngressSpec{
+				IngressClassName: lo.ToPtr(ingressClass),
+				DefaultBackend: &netv1.IngressBackend{
+					Service: &netv1.IngressServiceBackend{
+						Name: "test",
+						Port: netv1.ServiceBackendPort{
+							Number: 8080,
+						},
+					},
 				},
 			},
 		}
 
-		err := clients.MgrClient.Create(ctx, &keyAuthSecretWithNoKey)
+		err := cl.Create(ctx, &ing)
 		if err == nil {
-			t.Log("ControlPlane webhook accepted an invalid secret, retrying and waiting for webhook to become functional")
+			t.Logf("ControlPlane webhook accepted an invalid Ingress %s, retrying and waiting for webhook to become functional", client.ObjectKeyFromObject(&ing))
 			return false
 		}
-		if !strings.Contains(err.Error(), "admission webhook \"secrets.validation.ingress-controller.konghq.com\" denied the request") {
+		if !strings.Contains(err.Error(), "admission webhook \"ingresses.validation.ingress-controller.konghq.com\" denied the request") {
 			t.Logf("unexpected error: %v", err)
 			return false
 		}
