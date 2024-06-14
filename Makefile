@@ -205,7 +205,7 @@ generate.clientsets: client-gen
 	# directory.
 	#
 	# See: https://github.com/kubernetes/code-generator/issues/167
-	ln -s api apis
+	ln -sf api apis
 	$(CLIENT_GEN) \
 		--go-header-file ./hack/generators/boilerplate.go.txt \
 		--clientset-name clientset \
