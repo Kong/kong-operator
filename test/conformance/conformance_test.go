@@ -57,6 +57,7 @@ var expressionsRouterSupportedFeatures = sets.New(
 	// extended
 	features.SupportHTTPRouteResponseHeaderModification,
 	features.SupportHTTPRouteMethodMatching,
+	features.SupportHTTPRouteQueryParamMatching,
 )
 
 type ConformanceConfig struct {
