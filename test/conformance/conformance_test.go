@@ -48,6 +48,17 @@ var skippedTestsForTraditionalCompatibleRouter = []string{
 	tests.HTTPRouteWeight.ShortName,
 }
 
+var traditionalCompatibleRouterSupportedFeatures = sets.New(
+	// extended
+	features.SupportHTTPRouteResponseHeaderModification,
+)
+
+var expressionsRouterSupportedFeatures = sets.New(
+	// extended
+	features.SupportHTTPRouteResponseHeaderModification,
+	features.SupportHTTPRouteMethodMatching,
+)
+
 type ConformanceConfig struct {
 	KongRouterFlavor RouterFlavor
 }
@@ -58,16 +69,19 @@ func TestGatewayConformance(t *testing.T) {
 	// Conformance tests are run for both available router flavours:
 	// traditional_compatible and expressions.
 	var (
-		config       ConformanceConfig
-		skippedTests []string
+		config            ConformanceConfig
+		skippedTests      []string
+		supportedFeatures sets.Set[features.SupportedFeature]
 	)
 	switch rf := KongRouterFlavor(t); rf {
 	case RouterFlavorTraditionalCompatible:
 		skippedTests = skippedTestsForTraditionalCompatibleRouter
 		config.KongRouterFlavor = RouterFlavorTraditionalCompatible
+		supportedFeatures = traditionalCompatibleRouterSupportedFeatures
 	case RouterFlavorExpressions:
 		skippedTests = skippedTestsForExpressionsRouter
 		config.KongRouterFlavor = RouterFlavorExpressions
+		supportedFeatures = expressionsRouterSupportedFeatures
 	default:
 		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
 	}
@@ -97,9 +111,7 @@ func TestGatewayConformance(t *testing.T) {
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
 	)
-	opts.SupportedFeatures = sets.New(
-		features.SupportHTTPRouteResponseHeaderModification,
-	)
+	opts.SupportedFeatures = supportedFeatures
 	opts.Implementation = conformancev1.Implementation{
 		Organization: metadata.Organization,
 		Project:      metadata.ProjectName,
