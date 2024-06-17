@@ -42,24 +42,31 @@ var skippedTestsForTraditionalCompatibleRouter = []string{
 	tests.HTTPRouteWeight.ShortName,
 }
 
-var traditionalCompatibleRouterSupportedFeatures = sets.New(
-	// core features
-	features.SupportHTTPRoute,
-	// extended
-	features.SupportHTTPRouteResponseHeaderModification,
-	features.SupportHTTPRoutePathRewrite,
-	features.SupportHTTPRouteHostRewrite,
-)
+var (
+	commonSupportedFeatures = sets.New(
+		// core features
+		features.SupportHTTPRoute,
+		features.SupportGateway,
+		features.SupportReferenceGrant,
 
-var expressionsRouterSupportedFeatures = sets.New(
-	// core features
-	features.SupportHTTPRoute,
-	// extended
-	features.SupportHTTPRouteResponseHeaderModification,
-	features.SupportHTTPRouteMethodMatching,
-	features.SupportHTTPRouteQueryParamMatching,
-	features.SupportHTTPRoutePathRewrite,
-	features.SupportHTTPRouteHostRewrite,
+		// Gateway extended
+		features.SupportGatewayPort8080,
+
+		// HTTPRoute extended
+		features.SupportHTTPRouteResponseHeaderModification,
+		features.SupportHTTPRoutePathRewrite,
+		features.SupportHTTPRouteHostRewrite,
+	)
+
+	traditionalCompatibleRouterSupportedFeatures = commonSupportedFeatures.Insert(
+	// add here the traditional compatible router specific features
+	)
+
+	expressionsRouterSupportedFeatures = commonSupportedFeatures.Insert(
+		// extended
+		features.SupportHTTPRouteMethodMatching,
+		features.SupportHTTPRouteQueryParamMatching,
+	)
 )
 
 type ConformanceConfig struct {
