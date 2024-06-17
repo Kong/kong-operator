@@ -147,6 +147,25 @@ func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Se
 	return certBytes, nil
 }
 
+// IsTLSSecretValid checks if a Secret contains a valid TLS certificate and key.
+func IsTLSSecretValid(secret *corev1.Secret) bool {
+	var ok bool
+	var crt, key []byte
+	if crt, ok = secret.Data["tls.crt"]; !ok {
+		return false
+	}
+	if key, ok = secret.Data["tls.key"]; !ok {
+		return false
+	}
+	if p, _ := pem.Decode(crt); p == nil {
+		return false
+	}
+	if p, _ := pem.Decode(key); p == nil {
+		return false
+	}
+	return true
+}
+
 // EnsureCertificate creates a namespace/name Secret for subject signed by the CA in the
 // mtlsCASecretNamespace/mtlsCASecretName Secret, or does nothing if a namespace/name Secret is
 // already present. It returns a boolean indicating if it created a Secret and an error indicating

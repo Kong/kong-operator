@@ -21,6 +21,7 @@ import (
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func TestParseKongProxyListenEnv(t *testing.T) {
@@ -856,6 +857,7 @@ func TestGatewayStatusNeedsUpdate(t *testing.T) {
 
 func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 	var generation int64 = 1
+	ca := helpers.CreateCA(t)
 
 	testCases := []struct {
 		name                          string
@@ -950,6 +952,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 						Name:      "test-secret",
 						Namespace: "default",
 					},
+					Data: map[string][]byte{
+						"tls.crt": ca.CertPEM.Bytes(),
+						"tls.key": ca.KeyPEM.Bytes(),
+					},
 				},
 			},
 			expectedSupportedKinds: []gwtypes.RouteGroupKind{
@@ -985,6 +991,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-secret",
 						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"tls.crt": ca.CertPEM.Bytes(),
+						"tls.key": ca.KeyPEM.Bytes(),
 					},
 				},
 			},
@@ -1092,6 +1102,46 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			},
 		},
 		{
+			name:             "tls bad-formed, invalid cert and key",
+			gatewayNamespace: "default",
+			listener: gwtypes.Listener{
+				Protocol: gatewayv1.HTTPSProtocolType,
+				TLS: &gatewayv1.GatewayTLSConfig{
+					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+					CertificateRefs: []gatewayv1.SecretObjectReference{
+						{
+							Name: "test-secret",
+						},
+					},
+				},
+			},
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"tls.crt": []byte("invalid-cert"),
+						"tls.key": []byte("invalid-key"),
+					},
+				},
+			},
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "HTTPRoute",
+				},
+			},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.ListenerReasonInvalidCertificateRef),
+				Message:            "Referenced secret does not contain a valid TLS certificate.",
+				ObservedGeneration: generation,
+			},
+		},
+		{
 			name:             "tls well-formed, with allowed cross-namespace reference",
 			gatewayNamespace: "default",
 			listener: gwtypes.Listener{
@@ -1111,6 +1161,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-secret",
 						Namespace: "other-namespace",
+					},
+					Data: map[string][]byte{
+						"tls.crt": ca.CertPEM.Bytes(),
+						"tls.key": ca.KeyPEM.Bytes(),
 					},
 				},
 			},
@@ -1171,6 +1225,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-secret",
 						Namespace: "other-namespace",
+					},
+					Data: map[string][]byte{
+						"tls.crt": ca.CertPEM.Bytes(),
+						"tls.key": ca.KeyPEM.Bytes(),
 					},
 				},
 			},

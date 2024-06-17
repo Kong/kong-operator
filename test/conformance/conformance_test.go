@@ -27,18 +27,12 @@ import (
 )
 
 var skippedTestsForExpressionsRouter = []string{
-	// gateway
-	tests.GatewayInvalidTLSConfiguration.ShortName,
-
 	// TODO: remove the skip https://github.com/Kong/gateway-operator/issues/295
 	// This test is flaky.
 	tests.HTTPRouteWeight.ShortName,
 }
 
 var skippedTestsForTraditionalCompatibleRouter = []string{
-	// gateway
-	tests.GatewayInvalidTLSConfiguration.ShortName,
-
 	// httproute
 	tests.HTTPRouteHeaderMatching.ShortName,
 	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
