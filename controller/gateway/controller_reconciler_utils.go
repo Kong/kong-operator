@@ -24,6 +24,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
@@ -875,17 +876,32 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 				secretNamespace = string(*certificateRef.Namespace)
 			}
 
+			isReferenceGranted := true
+			// In case there is a cross-namespace reference, check if there is any referenceGrant allowing it.
+			if secretNamespace != gatewayNamespace {
+				referenceGrantList := &gatewayv1beta1.ReferenceGrantList{}
+				err = c.List(ctx, referenceGrantList, client.InNamespace(secretNamespace))
+				if err != nil {
+					return nil, metav1.Condition{}, fmt.Errorf("failed to list ReferenceGrants: %w", err)
+				}
+				if !isSecretCrossReferenceGranted(gatewayv1.Namespace(gatewayNamespace), certificateRef.Name, referenceGrantList.Items) {
+					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonRefNotPermitted)
+					message = conditionMessage(message, fmt.Sprintf("Secret %s/%s reference not allowed by any referenceGrant", secretNamespace, certificateRef.Name))
+					isReferenceGranted = false
+				}
+			}
+
 			var secretExists bool
-			if isValidGroupKind {
+			certificateSecret := &corev1.Secret{}
+			if isValidGroupKind && isReferenceGranted {
 				// Get the secret and check it exists.
-				certificateSecret := &corev1.Secret{}
 				err = c.Get(ctx, types.NamespacedName{
 					Namespace: secretNamespace,
 					Name:      string(certificateRef.Name),
 				}, certificateSecret)
 				if err != nil {
 					if !k8serrors.IsNotFound(err) {
-						return
+						return nil, metav1.Condition{}, fmt.Errorf("failed to get Secret: %w", err)
 					}
 					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
 					message = conditionMessage(message, fmt.Sprintf("Referenced secret %s/%s does not exist", secretNamespace, certificateRef.Name))
@@ -894,18 +910,11 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 				}
 			}
 
-			if secretExists {
-				// In case there is a cross-namespace reference, check if there is any referenceGrant allowing it.
-				if secretNamespace != gatewayNamespace {
-					referenceGrantList := &gatewayv1beta1.ReferenceGrantList{}
-					err = c.List(ctx, referenceGrantList, client.InNamespace(secretNamespace))
-					if err != nil {
-						return
-					}
-					if !isSecretCrossReferenceGranted(gatewayv1.Namespace(gatewayNamespace), certificateRef.Name, referenceGrantList.Items) {
-						resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonRefNotPermitted)
-						message = conditionMessage(message, fmt.Sprintf("Secret %s/%s reference not allowed by any referenceGrant", secretNamespace, certificateRef.Name))
-					}
+			if isReferenceGranted && secretExists {
+				// Check if the secret is a valid TLS secret.
+				if !secrets.IsTLSSecretValid(certificateSecret) {
+					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
+					message = conditionMessage(message, "Referenced secret does not contain a valid TLS certificate")
 				}
 			}
 		}
