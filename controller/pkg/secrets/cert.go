@@ -434,8 +434,7 @@ func ensureContainerImageUpdated(container *corev1.Container, imageVersionStr st
 
 	imageParts := strings.Split(container.Image, ":")
 	if len(imageParts) > 3 {
-		err = fmt.Errorf("invalid container image found: %s", container.Image)
-		return
+		return false, fmt.Errorf("invalid container image found: %s", container.Image)
 	}
 
 	// This is a special case for registries that specify a non default port,
@@ -462,5 +461,5 @@ func ensureContainerImageUpdated(container *corev1.Container, imageVersionStr st
 		updated = true
 	}
 
-	return
+	return updated, nil
 }

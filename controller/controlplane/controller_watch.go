@@ -203,7 +203,7 @@ func (r *Reconciler) getControlPlanesFromDataPlane(ctx context.Context, obj clie
 			"failed to map ControlPlane on DataPlane",
 			"expected", "DataPlane", "found", reflect.TypeOf(obj),
 		)
-		return
+		return nil
 	}
 
 	controlPlaneList := &operatorv1beta1.ControlPlaneList{}
@@ -213,7 +213,7 @@ func (r *Reconciler) getControlPlanesFromDataPlane(ctx context.Context, obj clie
 			index.DataPlaneNameIndex: dataplane.Name,
 		}); err != nil {
 		log.FromContext(ctx).Error(err, "failed to map ControlPlane on DataPlane")
-		return
+		return nil
 	}
 
 	recs = make([]reconcile.Request, 0, len(controlPlaneList.Items))
