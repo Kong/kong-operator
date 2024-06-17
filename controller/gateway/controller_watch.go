@@ -128,7 +128,7 @@ func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client
 	return
 }
 
-func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
+func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
 
 	gatewayConfig, ok := obj.(*operatorv1beta1.GatewayConfiguration)
@@ -138,7 +138,7 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 			"failed to run map funcs",
 			"expected", "GatewayConfiguration", "found", reflect.TypeOf(obj),
 		)
-		return
+		return nil
 	}
 
 	gatewayClassList := new(gatewayv1.GatewayClassList)
@@ -148,7 +148,7 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 			"failed to run map funcs",
 			"error", err.Error(),
 		)
-		return
+		return nil
 	}
 
 	matchingGatewayClasses := make(map[string]struct{})
@@ -168,9 +168,10 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 			"failed to run map funcs",
 			"error", err.Error(),
 		)
-		return
+		return nil
 	}
 
+	var recs []reconcile.Request
 	for _, gateway := range gatewayList.Items {
 		if _, ok := matchingGatewayClasses[string(gateway.Spec.GatewayClassName)]; ok {
 			recs = append(recs, reconcile.Request{
@@ -181,8 +182,7 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 			})
 		}
 	}
-
-	return
+	return recs
 }
 
 // listReferenceGrantsForGateway is a watch predicate which finds all Gateways mentioned in a From clause for a
