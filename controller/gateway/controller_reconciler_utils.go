@@ -882,7 +882,7 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 				referenceGrantList := &gatewayv1beta1.ReferenceGrantList{}
 				err = c.List(ctx, referenceGrantList, client.InNamespace(secretNamespace))
 				if err != nil {
-					return
+					return nil, metav1.Condition{}, fmt.Errorf("failed to list ReferenceGrants: %w", err)
 				}
 				if !isSecretCrossReferenceGranted(gatewayv1.Namespace(gatewayNamespace), certificateRef.Name, referenceGrantList.Items) {
 					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonRefNotPermitted)
@@ -901,7 +901,7 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 				}, certificateSecret)
 				if err != nil {
 					if !k8serrors.IsNotFound(err) {
-						return
+						return nil, metav1.Condition{}, fmt.Errorf("failed to get Secret: %w", err)
 					}
 					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
 					message = conditionMessage(message, fmt.Sprintf("Referenced secret %s/%s does not exist", secretNamespace, certificateRef.Name))
