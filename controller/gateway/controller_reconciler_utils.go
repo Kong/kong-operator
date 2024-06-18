@@ -702,7 +702,7 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 							client.ObjectKeyFromObject(g), err,
 						)
 					}
-					count += int32(len(httpRoutes))
+					count += countAttachedHTTPRoutes(listener.Name, httpRoutes)
 				default:
 					return 0, fmt.Errorf("unsupported route kind: %T", k)
 				}
@@ -723,11 +723,24 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 				)
 			}
 
-			count += int32(len(httpRoutes))
+			count += countAttachedHTTPRoutes(listener.Name, httpRoutes)
 		}
 	}
 
 	return count, nil
+}
+
+func countAttachedHTTPRoutes(listenerName gatewayv1.SectionName, httpRoutes []gatewayv1.HTTPRoute) int32 {
+	var count int32
+	for _, httpRoute := range httpRoutes {
+		if lo.ContainsBy(httpRoute.Spec.ParentRefs, func(item gatewayv1.ParentReference) bool {
+			return item.SectionName == nil || *item.SectionName == listenerName
+		}) {
+			count++
+		}
+	}
+
+	return count
 }
 
 // setConflicted sets the gateway Conflicted condition according to the Gateway API specification.

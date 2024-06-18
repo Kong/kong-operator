@@ -58,11 +58,11 @@ var (
 		features.SupportHTTPRouteHostRewrite,
 	)
 
-	traditionalCompatibleRouterSupportedFeatures = commonSupportedFeatures.Insert(
+	traditionalCompatibleRouterSupportedFeatures = commonSupportedFeatures.Clone().Insert(
 	// add here the traditional compatible router specific features
 	)
 
-	expressionsRouterSupportedFeatures = commonSupportedFeatures.Insert(
+	expressionsRouterSupportedFeatures = commonSupportedFeatures.Clone().Insert(
 		// extended
 		features.SupportHTTPRouteMethodMatching,
 		features.SupportHTTPRouteQueryParamMatching,
