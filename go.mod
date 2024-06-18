@@ -1,8 +1,7 @@
 module github.com/kong/gateway-operator
 
 go 1.22.0
-
-toolchain go1.22.3
+toolchain go1.22.4
 
 // 1.2.2 was released on main branch with a breaking change that was not
 // intended to be released in 1.2.x:
@@ -16,7 +15,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
-	github.com/kong/kubernetes-ingress-controller/v3 v3.1.6
+	github.com/kong/kubernetes-ingress-controller/v3 v3.2.0
 	github.com/kong/kubernetes-telemetry v0.1.3
 	github.com/kong/kubernetes-testing-framework v0.47.1
 	github.com/kong/semver/v4 v4.0.1
@@ -163,9 +162,9 @@ require (
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/prometheus/client_golang v1.19.0 // indirect
+	github.com/prometheus/client_golang v1.19.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.52.3 // indirect
+	github.com/prometheus/common v0.54.0 // indirect
 	github.com/prometheus/procfs v0.15.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
