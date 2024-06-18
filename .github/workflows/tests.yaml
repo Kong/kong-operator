@@ -142,6 +142,9 @@ jobs:
 
     - run: make build.operator
 
+    - name: Test the image by running it with -version flag
+      run: ./bin/manager -version | ./scripts/verify-version.sh ${{ github.repository }}
+
   unit-tests:
     runs-on: ubuntu-latest
     steps:
