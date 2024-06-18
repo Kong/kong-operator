@@ -39,6 +39,12 @@ on:
         required: false
         type: string
         default: Dockerfile
+      additional-build-contexts:
+        description: >
+          Additional build context to include in the build (format name=path),
+          it's used for EE build to additionaly include path to OSS repo.
+        required: false
+        type: string
       target:
         description: The target to be built.
         required: false
@@ -140,9 +146,6 @@ jobs:
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
 
-      - name: Checkout KGO submodule
-        run: git submodule update --init
-
       - name: Cache Docker layers
         uses: actions/cache@v4
         with:
@@ -210,6 +213,7 @@ jobs:
         uses: docker/build-push-action@v6.0.0
         with:
           context: .
+          build-contexts: ${{ inputs.additional-build-contexts }}
           push: ${{ inputs.push }}
           # Use load when push is set to false to allow subsequent steps to have
           # access to this image.
@@ -270,9 +274,6 @@ jobs:
 
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
-
-      - name: Checkout KGO submodule
-        run: git submodule update --init
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
