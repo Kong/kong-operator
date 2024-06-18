@@ -128,9 +128,6 @@ jobs:
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
 
-      - name: Checkout KGO submodule
-        run: git submodule update --init
-
       - name: Setup golang
         uses: actions/setup-go@v5
         with:
@@ -159,9 +156,6 @@ jobs:
 
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
-
-      - name: Checkout KGO submodule
-        run: git submodule update --init
 
       - name: Setup golang
         uses: actions/setup-go@v5
