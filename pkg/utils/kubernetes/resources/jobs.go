@@ -75,6 +75,7 @@ func newWebhookCertificateConfigJobCommon(namespace, serviceAccountName string, 
 			Namespace: namespace,
 		},
 		Spec: batchv1.JobSpec{
+			TTLSecondsAfterFinished: lo.ToPtr(int32(600)),
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					RestartPolicy:      corev1.RestartPolicyOnFailure,

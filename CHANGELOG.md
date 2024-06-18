@@ -52,6 +52,8 @@
   [#259](https://github.com/Kong/gateway-operator/pull/259)
 - Default version of `ControlPlane` is bumped to 3.2.0
   [#327](https://github.com/Kong/gateway-operator/pull/327)
+- Webhook certificate Jobs now set `TTLSecondsAfterFinished=600` to clean up after they have finished.
+  [#346](https://github.com/Kong/gateway-operator/pull/346)
 
 ### Fixes
 
