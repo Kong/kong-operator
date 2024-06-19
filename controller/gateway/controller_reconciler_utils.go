@@ -730,11 +730,14 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 	return count, nil
 }
 
+// countAttachedHTTPRoutes counts the number of attached HTTPRoutes for a given listener,
+// taking into account the ParentRefs' sectionName.
 func countAttachedHTTPRoutes(listenerName gatewayv1.SectionName, httpRoutes []gatewayv1.HTTPRoute) int32 {
 	var count int32
+
 	for _, httpRoute := range httpRoutes {
-		if lo.ContainsBy(httpRoute.Spec.ParentRefs, func(item gatewayv1.ParentReference) bool {
-			return item.SectionName == nil || *item.SectionName == listenerName
+		if lo.ContainsBy(httpRoute.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
+			return parentRef.SectionName == nil || *parentRef.SectionName == listenerName
 		}) {
 			count++
 		}
