@@ -412,7 +412,7 @@ func getGatewayByLabelSelector(gatewayLabelSelector string, ctx context.Context,
 	lReq, err := labels.ParseToRequirements(gatewayLabelSelector)
 	if err != nil {
 		c.Errorf("failed to parse label selector %q: %v", gatewayLabelSelector, err)
-		c.FailNow()
+		return nil
 	}
 	lSel := labels.NewSelector()
 	for _, req := range lReq {
@@ -433,6 +433,9 @@ func getGatewayByLabelSelector(gatewayLabelSelector string, ctx context.Context,
 func gatewayAndItsListenersAreProgrammedAssertion(gatewayLabelSelector string) func(context.Context, *assert.CollectT, client.Client) {
 	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
 		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, c, cl)
+		if !assert.NotNil(c, gw) {
+			return
+		}
 		assert.True(c, gateway.IsProgrammed(gw))
 		assert.True(c, gateway.AreListenersProgrammed(gw))
 	}
@@ -443,11 +446,14 @@ func gatewayAndItsListenersAreProgrammedAssertion(gatewayLabelSelector string) f
 func gatewayDataPlaneDeploymentIsNotPatched(gatewayLabelSelector string) func(context.Context, *assert.CollectT, client.Client) {
 	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
 		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, c, cl)
+		if !assert.NotNil(c, gw) {
+			return
+		}
 
 		dataplanes, err := gateway.ListDataPlanesForGateway(ctx, cl, gw)
 		if err != nil {
 			c.Errorf("failed to list DataPlanes for Gateway %q: %v", client.ObjectKeyFromObject(gw), err)
-			c.FailNow()
+			return
 		}
 		if !assert.Len(c, dataplanes, 1) {
 			return
@@ -455,7 +461,7 @@ func gatewayDataPlaneDeploymentIsNotPatched(gatewayLabelSelector string) func(co
 		dp := &dataplanes[0]
 		if dp.Generation != 1 {
 			c.Errorf("DataPlane %q got patched but it shouldn't: %v", client.ObjectKeyFromObject(dp), err)
-			c.FailNow()
+			return
 		}
 	}
 }
@@ -466,7 +472,7 @@ func clusterWideResourcesAreProperlyManaged(gatewayLabelSelector string) func(ct
 		controlplanes, err := gateway.ListControlPlanesForGateway(ctx, cl, gw)
 		if err != nil {
 			c.Errorf("failed to list ControlPlanes for Gateway %q: %v", client.ObjectKeyFromObject(gw), err)
-			c.FailNow()
+			return
 		}
 		if !assert.Len(c, controlplanes, 1) {
 			return
