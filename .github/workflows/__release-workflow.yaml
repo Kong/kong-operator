@@ -48,6 +48,12 @@ on:
         description: "The name of the image to push to Docker Hub"
         type: string
         required: true
+      additional-build-contexts:
+        description: >
+          Additional build context to include in the build (format name=path),
+          it's used for EE build to additionaly include path to OSS repo.
+        required: false
+        type: string
       verify-image-script:
         description: Path to the script that will be used to verify the built image.
         required: false
@@ -105,6 +111,7 @@ jobs:
       registry: docker.io
       username: ${{ inputs.dockerhub-push-username }}
       image-name: ${{ inputs.image-name }}
+      additional-build-contexts: ${{ inputs.additional-build-contexts }}
       push: true
       latest: ${{ inputs.latest }}
       tag: ${{ inputs.tag }}
@@ -203,10 +210,6 @@ jobs:
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         if: ${{ (inputs.base == 'main' && matrix.base == 'main') || (inputs.base != 'main') }}
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
-
-      - name: Checkout KGO submodule
-        if: ${{ (inputs.base == 'main' && matrix.base == 'main') || (inputs.base != 'main') }}
-        run: git submodule update --init
 
       - name: Setup golang
         if: ${{ (inputs.base == 'main' && matrix.base == 'main') || (inputs.base != 'main') }}
