@@ -23,7 +23,7 @@ jobs:
       dockerhub-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
       gh-pat: ${{ secrets.PAT_GITHUB }}
     with:
-      username: ${{ vars.DOCKERHUB_PUSH_USERNAME  }}
+      username: ${{ vars.DOCKERHUB_PUSH_USERNAME }}
       registry: docker.io
       image-name: ${{ vars.DOCKERHUB_IMAGE_NAME }}
       push: true

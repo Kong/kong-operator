@@ -46,8 +46,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Setup go
       uses: actions/setup-go@v5
@@ -127,13 +125,21 @@ jobs:
     - name: Verify that uninstalling operator CRDs via kustomize works
       run: make uninstall
 
+  build-image:
+    uses: ./.github/workflows/__build-workflow.yaml
+    secrets:
+      dockerhub-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
+      gh-pat: ${{ secrets.PAT_GITHUB }}
+    with:
+      username: ${{ vars.DOCKERHUB_PUSH_USERNAME }}
+      registry: docker.io
+      image-name: ${{ vars.DOCKERHUB_IMAGE_NAME }}
+      push: false
+
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+    - uses: actions/checkout@v4
 
     - name: setup golang
       uses: actions/setup-go@v5
@@ -142,7 +148,7 @@ jobs:
 
     - run: make build.operator
 
-    - name: Test the image by running it with -version flag
+    - name: Test the binary by running it with -version flag
       run: ./bin/manager -version | ./scripts/verify-version.sh ${{ github.repository }}
 
   unit-tests:

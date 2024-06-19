@@ -54,14 +54,6 @@ on:
         description: Set outputs for docker/build-push-action.
         required: false
         type: string
-      upload-artifact:
-        description: |
-          If a non empty string is provided then this will be used as path for
-          artifact to upload, which will contain the built, exported container image.
-          This artifact will be available for subsequent jobs under the name
-          of "image".
-        required: false
-        type: string
       latest:
         description: Whether to tag this build latest
         type: boolean
@@ -138,7 +130,6 @@ jobs:
     outputs:
       tags: ${{ steps.meta.outputs.tags }}
       version: ${{ steps.meta.outputs.version }}
-      artifact: ${{ steps.set-artifact.outputs.artifact }}
 
     steps:
       - uses: actions/checkout@v4
@@ -215,10 +206,6 @@ jobs:
           context: .
           build-contexts: ${{ inputs.additional-build-contexts }}
           push: ${{ inputs.push }}
-          # Use load when push is set to false to allow subsequent steps to have
-          # access to this image.
-          # Ref: https://docs.docker.com/build/ci/github-actions/test-before-push/
-          load: ${{ !inputs.push }}
           file: ${{ inputs.file }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
@@ -233,29 +220,66 @@ jobs:
             PAT_GITHUB=${{ secrets.gh-pat }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: ${{ inputs.outputs }}
+          # Use outputs when push is set to false to allow subsequent steps to have
+          # access to this image.
+          # Ref: https://docs.docker.com/build/ci/github-actions/test-before-push/
+          outputs: ${{ !inputs.push && 'type=docker,dest=/tmp/image.tar' }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.os }}-${{ matrix.arch }}
+          path: /tmp/image.tar
+
+  test-image:
+    name: Run image to verify it and check -version output
+    runs-on: ubuntu-latest
+    needs:
+      - semver
+      - build
+
+    strategy:
+        # Whatever gets changed here should be changed in the multi-arch job below.
+      matrix:
+        include:
+        - os: linux
+          arch: amd64
+        - os: linux
+          arch: arm64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifact with built image
+        uses: actions/download-artifact@v4
+        with:
+          name: image-${{ matrix.os }}-${{ matrix.arch }}
+          path: /tmp/${{ matrix.os }}/${{ matrix.arch }}/
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: ${{ matrix.arch }}
+ 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+ 
+      - name: Load image
+        run: |
+          docker load --input /tmp/${{ matrix.os }}/${{ matrix.arch }}/image.tar
+          docker image ls -a
 
       - name: Test the image by running it with -version flag
-        # Why this doesn't work?
-        # ${{inputs.registry}}/${{ inputs.image-name }}@${{ steps.build.outputs.digest }}
+        # NOTE: we can't use steps.build.outputs.tags here because it's there's more than one tag
+        # and we need to run the image with the same os/arch combination as it was downloaded.
+        # Below 'docker images ...' relies on the fact that there will only be 1 image with
+        # reference ${{ inputs.image-name }}.
         run: |
           docker images
-          echo "${{ steps.meta.outputs.tags }}" | xargs -I {} \
+          docker images --format {{.ID}} --filter reference=${{ inputs.image-name }} | xargs -I {} \
             docker run --rm \
               --platform ${{ matrix.os }}/${{ matrix.arch }} \
               {} -version | ${{ inputs.verify-image-script }} ${{ github.repository }}
-
-      - name: Upload artifact
-        if: ${{ inputs.upload-artifact }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: image
-          path: ${{ inputs.upload-artifact }}
-
-      - name: Set artifact output
-        if: ${{ inputs.upload-artifact }}
-        id: set-artifact
-        run: echo "artifact=${{ inputs.upload-artifact }}" >> $GITHUB_OUTPUT
 
   build-multi-arch:
     name: Build and push multi-arch manifest
@@ -268,6 +292,7 @@ jobs:
     needs:
       - semver
       - build
+      - test-image
 
     steps:
       - uses: actions/checkout@v4
