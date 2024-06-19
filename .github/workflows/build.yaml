@@ -14,6 +14,9 @@ on:
   push:
     branches:
     - 'main'
+  pull_request:
+    branches:
+      - '*'
   workflow_dispatch: {}
 
 jobs:
@@ -26,4 +29,6 @@ jobs:
       username: ${{ vars.DOCKERHUB_PUSH_USERNAME }}
       registry: docker.io
       image-name: ${{ vars.DOCKERHUB_IMAGE_NAME }}
-      push: true
+      # If we pushed then it means we want to build and push the image.
+      # Branch filter above will decide pushes to which branch will trigger this.
+      push: ${{ github.event.action == 'push' }}
