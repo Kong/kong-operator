@@ -140,4 +140,4 @@ jobs:
         with:
           branch: main
           title: '[cherry-pick] ${{ needs.semver.outputs.version }} - ${{ github.sha }}'
-          body: 'Cherry picking ${{ needs.semver.outputs.version }} commit (${{ github.sha }}) onto this branch'
+          body: 'Cherry picking ${{ needs.semver.outputs.version }} commit (${{ github.sha }}) onto main'
