@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v1.3.0-rc.1](#v130-rc1)
 - [v1.2.3](#v123)
 - [v1.2.2](#v122)
 - [v1.2.1](#v121)
@@ -20,9 +21,9 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v1.3.0-rc.1]
 
-> Release date: TBA
+> Release date: 2024-06-20
 
 ### Added
 
@@ -674,6 +675,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v1.3.0-rc.1]: https://github.com/Kong/gateway-operator/compare/v1.2.3..v1.3.0-rc.1
 [v1.2.3]: https://github.com/Kong/gateway-operator/compare/v1.2.2..v1.2.3
 [v1.2.2]: https://github.com/Kong/gateway-operator/compare/v1.2.1..v1.2.2
 [v1.2.1]: https://github.com/Kong/gateway-operator/compare/v1.2.0..v1.2.1
