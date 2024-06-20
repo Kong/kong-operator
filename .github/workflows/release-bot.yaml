@@ -14,6 +14,7 @@ jobs:
     outputs:
       release_found: ${{ steps.commit_parser.outputs.release_found }}
       release_type: ${{ steps.commit_parser.outputs.release_type }}
+      release_latest: ${{ steps.commit_parser.outputs.release_latest }}
     runs-on: ubuntu-latest
     
     steps:
@@ -28,9 +29,15 @@ jobs:
             if (commitMessage.includes('chore(release): [bot]')) {
               core.setOutput('release_found', 'true')
               core.setOutput('release_type', 'release')
+              if (commitMessage.includes('[latest]')) {
+                core.setOutput('release_latest', 'true')
+              }
             } else if (commitMessage.includes('chore(prerelease): [bot]')) {
               core.setOutput('release_found', 'true')
               core.setOutput('release_type', 'prerelease')
+              if (commitMessage.includes('[latest]')) {
+                core.setOutput('release_latest', 'true')
+              }
             } else {
               core.setOutput('release_found', 'false')
             }
@@ -97,3 +104,40 @@ jobs:
           tag: v${{ needs.semver.outputs.version }}
           commit: ${{ github.sha }}
           prerelease: ${{ needs.look_for_release.outputs.release_type == 'prerelease' }}
+
+  create-release-branch:
+    needs:
+      - look_for_release
+      - publish-release
+      - semver
+    # NOTE: only create a release branch if the release is not a patch release
+    # or a prerelease.
+    # For patch releases, the release branch should already be in place.
+    # For prereleases, we do not want to create a release branch.
+    if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.patch == '0' && needs.semver.outputs.prerelease == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: peterjgrainger/action-create-branch@v2.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # NOTE: using the full ref name because
+          # https://github.com/peterjgrainger/action-create-branch?tab=readme-ov-file#branch
+          branch: 'refs/heads/release/v${{ needs.semver.outputs.major }}.{{ needs.semver.outputs.minor }}.x'
+          sha: '${{ github.sha }}'
+
+  create-cherry-pick-branch-to-main:
+    needs:
+      - look_for_release
+      - publish-release
+      - semver
+    if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.patch != '0' && needs.semver.outputs.prerelease == '' && needs.look_for_release.outputs.release_latest == 'true' && github.ref_name != 'main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: carloscastrojumo/github-cherry-pick-action@v1.0.1
+        with:
+          branch: main
+          title: '[cherry-pick] ${{ needs.semver.outputs.version }} - ${{ github.sha }}'
+          body: 'Cherry picking ${{ needs.semver.outputs.version }} commit (${{ github.sha }}) onto this branch'
