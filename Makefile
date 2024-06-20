@@ -297,6 +297,7 @@ docker.push:
 GOTESTSUM_FORMAT ?= standard-verbose
 INTEGRATION_TEST_TIMEOUT ?= "30m"
 CONFORMANCE_TEST_TIMEOUT ?= "20m"
+E2E_TEST_TIMEOUT ?= "20m"
 
 .PHONY: test
 test: test.unit
@@ -354,6 +355,7 @@ test.integration_provision_dataplane_fail:
 _test.e2e: gotestsum
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-timeout $(E2E_TEST_TIMEOUT) \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		-race \
 		./test/e2e/...
