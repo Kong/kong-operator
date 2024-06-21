@@ -8,22 +8,62 @@ package metadata
 // WARNING: moving any of these variables requires changes to both the Makefile
 //          and the Dockerfile which modify them during the link step with -X
 
-var (
+// Info is a struct type that holds the metadata for the controller manager.
+type Info struct {
 	// Release returns the release version, generally a semver like v1.0.0.
-	Release = "NOT_SET"
+	Release string
 
 	// Repo returns the git repository URL.
-	Repo = "NOT_SET"
+	Repo string
 
 	// RepoURL returns the repository URL.
-	RepoURL = "NOT_SET"
+	RepoURL string
 
 	// Commit returns the SHA from the current branch HEAD.
-	Commit = "NOT_SET"
+	Commit string
 
 	// ProjectName is the name of the project.
-	ProjectName = "NOT_SET"
+	ProjectName string
 
 	// Organization is the Kong organization
-	Organization = "Kong"
+	Organization string
+
+	// Flavor is the flavor of the build.
+	Flavor string
+}
+
+var (
+	// Release returns the release version, generally a semver like v1.0.0.
+	release = "NOT_SET"
+
+	// Repo returns the git repository URL.
+	repo = "NOT_SET"
+
+	// RepoURL returns the repository URL.
+	repoURL = "NOT_SET"
+
+	// Commit returns the SHA from the current branch HEAD.
+	commit = "NOT_SET"
+
+	// ProjectName is the name of the project.
+	projectName = "NOT_SET"
+
+	// Organization is the Kong organization
+	organization = "Kong"
+
+	// Flavor is the flavor of the build.
+	flavor = "oss"
 )
+
+// Metadata returns the metadata for the controller manager.
+func Metadata() Info {
+	return Info{
+		Release:      release,
+		Repo:         repo,
+		RepoURL:      repoURL,
+		Commit:       commit,
+		ProjectName:  projectName,
+		Organization: organization,
+		Flavor:       flavor,
+	}
+}

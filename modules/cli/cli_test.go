@@ -10,6 +10,7 @@ import (
 
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/logging"
+	"github.com/kong/gateway-operator/modules/manager/metadata"
 )
 
 func TestParse(t *testing.T) {
@@ -83,7 +84,7 @@ func TestParse(t *testing.T) {
 			for k, v := range tC.envVars {
 				t.Setenv(k, v)
 			}
-			cli := New()
+			cli := New(metadata.Metadata())
 
 			cfg := cli.Parse(tC.args)
 			require.Empty(t, cmp.Diff(
@@ -103,7 +104,7 @@ func TestParseWithAdditionalFlags(t *testing.T) {
 	}
 
 	var additionalCfg additionalConfig
-	cli := New()
+	cli := New(metadata.Metadata())
 	cli.FlagSet().BoolVar(&additionalCfg.OptionBool, "additional-bool", true, "Additional bool flag")
 	cli.FlagSet().StringVar(&additionalCfg.OptionString, "additional-string", "additional", "Additional string flag")
 	cli.FlagSet().IntVar(&additionalCfg.OptionalInt, "additional-int", 0, "Additional integer flag")

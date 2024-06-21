@@ -16,7 +16,7 @@ import (
 )
 
 // New returns a new CLI.
-func New() *CLI {
+func New(m metadata.Info) *CLI {
 	flagSet := flag.NewFlagSet("", flag.ExitOnError)
 
 	var cfg manager.Config
@@ -64,6 +64,7 @@ func New() *CLI {
 		cfg:             &cfg,
 		loggerOpts:      loggerOpts,
 		deferFlagValues: &deferCfg,
+		metadata:        m,
 	}
 }
 
@@ -76,6 +77,8 @@ type CLI struct {
 	// logic after parsing flagSet to determine desired configuration.
 	deferFlagValues *flagsForFurtherEvaluation
 	cfg             *manager.Config
+
+	metadata metadata.Info
 }
 
 type flagsForFurtherEvaluation struct {
@@ -111,6 +114,11 @@ func (c *CLI) bindEnvVarsToFlags() (err error) {
 	})
 
 	return err
+}
+
+// Metadata returns the metadata for the controller manager.
+func (c *CLI) Metadata() metadata.Info {
+	return c.metadata
 }
 
 // Parse parses flag definitions from the argument list, which should not include the command name.
@@ -160,9 +168,9 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 			Commit  string `json:"commit"`
 		}
 		out, err := json.Marshal(Version{
-			Release: metadata.Release,
-			Repo:    metadata.Repo,
-			Commit:  metadata.Commit,
+			Release: c.metadata.Release,
+			Repo:    c.metadata.Repo,
+			Commit:  c.metadata.Commit,
 		})
 		if err != nil {
 			fmt.Printf("ERROR: failed to print version information: %v\n", err)

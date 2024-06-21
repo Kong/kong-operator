@@ -28,11 +28,11 @@ LDFLAGS_COMMON ?= -extldflags=-Wl,-ld_classic
 endif
 
 LDFLAGS_METADATA ?= \
-	-X $(REPO)/modules/manager/metadata.ProjectName=$(REPO_NAME) \
-	-X $(REPO)/modules/manager/metadata.Release=$(TAG) \
-	-X $(REPO)/modules/manager/metadata.Commit=$(COMMIT) \
-	-X $(REPO)/modules/manager/metadata.Repo=$(REPO_INFO) \
-	-X $(REPO)/modules/manager/metadata.RepoURL=$(REPO_URL)
+	-X $(REPO)/modules/manager/metadata.projectName=$(REPO_NAME) \
+	-X $(REPO)/modules/manager/metadata.release=$(TAG) \
+	-X $(REPO)/modules/manager/metadata.commit=$(COMMIT) \
+	-X $(REPO)/modules/manager/metadata.repo=$(REPO_INFO) \
+	-X $(REPO)/modules/manager/metadata.repoURL=$(REPO_URL)
 
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
