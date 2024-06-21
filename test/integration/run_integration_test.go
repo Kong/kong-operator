@@ -8,6 +8,7 @@ import (
 
 	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/manager"
+	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -22,8 +23,10 @@ func TestMain(m *testing.M) {
 
 	testSuiteToRun = helpers.ParseGoTestFlags(TestIntegration, testSuiteToRun)
 	cfg := integration.DefaultControllerConfigForTests()
+
+	metadata := metadata.Metadata()
 	managerToTest := func(startedChan chan struct{}) error {
-		return manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, admission.NewRequestHandler, startedChan)
+		return manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, admission.NewRequestHandler, startedChan, metadata)
 	}
 	integration.TestMain(
 		m,
