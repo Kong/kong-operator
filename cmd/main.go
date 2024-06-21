@@ -25,16 +25,19 @@ import (
 	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/cli"
 	"github.com/kong/gateway-operator/modules/manager"
+	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 )
 
 func main() {
-	cli := cli.New()
+	m := metadata.Metadata()
+
+	cli := cli.New(m)
 	cfg := cli.Parse(os.Args[1:])
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(cfg.LoggerOpts)))
 
-	if err := manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, admission.NewRequestHandler, nil); err != nil {
+	if err := manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, admission.NewRequestHandler, nil, m); err != nil {
 		ctrl.Log.Error(err, "failed to run manager")
 		os.Exit(1)
 	}

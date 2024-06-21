@@ -22,6 +22,7 @@ import (
 	"github.com/kong/gateway-operator/config"
 	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/manager"
+	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test"
@@ -113,7 +114,8 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: starting the operator's controller manager")
 	// startControllerManager will spawn the controller manager in a separate
 	// goroutine and will report whether that succeeded.
-	started := startControllerManager()
+	metadata := metadata.Metadata()
+	started := startControllerManager(metadata)
 	<-started
 
 	exitOnErr(testutils.BuildMTLSCredentials(ctx, clients.K8sClient, &httpc))
@@ -160,7 +162,7 @@ func exitOnErr(err error) {
 
 // startControllerManager will configure the manager and start it in a separate goroutine.
 // It returns a channel which will get closed when manager.Start() gets called.
-func startControllerManager() <-chan struct{} {
+func startControllerManager(metadata metadata.Info) <-chan struct{} {
 	cfg := manager.DefaultConfig()
 	cfg.LeaderElection = false
 	cfg.DevelopmentMode = true
@@ -182,7 +184,7 @@ func startControllerManager() <-chan struct{} {
 
 	startedChan := make(chan struct{})
 	go func() {
-		exitOnErr(manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, admission.NewRequestHandler, startedChan))
+		exitOnErr(manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, admission.NewRequestHandler, startedChan, metadata))
 	}()
 
 	return startedChan

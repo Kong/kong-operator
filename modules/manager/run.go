@@ -132,6 +132,7 @@ func Run(
 	setupControllers SetupControllersFunc,
 	admissionRequestHandler AdmissionRequestHandlerFunc,
 	startedChan chan<- struct{},
+	metadata metadata.Info,
 ) error {
 	setupLog := ctrl.Log.WithName("setup")
 	setupLog.Info("starting controller manager",
@@ -243,7 +244,7 @@ func Run(
 	// Enable anonnymous reporting when configured but not for development builds
 	// to reduce the noise.
 	if cfg.AnonymousReports && !cfg.DevelopmentMode {
-		stopAnonymousReports, err := setupAnonymousReports(context.Background(), cfg, setupLog)
+		stopAnonymousReports, err := setupAnonymousReports(context.Background(), cfg, setupLog, metadata)
 		if err != nil {
 			setupLog.Error(err, "failed setting up anonymous reports")
 		} else {
@@ -368,18 +369,19 @@ func getKubeconfig(apiServerPath string, kubeconfig string) (*rest.Config, error
 // a cleanup function and an error.
 // The caller is responsible to call the returned function - when the returned
 // error is not nil - to stop the reports sending.
-func setupAnonymousReports(ctx context.Context, cfg Config, logger logr.Logger) (func(), error) {
+func setupAnonymousReports(ctx context.Context, cfg Config, logger logr.Logger, metadata metadata.Info) (func(), error) {
 	logger.Info("starting anonymous reports")
 	restConfig, err := getKubeconfig(cfg.APIServerPath, cfg.KubeconfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 	}
 
-	telemetryPayload := telemetry.Payload{
-		"v": metadata.Release,
+	payload := telemetry.Payload{
+		"v":      metadata.Release,
+		"flavor": metadata.Flavor,
 	}
 
-	tMgr, err := telemetry.CreateManager(telemetry.SignalPing, restConfig, logger, telemetryPayload)
+	tMgr, err := telemetry.CreateManager(telemetry.SignalPing, restConfig, logger, payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create anonymous reports manager: %w", err)
 	}
