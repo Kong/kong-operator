@@ -17,7 +17,7 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
 	github.com/kong/kubernetes-ingress-controller/v3 v3.2.0
-	github.com/kong/kubernetes-telemetry v0.1.3
+	github.com/kong/kubernetes-telemetry v0.1.4
 	github.com/kong/kubernetes-testing-framework v0.47.1
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
