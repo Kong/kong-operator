@@ -347,8 +347,9 @@ func TestCreateManager(t *testing.T) {
 			// We need the custom list kinds to prevent:
 			// panic: coding error: you must register resource to list kind for every resource you're going
 			// to LIST when creating the client.
-			// See NewSimpleDynamicClientWithCustomListKinds or register the list into the scheme:
-			// gateway-operator.konghq.com/v1alpha1, Resource=aigateways out of map
+			// See NewSimpleDynamicClientWithCustomListKinds:
+			// https://pkg.go.dev/k8s.io/client-go/dynamic/fake#NewSimpleDynamicClientWithCustomListKinds
+			// or register the list into the scheme:
 			dyn := testdynclient.NewSimpleDynamicClientWithCustomListKinds(scheme,
 				map[schema.GroupVersionResource]string{
 					operatorv1alpha1.AIGatewayGVR(): "AIGatewayList",
@@ -486,8 +487,9 @@ func TestTelemetryUpdates(t *testing.T) {
 			// We need the custom list kinds to prevent:
 			// panic: coding error: you must register resource to list kind for every resource you're going
 			// to LIST when creating the client.
-			// See NewSimpleDynamicClientWithCustomListKinds or register the list into the scheme:
-			// gateway-operator.konghq.com/v1alpha1, Resource=aigateways out of map
+			// See NewSimpleDynamicClientWithCustomListKinds:
+			// https://pkg.go.dev/k8s.io/client-go/dynamic/fake#NewSimpleDynamicClientWithCustomListKinds
+			// or register the list into the scheme:
 			dyn := testdynclient.NewSimpleDynamicClientWithCustomListKinds(
 				scheme,
 				map[schema.GroupVersionResource]string{
