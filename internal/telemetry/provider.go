@@ -7,7 +7,6 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -27,9 +26,9 @@ const (
 	ControlPlaneCountKind = provider.Kind("controlplanes_count")
 
 	// AIGatewayK8sResourceName is the registered name of resource in kubernetes for AIgateways.
-	AIGatewayK8sResourceName = "aigatewaies"
+	AIGatewayK8sResourceName = "aigateways"
 	// AIGatewayCountKind is the kind of provider reporting number of AIGateways.
-	AIGatewayCountKind = provider.Kind("aigatewaies_count")
+	AIGatewayCountKind = provider.Kind("aigateways_count")
 
 	// StandaloneDataPlaneCountProviderName is the name of the standalone dataplane count provider.
 	StandaloneDataPlaneCountProviderName = "standalone_dataplanes"
@@ -44,42 +43,24 @@ const (
 	RequestedControlPlaneReplicasCountProviderName = "requested_controlplanes_replicas"
 )
 
-var (
-	dataplaneGVR = schema.GroupVersionResource{
-		Group:    operatorv1beta1.SchemeGroupVersion.Group,
-		Version:  operatorv1beta1.SchemeGroupVersion.Version,
-		Resource: DataPlaneK8sResourceName,
-	}
-	controlplaneGVR = schema.GroupVersionResource{
-		Group:    operatorv1beta1.SchemeGroupVersion.Group,
-		Version:  operatorv1beta1.SchemeGroupVersion.Version,
-		Resource: ControlPlaneK8sResourceName,
-	}
-	aiGatewayGVR = schema.GroupVersionResource{
-		Group:    operatorv1alpha1.SchemeGroupVersion.Group,
-		Version:  operatorv1alpha1.SchemeGroupVersion.Version,
-		Resource: AIGatewayK8sResourceName,
-	}
-)
-
 // NewDataPlaneCountProvider creates a provider for number of dataplanes in the cluster.
 func NewDataPlaneCountProvider(dyn dynamic.Interface, restMapper meta.RESTMapper) (provider.Provider, error) {
 	return provider.NewK8sObjectCountProviderWithRESTMapper(
-		DataPlaneK8sResourceName, DataPlaneCountKind, dyn, dataplaneGVR, restMapper,
+		DataPlaneK8sResourceName, DataPlaneCountKind, dyn, operatorv1beta1.DataPlaneGVR(), restMapper,
 	)
 }
 
 // NewControlPlaneCountProvider creates a provider for number of dataplanes in the cluster.
 func NewControlPlaneCountProvider(dyn dynamic.Interface, restMapper meta.RESTMapper) (provider.Provider, error) {
 	return provider.NewK8sObjectCountProviderWithRESTMapper(
-		ControlPlaneK8sResourceName, ControlPlaneCountKind, dyn, controlplaneGVR, restMapper,
+		ControlPlaneK8sResourceName, ControlPlaneCountKind, dyn, operatorv1beta1.ControlPlaneGVR(), restMapper,
 	)
 }
 
 // NewControlPlaneCountProvider creates a provider for number of dataplanes in the cluster.
 func NewAIgatewayCountProvider(dyn dynamic.Interface, restMapper meta.RESTMapper) (provider.Provider, error) {
 	return provider.NewK8sObjectCountProviderWithRESTMapper(
-		AIGatewayK8sResourceName, AIGatewayCountKind, dyn, aiGatewayGVR, restMapper,
+		AIGatewayK8sResourceName, AIGatewayCountKind, dyn, operatorv1alpha1.AIGatewayGVR(), restMapper,
 	)
 }
 
