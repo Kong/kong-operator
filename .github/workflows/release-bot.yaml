@@ -136,7 +136,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: carloscastrojumo/github-cherry-pick-action@v1.0.1
+      - uses: carloscastrojumo/github-cherry-pick-action@v1.0.10
         with:
           branch: main
           title: '[cherry-pick] ${{ needs.semver.outputs.version }} - ${{ github.sha }}'
