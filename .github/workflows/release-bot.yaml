@@ -123,7 +123,7 @@ jobs:
         with:
           # NOTE: using the full ref name because
           # https://github.com/peterjgrainger/action-create-branch?tab=readme-ov-file#branch
-          branch: 'refs/heads/release/v${{ needs.semver.outputs.major }}.{{ needs.semver.outputs.minor }}.x'
+          branch: 'refs/heads/release/v${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}.x'
           sha: '${{ github.sha }}'
 
   create-cherry-pick-branch-to-main:
