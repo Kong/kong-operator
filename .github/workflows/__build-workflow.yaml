@@ -195,6 +195,12 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      
+      # Path for additional-build-contexts may point to dependencies that are pulled by Go toolchain,
+      # so we need to download them before building the image.
+      - name: Set up Go dependencies for additional build contexts
+        if: ${{ inputs.additional-build-contexts != ''}}
+        run: go mod download
 
       - run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
       - run: echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_ENV
