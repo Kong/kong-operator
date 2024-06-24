@@ -293,14 +293,39 @@ func (r *Reconciler) ensureClusterRole(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 ) (createdOrUpdated bool, cr *rbacv1.ClusterRole, err error) {
-	managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
-	clusterRoles, err := k8sutils.ListClusterRoles(
+	// TODO: This performs a migration from the old managedBy label to the new one.
+	// After several versions of soak time we can remove handling the legeacy label set.
+	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
+	// PR: that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
+	clusterRolesLegacy, err := k8sutils.ListClusterRoles(
 		ctx,
 		r.Client,
-		client.MatchingLabels(managedByLabelSet),
+		client.MatchingLabels(k8sutils.GetLegacyManagedByLabelSet(cp)),
 	)
 	if err != nil {
 		return false, nil, err
+	}
+
+	clusterRoles, err := k8sutils.ListClusterRoles(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
+	)
+	if err != nil {
+		return false, nil, err
+	}
+
+	// NOTE: This is a temporary workaround to handle the migration from the old managedBy label to the new one.
+	// The reason for this is because those label sets overlap.
+	for i, cr := range clusterRolesLegacy {
+		nn := client.ObjectKeyFromObject(&cr)
+		if lo.ContainsBy(clusterRoles, func(iterator rbacv1.ClusterRole) bool {
+			return client.ObjectKeyFromObject(&iterator) == nn
+		}) {
+			continue
+		}
+
+		clusterRoles = append(clusterRoles, clusterRolesLegacy[i])
 	}
 
 	count := len(clusterRoles)
@@ -350,15 +375,39 @@ func (r *Reconciler) ensureClusterRoleBinding(
 ) (createdOrUpdate bool, crb *rbacv1.ClusterRoleBinding, err error) {
 	logger := log.GetLogger(ctx, "controlplane.ensureClusterRoleBinding", r.DevelopmentMode)
 
-	managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
+	// TODO: This performs a migration from the old managedBy label to the new one.
+	// After several versions of soak time we can remove handling the legeacy label set.
+	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
+	// PR: that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
+	clusterRoleBindingsLegacy, err := k8sutils.ListClusterRoleBindings(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetLegacyManagedByLabelSet(cp)),
+	)
+	if err != nil {
+		return false, nil, err
+	}
 
 	clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
 		ctx,
 		r.Client,
-		client.MatchingLabels(managedByLabelSet),
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
 	)
 	if err != nil {
 		return false, nil, err
+	}
+
+	// NOTE: This is a temporary workaround to handle the migration from the old managedBy label to the new one.
+	// The reason for this is because those label sets overlap.
+	for i, crb := range clusterRoleBindingsLegacy {
+		nn := client.ObjectKeyFromObject(&crb)
+		if lo.ContainsBy(clusterRoleBindings, func(iterator rbacv1.ClusterRoleBinding) bool {
+			return client.ObjectKeyFromObject(&iterator) == nn
+		}) {
+			continue
+		}
+
+		clusterRoleBindings = append(clusterRoleBindings, clusterRoleBindingsLegacy[i])
 	}
 
 	count := len(clusterRoleBindings)
@@ -503,15 +552,25 @@ func (r *Reconciler) ensureOwnedClusterRolesDeleted(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 ) (deletions bool, err error) {
-	managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
-
-	clusterRoles, err := k8sutils.ListClusterRoles(
-		ctx, r.Client,
-		client.MatchingLabels(managedByLabelSet),
+	clusterRolesLegacy, err := k8sutils.ListClusterRoles(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetLegacyManagedByLabelSet(cp)),
 	)
 	if err != nil {
 		return false, err
 	}
+
+	clusterRoles, err := k8sutils.ListClusterRoles(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
+	)
+	if err != nil {
+		return false, err
+	}
+
+	clusterRoles = append(clusterRoles, clusterRolesLegacy...)
 
 	var (
 		deleted bool
@@ -519,8 +578,12 @@ func (r *Reconciler) ensureOwnedClusterRolesDeleted(
 	)
 	for i := range clusterRoles {
 		err = r.Client.Delete(ctx, &clusterRoles[i])
-		if err != nil && !k8serrors.IsNotFound(err) {
+		if err != nil {
+			if k8serrors.IsNotFound(err) {
+				continue
+			}
 			errs = append(errs, err)
+			continue
 		}
 		deleted = true
 	}
@@ -535,15 +598,25 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 ) (deletions bool, err error) {
-	managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
-
-	clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
-		ctx, r.Client,
-		client.MatchingLabels(managedByLabelSet),
+	clusterRoleBindingsLegacy, err := k8sutils.ListClusterRoleBindings(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetLegacyManagedByLabelSet(cp)),
 	)
 	if err != nil {
 		return false, err
 	}
+
+	clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
+	)
+	if err != nil {
+		return false, err
+	}
+
+	clusterRoleBindings = append(clusterRoleBindings, clusterRoleBindingsLegacy...)
 
 	var (
 		deleted bool
@@ -551,8 +624,12 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 	)
 	for i := range clusterRoleBindings {
 		err = r.Client.Delete(ctx, &clusterRoleBindings[i])
-		if err != nil && !k8serrors.IsNotFound(err) {
+		if err != nil {
+			if k8serrors.IsNotFound(err) {
+				continue
+			}
 			errs = append(errs, err)
+			continue
 		}
 		deleted = true
 	}
@@ -561,17 +638,31 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 }
 
 func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx context.Context,
-	cp *operatorv1beta1.ControlPlane) (deletions bool, err error) {
-	managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
-
-	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
+	cp *operatorv1beta1.ControlPlane,
+) (deletions bool, err error) {
+	// TODO: This performs a migration from the old managedBy label to the new one.
+	// After several versions of soak time we can remove handling the legeacy label set.
+	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
+	// PR: that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
+	validatingWebhookConfigurationsLegacy, err := k8sutils.ListValidatingWebhookConfigurations(
 		ctx,
 		r.Client,
-		client.MatchingLabels(managedByLabelSet),
+		client.MatchingLabels(k8sutils.GetLegacyManagedByLabelSet(cp)),
 	)
 	if err != nil {
 		return false, fmt.Errorf("failed listing webhook configurations for owner: %w", err)
 	}
+
+	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed listing webhook configurations for owner: %w", err)
+	}
+
+	validatingWebhookConfigurations = append(validatingWebhookConfigurations, validatingWebhookConfigurationsLegacy...)
 
 	var (
 		deleted bool
@@ -579,8 +670,12 @@ func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx contex
 	)
 	for i := range validatingWebhookConfigurations {
 		err = r.Client.Delete(ctx, &validatingWebhookConfigurations[i])
-		if err != nil && !k8serrors.IsNotFound(err) {
+		if err != nil {
+			if k8serrors.IsNotFound(err) {
+				continue
+			}
 			errs = append(errs, err)
+			continue
 		}
 		deleted = true
 	}
@@ -671,15 +766,42 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 ) (op.Result, error) {
 	logger := log.GetLogger(ctx, "controlplane.ensureValidatingWebhookConfiguration", r.DevelopmentMode)
 
-	managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
+	// TODO: This performs a migration from the old managedBy label to the new one.
+	// After several versions of soak time we can remove handling the legeacy label set.
+	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
+	// PR: that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
+	validatingWebhookConfigurationsLegacy, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(
+		ctx,
+		r.Client,
+		cp.GetUID(),
+		// NOTE: this uses only the 1 label to find the legacy webhook configurations not the label set
+		// because app:<name> is not set on ValidatingWebhookConfiguration.
+		client.MatchingLabels(k8sutils.GetLegacyManagedByLabel(cp)),
+	)
+	if err != nil {
+		return op.Noop, fmt.Errorf("failed listing webhook configurations for owner: %w", err)
+	}
 
 	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
 		ctx,
 		r.Client,
-		client.MatchingLabels(managedByLabelSet),
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
 	)
 	if err != nil {
-		return op.Noop, err
+		return op.Noop, fmt.Errorf("failed listing webhook configurations for owner: %w", err)
+	}
+
+	// NOTE: This is a temporary workaround to handle the migration from the old managedBy label to the new one.
+	// The reason for this is because those label sets overlap.
+	for i, vwc := range validatingWebhookConfigurationsLegacy {
+		nn := client.ObjectKeyFromObject(&vwc)
+		if lo.ContainsBy(validatingWebhookConfigurations, func(iterator admregv1.ValidatingWebhookConfiguration) bool {
+			return client.ObjectKeyFromObject(&iterator) == nn
+		}) {
+			continue
+		}
+
+		validatingWebhookConfigurations = append(validatingWebhookConfigurations, validatingWebhookConfigurationsLegacy[i])
 	}
 
 	count := len(validatingWebhookConfigurations)
@@ -736,7 +858,8 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 
 		updated, webhookConfiguration.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(webhookConfiguration.ObjectMeta, generatedWebhookConfiguration.ObjectMeta)
 
-		if !cmp.Equal(webhookConfiguration.Webhooks, generatedWebhookConfiguration.Webhooks) {
+		if !cmp.Equal(webhookConfiguration.Webhooks, generatedWebhookConfiguration.Webhooks) ||
+			!cmp.Equal(webhookConfiguration.Labels, generatedWebhookConfiguration.Labels) {
 			webhookConfiguration.Webhooks = generatedWebhookConfiguration.Webhooks
 			updated = true
 		}

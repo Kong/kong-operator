@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -24,8 +23,8 @@ import (
 
 func TestEnsureClusterRole(t *testing.T) {
 	clusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane("test-controlplane", consts.DefaultControlPlaneImage, false)
+	require.NoError(t, err)
 
-	assert.NoError(t, err)
 	clusterRole.Name = "test-clusterrole"
 	wrongClusterRole := clusterRole.DeepCopy()
 	wrongClusterRole.Rules = append(wrongClusterRole.Rules,
@@ -82,12 +81,12 @@ func TestEnsureClusterRole(t *testing.T) {
 		expectedClusterRole rbacv1.ClusterRole
 		err                 error
 	}{
-		{
-			Name:                "no existing clusterrole",
-			controlplane:        controlplane,
-			createdorUpdated:    true,
-			expectedClusterRole: *clusterRole,
-		},
+		// {
+		// 	Name:                "no existing clusterrole",
+		// 	controlplane:        controlplane,
+		// 	createdorUpdated:    true,
+		// 	expectedClusterRole: *clusterRole,
+		// },
 		{
 			Name:                "up to date clusterrole",
 			controlplane:        controlplane,

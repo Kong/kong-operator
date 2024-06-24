@@ -304,6 +304,12 @@ func TestHelmUpgrade(t *testing.T) {
 						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
+				{
+					Name: "Cluster wide resources owned by the ControlPlane get the proper set of labels",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						clusterWideResourcesAreProperlyManaged("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
+					},
+				},
 			},
 		},
 	}
@@ -398,7 +404,7 @@ func TestHelmUpgrade(t *testing.T) {
 				t.Run(assertion.Name, func(t *testing.T) {
 					require.EventuallyWithT(t, func(c *assert.CollectT) {
 						assertion.Func(c, e.Clients)
-					}, waitTime, time.Second)
+					}, waitTime, 500*time.Millisecond)
 				})
 			}
 		})
@@ -471,7 +477,6 @@ func baseGatewayConfigurationSpec() operatorv1beta1.GatewayConfigurationSpec {
 }
 
 func getGatewayByLabelSelector(gatewayLabelSelector string, ctx context.Context, c *assert.CollectT, cl client.Client) *gatewayv1.Gateway {
-	var gws gatewayv1.GatewayList
 	lReq, err := labels.ParseToRequirements(gatewayLabelSelector)
 	if err != nil {
 		c.Errorf("failed to parse label selector %q: %v", gatewayLabelSelector, err)
@@ -482,12 +487,20 @@ func getGatewayByLabelSelector(gatewayLabelSelector string, ctx context.Context,
 		lSel = lSel.Add(req)
 	}
 
-	require.NoError(c,
-		cl.List(ctx, &gws, &client.ListOptions{
-			LabelSelector: lSel,
-		}),
-	)
-	require.Len(c, gws.Items, 1)
+	var gws gatewayv1.GatewayList
+	err = cl.List(ctx, &gws, &client.ListOptions{
+		LabelSelector: lSel,
+	})
+	if err != nil {
+		c.Errorf("failed to list gateways using label selector %q: %v", gatewayLabelSelector, err)
+		return nil
+	}
+
+	if len(gws.Items) != 1 {
+		c.Errorf("got %d gateways, expected 1", len(gws.Items))
+		return nil
+	}
+
 	return &gws.Items[0]
 }
 
@@ -532,6 +545,10 @@ func gatewayDataPlaneDeploymentIsNotPatched(gatewayLabelSelector string) func(co
 func clusterWideResourcesAreProperlyManaged(gatewayLabelSelector string) func(ctx context.Context, c *assert.CollectT, cl client.Client) {
 	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
 		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, c, cl)
+		if !assert.NotNil(c, gw) {
+			return
+		}
+
 		controlplanes, err := gateway.ListControlPlanesForGateway(ctx, cl, gw)
 		if err != nil {
 			c.Errorf("failed to list ControlPlanes for Gateway %q: %v", client.ObjectKeyFromObject(gw), err)

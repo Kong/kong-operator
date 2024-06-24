@@ -17,6 +17,7 @@ import (
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/consts"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------
@@ -74,8 +75,8 @@ func (r *Reconciler) validatingWebhookConfigurationHasControlPlaneOwner(obj clie
 // ClusterScopedObjHasControlPlaneOwner checks if the cluster-scoped object has a control plane owner.
 // The check is performed through the managed-by-name label.
 func (r *Reconciler) ClusterScopedObjHasControlPlaneOwner(ctx context.Context, obj client.Object) bool {
-	controlplaneList := &operatorv1beta1.ControlPlaneList{}
-	if err := r.Client.List(ctx, controlplaneList); err != nil {
+	var controlplaneList operatorv1beta1.ControlPlaneList
+	if err := r.Client.List(ctx, &controlplaneList); err != nil {
 		// filtering here is just an optimization. If we fail here it's most likely because of some failure
 		// of the Kubernetes API and it's technically better to enqueue the object
 		// than to drop it for eventual consistency during cluster outages.
@@ -83,9 +84,8 @@ func (r *Reconciler) ClusterScopedObjHasControlPlaneOwner(ctx context.Context, o
 		return true
 	}
 
-	for _, controlplane := range controlplaneList.Items {
-		// When resources are cluster-scoped, the owner is set through a label.
-		if obj.GetLabels()[consts.GatewayOperatorManagedByNameLabel] == controlplane.Name {
+	for i := range controlplaneList.Items {
+		if objectIsOwnedByControlPlane(obj, &controlplaneList.Items[i]) {
 			return true
 		}
 	}
@@ -146,21 +146,46 @@ func (r *Reconciler) getControlPlaneRequestFromManagedByNameLabel(ctx context.Co
 		return
 	}
 
-	for _, controlplane := range controlplanes.Items {
-		// For cluster-scoped resources, the owner is set through a label.
-		if obj.GetLabels()[consts.GatewayOperatorManagedByNameLabel] == controlplane.Name {
-			return []reconcile.Request{
-				{
-					NamespacedName: types.NamespacedName{
-						Namespace: controlplane.Namespace,
-						Name:      controlplane.Name,
-					},
+	for i := range controlplanes.Items {
+		if !objectIsOwnedByControlPlane(obj, &controlplanes.Items[i]) {
+			continue
+		}
+
+		return []reconcile.Request{
+			{
+				NamespacedName: types.NamespacedName{
+					Namespace: controlplanes.Items[i].Namespace,
+					Name:      controlplanes.Items[i].Name,
 				},
-			}
+			},
 		}
 	}
 
 	return
+}
+
+// objectIsOwnedByControlPlane checks if the object is owned by the control plane.
+//
+// NOTE: We are using the managed-by-name label to identify the owner of the resource
+// To keep backward compatibility, we also check the owner reference which
+// are not used anymore for cluster-scoped resources since that's considered
+// an error.
+func objectIsOwnedByControlPlane(obj client.Object, cp *operatorv1beta1.ControlPlane) bool {
+	if k8sutils.IsOwnedByRefUID(obj, cp.GetUID()) {
+		return true
+	}
+
+	if labels := obj.GetLabels(); len(labels) > 0 {
+		if labels[consts.GatewayOperatorManagedByNameLabel] == cp.Name {
+			if obj.GetNamespace() != "" {
+				return cp.GetNamespace() == obj.GetNamespace()
+			} else {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func (r *Reconciler) getControlPlanesFromDataPlaneDeployment(ctx context.Context, obj client.Object) (recs []reconcile.Request) {

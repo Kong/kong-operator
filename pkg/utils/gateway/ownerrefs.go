@@ -71,7 +71,9 @@ func ListControlPlanesForGateway(
 		ctx,
 		controlplaneList,
 		client.InNamespace(gateway.Namespace),
-		client.MatchingLabels{consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue},
+		client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+		},
 	)
 	if err != nil {
 		return nil, err

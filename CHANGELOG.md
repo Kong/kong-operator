@@ -30,6 +30,12 @@
 - Proper `User-Agent` header is now set on outgoing HTTP requests.
   [#387](https://github.com/Kong/gateway-operator/pull/387)
 
+### Fixed
+
+- Fixed `ControlPlane` cluster wide resources not migrating to new ownership labels
+  (introduced in 1.3.0) when upgrading the operator form 1.2 (or older) to 1.3.0.
+  [#369](https://github.com/Kong/gateway-operator/pull/369)
+
 ## [v1.3.0]
 
 > Release date: 2024-06-24

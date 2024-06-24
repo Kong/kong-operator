@@ -63,9 +63,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	validatinWebhookConfigurationOwnerPredicate.UpdateFunc = func(e event.UpdateEvent) bool {
 		return r.validatingWebhookConfigurationHasControlPlaneOwner(e.ObjectOld)
 	}
-	validatinWebhookConfigurationOwnerPredicate.DeleteFunc = func(e event.DeleteEvent) bool {
-		return r.validatingWebhookConfigurationHasControlPlaneOwner(e.Object)
-	}
 
 	return ctrl.NewControllerManagedBy(mgr).
 		// watch ControlPlane objects

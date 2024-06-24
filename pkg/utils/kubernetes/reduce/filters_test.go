@@ -10,9 +10,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 func TestFilterSecrets(t *testing.T) {
@@ -798,7 +801,47 @@ func TestFilterValidatingWebhookConfigurations(t *testing.T) {
 					},
 				},
 			},
-			expectedFilteredWebhookNames: []string{"newer"},
+			expectedFilteredWebhookNames: []string{"older"},
+		},
+		{
+			name: "the one with older managed-by labels must be filtered out",
+			webhooks: []admregv1.ValidatingWebhookConfiguration{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "with-new-labels",
+						CreationTimestamp: now,
+						Labels: k8sutils.GetManagedByLabelSet(
+							&operatorv1beta1.ControlPlane{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test",
+									Namespace: "test-namespace",
+								},
+							},
+						),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "with-new-labels-newer",
+						CreationTimestamp: nowPlus(time.Minute),
+						Labels: k8sutils.GetManagedByLabelSet(
+							&operatorv1beta1.ControlPlane{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test",
+									Namespace: "test-namespace",
+								},
+							},
+						),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer",
+						CreationTimestamp: nowPlus(time.Hour),
+					},
+				},
+			},
+			expectedFilteredWebhookNames: []string{"newer", "with-new-labels"},
 		},
 	}
 
@@ -810,6 +853,140 @@ func TestFilterValidatingWebhookConfigurations(t *testing.T) {
 				return w.Name
 			})
 			require.ElementsMatch(t, filteredWebhookNames, tc.expectedFilteredWebhookNames)
+		})
+	}
+}
+
+func TestFilterClusterRoles(t *testing.T) {
+	now := metav1.Now()
+	nowPlus := func(d time.Duration) metav1.Time {
+		return metav1.NewTime(now.Add(d))
+	}
+	testCases := []struct {
+		name          string
+		clusterRoles  []rbacv1.ClusterRole
+		expectedNames []string
+	}{
+		{
+			name: "the newer must be filtered out",
+			clusterRoles: []rbacv1.ClusterRole{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older",
+						CreationTimestamp: nowPlus(-time.Second),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer",
+						CreationTimestamp: now,
+					},
+				},
+			},
+			expectedNames: []string{"older"},
+		},
+		{
+			name: "the one with newer managed-by labels must be filtered out",
+			clusterRoles: []rbacv1.ClusterRole{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "with-new-labels",
+						CreationTimestamp: nowPlus(-time.Second),
+						Labels: k8sutils.GetManagedByLabelSet(
+							&operatorv1beta1.ControlPlane{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test",
+									Namespace: "test-namespace",
+								},
+							},
+						),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer",
+						CreationTimestamp: now,
+					},
+				},
+			},
+			expectedNames: []string{"newer"},
+		},
+		{
+			name: "the one with newer managed-by labels must be filtered out",
+			clusterRoles: []rbacv1.ClusterRole{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "with-new-labels",
+						CreationTimestamp: now,
+						Labels: k8sutils.GetManagedByLabelSet(
+							&operatorv1beta1.ControlPlane{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test",
+									Namespace: "test-namespace",
+								},
+							},
+						),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older",
+						CreationTimestamp: nowPlus(-time.Hour),
+					},
+				},
+			},
+			expectedNames: []string{"older"},
+		},
+		{
+			name: "the one with older managed-by labels must be filtered out",
+			clusterRoles: []rbacv1.ClusterRole{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "with-new-labels",
+						CreationTimestamp: now,
+						Labels: k8sutils.GetManagedByLabelSet(
+							&operatorv1beta1.ControlPlane{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test",
+									Namespace: "test-namespace",
+								},
+							},
+						),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "with-new-labels-older",
+						CreationTimestamp: nowPlus(-time.Minute),
+						Labels: k8sutils.GetManagedByLabelSet(
+							&operatorv1beta1.ControlPlane{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test",
+									Namespace: "test-namespace",
+								},
+							},
+						),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older",
+						CreationTimestamp: nowPlus(-time.Hour),
+					},
+				},
+			},
+			expectedNames: []string{"older", "with-new-labels-older"},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			filtered := filterClusterRoles(tc.clusterRoles)
+			filteredNames := lo.Map(filtered, func(w rbacv1.ClusterRole, _ int) string {
+				return w.Name
+			})
+			require.ElementsMatch(t, filteredNames, tc.expectedNames)
 		})
 	}
 }

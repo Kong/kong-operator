@@ -412,8 +412,12 @@ func (r *Reconciler) ensureOwnedControlPlanesDeleted(ctx context.Context, gatewa
 			continue
 		}
 		err = r.Client.Delete(ctx, &controlplanes[i])
-		if err != nil && !k8serrors.IsNotFound(err) {
+		if err != nil {
+			if k8serrors.IsNotFound(err) {
+				continue
+			}
 			errs = append(errs, err)
+			continue
 		}
 		deleted = true
 	}
@@ -435,8 +439,12 @@ func (r *Reconciler) ensureOwnedDataPlanesDeleted(ctx context.Context, gateway *
 	)
 	for i := range dataplanes {
 		err = r.Client.Delete(ctx, &dataplanes[i])
-		if err != nil && !k8serrors.IsNotFound(err) {
+		if err != nil {
+			if k8serrors.IsNotFound(err) {
+				continue
+			}
 			errs = append(errs, err)
+			continue
 		}
 		deleted = true
 	}
@@ -458,8 +466,12 @@ func (r *Reconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gate
 	)
 	for i := range networkPolicies {
 		err = r.Client.Delete(ctx, &networkPolicies[i])
-		if err != nil && !k8serrors.IsNotFound(err) {
+		if err != nil {
+			if k8serrors.IsNotFound(err) {
+				continue
+			}
 			errs = append(errs, err)
+			continue
 		}
 		deleted = true
 	}

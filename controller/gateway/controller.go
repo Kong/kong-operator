@@ -309,11 +309,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	controlplane := r.provisionControlPlane(ctx, logger, gwc.GatewayClass, &gateway, gatewayConfig, dataplane, ingressServices[0], adminServices[0])
 
 	// Set the ControlPlaneReady Condition to False. This happens only if:
-	// * the new status is false and there was no ControlPlaneReady condition in the cgatewafy
+	// * the new status is false and there was no ControlPlaneReady condition in the gateway
 	// * the new status is false and the previous status was true
-	if !k8sutils.IsConditionTrue(ControlPlaneReadyType, gwConditionAware) {
-		condition, found := k8sutils.GetCondition(ControlPlaneReadyType, oldGwConditionsAware)
-		if !found || condition.Status == metav1.ConditionTrue {
+	if condition, found := k8sutils.GetCondition(ControlPlaneReadyType, gwConditionAware); found && condition.Status != metav1.ConditionTrue {
+		if condition.Reason == string(consts.UnableToProvisionReason) {
+			log.Debug(logger, "unable to provision controlplane, requeueing", gateway)
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		conditionOld, foundOld := k8sutils.GetCondition(ControlPlaneReadyType, oldGwConditionsAware)
+		if !foundOld || conditionOld.Status == metav1.ConditionTrue {
 			if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil {
 				return ctrl.Result{}, err
 			}
