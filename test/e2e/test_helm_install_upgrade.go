@@ -124,39 +124,39 @@ func TestHelmUpgrade(t *testing.T) {
 		{
 			// TODO: use renovate to bump the version in these 2 lines.
 			// https://github.com/Kong/gateway-operator/issues/121
-			name:             "upgrade from 1.2.3 to current",
-			fromVersion:      "1.2.3",
-			upgradeToCurrent: true,
+			name:        "upgrade from 1.2.3 to 1.3.0",
+			fromVersion: "1.2.3",
+			toVersion:   "1.3.0",
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "gwconf-upgrade-123-current",
+						Name: "gwconf-upgrade-123-130",
 					},
 					Spec: baseGatewayConfigurationSpec(),
 				},
 				&gatewayv1.GatewayClass{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "gwclass-upgrade-123-current",
+						Name: "gwclass-upgrade-123-130",
 					},
 					Spec: gatewayv1.GatewayClassSpec{
 						ParametersRef: &gatewayv1.ParametersReference{
 							Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
 							Kind:      gatewayv1.Kind("GatewayConfiguration"),
 							Namespace: (*gatewayv1.Namespace)(&e.Namespace.Name),
-							Name:      "gwconf-upgrade-123-current",
+							Name:      "gwconf-upgrade-123-130",
 						},
 						ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 					},
 				},
 				&gatewayv1.Gateway{
 					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "gw-upgrade-123-current-",
+						GenerateName: "gw-upgrade-123-130-",
 						Labels: map[string]string{
-							"gw-upgrade-123-current": "true",
+							"gw-upgrade-123-130": "true",
 						},
 					},
 					Spec: gatewayv1.GatewaySpec{
-						GatewayClassName: gatewayv1.ObjectName("gwclass-upgrade-123-current"),
+						GatewayClassName: gatewayv1.ObjectName("gwclass-upgrade-123-130"),
 						Listeners: []gatewayv1.Listener{{
 							Name:     "http",
 							Protocol: gatewayv1.HTTPProtocolType,
@@ -169,19 +169,82 @@ func TestHelmUpgrade(t *testing.T) {
 				{
 					Name: "Gateway is programmed",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-123-current=true")(ctx, c, cl.MgrClient)
+						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-123-130=true")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
 					Name: "DataPlane deployment is not patched after operator upgrade",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-123-current=true")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-123-130=true")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
 					Name: "Cluster wide resources owned by the ControlPlane get the proper set of labels",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						clusterWideResourcesAreProperlyManaged("gw-upgrade-123-current=true")(ctx, c, cl.MgrClient)
+						clusterWideResourcesAreProperlyManaged("gw-upgrade-123-130=true")(ctx, c, cl.MgrClient)
+					},
+				},
+			},
+		},
+		{
+			name:             "upgrade from 1.3.0 to current",
+			fromVersion:      "1.3.0",
+			upgradeToCurrent: true,
+			objectsToDeploy: []client.Object{
+				&operatorv1beta1.GatewayConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "gwconf-upgrade-130-current",
+					},
+					Spec: baseGatewayConfigurationSpec(),
+				},
+				&gatewayv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "gwclass-upgrade-130-current",
+					},
+					Spec: gatewayv1.GatewayClassSpec{
+						ParametersRef: &gatewayv1.ParametersReference{
+							Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
+							Kind:      gatewayv1.Kind("GatewayConfiguration"),
+							Namespace: (*gatewayv1.Namespace)(&e.Namespace.Name),
+							Name:      "gwconf-upgrade-130-current",
+						},
+						ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
+					},
+				},
+				&gatewayv1.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "gw-upgrade-130-current-",
+						Labels: map[string]string{
+							"gw-upgrade-130-current": "true",
+						},
+					},
+					Spec: gatewayv1.GatewaySpec{
+						GatewayClassName: gatewayv1.ObjectName("gwclass-upgrade-130-current"),
+						Listeners: []gatewayv1.Listener{{
+							Name:     "http",
+							Protocol: gatewayv1.HTTPProtocolType,
+							Port:     gatewayv1.PortNumber(80),
+						}},
+					},
+				},
+			},
+			assertionsAfterUpgrade: []assertion{
+				{
+					Name: "Gateway is programmed",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-130-current=true")(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "DataPlane deployment is not patched after operator upgrade",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-130-current=true")(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "Cluster wide resources owned by the ControlPlane get the proper set of labels",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						clusterWideResourcesAreProperlyManaged("gw-upgrade-130-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 			},
