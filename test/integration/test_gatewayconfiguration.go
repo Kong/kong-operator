@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/gateway-operator/v1beta1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
@@ -117,7 +117,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			},
 		},
 	}
-	gatewayConfig, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err = GetClients().OperatorClient.GatewayoperatorV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 

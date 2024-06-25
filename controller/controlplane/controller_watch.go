@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/gateway-operator/v1beta1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/consts"

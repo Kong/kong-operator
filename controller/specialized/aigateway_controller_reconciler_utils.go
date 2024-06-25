@@ -5,7 +5,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/api/v1alpha1"
+	"github.com/kong/gateway-operator/api/gateway-operator/v1alpha1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 	"github.com/kong/gateway-operator/pkg/vars"
@@ -28,7 +28,8 @@ func (r *AIGatewayReconciler) verifyGatewayClassSupport(
 
 	gwc := gatewayclass.NewDecorator()
 	if err := r.Client.Get(ctx, client.ObjectKey{
-		Name: aigateway.Spec.GatewayClassName},
+		Name: aigateway.Spec.GatewayClassName,
+	},
 		gwc.GatewayClass,
 	); err != nil {
 		return nil, err

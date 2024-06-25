@@ -9,7 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/gateway-operator/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 )
 
@@ -81,7 +81,7 @@ func TestDataPlaneValidatingWebhook(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(testNamespace.Name)
+			dataplaneClient := clients.OperatorClient.GatewayoperatorV1beta1().DataPlanes(testNamespace.Name)
 			_, err := dataplaneClient.Create(ctx, tc.dataplane, metav1.CreateOptions{})
 			if tc.errMsg == "" {
 				require.NoErrorf(t, err, "test case %s: should not return error when creating dataplane", tc.name)

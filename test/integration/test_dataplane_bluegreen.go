@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/gateway-operator/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
@@ -50,7 +50,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 		Spec: testBlueGreenDataPlaneSpec(),
 	}
 
-	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.GatewayoperatorV1beta1().DataPlanes(namespace.Name)
 
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -280,7 +280,7 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 		},
 	}
 
-	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.GatewayoperatorV1beta1().DataPlanes(namespace.Name)
 
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -357,7 +357,7 @@ func TestDataPlaneBlueGreen_ResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T)
 	}
 	dataplaneName := client.ObjectKeyFromObject(dataplane)
 
-	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.GatewayoperatorV1beta1().DataPlanes(namespace.Name)
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)

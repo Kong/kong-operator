@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	v1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	v1alpha1 "github.com/kong/gateway-operator/api/gateway-operator/v1alpha1"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
@@ -21,8 +21,10 @@ import (
 // AIGateway - AI Inference Authentication
 // ----------------------------------------------------------------------------
 
-var aiCloudPRoviderAuthHeaderMapInitializer sync.Once
-var aiCloudProviderAuthHeaders map[v1alpha1.AICloudProviderName]map[string]string
+var (
+	aiCloudPRoviderAuthHeaderMapInitializer sync.Once
+	aiCloudProviderAuthHeaders              map[v1alpha1.AICloudProviderName]map[string]string
+)
 
 func getAuthHeaderForInference(provider v1alpha1.AICloudProvider) (map[string]string, error) {
 	aiCloudPRoviderAuthHeaderMapInitializer.Do(func() {

@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/gateway-operator/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"

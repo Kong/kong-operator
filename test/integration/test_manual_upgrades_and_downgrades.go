@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/gateway-operator/v1beta1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
@@ -91,7 +91,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		},
 	}
 	var err error
-	gatewayConfig, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err = GetClients().OperatorClient.GatewayoperatorV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -373,7 +373,7 @@ func changeControlPlaneImage(
 	controlPlaneImageVersion string,
 ) error {
 	// refresh the object
-	gcfg, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(gcfg.Namespace).Get(GetCtx(), gcfg.Name, metav1.GetOptions{})
+	gcfg, err := GetClients().OperatorClient.GatewayoperatorV1beta1().GatewayConfigurations(gcfg.Namespace).Get(GetCtx(), gcfg.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -384,7 +384,7 @@ func changeControlPlaneImage(
 	}
 	container.Image = fmt.Sprintf("%s:%s", controlPlaneImageName, controlPlaneImageVersion)
 
-	_, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(gcfg.Namespace).Update(GetCtx(), gcfg, metav1.UpdateOptions{})
+	_, err = GetClients().OperatorClient.GatewayoperatorV1beta1().GatewayConfigurations(gcfg.Namespace).Update(GetCtx(), gcfg, metav1.UpdateOptions{})
 	return err
 }
 
@@ -396,7 +396,7 @@ func changeDataPlaneImage(
 	dataPlaneImageVersion string,
 ) error {
 	// refresh the object
-	gcfg, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(gcfg.Namespace).Get(GetCtx(), gcfg.Name, metav1.GetOptions{})
+	gcfg, err := GetClients().OperatorClient.GatewayoperatorV1beta1().GatewayConfigurations(gcfg.Namespace).Get(GetCtx(), gcfg.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -407,6 +407,6 @@ func changeDataPlaneImage(
 	}
 	container.Image = fmt.Sprintf("%s:%s", dataPlaneImageName, dataPlaneImageVersion)
 
-	_, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(gcfg.Namespace).Update(GetCtx(), gcfg, metav1.UpdateOptions{})
+	_, err = GetClients().OperatorClient.GatewayoperatorV1beta1().GatewayConfigurations(gcfg.Namespace).Update(GetCtx(), gcfg, metav1.UpdateOptions{})
 	return err
 }

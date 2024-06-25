@@ -22,8 +22,9 @@ import (
 	"fmt"
 	"net/http"
 
-	apisv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1alpha1"
-	apisv1beta1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1beta1"
+	gatewayoperatorv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/gateway-operator/v1alpha1"
+	gatewayoperatorv1beta1 "github.com/kong/gateway-operator/pkg/clientset/typed/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/konnect/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -31,25 +32,32 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	ApisV1alpha1() apisv1alpha1.ApisV1alpha1Interface
-	ApisV1beta1() apisv1beta1.ApisV1beta1Interface
+	GatewayoperatorV1alpha1() gatewayoperatorv1alpha1.GatewayoperatorV1alpha1Interface
+	GatewayoperatorV1beta1() gatewayoperatorv1beta1.GatewayoperatorV1beta1Interface
+	KonnectV1alpha1() konnectv1alpha1.KonnectV1alpha1Interface
 }
 
 // Clientset contains the clients for groups.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	apisV1alpha1 *apisv1alpha1.ApisV1alpha1Client
-	apisV1beta1  *apisv1beta1.ApisV1beta1Client
+	gatewayoperatorV1alpha1 *gatewayoperatorv1alpha1.GatewayoperatorV1alpha1Client
+	gatewayoperatorV1beta1  *gatewayoperatorv1beta1.GatewayoperatorV1beta1Client
+	konnectV1alpha1         *konnectv1alpha1.KonnectV1alpha1Client
 }
 
-// ApisV1alpha1 retrieves the ApisV1alpha1Client
-func (c *Clientset) ApisV1alpha1() apisv1alpha1.ApisV1alpha1Interface {
-	return c.apisV1alpha1
+// GatewayoperatorV1alpha1 retrieves the GatewayoperatorV1alpha1Client
+func (c *Clientset) GatewayoperatorV1alpha1() gatewayoperatorv1alpha1.GatewayoperatorV1alpha1Interface {
+	return c.gatewayoperatorV1alpha1
 }
 
-// ApisV1beta1 retrieves the ApisV1beta1Client
-func (c *Clientset) ApisV1beta1() apisv1beta1.ApisV1beta1Interface {
-	return c.apisV1beta1
+// GatewayoperatorV1beta1 retrieves the GatewayoperatorV1beta1Client
+func (c *Clientset) GatewayoperatorV1beta1() gatewayoperatorv1beta1.GatewayoperatorV1beta1Interface {
+	return c.gatewayoperatorV1beta1
+}
+
+// KonnectV1alpha1 retrieves the KonnectV1alpha1Client
+func (c *Clientset) KonnectV1alpha1() konnectv1alpha1.KonnectV1alpha1Interface {
+	return c.konnectV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -96,11 +104,15 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 
 	var cs Clientset
 	var err error
-	cs.apisV1alpha1, err = apisv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.gatewayoperatorV1alpha1, err = gatewayoperatorv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
-	cs.apisV1beta1, err = apisv1beta1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.gatewayoperatorV1beta1, err = gatewayoperatorv1beta1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
+	cs.konnectV1alpha1, err = konnectv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -125,8 +137,9 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.apisV1alpha1 = apisv1alpha1.New(c)
-	cs.apisV1beta1 = apisv1beta1.New(c)
+	cs.gatewayoperatorV1alpha1 = gatewayoperatorv1alpha1.New(c)
+	cs.gatewayoperatorV1beta1 = gatewayoperatorv1beta1.New(c)
+	cs.konnectV1alpha1 = konnectv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

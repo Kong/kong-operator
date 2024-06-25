@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/gateway-operator/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
@@ -34,8 +34,8 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
-	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
-	controlplaneClient := GetClients().OperatorClient.ApisV1beta1().ControlPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.GatewayoperatorV1beta1().DataPlanes(namespace.Name)
+	controlplaneClient := GetClients().OperatorClient.GatewayoperatorV1beta1().ControlPlanes(namespace.Name)
 
 	controlplaneName := types.NamespacedName{
 		Namespace: namespace.Name,
@@ -150,8 +150,8 @@ func TestControlPlaneEssentials(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
-	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
-	controlplaneClient := GetClients().OperatorClient.ApisV1beta1().ControlPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.GatewayoperatorV1beta1().DataPlanes(namespace.Name)
+	controlplaneClient := GetClients().OperatorClient.GatewayoperatorV1beta1().ControlPlanes(namespace.Name)
 
 	// Control plane needs a dataplane to exist to properly function.
 	dataplaneName := types.NamespacedName{
@@ -385,11 +385,11 @@ func TestControlPlaneEssentials(t *testing.T) {
 	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasAdmissionWebhookConfiguration(t, GetCtx(), controlplane, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 	t.Log("verifying controlplane disappears after cluster resources are deleted")
 	require.Eventually(t, func() bool {
-		_, err := GetClients().OperatorClient.ApisV1beta1().ControlPlanes(controlplaneName.Namespace).Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
+		_, err := GetClients().OperatorClient.GatewayoperatorV1beta1().ControlPlanes(controlplaneName.Namespace).Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
 		return k8serrors.IsNotFound(err)
 	}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 		func() string {
-			controlplane, err := GetClients().OperatorClient.ApisV1beta1().ControlPlanes(controlplaneName.Namespace).Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
+			controlplane, err := GetClients().OperatorClient.GatewayoperatorV1beta1().ControlPlanes(controlplaneName.Namespace).Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
 			if err != nil {
 				return fmt.Sprintf("failed to get controlplane %s, error %v", controlplaneName.Name, err)
 			}
@@ -493,8 +493,8 @@ func TestControlPlaneUpdate(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
-	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
-	controlplaneClient := GetClients().OperatorClient.ApisV1beta1().ControlPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.GatewayoperatorV1beta1().DataPlanes(namespace.Name)
+	controlplaneClient := GetClients().OperatorClient.GatewayoperatorV1beta1().ControlPlanes(namespace.Name)
 
 	dataplaneName := types.NamespacedName{
 		Namespace: namespace.Name,

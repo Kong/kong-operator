@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/gateway-operator/v1alpha1"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )

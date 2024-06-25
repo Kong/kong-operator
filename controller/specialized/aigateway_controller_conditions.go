@@ -4,7 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/api/v1alpha1"
+	"github.com/kong/gateway-operator/api/gateway-operator/v1alpha1"
 )
 
 // ----------------------------------------------------------------------------

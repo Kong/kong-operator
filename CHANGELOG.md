@@ -33,6 +33,14 @@
   plugins distributed as container images.
   [400](https://github.com/Kong/gateway-operator/pull/400)
 
+### Changes
+
+- Go API import paths changed. If you've been using the `v1beta1` or `v1alpha` APIs
+  they have now been moved:
+  - from `api/v1beta1` to `api/gateway-operator/v1beta1`
+  - and from `api/v1alpha1` to `api/gateway-operator/v1alpha1`
+  [#443](https://github.com/Kong/gateway-operator/pull/443)
+
 ### Fixed
 
 - Fixed `ControlPlane` cluster wide resources not migrating to new ownership labels

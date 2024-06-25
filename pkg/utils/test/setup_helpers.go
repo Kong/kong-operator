@@ -216,7 +216,7 @@ func waitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Cli
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			if _, err := operatorClient.ApisV1beta1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); err == nil {
+			if _, err := operatorClient.GatewayoperatorV1beta1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); err == nil {
 				ready = true
 			}
 		}

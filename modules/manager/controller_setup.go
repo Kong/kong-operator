@@ -14,8 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/gateway-operator/v1beta1"
 	"github.com/kong/gateway-operator/controller/controlplane"
 	"github.com/kong/gateway-operator/controller/dataplane"
 	"github.com/kong/gateway-operator/controller/gateway"

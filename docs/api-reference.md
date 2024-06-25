@@ -3,6 +3,7 @@
 ## Packages
 - [gateway-operator.konghq.com/v1alpha1](#gateway-operatorkonghqcomv1alpha1)
 - [gateway-operator.konghq.com/v1beta1](#gateway-operatorkonghqcomv1beta1)
+- [konnect.konghq.com/v1alpha1](#konnectkonghqcomv1alpha1)
 
 
 ## gateway-operator.konghq.com/v1alpha1
@@ -1222,3 +1223,10 @@ _Appears in:_
 - [DataPlaneServiceOptions](#dataplaneserviceoptions)
 - [GatewayConfigServiceOptions](#gatewayconfigserviceoptions)
 
+
+## konnect.konghq.com/v1alpha1
+
+Package v1alpha1 contains API Schema definitions for the operator konnect v1alpha1 API group
+### Types
+
+In this section you will find types that the CRDs rely on.

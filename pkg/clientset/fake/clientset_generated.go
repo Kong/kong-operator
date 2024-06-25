@@ -20,10 +20,12 @@ package fake
 
 import (
 	clientset "github.com/kong/gateway-operator/pkg/clientset"
-	apisv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1alpha1"
-	fakeapisv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1alpha1/fake"
-	apisv1beta1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1beta1"
-	fakeapisv1beta1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1beta1/fake"
+	gatewayoperatorv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/gateway-operator/v1alpha1"
+	fakegatewayoperatorv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/gateway-operator/v1alpha1/fake"
+	gatewayoperatorv1beta1 "github.com/kong/gateway-operator/pkg/clientset/typed/gateway-operator/v1beta1"
+	fakegatewayoperatorv1beta1 "github.com/kong/gateway-operator/pkg/clientset/typed/gateway-operator/v1beta1/fake"
+	konnectv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/konnect/v1alpha1"
+	fakekonnectv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/konnect/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -81,12 +83,17 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
-// ApisV1alpha1 retrieves the ApisV1alpha1Client
-func (c *Clientset) ApisV1alpha1() apisv1alpha1.ApisV1alpha1Interface {
-	return &fakeapisv1alpha1.FakeApisV1alpha1{Fake: &c.Fake}
+// GatewayoperatorV1alpha1 retrieves the GatewayoperatorV1alpha1Client
+func (c *Clientset) GatewayoperatorV1alpha1() gatewayoperatorv1alpha1.GatewayoperatorV1alpha1Interface {
+	return &fakegatewayoperatorv1alpha1.FakeGatewayoperatorV1alpha1{Fake: &c.Fake}
 }
 
-// ApisV1beta1 retrieves the ApisV1beta1Client
-func (c *Clientset) ApisV1beta1() apisv1beta1.ApisV1beta1Interface {
-	return &fakeapisv1beta1.FakeApisV1beta1{Fake: &c.Fake}
+// GatewayoperatorV1beta1 retrieves the GatewayoperatorV1beta1Client
+func (c *Clientset) GatewayoperatorV1beta1() gatewayoperatorv1beta1.GatewayoperatorV1beta1Interface {
+	return &fakegatewayoperatorv1beta1.FakeGatewayoperatorV1beta1{Fake: &c.Fake}
+}
+
+// KonnectV1alpha1 retrieves the KonnectV1alpha1Client
+func (c *Clientset) KonnectV1alpha1() konnectv1alpha1.KonnectV1alpha1Interface {
+	return &fakekonnectv1alpha1.FakeKonnectV1alpha1{Fake: &c.Fake}
 }

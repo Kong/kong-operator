@@ -200,22 +200,16 @@ generate.api: controller-gen
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 .PHONY: generate.clientsets
 generate.clientsets: client-gen
-	# We create a symlink to the apis/ directory as a hack because currently
-	# client-gen does not properly support the use of api/ as your API
-	# directory.
-	#
-	# See: https://github.com/kubernetes/code-generator/issues/167
-	ln -sf api apis
 	$(CLIENT_GEN) \
 		--go-header-file ./hack/generators/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base '' \
-		--input $(REPO)/apis/v1alpha1 \
-		--input $(REPO)/apis/v1beta1 \
+		--input $(REPO)/$(API_DIR)/gateway-operator/v1alpha1 \
+		--input $(REPO)/$(API_DIR)/gateway-operator/v1beta1 \
+		--input $(REPO)/$(API_DIR)/konnect/v1alpha1 \
 		--output-dir pkg/ \
 		--output-pkg $(REPO)/pkg/
-	rm apis
-	find ./pkg/clientset/ -type f -name '*.go' -exec sed -i '' -e 's/github.com\/kong\/gateway-operator\/apis/github.com\/kong\/gateway-operator\/api/gI' {} \; &> /dev/null
+
 .PHONY: generate.rbacs
 generate.rbacs: kic-role-generator
 	$(KIC_ROLE_GENERATOR) --force

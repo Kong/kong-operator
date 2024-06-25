@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	"github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/api/gateway-operator/v1beta1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/pkg/consts"

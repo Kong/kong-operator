@@ -23,7 +23,7 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/gateway-operator/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/builder"
 	"github.com/kong/gateway-operator/controller/pkg/dataplane"
 	"github.com/kong/gateway-operator/controller/pkg/op"

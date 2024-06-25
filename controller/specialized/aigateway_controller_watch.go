@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/api/v1alpha1"
+	"github.com/kong/gateway-operator/api/gateway-operator/v1alpha1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 )
 

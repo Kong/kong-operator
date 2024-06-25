@@ -32,8 +32,8 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/gateway-operator/v1beta1"
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/clientset"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"

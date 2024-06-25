@@ -16,7 +16,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/gateway-operator/v1beta1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
