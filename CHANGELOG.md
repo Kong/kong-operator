@@ -21,6 +21,15 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+> Release date: TBD
+
+### Added
+
+- Proper `User-Agent` header is now set on outgoing HTTP requests.
+  [#387](https://github.com/Kong/gateway-operator/pull/387)
+
 ## [v1.3.0]
 
 > Release date: 2024-06-24
