@@ -106,7 +106,7 @@ github.com/go-openapi/swag v0.23.0/go.mod h1:esZ8ITTYEsH1V2trKHjAN8Ai7xHb8RV+YSZ
 github.com/go-sql-driver/mysql v1.6.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
 github.com/go-sql-driver/mysql v1.7.1 h1:lUIinVbN1DY0xBg0eMOzmmtGoHwWBbvnWubQUrtU8EI=
 github.com/go-sql-driver/mysql v1.7.1/go.mod h1:OXbVy3sEdcQ2Doequ6Z5BW6fXNQTmx+9S1MCJN5yJMI=
-github.com/go-task/slim-sprig v2.20.0+incompatible h1:4Xh3bDzO29j4TWNOI+24ubc0vbVFMg2PMnXKxK54/CA=
+github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 h1:tfuBGBXKqDEevZMzYi5KSi8KkcZtzBcTgAUUtapy0OI=
 github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1vB6EwHI=
 github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZiAzKg9hl15HA8=
 github.com/goccy/go-json v0.10.3 h1:KZ5WoDbxAIgm2HNbYckL0se1fHD6rz5j4ywS6ebzDqA=
@@ -211,10 +211,10 @@ github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnr
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
-github.com/kong/go-kong v0.55.0 h1:lonKRzsDGk12dh9E+y+pWnY2ThXhKuMHjzBHSpCvQLw=
-github.com/kong/go-kong v0.55.0/go.mod h1:i1cMgTu6RYPHSyMpviShddRnc+DML/vlpgKC00hr8kU=
-github.com/kong/kubernetes-ingress-controller/v3 v3.2.0 h1:OpubKZDdKr9PBgwuR313xtqDBX4mXgJuf3omtOQm0Xg=
-github.com/kong/kubernetes-ingress-controller/v3 v3.2.0/go.mod h1:zPgWIogOciHSgCrG8Rrdox/eI+Ran3Egv5GwJl515yo=
+github.com/kong/go-kong v0.56.0 h1:/9qbnQJWAgrSAKzL2RViBhHMTYOEyG8N4ClkKnUwEW4=
+github.com/kong/go-kong v0.56.0/go.mod h1:gyNwyP1fzztT6sX/0/ygMQ30OiRMIQ51b2jSfstMrcU=
+github.com/kong/kubernetes-ingress-controller/v3 v3.2.1 h1:0JC1Sm6KLdCtC9YvYs+c0AySNvEyd3l16NGZWm1MU04=
+github.com/kong/kubernetes-ingress-controller/v3 v3.2.1/go.mod h1:gshVZnDU2FTe/95I3vSJPsH2kyB8zR+GpUIieCyt8C4=
 github.com/kong/kubernetes-telemetry v0.1.4 h1:Yz7OlECxWKgNRG1wJ5imA4+H0dQEpdU9d86uhwUVpu4=
 github.com/kong/kubernetes-telemetry v0.1.4/go.mod h1:z3yB5naZjUmQCFjzD3hsJ9PVYar7BgPJFKzskUuOejU=
 github.com/kong/kubernetes-testing-framework v0.47.1 h1:BE2mQLC0Zj/NC5Y8B1Nm5VZymmrdVfu7cfwVKSobWtg=
