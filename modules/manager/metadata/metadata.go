@@ -50,10 +50,9 @@ type Info struct {
 // UserAgent returns the User-Agent string to use in all HTTP requests made by KGO.
 func (inf Info) UserAgent() string {
 	org := strings.ToLower(inf.Organization)
-	if inf.Flavor == OSSFlavor {
-		return fmt.Sprintf("%s-%s-%s/%s", org, inf.ProjectName, OSSFlavor, inf.Release)
-	}
-	return fmt.Sprintf("%s-%s/%s", org, inf.ProjectName, inf.Release)
+	return fmt.Sprintf("%s/%s (%s/%s) (%s)",
+			inf.ProjectName, inf.Release, runtime.GOOS, runtime.GOARCH, inf.Flavor,
+		)
 }
 
 var (
