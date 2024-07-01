@@ -46,5 +46,12 @@
         ".+\\s+=\\s+\"(?<currentValue>.+)\"\\s+//\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+depName=(?<depName>.+)"
       ]
     }
+  ],
+  "packageRules": [
+    {
+      "description": "Strip kustomize/ version prefix",
+      "matchPackageNames": ["kubernetes-sigs/kustomize"],
+      "extractVersion": "^kustomize/(?<version>.*)$"
+    }
   ]
 }
