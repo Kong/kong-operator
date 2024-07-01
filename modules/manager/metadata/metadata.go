@@ -1,12 +1,27 @@
 // Package metadata includes metadata variables for logging and reporting.
 package metadata
 
+import (
+	"fmt"
+	"runtime"
+)
+
 // -----------------------------------------------------------------------------
 // Controller Manager - Versioning Information
 // -----------------------------------------------------------------------------
 
 // WARNING: moving any of these variables requires changes to both the Makefile
 //          and the Dockerfile which modify them during the link step with -X
+
+// BuildFlavor is the flavor of the build.
+type BuildFlavor string
+
+const (
+	// OSSFlavor is the open-source flavor.
+	OSSFlavor BuildFlavor = "oss"
+	// EEFlavor is the enterprise flavor.
+	EEFlavor BuildFlavor = "enterprise"
+)
 
 // Info is a struct type that holds the metadata for the controller manager.
 type Info struct {
@@ -29,7 +44,14 @@ type Info struct {
 	Organization string
 
 	// Flavor is the flavor of the build.
-	Flavor string
+	Flavor BuildFlavor
+}
+
+// UserAgent returns the User-Agent string to use in all HTTP requests made by KGO.
+func (inf Info) UserAgent() string {
+	return fmt.Sprintf("%s/%s (%s/%s) (%s)",
+		inf.ProjectName, inf.Release, runtime.GOOS, runtime.GOARCH, inf.Flavor,
+	)
 }
 
 var (
@@ -50,9 +72,6 @@ var (
 
 	// Organization is the Kong organization
 	organization = "Kong"
-
-	// Flavor is the flavor of the build.
-	flavor = "oss"
 )
 
 // Metadata returns the metadata for the controller manager.
@@ -64,6 +83,6 @@ func Metadata() Info {
 		Commit:       commit,
 		ProjectName:  projectName,
 		Organization: organization,
-		Flavor:       flavor,
+		Flavor:       OSSFlavor,
 	}
 }

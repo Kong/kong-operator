@@ -36,7 +36,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -82,7 +81,7 @@ type Config struct {
 	DataPlaneControllerEnabled          bool
 	DataPlaneBlueGreenControllerEnabled bool
 
-	// Controllers for speciality APIs and experimental features.
+	// Controllers for specialty APIs and experimental features.
 	AIGatewayControllerEnabled bool
 
 	// webhook and validation options
@@ -156,7 +155,10 @@ func Run(
 		setupLog.Info("leader election disabled")
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	restCfg := ctrl.GetConfigOrDie()
+	restCfg.UserAgent = metadata.UserAgent()
+
+	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{
 		Scheme: scheme,
 		Metrics: server.Options{
 			BindAddress: cfg.MetricsAddr,
@@ -244,7 +246,7 @@ func Run(
 	// Enable anonnymous reporting when configured but not for development builds
 	// to reduce the noise.
 	if cfg.AnonymousReports && !cfg.DevelopmentMode {
-		stopAnonymousReports, err := setupAnonymousReports(context.Background(), cfg, setupLog, metadata)
+		stopAnonymousReports, err := setupAnonymousReports(context.Background(), restCfg, setupLog, metadata)
 		if err != nil {
 			setupLog.Error(err, "failed setting up anonymous reports")
 		} else {
@@ -353,35 +355,19 @@ func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
 	return nil
 }
 
-func getKubeconfig(apiServerPath string, kubeconfig string) (*rest.Config, error) {
-	config, err := clientcmd.BuildConfigFromFlags(apiServerPath, kubeconfig)
-	if err != nil {
-		// Fall back to default client loading rules.
-		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-		// if you want to change the loading rules (which files in which order), you can do so here
-		kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, nil)
-		return kubeConfig.ClientConfig()
-	}
-	return config, nil
-}
-
 // setupAnonymousReports sets up and starts the anonymous reporting and returns
 // a cleanup function and an error.
 // The caller is responsible to call the returned function - when the returned
 // error is not nil - to stop the reports sending.
-func setupAnonymousReports(ctx context.Context, cfg Config, logger logr.Logger, metadata metadata.Info) (func(), error) {
+func setupAnonymousReports(ctx context.Context, restCfg *rest.Config, logger logr.Logger, metadata metadata.Info) (func(), error) {
 	logger.Info("starting anonymous reports")
-	restConfig, err := getKubeconfig(cfg.APIServerPath, cfg.KubeconfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
-	}
 
 	payload := telemetry.Payload{
 		"v":      metadata.Release,
 		"flavor": metadata.Flavor,
 	}
 
-	tMgr, err := telemetry.CreateManager(telemetry.SignalPing, restConfig, logger, payload)
+	tMgr, err := telemetry.CreateManager(telemetry.SignalPing, restCfg, logger, payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create anonymous reports manager: %w", err)
 	}
