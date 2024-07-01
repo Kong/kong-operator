@@ -3,7 +3,7 @@ package metadata
 
 import (
 	"fmt"
-	"strings"
+	"runtime"
 )
 
 // -----------------------------------------------------------------------------
@@ -49,10 +49,9 @@ type Info struct {
 
 // UserAgent returns the User-Agent string to use in all HTTP requests made by KGO.
 func (inf Info) UserAgent() string {
-	org := strings.ToLower(inf.Organization)
 	return fmt.Sprintf("%s/%s (%s/%s) (%s)",
-			inf.ProjectName, inf.Release, runtime.GOOS, runtime.GOARCH, inf.Flavor,
-		)
+		inf.ProjectName, inf.Release, runtime.GOOS, runtime.GOARCH, inf.Flavor,
+	)
 }
 
 var (
