@@ -175,6 +175,7 @@ func objectIsOwnedByControlPlane(obj client.Object, cp *operatorv1beta1.ControlP
 		return true
 	}
 
+	labels := obj.GetLabels()
 	if labels[consts.GatewayOperatorManagedByNameLabel] == cp.Name {
 		if obj.GetNamespace() != "" {
 			return cp.GetNamespace() == obj.GetNamespace()
