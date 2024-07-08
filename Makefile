@@ -234,7 +234,7 @@ generate.testcases-registration:
 
 .PHONY: generate.kic-webhook-config
 generate.kic-webhook-config: kic-webhook-config-generator
-	$(KIC_WEBHOOKCONFIG_GENERATOR)
+	KUSTOMIZE=$(KUSTOMIZE) $(KIC_WEBHOOKCONFIG_GENERATOR)
 
 # ------------------------------------------------------------------------------
 # Files generation checks

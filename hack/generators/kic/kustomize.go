@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 )
 
@@ -14,7 +15,11 @@ func BuildKustomizeForURLAndRef(ctx context.Context, url, ref string) ([]byte, e
 	kustomizeResourceURL := fmt.Sprintf("%s?ref=%s", url, ref)
 
 	log.Printf("Running 'kustomize build %s'\n", kustomizeResourceURL)
-	cmd := exec.CommandContext(ctx, "kustomize", "build", kustomizeResourceURL)
+	kustomize := "kustomize"
+	if k := os.Getenv("KUSTOMIZE"); k != "" {
+		kustomize = k
+	}
+	cmd := exec.CommandContext(ctx, kustomize, "build", kustomizeResourceURL)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
