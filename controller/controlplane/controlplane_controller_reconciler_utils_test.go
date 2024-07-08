@@ -81,12 +81,12 @@ func TestEnsureClusterRole(t *testing.T) {
 		expectedClusterRole rbacv1.ClusterRole
 		err                 error
 	}{
-		// {
-		// 	Name:                "no existing clusterrole",
-		// 	controlplane:        controlplane,
-		// 	createdorUpdated:    true,
-		// 	expectedClusterRole: *clusterRole,
-		// },
+		{
+			Name:                "no existing clusterrole",
+			controlplane:        controlplane,
+			createdorUpdated:    true,
+			expectedClusterRole: *clusterRole,
+		},
 		{
 			Name:                "up to date clusterrole",
 			controlplane:        controlplane,
