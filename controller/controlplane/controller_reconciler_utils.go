@@ -294,9 +294,9 @@ func (r *Reconciler) ensureClusterRole(
 	cp *operatorv1beta1.ControlPlane,
 ) (createdOrUpdated bool, cr *rbacv1.ClusterRole, err error) {
 	// TODO: This performs a migration from the old managedBy label to the new one.
-	// After several versions of soak time we can remove handling the legeacy label set.
+	// After several versions of soak time we can remove handling the legacy label set.
 	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
-	// PR: that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
+	// PR that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
 	clusterRolesLegacy, err := k8sutils.ListClusterRoles(
 		ctx,
 		r.Client,
@@ -376,9 +376,9 @@ func (r *Reconciler) ensureClusterRoleBinding(
 	logger := log.GetLogger(ctx, "controlplane.ensureClusterRoleBinding", r.DevelopmentMode)
 
 	// TODO: This performs a migration from the old managedBy label to the new one.
-	// After several versions of soak time we can remove handling the legeacy label set.
+	// After several versions of soak time we can remove handling the legacy label set.
 	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
-	// PR: that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
+	// PR that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
 	clusterRoleBindingsLegacy, err := k8sutils.ListClusterRoleBindings(
 		ctx,
 		r.Client,
@@ -767,9 +767,9 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	logger := log.GetLogger(ctx, "controlplane.ensureValidatingWebhookConfiguration", r.DevelopmentMode)
 
 	// TODO: This performs a migration from the old managedBy label to the new one.
-	// After several versions of soak time we can remove handling the legeacy label set.
+	// After several versions of soak time we can remove handling the legacy label set.
 	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
-	// PR: that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
+	// PR that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
 	validatingWebhookConfigurationsLegacy, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(
 		ctx,
 		r.Client,

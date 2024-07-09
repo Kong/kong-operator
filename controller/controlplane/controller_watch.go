@@ -166,9 +166,9 @@ func (r *Reconciler) getControlPlaneRequestFromManagedByNameLabel(ctx context.Co
 
 // objectIsOwnedByControlPlane checks if the object is owned by the control plane.
 //
-// NOTE: We are using the managed-by-name label to identify the owner of the resource
+// NOTE: We are using the managed-by-name label to identify the owner of the resource.
 // To keep backward compatibility, we also check the owner reference which
-// are not used anymore for cluster-scoped resources since that's considered
+// is not used anymore for cluster-scoped resources since that's considered
 // an error.
 func objectIsOwnedByControlPlane(obj client.Object, cp *operatorv1beta1.ControlPlane) bool {
 	if k8sutils.IsOwnedByRefUID(obj, cp.GetUID()) {
