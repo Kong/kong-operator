@@ -31,11 +31,11 @@ func init() {
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName=kpi,categories=kong;all
 //+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
+//+kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 
-// KongPluginInstallation allows to use a custom Kong Plugin distributed as a container image available in a registry.
-// Such plugin can be associated with GatewayConfiguration or DataPlane to be available for particular Kong Gateway
-// and to be configured with KongPlugin CRD.
+// KongPluginInstallation allows using a custom Kong Plugin distributed as a container image available in a registry.
+// Such a plugin can be associated with GatewayConfiguration or DataPlane to be available for particular Kong Gateway
+// and configured with KongPlugin CRD.
 type KongPluginInstallation struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -56,14 +56,14 @@ type KongPluginInstallationList struct {
 // KongPluginInstallationSpec defines the desired state of KongPluginInstallation.
 type KongPluginInstallationSpec struct {
 
-	// Image is OCI image URL for a packaged Custom Kong Plugin.
+	// The image is an OCI image URL for a packaged Custom Kong Plugin.
 	//
 	//+kubebuilder:validation:Required
 	Image string `json:"image"`
 
-	// SecretRef allows specifying secret to be used for OCI registry authentication to pull the image with custom Kong Plugin.
+	// SecretRef allows referring specific Kubernetes Secret to use for OCI registry authentication for pulling an image with Custom Kong Plugin.
 	// The Secret format should follow https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry.
-	// When field is omitted it is assumed that the image is public and can be fetched without providing any credentials.
+	// When the field is omitted it is assumed that the image is public and can be fetched without providing credentials.
 	//
 	//+optional
 	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
@@ -90,7 +90,7 @@ type KongPluginInstallationConditionReason string
 
 const (
 	// This condition indicates whether the controller has fetched the plugin image
-	// and made it  available for use as a specific Custom Kong Plugin.
+	// and made it available for use as a specific Custom Kong Plugin.
 	//
 	// It is a positive-polarity summary condition, and so should always be
 	// present on the resource with ObservedGeneration set.
@@ -99,31 +99,31 @@ const (
 	// status before it has all the information it needs to be able to determine
 	// if the condition is true.
 	//
-	// Possible reasons for this condition to be True are:
+	// Possible reasons for this condition to be "True" are:
 	//
-	// * "Programmed"
+	// * "Ready"
 	//
-	// Possible reasons for this condition to be False are:
+	// Possible reasons for this condition to be "False" are:
 	//
-	// * "Invalid"
-	// * "Fetching"
+	// * "Failed"
+	// * "Pending"
 	//
-	// Possible reasons for this condition to be Unknown are:
+	// Possible reasons for this condition to be "Unknown" are:
 	//
-	// * "Fetching".
+	// * "Pending".
 	//
+	KongPluginInstallationConditionStatusAccepted KongPluginInstallationConditionType = "Ready"
 
-	// Controllers should prefer to use the values of KongPluginInstallationConditionReason
-	// for the corresponding Reason, where appropriate.
-	KongPluginInstallationConditionStatusAccepted KongPluginInstallationConditionType = "Accepted"
+	// KongPluginInstallationReasonReady is used with the "Ready" condition when
+	// the condition is "True".
+	KongPluginInstallationReasonReady KongPluginInstallationConditionReason = "Ready"
 
-	// This reason is used with the "Accepted" condition when the KongPluginInstallation
-	// was not accepted because image can't be fetched, more details can be obtained from the
-	// condition's message.
-	KongPluginInstallationReasonInvalidParameters KongPluginInstallationConditionReason = "Invalid"
+	// KongPluginInstallationReasonFailed is used with the "Ready" condition when
+	// the KongPluginInstallation can't be configured e.g. image can't be fetched.
+	// More details can be obtained from the condition's message.
+	KongPluginInstallationReasonFailed KongPluginInstallationConditionReason = "Failed"
 
-	// This reason is used with the "Accepted" condition when the
-	// requested controller has started processing the KongPluginInstallation,
-	// but it haven't yet finished.
-	KongPluginInstallationReasonPending KongPluginInstallationConditionReason = "Fetching"
+	// KongPluginInstallationReasonPending is used with the "Ready" condition when the requested
+	// controller has started processing the KongPluginInstallation, but it hasn't finished yet.
+	KongPluginInstallationReasonPending KongPluginInstallationConditionReason = "Pending"
 )

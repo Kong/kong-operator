@@ -84,9 +84,9 @@ the EE version of Kong Gateway Operator with a valid license.
 ### KongPluginInstallation
 
 
-KongPluginInstallation allows to use a custom Kong Plugin distributed as a container image available in a registry.
-Such plugin can be associated with GatewayConfiguration or DataPlane to be available for particular Kong Gateway
-and to be configured with KongPlugin CRD.
+KongPluginInstallation allows using a custom Kong Plugin distributed as a container image available in a registry.
+Such a plugin can be associated with GatewayConfiguration or DataPlane to be available for particular Kong Gateway
+and configured with KongPlugin CRD.
 
 <!-- kong_plugin_installation description placeholder -->
 
@@ -321,8 +321,8 @@ KongPluginInstallationSpec defines the desired state of KongPluginInstallation.
 
 | Field | Description |
 | --- | --- |
-| `image` _string_ | Image is OCI image URL for a packaged Custom Kong Plugin. |
-| `secretRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#secretreference-v1-core)_ | SecretRef allows specifying secret to be used for OCI registry authentication to pull the image with custom Kong Plugin. The Secret format should follow https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry. When field is omitted it is assumed that the image is public and can be fetched without providing any credentials. |
+| `image` _string_ | The image is an OCI image URL for a packaged Custom Kong Plugin. |
+| `secretRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#secretreference-v1-core)_ | SecretRef allows referring specific Kubernetes Secret to use for OCI registry authentication for pulling an image with Custom Kong Plugin. The Secret format should follow https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry. When the field is omitted it is assumed that the image is public and can be fetched without providing credentials. |
 
 
 _Appears in:_

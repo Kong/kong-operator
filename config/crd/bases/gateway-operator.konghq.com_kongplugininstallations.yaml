@@ -20,16 +20,16 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.conditions[?(@.type=="Programmed")].status
-      name: Programmed
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
       type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
         description: |-
-          KongPluginInstallation allows to use a custom Kong Plugin distributed as a container image available in a registry.
-          Such plugin can be associated with GatewayConfiguration or DataPlane to be available for particular Kong Gateway
-          and to be configured with KongPlugin CRD.
+          KongPluginInstallation allows using a custom Kong Plugin distributed as a container image available in a registry.
+          Such a plugin can be associated with GatewayConfiguration or DataPlane to be available for particular Kong Gateway
+          and configured with KongPlugin CRD.
         properties:
           apiVersion:
             description: |-
@@ -52,13 +52,14 @@ spec:
             description: KongPluginInstallationSpec defines the desired state of KongPluginInstallation.
             properties:
               image:
-                description: Image is OCI image URL for a packaged Custom Kong Plugin.
+                description: The image is an OCI image URL for a packaged Custom Kong
+                  Plugin.
                 type: string
               secretRef:
                 description: |-
-                  SecretRef allows specifying secret to be used for OCI registry authentication to pull the image with custom Kong Plugin.
+                  SecretRef allows referring specific Kubernetes Secret to use for OCI registry authentication for pulling an image with Custom Kong Plugin.
                   The Secret format should follow https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry.
-                  When field is omitted it is assumed that the image is public and can be fetched without providing any credentials.
+                  When the field is omitted it is assumed that the image is public and can be fetched without providing credentials.
                 properties:
                   name:
                     description: name is unique within a namespace to reference a
