@@ -89,8 +89,8 @@ type KongPluginInstallationConditionType string
 type KongPluginInstallationConditionReason string
 
 const (
-	// This condition indicates whether the controller has fetched and make
-	// available for use a specific Custom Kong Plugin.
+	// This condition indicates whether the controller has fetched the plugin image
+	// and made it  available for use as a specific Custom Kong Plugin.
 	//
 	// It is a positive-polarity summary condition, and so should always be
 	// present on the resource with ObservedGeneration set.
@@ -99,7 +99,7 @@ const (
 	// status before it has all the information it needs to be able to determine
 	// if the condition is true.
 	//
-	// Possible reasons for this condition to be true are:
+	// Possible reasons for this condition to be True are:
 	//
 	// * "Programmed"
 	//
