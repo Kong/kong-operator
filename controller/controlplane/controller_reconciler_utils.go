@@ -293,10 +293,13 @@ func (r *Reconciler) ensureClusterRole(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 ) (createdOrUpdated bool, cr *rbacv1.ClusterRole, err error) {
-	// TODO: This performs a migration from the old managedBy label to the new one.
+	// NOTE: Code below performs a migration from the old managedBy label to the new one.
+	// It lists both resources labeled with the old and the new label set and merges them,
+	// then it reduces the number of resources to 1 and eventually updates the resource.
 	// After several versions of soak time we can remove handling the legacy label set.
 	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
 	// PR that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
+	// TODO: https://github.com/Kong/gateway-operator/issues/401.
 	clusterRolesLegacy, err := k8sutils.ListClusterRoles(
 		ctx,
 		r.Client,
@@ -375,10 +378,13 @@ func (r *Reconciler) ensureClusterRoleBinding(
 ) (createdOrUpdate bool, crb *rbacv1.ClusterRoleBinding, err error) {
 	logger := log.GetLogger(ctx, "controlplane.ensureClusterRoleBinding", r.DevelopmentMode)
 
-	// TODO: This performs a migration from the old managedBy label to the new one.
+	// NOTE: Code below performs a migration from the old managedBy label to the new one.
+	// It lists both resources labeled with the old and the new label set and merges them,
+	// then it reduces the number of resources to 1 and eventually updates the resource.
 	// After several versions of soak time we can remove handling the legacy label set.
 	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
 	// PR that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
+	// TODO: https://github.com/Kong/gateway-operator/issues/401.
 	clusterRoleBindingsLegacy, err := k8sutils.ListClusterRoleBindings(
 		ctx,
 		r.Client,
@@ -552,6 +558,7 @@ func (r *Reconciler) ensureOwnedClusterRolesDeleted(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 ) (deletions bool, err error) {
+	// TODO: Remove listing with old labels https://github.com/Kong/gateway-operator/issues/401.
 	clusterRolesLegacy, err := k8sutils.ListClusterRoles(
 		ctx,
 		r.Client,
@@ -598,6 +605,7 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 ) (deletions bool, err error) {
+	// TODO: Remove listing with old labels https://github.com/Kong/gateway-operator/issues/401.
 	clusterRoleBindingsLegacy, err := k8sutils.ListClusterRoleBindings(
 		ctx,
 		r.Client,
@@ -640,14 +648,13 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 ) (deletions bool, err error) {
-	// TODO: This performs a migration from the old managedBy label to the new one.
-	// After several versions of soak time we can remove handling the legeacy label set.
-	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
-	// PR: that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
+	// TODO: Remove listing with old labels https://github.com/Kong/gateway-operator/issues/401.
 	validatingWebhookConfigurationsLegacy, err := k8sutils.ListValidatingWebhookConfigurations(
 		ctx,
 		r.Client,
-		client.MatchingLabels(k8sutils.GetLegacyManagedByLabelSet(cp)),
+		// NOTE: this uses only the 1 label to find the legacy webhook configurations not the label set
+		// because app:<name> is not set on ValidatingWebhookConfiguration.
+		client.MatchingLabels(k8sutils.GetLegacyManagedByLabel(cp)),
 	)
 	if err != nil {
 		return false, fmt.Errorf("failed listing webhook configurations for owner: %w", err)
@@ -766,10 +773,13 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 ) (op.Result, error) {
 	logger := log.GetLogger(ctx, "controlplane.ensureValidatingWebhookConfiguration", r.DevelopmentMode)
 
-	// TODO: This performs a migration from the old managedBy label to the new one.
+	// NOTE: Code below performs a migration from the old managedBy label to the new one.
+	// It lists both resources labeled with the old and the new label set and merges them,
+	// then it reduces the number of resources to 1 and eventually updates the resource.
 	// After several versions of soak time we can remove handling the legacy label set.
 	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
 	// PR that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
+	// TODO: https://github.com/Kong/gateway-operator/issues/401.
 	validatingWebhookConfigurationsLegacy, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(
 		ctx,
 		r.Client,
