@@ -86,20 +86,49 @@ func filterServiceAccounts(serviceAccounts []corev1.ServiceAccount) []corev1.Ser
 // filterClusterRoles filters out the ClusterRole to be kept and returns
 // all the ClusterRoles to be deleted.
 // The filtered-out ClusterRole is decided as follows:
-// 1. creationTimestamp (older is better)
+//  1. creationTimestamp (newer is better, because newer ClusterRoles can contain new policy rules)
+//  2. using legacy labels (if present): if a ClusterRole does not have the legacy labels, it is considered newer
+//     and will be kept.
 func filterClusterRoles(clusterRoles []rbacv1.ClusterRole) []rbacv1.ClusterRole {
 	if len(clusterRoles) < 2 {
 		return []rbacv1.ClusterRole{}
 	}
 
-	toFilter := 0
+	newestWithManagedByLabels := -1
+	newestLegacy := -1
 	for i, clusterRole := range clusterRoles {
-		if clusterRole.CreationTimestamp.Before(&clusterRoles[toFilter].CreationTimestamp) {
-			toFilter = i
+		labels := clusterRole.GetLabels()
+
+		_, okManagedBy := labels[consts.GatewayOperatorManagedByLabel]
+		_, okManagedByNs := labels[consts.GatewayOperatorManagedByNamespaceLabel]
+		_, okManagedByName := labels[consts.GatewayOperatorManagedByNameLabel]
+		if okManagedBy && okManagedByNs && okManagedByName {
+			if newestWithManagedByLabels == -1 {
+				newestWithManagedByLabels = i
+				continue
+			}
+
+			if clusterRole.CreationTimestamp.After(clusterRoles[newestWithManagedByLabels].CreationTimestamp.Time) {
+				newestWithManagedByLabels = i
+			}
+			continue
 		}
+
+		if newestLegacy == -1 {
+			newestLegacy = i
+			continue
+		}
+
+		if clusterRole.CreationTimestamp.After(clusterRoles[newestLegacy].CreationTimestamp.Time) {
+			newestLegacy = i
+		}
+		continue
 	}
 
-	return append(clusterRoles[:toFilter], clusterRoles[toFilter+1:]...)
+	if newestWithManagedByLabels != -1 {
+		return append(clusterRoles[:newestWithManagedByLabels], clusterRoles[newestWithManagedByLabels+1:]...)
+	}
+	return append(clusterRoles[:newestLegacy], clusterRoles[newestLegacy+1:]...)
 }
 
 // -----------------------------------------------------------------------------
@@ -115,14 +144,41 @@ func filterClusterRoleBindings(clusterRoleBindings []rbacv1.ClusterRoleBinding) 
 		return []rbacv1.ClusterRoleBinding{}
 	}
 
-	toFilter := 0
+	oldestWithManagedByLabels := -1
+	oldestLegacy := -1
 	for i, clusterRoleBinding := range clusterRoleBindings {
-		if clusterRoleBinding.CreationTimestamp.Before(&clusterRoleBindings[toFilter].CreationTimestamp) {
-			toFilter = i
+		labels := clusterRoleBinding.GetLabels()
+
+		_, okManagedBy := labels[consts.GatewayOperatorManagedByLabel]
+		_, okManagedByNs := labels[consts.GatewayOperatorManagedByNamespaceLabel]
+		_, okManagedByName := labels[consts.GatewayOperatorManagedByNameLabel]
+		if okManagedBy && okManagedByNs && okManagedByName {
+			if oldestWithManagedByLabels == -1 {
+				oldestWithManagedByLabels = i
+				continue
+			}
+
+			if clusterRoleBinding.CreationTimestamp.Before(&clusterRoleBindings[oldestWithManagedByLabels].CreationTimestamp) {
+				oldestWithManagedByLabels = i
+			}
+			continue
 		}
+
+		if oldestLegacy == -1 {
+			oldestLegacy = i
+			continue
+		}
+
+		if clusterRoleBinding.CreationTimestamp.Before(&clusterRoleBindings[oldestLegacy].CreationTimestamp) {
+			oldestLegacy = i
+		}
+		continue
 	}
 
-	return append(clusterRoleBindings[:toFilter], clusterRoleBindings[toFilter+1:]...)
+	if oldestWithManagedByLabels != -1 {
+		return append(clusterRoleBindings[:oldestWithManagedByLabels], clusterRoleBindings[oldestWithManagedByLabels+1:]...)
+	}
+	return append(clusterRoleBindings[:oldestLegacy], clusterRoleBindings[oldestLegacy+1:]...)
 }
 
 // -----------------------------------------------------------------------------
@@ -315,21 +371,52 @@ func FilterHPAs(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.Ho
 // Filter functions - ValidatingWebhookConfigurations
 // -----------------------------------------------------------------------------
 
-// filterValidatingWebhookConfigurations filters out the ValidatingWebhookConfigurations to be kept and returns
-// all the ValidatingWebhookConfigurations to be deleted. The oldest ValidatingWebhookConfiguration is kept.
-func filterValidatingWebhookConfigurations(webhookConfigurations []admregv1.ValidatingWebhookConfiguration) []admregv1.ValidatingWebhookConfiguration {
-	if len(webhookConfigurations) < 2 {
+// filterValidatingWebhookConfigurations filters out the ValidatingWebhookConfigurations
+// to be kept and returns all the ValidatingWebhookConfigurations to be deleted.
+// The following criteria are used:
+//  1. creationTimestamp (newer is better, because newer ValidatingWebhookConfiguration can contain new rules)
+//  2. using legacy labels (if present): if a ValidatingWebhookConfiguration does
+//     not have the legacy labels, it is considered newer and will be kept.
+func filterValidatingWebhookConfigurations(vwcs []admregv1.ValidatingWebhookConfiguration) []admregv1.ValidatingWebhookConfiguration {
+	if len(vwcs) < 2 {
 		return []admregv1.ValidatingWebhookConfiguration{}
 	}
 
-	best := 0
-	for i, webhookConfig := range webhookConfigurations {
-		if webhookConfig.CreationTimestamp.Before(&webhookConfigurations[best].CreationTimestamp) {
-			best = i
+	newestWithManagedByLabels := -1
+	newestLegacy := -1
+	for i, vwc := range vwcs {
+		labels := vwc.GetLabels()
+
+		_, okManagedBy := labels[consts.GatewayOperatorManagedByLabel]
+		_, okManagedByNs := labels[consts.GatewayOperatorManagedByNamespaceLabel]
+		_, okManagedByName := labels[consts.GatewayOperatorManagedByNameLabel]
+		if okManagedBy && okManagedByNs && okManagedByName {
+			if newestWithManagedByLabels == -1 {
+				newestWithManagedByLabels = i
+				continue
+			}
+
+			if vwc.CreationTimestamp.After(vwcs[newestWithManagedByLabels].CreationTimestamp.Time) {
+				newestWithManagedByLabels = i
+			}
+			continue
 		}
+
+		if newestLegacy == -1 {
+			newestLegacy = i
+			continue
+		}
+
+		if vwc.CreationTimestamp.After(vwcs[newestLegacy].CreationTimestamp.Time) {
+			newestLegacy = i
+		}
+		continue
 	}
 
-	return append(webhookConfigurations[:best], webhookConfigurations[best+1:]...)
+	if newestWithManagedByLabels != -1 {
+		return append(vwcs[:newestWithManagedByLabels], vwcs[newestWithManagedByLabels+1:]...)
+	}
+	return append(vwcs[:newestLegacy], vwcs[newestLegacy+1:]...)
 }
 
 // -----------------------------------------------------------------------------

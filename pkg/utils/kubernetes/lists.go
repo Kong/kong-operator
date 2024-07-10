@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"slices"
 
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -242,4 +243,29 @@ func ListValidatingWebhookConfigurations(
 	}
 
 	return cfgList.Items, nil
+}
+
+// ListValidatingWebhookConfigurationsForOwner is a helper function that gets a list of ValidatingWebhookConfiguration
+// using the provided list options and checking if the provided object is the owner.
+func ListValidatingWebhookConfigurationsForOwner(
+	ctx context.Context,
+	c client.Client,
+	uid types.UID,
+	listOpts ...client.ListOption,
+) ([]admregv1.ValidatingWebhookConfiguration, error) {
+	cfgList := &admregv1.ValidatingWebhookConfigurationList{}
+	err := c.List(
+		ctx,
+		cfgList,
+		listOpts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return slices.DeleteFunc(
+		cfgList.Items, func(vwc admregv1.ValidatingWebhookConfiguration) bool {
+			return !IsOwnedByRefUID(&vwc, uid)
+		},
+	), nil
 }

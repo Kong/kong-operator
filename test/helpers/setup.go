@@ -33,6 +33,9 @@ func SetupTestEnv(t *testing.T, ctx context.Context, env environments.Environmen
 	t.Log("performing test setup")
 	cleaner := clusters.NewCleaner(env.Cluster())
 	t.Cleanup(func() {
+		t.Helper()
+
+		t.Log("performing test cleanup")
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
 		defer cancel()
 		assert.NoError(t, cleaner.Cleanup(ctx))
