@@ -19,8 +19,6 @@ package v1alpha1
 import (
 	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // KongService is the schema for Services API which defines a Kong Service.
@@ -58,12 +56,6 @@ func (c *KongService) SetKonnectLabels(labels map[string]string) {
 
 func (c *KongService) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigurationRef {
 	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
-}
-
-func (c *KongService) GetReconciliationWatchOptions(
-	cl client.Client,
-) []func(*ctrl.Builder) *ctrl.Builder {
-	return []func(*ctrl.Builder) *ctrl.Builder{}
 }
 
 // KongServiceSpec defines specification of a Kong Route.

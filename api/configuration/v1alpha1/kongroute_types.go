@@ -19,8 +19,6 @@ package v1alpha1
 import (
 	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // TODO(pmalek): expression field is not in OpenAPI spec but error message references it:
@@ -58,13 +56,6 @@ func (c KongRoute) GetTypeName() string {
 
 func (c *KongRoute) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigurationRef {
 	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
-}
-
-func (c *KongRoute) GetReconciliationWatchOptions(
-	cl client.Client,
-) []func(*ctrl.Builder) *ctrl.Builder {
-	// TODO(pmalek): watch services
-	return []func(*ctrl.Builder) *ctrl.Builder{}
 }
 
 // KongRouteSpec defines specification of a Kong Route.
