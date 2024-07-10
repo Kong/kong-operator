@@ -648,10 +648,11 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 ) (deletions bool, err error) {
-	// TODO: Remove listing with old labels https://github.com/Kong/gateway-operator/issues/401.
-	validatingWebhookConfigurationsLegacy, err := k8sutils.ListValidatingWebhookConfigurations(
+	// TODO: Remove listing with old labels and owner ref https://github.com/Kong/gateway-operator/issues/401.
+	validatingWebhookConfigurationsLegacy, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(
 		ctx,
 		r.Client,
+		cp.GetUID(),
 		// NOTE: this uses only the 1 label to find the legacy webhook configurations not the label set
 		// because app:<name> is not set on ValidatingWebhookConfiguration.
 		client.MatchingLabels(k8sutils.GetLegacyManagedByLabel(cp)),
