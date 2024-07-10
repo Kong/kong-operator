@@ -315,14 +315,14 @@ _Appears in:_
 #### KongPluginInstallationSpec
 
 
-KongPluginInstallationSpec defines the desired state of KongPluginInstallation.
+KongPluginInstallationSpec provides the information necessary to retrieve and install a Kong custom plugin.
 
 
 
 | Field | Description |
 | --- | --- |
-| `image` _string_ | The image is an OCI image URL for a packaged Custom Kong Plugin. |
-| `secretRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#secretreference-v1-core)_ | SecretRef allows referring specific Kubernetes Secret to use for OCI registry authentication for pulling an image with Custom Kong Plugin. The Secret format should follow https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry. When the field is omitted it is assumed that the image is public and can be fetched without providing credentials. |
+| `image` _string_ | The image is an OCI image URL for a packaged custom Kong plugin. |
+| `secretRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#secretreference-v1-core)_ | SecretRef is a reference to a Kubernetes Secret containing credentials necessary to pull the OCI image in Image. It must follow the format in https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry. It is optional. If the image is public, omit this field. |
 
 
 _Appears in:_

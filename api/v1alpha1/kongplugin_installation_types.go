@@ -53,17 +53,17 @@ type KongPluginInstallationList struct {
 	Items           []KongPluginInstallation `json:"items"`
 }
 
-// KongPluginInstallationSpec defines the desired state of KongPluginInstallation.
+// KongPluginInstallationSpec provides the information necessary to retrieve and install a Kong custom plugin.
 type KongPluginInstallationSpec struct {
 
-	// The image is an OCI image URL for a packaged Custom Kong Plugin.
+	// The image is an OCI image URL for a packaged custom Kong plugin.
 	//
 	//+kubebuilder:validation:Required
 	Image string `json:"image"`
 
-	// SecretRef allows referring specific Kubernetes Secret to use for OCI registry authentication for pulling an image with Custom Kong Plugin.
-	// The Secret format should follow https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry.
-	// When the field is omitted it is assumed that the image is public and can be fetched without providing credentials.
+	// SecretRef is a reference to a Kubernetes Secret containing credentials necessary to pull the OCI image
+	// in Image. It must follow the format in https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry.
+	// It is optional. If the image is public, omit this field.
 	//
 	//+optional
 	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
@@ -79,13 +79,14 @@ type KongPluginInstallationStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// KongPluginInstallationConditionType is the type for status conditions on
-// KongPluginInstallation resources. This type should be used with the
-// KongPluginInstallationStatus.Conditions field.
+// The following are KongPluginInstallation specific types for
+// https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#condition-v1-meta fields
+
+// KongPluginInstallationConditionType is the type for Conditions in a KongPluginInstallation's
+// Status.Conditions array.
 type KongPluginInstallationConditionType string
 
-// KongPluginInstallationConditionReason defines the set of reasons that explain why
-// a particular KongPluginInstallation condition type has been raised.
+// KongPluginInstallationConditionReason is a reason for the KongPluginInstallation condition's last transition.
 type KongPluginInstallationConditionReason string
 
 const (
