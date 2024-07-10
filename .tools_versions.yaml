@@ -7,7 +7,7 @@ kustomize: "5.4.2"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 golangci-lint: "1.59.1"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
-skaffold: "2.12.0"
+skaffold: "2.13.0"
 # renovate: datasource=github-releases depName=go-delve/delve
 dlv: "1.22.1"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
