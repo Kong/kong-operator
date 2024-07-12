@@ -43,8 +43,8 @@ type KongService struct {
 	Status KongServiceStatus `json:"status,omitempty"`
 }
 
-func (c *KongService) GetStatus() *KonnectEntityStatus {
-	return &c.Status.KonnectEntityStatus
+func (c *KongService) GetKonnectStatus() *KonnectEntityStatus {
+	return &c.Status.Konnect.KonnectEntityStatus
 }
 
 func (c KongService) GetTypeName() string {
@@ -58,12 +58,23 @@ func (c *KongService) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigur
 	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
 }
 
+// GetConditions returns the Status Conditions
+func (c *KongService) GetConditions() []metav1.Condition {
+	return c.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions
+func (c *KongService) SetConditions(conditions []metav1.Condition) {
+	c.Status.Conditions = conditions
+}
+
 // KongServiceSpec defines specification of a Kong Route.
 type KongServiceSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this Route is associated with.
 	// +kubebuilder:validation:Required
 	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef"`
 
+	// KonnectConfiguration holds the Konnect configuration like authentication configuration.
 	// +kubebuilder:validation:Required
 	KonnectConfiguration KonnectConfiguration `json:"konnect,omitempty"`
 
@@ -117,10 +128,16 @@ type KongServiceAPISpec struct {
 
 // KongServiceStatus represents the current status of the Kong Service resource.
 type KongServiceStatus struct {
-	KonnectEntityStatus `json:",inline"`
-	// ControlPlaneID is the unique identifier of the ControlPlane this Route is associated with.
-	// This is currently only set for Konnect Control Planes.
-	ControlPlaneID string `json:"controlPlaneID,omitempty"`
+	// Konnect contains the Konnect entity status.
+	Konnect KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
+
+	// Conditions describe the status of the Konnect entity.
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -18,6 +18,8 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 // +genclient
@@ -53,8 +55,43 @@ type KongConsumer struct {
 	// +listType=set
 	ConsumerGroups []string `json:"consumerGroups,omitempty"`
 
+	Spec KongConsumerSpec `json:"spec,omitempty"`
+
 	// Status represents the current status of the KongConsumer resource.
 	Status KongConsumerStatus `json:"status,omitempty"`
+}
+
+func (c *KongConsumer) GetKonnectStatus() *configurationv1alpha1.KonnectEntityStatus {
+	return &c.Status.Konnect.KonnectEntityStatus
+}
+
+func (c KongConsumer) GetTypeName() string {
+	return "KongConsumer"
+}
+
+func (c *KongConsumer) SetKonnectLabels(labels map[string]string) {
+}
+
+func (c *KongConsumer) GetKonnectAPIAuthConfigurationRef() configurationv1alpha1.KonnectAPIAuthConfigurationRef {
+	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
+}
+
+// GetConditions returns the Status Conditions
+func (c *KongConsumer) GetConditions() []metav1.Condition {
+	return c.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions
+func (c *KongConsumer) SetConditions(conditions []metav1.Condition) {
+	c.Status.Conditions = conditions
+}
+
+type KongConsumerSpec struct {
+	// ControlPlaneRef is a reference to a ControlPlane this Route is associated with.
+	ControlPlaneRef configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+
+	// KonnectConfiguration holds the Konnect configuration like authentication configuration.
+	KonnectConfiguration configurationv1alpha1.KonnectConfiguration `json:"konnect,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -68,6 +105,9 @@ type KongConsumerList struct {
 
 // KongConsumerStatus represents the current status of the KongConsumer resource.
 type KongConsumerStatus struct {
+	// Konnect contains the Konnect entity status.
+	Konnect configurationv1alpha1.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
+
 	// Conditions describe the current conditions of the KongConsumer.
 	//
 	// Known condition types are:

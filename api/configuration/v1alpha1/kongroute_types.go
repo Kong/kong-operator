@@ -46,8 +46,8 @@ type KongRoute struct {
 	Status KongRouteStatus `json:"status,omitempty"`
 }
 
-func (c *KongRoute) GetStatus() *KonnectEntityStatus {
-	return &c.Status.KonnectEntityStatus
+func (c *KongRoute) GetKonnectStatus() *KonnectEntityStatus {
+	return &c.Status.Konnect.KonnectEntityStatus
 }
 
 func (c KongRoute) GetTypeName() string {
@@ -56,6 +56,16 @@ func (c KongRoute) GetTypeName() string {
 
 func (c *KongRoute) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigurationRef {
 	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
+}
+
+// GetConditions returns the Status Conditions
+func (c *KongRoute) GetConditions() []metav1.Condition {
+	return c.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions
+func (c *KongRoute) SetConditions(conditions []metav1.Condition) {
+	c.Status.Conditions = conditions
 }
 
 // KongRouteSpec defines specification of a Kong Route.
@@ -68,6 +78,7 @@ type KongRouteSpec struct {
 	// +optional
 	ServiceRef ServiceRef `json:"serviceRef,omitempty"`
 
+	// KonnectConfiguration holds the Konnect configuration like authentication configuration.
 	// +kubebuilder:validation:Required
 	KonnectConfiguration KonnectConfiguration `json:"konnect,omitempty"`
 
@@ -117,13 +128,16 @@ type KongRouteAPISpec struct {
 
 // KongRouteStatus represents the current status of the Kong Route resource.
 type KongRouteStatus struct {
-	KonnectEntityStatus `json:",inline"`
-	// ControlPlaneID is the unique identifier of the ControlPlane this Route is associated with.
-	// This is currently only set for Konnect Control Planes.
-	ControlPlaneID string `json:"controlPlaneID,omitempty"`
-	// ServiceID is the unique identifier of the Service this Route is associated with.
-	// This is currently only set for entities configured in Konnect Control Planes.
-	ServiceID string `json:"serviceID,omitempty"`
+	// Konnect contains the Konnect entity status.
+	Konnect KonnectEntityStatusWithControlPlaneAndServiceRefs `json:"konnect,omitempty"`
+
+	// Conditions describe the status of the Konnect entity.
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
