@@ -22,8 +22,7 @@ import (
 )
 
 // TODO(pmalek): expression field is not in OpenAPI spec but error message references it:
-//
-//	when protocols has 'http', at least one of 'hosts', 'methods', 'paths', 'headers' or 'expression' must be set
+//   when protocols has 'http', at least one of 'hosts', 'methods', 'paths', 'headers' or 'expression' must be set
 
 // KongRoute is the schema for Routes API which defines a Kong Route.
 //
@@ -34,8 +33,6 @@ import (
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
-// +kubebuilder:printcolumn:name="ID",description="Konnect ID",type=string,JSONPath=`.status.id`
-// +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.konnect.authRef) || has(self.spec.konnect.authRef)", message="Konnect Configuration's API auth ref reference is required once set"
 // +kubebuilder:validation:XValidation:rule="self.spec.protocols.exists(p, p == 'http') ? (has(self.spec.hosts) || has(self.spec.methods) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.headers) ) : true", message="If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set"
 type KongRoute struct {
