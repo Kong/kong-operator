@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/kong/gateway-operator v0.0.0-00010101000000-000000000000
 	github.com/kong/semver/v4 v4.0.1
-	github.com/samber/lo v1.44.0
+	github.com/samber/lo v1.45.0
 	k8s.io/api v0.30.2
 	k8s.io/apimachinery v0.30.2
 	sigs.k8s.io/gateway-api v1.1.0
