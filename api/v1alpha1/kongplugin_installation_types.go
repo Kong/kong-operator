@@ -113,14 +113,14 @@ const (
 	//
 	// * "Pending".
 	//
-	KongPluginInstallationConditionStatusAccepted KongPluginInstallationConditionType = "Ready"
+	KongPluginInstallationConditionStatusAccepted KongPluginInstallationConditionType = "Accepted"
 
-	// KongPluginInstallationReasonReady is used with the "Ready" condition when
-	// the condition is "True".
+	// KongPluginInstallationReasonReady indicates that the controller has downloaded the plugin
+	// and can install it on a DataPlane or Gateway.
 	KongPluginInstallationReasonReady KongPluginInstallationConditionReason = "Ready"
 
 	// KongPluginInstallationReasonFailed is used with the "Ready" condition when
-	// the KongPluginInstallation can't be configured e.g. image can't be fetched.
+	// the KongPluginInstallation can't be fetched e.g. image can't be fetched.
 	// More details can be obtained from the condition's message.
 	KongPluginInstallationReasonFailed KongPluginInstallationConditionReason = "Failed"
 
