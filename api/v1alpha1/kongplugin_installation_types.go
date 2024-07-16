@@ -119,12 +119,12 @@ const (
 	// and can install it on a DataPlane or Gateway.
 	KongPluginInstallationReasonReady KongPluginInstallationConditionReason = "Ready"
 
-	// KongPluginInstallationReasonFailed is used with the "Ready" condition when
+	// KongPluginInstallationReasonFailed is used with the "Accepted" condition type when
 	// the KongPluginInstallation can't be fetched e.g. image can't be fetched.
 	// More details can be obtained from the condition's message.
 	KongPluginInstallationReasonFailed KongPluginInstallationConditionReason = "Failed"
 
-	// KongPluginInstallationReasonPending is used with the "Ready" condition when the requested
+	// KongPluginInstallationReasonPending is used with the "Accepted" condition type when the requested
 	// controller has started processing the KongPluginInstallation, but it hasn't finished yet.
 	KongPluginInstallationReasonPending KongPluginInstallationConditionReason = "Pending"
 )
