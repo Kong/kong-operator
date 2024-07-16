@@ -29,7 +29,8 @@
 
 - Proper `User-Agent` header is now set on outgoing HTTP requests.
   [#387](https://github.com/Kong/gateway-operator/pull/387)
-- Introduce `KongPluginInstallation` CRD
+- Introduce `KongPluginInstallation` CRD to allow installing custom Kong
+  plugins distributed as container images.
   [400](https://github.com/Kong/gateway-operator/pull/400)
 
 ### Fixed

@@ -56,9 +56,9 @@ spec:
                 description: The image is an OCI image URL for a packaged custom Kong
                   plugin.
                 type: string
-              secretRef:
+              imagePullSecretRef:
                 description: |-
-                  SecretRef is a reference to a Kubernetes Secret containing credentials necessary to pull the OCI image
+                  ImagePullSecretRef is a reference to a Kubernetes Secret containing credentials necessary to pull the OCI image
                   in Image. It must follow the format in https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry.
                   It is optional. If the image is public, omit this field.
                 properties:

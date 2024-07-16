@@ -61,12 +61,12 @@ type KongPluginInstallationSpec struct {
 	//+kubebuilder:validation:Required
 	Image string `json:"image"`
 
-	// SecretRef is a reference to a Kubernetes Secret containing credentials necessary to pull the OCI image
+	// ImagePullSecretRef is a reference to a Kubernetes Secret containing credentials necessary to pull the OCI image
 	// in Image. It must follow the format in https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry.
 	// It is optional. If the image is public, omit this field.
 	//
 	//+optional
-	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
+	ImagePullSecretRef *corev1.SecretReference `json:"imagePullSecretRef,omitempty"`
 }
 
 // KongPluginInstallationStatus defines the observed state of KongPluginInstallation.
@@ -91,14 +91,14 @@ type KongPluginInstallationConditionReason string
 
 const (
 	// This condition indicates whether the controller has fetched the plugin image
-	// and made it available for use as a specific Custom Kong Plugin.
+	// and made it available for use as a specific custom Kong Plugin.
 	//
 	// It is a positive-polarity summary condition, and so should always be
 	// present on the resource with ObservedGeneration set.
 	//
 	// It should be set to Unknown if the controller performs updates to the
 	// status before it has all the information it needs to be able to determine
-	// if the condition is true.
+	// if the condition is true (e.g. haven't started the download yet).
 	//
 	// Possible reasons for this condition to be "True" are:
 	//
@@ -106,8 +106,8 @@ const (
 	//
 	// Possible reasons for this condition to be "False" are:
 	//
-	// * "Failed"
 	// * "Pending"
+	// * "Failed"
 	//
 	// Possible reasons for this condition to be "Unknown" are:
 	//
@@ -120,11 +120,14 @@ const (
 	KongPluginInstallationReasonReady KongPluginInstallationConditionReason = "Ready"
 
 	// KongPluginInstallationReasonFailed is used with the "Accepted" condition type when
-	// the KongPluginInstallation can't be fetched e.g. image can't be fetched.
+	// the KongPluginInstallation can't be fetched e.g. image can't be fetched due to lack
+	// of permissions or the image doesn't exist. It's a state that can't be recovered without
+	// manual intervention.
 	// More details can be obtained from the condition's message.
 	KongPluginInstallationReasonFailed KongPluginInstallationConditionReason = "Failed"
 
 	// KongPluginInstallationReasonPending is used with the "Accepted" condition type when the requested
-	// controller has started processing the KongPluginInstallation, but it hasn't finished yet.
+	// controller has started processing the KongPluginInstallation, but it hasn't finished yet, e.g.
+	// fetching and unpacking the image is in progress.
 	KongPluginInstallationReasonPending KongPluginInstallationConditionReason = "Pending"
 )
