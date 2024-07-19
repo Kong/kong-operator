@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
-	"github.com/kong/gateway-operator/hack/generators/kic"
 	kongsemver "github.com/kong/semver/v4"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
+	"github.com/kong/gateway-operator/hack/generators/kic"
 	kicversions "github.com/kong/gateway-operator/internal/versions"
 )
 

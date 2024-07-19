@@ -11,6 +11,7 @@ Package v1alpha1 contains API Schema definitions for the operator v1alpha1 API g
 
 - [AIGateway](#aigateway)
 - [DataPlaneMetricsExtension](#dataplanemetricsextension)
+- [KongPluginInstallation](#kongplugininstallation)
 ### AIGateway
 
 
@@ -77,6 +78,25 @@ the EE version of Kong Gateway Operator with a valid license.
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[DataPlaneMetricsExtensionSpec](#dataplanemetricsextensionspec)_ |  |
 | `status` _[DataPlaneMetricsExtensionStatus](#dataplanemetricsextensionstatus)_ |  |
+
+
+
+### KongPluginInstallation
+
+
+KongPluginInstallation allows using a custom Kong Plugin distributed as a container image available in a registry.
+Such a plugin can be associated with GatewayConfiguration or DataPlane to be available for particular Kong Gateway
+and configured with KongPlugin CRD.
+
+<!-- kong_plugin_installation description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway-operator.konghq.com/v1alpha1`
+| `kind` _string_ | `KongPluginInstallation`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongPluginInstallationSpec](#kongplugininstallationspec)_ |  |
+| `status` _[KongPluginInstallationStatus](#kongplugininstallationstatus)_ |  |
 
 
 
@@ -287,6 +307,41 @@ defines extended behavior for a resource (e.g. ControlPlane).
 _Appears in:_
 - [ControlPlaneOptions](#controlplaneoptions)
 - [ControlPlaneSpec](#controlplanespec)
+
+
+
+
+
+#### KongPluginInstallationSpec
+
+
+KongPluginInstallationSpec provides the information necessary to retrieve and install a Kong custom plugin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `image` _string_ | The image is an OCI image URL for a packaged custom Kong plugin. |
+| `imagePullSecretRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#secretreference-v1-core)_ | ImagePullSecretRef is a reference to a Kubernetes Secret containing credentials necessary to pull the OCI image in Image. It must follow the format in https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry. It is optional. If the image is public, omit this field. |
+
+
+_Appears in:_
+- [KongPluginInstallation](#kongplugininstallation)
+
+#### KongPluginInstallationStatus
+
+
+KongPluginInstallationStatus defines the observed state of KongPluginInstallation.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions describe the current conditions of this KongPluginInstallation. |
+
+
+_Appears in:_
+- [KongPluginInstallation](#kongplugininstallation)
 
 #### LLMPrompt
 
