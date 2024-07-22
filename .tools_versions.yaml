@@ -3,7 +3,7 @@ code-generator: "0.30.2"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
 controller-tools: "0.15.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
-kustomize: "5.4.2"
+kustomize: "5.4.3"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 golangci-lint: "1.59.1"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
