@@ -233,7 +233,7 @@ generate.testcases-registration:
 	go run ./hack/generators/testcases-registration/main.go
 
 .PHONY: generate.kic-webhook-config
-generate.kic-webhook-config: kic-webhook-config-generator
+generate.kic-webhook-config: kustomize kic-webhook-config-generator
 	KUSTOMIZE=$(KUSTOMIZE) $(KIC_WEBHOOKCONFIG_GENERATOR)
 
 # ------------------------------------------------------------------------------
