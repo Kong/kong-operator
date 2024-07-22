@@ -10,7 +10,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	"github.com/kong/semver/v4"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
