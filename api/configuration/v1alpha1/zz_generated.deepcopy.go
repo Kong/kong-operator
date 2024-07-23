@@ -415,7 +415,7 @@ func (in *KongRouteAPISpec) DeepCopyInto(out *KongRouteAPISpec) {
 	*out = *in
 	if in.Destinations != nil {
 		in, out := &in.Destinations, &out.Destinations
-		*out = make([]components.CreateRouteDestinations, len(*in))
+		*out = make([]components.Destinations, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -434,7 +434,7 @@ func (in *KongRouteAPISpec) DeepCopyInto(out *KongRouteAPISpec) {
 	}
 	if in.HTTPSRedirectStatusCode != nil {
 		in, out := &in.HTTPSRedirectStatusCode, &out.HTTPSRedirectStatusCode
-		*out = new(components.CreateRouteHTTPSRedirectStatusCode)
+		*out = new(components.HTTPSRedirectStatusCode)
 		**out = **in
 	}
 	if in.Methods != nil {
@@ -449,7 +449,7 @@ func (in *KongRouteAPISpec) DeepCopyInto(out *KongRouteAPISpec) {
 	}
 	if in.PathHandling != nil {
 		in, out := &in.PathHandling, &out.PathHandling
-		*out = new(components.CreateRoutePathHandling)
+		*out = new(components.PathHandling)
 		**out = **in
 	}
 	if in.Paths != nil {
@@ -464,7 +464,7 @@ func (in *KongRouteAPISpec) DeepCopyInto(out *KongRouteAPISpec) {
 	}
 	if in.Protocols != nil {
 		in, out := &in.Protocols, &out.Protocols
-		*out = make([]components.CreateRouteProtocols, len(*in))
+		*out = make([]components.RouteProtocols, len(*in))
 		copy(*out, *in)
 	}
 	if in.RegexPriority != nil {
@@ -489,7 +489,7 @@ func (in *KongRouteAPISpec) DeepCopyInto(out *KongRouteAPISpec) {
 	}
 	if in.Sources != nil {
 		in, out := &in.Sources, &out.Sources
-		*out = make([]components.CreateRouteSources, len(*in))
+		*out = make([]components.Sources, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
