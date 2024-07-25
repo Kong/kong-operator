@@ -59,6 +59,12 @@ func NewK8sClients(env environments.Environment) (K8sClients, error) {
 	if err := konnectv1alpha1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
 		return clients, err
 	}
+	if err := configurationv1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
+		return clients, err
+	}
+	if err := configurationv1beta1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
+		return clients, err
+	}
 	if err := configurationv1alpha1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
 		return clients, err
 	}

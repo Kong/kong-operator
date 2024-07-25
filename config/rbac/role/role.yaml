@@ -166,10 +166,8 @@ rules:
   - configuration.konghq.com
   resources:
   - kongpluginbindings
-  - kongroutes
-  - kongservices
-  - kongupstreams
   verbs:
+  - create
   - get
   - list
   - patch
@@ -182,6 +180,18 @@ rules:
   verbs:
   - create
   - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongroutes
+  - kongservices
+  - kongupstreams
+  verbs:
   - get
   - list
   - patch

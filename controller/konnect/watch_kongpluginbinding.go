@@ -234,6 +234,9 @@ func enqueueKongPluginBindingForKonnectGatewayControlPlane(
 
 		var ret []reconcile.Request
 		for _, pb := range l.Items {
+			if pb.Spec.ControlPlaneRef == nil {
+				continue
+			}
 			switch pb.Spec.ControlPlaneRef.Type {
 			case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
 				// TODO: change this when cross namespace refs are allowed.

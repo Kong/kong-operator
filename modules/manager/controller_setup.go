@@ -72,6 +72,8 @@ const (
 	KongConsumerGroupControllerName = "KongConsumerGroup"
 	// KongPluginBindingControllerName is the name of the KongPluginBinding controller.
 	KongPluginBindingControllerName = "KongPluginBinding"
+	// KongPluginControllerName is the name of the KongPlugin controller.
+	KongPluginControllerName = "KongPlugin"
 	// KongUpstreamControllerName is the name of the KongUpstream controller.
 	KongUpstreamControllerName = "KongUpstream"
 )
@@ -392,6 +394,13 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				return nil, fmt.Errorf("duplicate controller key: %s", name)
 			}
 			controllers[name] = controller
+		}
+		controllers[KongPluginControllerName] = ControllerDef{
+			Enabled: c.KonnectControllersEnabled,
+			Controller: konnect.NewKongPluginReconciler(
+				c.DevelopmentMode,
+				mgr.GetClient(),
+			),
 		}
 	}
 
