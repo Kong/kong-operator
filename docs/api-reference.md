@@ -742,9 +742,27 @@ deploy the DataPlane.
 | --- | --- |
 | `deployment` _[DataPlaneDeploymentOptions](#dataplanedeploymentoptions)_ |  |
 | `network` _[DataPlaneNetworkOptions](#dataplanenetworkoptions)_ |  |
+| `resources` _[DataPlaneResources](#dataplaneresources)_ |  |
 
 
 _Appears in:_
+- [DataPlaneSpec](#dataplanespec)
+
+#### DataPlaneResources
+
+
+DataPlaneResources defines the resources that will be created and managed
+for the DataPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `podDisruptionBudget` _[PodDisruptionBudget](#poddisruptionbudget)_ | PodDisruptionBudget is the configuration for the PodDisruptionBudget that will be created for the DataPlane. |
+
+
+_Appears in:_
+- [DataPlaneOptions](#dataplaneoptions)
 - [DataPlaneSpec](#dataplanespec)
 
 #### DataPlaneRolloutStatus
@@ -858,6 +876,7 @@ DataPlaneSpec defines the desired state of DataPlane
 | --- | --- |
 | `deployment` _[DataPlaneDeploymentOptions](#dataplanedeploymentoptions)_ |  |
 | `network` _[DataPlaneNetworkOptions](#dataplanenetworkoptions)_ |  |
+| `resources` _[DataPlaneResources](#dataplaneresources)_ |  |
 
 
 _Appears in:_
@@ -1054,6 +1073,39 @@ NamespacedName is a resource identified by name and optional namespace.
 
 _Appears in:_
 - [KonnectCertificateOptions](#konnectcertificateoptions)
+
+#### PodDisruptionBudget
+
+
+PodDisruptionBudget defines the configuration for the PodDisruptionBudget.
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _boolean_ | Enabled indicates whether the PodDisruptionBudget should be created. |
+| `spec` _[PodDisruptionBudgetSpec](#poddisruptionbudgetspec)_ | Spec defines the specification of the PodDisruptionBudget. Selector is managed by the controller and cannot be set by the user. |
+
+
+_Appears in:_
+- [DataPlaneResources](#dataplaneresources)
+
+#### PodDisruptionBudgetSpec
+
+
+PodDisruptionBudgetSpec defines the specification of a PodDisruptionBudget.
+
+
+
+| Field | Description |
+| --- | --- |
+| `minAvailable` _[IntOrString](#intorstring)_ | An eviction is allowed if at least "minAvailable" pods selected by "selector" will still be available after the eviction, i.e. even in the absence of the evicted pod.  So for example you can prevent all voluntary evictions by specifying "100%". |
+| `maxUnavailable` _[IntOrString](#intorstring)_ | An eviction is allowed if at most "maxUnavailable" pods selected by "selector" are unavailable after the eviction, i.e. even in absence of the evicted pod. For example, one can prevent all voluntary evictions by specifying 0. This is a mutually exclusive setting with "minAvailable". |
+| `unhealthyPodEvictionPolicy` _[UnhealthyPodEvictionPolicyType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#unhealthypodevictionpolicytype-v1-policy)_ | UnhealthyPodEvictionPolicy defines the criteria for when unhealthy pods should be considered for eviction. Current implementation considers healthy pods, as pods that have status.conditions item with type="Ready",status="True".<br /><br /> Valid policies are IfHealthyBudget and AlwaysAllow. If no policy is specified, the default behavior will be used, which corresponds to the IfHealthyBudget policy.<br /><br /> IfHealthyBudget policy means that running pods (status.phase="Running"), but not yet healthy can be evicted only if the guarded application is not disrupted (status.currentHealthy is at least equal to status.desiredHealthy). Healthy pods will be subject to the PDB for eviction.<br /><br /> AlwaysAllow policy means that all running pods (status.phase="Running"), but not yet healthy are considered disrupted and can be evicted regardless of whether the criteria in a PDB is met. This means perspective running pods of a disrupted application might not get a chance to become healthy. Healthy pods will be subject to the PDB for eviction.<br /><br /> Additional policies may be added in the future. Clients making eviction decisions should disallow eviction of unhealthy pods if they encounter an unrecognized policy in this field.<br /><br /> This field is beta-level. The eviction API uses this field when the feature gate PDBUnhealthyPodEvictionPolicy is enabled (enabled by default). |
+
+
+_Appears in:_
+- [PodDisruptionBudget](#poddisruptionbudget)
 
 #### Promotion
 

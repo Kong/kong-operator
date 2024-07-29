@@ -1,0 +1,29 @@
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: dataplane-with-pdb
+spec:
+  resources:
+    podDisruptionBudget:
+      enabled: true
+      spec:
+        minAvailable: 1
+        maxUnavailable: 1
+  deployment:
+    replicas: 3
+    podTemplateSpec:
+      spec:
+        containers:
+        - name: proxy
+          # renovate: datasource=docker versioning=docker
+          image: kong/kong-gateway:3.7
+          env:
+          - name: KONG_LOG_LEVEL
+            value: debug
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
