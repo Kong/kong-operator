@@ -1,0 +1,41 @@
+package konnect
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
+	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/kong/gateway-operator/modules/manager/scheme"
+
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+)
+
+func TestNewKonnectEntityReconciler(t *testing.T) {
+	testNewKonnectEntityReconciler(t, configurationv1.KongConsumer{})
+	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongService{})
+	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongRoute{})
+}
+
+func testNewKonnectEntityReconciler[
+	T SupportedKonnectEntityType,
+	TEnt EntityType[T],
+](
+	t *testing.T,
+	ent T,
+) {
+	t.Helper()
+
+	t.Run(ent.GetTypeName(), func(t *testing.T) {
+		cl := fakectrlruntimeclient.NewFakeClient()
+		mgr, err := ctrl.NewManager(&rest.Config{}, ctrl.Options{
+			Scheme: scheme.Get(),
+		})
+		require.NoError(t, err)
+		reconciler := NewKonnectEntityReconciler[T, TEnt](ent, false, cl)
+		require.NoError(t, reconciler.SetupWithManager(mgr))
+	})
+}

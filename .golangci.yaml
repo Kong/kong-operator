@@ -38,6 +38,7 @@ linters-settings:
     sections:
       - standard
       - default
+      - prefix(github.com/kong/kubernetes-configuration)
       - prefix(github.com/kong/gateway-operator)
   importas:
     no-unaliased: true

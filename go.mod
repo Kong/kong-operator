@@ -1,8 +1,8 @@
 module github.com/kong/gateway-operator
 
-go 1.22.3
+go 1.22.4
 
-toolchain go1.22.4
+toolchain go1.22.5
 
 // 1.2.2 was released on main branch with a breaking change that was not
 // intended to be released in 1.2.x:
@@ -17,6 +17,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
+	github.com/kong/kubernetes-configuration v0.0.0-20240726122834-c10e8297f9e6
 	github.com/kong/kubernetes-ingress-controller/v3 v3.2.3
 	github.com/kong/kubernetes-telemetry v0.1.4
 	github.com/kong/kubernetes-testing-framework v0.47.1
@@ -63,7 +64,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/homeport/dyff v1.6.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.1-0.20220621161143-b0104c826a24 // indirect
-	github.com/kong/go-kong v0.56.0 // indirect
+	github.com/kong/go-kong v0.57.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-ciede2000 v0.0.0-20170301095244-782e8c62fec3 // indirect
@@ -186,7 +187,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.30.1
+	k8s.io/apiextensions-apiserver v0.30.3
 	k8s.io/component-base v0.30.3 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240430033511-f0e62f92d13f // indirect
