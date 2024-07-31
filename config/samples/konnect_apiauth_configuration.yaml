@@ -1,0 +1,30 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  serverURL: eu.api.konghq.com
+---
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-2
+  namespace: default
+spec:
+  type: secretRef
+  secretRef:
+    name: konnect-api-auth-secret
+  serverURL: eu.api.konghq.com
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: konnect-api-auth-secret
+  namespace: default
+  labels:
+    konghq.com/credential: konnect
+stringData:
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
