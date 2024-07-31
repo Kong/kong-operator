@@ -84,6 +84,9 @@ type Config struct {
 	// Controllers for specialty APIs and experimental features.
 	AIGatewayControllerEnabled bool
 
+	// Controllers for Konnect APIs.
+	KonnectControllersEnabled bool
+
 	// webhook and validation options
 	ValidatingWebhookEnabled bool
 }
