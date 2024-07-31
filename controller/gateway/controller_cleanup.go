@@ -31,7 +31,7 @@ func (r *Reconciler) cleanup(
 	logger logr.Logger,
 	gateway *gatewayv1.Gateway,
 ) (
-	bool, // whether or not cleanup is being performed
+	bool, // Whether the caller should return early from the reconciliation loop.
 	ctrl.Result,
 	error,
 ) {
@@ -42,7 +42,7 @@ func (r *Reconciler) cleanup(
 
 	if gateway.DeletionTimestamp.After(time.Now()) {
 		log.Debug(logger, "gateway deletion still under grace period", gateway)
-		return true, ctrl.Result{
+		return false, ctrl.Result{
 			Requeue:      true,
 			RequeueAfter: time.Until(gateway.DeletionTimestamp.Time),
 		}, nil
@@ -54,15 +54,16 @@ func (r *Reconciler) cleanup(
 	// for cleaning up owned controlplanes when they disappeared.
 	controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, r.Client, gateway)
 	if err != nil {
-		return true, ctrl.Result{}, err
+		return false, ctrl.Result{}, err
 	}
 	if len(controlplanes) > 0 {
 		deletions, err := r.ensureOwnedControlPlanesDeleted(ctx, gateway)
 		if err != nil {
-			return true, ctrl.Result{}, err
+			return false, ctrl.Result{}, err
 		}
 		if deletions {
 			log.Debug(logger, "deleted owned controlplanes", gateway)
+			// Return early from reconciliation, deletion will trigger a new reconcile.
 			return true, ctrl.Result{}, err
 		}
 	} else {
@@ -70,26 +71,29 @@ func (r *Reconciler) cleanup(
 		if controllerutil.RemoveFinalizer(gateway, string(GatewayFinalizerCleanupControlPlanes)) {
 			if err := r.Client.Patch(ctx, gateway, client.MergeFrom(oldGateway)); err != nil {
 				res, err := handleGatewayFinalizerPatchOrUpdateError(err, gateway, logger)
-				return true, res, err
+				return false, res, err
 			}
 			log.Debug(logger, "finalizer for cleaning up controlplanes removed", gateway)
-			return true, ctrl.Result{}, nil
+			// Requeue to ensure that we continue reconciliation in case the patch
+			// was empty and didn't trigger a new reconcile.
+			return false, ctrl.Result{Requeue: true}, nil
 		}
 	}
 
 	// Delete owned dataplanes.
 	dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, r.Client, gateway)
 	if err != nil {
-		return true, ctrl.Result{}, err
+		return false, ctrl.Result{}, err
 	}
 
 	if len(dataplanes) > 0 {
 		deletions, err := r.ensureOwnedDataPlanesDeleted(ctx, gateway)
 		if err != nil {
-			return true, ctrl.Result{}, err
+			return false, ctrl.Result{}, err
 		}
 		if deletions {
 			log.Debug(logger, "deleted owned dataplanes", gateway)
+			// Return early from reconciliation, deletion will trigger a new reconcile.
 			return true, ctrl.Result{}, err
 		}
 	} else {
@@ -97,25 +101,28 @@ func (r *Reconciler) cleanup(
 		if controllerutil.RemoveFinalizer(gateway, string(GatewayFinalizerCleanupDataPlanes)) {
 			if err := r.Client.Patch(ctx, gateway, client.MergeFrom(oldGateway)); err != nil {
 				res, err := handleGatewayFinalizerPatchOrUpdateError(err, gateway, logger)
-				return true, res, err
+				return false, res, err
 			}
 			log.Debug(logger, "finalizer for cleaning up dataplanes removed", gateway)
-			return true, ctrl.Result{}, nil
+			// Requeue to ensure that we continue reconciliation in case the patch
+			// was empty and didn't trigger a new reconcile.
+			return false, ctrl.Result{Requeue: true}, nil
 		}
 	}
 
 	// Delete owned network policies
 	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway)
 	if err != nil {
-		return true, ctrl.Result{}, err
+		return false, ctrl.Result{}, err
 	}
 	if len(networkPolicies) > 0 {
 		deletions, err := r.ensureOwnedNetworkPoliciesDeleted(ctx, gateway)
 		if err != nil {
-			return true, ctrl.Result{}, err
+			return false, ctrl.Result{}, err
 		}
 		if deletions {
 			log.Debug(logger, "deleted owned network policies", gateway)
+			// Return early from reconciliation, deletion will trigger a new reconcile.
 			return true, ctrl.Result{}, err
 		}
 	} else {
@@ -126,12 +133,14 @@ func (r *Reconciler) cleanup(
 				return true, res, err
 			}
 			log.Debug(logger, "finalizer for cleaning up network policies removed", gateway)
-			return true, ctrl.Result{}, nil
+			// Requeue to ensure that we continue reconciliation in case the patch
+			// was empty and didn't trigger a new reconcile.
+			return false, ctrl.Result{Requeue: true}, nil
 		}
 	}
 
 	log.Debug(logger, "owned resources cleanup completed", gateway)
-	return true, ctrl.Result{}, nil
+	return false, ctrl.Result{}, nil
 }
 
 func handleGatewayFinalizerPatchOrUpdateError(err error, gateway *gatewayv1.Gateway, logger logr.Logger) (ctrl.Result, error) {
@@ -140,13 +149,14 @@ func handleGatewayFinalizerPatchOrUpdateError(err error, gateway *gatewayv1.Gate
 		return ctrl.Result{}, nil
 	}
 
-	// If the Gateway is not found, then requeue without an error.
-	if k8serrors.IsNotFound(err) {
+	// If the Gateway is not found or there's a conflict patching, then requeue without an error.
+	if k8serrors.IsNotFound(err) || k8serrors.IsConflict(err) {
 		return ctrl.Result{
 			Requeue:      true,
 			RequeueAfter: requeueWithoutBackoff,
 		}, nil
 	}
+
 	// Since controllers use cached clients, it's possible that the Gateway is out of sync with what
 	// is in the API server and this causes:
 	// Forbidden: no new finalizers can be added if the object is being deleted, found new finalizers []string{...}
