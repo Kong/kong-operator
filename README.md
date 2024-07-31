@@ -9,9 +9,19 @@ on Kubernetes.
 With Kong Gateway Operator, users can:
 
 * Deploy and configure Kong Gateway services.
-* Customise deployments using PodTemplateSpec to deploy sidecars, set node affinity
-  and more.
-* Upgrade Data Planes using a rolling restart or blue/green deployments.
+* Customise deployments using `PodTemplateSpec` to:
+  * [Deploy sidecars][docs_sidecar],
+  * [Set image][docs_dataplane_image],
+  * [And much more][docs_podtemplatespec].
+* Upgrade Data Planes using a [rolling restart][docs_upgrade_rolling] or [blue/green deployments][docs_upgrade_bg].
+* Configure [auto scaling on Data Planes][docs_autoscaling].
+
+[docs_sidecar]: https://docs.konghq.com/gateway-operator/latest/customization/sidecars/
+[docs_dataplane_image]: https://docs.konghq.com/gateway-operator/latest/customization/data-plane-image/
+[docs_podtemplatespec]: https://docs.konghq.com/gateway-operator/latest/customization/pod-template-spec/
+[docs_upgrade_rolling]: https://docs.konghq.com/gateway-operator/latest/guides/upgrade/data-plane/rolling/
+[docs_upgrade_bg]: https://docs.konghq.com/gateway-operator/latest/guides/upgrade/data-plane/blue-green/
+[docs_autoscaling]: https://docs.konghq.com/gateway-operator/latest/guides/autoscaling-kong/
 
 ## Current Features
 
@@ -25,6 +35,23 @@ The following features are considered supported:
 * Configuration and management of `AIGateway`s (experimental feature)
 
 See our [Features Page](/FEATURES.md) for details on these capabilities.
+
+## API stability
+
+The operator provides 2 APIs:
+
+- YAML / manifests API which users use to apply their manifests against Kubernetes clusters.
+- Go API through types exported under [api/](https://github.com/Kong/gateway-operator/tree/main/api)
+  and other exported packages.
+
+This project:
+
+- Follows [Kubernetes API versioning][k8s_api_versioning] for the YAML API.
+  - This is considered part of the user contract.
+- Tries to not break users implementing against operator's Go API but does not
+  offer a non breaking guarantee.
+
+[k8s_api_versioning]: https://kubernetes.io/docs/reference/using-api/#api-versioning
 
 ## Quick Start and documentation
 
