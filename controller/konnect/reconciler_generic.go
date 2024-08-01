@@ -141,7 +141,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 
 	// Update the status if the reference is resolved and it's not as expected.
-	if cond, present := k8sutils.GetCondition(KonnectEntityAPIAuthConfigurationResolvedRefConditionType, &apiAuth.Status); !present ||
+	if cond, present := k8sutils.GetCondition(KonnectEntityAPIAuthConfigurationResolvedRefConditionType, &apiAuth); !present ||
 		cond.Status != metav1.ConditionTrue ||
 		cond.ObservedGeneration != apiAuth.GetGeneration() ||
 		cond.Reason != KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef {
@@ -152,13 +152,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef,
 			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is resolved", apiAuthRef),
 		); err != nil || res.Requeue {
-			return ctrl.Result{}, err
+			return res, err
 		}
 		return ctrl.Result{}, nil
 	}
 
 	// Check if the referenced APIAuthConfiguration is valid.
-	if cond, present := k8sutils.GetCondition(KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth.Status); !present || cond.Status != metav1.ConditionTrue {
+	if cond, present := k8sutils.GetCondition(KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !present || cond.Status != metav1.ConditionTrue {
 		if res, err := updateStatusWithCondition(
 			ctx, r.Client, ent,
 			KonnectEntityAPIAuthConfigurationValidConditionType,
@@ -166,7 +166,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			KonnectEntityAPIAuthConfigurationReasonInvalid,
 			fmt.Sprintf("referenced KonnectAPIAuthConfiguration %s is invalid", apiAuthRef),
 		); err != nil || res.Requeue {
-			return ctrl.Result{}, err
+			return res, err
 		}
 
 		return ctrl.Result{}, nil
@@ -182,7 +182,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			KonnectEntityAPIAuthConfigurationReasonValid,
 			fmt.Sprintf("referenced KonnectAPIAuthConfiguration %s is valid", apiAuthRef),
 		); err != nil || res.Requeue {
-			return ctrl.Result{}, err
+			return res, err
 		}
 		return ctrl.Result{}, nil
 	}
@@ -297,10 +297,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}, nil
 }
 
-func updateStatusWithCondition[T SupportedKonnectEntityType, TEnt EntityType[T]](
+func updateStatusWithCondition[T interface {
+	client.Object
+	k8sutils.ConditionsAware
+}](
 	ctx context.Context,
 	client client.Client,
-	ent TEnt,
+	ent T,
 	conditionType consts.ConditionType,
 	conditionStatus metav1.ConditionStatus,
 	conditionReason consts.ConditionReason,

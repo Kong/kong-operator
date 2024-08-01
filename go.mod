@@ -17,7 +17,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
-	github.com/kong/kubernetes-configuration v0.0.0-20240801155137-c98bf64df469
+	github.com/kong/kubernetes-configuration v0.0.0-20240801170722-d6586edd1b81
 	github.com/kong/kubernetes-ingress-controller/v3 v3.2.3
 	github.com/kong/kubernetes-telemetry v0.1.4
 	github.com/kong/kubernetes-testing-framework v0.47.1

@@ -6,7 +6,6 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -15,8 +14,7 @@ import (
 type SupportedKonnectEntityType interface {
 	configurationv1alpha1.KongService |
 		configurationv1alpha1.KongRoute |
-		configurationv1.KongConsumer |
-		configurationv1beta1.KongConsumerGroup
+		configurationv1.KongConsumer
 	// TODO: add other types
 
 	GetTypeName() string

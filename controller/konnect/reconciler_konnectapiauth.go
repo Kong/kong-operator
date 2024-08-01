@@ -6,7 +6,6 @@ import (
 	"time"
 
 	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -14,6 +13,8 @@ import (
 
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // KonnectAPIAuthConfigurationReconciler reconciles a KonnectAPIAuthConfiguration object.
@@ -96,61 +97,52 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 	// https://github.com/Kong/sdk-konnect-go/blob/999d9a987e1aa7d2e09ac11b1450f4563adf21ea/models/operations/getorganizationsme.go#L10-L12
 	respOrg, err := sdk.Me.GetOrganizationsMe(ctx, sdkkonnectgoops.WithServerURL("https://"+apiAuth.Spec.ServerURL))
 	if err != nil {
-		if cond, ok := k8sutils.GetCondition(KonnectAPIAuthConfigurationValidConditionType, &apiAuth.Status); !ok ||
+		if cond, ok := k8sutils.GetCondition(KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
 			cond.Status != metav1.ConditionFalse ||
-			cond.Reason != KonnectAPIAuthConfigurationReasonInvalid ||
+			cond.Reason != KonnectEntityAPIAuthConfigurationReasonInvalid ||
 			cond.ObservedGeneration != apiAuth.GetGeneration() ||
 			apiAuth.Status.OrganizationID != "" ||
 			apiAuth.Status.ServerURL != apiAuth.Spec.ServerURL {
 
 			apiAuth.Status.OrganizationID = ""
 			apiAuth.Status.ServerURL = apiAuth.Spec.ServerURL
-			k8sutils.SetCondition(
-				k8sutils.NewConditionWithGeneration(
-					KonnectAPIAuthConfigurationValidConditionType,
-					metav1.ConditionFalse,
-					KonnectAPIAuthConfigurationReasonInvalid,
-					err.Error(),
-					apiAuth.GetGeneration(),
-				),
-				&apiAuth.Status,
+
+			res, err := updateStatusWithCondition(
+				ctx, r.Client, &apiAuth,
+				KonnectEntityAPIAuthConfigurationValidConditionType,
+				metav1.ConditionFalse,
+				KonnectEntityAPIAuthConfigurationReasonInvalid,
+				err.Error(),
 			)
-			if err := r.Client.Status().Update(ctx, &apiAuth); err != nil {
-				if k8serrors.IsConflict(err) {
-					return ctrl.Result{Requeue: true}, nil
-				}
-				return ctrl.Result{}, fmt.Errorf("failed to update status of %s: %w", entityTypeName, err)
+			if err != nil || res.Requeue {
+				return res, err
 			}
+			return ctrl.Result{}, fmt.Errorf("failed to get organization info from Konnect: %w", err)
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to get organization info from Konnect: %w", err)
 	}
 
 	// Update the status only if it would change to prevent unnecessary updates.
-	if cond, ok := k8sutils.GetCondition(KonnectAPIAuthConfigurationValidConditionType, &apiAuth.Status); !ok ||
+	if cond, ok := k8sutils.GetCondition(KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
 		cond.Status != metav1.ConditionTrue ||
 		cond.Message != "" ||
-		cond.Reason != KonnectAPIAuthConfigurationReasonValid ||
+		cond.Reason != KonnectEntityAPIAuthConfigurationReasonValid ||
 		cond.ObservedGeneration != apiAuth.GetGeneration() ||
 		apiAuth.Status.OrganizationID != *respOrg.MeOrganization.ID ||
 		apiAuth.Status.ServerURL != apiAuth.Spec.ServerURL {
 
 		apiAuth.Status.OrganizationID = *respOrg.MeOrganization.ID
 		apiAuth.Status.ServerURL = apiAuth.Spec.ServerURL
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				KonnectAPIAuthConfigurationValidConditionType,
-				metav1.ConditionTrue,
-				KonnectAPIAuthConfigurationReasonValid,
-				"",
-				apiAuth.GetGeneration(),
-			),
-			&apiAuth.Status,
+
+		res, err := updateStatusWithCondition(
+			ctx, r.Client, &apiAuth,
+			KonnectEntityAPIAuthConfigurationValidConditionType,
+			metav1.ConditionTrue,
+			KonnectEntityAPIAuthConfigurationReasonValid,
+			fmt.Sprintf("Referenced KonnectAPIAuthConfiguration %s is valid", client.ObjectKeyFromObject(&apiAuth)),
 		)
-		if err := r.Client.Status().Update(ctx, &apiAuth); err != nil {
-			if k8serrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-			return ctrl.Result{}, fmt.Errorf("failed to update status of %s: %w", entityTypeName, err)
+		if err != nil || res.Requeue {
+			return res, err
 		}
 		return ctrl.Result{}, nil
 	}
