@@ -16,6 +16,9 @@ import (
 
 func TestNewKonnectEntityReconciler(t *testing.T) {
 	testNewKonnectEntityReconciler(t, configurationv1.KongConsumer{})
+	// GetTypeName() is missing.
+	// https://github.com/Kong/kubernetes-configuration/pull/15 fixes that.
+	// testNewKonnectEntityReconciler(t, configurationv1beta1.KongConsumerGroup{})
 	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongService{})
 	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongRoute{})
 }

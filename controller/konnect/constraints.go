@@ -6,6 +6,8 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // SupportedKonnectEntityType is an interface that all Konnect entity types
@@ -13,7 +15,8 @@ import (
 type SupportedKonnectEntityType interface {
 	configurationv1alpha1.KongService |
 		configurationv1alpha1.KongRoute |
-		configurationv1.KongConsumer
+		configurationv1.KongConsumer |
+		configurationv1beta1.KongConsumerGroup
 	// TODO: add other types
 
 	GetTypeName() string
@@ -33,10 +36,10 @@ type EntityType[
 	GetObjectMeta() metav1.Object
 	client.Object
 
-	// Added methods
+	// Additional method which are used in reconciling Konnect entities.
 
 	GetConditions() []metav1.Condition
 	SetConditions([]metav1.Condition)
 	GetKonnectStatus() *configurationv1alpha1.KonnectEntityStatus
-	GetKonnectAPIAuthConfigurationRef() configurationv1alpha1.KonnectAPIAuthConfigurationRef
+	GetKonnectAPIAuthConfigurationRef() konnectv1alpha1.KonnectAPIAuthConfigurationRef
 }

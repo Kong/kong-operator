@@ -16,9 +16,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 const (
@@ -103,7 +104,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	log.Debug(logger, "reconciling", ent)
 	var (
-		apiAuth    configurationv1alpha1.KonnectAPIAuthConfiguration
+		apiAuth    konnectv1alpha1.KonnectAPIAuthConfiguration
 		apiAuthRef = types.NamespacedName{
 			Name:      ent.GetKonnectAPIAuthConfigurationRef().Name,
 			Namespace: ent.GetNamespace(),
@@ -112,44 +113,78 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 	)
 	if err := r.Client.Get(ctx, apiAuthRef, &apiAuth); err != nil {
+		if k8serrors.IsNotFound(err) {
+			if res, err := updateStatusWithCondition(
+				ctx, r.Client, ent,
+				KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
+				metav1.ConditionFalse,
+				KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound,
+				fmt.Sprintf("Referenced KonnectAPIAuthConfiguration %s not found", apiAuthRef),
+			); err != nil || res.Requeue {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{}, nil
+		}
+
+		if res, err := updateStatusWithCondition(
+			ctx, r.Client, ent,
+			KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
+			metav1.ConditionFalse,
+			KonnectEntityAPIAuthConfigurationResolvedRefReasonRefInvalid,
+			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is invalid: %v", apiAuthRef, err),
+		); err != nil || res.Requeue {
+			return ctrl.Result{}, err
+		}
+
 		return ctrl.Result{}, fmt.Errorf("failed to get KonnectAPIAuthConfiguration: %w", err)
 	}
 
-	// Check if the referenced APIAuthConfiguration is valid.
-	if cond, present := k8sutils.GetCondition(KonnectAPIAuthConfigurationValidConditionType, &apiAuth.Status); present && cond.Status != metav1.ConditionTrue {
-		// If the referenced APIAuthConfiguration is not valid, set the
-		// "APIAuthRefValid" condition to false and return.
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				KonnectEntityAPIAuthConfigurationRefValidConditionType,
-				metav1.ConditionFalse,
-				KonnectEntityAPIAuthConfigurationRefReasonInvalid,
-				fmt.Sprintf("referenced KonnectAPIAuthConfiguration %s is invalid", apiAuthRef),
-				ent.GetGeneration(),
-			),
-			ent,
-		)
-
+	// Update the status if the reference is resolved and it's not as expected.
+	if cond, present := k8sutils.GetCondition(KonnectEntityAPIAuthConfigurationResolvedRefConditionType, &apiAuth.Status); !present ||
+		cond.Status != metav1.ConditionTrue ||
+		cond.ObservedGeneration != apiAuth.GetGeneration() ||
+		cond.Reason != KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef {
+		if res, err := updateStatusWithCondition(
+			ctx, r.Client, ent,
+			KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
+			metav1.ConditionTrue,
+			KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef,
+			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is resolved", apiAuthRef),
+		); err != nil || res.Requeue {
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 
-	// If the referenced APIAuthConfiguration is valid, set the "APIAuthRefValid"
-	// condition to true.
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			KonnectEntityAPIAuthConfigurationRefValidConditionType,
-			metav1.ConditionTrue,
-			KonnectEntityAPIAuthConfigurationRefReasonValid,
-			fmt.Sprintf("referenced KonnectAPIAuthConfiguration %s is valid", apiAuthRef),
-			ent.GetGeneration(),
-		),
-		ent,
-	)
-	if err := r.Client.Status().Update(ctx, ent); err != nil {
-		if k8serrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
+	// Check if the referenced APIAuthConfiguration is valid.
+	if cond, present := k8sutils.GetCondition(KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth.Status); !present || cond.Status != metav1.ConditionTrue {
+		if res, err := updateStatusWithCondition(
+			ctx, r.Client, ent,
+			KonnectEntityAPIAuthConfigurationValidConditionType,
+			metav1.ConditionFalse,
+			KonnectEntityAPIAuthConfigurationReasonInvalid,
+			fmt.Sprintf("referenced KonnectAPIAuthConfiguration %s is invalid", apiAuthRef),
+		); err != nil || res.Requeue {
+			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to update status with %s condition: %w", KonnectEntityAPIAuthConfigurationRefValidConditionType, err)
+
+		return ctrl.Result{}, nil
+	} else if cond.ObservedGeneration != apiAuth.GetGeneration() ||
+		cond.Reason != KonnectEntityAPIAuthConfigurationReasonValid {
+		// If the referenced APIAuthConfiguration is valid, set the "APIAuthValid"
+		// condition to true. Only perform the update if the Reason or ObservedGeneration
+		// has changed.
+		if res, err := updateStatusWithCondition(
+			ctx, r.Client, ent,
+			KonnectEntityAPIAuthConfigurationValidConditionType,
+			metav1.ConditionTrue,
+			KonnectEntityAPIAuthConfigurationReasonValid,
+			fmt.Sprintf("referenced KonnectAPIAuthConfiguration %s is valid", apiAuthRef),
+		); err != nil || res.Requeue {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// NOTE: We need to create a new SDK instance for each reconciliation
@@ -260,4 +295,37 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	return ctrl.Result{
 		RequeueAfter: configurableSyncPeriod,
 	}, nil
+}
+
+func updateStatusWithCondition[T SupportedKonnectEntityType, TEnt EntityType[T]](
+	ctx context.Context,
+	client client.Client,
+	ent TEnt,
+	conditionType consts.ConditionType,
+	conditionStatus metav1.ConditionStatus,
+	conditionReason consts.ConditionReason,
+	conditionMessage string,
+) (ctrl.Result, error) {
+	k8sutils.SetCondition(
+		k8sutils.NewConditionWithGeneration(
+			conditionType,
+			conditionStatus,
+			conditionReason,
+			conditionMessage,
+			ent.GetGeneration(),
+		),
+		ent,
+	)
+
+	if err := client.Status().Update(ctx, ent); err != nil {
+		if k8serrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf(
+			"failed to update status with %s condition: %w",
+			KonnectEntityAPIAuthConfigurationResolvedRefConditionType, err,
+		)
+	}
+
+	return ctrl.Result{}, nil
 }

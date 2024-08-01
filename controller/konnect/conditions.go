@@ -14,30 +14,38 @@ const (
 )
 
 const (
-	// KonnectAPIAuthConfigurationValidConditionType is the type of the condition
-	// that indicates whether the APIAuth configuration is valid.
-	KonnectAPIAuthConfigurationValidConditionType = "Valid"
+	// KonnectEntityAPIAuthConfigurationResolvedRefConditionType is the type of the
+	// condition that indicates whether the APIAuth configuration reference is
+	// valid and points to an existing APIAuth configuration.
+	KonnectEntityAPIAuthConfigurationResolvedRefConditionType = "APIAuthResolvedRef"
 
-	// KonnectAPIAuthConfigurationReasonValid is the reason used with the Valid
-	// condition type indiciating that the APIAuth configuration is valid.
-	KonnectAPIAuthConfigurationReasonValid = "Valid"
-	// KonnectAPIAuthConfigurationReasonValid is the reason used with the Valid
-	// condition type indiciating that the APIAuth configuration is invalid.
-	KonnectAPIAuthConfigurationReasonInvalid = "Invalid"
+	// KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef is the reason
+	// used with the APIAuthResolvedRef condition type indicating that the APIAuth
+	// configuration reference has been resolved.
+	KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef = "ResolvedRef"
+	// KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound is the reason
+	// used with the APIAuthResolvedRef condition type indicating that the APIAuth
+	// configuration reference could not be resolved.
+	KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound = "RefNotFound"
+	// KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound is the reason
+	// used with the APIAuthResolvedRef condition type indicating that the APIAuth
+	// configuration reference is invalid and could not be resolved.
+	// Condition message can contain more information about the error.
+	KonnectEntityAPIAuthConfigurationResolvedRefReasonRefInvalid = "RefInvalid"
 )
 
 const (
-	// KonnectEntityAPIAuthConfigurationRefValidConditionType is the type of the
-	// condition that indicates whether the APIAuth configuration reference is
-	// valid and points to an existing, valid APIAuth configuration.
-	KonnectEntityAPIAuthConfigurationRefValidConditionType = "APIAuthRefValid"
+	// KonnectEntityAPIAuthConfigurationValidConditionType is the type of the
+	// condition that indicates whether the referenced APIAuth configuration is
+	// valid.
+	KonnectEntityAPIAuthConfigurationValidConditionType = "APIAuthValid"
 
-	// KonnectEntityAPIAuthConfigurationRefReasonValid is the reason used with the
+	// KonnectEntityAPIAuthConfigurationReasonValid is the reason used with the
 	// APIAuthRefValid condition type indicating that the APIAuth configuration
 	// referenced by the entity is valid.
-	KonnectEntityAPIAuthConfigurationRefReasonValid = "Valid"
-	// KonnectEntityAPIAuthConfigurationRefReasonValid is the reason used with the
+	KonnectEntityAPIAuthConfigurationReasonValid = "Valid"
+	// KonnectEntityAPIAuthConfigurationReasonInvalid is the reason used with the
 	// APIAuthRefValid condition type indicating that the APIAuth configuration
 	// referenced by the entity is invalid.
-	KonnectEntityAPIAuthConfigurationRefReasonInvalid = "Invalid"
+	KonnectEntityAPIAuthConfigurationReasonInvalid = "Invalid"
 )
