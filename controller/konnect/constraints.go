@@ -35,7 +35,7 @@ type EntityType[
 	GetObjectMeta() metav1.Object
 	client.Object
 
-	// Additional method which are used in reconciling Konnect entities.
+	// Additional methods which are used in reconciling Konnect entities.
 	GetConditions() []metav1.Condition
 	SetConditions([]metav1.Condition)
 	GetKonnectStatus() *configurationv1alpha1.KonnectEntityStatus
