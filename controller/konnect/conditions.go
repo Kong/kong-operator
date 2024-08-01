@@ -1,6 +1,7 @@
 package konnect
 
 // TODO(pmalek): move this to Konnect API directory so that it's part of the API contract.
+// https://github.com/Kong/kubernetes-configuration/issues/14
 
 const (
 	// KonnectEntityProgrammedConditionType is the type of the condition that
