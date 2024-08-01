@@ -20,6 +20,8 @@ package v1alpha1
 // defines extended behavior for a resource (e.g. ControlPlane).
 type ExtensionRef struct {
 	// Group is the group of the extension resource.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=gateway-operator.konghq.com
 	Group string `json:"group"`
 
 	// Kind is kind of the extension resource.

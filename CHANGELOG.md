@@ -53,8 +53,10 @@
 - Added command line flags to configure the certificate generator job's images.
   [#516](https://github.com/Kong/gateway-operator/pull/516)
 - Add `KongPluginBinding` reconciler for Konnect Plugins.
-  [#513](https://github.com/Kong/gateway-operator/pull/513)
-  [#535](https://github.com/Kong/gateway-operator/pull/535)
+  [#513](https://github.com/Kong/gateway-operator/pull/513), [#535](https://github.com/Kong/gateway-operator/pull/535)
+- The `DataPlaneKonnectExtension` CRD has been introduced. Such a CRD can be attached
+  to a `DataPlane` via the extensions field to have a konnect-flavored `DataPlane`.
+  [#453](https://github.com/Kong/gateway-operator/pull/453)
 
 ### Fixed
 
