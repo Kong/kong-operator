@@ -13,10 +13,7 @@ type SDKFactory interface {
 	NewKonnectSDK(serverURL string, token SDKToken) *sdkkonnectgo.SDK
 }
 
-type sdkFactory struct {
-	ServerURL string
-	Token     SDKToken
-}
+type sdkFactory struct{}
 
 // NewSDKFactory creates a new SDKFactory.
 func NewSDKFactory() SDKFactory {
