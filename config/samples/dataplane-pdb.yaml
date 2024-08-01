@@ -5,9 +5,7 @@ metadata:
 spec:
   resources:
     podDisruptionBudget:
-      enabled: true
       spec:
-        minAvailable: 1
         maxUnavailable: 1
   deployment:
     replicas: 3

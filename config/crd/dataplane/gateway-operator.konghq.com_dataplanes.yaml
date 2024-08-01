@@ -8943,11 +8943,6 @@ spec:
                       PodDisruptionBudget is the configuration for the PodDisruptionBudget
                       that will be created for the DataPlane.
                     properties:
-                      enabled:
-                        default: false
-                        description: Enabled indicates whether the PodDisruptionBudget
-                          should be created.
-                        type: boolean
                       spec:
                         description: |-
                           Spec defines the specification of the PodDisruptionBudget.
@@ -9007,6 +9002,11 @@ spec:
                               the feature gate PDBUnhealthyPodEvictionPolicy is enabled (enabled by default).
                             type: string
                         type: object
+                        x-kubernetes-validations:
+                        - message: You can specify only one of maxUnavailable and
+                            minAvailable in a single PodDisruptionBudgetSpec.
+                          rule: (has(self.minAvailable) && !has(self.maxUnavailable))
+                            || (!has(self.minAvailable) && has(self.maxUnavailable))
                     type: object
                 type: object
             type: object

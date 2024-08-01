@@ -80,18 +80,14 @@ type DataPlaneResources struct {
 
 // PodDisruptionBudget defines the configuration for the PodDisruptionBudget.
 type PodDisruptionBudget struct {
-	// Enabled indicates whether the PodDisruptionBudget should be created.
-	//
-	// +optional
-	// +kubebuilder:default=false
-	Enabled bool `json:"enabled"`
-
 	// Spec defines the specification of the PodDisruptionBudget.
 	// Selector is managed by the controller and cannot be set by the user.
 	Spec PodDisruptionBudgetSpec `json:"spec,omitempty"`
 }
 
 // PodDisruptionBudgetSpec defines the specification of a PodDisruptionBudget.
+//
+// +kubebuilder:validation:XValidation:message="You can specify only one of maxUnavailable and minAvailable in a single PodDisruptionBudgetSpec.",rule="(has(self.minAvailable) && !has(self.maxUnavailable)) || (!has(self.minAvailable) && has(self.maxUnavailable))"
 type PodDisruptionBudgetSpec struct {
 	// An eviction is allowed if at least "minAvailable" pods selected by
 	// "selector" will still be available after the eviction, i.e. even in the

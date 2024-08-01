@@ -1083,7 +1083,6 @@ PodDisruptionBudget defines the configuration for the PodDisruptionBudget.
 
 | Field | Description |
 | --- | --- |
-| `enabled` _boolean_ | Enabled indicates whether the PodDisruptionBudget should be created. |
 | `spec` _[PodDisruptionBudgetSpec](#poddisruptionbudgetspec)_ | Spec defines the specification of the PodDisruptionBudget. Selector is managed by the controller and cannot be set by the user. |
 
 
