@@ -38,6 +38,10 @@ type KongConsumerGroup struct {
 	Status KongConsumerGroupStatus `json:"status,omitempty"`
 }
 
+func (c KongConsumerGroup) GetTypeName() string {
+	return "KongConsumerGroup"
+}
+
 // +kubebuilder:object:root=true
 
 // KongConsumerGroupList contains a list of KongConsumerGroups.
