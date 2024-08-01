@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // TODO(pmalek): expression field is not in OpenAPI spec but error message references it:
@@ -51,7 +53,7 @@ func (c KongRoute) GetTypeName() string {
 	return "KongRoute"
 }
 
-func (c *KongRoute) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigurationRef {
+func (c *KongRoute) GetKonnectAPIAuthConfigurationRef() konnectv1alpha1.KonnectAPIAuthConfigurationRef {
 	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
 }
 
@@ -77,7 +79,7 @@ type KongRouteSpec struct {
 
 	// KonnectConfiguration holds the Konnect configuration like authentication configuration.
 	// +kubebuilder:validation:Required
-	KonnectConfiguration KonnectConfiguration `json:"konnect,omitempty"`
+	KonnectConfiguration konnectv1alpha1.KonnectConfiguration `json:"konnect,omitempty"`
 
 	KongRouteAPISpec `json:",inline"`
 }

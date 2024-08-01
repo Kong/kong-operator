@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // KongService is the schema for Services API which defines a Kong Service.
@@ -52,7 +54,7 @@ func (c KongService) GetTypeName() string {
 func (c *KongService) SetKonnectLabels(labels map[string]string) {
 }
 
-func (c *KongService) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigurationRef {
+func (c *KongService) GetKonnectAPIAuthConfigurationRef() konnectv1alpha1.KonnectAPIAuthConfigurationRef {
 	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
 }
 
@@ -74,7 +76,7 @@ type KongServiceSpec struct {
 
 	// KonnectConfiguration holds the Konnect configuration like authentication configuration.
 	// +kubebuilder:validation:Required
-	KonnectConfiguration KonnectConfiguration `json:"konnect,omitempty"`
+	KonnectConfiguration konnectv1alpha1.KonnectConfiguration `json:"konnect,omitempty"`
 
 	KongServiceAPISpec `json:",inline"`
 }

@@ -11,6 +11,7 @@ func init() {
 // KonnectAPIAuthConfiguration is the Schema for the Konnect configuration type.
 //
 // +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:resource:scope=Namespaced
 // +kubebuilder:object:root=true
 // +kubebuilder:object:generate=true
@@ -39,8 +40,6 @@ type KonnectAPIAuthConfigurationSpec struct {
 	Token string `json:"token"`
 
 	// ServerURL is the URL of the Konnect server.
-	// TODO(pmalek): do we want this validation?
-	// +Xkubebuilder:validation:Enum=us.api.konghq.com;eu.api.konghq.com;au.api.konghq.com
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Server URL is immutable"
 	ServerURL string `json:"serverURL"`

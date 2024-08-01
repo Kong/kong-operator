@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // +genclient
@@ -72,7 +73,7 @@ func (c KongConsumer) GetTypeName() string {
 func (c *KongConsumer) SetKonnectLabels(labels map[string]string) {
 }
 
-func (c *KongConsumer) GetKonnectAPIAuthConfigurationRef() configurationv1alpha1.KonnectAPIAuthConfigurationRef {
+func (c *KongConsumer) GetKonnectAPIAuthConfigurationRef() konnectv1alpha1.KonnectAPIAuthConfigurationRef {
 	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
 }
 
@@ -91,7 +92,7 @@ type KongConsumerSpec struct {
 	ControlPlaneRef configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
 
 	// KonnectConfiguration holds the Konnect configuration like authentication configuration.
-	KonnectConfiguration configurationv1alpha1.KonnectConfiguration `json:"konnect,omitempty"`
+	KonnectConfiguration konnectv1alpha1.KonnectConfiguration `json:"konnect,omitempty"`
 }
 
 // +kubebuilder:object:root=true
