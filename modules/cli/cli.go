@@ -45,7 +45,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.BoolVar(&cfg.AIGatewayControllerEnabled, "enable-controller-aigateway", false, "Enable the AIGateway controller. (Experimental).")
 
 	// controllers for Konnect APIs
-	flagSet.BoolVar(&cfg.KonnectControllersEnabled, "enable-controller-konnect", false, "Enable the KonnectAPIAuthConfiguration controller.")
+	flagSet.BoolVar(&cfg.KonnectControllersEnabled, "enable-controller-konnect", false, "Enable the Konnect controllers.")
 
 	// webhook and validation options
 	flagSet.BoolVar(&deferCfg.ValidatingWebhookEnabled, "enable-validating-webhook", true, "Enable the validating webhook.")
