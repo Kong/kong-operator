@@ -215,8 +215,12 @@ github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnr
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
-github.com/kong/go-kong v0.56.0 h1:/9qbnQJWAgrSAKzL2RViBhHMTYOEyG8N4ClkKnUwEW4=
-github.com/kong/go-kong v0.56.0/go.mod h1:gyNwyP1fzztT6sX/0/ygMQ30OiRMIQ51b2jSfstMrcU=
+github.com/kong/go-kong v0.57.0 h1:e+4bHTzcO0xhFPVyGIUtlO+B4E4l14k55NH8Vjw6ORY=
+github.com/kong/go-kong v0.57.0/go.mod h1:gyNwyP1fzztT6sX/0/ygMQ30OiRMIQ51b2jSfstMrcU=
+github.com/kong/kubernetes-configuration v0.0.0-20240801095618-0ed30e4054cb h1:GUMgT3qqNjLV1Wdl8D6fskEaN/vof/FRhRbicIkUKpg=
+github.com/kong/kubernetes-configuration v0.0.0-20240801095618-0ed30e4054cb/go.mod h1:kZTKzwQ68Wk2n8W8Em0RsYTL2yVNbCWU+5b9w1WU+Hs=
+github.com/kong/kubernetes-configuration v0.0.0-20240801155137-c98bf64df469 h1:wzRoAf4byqST4BvmqPne/GL56VrnsrRM3A8ePuvOyf4=
+github.com/kong/kubernetes-configuration v0.0.0-20240801155137-c98bf64df469/go.mod h1:kZTKzwQ68Wk2n8W8Em0RsYTL2yVNbCWU+5b9w1WU+Hs=
 github.com/kong/kubernetes-ingress-controller/v3 v3.2.3 h1:SQ/0hfceGmsvzbkCUxiJUv1ELcFRp4d6IzvYGfHct9o=
 github.com/kong/kubernetes-ingress-controller/v3 v3.2.3/go.mod h1:gshVZnDU2FTe/95I3vSJPsH2kyB8zR+GpUIieCyt8C4=
 github.com/kong/kubernetes-telemetry v0.1.4 h1:Yz7OlECxWKgNRG1wJ5imA4+H0dQEpdU9d86uhwUVpu4=
