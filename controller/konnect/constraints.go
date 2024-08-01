@@ -32,7 +32,6 @@ type EntityType[
 	*T
 
 	// Kubernetes Object methods
-
 	GetObjectMeta() metav1.Object
 	client.Object
 
