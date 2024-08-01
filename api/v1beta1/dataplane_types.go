@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -64,6 +65,71 @@ type DataPlaneOptions struct {
 
 	// +optional
 	Network DataPlaneNetworkOptions `json:"network"`
+
+	// +optional
+	Resources DataPlaneResources `json:"resources"`
+}
+
+// DataPlaneResources defines the resources that will be created and managed
+// for the DataPlane.
+type DataPlaneResources struct {
+	// PodDisruptionBudget is the configuration for the PodDisruptionBudget
+	// that will be created for the DataPlane.
+	PodDisruptionBudget *PodDisruptionBudget `json:"podDisruptionBudget,omitempty"`
+}
+
+// PodDisruptionBudget defines the configuration for the PodDisruptionBudget.
+type PodDisruptionBudget struct {
+	// Spec defines the specification of the PodDisruptionBudget.
+	// Selector is managed by the controller and cannot be set by the user.
+	Spec PodDisruptionBudgetSpec `json:"spec,omitempty"`
+}
+
+// PodDisruptionBudgetSpec defines the specification of a PodDisruptionBudget.
+//
+// +kubebuilder:validation:XValidation:message="You can specify only one of maxUnavailable and minAvailable in a single PodDisruptionBudgetSpec.",rule="(has(self.minAvailable) && !has(self.maxUnavailable)) || (!has(self.minAvailable) && has(self.maxUnavailable))"
+type PodDisruptionBudgetSpec struct {
+	// An eviction is allowed if at least "minAvailable" pods selected by
+	// "selector" will still be available after the eviction, i.e. even in the
+	// absence of the evicted pod.  So for example you can prevent all voluntary
+	// evictions by specifying "100%".
+	// +optional
+	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty" protobuf:"bytes,1,opt,name=minAvailable"`
+
+	// An eviction is allowed if at most "maxUnavailable" pods selected by
+	// "selector" are unavailable after the eviction, i.e. even in absence of
+	// the evicted pod. For example, one can prevent all voluntary evictions
+	// by specifying 0. This is a mutually exclusive setting with "minAvailable".
+	// +optional
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty" protobuf:"bytes,3,opt,name=maxUnavailable"`
+
+	// UnhealthyPodEvictionPolicy defines the criteria for when unhealthy pods
+	// should be considered for eviction. Current implementation considers healthy pods,
+	// as pods that have status.conditions item with type="Ready",status="True".
+	//
+	// Valid policies are IfHealthyBudget and AlwaysAllow.
+	// If no policy is specified, the default behavior will be used,
+	// which corresponds to the IfHealthyBudget policy.
+	//
+	// IfHealthyBudget policy means that running pods (status.phase="Running"),
+	// but not yet healthy can be evicted only if the guarded application is not
+	// disrupted (status.currentHealthy is at least equal to status.desiredHealthy).
+	// Healthy pods will be subject to the PDB for eviction.
+	//
+	// AlwaysAllow policy means that all running pods (status.phase="Running"),
+	// but not yet healthy are considered disrupted and can be evicted regardless
+	// of whether the criteria in a PDB is met. This means perspective running
+	// pods of a disrupted application might not get a chance to become healthy.
+	// Healthy pods will be subject to the PDB for eviction.
+	//
+	// Additional policies may be added in the future.
+	// Clients making eviction decisions should disallow eviction of unhealthy pods
+	// if they encounter an unrecognized policy in this field.
+	//
+	// This field is beta-level. The eviction API uses this field when
+	// the feature gate PDBUnhealthyPodEvictionPolicy is enabled (enabled by default).
+	// +optional
+	UnhealthyPodEvictionPolicy *policyv1.UnhealthyPodEvictionPolicyType `json:"unhealthyPodEvictionPolicy,omitempty" protobuf:"bytes,4,opt,name=unhealthyPodEvictionPolicy"`
 }
 
 // DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
