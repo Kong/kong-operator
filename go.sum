@@ -14,6 +14,8 @@ github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1/go.mod h1:xomTg6
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v1.3.2 h1:o7IhLm0Msx3BaB+n3Ag7L8EVlByGnpq14C4YWiu/gL8=
 github.com/BurntSushi/toml v1.3.2/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
+github.com/Kong/sdk-konnect-go v0.0.0-20240723160412-999d9a987e1a h1:0mQhPVVA2/+uTVmoKrEIGf+0eTrNyr80Ssv1zGs/1Lk=
+github.com/Kong/sdk-konnect-go v0.0.0-20240723160412-999d9a987e1a/go.mod h1:ipu67aQNnwDzu/LXKePG46cVqkkZnAHKWpsbhTEI8xE=
 github.com/Kong/sdk-konnect-go v0.0.0-20240801091928-39a27951b473 h1:vIYHnHxEcWTGPZ113NPlLvWEOWYaPRYwwpuoU2J64yY=
 github.com/Kong/sdk-konnect-go v0.0.0-20240801091928-39a27951b473/go.mod h1:75YzLhfnYfmCvBJgkafzVuREwBAec2/jihCW2fyn6hY=
 github.com/Masterminds/semver v1.5.0 h1:H65muMkzWKEuNDnfl9d70GUjFniHKHRbFPGBuZ3QEww=
@@ -217,10 +219,16 @@ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/kong/go-kong v0.57.0 h1:e+4bHTzcO0xhFPVyGIUtlO+B4E4l14k55NH8Vjw6ORY=
 github.com/kong/go-kong v0.57.0/go.mod h1:gyNwyP1fzztT6sX/0/ygMQ30OiRMIQ51b2jSfstMrcU=
+github.com/kong/kubernetes-configuration v0.0.0-20240726122834-c10e8297f9e6 h1:mi0P9KZSYbI1bffC+dwz0lesjHgd3AS4W/762C6qJHs=
+github.com/kong/kubernetes-configuration v0.0.0-20240726122834-c10e8297f9e6/go.mod h1:kZTKzwQ68Wk2n8W8Em0RsYTL2yVNbCWU+5b9w1WU+Hs=
+github.com/kong/kubernetes-configuration v0.0.0-20240731182605-13d36c4c628c h1:D+JNLhsjs3I9R4tUp9/0EknDG2DayVny20rEGj33o/w=
+github.com/kong/kubernetes-configuration v0.0.0-20240731182605-13d36c4c628c/go.mod h1:kZTKzwQ68Wk2n8W8Em0RsYTL2yVNbCWU+5b9w1WU+Hs=
 github.com/kong/kubernetes-configuration v0.0.0-20240801095618-0ed30e4054cb h1:GUMgT3qqNjLV1Wdl8D6fskEaN/vof/FRhRbicIkUKpg=
 github.com/kong/kubernetes-configuration v0.0.0-20240801095618-0ed30e4054cb/go.mod h1:kZTKzwQ68Wk2n8W8Em0RsYTL2yVNbCWU+5b9w1WU+Hs=
 github.com/kong/kubernetes-configuration v0.0.0-20240801155137-c98bf64df469 h1:wzRoAf4byqST4BvmqPne/GL56VrnsrRM3A8ePuvOyf4=
 github.com/kong/kubernetes-configuration v0.0.0-20240801155137-c98bf64df469/go.mod h1:kZTKzwQ68Wk2n8W8Em0RsYTL2yVNbCWU+5b9w1WU+Hs=
+github.com/kong/kubernetes-configuration v0.0.0-20240801170722-d6586edd1b81 h1:yEbqo7RdTQ7iGEA1PIpQGfO7D5EN7jj2qdPOGN9ipow=
+github.com/kong/kubernetes-configuration v0.0.0-20240801170722-d6586edd1b81/go.mod h1:kZTKzwQ68Wk2n8W8Em0RsYTL2yVNbCWU+5b9w1WU+Hs=
 github.com/kong/kubernetes-ingress-controller/v3 v3.2.3 h1:SQ/0hfceGmsvzbkCUxiJUv1ELcFRp4d6IzvYGfHct9o=
 github.com/kong/kubernetes-ingress-controller/v3 v3.2.3/go.mod h1:gshVZnDU2FTe/95I3vSJPsH2kyB8zR+GpUIieCyt8C4=
 github.com/kong/kubernetes-telemetry v0.1.4 h1:Yz7OlECxWKgNRG1wJ5imA4+H0dQEpdU9d86uhwUVpu4=

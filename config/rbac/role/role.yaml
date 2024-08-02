@@ -604,6 +604,24 @@ rules:
   - patch
   - update
 - apiGroups:
+  - konnect.konghq.com
+  resources:
+  - konnectapiauthconfigurations
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - konnect.konghq.com
+  resources:
+  - konnectapiauthconfigurations/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - networking.k8s.io
   resources:
   - ingressclasses

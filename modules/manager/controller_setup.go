@@ -20,6 +20,7 @@ import (
 	"github.com/kong/gateway-operator/controller/dataplane"
 	"github.com/kong/gateway-operator/controller/gateway"
 	"github.com/kong/gateway-operator/controller/gatewayclass"
+	"github.com/kong/gateway-operator/controller/konnect"
 	"github.com/kong/gateway-operator/controller/specialized"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	dataplanevalidator "github.com/kong/gateway-operator/internal/validation/dataplane"
@@ -46,6 +47,8 @@ const (
 	DataPlaneOwnedDeploymentFinalizerControllerName = "DataPlaneOwnedDeploymentFinalizer"
 	// AIGatewayControllerName is the name of the GatewayClass controller.
 	AIGatewayControllerName = "AIGateway"
+	// KonnectAPIAuthConfigurationControllerName is the name of the KonnectAPIAuthConfiguration controller.
+	KonnectAPIAuthConfigurationControllerName = "KonnectAPIAuthConfiguration"
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
@@ -269,6 +272,19 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				DevelopmentMode: c.DevelopmentMode,
 			},
 		},
+	}
+
+	// Konnect controllers
+	if c.KonnectControllersEnabled {
+		sdkFactory := konnect.NewSDKFactory()
+		controllers[KonnectAPIAuthConfigurationControllerName] = ControllerDef{
+			Enabled: c.KonnectControllersEnabled,
+			Controller: konnect.NewKonnectAPIAuthConfigurationReconciler(
+				sdkFactory,
+				c.DevelopmentMode,
+				mgr.GetClient(),
+			),
+		}
 	}
 
 	return controllers, nil
