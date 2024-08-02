@@ -8,6 +8,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // ReconciliationWatchOptionsForEntity returns the watch options for the given
@@ -20,12 +21,14 @@ func ReconciliationWatchOptionsForEntity[
 	ent TEnt,
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	switch any(ent).(type) {
-	case *configurationv1alpha1.KongService:
-		return nil
 	case *configurationv1alpha1.KongRoute:
-		return nil
+		return []func(*ctrl.Builder) *ctrl.Builder{}
+	case *configurationv1alpha1.KongService:
+		return []func(*ctrl.Builder) *ctrl.Builder{}
 	case *configurationv1.KongConsumer:
-		return nil
+		return []func(*ctrl.Builder) *ctrl.Builder{}
+	case *konnectv1alpha1.KonnectControlPlane:
+		return KonnectControlPlaneReconciliationWatchOptions(cl)
 	default:
 		panic(fmt.Sprintf("unsupported entity type %T", ent))
 	}

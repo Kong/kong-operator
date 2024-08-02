@@ -3,6 +3,8 @@ package konnect
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
@@ -13,17 +15,26 @@ import (
 
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// Op is the Konnect operation type.
+// Response is the interface for the response from the Konnect API.
+type Response interface {
+	GetContentType() string
+	GetStatusCode() int
+	GetRawResponse() *http.Response
+}
+
+// Op is the type for the operation type of a Konnect entity.
 type Op string
 
 const (
-	// CreateOp is the Konnect create operation.
+	// CreateOp is the operation type for creating a Konnect entity.
 	CreateOp Op = "create"
-	// UpdateOp is the Konnect update operation.
+	// UpdateOp is the operation type for updating a Konnect entity.
 	UpdateOp Op = "update"
-	// DeleteOp is the Konnect delete operation.
+	// DeleteOp is the operation type for deleting a Konnect entity.
 	DeleteOp Op = "delete"
 )
 
@@ -34,9 +45,12 @@ func Create[
 ](ctx context.Context, sdk *sdkkonnectgo.SDK, logger logr.Logger, cl client.Client, e *T) (*T, error) {
 	defer logOpComplete[T, TEnt](logger, time.Now(), CreateOp, e)
 
-	switch ent := any(e).(type) { //nolint:gocritic
-	// ---------------------------------------------------------------------
-	// TODO: add other Konnect types
+	switch ent := any(e).(type) {
+	case *konnectv1alpha1.KonnectControlPlane:
+		return e, createControlPlane(ctx, sdk, logger, ent)
+
+		// ---------------------------------------------------------------------
+		// TODO: add other Konnect types
 
 	default:
 		return nil, fmt.Errorf("unsupported entity type %T", ent)
@@ -50,9 +64,12 @@ func Delete[
 ](ctx context.Context, sdk *sdkkonnectgo.SDK, logger logr.Logger, cl client.Client, e *T) error {
 	defer logOpComplete[T, TEnt](logger, time.Now(), DeleteOp, e)
 
-	switch ent := any(e).(type) { //nolint:gocritic
-	// ---------------------------------------------------------------------
-	// TODO: add other Konnect types
+	switch ent := any(e).(type) {
+	case *konnectv1alpha1.KonnectControlPlane:
+		return deleteControlPlane(ctx, sdk, logger, ent)
+
+		// ---------------------------------------------------------------------
+		// TODO: add other Konnect types
 
 	default:
 		return fmt.Errorf("unsupported entity type %T", ent)
@@ -91,9 +108,12 @@ func Update[
 
 	defer logOpComplete[T, TEnt](logger, now, UpdateOp, e)
 
-	switch ent := any(e).(type) { //nolint:gocritic
-	// ---------------------------------------------------------------------
-	// TODO: add other Konnect types
+	switch ent := any(e).(type) {
+	case *konnectv1alpha1.KonnectControlPlane:
+		return ctrl.Result{}, updateControlPlane(ctx, sdk, logger, ent)
+
+		// ---------------------------------------------------------------------
+		// TODO: add other Konnect types
 
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
@@ -110,4 +130,28 @@ func logOpComplete[
 		"type", entityTypeName[T](),
 		"konnect_id", e.GetKonnectStatus().GetKonnectID(),
 	)
+}
+
+// handleResp checks the response from the Konnect API and returns an error if
+// the response is not successful.
+// It closes the response body.
+func handleResp[T SupportedKonnectEntityType](err error, resp Response, op Op) error {
+	if err != nil {
+		return err
+	}
+	body := resp.GetRawResponse().Body
+	defer body.Close()
+	if resp.GetStatusCode() < 200 || resp.GetStatusCode() >= 400 {
+		b, err := io.ReadAll(body)
+		if err != nil {
+			var e T
+			return fmt.Errorf(
+				"failed to %s %T and failed to read response body: %w",
+				op, e, err,
+			)
+		}
+		var e T
+		return fmt.Errorf("failed to %s %T: %s", op, e, string(b))
+	}
+	return nil
 }

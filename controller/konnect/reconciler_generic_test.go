@@ -12,9 +12,11 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 func TestNewKonnectEntityReconciler(t *testing.T) {
+	testNewKonnectEntityReconciler(t, konnectv1alpha1.KonnectControlPlane{})
 	testNewKonnectEntityReconciler(t, configurationv1.KongConsumer{})
 	// GetTypeName() is missing.
 	// https://github.com/Kong/kubernetes-configuration/pull/15 fixes that.
@@ -32,13 +34,15 @@ func testNewKonnectEntityReconciler[
 ) {
 	t.Helper()
 
+	sdkFactory := NewSDKFactory()
+
 	t.Run(ent.GetTypeName(), func(t *testing.T) {
 		cl := fakectrlruntimeclient.NewFakeClient()
 		mgr, err := ctrl.NewManager(&rest.Config{}, ctrl.Options{
 			Scheme: scheme.Get(),
 		})
 		require.NoError(t, err)
-		reconciler := NewKonnectEntityReconciler[T, TEnt](ent, false, cl)
+		reconciler := NewKonnectEntityReconciler[T, TEnt](sdkFactory, false, cl)
 		require.NoError(t, reconciler.SetupWithManager(mgr))
 	})
 }
