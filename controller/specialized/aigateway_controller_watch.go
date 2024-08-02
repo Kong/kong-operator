@@ -7,7 +7,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -22,7 +22,7 @@ import (
 func (r *AIGatewayReconciler) aiGatewayHasMatchingGatewayClass(obj client.Object) bool {
 	aigateway, ok := obj.(*v1alpha1.AIGateway)
 	if !ok {
-		log.FromContext(context.Background()).Error(
+		ctrllog.FromContext(context.Background()).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run predicate function",
 			"expected", "Gateway", "found", reflect.TypeOf(obj),
@@ -49,7 +49,7 @@ func (r *AIGatewayReconciler) aiGatewayHasMatchingGatewayClass(obj client.Object
 func (r *AIGatewayReconciler) listAIGatewaysForGatewayClass(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	gatewayClass, ok := obj.(*gatewayv1.GatewayClass)
 	if !ok {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run map funcs",
 			"expected", "GatewayClass", "found", reflect.TypeOf(obj),
@@ -59,7 +59,7 @@ func (r *AIGatewayReconciler) listAIGatewaysForGatewayClass(ctx context.Context,
 
 	aigateways := new(v1alpha1.AIGatewayList)
 	if err := r.Client.List(ctx, aigateways); err != nil {
-		log.FromContext(ctx).Error(err, "could not list aigateways in map func")
+		ctrllog.FromContext(ctx).Error(err, "could not list aigateways in map func")
 		return
 	}
 

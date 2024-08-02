@@ -10,7 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -32,7 +32,7 @@ import (
 func (r *Reconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
 	gateway, ok := obj.(*gwtypes.Gateway)
 	if !ok {
-		log.FromContext(context.Background()).Error(
+		ctrllog.FromContext(context.Background()).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run predicate function",
 			"expected", "Gateway", "found", reflect.TypeOf(obj),
@@ -57,7 +57,7 @@ func (r *Reconciler) gatewayConfigurationMatchesController(obj client.Object) bo
 
 	gatewayClassList := new(gatewayv1.GatewayClassList)
 	if err := r.Client.List(ctx, gatewayClassList); err != nil {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run predicate function",
 			"expected", "GatewayClass", "found", reflect.TypeOf(obj),
@@ -100,7 +100,7 @@ func referenceGrantHasGatewayFrom(obj client.Object) bool {
 func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	gatewayClass, ok := obj.(*gatewayv1.GatewayClass)
 	if !ok {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run map funcs",
 			"expected", "GatewayClass", "found", reflect.TypeOf(obj),
@@ -110,7 +110,7 @@ func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client
 
 	gateways := new(gatewayv1.GatewayList)
 	if err := r.Client.List(ctx, gateways); err != nil {
-		log.FromContext(ctx).Error(err, "could not list gateways in map func")
+		ctrllog.FromContext(ctx).Error(err, "could not list gateways in map func")
 		return
 	}
 
@@ -129,7 +129,7 @@ func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client
 }
 
 func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj client.Object) []reconcile.Request {
-	logger := log.FromContext(ctx)
+	logger := ctrllog.FromContext(ctx)
 
 	gatewayConfig, ok := obj.(*operatorv1beta1.GatewayConfiguration)
 	if !ok {
@@ -143,7 +143,7 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 
 	gatewayClassList := new(gatewayv1.GatewayClassList)
 	if err := r.Client.List(ctx, gatewayClassList); err != nil {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			fmt.Errorf("unexpected error occurred while listing GatewayClass resources"),
 			"failed to run map funcs",
 			"error", err.Error(),
@@ -163,7 +163,7 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 
 	gatewayList := new(gatewayv1.GatewayList)
 	if err := r.Client.List(ctx, gatewayList); err != nil {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			fmt.Errorf("unexpected error occurred while listing Gateway resources"),
 			"failed to run map funcs",
 			"error", err.Error(),
@@ -188,7 +188,7 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 // listReferenceGrantsForGateway is a watch predicate which finds all Gateways mentioned in a From clause for a
 // ReferenceGrant.
 func (r *Reconciler) listReferenceGrantsForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
-	logger := log.FromContext(ctx)
+	logger := ctrllog.FromContext(ctx)
 
 	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
 	if !ok {
@@ -225,7 +225,7 @@ func (r *Reconciler) listReferenceGrantsForGateway(ctx context.Context, obj clie
 // listManagedGatewaysInNamespace is a watch predicate which finds all Gateways
 // in provided namespace.
 func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj client.Object) []reconcile.Request {
-	logger := log.FromContext(ctx)
+	logger := ctrllog.FromContext(ctx)
 
 	ns, ok := obj.(*corev1.Namespace)
 	if !ok {
@@ -271,7 +271,7 @@ func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj cli
 // listGatewaysAttachedByHTTPRoute is a watch predicate which finds all Gateways mentioned
 // in HTTPRoutes' Parents field.
 func (r *Reconciler) listGatewaysAttachedByHTTPRoute(ctx context.Context, obj client.Object) []reconcile.Request {
-	logger := log.FromContext(ctx)
+	logger := ctrllog.FromContext(ctx)
 
 	httpRoute, ok := obj.(*gatewayv1beta1.HTTPRoute)
 	if !ok {

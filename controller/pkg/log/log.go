@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
-	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/gateway-operator/modules/manager/logging"
@@ -83,7 +83,7 @@ func GetLogger(ctx context.Context, controllerName string, developmentMode bool)
 	// if development mode is active, do not add the context to the log line, as we want
 	// to have a lighter logging structure
 	if developmentMode {
-		return ctrlruntimelog.Log.WithName(controllerName)
+		return ctrllog.Log.WithName(controllerName)
 	}
-	return ctrlruntimelog.FromContext(ctx).WithName("controlplane")
+	return ctrllog.FromContext(ctx).WithName("controlplane")
 }

@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -23,7 +23,7 @@ import (
 // so that we can efficiently watch only the relevant Secrets' changes.
 func listKonnectAPIAuthConfigurationsReferencingSecret(cl client.Client) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		logger := log.FromContext(ctx)
+		logger := ctrllog.FromContext(ctx)
 
 		secret, ok := obj.(*corev1.Secret)
 		if !ok {

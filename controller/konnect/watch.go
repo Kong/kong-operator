@@ -24,7 +24,7 @@ func ReconciliationWatchOptionsForEntity[
 	case *configurationv1alpha1.KongRoute:
 		return []func(*ctrl.Builder) *ctrl.Builder{}
 	case *configurationv1alpha1.KongService:
-		return []func(*ctrl.Builder) *ctrl.Builder{}
+		return KongServiceReconciliationWatchOptions(cl)
 	case *configurationv1.KongConsumer:
 		return []func(*ctrl.Builder) *ctrl.Builder{}
 	case *konnectv1alpha1.KonnectControlPlane:

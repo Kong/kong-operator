@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/dataplane"
@@ -184,7 +184,7 @@ func EnsureCertificate[
 	cl client.Client,
 	additionalMatchingLabels client.MatchingLabels,
 ) (op.Result, *corev1.Secret, error) {
-	setCALogger(ctrlruntimelog.Log)
+	setCALogger(ctrllog.Log)
 
 	// TODO: https://github.com/Kong/gateway-operator-archive/pull/156.
 	// Use only new labels after several minor version of soak time.

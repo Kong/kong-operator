@@ -35,5 +35,13 @@ type EntityType[T SupportedKonnectEntityType] interface {
 	GetConditions() []metav1.Condition
 	SetConditions([]metav1.Condition)
 	GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
+}
+
+// EntityWithKonnectAPIAuthConfigurationRef is an interface that all Konnect entity types
+// that reference a KonnectAPIAuthConfiguration must implement.
+// More specifically Konnect's ControlPlane does implement that, while all the other
+// Konnect entities that are defined within a ControlPlane do not because their
+// KonnectAPIAuthConfigurationRef is defined in the referenced ControlPlane.
+type EntityWithKonnectAPIAuthConfigurationRef interface {
 	GetKonnectAPIAuthConfigurationRef() konnectv1alpha1.KonnectAPIAuthConfigurationRef
 }

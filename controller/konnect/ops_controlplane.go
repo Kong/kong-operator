@@ -8,8 +8,8 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	"github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/Kong/sdk-konnect-go/models/sdkerrors"
-	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -19,7 +19,6 @@ import (
 func createControlPlane(
 	ctx context.Context,
 	sdk *sdkkonnectgo.SDK,
-	logger logr.Logger, //nolint:unparam
 	cp *konnectv1alpha1.KonnectControlPlane,
 ) error {
 	resp, err := sdk.ControlPlanes.CreateControlPlane(ctx, cp.Spec.CreateControlPlaneRequest)
@@ -59,7 +58,6 @@ func createControlPlane(
 func deleteControlPlane(
 	ctx context.Context,
 	sdk *sdkkonnectgo.SDK,
-	logger logr.Logger,
 	cp *konnectv1alpha1.KonnectControlPlane,
 ) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
@@ -71,9 +69,10 @@ func deleteControlPlane(
 	if errWrap := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, DeleteOp); errWrap != nil {
 		var sdkError *sdkerrors.NotFoundError
 		if errors.As(err, &sdkError) {
-			logger.Info("entity not found in Konnect, skipping delete",
-				"op", DeleteOp, "type", cp.GetTypeName(), "id", id,
-			)
+			ctrllog.FromContext(ctx).
+				Info("entity not found in Konnect, skipping delete",
+					"op", DeleteOp, "type", cp.GetTypeName(), "id", id,
+				)
 			return nil
 		}
 		return FailedKonnectOpError[konnectv1alpha1.KonnectControlPlane]{
@@ -88,7 +87,6 @@ func deleteControlPlane(
 func updateControlPlane(
 	ctx context.Context,
 	sdk *sdkkonnectgo.SDK,
-	logger logr.Logger,
 	cp *konnectv1alpha1.KonnectControlPlane,
 ) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
@@ -107,10 +105,11 @@ func updateControlPlane(
 	resp, err := sdk.ControlPlanes.UpdateControlPlane(ctx, id, req)
 	var sdkError *sdkerrors.NotFoundError
 	if errors.As(err, &sdkError) {
-		logger.Info("entity not found in Konnect, trying to recreate",
-			"type", cp.GetTypeName(), "id", id,
-		)
-		if err := createControlPlane(ctx, sdk, logger, cp); err != nil {
+		ctrllog.FromContext(ctx).
+			Info("entity not found in Konnect, trying to recreate",
+				"type", cp.GetTypeName(), "id", id,
+			)
+		if err := createControlPlane(ctx, sdk, cp); err != nil {
 			return FailedKonnectOpError[konnectv1alpha1.KonnectControlPlane]{
 				Op:  UpdateOp,
 				Err: err,
