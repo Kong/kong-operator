@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -19,8 +20,8 @@ func init() {
 // +kubebuilder:printcolumn:name="Valid",description="The API authentication information is valid",type=string,JSONPath=`.status.conditions[?(@.type=='Valid')].status`
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this API authentication configuration belongs to.",type=string,JSONPath=`.status.organizationID`
 // +kubebuilder:printcolumn:name="ServerURL",description="Configured server URL.",type=string,JSONPath=`.status.serverURL`
-// +kubebuilder:validation:XValidation:rule="self.spec.token.startsWith('spat_') || self.spec.token.startsWith('kpat_')", message="Konnect tokens have to start with spat_ or kpat_"
-// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.token) || has(self.spec.token)", message="Token is required once set"
+// +kubebuilder:validation:XValidation:rule="self.spec.type != 'token' || (self.spec.token.startsWith('spat_') || self.spec.token.startsWith('kpat_'))", message="Konnect tokens have to start with spat_ or kpat_"
+// +kubebuilder:validation:XValidation:rule="self.spec.type != 'token' || (!has(oldSelf.spec.token) || has(self.spec.token))", message="Token is required once set"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.serverURL) || has(self.spec.serverURL)", message="Server URL is required once set"
 type KonnectAPIAuthConfiguration struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -33,11 +34,27 @@ type KonnectAPIAuthConfiguration struct {
 	Status KonnectAPIAuthConfigurationStatus `json:"status,omitempty"`
 }
 
+type KonnectAPIAuthType string
+
+const (
+	KonnectAPIAuthTypeToken     KonnectAPIAuthType = "token"
+	KonnectAPIAuthTypeSecretRef KonnectAPIAuthType = "secretRef"
+)
+
 // KonnectAPIAuthConfigurationSpec is the specification of the KonnectAPIAuthConfiguration resource.
+//
+// +kubebuilder:validation:XValidation:rule="(self.type == 'token' && has(self.token)) || (self.type == 'secretRef' && has(self.secretRef))", message="Token is required if auth type is set to token or secretRef is required if auth type is set to secretRef"
 type KonnectAPIAuthConfigurationSpec struct {
-	// Token is the Konnect token used to authenticate with the Konnect API.
 	// +kubebuilder:validation:Required
-	Token string `json:"token"`
+	// +kubebuilder:validation:Enum=token;secretRef
+	Type KonnectAPIAuthType `json:"type"`
+
+	// Token is the Konnect token used to authenticate with the Konnect API.
+	Token string `json:"token,omitempty"`
+
+	// SecretRef is a reference to a Kubernetes Secret containing the Konnect token.
+	// This secret is required to has the konghq.com/credential label set to "konnect".
+	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
 
 	// ServerURL is the URL of the Konnect server.
 	// +kubebuilder:validation:Required
