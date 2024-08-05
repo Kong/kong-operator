@@ -231,6 +231,34 @@ func ListClusterRoleBindings(
 	return clusterRoleBindingList.Items, nil
 }
 
+// ListConfigMapsForOwner is a helper function which gets a list of ConfigMaps
+// using the provided list options and reduce by OwnerReference UID to efficiently
+// list only the objects owned by the provided UID.
+func ListConfigMapsForOwner(ctx context.Context,
+	c client.Client,
+	uid types.UID,
+	listOpts ...client.ListOption,
+) ([]corev1.ConfigMap, error) {
+	configMapList := &corev1.ConfigMapList{}
+	if err := c.List(
+		ctx,
+		configMapList,
+		listOpts...,
+	); err != nil {
+		return nil, err
+	}
+
+	configMaps := make([]corev1.ConfigMap, 0)
+	for _, cm := range configMapList.Items {
+		cm := cm
+		if IsOwnedByRefUID(&cm, uid) {
+			configMaps = append(configMaps, cm)
+		}
+	}
+
+	return configMaps, nil
+}
+
 // ListSecretsForOwner is a helper function which gets a list of Secrets
 // using the provided list options and reduce by OwnerReference UID to efficiently
 // list only the objects owned by the provided UID.

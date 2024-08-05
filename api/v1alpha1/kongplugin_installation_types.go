@@ -31,7 +31,7 @@ func init() {
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName=kpi,categories=kong;all
 //+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
+//+kubebuilder:printcolumn:name="Accepted",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Accepted')].status`
 
 // KongPluginInstallation allows using a custom Kong Plugin distributed as a container image available in a registry.
 // Such a plugin can be associated with GatewayConfiguration or DataPlane to be available for particular Kong Gateway
@@ -77,6 +77,12 @@ type KongPluginInstallationStatus struct {
 	//+listMapKey=type
 	//+kubebuilder:validation:MaxItems=8
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// UnderlyingConfigMapName is the name of the ConfigMap that contains the plugin's content.
+	// It is set when the plugin is successfully fetched and unpacked.
+	//
+	//+optional
+	UnderlyingConfigMapName string `json:"underlyingConfigMapName,omitempty"`
 }
 
 // The following are KongPluginInstallation specific types for

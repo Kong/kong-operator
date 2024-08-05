@@ -9,6 +9,7 @@ resources:
 - bases/gateway-operator.konghq.com_dataplanes.yaml
 - bases/gateway-operator.konghq.com_gatewayconfigurations.yaml
 - bases/gateway-operator.konghq.com_dataplanemetricsextensions.yaml
+- bases/gateway-operator.konghq.com_kongplugininstallations.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 # patches:

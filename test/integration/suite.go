@@ -218,6 +218,7 @@ func DefaultControllerConfigForTests() manager.Config {
 	cfg.ControlPlaneControllerEnabled = true
 	cfg.DataPlaneControllerEnabled = true
 	cfg.DataPlaneBlueGreenControllerEnabled = bluegreenController
+	cfg.KongPluginInstallationControllerEnabled = true
 	cfg.AIGatewayControllerEnabled = true
 	cfg.ValidatingWebhookEnabled = webhookEnabled
 	cfg.AnonymousReports = false
