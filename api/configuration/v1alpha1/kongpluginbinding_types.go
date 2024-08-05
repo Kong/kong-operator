@@ -137,7 +137,8 @@ type EntityRef struct {
 // KongPluginBindingStatus represents the current status of the KongBinding resource.
 type KongPluginBindingStatus struct {
 	// Konnect contains the Konnect entity status.
-	Konnect KonnectEntityStatusWithControlPlaneAndServiceRefs `json:"konnect,omitempty"`
+	// +optional
+	Konnect *KonnectEntityStatusWithControlPlaneAndServiceRefs `json:"konnect,omitempty"`
 
 	// Conditions describe the status of the Konnect entity.
 	// +listType=map

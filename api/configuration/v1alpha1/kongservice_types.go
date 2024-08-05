@@ -129,7 +129,8 @@ type KongServiceAPISpec struct {
 // KongServiceStatus represents the current status of the Kong Service resource.
 type KongServiceStatus struct {
 	// Konnect contains the Konnect entity status.
-	Konnect KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
+	// +optional
+	Konnect *KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
 
 	// Conditions describe the status of the Konnect entity.
 	// +listType=map

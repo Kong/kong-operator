@@ -107,7 +107,8 @@ type KongConsumerList struct {
 // KongConsumerStatus represents the current status of the KongConsumer resource.
 type KongConsumerStatus struct {
 	// Konnect contains the Konnect entity status.
-	Konnect configurationv1alpha1.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
+	// +optional
+	Konnect *configurationv1alpha1.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
 
 	// Conditions describe the current conditions of the KongConsumer.
 	//

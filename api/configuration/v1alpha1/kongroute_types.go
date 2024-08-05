@@ -128,7 +128,8 @@ type KongRouteAPISpec struct {
 // KongRouteStatus represents the current status of the Kong Route resource.
 type KongRouteStatus struct {
 	// Konnect contains the Konnect entity status.
-	Konnect KonnectEntityStatusWithControlPlaneAndServiceRefs `json:"konnect,omitempty"`
+	// +optional
+	Konnect *KonnectEntityStatusWithControlPlaneAndServiceRefs `json:"konnect,omitempty"`
 
 	// Conditions describe the status of the Konnect entity.
 	// +listType=map
