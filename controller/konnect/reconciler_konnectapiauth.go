@@ -225,7 +225,6 @@ func getTokenFromKonnectAPIAuthConfiguration(
 	case konnectv1alpha1.KonnectAPIAuthTypeToken:
 		return apiAuth.Spec.Token, nil
 	case konnectv1alpha1.KonnectAPIAuthTypeSecretRef:
-		var secret corev1.Secret
 		nn := types.NamespacedName{
 			Namespace: apiAuth.Spec.SecretRef.Namespace,
 			Name:      apiAuth.Spec.SecretRef.Name,
@@ -234,6 +233,7 @@ func getTokenFromKonnectAPIAuthConfiguration(
 			nn.Namespace = apiAuth.Namespace
 		}
 
+		var secret corev1.Secret
 		if err := cl.Get(ctx, nn, &secret); err != nil {
 			return "", fmt.Errorf("failed to get Secret %s: %w", nn, err)
 		}
