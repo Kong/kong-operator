@@ -31,7 +31,7 @@ func init() {
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName=kpi,categories=kong;all
 //+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="Accepted",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Accepted')].status`
+//+kubebuilder:printcolumn:name="Accepted",description="The Resource is accepted",type=string,JSONPath=`.status.conditions[?(@.type=='Accepted')].status`
 
 // KongPluginInstallation allows using a custom Kong Plugin distributed as a container image available in a registry.
 // Such a plugin can be associated with GatewayConfiguration or DataPlane to be available for particular Kong Gateway
