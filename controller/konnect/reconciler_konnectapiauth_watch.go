@@ -37,7 +37,7 @@ func listKonnectAPIAuthConfigurationsReferencingSecret(cl client.Client) func(ct
 
 		var konnectAPIAuthConfigList konnectv1alpha1.KonnectAPIAuthConfigurationList
 		if err := cl.List(ctx, &konnectAPIAuthConfigList); err != nil {
-			log.FromContext(ctx).Error(
+			logger.Error(
 				fmt.Errorf("unexpected error occurred while listing KonnectAPIAuthConfiguration resources"),
 				"failed to run map funcs",
 				"error", err.Error(),
