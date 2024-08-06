@@ -46,7 +46,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 					return false
 				},
 				UpdateFunc: func(e event.UpdateEvent) bool {
-					return false
+					return true
 				},
 			},
 		)).
@@ -79,6 +79,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log.Trace(logger, "managing KongPluginInstallation resource", kpi)
 	var credentialsStore credentials.Store
 	if kpi.Spec.ImagePullSecretRef != nil {
+		log.Trace(logger, "getting secret for KongPluginInstallation resource", kpi)
 		secretNN := client.ObjectKey{
 			Namespace: kpi.Spec.ImagePullSecretRef.Namespace,
 			Name:      kpi.Spec.ImagePullSecretRef.Name,
@@ -93,26 +94,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			secretNN,
 			&secret,
 		); err != nil {
-			return ctrl.Result{}, setStatusConditionFailed(ctx, r.Client, &kpi, fmt.Sprintf("cannot retrieve secret %q, because: %s", secretNN, err))
+			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, fmt.Sprintf("cannot retrieve secret %q, because: %s", secretNN, err))
 		}
 
 		const requiredKey = ".dockerconfigjson"
 		secretData, ok := secret.Data[requiredKey]
 		if !ok {
-			return ctrl.Result{}, setStatusConditionFailed(
+			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(
 				ctx, r.Client, &kpi, fmt.Sprintf("can't parse secret %q - unexpected type, it should follow 'kubernetes.io/dockerconfigjson'", secretNN),
 			)
 		}
 		var err error
 		credentialsStore, err = image.CredentialsStoreFromString(string(secretData))
 		if err != nil {
-			return ctrl.Result{}, setStatusConditionFailed(ctx, r.Client, &kpi, fmt.Sprintf("can't parse secret: %q data: %s", secretNN, err))
+			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, fmt.Sprintf("can't parse secret: %q data: %s", secretNN, err))
 		}
 	}
 
+	log.Trace(logger, "fetch plugin for KongPluginInstallation resource", kpi)
 	plugin, err := image.FetchPluginContent(ctx, kpi.Spec.Image, credentialsStore)
 	if err != nil {
-		return ctrl.Result{}, setStatusConditionFailed(ctx, r.Client, &kpi, fmt.Sprintf("problem with the image: %q error: %s", kpi.Spec.Image, err))
+		return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, fmt.Sprintf("problem with the image: %q error: %s", kpi.Spec.Image, err))
 	}
 
 	cms, err := kubernetes.ListConfigMapsForOwner(ctx, r.Client, kpi.GetUID())
@@ -140,7 +142,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		kpi.Status.UnderlyingConfigMapName = cm.Name
 	case 1:
 		cm = cms[0]
-		cm.Name = kpi.Status.UnderlyingConfigMapName
 		cm.Data = map[string]string{
 			fmt.Sprintf("%s.lua", kpi.Name): string(plugin),
 		}
@@ -152,7 +153,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, errors.New("unexpected error happened - more than one ConfigMap found")
 	}
 
-	return ctrl.Result{}, setStatusCondition(
+	return ctrl.Result{}, setStatusConditionForKongPluginInstallation(
 		ctx, r.Client, &kpi, metav1.ConditionTrue, v1alpha1.KongPluginInstallationReasonReady, "plugin successfully saved in cluster as ConfigMap",
 	)
 }
@@ -189,11 +190,13 @@ func (r *Reconciler) listKongPluginInstallationsForSecret(ctx context.Context, o
 	return recs
 }
 
-func setStatusConditionFailed(ctx context.Context, client client.Client, kpi *v1alpha1.KongPluginInstallation, msg string) error {
-	return setStatusCondition(ctx, client, kpi, metav1.ConditionFalse, v1alpha1.KongPluginInstallationReasonFailed, msg)
+func setStatusConditionFailedForKongPluginInstallation(
+	ctx context.Context, client client.Client, kpi *v1alpha1.KongPluginInstallation, msg string,
+) error {
+	return setStatusConditionForKongPluginInstallation(ctx, client, kpi, metav1.ConditionFalse, v1alpha1.KongPluginInstallationReasonFailed, msg)
 }
 
-func setStatusCondition(
+func setStatusConditionForKongPluginInstallation(
 	ctx context.Context, client client.Client, kpi *v1alpha1.KongPluginInstallation, conditionStatus metav1.ConditionStatus, reason v1alpha1.KongPluginInstallationConditionReason, msg string,
 ) error {
 	status := metav1.Condition{
@@ -208,6 +211,10 @@ func setStatusCondition(
 		return c.Type == string(v1alpha1.KongPluginInstallationConditionStatusAccepted)
 	})
 	if found {
+		// Nothing changed, condition doesn't need to be updated.
+		if c := kpi.Status.Conditions[index]; c.Status == status.Status && c.Reason == status.Reason && c.Message == status.Message {
+			return nil
+		}
 		kpi.Status.Conditions[index] = status
 	} else {
 		kpi.Status.Conditions = append(kpi.Status.Conditions, status)

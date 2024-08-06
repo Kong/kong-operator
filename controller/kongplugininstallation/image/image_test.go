@@ -81,13 +81,6 @@ func TestFetchPluginContent(t *testing.T) {
 		require.Equal(t, string(plugin), "plugin-content\n")
 	})
 
-	t.Run("invalid image - to many layers", func(t *testing.T) {
-		_, err := image.FetchPluginContent(
-			context.Background(), registryUrl+"plugin-example/invalid-layers", nil,
-		)
-		require.ErrorContains(t, err, "expected exactly one layer with plugin, found 2 layers")
-	})
-
 	t.Run("valid image from private registry", func(t *testing.T) {
 		credentials := integration.GetKongPluginImageRegistryCredentialsForTests()
 		if credentials == "" {
@@ -104,7 +97,7 @@ func TestFetchPluginContent(t *testing.T) {
 		require.Equal(t, string(plugin), "plugin-content-private\n")
 	})
 
-	t.Run("invalid image - to many layers", func(t *testing.T) {
+	t.Run("invalid image - too many layers", func(t *testing.T) {
 		_, err := image.FetchPluginContent(
 			context.Background(), registryUrl+"plugin-example/invalid-layers", nil,
 		)
@@ -116,5 +109,12 @@ func TestFetchPluginContent(t *testing.T) {
 			context.Background(), registryUrl+"plugin-example/invalid-name", nil,
 		)
 		require.ErrorContains(t, err, `file "plugin.lua" not found in the image`)
+	})
+
+	t.Run("invalid image - invalid too big plugin", func(t *testing.T) {
+		_, err := image.FetchPluginContent(
+			context.Background(), registryUrl+"plugin-example/invalid-size", nil,
+		)
+		require.ErrorContains(t, err, "plugin size exceed 1.00 MiB")
 	})
 }

@@ -20,7 +20,7 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - description: The Resource is ready
+    - description: The Resource is accepted
       jsonPath: .status.conditions[?(@.type=='Accepted')].status
       name: Accepted
       type: string

@@ -149,7 +149,7 @@ func expectedDefaultCfg() manager.Config {
 		DataPlaneControllerEnabled:              true,
 		DataPlaneBlueGreenControllerEnabled:     true,
 		KonnectControllersEnabled:               false,
-		KongPluginInstallationControllerEnabled: true,
+		KongPluginInstallationControllerEnabled: false,
 		ValidatingWebhookEnabled:                true,
 		LoggerOpts:                              &zap.Options{},
 	}

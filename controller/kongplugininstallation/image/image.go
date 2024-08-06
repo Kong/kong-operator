@@ -73,8 +73,8 @@ func FetchPluginContent(ctx context.Context, imageURL string, credentialsStore c
 	}); err != nil {
 		return nil, fmt.Errorf("can't fetch image: %s, because: %w", imageURL, err)
 	}
-	// How to build such image is described in details,
-	// following manual results in the image with exactly one layer that contains a plugin.
+	// Image with plugin should have exactly one layer that contains a plugin with the name plugin.lua.
+	// This is requirement described in details in the documentation. Any mismatch is treated as invalid image.
 	if numOfLayers := len(layersThatMayContainPlugin); numOfLayers != 1 {
 		return nil, fmt.Errorf("expected exactly one layer with plugin, found %d layers", numOfLayers)
 	}
@@ -99,12 +99,22 @@ func CredentialsStoreFromString(s string) (credentials.Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temporary file: %w", err)
 	}
-	defer tmpFile.Close()
 	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
 	if _, err = tmpFile.WriteString(s); err != nil {
 		return nil, fmt.Errorf("failed to write credentials to file: %w", err)
 	}
 	return credentials.NewFileStore(tmpFile.Name())
+}
+
+type sizeLimitBytes int64
+
+func (sl sizeLimitBytes) int64() int64 {
+	return int64(sl)
+}
+
+func (sl sizeLimitBytes) String() string {
+	return fmt.Sprintf("%.2f MiB", float64(sl)/(1024*1024))
 }
 
 func extractKongPluginFromLayer(r io.Reader) ([]byte, error) {
@@ -115,25 +125,24 @@ func extractKongPluginFromLayer(r io.Reader) ([]byte, error) {
 
 	// The target file name for custom Kong plugin.
 	const kongPluginName = "plugin.lua"
-
 	// Search for the file walking through the archive.
-	// Limit plugin to 1MB the same as ConfigMap in Kubernetes.
-	const sizeLimit_1MiB = 1024 * 1024
-
-	for tr := tar.NewReader(io.LimitReader(gr, sizeLimit_1MiB)); ; {
+	// Size of plugin is limited to size of a ConfigMap in Kubernetes.
+	const sizeLimit_1MiB sizeLimitBytes = 1024 * 1024
+	for tr := tar.NewReader(io.LimitReader(gr, sizeLimit_1MiB.int64())); ; {
 		switch h, err := tr.Next(); {
 		case err == nil:
 			if filepath.Base(h.Name) == kongPluginName {
 				plugin := make([]byte, h.Size)
 				if _, err := io.ReadFull(tr, plugin); err != nil {
+					if errors.Is(err, io.ErrUnexpectedEOF) {
+						return nil, fmt.Errorf("plugin size exceed %s", sizeLimit_1MiB)
+					}
 					return nil, fmt.Errorf("failed to read %s from image: %w", kongPluginName, err)
 				}
 				return plugin, nil
 			}
 		case errors.Is(err, io.EOF):
 			return nil, fmt.Errorf("file %q not found in the image", kongPluginName)
-		case errors.Is(err, io.ErrUnexpectedEOF):
-			return nil, fmt.Errorf("plugin size exceed %d bytes", sizeLimit_1MiB)
 		default:
 			return nil, fmt.Errorf("unexpected error during looking for plugin: %w", err)
 		}

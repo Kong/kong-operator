@@ -22,8 +22,7 @@ spec:
             - -cluster-ca-secret-namespace=kong-system
             - -zap-log-level=debug
             - -zap-devel=true
-            - -enable-controller-gateway=true
-            - -enable-controller-controlplane=true
+            - -enable-controller-kongplugininstallation=true
             - -enable-validating-webhook=true
           name: manager
           env:
