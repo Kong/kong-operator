@@ -27,6 +27,8 @@ metadata:
   name: konnect-api-auth-secret
   namespace: default
   labels:
+    # NOTE: this label is required on Konnect credential secrets to make
+    # Secret watch efficient in the operator.
     konghq.com/credential: konnect
 stringData:
   token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
