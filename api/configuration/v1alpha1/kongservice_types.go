@@ -43,7 +43,7 @@ type KongService struct {
 	Status KongServiceStatus `json:"status,omitempty"`
 }
 
-func (c *KongService) GetKonnectStatus() *KonnectEntityStatus {
+func (c *KongService) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
 	return &c.Status.Konnect.KonnectEntityStatus
 }
 
@@ -130,7 +130,7 @@ type KongServiceAPISpec struct {
 type KongServiceStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
-	Konnect *KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
+	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
 
 	// Conditions describe the status of the Konnect entity.
 	// +listType=map

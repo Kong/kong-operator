@@ -18,6 +18,8 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // KongPluginBinding is the schema for Plugin Bindings API which defines a Kong Plugin Binding.
@@ -40,7 +42,7 @@ type KongPluginBinding struct {
 	Status KongPluginBindingStatus `json:"status,omitempty"`
 }
 
-func (c *KongPluginBinding) GetKonnectStatus() *KonnectEntityStatus {
+func (c *KongPluginBinding) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
 	return &c.Status.Konnect.KonnectEntityStatus
 }
 
@@ -138,7 +140,7 @@ type EntityRef struct {
 type KongPluginBindingStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
-	Konnect *KonnectEntityStatusWithControlPlaneAndServiceRefs `json:"konnect,omitempty"`
+	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs `json:"konnect,omitempty"`
 
 	// Conditions describe the status of the Konnect entity.
 	// +listType=map

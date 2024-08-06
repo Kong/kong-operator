@@ -62,7 +62,7 @@ type KongConsumer struct {
 	Status KongConsumerStatus `json:"status,omitempty"`
 }
 
-func (c *KongConsumer) GetKonnectStatus() *configurationv1alpha1.KonnectEntityStatus {
+func (c *KongConsumer) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
 	return &c.Status.Konnect.KonnectEntityStatus
 }
 
@@ -108,7 +108,7 @@ type KongConsumerList struct {
 type KongConsumerStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
-	Konnect *configurationv1alpha1.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
+	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
 
 	// Conditions describe the current conditions of the KongConsumer.
 	//

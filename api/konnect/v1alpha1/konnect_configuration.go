@@ -7,7 +7,7 @@ type KonnectConfiguration struct {
 	//
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="authRef is immutable"
-	APIAuthConfigurationRef KonnectAPIAuthConfigurationRef `json:"authRef,omitempty"`
+	APIAuthConfigurationRef KonnectAPIAuthConfigurationRef `json:"authRef"`
 
 	// NOTE: Place for extending the KonnectConfiguration object.
 	// This is a good place to add fields like "class" which could reference a cluster-wide

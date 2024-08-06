@@ -45,7 +45,7 @@ type KongRoute struct {
 	Status KongRouteStatus `json:"status,omitempty"`
 }
 
-func (c *KongRoute) GetKonnectStatus() *KonnectEntityStatus {
+func (c *KongRoute) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
 	return &c.Status.Konnect.KonnectEntityStatus
 }
 
@@ -129,7 +129,7 @@ type KongRouteAPISpec struct {
 type KongRouteStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
-	Konnect *KonnectEntityStatusWithControlPlaneAndServiceRefs `json:"konnect,omitempty"`
+	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs `json:"konnect,omitempty"`
 
 	// Conditions describe the status of the Konnect entity.
 	// +listType=map

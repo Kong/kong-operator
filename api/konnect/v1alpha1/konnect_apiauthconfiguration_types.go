@@ -79,13 +79,13 @@ type KonnectAPIAuthConfigurationStatus struct {
 }
 
 // GetConditions returns the Status Conditions
-func (in *KonnectAPIAuthConfigurationStatus) GetConditions() []metav1.Condition {
-	return in.Conditions
+func (in *KonnectAPIAuthConfiguration) GetConditions() []metav1.Condition {
+	return in.Status.Conditions
 }
 
 // SetConditions sets the Status Conditions
-func (in *KonnectAPIAuthConfigurationStatus) SetConditions(conditions []metav1.Condition) {
-	in.Conditions = conditions
+func (in *KonnectAPIAuthConfiguration) SetConditions(conditions []metav1.Condition) {
+	in.Status.Conditions = conditions
 }
 
 type KonnectAPIAuthConfigurationRef struct {
