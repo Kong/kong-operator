@@ -6,6 +6,7 @@ metadata:
 spec:
   type: token
   token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For complete list of available API URLs see: https://docs.konghq.com/konnect/network/
   serverURL: eu.api.konghq.com
 ---
 kind: KonnectAPIAuthConfiguration
@@ -17,6 +18,7 @@ spec:
   type: secretRef
   secretRef:
     name: konnect-api-auth-secret
+  # For complete list of available API URLs see: https://docs.konghq.com/konnect/network/
   serverURL: eu.api.konghq.com
 ---
 kind: Secret
