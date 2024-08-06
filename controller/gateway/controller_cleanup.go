@@ -64,7 +64,7 @@ func (r *Reconciler) cleanup(
 		if deletions {
 			log.Debug(logger, "deleted owned controlplanes", gateway)
 			// Return early from reconciliation, deletion will trigger a new reconcile.
-			return true, ctrl.Result{}, err
+			return true, ctrl.Result{}, nil
 		}
 	} else {
 		oldGateway := gateway.DeepCopy()
