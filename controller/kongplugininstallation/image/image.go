@@ -39,10 +39,9 @@ func FetchPluginContent(ctx context.Context, imageURL string, credentialsStore c
 	if credentialsStore != nil {
 		credentialFunc = credentials.Credential(credentialsStore)
 	}
-	httpClient := auth.DefaultClient
-	httpClient.Header = map[string][]string{"User-Agent": {metadata.Metadata().UserAgent()}}
 	registry.Client = &auth.Client{
-		Client:     httpClient.Client,
+		Client:     auth.DefaultClient.Client,
+		Header:     map[string][]string{"User-Agent": {metadata.Metadata().UserAgent()}},
 		Cache:      auth.NewCache(),
 		Credential: credentialFunc,
 	}
