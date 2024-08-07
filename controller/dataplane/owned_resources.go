@@ -120,29 +120,30 @@ func ensurePodDisruptionBudgetForDataPlane(
 	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 ) (res op.Result, pdb *policyv1.PodDisruptionBudget, err error) {
+	dpNn := client.ObjectKeyFromObject(dataplane)
 	matchingLabels := k8sresources.GetManagedLabelForOwner(dataplane)
 	pdbs, err := k8sutils.ListPodDisruptionBudgetsForOwner(ctx, cl, dataplane.Namespace, dataplane.UID, matchingLabels)
 	if err != nil {
-		return op.Noop, nil, fmt.Errorf("failed listing PodDisruptionBudgets for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		return op.Noop, nil, fmt.Errorf("failed listing PodDisruptionBudgets for DataPlane %s: %w", dpNn, err)
 	}
 
 	if dataplane.Spec.Resources.PodDisruptionBudget == nil {
 		if err := k8sreduce.ReducePodDisruptionBudgets(ctx, cl, pdbs, k8sreduce.FilterNone); err != nil {
-			return op.Noop, nil, fmt.Errorf("failed reducing PodDisruptionBudgets for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+			return op.Noop, nil, fmt.Errorf("failed reducing PodDisruptionBudgets for DataPlane %s: %w", dpNn, err)
 		}
 		return op.Noop, nil, nil
 	}
 
 	if len(pdbs) > 1 {
 		if err := k8sreduce.ReducePodDisruptionBudgets(ctx, cl, pdbs, k8sreduce.FilterPodDisruptionBudgets); err != nil {
-			return op.Noop, nil, fmt.Errorf("failed reducing PodDisruptionBudgets for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+			return op.Noop, nil, fmt.Errorf("failed reducing PodDisruptionBudgets for DataPlane %s: %w", dpNn, err)
 		}
 		return op.Noop, nil, nil
 	}
 
 	generatedPDB, err := k8sresources.GeneratePodDisruptionBudgetForDataPlane(dataplane)
 	if err != nil {
-		return op.Noop, nil, fmt.Errorf("failed generating PodDisruptionBudget for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+		return op.Noop, nil, fmt.Errorf("failed generating PodDisruptionBudget for DataPlane %s: %w", dpNn, err)
 	}
 
 	if len(pdbs) == 1 {
@@ -163,7 +164,7 @@ func ensurePodDisruptionBudgetForDataPlane(
 	}
 
 	if err := cl.Create(ctx, generatedPDB); err != nil {
-		return op.Noop, nil, fmt.Errorf("failed creating PodDisruptionBudget for DataPlane %s: %w", dataplane.Name, err)
+		return op.Noop, nil, fmt.Errorf("failed creating PodDisruptionBudget for DataPlane %s: %w", dpNn, err)
 	}
 
 	return op.Created, generatedPDB, nil

@@ -166,16 +166,16 @@ func ReduceHPAs(ctx context.Context, k8sClient client.Client, hpas []autoscaling
 	return nil
 }
 
-// +kubebuilder:rbac:groups=policy,resources=poddistruptionbudgets,verbs=delete
+// +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=delete
 
 // PDBFilterFunc filters a list of PodDisruptionBudgets.
 type PDBFilterFunc func(hpas []policyv1.PodDisruptionBudget) []policyv1.PodDisruptionBudget
 
 // ReducePodDisruptionBudgets detects the best PodDisruptionBudget in the set and deletes all the others.
 func ReducePodDisruptionBudgets(ctx context.Context, k8sClient client.Client, pdbs []policyv1.PodDisruptionBudget, filter PDBFilterFunc) error {
-	for _, hpa := range filter(pdbs) {
-		hpa := hpa
-		if err := k8sClient.Delete(ctx, &hpa); client.IgnoreNotFound(err) != nil {
+	for _, pdb := range filter(pdbs) {
+		pdb := pdb
+		if err := k8sClient.Delete(ctx, &pdb); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
