@@ -4,6 +4,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 
@@ -15,14 +16,16 @@ import (
 // the operator.
 func DataPlaneWatchBuilder(mgr ctrl.Manager) *builder.Builder {
 	return ctrl.NewControllerManagedBy(mgr).
-		// watch DataPlane objects
+		// Watch DataPlane objects.
 		For(&operatorv1beta1.DataPlane{}).
-		// watch for changes in Secrets created by the dataplane controller
+		// Watch for changes in Secrets created by the dataplane controller.
 		Owns(&corev1.Secret{}).
-		// watch for changes in Services created by the dataplane controller
+		// Watch for changes in Services created by the dataplane controller.
 		Owns(&corev1.Service{}).
-		// watch for changes in Deployments created by the dataplane controller
+		// Watch for changes in Deployments created by the dataplane controller.
 		Owns(&appsv1.Deployment{}).
-		// watch for changes in HPA created by the dataplane controller
-		Owns(&autoscalingv2.HorizontalPodAutoscaler{})
+		// Watch for changes in HPA created by the dataplane controller.
+		Owns(&autoscalingv2.HorizontalPodAutoscaler{}).
+		// Watch for changes in PodDisruptionBudgets created by the dataplane controller.
+		Owns(&policyv1.PodDisruptionBudget{})
 }

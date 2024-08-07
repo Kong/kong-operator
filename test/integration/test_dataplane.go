@@ -11,6 +11,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -816,5 +818,99 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 			return false
 		}
 		return true
+	}, time.Minute, time.Second)
+}
+
+func TestDataPlanePodDisruptionBudget(t *testing.T) {
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+
+	t.Log("deploying DataPlane resource with 2 replicas")
+	dataplaneName := types.NamespacedName{
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
+	}
+	dataplane := &operatorv1beta1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: dataplaneName.Namespace,
+			Name:      dataplaneName.Name,
+		},
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Resources: operatorv1beta1.DataPlaneResources{
+					PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
+						Spec: operatorv1beta1.PodDisruptionBudgetSpec{
+							MinAvailable: lo.ToPtr(intstr.FromInt32(1)),
+						},
+					},
+				},
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						Replicas: lo.ToPtr(int32(2)),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: helpers.GetDefaultDataPlaneImage(),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+
+	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(dataplane)
+
+	t.Log("verifying DataPlane gets marked provisioned")
+	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), time.Minute, time.Second)
+
+	t.Log("verifying deployments managed by the DataPlane")
+	deployment := &appsv1.Deployment{}
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, deployment, client.MatchingLabels{
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+	}, clients), time.Minute, time.Second)
+
+	t.Log("verifying that DataPlane has indeed 2 ready replicas")
+	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneName, clients, 2), time.Minute, time.Second)
+
+	t.Log("verifying that the PodDisruptionBudget is created")
+	pdb := policyv1.PodDisruptionBudget{}
+	require.Eventually(t, testutils.DataPlaneHasPodDisruptionBudget(t, GetCtx(), dataplane, &pdb, clients, testutils.AnyPodDisruptionBudget()), time.Minute, time.Second)
+
+	t.Log("verifying the PodDisruptionBudget status is as expected")
+	assert.EqualValues(t, 2, pdb.Status.ExpectedPods)
+	assert.EqualValues(t, 1, pdb.Status.DesiredHealthy)
+	assert.EqualValues(t, 1, pdb.Status.DisruptionsAllowed)
+
+	t.Log("changing the PodDisruptionBudget spec in DataPlane")
+	require.Eventually(t, testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+		dp.Spec.Resources.PodDisruptionBudget.Spec.MinAvailable = lo.ToPtr(intstr.FromInt32(2))
+	}), time.Minute, time.Second)
+
+	t.Log("verifying the PodDisruptionBudget status is updated accordingly")
+	require.Eventually(t, testutils.DataPlaneHasPodDisruptionBudget(t, GetCtx(), dataplane, &pdb, clients, func(pdb policyv1.PodDisruptionBudget) bool {
+		return pdb.Status.ExpectedPods == int32(2) &&
+			pdb.Status.DesiredHealthy == int32(2) &&
+			pdb.Status.DisruptionsAllowed == int32(0)
+	}), time.Minute, time.Second)
+
+	t.Log("removing the PodDisruptionBudget spec in DataPlane")
+	require.Eventually(t, testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+		dp.Spec.Resources.PodDisruptionBudget = nil
+	}), time.Minute, time.Second)
+
+	t.Log("verifying the PodDisruptionBudget is deleted")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		_, err := GetClients().K8sClient.PolicyV1().PodDisruptionBudgets(namespace.Name).Get(GetCtx(), pdb.Name, metav1.GetOptions{})
+		assert.Error(t, err)
+		assert.True(t, k8serrors.IsNotFound(err))
 	}, time.Minute, time.Second)
 }

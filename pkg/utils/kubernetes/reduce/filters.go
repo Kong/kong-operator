@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
@@ -365,6 +366,29 @@ func FilterHPAs(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.Ho
 	}
 
 	return append(hpas[:best], hpas[best+1:]...)
+}
+
+// -----------------------------------------------------------------------------
+// Filter functions - PodDisruptionBudgets
+// -----------------------------------------------------------------------------
+
+// FilterPodDisruptionBudgets filters out the PodDisruptionBudgets to be kept and returns all
+// the PodDisruptionBudgets to be deleted.
+// The filtered-out PodDisruptionBudget is decided as follows:
+// 1. creationTimestamp (older is better)
+func FilterPodDisruptionBudgets(pdbs []policyv1.PodDisruptionBudget) []policyv1.PodDisruptionBudget {
+	if len(pdbs) < 2 {
+		return nil
+	}
+
+	best := 0
+	for i, hpa := range pdbs {
+		if hpa.CreationTimestamp.Before(&pdbs[best].CreationTimestamp) {
+			best = i
+		}
+	}
+
+	return append(pdbs[:best], pdbs[best+1:]...)
 }
 
 // -----------------------------------------------------------------------------

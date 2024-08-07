@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	policyv1 "k8s.io/api/policy/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -23,7 +24,7 @@ import (
 func ApplyPatchIfNonEmpty[
 	OwnerT *operatorv1beta1.DataPlane | *operatorv1beta1.ControlPlane,
 	ResourceT interface {
-		*appsv1.Deployment | *autoscalingv2.HorizontalPodAutoscaler | *certmanagerv1.Certificate
+		*appsv1.Deployment | *autoscalingv2.HorizontalPodAutoscaler | *certmanagerv1.Certificate | *policyv1.PodDisruptionBudget
 		client.Object
 	},
 ](

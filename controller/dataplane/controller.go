@@ -204,6 +204,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
+	res, _, err = ensurePodDisruptionBudgetForDataPlane(ctx, r.Client, logger, dataplane)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("could not ensure PodDisruptionBudget for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+	if res != op.Noop {
+		log.Debug(logger, "PodDisruptionBudget created/updated", dataplane)
+		return ctrl.Result{}, nil
+	}
+
 	if res, err := ensureDataPlaneReadyStatus(ctx, r.Client, logger, dataplane, dataplane.Generation); err != nil {
 		return ctrl.Result{}, err
 	} else if res.Requeue {

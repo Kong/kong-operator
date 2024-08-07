@@ -9322,7 +9322,7 @@ spec:
                 description: |-
                   Selector contains a unique DataPlane identifier used as a deterministic
                   label selector that is used throughout its dependent resources.
-                  This is used e.g. as a label selector for DataPlane's Services and Deployments.
+                  This is used e.g. as a label selector for DataPlane's Services, Deployments and PodDisruptionBudgets.
                 maxLength: 512
                 minLength: 8
                 type: string
