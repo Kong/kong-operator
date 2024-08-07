@@ -2,7 +2,7 @@
 # Builder
 # ------------------------------------------------------------------------------
 
-FROM --platform=$BUILDPLATFORM golang:1.22.5 as builder
+FROM --platform=$BUILDPLATFORM golang:1.22.6 as builder
 
 WORKDIR /workspace
 ARG GOPATH
