@@ -36,6 +36,6 @@ type EntityType[
 	// Additional methods which are used in reconciling Konnect entities.
 	GetConditions() []metav1.Condition
 	SetConditions([]metav1.Condition)
-	GetKonnectStatus() *configurationv1alpha1.KonnectEntityStatus
+	GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
 	GetKonnectAPIAuthConfigurationRef() konnectv1alpha1.KonnectAPIAuthConfigurationRef
 }
