@@ -152,8 +152,8 @@ func ReduceNetworkPolicies(ctx context.Context, k8sClient client.Client, network
 
 // +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=delete
 
-// HPAFilterFunc filters a list of HorizontalPodAutoscalers.
-type HPAFilterFunc func(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.HorizontalPodAutoscaler
+// HPAFilterFunc filters a list of HorizontalPodAutoscalers and returns the ones that should be deleted.
+type HPAFilterFunc func([]autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.HorizontalPodAutoscaler
 
 // ReduceHPAs detects the best HorizontalPodAutoscaler in the set and deletes all the others.
 func ReduceHPAs(ctx context.Context, k8sClient client.Client, hpas []autoscalingv2.HorizontalPodAutoscaler, filter HPAFilterFunc) error {
@@ -168,8 +168,8 @@ func ReduceHPAs(ctx context.Context, k8sClient client.Client, hpas []autoscaling
 
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=delete
 
-// PDBFilterFunc filters a list of PodDisruptionBudgets.
-type PDBFilterFunc func(hpas []policyv1.PodDisruptionBudget) []policyv1.PodDisruptionBudget
+// PDBFilterFunc filters a list of PodDisruptionBudgets and returns the ones that should be deleted.
+type PDBFilterFunc func([]policyv1.PodDisruptionBudget) []policyv1.PodDisruptionBudget
 
 // ReducePodDisruptionBudgets detects the best PodDisruptionBudget in the set and deletes all the others.
 func ReducePodDisruptionBudgets(ctx context.Context, k8sClient client.Client, pdbs []policyv1.PodDisruptionBudget, filter PDBFilterFunc) error {

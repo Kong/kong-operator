@@ -604,7 +604,13 @@ func AnyPodDisruptionBudget() PodDisruptionBudgetRequirement {
 }
 
 // DataPlaneHasPodDisruptionBudget is a helper function for tests that returns a function
-// that can be used to check if a DataPlane has a PodDisruptionBudget.
+// that can be used to check if a DataPlane has a PodDisruptionBudget. It expects there is
+// only a single PodDisruptionBudget for the DataPlane with the following requirements:
+// - it is owned by the DataPlane,
+// - its `app` label matches the DP name,
+// - its `gateway-operator.konghq.com/managed-by` label is set to `dataplane`.
+// Additionally, the caller can provide a requirement function that will be used to verify
+// the PodDisruptionBudget (e.g. to check if it has an expected status).
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasPodDisruptionBudget(
 	t *testing.T,
@@ -618,14 +624,6 @@ func DataPlaneHasPodDisruptionBudget(
 	const dataplaneDeploymentAppLabel = "app"
 
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
-			dataplaneDeploymentAppLabel:          dataplane.Name,
-			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
-		})
-		if len(deployments) != 1 {
-			return false
-		}
-
 		pdbs := MustListDataPlanePodDisruptionBudgets(t, ctx, dataplane, clients, client.MatchingLabels{
 			dataplaneDeploymentAppLabel:          dataplane.Name,
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,

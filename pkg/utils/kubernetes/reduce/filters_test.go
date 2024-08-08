@@ -8,8 +8,10 @@ import (
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -985,6 +987,96 @@ func TestFilterClusterRoles(t *testing.T) {
 			filtered := filterClusterRoles(tc.clusterRoles)
 			filteredNames := lo.Map(filtered, func(w rbacv1.ClusterRole, _ int) string {
 				return w.Name
+			})
+			require.ElementsMatch(t, filteredNames, tc.expectedNames)
+		})
+	}
+}
+
+func TestFilterHPA(t *testing.T) {
+	now := time.Now()
+	testCases := []struct {
+		name          string
+		hpas          []autoscalingv2.HorizontalPodAutoscaler
+		expectedNames []string
+	}{
+		{
+			name: "the newer ones must be returned to be deleted",
+			hpas: []autoscalingv2.HorizontalPodAutoscaler{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older",
+						CreationTimestamp: metav1.NewTime(now.Add(-time.Second)),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer",
+						CreationTimestamp: metav1.NewTime(now),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer-2",
+						CreationTimestamp: metav1.NewTime(now.Add(time.Second)),
+					},
+				},
+			},
+			expectedNames: []string{"newer", "newer-2"},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			filtered := FilterHPAs(tc.hpas)
+			filteredNames := lo.Map(filtered, func(hpa autoscalingv2.HorizontalPodAutoscaler, _ int) string {
+				return hpa.Name
+			})
+			require.ElementsMatch(t, filteredNames, tc.expectedNames)
+		})
+	}
+}
+
+func TestFilterPodDisruptionBudgets(t *testing.T) {
+	now := time.Now()
+	testCases := []struct {
+		name          string
+		pdbs          []policyv1.PodDisruptionBudget
+		expectedNames []string
+	}{
+		{
+			name: "the newer ones must be returned to be deleted",
+			pdbs: []policyv1.PodDisruptionBudget{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older",
+						CreationTimestamp: metav1.NewTime(now.Add(-time.Second)),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer",
+						CreationTimestamp: metav1.NewTime(now),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer-2",
+						CreationTimestamp: metav1.NewTime(now.Add(time.Second)),
+					},
+				},
+			},
+			expectedNames: []string{"newer", "newer-2"},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			filtered := FilterPodDisruptionBudgets(tc.pdbs)
+			filteredNames := lo.Map(filtered, func(pdb policyv1.PodDisruptionBudget, _ int) string {
+				return pdb.Name
 			})
 			require.ElementsMatch(t, filteredNames, tc.expectedNames)
 		})
