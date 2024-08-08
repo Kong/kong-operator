@@ -33,19 +33,22 @@ import (
 // +kubebuilder:printcolumn:name="Plugin-kind",type=string,JSONPath=`.spec.pluginReference.kind`,description="Kind of the plugin"
 // +kubebuilder:printcolumn:name="Plugin-name",type=string,JSONPath=`.spec.pluginReference.name`,description="Name of the plugin"
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
-// +kubebuilder:validation:XValidation:rule="(has(self.spec.kong.consumerRef) && has(self.spec.kong.routeRef) && has(self.spec.kong.serviceRef) && !has(self.spec.kong.consumerGroupRef)) || (has(self.spec.kong.consumerGroupRef) && has(self.spec.kong.serviceRef) && has(self.spec.kong.routeRef) && !has(self.spec.kong.consumerRef)) || (has(self.spec.kong.consumerRef) && has(self.spec.kong.routeRef) && !has(self.spec.kong.consumerGroupRef) && !has(self.spec.kong.serviceRef)) || (has(self.spec.kong.consumerRef) && has(self.spec.kong.serviceRef) && !has(self.spec.kong.routeRef) && !has(self.spec.kong.consumerGroupRef)) || (has(self.spec.kong.consumerGroupRef) && has(self.spec.kong.routeRef) && !has(self.spec.kong.serviceRef) && !has(self.spec.kong.consumerRef)) || (has(self.spec.kong.consumerGroupRef) && has(self.spec.kong.serviceRef) && !has(self.spec.kong.consumerRef) && !has(self.spec.kong.routeRef)) || (has(self.spec.kong.routeRef) && has(self.spec.kong.serviceRef) && !has(self.spec.kong.consumerRef) && !has(self.spec.kong.consumerGroupRef)) || (has(self.spec.kong.consumerRef) && !has(self.spec.kong.serviceRef) && !has(self.spec.kong.routeRef) && !has(self.spec.kong.consumerGroupRef)) || (has(self.spec.kong.consumerGroupRef) && !has(self.spec.kong.serviceRef) && !has(self.spec.kong.routeRef) && !has(self.spec.kong.consumerRef)) || (has(self.spec.kong.routeRef) && !has(self.spec.kong.serviceRef) && !has(self.spec.kong.consumerRef) && !has(self.spec.kong.consumerGroupRef)) || (has(self.spec.kong.serviceRef) && !has(self.spec.kong.routeRef) && !has(self.spec.kong.consumerGroupRef) && !has(self.spec.kong.consumerRef))", message="The combination of entities set is not allowed"
 type KongPluginBinding struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +kubebuilder:validation:XValidation:message="When global is set, target refs cannot be used",rule="(has(self.global) && self.global == true) ? !has(self.targets) : true"
+	// +kubebuilder:validation:XValidation:message="When global is unset, target refs have to be used",rule="(!has(self.global) || self.global == false) ? has(self.targets) : true"
 	Spec   KongPluginBindingSpec   `json:"spec"`
 	Status KongPluginBindingStatus `json:"status,omitempty"`
 }
 
+// GetKonnectStatus returns the Konnect status contained in the KongPluginBinding status.
 func (c *KongPluginBinding) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
 	return &c.Status.Konnect.KonnectEntityStatus
 }
 
+// GetTypeName returns the KongPluginBinding Kind name
 func (c KongPluginBinding) GetTypeName() string {
 	return "KongPluginBinding"
 }
@@ -65,7 +68,12 @@ type KongPluginBindingSpec struct {
 	// PluginReference is a reference to the KongPlugin or KongClusterPlugin resource. It is required
 	PluginReference PluginRef `json:"pluginRef"`
 
-	// Kong contains the Kong entity references. It is possible to set multiple combinations
+	// Global can be set to automatically target all the entities in the Kong cluster. When set to true,
+	// all the services, routes and consumers in the Kong cluster are targeted by the plugin.
+	// +optional
+	Global *bool `json:"global,omitempty"`
+
+	// Targets contains the targets references. It is possible to set multiple combinations
 	// of references, as described in https://docs.konghq.com/gateway/latest/key-concepts/plugins/#precedence
 	// The complete set of allowed combinations and their order of precedence for plugins
 	// configured to multiple entities is:
@@ -81,66 +89,83 @@ type KongPluginBindingSpec struct {
 	// 9. Consumer group
 	// 10. Route
 	// 11. Service
-	// 12. Global
 	//
-	// TODO(mlavacca): we need to figure out how to deal with global plugins. By means of this new API,
-	// KongClusterPlugin can be replaced by kongPluginBindings with no Kong references. This way we'd be
-	// more coherent with the Konnect approach.
-	// https://github.com/Kong/kubernetes-configuration/issues/7
-	Kong *KongReferences `json:"kong,omitempty"`
-
-	// TODO(mlavacca): let's defer this one to the future as we are not sure about the shape we want to give it.
-	// https://github.com/Kong/kubernetes-configuration/issues/8
-	// EntityReference        *GenericEntityRef `json:"genericEntityRef,omitempty"`
+	// +optional
+	// +kubebuilder:validation:XValidation:message="The combination of entities set is not allowed",rule="(has(self.consumerRef) && has(self.routeRef) && has(self.serviceRef) && !has(self.consumerGroupRef)) || (has(self.consumerGroupRef) && has(self.serviceRef) && has(self.routeRef) && !has(self.consumerRef)) || (has(self.consumerRef) && has(self.routeRef) && !has(self.consumerGroupRef) && !has(self.serviceRef)) || (has(self.consumerRef) && has(self.serviceRef) && !has(self.routeRef) && !has(self.consumerGroupRef)) || (has(self.consumerGroupRef) && has(self.routeRef) && !has(self.serviceRef) && !has(self.consumerRef)) || (has(self.consumerGroupRef) && has(self.serviceRef) && !has(self.consumerRef) && !has(self.routeRef)) || (has(self.routeRef) && has(self.serviceRef) && !has(self.consumerRef) && !has(self.consumerGroupRef)) || (has(self.consumerRef) && !has(self.serviceRef) && !has(self.routeRef) && !has(self.consumerGroupRef)) || (has(self.consumerGroupRef) && !has(self.serviceRef) && !has(self.routeRef) && !has(self.consumerRef)) || (has(self.routeRef) && !has(self.serviceRef) && !has(self.consumerRef) && !has(self.consumerGroupRef)) || (has(self.serviceRef) && !has(self.routeRef) && !has(self.consumerGroupRef) && !has(self.consumerRef))"
+	// +kubebuilder:validation:XValidation:message="At least one entity reference must be set",rule="has(self.routeRef) || has(self.serviceRef) || has(self.consumerRef) || has(self.consumerGroupRef)"
+	// +kubebuilder:validation:XValidation:message="KongRoute can be used only when serviceRef is unset or set to KongService, and viceversa",rule="(has(self.routeRef) && self.routeRef.kind == 'KongRoute') ? (!has(self.serviceRef) || self.serviceRef.kind == 'KongService') : true"
+	Targets *KongPluginBindingTargets `json:"targets,omitempty"`
 }
 
-type KongReferences struct {
-	RouteReference         *EntityRef `json:"routeRef,omitempty"`
-	ServiceReference       *EntityRef `json:"serviceRef,omitempty"`
-	ConsumerReference      *EntityRef `json:"consumerRef,omitempty"`
-	ConsumerGroupReference *EntityRef `json:"consumerGroupRef,omitempty"`
+// KongPluginBindingTargets contains the targets references.
+type KongPluginBindingTargets struct {
+	// RouteReference can be used to reference one of the following resouces:
+	// - networking.k8s.io/Ingress
+	// - gateway.networking.k8s.io/HTTPRoute
+	// - gateway.networking.k8s.io/GRPCRoute
+	// - configuration.konghq.com/KongRoute
+	//
+	// +optional
+	// +kubebuilder:validation:XValidation:message="group/kind not allowed for the routeRef",rule="(self.kind == 'KongRoute' && self.group == 'configuration.konghq.com') || (self.kind == 'Ingress' && self.group == 'networking.k8s.io') || (self.kind == 'HTTPRoute' && self.group == 'gateway.networking.k8s.io') || (self.kind == 'GRPCRoute' && self.group == 'gateway.networking.k8s.io')"
+	RouteReference *TargetRefWithGroupKind `json:"routeRef,omitempty"`
+
+	// ServiceReference can be used to reference one of the following resouces:
+	// - core/Service or /Service
+	// - configuration.konghq.com/KongService
+	//
+	// +optional
+	// +kubebuilder:validation:XValidation:message="group/kind not allowed for the serviceRef",rule="(self.kind == 'KongService' && self.group == 'configuration.konghq.com') || (self.kind == 'Service' && (self.group == '' || self.group == 'core'))"
+	ServiceReference *TargetRefWithGroupKind `json:"serviceRef,omitempty"`
+
+	// ConsumerReference is used to reference a configuration.konghq.com/Consumer resource.
+	// The group/kind is fixed, therefore the reference is performed only by name.
+	ConsumerReference *TargetRef `json:"consumerRef,omitempty"`
+
+	// ConsumerGroupReference is used to reference a configuration.konghq.com/ConsumerGroup resource.
+	// The group/kind is fixed, therefore the reference is performed only by name.
+	ConsumerGroupReference *TargetRef `json:"consumerGroupRef,omitempty"`
 }
 
+// PluginRef is a reference to a KongPlugin or KongClusterPlugin resource.
 type PluginRef struct {
-	// TODO(mattia): What about cross-namespace references? Do we want to introduce a namespace field
-	// to allow such a reference? We could allow it and require a RefGrant.
+	// TODO(mattia): cross-namespace references are not supported yet.
 	// https://github.com/Kong/kubernetes-configuration/issues/9
 
 	// Name is the name of the KongPlugin or KongClusterPlugin resource.
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
-	// kind can be KongPlugin or KongClusterPlugin. If not set, it is assumed to be KongPlugin.
+
+	// Kind can be KongPlugin or KongClusterPlugin. If not set, it is assumed to be KongPlugin.
 	// +kubebuilder:validation:Enum=KongPlugin;KongClusterPlugin
 	// +kubebuilder:default:=KongPlugin
 	Kind *string `json:"kind,omitempty"`
 }
 
-type EntityRef struct {
+// TargetRef is a reference based on the object's name.
+type TargetRef struct {
 	// Name is the name of the entity.
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
 }
 
-// type GenericEntityRef struct {
-// 	// Name is the name of the generic entity.
-// 	// +kubebuilder:validation:Required
-// 	Name string `json:"name"`
+// TargetRefWithGroupKind is a reference based on the object's group, kind, and name.
+type TargetRefWithGroupKind struct {
+	// Name is the name of the entity.
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
 
-// 	// kind is the kind of the entity.
-// 	// +kubebuilder:validation:Enum=Service;HTTPRoute;GCPRoute;TLSRoute;TCPRoute;UDPRoute;Ingress
-// 	Kind string `json:"kind"`
+	// +kubebuilder:validation:Enum=Service;Ingress;HTTPRoute;GRPCRoute;KongService;KongRoute
+	Kind string `json:"kind"`
 
-// 	// TODO(mlavacca): add cross-field validation. Kind can be set depending on the group.
-// 	// Group is the group of the entity.
-// 	// +kubebuilder:validation:Enum="";core;gateway.networking.k8s.io;networking.k8s.io
-// 	Group string `json:"group"`
-// }
+	// +kubebuilder:validation:Enum="";core;networking.k8s.io;gateway.networking.k8s.io;configuration.konghq.com
+	Group string `json:"group"`
+}
 
 // KongPluginBindingStatus represents the current status of the KongBinding resource.
 type KongPluginBindingStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
-	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs `json:"konnect,omitempty"`
+	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
 
 	// Conditions describe the status of the Konnect entity.
 	// +listType=map
