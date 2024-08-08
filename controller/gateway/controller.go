@@ -116,8 +116,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "managing cleanup for gateway resource", gateway)
-	shouldReturnEarly, result, err := r.cleanup(ctx, logger, &gateway)
-	if err != nil || result.Requeue {
+	if shouldReturnEarly, result, err := r.cleanup(ctx, logger, &gateway); err != nil || result.Requeue {
 		return result, err
 	} else if shouldReturnEarly {
 		return ctrl.Result{}, nil

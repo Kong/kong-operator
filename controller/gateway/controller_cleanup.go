@@ -23,9 +23,19 @@ import (
 const requeueWithoutBackoff = 200 * time.Millisecond
 
 // cleanup determines whether cleanup is needed/underway for a Gateway and
-// performs all necessary cleanup steps. Namely, it cleans up resources
-// managed on behalf of the Gateway and removes the finalizers once all
-// cleanup is finished so that the garbage collector can remove the resource.
+// performs all necessary cleanup steps.
+// Namely, it cleans up resources managed on behalf of the Gateway and removes
+// the finalizers one by one, after each cleanup step is finished.
+// If the Gateway is marked for deletion, it will wait for all owned resources
+// to be deleted before removing the finalizers.
+//
+// It returns a boolean indicating whether the caller should return early
+// from the reconciliation loop, a ctrl.Result to requeue the request, and an error.
+// The caller should return early if
+//   - the requeue is set explicitly, then the ctrl.Result should be returned as is.
+//   - the error is not nil, then the error should be returned as is.
+//   - the boolean is true, then the reconciliation loop should return early without
+//     requeuing the request.
 func (r *Reconciler) cleanup(
 	ctx context.Context,
 	logger logr.Logger,
@@ -47,7 +57,7 @@ func (r *Reconciler) cleanup(
 			RequeueAfter: time.Until(gateway.DeletionTimestamp.Time),
 		}, nil
 	}
-	log.Trace(logger, "gateway is marked delete, waiting for owned resources deleted", gateway)
+	log.Trace(logger, "gateway is marked for deletion, waiting for owned resources to be deleted", gateway)
 
 	// Delete owned controlplanes.
 	// Because controlplanes have finalizers, so we only remove the finalizer
