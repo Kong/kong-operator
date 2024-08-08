@@ -41,7 +41,7 @@ func createControlPlane(
 		return errHandled
 	}
 
-	cp.Status.SetKonnectID(*resp.ControlPlane.ID)
+	cp.Status.SetKonnectID(resp.ControlPlane.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
 			KonnectEntityProgrammedConditionType,
@@ -69,8 +69,8 @@ func deleteControlPlane(
 
 	resp, err := sdk.ControlPlanes.DeleteControlPlane(ctx, id)
 	if errHandled := handleResp[konnectv1alpha1.KonnectControlPlane](err, resp, DeleteOp); errHandled != nil {
-		var sdkError *sdkerrors.SDKError
-		if errors.As(errHandled, &sdkError) && sdkError.StatusCode == 404 {
+		var sdkError *sdkerrors.NotFoundError
+		if errors.As(err, &sdkError) {
 			logger.Info("entity not found in Konnect, skipping delete",
 				"op", DeleteOp, "type", cp.GetTypeName(), "id", id,
 			)
@@ -117,7 +117,7 @@ func updateControlPlane(
 			}
 		}
 		// Create succeeded, update status.
-		cp.Status.SetKonnectID(*resp.ControlPlane.ID)
+		cp.Status.SetKonnectID(resp.ControlPlane.ID)
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				KonnectEntityProgrammedConditionType,
@@ -149,7 +149,7 @@ func updateControlPlane(
 		}
 	}
 
-	cp.Status.SetKonnectID(*resp.ControlPlane.ID)
+	cp.Status.SetKonnectID(resp.ControlPlane.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
 			KonnectEntityProgrammedConditionType,
