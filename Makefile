@@ -513,9 +513,18 @@ install: manifests kustomize install-gateway-api-crds
 	$(KUSTOMIZE) build $(KIC_CRDS_URL) | kubectl apply -f -
 	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
 
+KUBERNETES_CONFIGURATION_CRDS_PACKAGE ?= github.com/kong/kubernetes-configuration
+KUBERNETES_CONFIGURATION_CRDS_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(KUBERNETES_CONFIGURATION_CRDS_PACKAGE))
+KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_CRDS_PACKAGE)@$(KUBERNETES_CONFIGURATION_CRDS_VERSION)/config/crd
+
+# Install kubernetes-configuration CRDs into the K8s cluster specified in ~/.kube/config.
+.PHONY: install.kubernetes-configuration-crds
+install.kubernetes-configuration-crds: kustomize
+	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH) | kubectl apply -f -
+
 # Install standard and experimental CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.all
-install.all: manifests kustomize install-gateway-api-crds
+install.all: manifests kustomize install-gateway-api-crds install.kubernetes-configuration-crds
 	$(KUSTOMIZE) build $(KIC_CRDS_URL) | kubectl apply -f -
 	kubectl apply --server-side -f $(PROJECT_DIR)/config/crd/bases/
 	kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
@@ -527,10 +536,14 @@ uninstall: manifests kustomize uninstall-gateway-api-crds
 	$(KUSTOMIZE) build $(KIC_CRDS_URL) | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
+.PHONY: uninstall.kubernetes-configuration-crds
+uninstall.kubernetes-configuration-crds: kustomize
+	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH) | kubectl delete -f -
+
 # Uninstall standard and experimental CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall.all
-uninstall.all: manifests kustomize uninstall-gateway-api-crds
+uninstall.all: manifests kustomize uninstall-gateway-api-crds uninstall.kubernetes-configuration-crds
 	$(KUSTOMIZE) build $(KIC_CRDS_URL) | kubectl apply -f -
 	kubectl delete --ignore-not-found=$(ignore-not-found) -f $(PROJECT_DIR)/config/crd/bases/
 

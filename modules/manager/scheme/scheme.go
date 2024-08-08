@@ -13,18 +13,25 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // Get returns a scheme aware of all types the manager can interact with.
 func Get() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+
 	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(operatorv1beta1.AddToScheme(scheme))
+
 	utilruntime.Must(gatewayv1.Install(scheme))
 	utilruntime.Must(gatewayv1beta1.Install(scheme))
+
 	utilruntime.Must(configurationv1.AddToScheme(scheme))
-	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
 	utilruntime.Must(configurationv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
+
+	utilruntime.Must(konnectv1alpha1.AddToScheme(scheme))
+
 	return scheme
 }

@@ -1,0 +1,34 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For complete list of available API URLs see: https://docs.konghq.com/konnect/network/
+  serverURL: eu.api.konghq.com
+---
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-2
+  namespace: default
+spec:
+  type: secretRef
+  secretRef:
+    name: konnect-api-auth-secret
+  # For complete list of available API URLs see: https://docs.konghq.com/konnect/network/
+  serverURL: eu.api.konghq.com
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: konnect-api-auth-secret
+  namespace: default
+  labels:
+    # NOTE: this label is required on Konnect credential secrets to make
+    # Secret watch efficient in the operator.
+    konghq.com/credential: konnect
+stringData:
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
