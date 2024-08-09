@@ -65,7 +65,8 @@ func (c *KongPluginBinding) SetConditions(conditions []metav1.Condition) {
 
 // KongPluginBindingSpec defines specification of a KongPluginBinding.
 type KongPluginBindingSpec struct {
-	// PluginReference is a reference to the KongPlugin or KongClusterPlugin resource. It is required
+	// PluginReference is a reference to the KongPlugin or KongClusterPlugin resource.
+	// +kubebuilder:validation:XValidation:message="pluginRef name must be set",rule="self.name != ''"
 	PluginReference PluginRef `json:"pluginRef"`
 
 	// Global can be set to automatically target all the entities in the Kong cluster. When set to true,
@@ -91,9 +92,10 @@ type KongPluginBindingSpec struct {
 	// 11. Service
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:message="The combination of entities set is not allowed",rule="(has(self.consumerRef) && has(self.routeRef) && has(self.serviceRef) && !has(self.consumerGroupRef)) || (has(self.consumerGroupRef) && has(self.serviceRef) && has(self.routeRef) && !has(self.consumerRef)) || (has(self.consumerRef) && has(self.routeRef) && !has(self.consumerGroupRef) && !has(self.serviceRef)) || (has(self.consumerRef) && has(self.serviceRef) && !has(self.routeRef) && !has(self.consumerGroupRef)) || (has(self.consumerGroupRef) && has(self.routeRef) && !has(self.serviceRef) && !has(self.consumerRef)) || (has(self.consumerGroupRef) && has(self.serviceRef) && !has(self.consumerRef) && !has(self.routeRef)) || (has(self.routeRef) && has(self.serviceRef) && !has(self.consumerRef) && !has(self.consumerGroupRef)) || (has(self.consumerRef) && !has(self.serviceRef) && !has(self.routeRef) && !has(self.consumerGroupRef)) || (has(self.consumerGroupRef) && !has(self.serviceRef) && !has(self.routeRef) && !has(self.consumerRef)) || (has(self.routeRef) && !has(self.serviceRef) && !has(self.consumerRef) && !has(self.consumerGroupRef)) || (has(self.serviceRef) && !has(self.routeRef) && !has(self.consumerGroupRef) && !has(self.consumerRef))"
+	// +kubebuilder:validation:XValidation:message="Cannot set Consumer and ConsumerGroup at the same time",rule="(has(self.consumerRef) ? !has(self.consumerGroupRef) : true)"
 	// +kubebuilder:validation:XValidation:message="At least one entity reference must be set",rule="has(self.routeRef) || has(self.serviceRef) || has(self.consumerRef) || has(self.consumerGroupRef)"
-	// +kubebuilder:validation:XValidation:message="KongRoute can be used only when serviceRef is unset or set to KongService, and viceversa",rule="(has(self.routeRef) && self.routeRef.kind == 'KongRoute') ? (!has(self.serviceRef) || self.serviceRef.kind == 'KongService') : true"
+	// +kubebuilder:validation:XValidation:message="KongRoute can be used only when serviceRef is unset or set to KongService",rule="(has(self.routeRef) && self.routeRef.kind == 'KongRoute') ? (!has(self.serviceRef) || self.serviceRef.kind == 'KongService') : true"
+	// +kubebuilder:validation:XValidation:message="KongService can be used only when routeRef is unset or set to KongRoute",rule="(has(self.serviceRef) && self.serviceRef.kind == 'KongService') ? (!has(self.routeRef) || self.routeRef.kind == 'KongRoute') : true"
 	Targets *KongPluginBindingTargets `json:"targets,omitempty"`
 }
 
