@@ -34,7 +34,8 @@ import (
 // +kubebuilder:printcolumn:name="Host",type=string,JSONPath=`.spec.host`,description="Host of the service"
 // +kubebuilder:printcolumn:name="Protocol",type=string,JSONPath=`.spec.procol`,description="Protocol of the service"
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
-// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.konnect.authRef) || has(self.spec.konnect.authRef)", message="Konnect Configuration's API auth ref reference is required once set"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
+// +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when entity is already Programmed."
 type KongService struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -75,10 +76,6 @@ func (c KongService) GetTypeName() string {
 func (c *KongService) SetKonnectLabels(labels map[string]string) {
 }
 
-func (c *KongService) GetKonnectAPIAuthConfigurationRef() konnectv1alpha1.KonnectAPIAuthConfigurationRef {
-	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
-}
-
 // GetConditions returns the Status Conditions
 func (c *KongService) GetConditions() []metav1.Condition {
 	return c.Status.Conditions
@@ -94,10 +91,6 @@ type KongServiceSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this Route is associated with.
 	// +kubebuilder:validation:Required
 	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef"`
-
-	// KonnectConfiguration holds the Konnect configuration like authentication configuration.
-	// +kubebuilder:validation:Required
-	KonnectConfiguration konnectv1alpha1.KonnectConfiguration `json:"konnect,omitempty"`
 
 	KongServiceAPISpec `json:",inline"`
 }

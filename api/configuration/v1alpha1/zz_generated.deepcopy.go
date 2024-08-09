@@ -885,7 +885,6 @@ func (in *KongServiceList) DeepCopyObject() runtime.Object {
 func (in *KongServiceSpec) DeepCopyInto(out *KongServiceSpec) {
 	*out = *in
 	in.ControlPlaneRef.DeepCopyInto(&out.ControlPlaneRef)
-	out.KonnectConfiguration = in.KonnectConfiguration
 	in.KongServiceAPISpec.DeepCopyInto(&out.KongServiceAPISpec)
 }
 
