@@ -16,7 +16,7 @@ require (
 	github.com/cert-manager/cert-manager v1.15.2
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/go-logr/logr v1.4.2
-	github.com/google/go-containerregistry v0.20.1
+	github.com/google/go-containerregistry v0.20.2
 	github.com/google/uuid v1.6.0
 	github.com/kong/kubernetes-configuration v0.0.1
 	github.com/kong/kubernetes-ingress-controller/v3 v3.2.3
