@@ -24,11 +24,8 @@ type SupportedKonnectEntityType interface {
 // Separating this from SupportedKonnectEntityType allows us to use EntityType
 // where client.Object is required, since it embeds client.Object and uses pointer
 // to refer to the SupportedKonnectEntityType.
-type EntityType[
-	T SupportedKonnectEntityType,
-] interface {
+type EntityType[T SupportedKonnectEntityType] interface {
 	*T
-
 	// Kubernetes Object methods
 	GetObjectMeta() metav1.Object
 	client.Object

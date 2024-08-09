@@ -12,6 +12,7 @@ func init() {
 		TestDataPlaneBlueGreen_ResourcesNotDeletedUntilOwnerIsRemoved,
 		TestDataPlaneEssentials,
 		TestDataPlaneHorizontalScaling,
+		TestDataPlanePodDisruptionBudget,
 		TestDataPlaneUpdate,
 		TestDataPlaneValidation,
 		TestDataPlaneVolumeMounts,

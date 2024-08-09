@@ -14,6 +14,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -589,6 +590,58 @@ func DataPlaneHasServiceSecret(t *testing.T, ctx context.Context, dpNN, usingSvc
 			return true
 		}
 		return false
+	}, clients.OperatorClient)
+}
+
+// PodDisruptionBudgetRequirement is a function type used to check if a PodDisruptionBudget meets a certain requirement.
+type PodDisruptionBudgetRequirement func(policyv1.PodDisruptionBudget) bool
+
+// AnyPodDisruptionBudget returns a function that accepts any PodDisruptionBudget.
+func AnyPodDisruptionBudget() PodDisruptionBudgetRequirement {
+	return func(policyv1.PodDisruptionBudget) bool {
+		return true
+	}
+}
+
+// DataPlaneHasPodDisruptionBudget is a helper function for tests that returns a function
+// that can be used to check if a DataPlane has a PodDisruptionBudget. It expects there is
+// only a single PodDisruptionBudget for the DataPlane with the following requirements:
+// - it is owned by the DataPlane,
+// - its `app` label matches the DP name,
+// - its `gateway-operator.konghq.com/managed-by` label is set to `dataplane`.
+// Additionally, the caller can provide a requirement function that will be used to verify
+// the PodDisruptionBudget (e.g. to check if it has an expected status).
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func DataPlaneHasPodDisruptionBudget(
+	t *testing.T,
+	ctx context.Context,
+	dataplane *operatorv1beta1.DataPlane,
+	ret *policyv1.PodDisruptionBudget,
+	clients K8sClients,
+	req PodDisruptionBudgetRequirement,
+) func() bool {
+	dataplaneName := client.ObjectKeyFromObject(dataplane)
+	const dataplaneDeploymentAppLabel = "app"
+
+	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
+		pdbs := MustListDataPlanePodDisruptionBudgets(t, ctx, dataplane, clients, client.MatchingLabels{
+			dataplaneDeploymentAppLabel:          dataplane.Name,
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		})
+		if len(pdbs) != 1 {
+			return false
+		}
+
+		pdb := pdbs[0]
+		if !req(pdb) {
+			return false
+		}
+
+		if ret != nil {
+			*ret = pdb
+		}
+
+		return true
 	}, clients.OperatorClient)
 }
 

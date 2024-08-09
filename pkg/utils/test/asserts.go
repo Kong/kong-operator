@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -120,6 +121,26 @@ func MustListDataPlaneHPAs(t *testing.T, ctx context.Context, dataplane *operato
 	)
 	require.NoError(t, err)
 	return hpas
+}
+
+// MustListDataPlanePodDisruptionBudgets is a helper function for tests that
+// conveniently lists all PDBs managed by a given dataplane.
+func MustListDataPlanePodDisruptionBudgets(
+	t *testing.T,
+	ctx context.Context,
+	dataplane *operatorv1beta1.DataPlane,
+	clients K8sClients,
+	matchinglabels client.MatchingLabels,
+) []policyv1.PodDisruptionBudget {
+	pdbs, err := k8sutils.ListPodDisruptionBudgetsForOwner(
+		ctx,
+		clients.MgrClient,
+		dataplane.Namespace,
+		dataplane.UID,
+		matchinglabels,
+	)
+	require.NoError(t, err)
+	return pdbs
 }
 
 // MustListServiceEndpointSlices is a helper function for tests that

@@ -894,7 +894,7 @@ DataPlaneStatus defines the observed state of DataPlane
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions describe the status of the DataPlane. |
 | `service` _string_ | Service indicates the Service that exposes the DataPlane's configured routes |
 | `addresses` _[Address](#address) array_ | Addresses lists the addresses that have actually been bound to the DataPlane. |
-| `selector` _string_ | Selector contains a unique DataPlane identifier used as a deterministic label selector that is used throughout its dependent resources. This is used e.g. as a label selector for DataPlane's Services and Deployments. |
+| `selector` _string_ | Selector contains a unique DataPlane identifier used as a deterministic label selector that is used throughout its dependent resources. This is used e.g. as a label selector for DataPlane's Services, Deployments and PodDisruptionBudgets. |
 | `readyReplicas` _integer_ | ReadyReplicas indicates how many replicas have reported to be ready. |
 | `replicas` _integer_ | Replicas indicates how many replicas have been set for the DataPlane. |
 | `rollout` _[DataPlaneRolloutStatus](#dataplanerolloutstatus)_ | RolloutStatus contains information about the rollout. It is set only if a rollout strategy was configured in the spec. |

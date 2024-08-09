@@ -280,7 +280,7 @@ type DataPlaneStatus struct {
 
 	// Selector contains a unique DataPlane identifier used as a deterministic
 	// label selector that is used throughout its dependent resources.
-	// This is used e.g. as a label selector for DataPlane's Services and Deployments.
+	// This is used e.g. as a label selector for DataPlane's Services, Deployments and PodDisruptionBudgets.
 	//
 	// +kubebuilder:validation:MaxLength=512
 	// +kubebuilder:validation:MinLength=8

@@ -11,6 +11,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -111,6 +112,62 @@ func ensureHPAForDataPlane(
 	}
 
 	return op.Created, nil, nil
+}
+
+func ensurePodDisruptionBudgetForDataPlane(
+	ctx context.Context,
+	cl client.Client,
+	log logr.Logger,
+	dataplane *operatorv1beta1.DataPlane,
+) (res op.Result, pdb *policyv1.PodDisruptionBudget, err error) {
+	dpNn := client.ObjectKeyFromObject(dataplane)
+	matchingLabels := k8sresources.GetManagedLabelForOwner(dataplane)
+	pdbs, err := k8sutils.ListPodDisruptionBudgetsForOwner(ctx, cl, dataplane.Namespace, dataplane.UID, matchingLabels)
+	if err != nil {
+		return op.Noop, nil, fmt.Errorf("failed listing PodDisruptionBudgets for DataPlane %s: %w", dpNn, err)
+	}
+
+	if dataplane.Spec.Resources.PodDisruptionBudget == nil {
+		if err := k8sreduce.ReducePodDisruptionBudgets(ctx, cl, pdbs, k8sreduce.FilterNone); err != nil {
+			return op.Noop, nil, fmt.Errorf("failed reducing PodDisruptionBudgets for DataPlane %s: %w", dpNn, err)
+		}
+		return op.Noop, nil, nil
+	}
+
+	if len(pdbs) > 1 {
+		if err := k8sreduce.ReducePodDisruptionBudgets(ctx, cl, pdbs, k8sreduce.FilterPodDisruptionBudgets); err != nil {
+			return op.Noop, nil, fmt.Errorf("failed reducing PodDisruptionBudgets for DataPlane %s: %w", dpNn, err)
+		}
+		return op.Noop, nil, nil
+	}
+
+	generatedPDB, err := k8sresources.GeneratePodDisruptionBudgetForDataPlane(dataplane)
+	if err != nil {
+		return op.Noop, nil, fmt.Errorf("failed generating PodDisruptionBudget for DataPlane %s: %w", dpNn, err)
+	}
+
+	if len(pdbs) == 1 {
+		var updated bool
+		existingPDB := &pdbs[0]
+		oldExistingPDB := existingPDB.DeepCopy()
+
+		// Ensure that PDB's metadata is up-to-date.
+		updated, existingPDB.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingPDB.ObjectMeta, generatedPDB.ObjectMeta)
+
+		// Ensure that PDB's spec is up-to-date.
+		if !cmp.Equal(existingPDB.Spec, generatedPDB.Spec) {
+			existingPDB.Spec = generatedPDB.Spec
+			updated = true
+		}
+
+		return patch.ApplyPatchIfNonEmpty(ctx, cl, log, existingPDB, oldExistingPDB, dataplane, updated)
+	}
+
+	if err := cl.Create(ctx, generatedPDB); err != nil {
+		return op.Noop, nil, fmt.Errorf("failed creating PodDisruptionBudget for DataPlane %s: %w", dpNn, err)
+	}
+
+	return op.Created, generatedPDB, nil
 }
 
 func matchingLabelsToServiceOpt(ml client.MatchingLabels) k8sresources.ServiceOpt {

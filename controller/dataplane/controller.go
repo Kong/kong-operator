@@ -64,8 +64,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger := log.GetLogger(ctx, "dataplane", r.DevelopmentMode)
 
 	log.Trace(logger, "reconciling DataPlane resource", req)
+	dpNn := req.NamespacedName
 	dataplane := new(operatorv1beta1.DataPlane)
-	if err := r.Client.Get(ctx, req.NamespacedName, dataplane); err != nil {
+	if err := r.Client.Get(ctx, dpNn, dataplane); err != nil {
 		if k8serrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -189,8 +190,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.DevelopmentMode)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("could not build Deployment for DataPlane %s/%s: %w",
-			dataplane.Namespace, dataplane.Name, err)
+		return ctrl.Result{}, fmt.Errorf("could not build Deployment for DataPlane %s: %w",
+			dpNn, err)
 	}
 	if res != op.Noop {
 		return ctrl.Result{}, nil
@@ -201,6 +202,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 	if res != op.Noop {
+		return ctrl.Result{}, nil
+	}
+
+	res, _, err = ensurePodDisruptionBudgetForDataPlane(ctx, r.Client, logger, dataplane)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("could not ensure PodDisruptionBudget for DataPlane %s: %w", dpNn, err)
+	}
+	if res != op.Noop {
+		log.Debug(logger, "PodDisruptionBudget created/updated", dataplane)
 		return ctrl.Result{}, nil
 	}
 

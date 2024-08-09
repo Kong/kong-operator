@@ -8,6 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -81,6 +82,41 @@ func ListHPAsForOwner(
 	}
 
 	return hpas, nil
+}
+
+// ListPodDisruptionBudgetsForOwner is a helper function which gets a list of PodDisruptionBudget
+// using the provided list options and reduce by OwnerReference UID and namespace to efficiently
+// list only the objects owned by the provided UID.
+func ListPodDisruptionBudgetsForOwner(
+	ctx context.Context,
+	c client.Client,
+	namespace string,
+	uid types.UID,
+	listOpts ...client.ListOption,
+) ([]policyv1.PodDisruptionBudget, error) {
+	pdbList := &policyv1.PodDisruptionBudgetList{}
+
+	err := c.List(
+		ctx,
+		pdbList,
+		append(
+			[]client.ListOption{client.InNamespace(namespace)},
+			listOpts...,
+		)...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var pdbs []policyv1.PodDisruptionBudget
+	for _, pdb := range pdbList.Items {
+		pdb := pdb
+		if IsOwnedByRefUID(&pdb, uid) {
+			pdbs = append(pdbs, pdb)
+		}
+	}
+
+	return pdbs, nil
 }
 
 // ListServicesForOwner is a helper function which gets a list of Services

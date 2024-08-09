@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -151,14 +152,30 @@ func ReduceNetworkPolicies(ctx context.Context, k8sClient client.Client, network
 
 // +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=delete
 
-// HPAFilterFunc filters a list of HorizontalPodAutoscalers.
-type HPAFilterFunc func(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.HorizontalPodAutoscaler
+// HPAFilterFunc filters a list of HorizontalPodAutoscalers and returns the ones that should be deleted.
+type HPAFilterFunc func([]autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.HorizontalPodAutoscaler
 
 // ReduceHPAs detects the best HorizontalPodAutoscaler in the set and deletes all the others.
 func ReduceHPAs(ctx context.Context, k8sClient client.Client, hpas []autoscalingv2.HorizontalPodAutoscaler, filter HPAFilterFunc) error {
 	for _, hpa := range filter(hpas) {
 		hpa := hpa
 		if err := k8sClient.Delete(ctx, &hpa); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=delete
+
+// PDBFilterFunc filters a list of PodDisruptionBudgets and returns the ones that should be deleted.
+type PDBFilterFunc func([]policyv1.PodDisruptionBudget) []policyv1.PodDisruptionBudget
+
+// ReducePodDisruptionBudgets detects the best PodDisruptionBudget in the set and deletes all the others.
+func ReducePodDisruptionBudgets(ctx context.Context, k8sClient client.Client, pdbs []policyv1.PodDisruptionBudget, filter PDBFilterFunc) error {
+	for _, pdb := range filter(pdbs) {
+		pdb := pdb
+		if err := k8sClient.Delete(ctx, &pdb); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
