@@ -116,6 +116,7 @@ func updateControlPlane(
 				Err: err,
 			}
 		}
+		// Create succeeded, createControlPlane sets the status so no need to do this here.
 
 		return nil
 	}
