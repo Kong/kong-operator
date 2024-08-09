@@ -116,18 +116,6 @@ func updateControlPlane(
 				Err: err,
 			}
 		}
-		// Create succeeded, update status.
-		cp.Status.SetKonnectID(resp.ControlPlane.ID)
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				KonnectEntityProgrammedConditionType,
-				metav1.ConditionTrue,
-				KonnectEntityProgrammedReason,
-				"",
-				cp.GetGeneration(),
-			),
-			cp,
-		)
 
 		return nil
 	}
