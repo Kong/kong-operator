@@ -338,6 +338,7 @@ KongPluginInstallationStatus defines the observed state of KongPluginInstallatio
 | Field | Description |
 | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions describe the current conditions of this KongPluginInstallation. |
+| `underlyingConfigMapName` _string_ | UnderlyingConfigMapName is the name of the ConfigMap that contains the plugin's content. It is set when the plugin is successfully fetched and unpacked. |
 
 
 _Appears in:_

@@ -20,6 +20,7 @@ import (
 	"github.com/kong/gateway-operator/controller/dataplane"
 	"github.com/kong/gateway-operator/controller/gateway"
 	"github.com/kong/gateway-operator/controller/gatewayclass"
+	"github.com/kong/gateway-operator/controller/kongplugininstallation"
 	"github.com/kong/gateway-operator/controller/konnect"
 	"github.com/kong/gateway-operator/controller/specialized"
 	"github.com/kong/gateway-operator/internal/utils/index"
@@ -49,6 +50,8 @@ const (
 	AIGatewayControllerName = "AIGateway"
 	// KonnectAPIAuthConfigurationControllerName is the name of the KonnectAPIAuthConfiguration controller.
 	KonnectAPIAuthConfigurationControllerName = "KonnectAPIAuthConfiguration"
+	// KongPluginInstallationControllerName is the name of the KongPluginInstallation controller.
+	KongPluginInstallationControllerName = "KongPluginInstallation"
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
@@ -267,6 +270,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		AIGatewayControllerName: {
 			Enabled: c.AIGatewayControllerEnabled,
 			Controller: &specialized.AIGatewayReconciler{
+				Client:          mgr.GetClient(),
+				Scheme:          mgr.GetScheme(),
+				DevelopmentMode: c.DevelopmentMode,
+			},
+		},
+		// KongPluginInstallation controller
+		KongPluginInstallationControllerName: {
+			Enabled: c.KongPluginInstallationControllerEnabled,
+			Controller: &kongplugininstallation.Reconciler{
 				Client:          mgr.GetClient(),
 				Scheme:          mgr.GetScheme(),
 				DevelopmentMode: c.DevelopmentMode,

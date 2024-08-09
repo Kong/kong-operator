@@ -282,6 +282,12 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps/status
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
   - events
   verbs:
   - create
@@ -451,6 +457,24 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - gateway-operator.konghq.com
+  resources:
+  - kongplugininstallations
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - gateway-operator.konghq.com
+  resources:
+  - kongplugininstallations/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - gateway.networking.k8s.io
   resources:

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
@@ -174,4 +175,8 @@ func GetVolumeMountsByVolumeName(volumeMounts []corev1.VolumeMount, name string)
 		}
 	}
 	return ret
+}
+
+func GetKongPluginImageRegistryCredentialsForTests() string {
+	return os.Getenv("KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS")
 }

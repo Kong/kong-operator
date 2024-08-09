@@ -158,6 +158,7 @@ jobs:
     - name: run unit tests
       run: make test.unit
       env:
+        KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
         GOTESTSUM_JUNITFILE: "unit-tests.xml"
 
     - name: collect test coverage
@@ -250,6 +251,7 @@ jobs:
       run: make test.integration
       env:
         KONG_TEST_DISABLE_CERTMANAGER: "true"
+        KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
         WEBHOOK_ENABLED: ${{ matrix.webhook-enabled }}
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: integration-tests-webhook-enabled-${{ matrix.webhook-enabled }}.xml
@@ -353,6 +355,7 @@ jobs:
       env:
         KONG_TEST_DISABLE_CERTMANAGER: "true"
         KONG_CONTROLLER_OUT: stdout
+        KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
         GOTESTSUM_JUNITFILE: integration-tests-provision-dataplane-fail.xml
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     

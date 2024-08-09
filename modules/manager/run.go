@@ -82,7 +82,8 @@ type Config struct {
 	DataPlaneBlueGreenControllerEnabled bool
 
 	// Controllers for specialty APIs and experimental features.
-	AIGatewayControllerEnabled bool
+	AIGatewayControllerEnabled              bool
+	KongPluginInstallationControllerEnabled bool
 
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool
