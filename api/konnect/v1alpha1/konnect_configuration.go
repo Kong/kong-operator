@@ -6,7 +6,6 @@ type KonnectConfiguration struct {
 	// that should be used for this Konnect Configuration.
 	//
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="authRef is immutable"
 	APIAuthConfigurationRef KonnectAPIAuthConfigurationRef `json:"authRef"`
 
 	// NOTE: Place for extending the KonnectConfiguration object.
