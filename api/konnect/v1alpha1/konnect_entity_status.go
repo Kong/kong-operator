@@ -14,6 +14,9 @@ type KonnectEntityStatus struct {
 
 // GetOrgID returns the OrgID field of the KonnectEntityStatus struct.
 func (in *KonnectEntityStatus) GetOrgID() string {
+	if in == nil {
+		return ""
+	}
 	return in.OrgID
 }
 
@@ -24,6 +27,9 @@ func (in *KonnectEntityStatus) SetOrgID(id string) {
 
 // GetKonnectID returns the ID field of the KonnectEntityStatus struct.
 func (in *KonnectEntityStatus) GetKonnectID() string {
+	if in == nil {
+		return ""
+	}
 	return in.ID
 }
 
@@ -34,6 +40,9 @@ func (in *KonnectEntityStatus) SetKonnectID(id string) {
 
 // GetServerURL returns the server URL of the KonnectEntityStatus struct.
 func (in *KonnectEntityStatus) GetServerURL() string {
+	if in == nil {
+		return ""
+	}
 	return in.ServerURL
 }
 
@@ -47,6 +56,16 @@ type KonnectEntityStatusWithControlPlaneRef struct {
 
 	// ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with.
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
+}
+
+// SetServerURL sets the server URL of the KonnectEntityStatus struct.
+func (in *KonnectEntityStatusWithControlPlaneRef) SetControlPlaneID(id string) {
+	in.ControlPlaneID = id
+}
+
+// GetServerURL sets the server URL of the KonnectEntityStatus struct.
+func (in *KonnectEntityStatusWithControlPlaneRef) GetControlPlaneID() string {
+	return in.ControlPlaneID
 }
 
 type KonnectEntityStatusWithControlPlaneAndServiceRefs struct {
