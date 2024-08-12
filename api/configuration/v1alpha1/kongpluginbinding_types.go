@@ -97,6 +97,9 @@ type KongPluginBindingSpec struct {
 	// +kubebuilder:validation:XValidation:message="KongRoute can be used only when serviceRef is unset or set to KongService",rule="(has(self.routeRef) && self.routeRef.kind == 'KongRoute') ? (!has(self.serviceRef) || self.serviceRef.kind == 'KongService') : true"
 	// +kubebuilder:validation:XValidation:message="KongService can be used only when routeRef is unset or set to KongRoute",rule="(has(self.serviceRef) && self.serviceRef.kind == 'KongService') ? (!has(self.routeRef) || self.routeRef.kind == 'KongRoute') : true"
 	Targets *KongPluginBindingTargets `json:"targets,omitempty"`
+
+	// ControlPlaneRef is a reference to a ControlPlane this KongPluginBinding is associated with.
+	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef,omitempty"`
 }
 
 // KongPluginBindingTargets contains the targets references.
