@@ -29,16 +29,17 @@ func TestKonnectControlPlane(t *testing.T) {
 				t.Run(tc.Name, func(t *testing.T) {
 					cl := cl.KonnectControlPlanes(tc.KonnectControlPlane.Namespace)
 					kcp, err := cl.Create(ctx, &tc.KonnectControlPlane, metav1.CreateOptions{})
-					if tc.ExpectedErrorMessage == nil {
-						assert.NoError(t, err)
+					if err == nil {
 						t.Cleanup(func() {
 							assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, kcp.Name, metav1.DeleteOptions{})))
 						})
+					}
+					if tc.ExpectedErrorMessage == nil {
+						assert.NoError(t, err)
 
 						// Update the object and check if the update is allowed.
 						if tc.Update != nil {
 							tc.Update(kcp)
-
 							_, err := cl.Update(ctx, kcp, metav1.UpdateOptions{})
 							if tc.ExpectedUpdateErrorMessage != nil {
 								require.NotNil(t, err)

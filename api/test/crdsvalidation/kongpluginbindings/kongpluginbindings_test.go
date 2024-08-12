@@ -29,11 +29,13 @@ func TestKongPluginBindings(t *testing.T) {
 				t.Run(tc.Name, func(t *testing.T) {
 					cl := cl.KongPluginBindings(tc.KongPluginBinding.Namespace)
 					kpb, err := cl.Create(ctx, &tc.KongPluginBinding, metav1.CreateOptions{})
-					if tc.ExpectedErrorMessage == nil {
-						assert.NoError(t, err)
+					if err == nil {
 						t.Cleanup(func() {
 							assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, kpb.Name, metav1.DeleteOptions{})))
 						})
+					}
+					if tc.ExpectedErrorMessage == nil {
+						assert.NoError(t, err)
 					} else {
 						require.NotNil(t, err)
 						assert.Contains(t, err.Error(), *tc.ExpectedErrorMessage)
