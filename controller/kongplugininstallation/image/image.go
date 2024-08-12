@@ -120,13 +120,13 @@ func (sl sizeLimitBytes) String() string {
 }
 
 func extractKongPluginFromLayer(r io.Reader) (map[string]string, error) {
-	// The target file name expected in image with a custom Kong plugin.
+	// The target files' names expected in an image with a custom Kong plugin.
 	const (
 		kongPluginHandler = "handler.lua"
 		kongPluginSchema  = "schema.lua"
 	)
-	// Search for the file walking through the archive.
-	// Size of plugin is limited to size of a ConfigMap in Kubernetes.
+	// Search for the files walking through the archive.
+	//The size of a plugin is limited to the size of a ConfigMap in Kubernetes.
 	const sizeLimit_1MiB sizeLimitBytes = 1024 * 1024
 
 	gr, err := gzip.NewReader(r)
@@ -148,7 +148,7 @@ func extractKongPluginFromLayer(r io.Reader) (map[string]string, error) {
 			file := make([]byte, h.Size)
 			if _, err := io.ReadFull(tr, file); err != nil {
 				if errors.Is(err, io.ErrUnexpectedEOF) {
-					return nil, fmt.Errorf("plugin size exceed %s", sizeLimit_1MiB)
+					return nil, fmt.Errorf("plugin size limit of %s exceeded", sizeLimit_1MiB)
 				}
 				return nil, fmt.Errorf("failed to read %s from image: %w", fileName, err)
 			}
@@ -167,7 +167,7 @@ func extractKongPluginFromLayer(r io.Reader) (map[string]string, error) {
 		}
 	}
 	if len(missingFiles) > 0 {
-		return nil, fmt.Errorf("not found in the image required files: %s", strings.Join(missingFiles, ", "))
+		return nil, fmt.Errorf("required files not found in the image: %s", strings.Join(missingFiles, ", "))
 	}
 
 	return pluginFiles, nil
