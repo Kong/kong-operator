@@ -27,6 +27,8 @@ import (
 	dataplanevalidator "github.com/kong/gateway-operator/internal/validation/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 const (
@@ -48,10 +50,14 @@ const (
 	DataPlaneOwnedDeploymentFinalizerControllerName = "DataPlaneOwnedDeploymentFinalizer"
 	// AIGatewayControllerName is the name of the GatewayClass controller.
 	AIGatewayControllerName = "AIGateway"
-	// KonnectAPIAuthConfigurationControllerName is the name of the KonnectAPIAuthConfiguration controller.
-	KonnectAPIAuthConfigurationControllerName = "KonnectAPIAuthConfiguration"
+
 	// KongPluginInstallationControllerName is the name of the KongPluginInstallation controller.
 	KongPluginInstallationControllerName = "KongPluginInstallation"
+
+	// KonnectAPIAuthConfigurationControllerName is the name of the KonnectAPIAuthConfiguration controller.
+	KonnectAPIAuthConfigurationControllerName = "KonnectAPIAuthConfiguration"
+	// KonnectControlPlaneControllerName is the name of the KonnectControlPlane controller.
+	KonnectControlPlaneControllerName = "KonnectControlPlane"
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
@@ -289,9 +295,18 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
 		sdkFactory := konnect.NewSDKFactory()
+
 		controllers[KonnectAPIAuthConfigurationControllerName] = ControllerDef{
 			Enabled: c.KonnectControllersEnabled,
 			Controller: konnect.NewKonnectAPIAuthConfigurationReconciler(
+				sdkFactory,
+				c.DevelopmentMode,
+				mgr.GetClient(),
+			),
+		}
+		controllers[KonnectControlPlaneControllerName] = ControllerDef{
+			Enabled: c.KonnectControllersEnabled,
+			Controller: konnect.NewKonnectEntityReconciler[konnectv1alpha1.KonnectControlPlane](
 				sdkFactory,
 				c.DevelopmentMode,
 				mgr.GetClient(),

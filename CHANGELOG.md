@@ -31,10 +31,17 @@
   [#387](https://github.com/Kong/gateway-operator/pull/387)
 - Introduce `KongPluginInstallation` CRD to allow installing custom Kong
   plugins distributed as container images.
-  [400](https://github.com/Kong/gateway-operator/pull/400), [424](https://github.com/Kong/gateway-operator/pull/424)
+  [#400](https://github.com/Kong/gateway-operator/pull/400), [#424](https://github.com/Kong/gateway-operator/pull/424)
 - Extended `DataPlane` API with a possibility to specify `PodDisruptionBudget` to be
   created for the `DataPlane` deployments via `spec.resources.podDisruptionBudget`.
   [#464](https://github.com/Kong/gateway-operator/pull/464)
+- Add `KonnectAPIAuthConfiguration` reconciler.
+  [#456](https://github.com/Kong/gateway-operator/pull/456)
+- Add support for Konnect tokens in `Secrets` in `KonnectAPIAuthConfiguration`
+  reconciler.
+  [#459](https://github.com/Kong/gateway-operator/pull/459)
+- Add `KonnectControlPlane` reconciler.
+  [#462](https://github.com/Kong/gateway-operator/pull/462)
 
 ### Fixed
 

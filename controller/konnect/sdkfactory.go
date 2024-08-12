@@ -28,6 +28,6 @@ func (f sdkFactory) NewKonnectSDK(serverURL string, token SDKToken) *sdkkonnectg
 				PersonalAccessToken: sdkkonnectgo.String(string(token)),
 			},
 		),
-		sdkkonnectgo.WithServerURL("https://"+serverURL),
+		sdkkonnectgo.WithServerURL(serverURL),
 	)
 }
