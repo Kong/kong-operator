@@ -417,6 +417,9 @@ func getControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	}
 }
 
+// handleControlPlaneRef handles the ControlPlaneRef for the given entity.
+// It sets the owner reference to the referenced ControlPlane and updates the
+// status of the entity based on the referenced ControlPlane status.
 func handleControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	ctx context.Context,
 	cl client.Client,
