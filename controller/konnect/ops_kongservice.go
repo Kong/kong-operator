@@ -37,18 +37,18 @@ func createService(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errHandled := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, CreateOp); errHandled != nil {
+	if errWrapped := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, CreateOp); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToCreate",
-				errHandled.Error(),
+				errWrapped.Error(),
 				svc.GetGeneration(),
 			),
 			svc,
 		)
-		return errHandled
+		return errWrapped
 	}
 
 	svc.Status.Konnect.SetKonnectID(*resp.Service.ID)
@@ -111,18 +111,18 @@ func updateService(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errHandled := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongService](err, UpdateOp); errHandled != nil {
+	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongService](err, UpdateOp); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToCreate",
-				errHandled.Error(),
+				errWrapped.Error(),
 				svc.GetGeneration(),
 			),
 			svc,
 		)
-		return errHandled
+		return errWrapped
 	}
 
 	svc.Status.Konnect.SetKonnectID(*resp.Service.ID)
@@ -152,9 +152,9 @@ func deleteService(
 	}
 
 	_, err := sdk.Services.DeleteService(ctx, svc.Status.Konnect.ControlPlaneID, id)
-	if errHandled := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongService](err, DeleteOp); errHandled != nil {
-		var sdkError *sdkerrors.SDKError
-		if errors.As(errHandled, &sdkError) && sdkError.StatusCode == 404 {
+	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongService](err, DeleteOp); errWrapped != nil {
+		var sdkError *sdkerrors.NotFoundError
+		if errors.As(errWrapped, &sdkError) {
 			ctrllog.FromContext(ctx).
 				Info("entity not found in Konnect, skipping delete",
 					"op", DeleteOp, "type", svc.GetTypeName(), "id", id,
@@ -163,7 +163,7 @@ func deleteService(
 		}
 		return FailedKonnectOpError[configurationv1alpha1.KongService]{
 			Op:  DeleteOp,
-			Err: errHandled,
+			Err: errWrapped,
 		}
 	}
 
