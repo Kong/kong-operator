@@ -59,26 +59,26 @@ func TestCredentialsStoreFromString(t *testing.T) {
 
 func TestFetchPluginContent(t *testing.T) {
 	t.Run("invalid image URL", func(t *testing.T) {
-		_, err := image.FetchPluginContent(context.Background(), "foo bar", nil)
+		_, err := image.FetchPlugin(context.Background(), "foo bar", nil)
 		require.ErrorContains(t, err, "unexpected format of image url: could not parse reference: foo bar")
 	})
 
 	const registryUrl = "northamerica-northeast1-docker.pkg.dev/k8s-team-playground/"
 
 	t.Run("valid image (Docker format)", func(t *testing.T) {
-		plugin, err := image.FetchPluginContent(
-			context.Background(), registryUrl+"plugin-example/valid", nil,
+		plugin, err := image.FetchPlugin(
+			context.Background(), registryUrl+"plugin-example/valid:0.1.0", nil,
 		)
 		require.NoError(t, err)
-		require.Equal(t, string(plugin), "plugin-content\n")
+		requireExpectedContent(t, plugin)
 	})
 
 	t.Run("valid image (OCI format)", func(t *testing.T) {
-		plugin, err := image.FetchPluginContent(
-			context.Background(), registryUrl+"plugin-example/valid-oci", nil,
+		plugin, err := image.FetchPlugin(
+			context.Background(), registryUrl+"plugin-example/valid-oci:0.1.0", nil,
 		)
 		require.NoError(t, err)
-		require.Equal(t, string(plugin), "plugin-content\n")
+		requireExpectedContent(t, plugin)
 	})
 
 	t.Run("valid image from private registry", func(t *testing.T) {
@@ -90,31 +90,65 @@ func TestFetchPluginContent(t *testing.T) {
 		credsStore, err := image.CredentialsStoreFromString(credentials)
 		require.NoError(t, err)
 
-		plugin, err := image.FetchPluginContent(
-			context.Background(), registryUrl+"plugin-example-private/valid:v1.0", credsStore,
+		plugin, err := image.FetchPlugin(
+			context.Background(), registryUrl+"plugin-example-private/valid:0.1.0", credsStore,
 		)
 		require.NoError(t, err)
-		require.Equal(t, string(plugin), "plugin-content-private\n")
+		requireExpectedContentPrivate(t, plugin)
 	})
 
 	t.Run("invalid image - too many layers", func(t *testing.T) {
-		_, err := image.FetchPluginContent(
+		_, err := image.FetchPlugin(
 			context.Background(), registryUrl+"plugin-example/invalid-layers", nil,
 		)
 		require.ErrorContains(t, err, "expected exactly one layer with plugin, found 2 layers")
 	})
 
-	t.Run("invalid image - invalid name of plugin inside of it", func(t *testing.T) {
-		_, err := image.FetchPluginContent(
+	t.Run("invalid image - invalid names of files", func(t *testing.T) {
+		_, err := image.FetchPlugin(
 			context.Background(), registryUrl+"plugin-example/invalid-name", nil,
 		)
-		require.ErrorContains(t, err, `file "plugin.lua" not found in the image`)
+		require.ErrorContains(t, err, `file "add-header.lua" is unexpected, required files are handler.lua and schema.lua`)
 	})
 
-	t.Run("invalid image - invalid too big plugin", func(t *testing.T) {
-		_, err := image.FetchPluginContent(
-			context.Background(), registryUrl+"plugin-example/invalid-size", nil,
+	t.Run("invalid image - missing file", func(t *testing.T) {
+		_, err := image.FetchPlugin(
+			context.Background(), registryUrl+"plugin-example/missing-file", nil,
 		)
-		require.ErrorContains(t, err, "plugin size exceed 1.00 MiB")
+		require.ErrorContains(t, err, `required files not found in the image: schema.lua`)
 	})
+
+	// Single file - handler.lua is over 1 MiB.
+	t.Run("invalid image - invalid too big plugin (size of single file)", func(t *testing.T) {
+		_, err := image.FetchPlugin(
+			context.Background(), registryUrl+"plugin-example/invalid-size-one", nil,
+		)
+		require.ErrorContains(t, err, "plugin size limit of 1.00 MiB exceeded")
+	})
+
+	// Each file is 512 KiB so together they are 1 MiB.
+	t.Run("invalid image - invalid too big plugin (size of files combined)", func(t *testing.T) {
+		_, err := image.FetchPlugin(
+			context.Background(), registryUrl+"plugin-example/invalid-size-combined", nil,
+		)
+		require.ErrorContains(t, err, "plugin size limit of 1.00 MiB exceeded")
+	})
+}
+
+func requireExpectedContent(t *testing.T, actual map[string]string) {
+	t.Helper()
+	require.Len(t, actual, 2)
+	require.Equal(t, map[string]string{
+		"handler.lua": "handler-content\n",
+		"schema.lua":  "schema-content\n",
+	}, actual)
+}
+
+func requireExpectedContentPrivate(t *testing.T, actual map[string]string) {
+	t.Helper()
+	require.Len(t, actual, 2)
+	require.Equal(t, map[string]string{
+		"handler.lua": "handler-content-private\n",
+		"schema.lua":  "schema-content-private\n",
+	}, actual)
 }
