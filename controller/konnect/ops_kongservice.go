@@ -29,22 +29,10 @@ func createService(
 		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", svc, client.ObjectKeyFromObject(svc))
 	}
 
-	resp, err := sdk.Services.CreateService(ctx, svc.Status.Konnect.ControlPlaneID, sdkkonnectgocomp.ServiceInput{
-		URL:            svc.Spec.KongServiceAPISpec.URL,
-		ConnectTimeout: svc.Spec.KongServiceAPISpec.ConnectTimeout,
-		Enabled:        svc.Spec.KongServiceAPISpec.Enabled,
-		Host:           svc.Spec.KongServiceAPISpec.Host,
-		Name:           svc.Spec.KongServiceAPISpec.Name,
-		Path:           svc.Spec.KongServiceAPISpec.Path,
-		Port:           svc.Spec.KongServiceAPISpec.Port,
-		Protocol:       svc.Spec.KongServiceAPISpec.Protocol,
-		ReadTimeout:    svc.Spec.KongServiceAPISpec.ReadTimeout,
-		Retries:        svc.Spec.KongServiceAPISpec.Retries,
-		Tags:           svc.Spec.KongServiceAPISpec.Tags,
-		TLSVerify:      svc.Spec.KongServiceAPISpec.TLSVerify,
-		TLSVerifyDepth: svc.Spec.KongServiceAPISpec.TLSVerifyDepth,
-		WriteTimeout:   svc.Spec.KongServiceAPISpec.WriteTimeout,
-	})
+	resp, err := sdk.Services.CreateService(ctx,
+		svc.Status.Konnect.ControlPlaneID,
+		kongServiceToSDKServiceInput(svc),
+	)
 
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
@@ -112,26 +100,13 @@ func updateService(
 		)
 	}
 
-	resp, err := sdk.Services.UpsertService(ctx, sdkkonnectgoops.UpsertServiceRequest{
-		ControlPlaneID: cp.Status.ID,
-		ServiceID:      svc.GetKonnectStatus().GetKonnectID(),
-		Service: sdkkonnectgocomp.ServiceInput{
-			URL:            svc.Spec.KongServiceAPISpec.URL,
-			ConnectTimeout: svc.Spec.KongServiceAPISpec.ConnectTimeout,
-			Enabled:        svc.Spec.KongServiceAPISpec.Enabled,
-			Host:           svc.Spec.KongServiceAPISpec.Host,
-			Name:           svc.Spec.KongServiceAPISpec.Name,
-			Path:           svc.Spec.KongServiceAPISpec.Path,
-			Port:           svc.Spec.KongServiceAPISpec.Port,
-			Protocol:       svc.Spec.KongServiceAPISpec.Protocol,
-			ReadTimeout:    svc.Spec.KongServiceAPISpec.ReadTimeout,
-			Retries:        svc.Spec.KongServiceAPISpec.Retries,
-			Tags:           svc.Spec.KongServiceAPISpec.Tags,
-			TLSVerify:      svc.Spec.KongServiceAPISpec.TLSVerify,
-			TLSVerifyDepth: svc.Spec.KongServiceAPISpec.TLSVerifyDepth,
-			WriteTimeout:   svc.Spec.KongServiceAPISpec.WriteTimeout,
+	resp, err := sdk.Services.UpsertService(ctx,
+		sdkkonnectgoops.UpsertServiceRequest{
+			ControlPlaneID: cp.Status.ID,
+			ServiceID:      svc.GetKonnectStatus().GetKonnectID(),
+			Service:        kongServiceToSDKServiceInput(svc),
 		},
-	})
+	)
 
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
@@ -193,4 +168,25 @@ func deleteService(
 	}
 
 	return nil
+}
+
+func kongServiceToSDKServiceInput(
+	svc *configurationv1alpha1.KongService,
+) sdkkonnectgocomp.ServiceInput {
+	return sdkkonnectgocomp.ServiceInput{
+		URL:            svc.Spec.KongServiceAPISpec.URL,
+		ConnectTimeout: svc.Spec.KongServiceAPISpec.ConnectTimeout,
+		Enabled:        svc.Spec.KongServiceAPISpec.Enabled,
+		Host:           svc.Spec.KongServiceAPISpec.Host,
+		Name:           svc.Spec.KongServiceAPISpec.Name,
+		Path:           svc.Spec.KongServiceAPISpec.Path,
+		Port:           svc.Spec.KongServiceAPISpec.Port,
+		Protocol:       svc.Spec.KongServiceAPISpec.Protocol,
+		ReadTimeout:    svc.Spec.KongServiceAPISpec.ReadTimeout,
+		Retries:        svc.Spec.KongServiceAPISpec.Retries,
+		Tags:           svc.Spec.KongServiceAPISpec.Tags,
+		TLSVerify:      svc.Spec.KongServiceAPISpec.TLSVerify,
+		TLSVerifyDepth: svc.Spec.KongServiceAPISpec.TLSVerifyDepth,
+		WriteTimeout:   svc.Spec.KongServiceAPISpec.WriteTimeout,
+	}
 }
