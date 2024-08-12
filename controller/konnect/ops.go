@@ -3,8 +3,6 @@ package konnect
 import (
 	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"time"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
@@ -23,7 +21,6 @@ import (
 type Response interface {
 	GetContentType() string
 	GetStatusCode() int
-	GetRawResponse() *http.Response
 }
 
 // Op is the type for the operation type of a Konnect entity.
@@ -132,26 +129,17 @@ func logOpComplete[
 	)
 }
 
-// handleResp checks the response from the Konnect API and returns an error if
-// the response is not successful.
-// It closes the response body.
-func handleResp[T SupportedKonnectEntityType](err error, resp Response, op Op) error {
+// wrapErrIfKonnectOpFailed checks the response from the Konnect API and returns a uniform
+// error for all Konnect entities if the operation failed.
+func wrapErrIfKonnectOpFailed[
+	T SupportedKonnectEntityType,
+	TEnt EntityType[T],
+](err error, op Op) error {
 	if err != nil {
-		return err
-	}
-	body := resp.GetRawResponse().Body
-	defer body.Close()
-	if resp.GetStatusCode() < 200 || resp.GetStatusCode() >= 400 {
-		b, err := io.ReadAll(body)
-		if err != nil {
-			var e T
-			return fmt.Errorf(
-				"failed to %s %T and failed to read response body: %w",
-				op, e, err,
-			)
-		}
-		var e T
-		return fmt.Errorf("failed to %s %T: %s", op, e, string(b))
+		var e TEnt
+		return fmt.Errorf("failed to %s for %T %q: %w",
+			op, client.ObjectKeyFromObject(e), e, err,
+		)
 	}
 	return nil
 }

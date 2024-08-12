@@ -27,18 +27,18 @@ func createControlPlane(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
-	if errHandled := handleResp[konnectv1alpha1.KonnectControlPlane](err, resp, CreateOp); errHandled != nil {
+	if errWrap := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, CreateOp); errWrap != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToCreate",
-				errHandled.Error(),
+				errWrap.Error(),
 				cp.GetGeneration(),
 			),
 			cp,
 		)
-		return errHandled
+		return errWrap
 	}
 
 	cp.Status.SetKonnectID(resp.ControlPlane.ID)
@@ -67,8 +67,8 @@ func deleteControlPlane(
 		return fmt.Errorf("can't remove %T without a Konnect ID", cp)
 	}
 
-	resp, err := sdk.ControlPlanes.DeleteControlPlane(ctx, id)
-	if errHandled := handleResp[konnectv1alpha1.KonnectControlPlane](err, resp, DeleteOp); errHandled != nil {
+	_, err := sdk.ControlPlanes.DeleteControlPlane(ctx, id)
+	if errWrap := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, DeleteOp); errWrap != nil {
 		var sdkError *sdkerrors.NotFoundError
 		if errors.As(err, &sdkError) {
 			logger.Info("entity not found in Konnect, skipping delete",
@@ -78,7 +78,7 @@ func deleteControlPlane(
 		}
 		return FailedKonnectOpError[konnectv1alpha1.KonnectControlPlane]{
 			Op:  DeleteOp,
-			Err: errHandled,
+			Err: errWrap,
 		}
 	}
 
@@ -121,20 +121,20 @@ func updateControlPlane(
 		return nil
 	}
 
-	if errHandled := handleResp[konnectv1alpha1.KonnectControlPlane](err, resp, UpdateOp); errHandled != nil {
+	if errWrap := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, UpdateOp); errWrap != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToUpdate",
-				errHandled.Error(),
+				errWrap.Error(),
 				cp.GetGeneration(),
 			),
 			cp,
 		)
 		return FailedKonnectOpError[konnectv1alpha1.KonnectControlPlane]{
 			Op:  UpdateOp,
-			Err: errHandled,
+			Err: errWrap,
 		}
 	}
 
