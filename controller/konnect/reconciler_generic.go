@@ -454,7 +454,7 @@ func handleControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 		}
 
 		cond, ok := k8sutils.GetCondition(KonnectEntityProgrammedConditionType, &cp)
-		if !ok || cond.Status != metav1.ConditionTrue /*|| cond.ObservedGeneration != cp.GetGeneration() */ {
+		if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
 			if res, errStatus := updateStatusWithCondition(
 				ctx, cl, ent,
 				ControlPlaneRefValidConditionType,
