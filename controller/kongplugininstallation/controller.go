@@ -129,7 +129,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			&secret,
 		); err != nil {
 			if k8serrors.IsNotFound(err) {
-				return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, fmt.Sprintf("cannot retrieve secret %q, because: %s", secretNN, err))
+				return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, fmt.Sprintf("referenced Secret %q not found", secretNN))
 			}
 			return ctrl.Result{}, fmt.Errorf("something unexpected during fetching secret %s: %w", secretNN, err)
 		}

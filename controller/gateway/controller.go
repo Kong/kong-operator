@@ -441,7 +441,7 @@ func (r *Reconciler) provisionDataPlane(
 	// if not configured in gatewayconfiguration, compare deployment option of dataplane with an empty one.
 	expectedDataPlaneOptions := &operatorv1beta1.DataPlaneOptions{}
 	if gatewayConfig.Spec.DataPlaneOptions != nil {
-		expectedDataPlaneOptions = gatewayConfigDataPlaneOptionsToDataPlaneOptions(*gatewayConfig.Spec.DataPlaneOptions)
+		expectedDataPlaneOptions = gatewayConfigDataPlaneOptionsToDataPlaneOptions(gatewayConfig.Namespace, *gatewayConfig.Spec.DataPlaneOptions)
 	}
 	// Don't require setting defaults for DataPlane when using Gateway CRD.
 	setDataPlaneOptionsDefaults(expectedDataPlaneOptions, r.DefaultDataPlaneImage)

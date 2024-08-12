@@ -18,14 +18,16 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	configurationclient "github.com/kong/kubernetes-configuration/pkg/clientset"
 )
 
 // K8sClients is a struct that contains all the Kubernetes clients needed by the tests.
 type K8sClients struct {
-	K8sClient      *kubernetesclient.Clientset
-	OperatorClient *operatorclient.Clientset
-	GatewayClient  *gatewayclient.Clientset
-	MgrClient      ctrlruntimeclient.Client
+	K8sClient           *kubernetesclient.Clientset
+	OperatorClient      *operatorclient.Clientset
+	GatewayClient       *gatewayclient.Clientset
+	ConfigurationClient *configurationclient.Clientset
+	MgrClient           ctrlruntimeclient.Client
 }
 
 // NewK8sClients returns a new K8sClients struct with all the clients needed by the tests.
@@ -42,6 +44,11 @@ func NewK8sClients(env environments.Environment) (K8sClients, error) {
 	if err != nil {
 		return clients, err
 	}
+	clients.ConfigurationClient, err = configurationclient.NewForConfig(env.Cluster().Config())
+	if err != nil {
+		return clients, err
+	}
+
 	clients.MgrClient, err = ctrlruntimeclient.New(env.Cluster().Config(), ctrlruntimeclient.Options{})
 	if err != nil {
 		return clients, err
