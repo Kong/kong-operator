@@ -49,7 +49,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 
 	t.Log("updating KongPluginInstallation resource to a valid image")
 	kpi, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Get(GetCtx(), kpiNN.Name, metav1.GetOptions{})
-	kpi.Spec.Image = registryUrl + "plugin-example/valid"
+	kpi.Spec.Image = registryUrl + "plugin-example/valid:0.1.0"
 	require.NoError(t, err)
 	_, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Update(GetCtx(), kpi, metav1.UpdateOptions{})
 	require.NoError(t, err)
@@ -71,7 +71,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 			return
 		}
 	}, 15*time.Second, time.Second)
-	checkContentOfRespectiveCM(t, respectiveCM, kpiNN.Name, "plugin-content\n")
+	require.Equal(t, pluginExpectedContent(), respectiveCM.Data)
 
 	t.Log("delete respective ConfigMap to check if it will be recreated")
 	var respectiveCMName = respectiveCM.Name
@@ -83,12 +83,12 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 		recreatedCM, err = GetClients().K8sClient.CoreV1().ConfigMaps(kpiNN.Namespace).Get(GetCtx(), respectiveCMName, metav1.GetOptions{})
 		assert.NoError(c, err)
 	}, 15*time.Second, time.Second)
-	checkContentOfRespectiveCM(t, *recreatedCM, kpiNN.Name, "plugin-content\n")
+	require.Equal(t, pluginExpectedContent(), recreatedCM.Data)
 
 	if registryCreds := GetKongPluginImageRegistryCredentialsForTests(); registryCreds != "" {
 		t.Log("update KongPluginInstallation resource to a private image")
 		kpi, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Get(GetCtx(), kpiNN.Name, metav1.GetOptions{})
-		kpi.Spec.Image = registryUrl + "plugin-example-private/valid:v1.0"
+		kpi.Spec.Image = registryUrl + "plugin-example-private/valid:0.1.0"
 		require.NoError(t, err)
 		_, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Update(GetCtx(), kpi, metav1.UpdateOptions{})
 		require.NoError(t, err)
@@ -128,7 +128,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			updatedCM, err = GetClients().K8sClient.CoreV1().ConfigMaps(kpiNN.Namespace).Get(GetCtx(), respectiveCMName, metav1.GetOptions{})
 			assert.NoError(c, err)
-			checkContentOfRespectiveCM(t, *updatedCM, kpiNN.Name, "plugin-content-private\n")
+			assert.Equal(c, privatePluginExpectedContent(), updatedCM.Data)
 		}, 15*time.Second, time.Second)
 	} else {
 		t.Log("skipping private image test - no credentials provided")
@@ -172,8 +172,16 @@ func checkKongPluginInstallationConditions(
 	}, 15*time.Second, time.Second)
 }
 
-func checkContentOfRespectiveCM(t *testing.T, respectiveCM corev1.ConfigMap, kpiName, expectedPluginContent string) {
-	pluginContent, ok := respectiveCM.Data[kpiName+".lua"]
-	require.True(t, ok, "plugin.lua not found in ConfigMap")
-	require.Equal(t, expectedPluginContent, pluginContent)
+func pluginExpectedContent() map[string]string {
+	return map[string]string{
+		"handler.lua": "handler-content\n",
+		"schema.lua":  "schema-content\n",
+	}
+}
+
+func privatePluginExpectedContent() map[string]string {
+	return map[string]string{
+		"handler.lua": "handler-content-private\n",
+		"schema.lua":  "schema-content-private\n",
+	}
 }

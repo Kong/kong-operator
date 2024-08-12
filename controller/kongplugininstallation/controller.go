@@ -112,7 +112,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "fetch plugin for KongPluginInstallation resource", kpi)
-	plugin, err := image.FetchPluginContent(ctx, kpi.Spec.Image, credentialsStore)
+	plugin, err := image.FetchPlugin(ctx, kpi.Spec.Image, credentialsStore)
 	if err != nil {
 		return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, fmt.Sprintf("problem with the image: %q error: %s", kpi.Spec.Image, err))
 	}
@@ -130,9 +130,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			cm.GenerateName = kpi.Name
 		}
 		cm.Namespace = kpi.Namespace
-		cm.Data = map[string]string{
-			fmt.Sprintf("%s.lua", kpi.Name): string(plugin),
-		}
+		cm.Data = plugin
 		if err := ctrl.SetControllerReference(&kpi, &cm, r.Scheme); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -142,9 +140,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		kpi.Status.UnderlyingConfigMapName = cm.Name
 	case 1:
 		cm = cms[0]
-		cm.Data = map[string]string{
-			fmt.Sprintf("%s.lua", kpi.Name): string(plugin),
-		}
+		cm.Data = plugin
 		if err := r.Client.Update(ctx, &cm); err != nil {
 			return ctrl.Result{}, err
 		}

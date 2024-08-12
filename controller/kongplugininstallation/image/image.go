@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -23,8 +24,9 @@ import (
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 )
 
-// FetchPluginContent fetches the content of the plugin from the image URL. When authentication is not needed pass nil.
-func FetchPluginContent(ctx context.Context, imageURL string, credentialsStore credentials.Store) ([]byte, error) {
+// FetchPlugin fetches the content of the plugin from the image URL. When authentication is not needed pass nil.
+// It returns a map with two entries - handler.lua and schema.lua, which are the content of the plugin.
+func FetchPlugin(ctx context.Context, imageURL string, credentialsStore credentials.Store) (map[string]string, error) {
 	ref, err := name.ParseReference(imageURL)
 	if err != nil {
 		return nil, fmt.Errorf("unexpected format of image url: %w", err)
@@ -117,34 +119,56 @@ func (sl sizeLimitBytes) String() string {
 	return fmt.Sprintf("%.2f MiB", float64(sl)/(1024*1024))
 }
 
-func extractKongPluginFromLayer(r io.Reader) ([]byte, error) {
+func extractKongPluginFromLayer(r io.Reader) (map[string]string, error) {
+	// The target file name expected in image with a custom Kong plugin.
+	const (
+		kongPluginHandler = "handler.lua"
+		kongPluginSchema  = "schema.lua"
+	)
+	// Search for the file walking through the archive.
+	// Size of plugin is limited to size of a ConfigMap in Kubernetes.
+	const sizeLimit_1MiB sizeLimitBytes = 1024 * 1024
+
 	gr, err := gzip.NewReader(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse layer as tar.gz: %w", err)
 	}
-
-	// The target file name for custom Kong plugin.
-	const kongPluginName = "plugin.lua"
-	// Search for the file walking through the archive.
-	// Size of plugin is limited to size of a ConfigMap in Kubernetes.
-	const sizeLimit_1MiB sizeLimitBytes = 1024 * 1024
+	pluginFiles := make(map[string]string)
 	for tr := tar.NewReader(io.LimitReader(gr, sizeLimit_1MiB.int64())); ; {
-		switch h, err := tr.Next(); {
-		case err == nil:
-			if filepath.Base(h.Name) == kongPluginName {
-				plugin := make([]byte, h.Size)
-				if _, err := io.ReadFull(tr, plugin); err != nil {
-					if errors.Is(err, io.ErrUnexpectedEOF) {
-						return nil, fmt.Errorf("plugin size exceed %s", sizeLimit_1MiB)
-					}
-					return nil, fmt.Errorf("failed to read %s from image: %w", kongPluginName, err)
-				}
-				return plugin, nil
-			}
-		case errors.Is(err, io.EOF):
-			return nil, fmt.Errorf("file %q not found in the image", kongPluginName)
-		default:
+		h, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
 			return nil, fmt.Errorf("unexpected error during looking for plugin: %w", err)
 		}
+
+		switch fileName := filepath.Base(h.Name); fileName {
+		case kongPluginHandler, kongPluginSchema:
+			file := make([]byte, h.Size)
+			if _, err := io.ReadFull(tr, file); err != nil {
+				if errors.Is(err, io.ErrUnexpectedEOF) {
+					return nil, fmt.Errorf("plugin size exceed %s", sizeLimit_1MiB)
+				}
+				return nil, fmt.Errorf("failed to read %s from image: %w", fileName, err)
+			}
+			pluginFiles[fileName] = string(file)
+		default:
+			return nil, fmt.Errorf(
+				"file %q is unexpected, required files are %s and %s", fileName, kongPluginHandler, kongPluginSchema,
+			)
+		}
 	}
+
+	var missingFiles []string
+	for _, f := range []string{kongPluginHandler, kongPluginSchema} {
+		if _, ok := pluginFiles[f]; !ok {
+			missingFiles = append(missingFiles, f)
+		}
+	}
+	if len(missingFiles) > 0 {
+		return nil, fmt.Errorf("not found in the image required files: %s", strings.Join(missingFiles, ", "))
+	}
+
+	return pluginFiles, nil
 }
