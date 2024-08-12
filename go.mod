@@ -18,13 +18,13 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-containerregistry v0.20.2
 	github.com/google/uuid v1.6.0
-	github.com/kong/kubernetes-configuration v0.0.1
+	github.com/kong/kubernetes-configuration v0.0.2
 	github.com/kong/kubernetes-ingress-controller/v3 v3.2.3
 	github.com/kong/kubernetes-telemetry v0.1.4
 	github.com/kong/kubernetes-testing-framework v0.47.1
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
-	github.com/samber/lo v1.45.0
+	github.com/samber/lo v1.46.0
 	github.com/stretchr/testify v1.9.0
 	k8s.io/api v0.30.3
 	k8s.io/apimachinery v0.30.3
@@ -66,7 +66,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/homeport/dyff v1.6.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.1-0.20220621161143-b0104c826a24 // indirect
-	github.com/kong/go-kong v0.57.0 // indirect
+	github.com/kong/go-kong v0.57.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-ciede2000 v0.0.0-20170301095244-782e8c62fec3 // indirect
@@ -86,7 +86,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/texttheater/golang-levenshtein v1.0.1 // indirect
-	github.com/tidwall/gjson v1.17.1 // indirect
+	github.com/tidwall/gjson v1.17.3 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/urfave/cli v1.22.14 // indirect
 	github.com/virtuald/go-ordered-json v0.0.0-20170621173500-b18e6e673d74 // indirect
