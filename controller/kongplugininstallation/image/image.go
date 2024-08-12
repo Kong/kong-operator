@@ -148,7 +148,7 @@ func (sl sizeLimitBytes) String() string {
 	return fmt.Sprintf("%.2f MiB", float64(sl)/(1024*1024))
 }
 
-func extractKongPluginFromLayer(r io.Reader) (map[string]string, error) {
+func extractKongPluginFromLayer(r io.Reader) (PluginFiles, error) {
 	// Search for the files walking through the archive.
 	// The size of a plugin is limited to the size of a ConfigMap in Kubernetes.
 	const sizeLimit_1MiB sizeLimitBytes = 1024 * 1024
