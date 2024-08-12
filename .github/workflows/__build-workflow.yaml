@@ -207,7 +207,7 @@ jobs:
 
       - name: Build image
         id: build
-        uses: docker/build-push-action@v6.6.0
+        uses: docker/build-push-action@v6.6.1
         env:
           DOCKER_BUILD_RECORD_UPLOAD: false
           DOCKER_BUILD_SUMMARY: false
