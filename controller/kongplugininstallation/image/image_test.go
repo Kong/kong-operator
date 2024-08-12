@@ -115,7 +115,7 @@ func TestFetchPluginContent(t *testing.T) {
 		_, err := image.FetchPlugin(
 			context.Background(), registryUrl+"plugin-example/missing-file", nil,
 		)
-		require.ErrorContains(t, err, `not found in the image required files: schema.lua`)
+		require.ErrorContains(t, err, `required files not found in the image: schema.lua`)
 	})
 
 	// Single file - handler.lua is over 1 MiB.
@@ -123,7 +123,7 @@ func TestFetchPluginContent(t *testing.T) {
 		_, err := image.FetchPlugin(
 			context.Background(), registryUrl+"plugin-example/invalid-size-one", nil,
 		)
-		require.ErrorContains(t, err, "plugin size exceed 1.00 MiB")
+		require.ErrorContains(t, err, "plugin size limit of 1.00 MiB exceeded")
 	})
 
 	// Each file is 512 KiB so together they are 1 MiB.
@@ -131,7 +131,7 @@ func TestFetchPluginContent(t *testing.T) {
 		_, err := image.FetchPlugin(
 			context.Background(), registryUrl+"plugin-example/invalid-size-combined", nil,
 		)
-		require.ErrorContains(t, err, "plugin size exceed 1.00 MiB")
+		require.ErrorContains(t, err, "plugin size limit of 1.00 MiB exceeded")
 	})
 }
 

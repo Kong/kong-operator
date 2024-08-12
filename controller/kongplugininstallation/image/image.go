@@ -15,6 +15,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	ociv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/samber/lo"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/memory"
 	"oras.land/oras-go/v2/registry/remote"
@@ -24,9 +25,37 @@ import (
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 )
 
+// The target files' names expected in an image with a custom Kong plugin.
+const (
+	kongPluginHandler = "handler.lua"
+	kongPluginSchema  = "schema.lua"
+)
+
+// PluginFiles maps a plugin's file names to their content.
+// It's expected that each plugin consists of `schema.lua` and `handler.lua` files.
+type PluginFiles map[string]string
+
+// newPluginFilesFromMap creates PluginFiles from a map of files with content.
+// It ensures that the required files handler.lua and schema.lua are only present
+// in the map.
+func newPluginFilesFromMap(pluginFiles map[string]string) (PluginFiles, error) {
+	var missingFiles []string
+	for _, f := range []string{kongPluginHandler, kongPluginSchema} {
+		if _, ok := pluginFiles[f]; !ok {
+			missingFiles = append(missingFiles, f)
+		}
+	}
+	if len(missingFiles) > 0 {
+		return nil, fmt.Errorf("required files not found in the image: %s", strings.Join(missingFiles, ", "))
+	}
+	if len(pluginFiles) != 2 {
+		return nil, fmt.Errorf("expected exactly 2 files, got %d: %s", len(pluginFiles), strings.Join(lo.Keys(pluginFiles), ","))
+	}
+	return PluginFiles(pluginFiles), nil
+}
+
 // FetchPlugin fetches the content of the plugin from the image URL. When authentication is not needed pass nil.
-// It returns a map with two entries - handler.lua and schema.lua, which are the content of the plugin.
-func FetchPlugin(ctx context.Context, imageURL string, credentialsStore credentials.Store) (map[string]string, error) {
+func FetchPlugin(ctx context.Context, imageURL string, credentialsStore credentials.Store) (PluginFiles, error) {
 	ref, err := name.ParseReference(imageURL)
 	if err != nil {
 		return nil, fmt.Errorf("unexpected format of image url: %w", err)
@@ -120,13 +149,8 @@ func (sl sizeLimitBytes) String() string {
 }
 
 func extractKongPluginFromLayer(r io.Reader) (map[string]string, error) {
-	// The target files' names expected in an image with a custom Kong plugin.
-	const (
-		kongPluginHandler = "handler.lua"
-		kongPluginSchema  = "schema.lua"
-	)
 	// Search for the files walking through the archive.
-	//The size of a plugin is limited to the size of a ConfigMap in Kubernetes.
+	// The size of a plugin is limited to the size of a ConfigMap in Kubernetes.
 	const sizeLimit_1MiB sizeLimitBytes = 1024 * 1024
 
 	gr, err := gzip.NewReader(r)
@@ -160,15 +184,5 @@ func extractKongPluginFromLayer(r io.Reader) (map[string]string, error) {
 		}
 	}
 
-	var missingFiles []string
-	for _, f := range []string{kongPluginHandler, kongPluginSchema} {
-		if _, ok := pluginFiles[f]; !ok {
-			missingFiles = append(missingFiles, f)
-		}
-	}
-	if len(missingFiles) > 0 {
-		return nil, fmt.Errorf("required files not found in the image: %s", strings.Join(missingFiles, ", "))
-	}
-
-	return pluginFiles, nil
+	return newPluginFilesFromMap(pluginFiles)
 }
