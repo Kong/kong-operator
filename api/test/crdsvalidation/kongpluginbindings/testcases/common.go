@@ -25,7 +25,6 @@ var TestCases = []kpbTestCasesGroup{}
 func init() {
 	TestCases = append(TestCases,
 		pluginRefTCs,
-		globalTargetTCs,
 		targetsCombinationsTCs,
 		crossTargetsTCs,
 		wrongTargetsGroupKindTCs,

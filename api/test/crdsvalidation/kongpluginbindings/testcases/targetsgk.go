@@ -19,7 +19,7 @@ var wrongTargetsGroupKindTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
 							Name:  "test-service",
 							Kind:  "Ingress",
@@ -39,7 +39,7 @@ var wrongTargetsGroupKindTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						RouteReference: &configurationv1alpha1.TargetRefWithGroupKind{
 							Name:  "test-route",
 							Kind:  "Service",

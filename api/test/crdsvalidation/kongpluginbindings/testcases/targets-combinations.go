@@ -20,7 +20,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ConsumerReference: &configurationv1alpha1.TargetRef{
 							Name: "test-consumer",
 						},
@@ -47,7 +47,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ConsumerGroupReference: &configurationv1alpha1.TargetRef{
 							Name: "test-consumer-group",
 						},
@@ -74,7 +74,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ConsumerReference: &configurationv1alpha1.TargetRef{
 							Name: "test-consumer",
 						},
@@ -96,7 +96,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ConsumerReference: &configurationv1alpha1.TargetRef{
 							Name: "test-consumer",
 						},
@@ -118,7 +118,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ConsumerGroupReference: &configurationv1alpha1.TargetRef{
 							Name: "test-consumer-group",
 						},
@@ -140,7 +140,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ConsumerGroupReference: &configurationv1alpha1.TargetRef{
 							Name: "test-consumer-group",
 						},
@@ -162,7 +162,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ConsumerGroupReference: &configurationv1alpha1.TargetRef{
 							Name: "test-consumer-group",
 						},
@@ -189,7 +189,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ConsumerReference: &configurationv1alpha1.TargetRef{
 							Name: "test-consumer",
 						},
@@ -206,7 +206,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ConsumerGroupReference: &configurationv1alpha1.TargetRef{
 							Name: "test-consumer",
 						},
@@ -223,7 +223,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						RouteReference: &configurationv1alpha1.TargetRefWithGroupKind{
 							Name:  "test-route",
 							Kind:  "KongRoute",
@@ -242,7 +242,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
 							Name:  "test-service",
 							Kind:  "Service",
@@ -261,7 +261,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ConsumerReference: &configurationv1alpha1.TargetRef{
 							Name: "test-consumer",
 						},
@@ -292,7 +292,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ConsumerReference: &configurationv1alpha1.TargetRef{
 							Name: "test-consumer",
 						},
@@ -318,7 +318,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ConsumerReference: &configurationv1alpha1.TargetRef{
 							Name: "test-consumer",
 						},
@@ -344,7 +344,7 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ConsumerReference: &configurationv1alpha1.TargetRef{
 							Name: "test-consumer",
 						},
@@ -355,6 +355,33 @@ var targetsCombinationsTCs = kpbTestCasesGroup{
 				},
 			},
 			ExpectedErrorMessage: lo.ToPtr("Cannot set Consumer and ConsumerGroup at the same time"),
+		},
+		{
+			Name: "no targets",
+			KongPluginBinding: configurationv1alpha1.KongPluginBinding{
+				ObjectMeta: commonObjectMeta,
+				Spec: configurationv1alpha1.KongPluginBindingSpec{
+					PluginReference: configurationv1alpha1.PluginRef{
+						Kind: lo.ToPtr("KongPlugin"),
+						Name: "my-plugin",
+					},
+				},
+			},
+			ExpectedErrorMessage: lo.ToPtr("At least one entity reference must be set"),
+		},
+		{
+			Name: "empty targets",
+			KongPluginBinding: configurationv1alpha1.KongPluginBinding{
+				ObjectMeta: commonObjectMeta,
+				Spec: configurationv1alpha1.KongPluginBindingSpec{
+					PluginReference: configurationv1alpha1.PluginRef{
+						Kind: lo.ToPtr("KongPlugin"),
+						Name: "my-plugin",
+					},
+					Targets: configurationv1alpha1.KongPluginBindingTargets{},
+				},
+			},
+			ExpectedErrorMessage: lo.ToPtr("At least one entity reference must be set"),
 		},
 	},
 }

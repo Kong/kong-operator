@@ -37,8 +37,6 @@ type KongPluginBinding struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// +kubebuilder:validation:XValidation:message="When global is set, target refs cannot be used",rule="(has(self.global) && self.global == true) ? !has(self.targets) : true"
-	// +kubebuilder:validation:XValidation:message="When global is unset, target refs have to be used",rule="(!has(self.global) || self.global == false) ? has(self.targets) : true"
 	Spec   KongPluginBindingSpec   `json:"spec"`
 	Status KongPluginBindingStatus `json:"status,omitempty"`
 }
@@ -69,11 +67,6 @@ type KongPluginBindingSpec struct {
 	// +kubebuilder:validation:XValidation:message="pluginRef name must be set",rule="self.name != ''"
 	PluginReference PluginRef `json:"pluginRef"`
 
-	// Global can be set to automatically target all the entities in the Kong cluster. When set to true,
-	// all the services, routes and consumers in the Kong cluster are targeted by the plugin.
-	// +optional
-	Global *bool `json:"global,omitempty"`
-
 	// Targets contains the targets references. It is possible to set multiple combinations
 	// of references, as described in https://docs.konghq.com/gateway/latest/key-concepts/plugins/#precedence
 	// The complete set of allowed combinations and their order of precedence for plugins
@@ -91,12 +84,11 @@ type KongPluginBindingSpec struct {
 	// 10. Route
 	// 11. Service
 	//
-	// +optional
 	// +kubebuilder:validation:XValidation:message="Cannot set Consumer and ConsumerGroup at the same time",rule="(has(self.consumerRef) ? !has(self.consumerGroupRef) : true)"
 	// +kubebuilder:validation:XValidation:message="At least one entity reference must be set",rule="has(self.routeRef) || has(self.serviceRef) || has(self.consumerRef) || has(self.consumerGroupRef)"
 	// +kubebuilder:validation:XValidation:message="KongRoute can be used only when serviceRef is unset or set to KongService",rule="(has(self.routeRef) && self.routeRef.kind == 'KongRoute') ? (!has(self.serviceRef) || self.serviceRef.kind == 'KongService') : true"
 	// +kubebuilder:validation:XValidation:message="KongService can be used only when routeRef is unset or set to KongRoute",rule="(has(self.serviceRef) && self.serviceRef.kind == 'KongService') ? (!has(self.routeRef) || self.routeRef.kind == 'KongRoute') : true"
-	Targets *KongPluginBindingTargets `json:"targets,omitempty"`
+	Targets KongPluginBindingTargets `json:"targets"`
 
 	// ControlPlaneRef is a reference to a ControlPlane this KongPluginBinding is associated with.
 	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef,omitempty"`

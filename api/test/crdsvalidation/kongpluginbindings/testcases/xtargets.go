@@ -19,7 +19,7 @@ var crossTargetsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
 							Name:  "test-service",
 							Kind:  "Service",
@@ -44,7 +44,7 @@ var crossTargetsTCs = kpbTestCasesGroup{
 						Kind: lo.ToPtr("KongPlugin"),
 						Name: "my-plugin",
 					},
-					Targets: &configurationv1alpha1.KongPluginBindingTargets{
+					Targets: configurationv1alpha1.KongPluginBindingTargets{
 						ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
 							Name:  "test-service",
 							Kind:  "KongService",
