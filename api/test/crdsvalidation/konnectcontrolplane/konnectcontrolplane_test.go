@@ -28,22 +28,29 @@ func TestKonnectControlPlane(t *testing.T) {
 				tc := tc
 				t.Run(tc.Name, func(t *testing.T) {
 					cl := cl.KonnectControlPlanes(tc.KonnectControlPlane.Namespace)
-					kcp, err := cl.Create(ctx, &tc.KonnectControlPlane, metav1.CreateOptions{})
+					entity, err := cl.Create(ctx, &tc.KonnectControlPlane, metav1.CreateOptions{})
 					if err == nil {
 						t.Cleanup(func() {
-							assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, kcp.Name, metav1.DeleteOptions{})))
+							assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, entity.Name, metav1.DeleteOptions{})))
 						})
+						// Create doesn't set the status, so we need to update it explicitly.
+						entity.Status = tc.KonnectControlPlane.Status
+						entity, err = cl.UpdateStatus(ctx, entity, metav1.UpdateOptions{})
+						assert.NoError(t, err)
 					}
+
 					if tc.ExpectedErrorMessage == nil {
 						assert.NoError(t, err)
 
 						// Update the object and check if the update is allowed.
 						if tc.Update != nil {
-							tc.Update(kcp)
-							_, err := cl.Update(ctx, kcp, metav1.UpdateOptions{})
+							tc.Update(entity)
+							_, err := cl.Update(ctx, entity, metav1.UpdateOptions{})
 							if tc.ExpectedUpdateErrorMessage != nil {
 								require.NotNil(t, err)
 								assert.Contains(t, err.Error(), *tc.ExpectedUpdateErrorMessage)
+							} else {
+								assert.NoError(t, err)
 							}
 						}
 					} else {

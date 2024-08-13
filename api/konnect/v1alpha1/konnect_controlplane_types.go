@@ -25,8 +25,10 @@ type KonnectControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// Spec defines the desired state of KonnectControlPlane.
 	Spec KonnectControlPlaneSpec `json:"spec,omitempty"`
 
+	// Status defines the observed state of KonnectControlPlane.
 	Status KonnectControlPlaneStatus `json:"status,omitempty"`
 }
 

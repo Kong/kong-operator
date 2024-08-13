@@ -6,21 +6,21 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
-// kpbTestCase is a test case related to KongPluginBinding validation.
-type kpbTestCase struct {
+// testCase is a test case related to KongPluginBinding validation.
+type testCase struct {
 	Name                 string
 	KongPluginBinding    configurationv1alpha1.KongPluginBinding
 	ExpectedErrorMessage *string
 }
 
-// kpbTestCasesGroup is a group of test cases related to KongPluginBinding validation. The grouping is done by a common theme.
-type kpbTestCasesGroup struct {
+// testCasesGroup is a group of test cases related to KongPluginBinding validation. The grouping is done by a common theme.
+type testCasesGroup struct {
 	Name      string
-	TestCases []kpbTestCase
+	TestCases []testCase
 }
 
 // TestCases is a collection of all test cases groups related to KongPluginBinding validation.
-var TestCases = []kpbTestCasesGroup{}
+var TestCases = []testCasesGroup{}
 
 func init() {
 	TestCases = append(TestCases,

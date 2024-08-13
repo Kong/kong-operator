@@ -7,9 +7,9 @@ import (
 )
 
 // crossTargetsTCs are test cases for the xvalidation between the target types.
-var crossTargetsTCs = kpbTestCasesGroup{
+var crossTargetsTCs = testCasesGroup{
 	Name: "cross targets validation",
-	TestCases: []kpbTestCase{
+	TestCases: []testCase{
 		{
 			Name: "core/Service, configuration.konghq.com/KongRoute targets",
 			KongPluginBinding: configurationv1alpha1.KongPluginBinding{

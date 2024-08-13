@@ -10,9 +10,9 @@ import (
 
 // updatesNotAllowedForStatus are test cases checking if updates to konnect.authRef
 // are indeed blocked for some status conditions.
-var updatesNotAllowedForStatus = kcpTestCasesGroup{
+var updatesNotAllowedForStatus = testCasesGroup{
 	Name: "updates not allowed for status conditions",
-	TestCases: []kcpTestCase{
+	TestCases: []testCase{
 		{
 			Name: "konnect.authRef change is not allowed for Programmed=True",
 			KonnectControlPlane: konnectv1alpha1.KonnectControlPlane{
@@ -31,8 +31,10 @@ var updatesNotAllowedForStatus = kcpTestCasesGroup{
 				Status: konnectv1alpha1.KonnectControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   "Programmed",
-							Status: metav1.ConditionTrue,
+							Type:               "Programmed",
+							Status:             metav1.ConditionTrue,
+							Reason:             "Valid",
+							LastTransitionTime: metav1.Now(),
 						},
 					},
 				},
@@ -60,8 +62,10 @@ var updatesNotAllowedForStatus = kcpTestCasesGroup{
 				Status: konnectv1alpha1.KonnectControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   "APIAuthValid",
-							Status: metav1.ConditionTrue,
+							Type:               "APIAuthValid",
+							Status:             metav1.ConditionTrue,
+							Reason:             "Valid",
+							LastTransitionTime: metav1.Now(),
 						},
 					},
 				},
@@ -69,7 +73,7 @@ var updatesNotAllowedForStatus = kcpTestCasesGroup{
 			Update: func(kcp *konnectv1alpha1.KonnectControlPlane) {
 				kcp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name = "name-2"
 			},
-			ExpectedUpdateErrorMessage: lo.ToPtr("spec.konnect.authRef is immutable when entity is already Programme"),
+			ExpectedUpdateErrorMessage: lo.ToPtr("spec.konnect.authRef is immutable when entity refers to a Valid API Auth Configuration"),
 		},
 		{
 			Name: "konnect.authRef change is allowed when cp is not Programmed=True nor APIAuthValid=True",
@@ -89,12 +93,16 @@ var updatesNotAllowedForStatus = kcpTestCasesGroup{
 				Status: konnectv1alpha1.KonnectControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   "APIAuthValid",
-							Status: metav1.ConditionFalse,
+							Type:               "APIAuthValid",
+							Status:             metav1.ConditionFalse,
+							Reason:             "Invalid",
+							LastTransitionTime: metav1.Now(),
 						},
 						{
-							Type:   "Programmed",
-							Status: metav1.ConditionFalse,
+							Type:               "Programmed",
+							Status:             metav1.ConditionFalse,
+							Reason:             "NotProgrammed",
+							LastTransitionTime: metav1.Now(),
 						},
 					},
 				},

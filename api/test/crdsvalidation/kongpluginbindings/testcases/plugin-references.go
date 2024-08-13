@@ -7,9 +7,9 @@ import (
 )
 
 // pluginRefTCs are test cases for the pluginRef field.
-var pluginRefTCs = kpbTestCasesGroup{
+var pluginRefTCs = testCasesGroup{
 	Name: "pluginRef validation",
-	TestCases: []kpbTestCase{
+	TestCases: []testCase{
 		{
 			Name: "no plugin reference",
 			KongPluginBinding: configurationv1alpha1.KongPluginBinding{

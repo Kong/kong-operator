@@ -11,10 +11,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	configurationv1alpha1client "github.com/kong/kubernetes-configuration/pkg/clientset/typed/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/test/crdsvalidation/kongpluginbindings/testcases"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation/kongservice/testcases"
 )
 
-func TestKongPluginBindings(t *testing.T) {
+func TestKongService(t *testing.T) {
 	ctx := context.Background()
 	cfg, err := config.GetConfig()
 	require.NoError(t, err, "error loading Kubernetes config")
@@ -27,19 +27,32 @@ func TestKongPluginBindings(t *testing.T) {
 			for _, tc := range tcsGroup.TestCases {
 				tc := tc
 				t.Run(tc.Name, func(t *testing.T) {
-					cl := cl.KongPluginBindings(tc.KongPluginBinding.Namespace)
-					entity, err := cl.Create(ctx, &tc.KongPluginBinding, metav1.CreateOptions{})
+					cl := cl.KongServices(tc.KongService.Namespace)
+					entity, err := cl.Create(ctx, &tc.KongService, metav1.CreateOptions{})
 					if err == nil {
 						t.Cleanup(func() {
 							assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, entity.Name, metav1.DeleteOptions{})))
 						})
 						// Create doesn't set the status, so we need to update it explicitly.
-						entity.Status = tc.KongPluginBinding.Status
+						entity.Status = tc.KongService.Status
 						entity, err = cl.UpdateStatus(ctx, entity, metav1.UpdateOptions{})
 						assert.NoError(t, err)
 					}
+
 					if tc.ExpectedErrorMessage == nil {
 						assert.NoError(t, err)
+
+						// Update the object and check if the update is allowed.
+						if tc.Update != nil {
+							tc.Update(entity)
+							_, err := cl.Update(ctx, entity, metav1.UpdateOptions{})
+							if tc.ExpectedUpdateErrorMessage != nil {
+								require.NotNil(t, err)
+								assert.Contains(t, err.Error(), *tc.ExpectedUpdateErrorMessage)
+							} else {
+								assert.NoError(t, err)
+							}
+						}
 					} else {
 						require.NotNil(t, err)
 						assert.Contains(t, err.Error(), *tc.ExpectedErrorMessage)

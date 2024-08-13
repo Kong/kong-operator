@@ -8,9 +8,9 @@ import (
 )
 
 // targetsCombinationsTCs are test cases for the various combinations of target references.
-var targetsCombinationsTCs = kpbTestCasesGroup{
+var targetsCombinationsTCs = testCasesGroup{
 	Name: "targets combinations validation",
-	TestCases: []kpbTestCase{
+	TestCases: []testCase{
 		{
 			Name: "consumer, route, service targets",
 			KongPluginBinding: configurationv1alpha1.KongPluginBinding{

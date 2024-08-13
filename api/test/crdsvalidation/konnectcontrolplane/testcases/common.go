@@ -6,8 +6,8 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// kcpTestCase is a test case related to KonnectControlPlane validation.
-type kcpTestCase struct {
+// testCase is a test case related to KonnectControlPlane validation.
+type testCase struct {
 	Name                       string
 	KonnectControlPlane        konnectv1alpha1.KonnectControlPlane
 	Update                     func(*konnectv1alpha1.KonnectControlPlane)
@@ -15,15 +15,15 @@ type kcpTestCase struct {
 	ExpectedUpdateErrorMessage *string
 }
 
-// kcpTestCasesGroup is a group of test cases related to KonnectControlPlane validation.
+// testCasesGroup is a group of test cases related to KonnectControlPlane validation.
 // The grouping is done by a common name.
-type kcpTestCasesGroup struct {
+type testCasesGroup struct {
 	Name      string
-	TestCases []kcpTestCase
+	TestCases []testCase
 }
 
 // TestCases is a collection of all test cases groups related to KonnectControlPlane validation.
-var TestCases = []kcpTestCasesGroup{}
+var TestCases = []testCasesGroup{}
 
 func init() {
 	TestCases = append(TestCases,

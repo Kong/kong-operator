@@ -7,9 +7,9 @@ import (
 )
 
 // wrongTargetsGroupKindTCs are test cases for the group/kind validation of the target references.
-var wrongTargetsGroupKindTCs = kpbTestCasesGroup{
+var wrongTargetsGroupKindTCs = testCasesGroup{
 	Name: "targets group/kind validation",
-	TestCases: []kpbTestCase{
+	TestCases: []testCase{
 		{
 			Name: "networking.k8s.io/Ingress, as service target",
 			KongPluginBinding: configurationv1alpha1.KongPluginBinding{
