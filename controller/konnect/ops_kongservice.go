@@ -37,7 +37,7 @@ func createService(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errWrapped := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, CreateOp); errWrapped != nil {
+	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongService](err, CreateOp, svc); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				KonnectEntityProgrammedConditionType,
@@ -73,12 +73,10 @@ func updateService(
 	svc *configurationv1alpha1.KongService,
 ) error {
 	// TODO(pmalek) handle other types of CP ref
+	// TODO(pmalek) handle cross namespace refs
 	nnCP := types.NamespacedName{
-		Namespace: svc.Spec.ControlPlaneRef.KonnectNamespacedRef.Namespace,
+		Namespace: svc.Namespace,
 		Name:      svc.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
-	}
-	if nnCP.Namespace == "" {
-		nnCP.Namespace = svc.Namespace
 	}
 	var cp konnectv1alpha1.KonnectControlPlane
 	if err := cl.Get(ctx, nnCP, &cp); err != nil {
@@ -111,7 +109,7 @@ func updateService(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongService](err, UpdateOp); errWrapped != nil {
+	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongService](err, UpdateOp, svc); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				KonnectEntityProgrammedConditionType,
@@ -152,9 +150,10 @@ func deleteService(
 	}
 
 	_, err := sdk.Services.DeleteService(ctx, svc.Status.Konnect.ControlPlaneID, id)
-	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongService](err, DeleteOp); errWrapped != nil {
-		var sdkError *sdkerrors.NotFoundError
-		if errors.As(errWrapped, &sdkError) {
+	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongService](err, DeleteOp, svc); errWrapped != nil {
+		// Service delete operation returns an SDKError instead of a NotFoundError.
+		var sdkError *sdkerrors.SDKError
+		if errors.As(errWrapped, &sdkError) && sdkError.StatusCode == 404 {
 			ctrllog.FromContext(ctx).
 				Info("entity not found in Konnect, skipping delete",
 					"op", DeleteOp, "type", svc.GetTypeName(), "id", id,

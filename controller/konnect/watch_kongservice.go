@@ -3,13 +3,19 @@ package konnect
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -30,6 +36,13 @@ func KongServiceReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.For(&configurationv1alpha1.KongService{},
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(kongServiceRefersToKonnectControlPlane),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
@@ -46,6 +59,23 @@ func KongServiceReconciliationWatchOptions(
 			)
 		},
 	}
+}
+
+// kongServiceRefersToKonnectControlPlane returns true if the KongService
+// refers to a KonnectControlPlane.
+func kongServiceRefersToKonnectControlPlane(obj client.Object) bool {
+	kongSvc, ok := obj.(*configurationv1alpha1.KongService)
+	if !ok {
+		ctrllog.FromContext(context.Background()).Error(
+			operatorerrors.ErrUnexpectedObject,
+			"failed to run predicate function",
+			"expected", "KongService", "found", reflect.TypeOf(obj),
+		)
+		return false
+	}
+
+	cpRef := kongSvc.Spec.ControlPlaneRef
+	return cpRef != nil && cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
 }
 
 func enqueueKongServiceForKonnectAPIAuthConfiguration(
@@ -70,7 +100,7 @@ func enqueueKongServiceForKonnectAPIAuthConfiguration(
 			case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
 				nn := types.NamespacedName{
 					Name:      svc.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
-					Namespace: svc.Spec.ControlPlaneRef.KonnectNamespacedRef.Namespace,
+					Namespace: svc.Namespace,
 				}
 				// TODO: change this when cross namespace refs are allowed.
 				if nn.Namespace != auth.Namespace {
@@ -97,11 +127,19 @@ func enqueueKongServiceForKonnectAPIAuthConfiguration(
 						Name:      svc.Name,
 					},
 				})
-			default:
+
+			case configurationv1alpha1.ControlPlaneRefKonnectID:
 				ctrllog.FromContext(ctx).Error(
-					fmt.Errorf("unsupported ControlPlaneRef type %q", svc.Spec.ControlPlaneRef.Type),
+					fmt.Errorf("unimplemented ControlPlaneRef type %q", svc.Spec.ControlPlaneRef.Type),
+					"unimplemented ControlPlaneRef for KongService",
+					"KongService", svc, "refType", svc.Spec.ControlPlaneRef.Type,
+				)
+				continue
+
+			default:
+				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
 					"unsupported ControlPlaneRef for KongService",
-					"KongService", svc,
+					"KongService", svc, "refType", svc.Spec.ControlPlaneRef.Type,
 				)
 				continue
 			}
@@ -142,11 +180,18 @@ func enqueueKongServiceForKonnectControlPlane(
 					},
 				})
 
-			default:
+			case configurationv1alpha1.ControlPlaneRefKonnectID:
 				ctrllog.FromContext(ctx).Error(
-					fmt.Errorf("unsupported ControlPlaneRef type %q", svc.Spec.ControlPlaneRef.Type),
+					fmt.Errorf("unimplemented ControlPlaneRef type %q", svc.Spec.ControlPlaneRef.Type),
+					"unimplemented ControlPlaneRef for KongService",
+					"KongService", svc, "refType", svc.Spec.ControlPlaneRef.Type,
+				)
+				continue
+
+			default:
+				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
 					"unsupported ControlPlaneRef for KongService",
-					"KongService", svc,
+					"KongService", svc, "refType", svc.Spec.ControlPlaneRef.Type,
 				)
 				continue
 			}

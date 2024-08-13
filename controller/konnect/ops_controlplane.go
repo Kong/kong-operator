@@ -26,7 +26,7 @@ func createControlPlane(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
-	if errWrap := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, CreateOp); errWrap != nil {
+	if errWrap := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, CreateOp, cp); errWrap != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				KonnectEntityProgrammedConditionType,
@@ -66,7 +66,7 @@ func deleteControlPlane(
 	}
 
 	_, err := sdk.ControlPlanes.DeleteControlPlane(ctx, id)
-	if errWrap := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, DeleteOp); errWrap != nil {
+	if errWrap := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, DeleteOp, cp); errWrap != nil {
 		var sdkError *sdkerrors.NotFoundError
 		if errors.As(err, &sdkError) {
 			ctrllog.FromContext(ctx).
@@ -120,7 +120,7 @@ func updateControlPlane(
 		return nil
 	}
 
-	if errWrap := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, UpdateOp); errWrap != nil {
+	if errWrap := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, UpdateOp, cp); errWrap != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				KonnectEntityProgrammedConditionType,
