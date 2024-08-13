@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/samber/mo"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -12,11 +13,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -102,16 +105,19 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, err
 	}
 
+	ctx = ctrllog.IntoContext(ctx, logger)
 	log.Debug(logger, "reconciling", ent)
-	var (
-		apiAuth    konnectv1alpha1.KonnectAPIAuthConfiguration
-		apiAuthRef = types.NamespacedName{
-			Name:      ent.GetKonnectAPIAuthConfigurationRef().Name,
-			Namespace: ent.GetNamespace(),
-			// TODO(pmalek): enable if cross namespace refs are allowed
-			// Namespace: ent.GetKonnectAPIAuthConfigurationRef().Namespace,
-		}
-	)
+
+	res, err := handleControlPlaneRef(ctx, r.Client, ent)
+	if err != nil || res.Requeue {
+		return res, err
+	}
+	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get APIAuth ref for %s: %w", client.ObjectKeyFromObject(ent), err)
+	}
+
+	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
 	if err := r.Client.Get(ctx, apiAuthRef, &apiAuth); err != nil {
 		if k8serrors.IsNotFound(err) {
 			if res, err := updateStatusWithCondition(
@@ -234,7 +240,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-			if err := Delete[T, TEnt](ctx, sdk, logger, r.Client, ent); err != nil {
+			if err := Delete[T, TEnt](ctx, sdk, r.Client, ent); err != nil {
 				return ctrl.Result{}, err
 			}
 			if err := r.Client.Update(ctx, ent); err != nil {
@@ -254,8 +260,8 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	//
 	// We should look at the "expectations" for this:
 	// https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go
-	if id := ent.GetKonnectStatus().GetKonnectID(); id == "" {
-		_, err := Create[T, TEnt](ctx, sdk, logger, r.Client, ent)
+	if status := ent.GetKonnectStatus(); status == nil || status.GetKonnectID() == "" {
+		_, err := Create[T, TEnt](ctx, sdk, r.Client, ent)
 		if err != nil {
 			// TODO(pmalek): this is actually not 100% error prone because when status
 			// update fails we don't store the Konnect ID and hence the reconciler
@@ -295,7 +301,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if res, err := Update[T, TEnt](ctx, sdk, logger, r.Client, ent); err != nil {
+	if res, err := Update[T, TEnt](ctx, sdk, r.Client, ent); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update object: %w", err)
 	} else if res.Requeue || res.RequeueAfter > 0 {
 		return res, nil
@@ -352,6 +358,153 @@ func updateStatusWithCondition[T interface {
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func getAPIAuthRefNN[T SupportedKonnectEntityType, TEnt EntityType[T]](
+	ctx context.Context,
+	cl client.Client,
+	ent TEnt,
+) (types.NamespacedName, error) {
+	// If the entity has a ControlPlaneRef, get the KonnectAPIAuthConfiguration
+	// ref from the referenced ControlPlane.
+	cpRef, ok := getControlPlaneRef(ent).Get()
+	if ok {
+		if cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
+			return types.NamespacedName{}, fmt.Errorf("unsupported ControlPlane ref type %q", cpRef.Type)
+		}
+		nn := types.NamespacedName{
+			Name:      cpRef.KonnectNamespacedRef.Name,
+			Namespace: cpRef.KonnectNamespacedRef.Namespace,
+		}
+		if nn.Namespace == "" {
+			nn.Namespace = ent.GetNamespace()
+		}
+		var cp konnectv1alpha1.KonnectControlPlane
+		if err := cl.Get(ctx, nn, &cp); err != nil {
+			return types.NamespacedName{}, fmt.Errorf("failed to get ControlPlane %s", nn)
+		}
+		return types.NamespacedName{
+			Name: cp.GetKonnectAPIAuthConfigurationRef().Name,
+			// TODO(pmalek): enable if cross namespace refs are allowed
+			Namespace: cp.GetNamespace(),
+		}, nil
+	}
+
+	if ref, ok := any(ent).(EntityWithKonnectAPIAuthConfigurationRef); ok {
+		return types.NamespacedName{
+			Name: ref.GetKonnectAPIAuthConfigurationRef().Name,
+			// TODO(pmalek): enable if cross namespace refs are allowed
+			Namespace: ent.GetNamespace(),
+		}, nil
+	}
+
+	return types.NamespacedName{}, fmt.Errorf(
+		"cannot get KonnectAPIAuthConfiguration for entity type %T %s",
+		client.ObjectKeyFromObject(ent), ent,
+	)
+}
+
+func getControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
+	e TEnt,
+) mo.Option[configurationv1alpha1.ControlPlaneRef] {
+	switch e := any(e).(type) {
+	case *konnectv1alpha1.KonnectControlPlane:
+		return mo.None[configurationv1alpha1.ControlPlaneRef]()
+	case *configurationv1alpha1.KongService:
+		return mo.Some(e.Spec.ControlPlaneRef)
+	default:
+		panic(fmt.Sprintf("unsupported entity type %T", e))
+	}
+}
+
+// handleControlPlaneRef handles the ControlPlaneRef for the given entity.
+// It sets the owner reference to the referenced ControlPlane and updates the
+// status of the entity based on the referenced ControlPlane status.
+func handleControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
+	ctx context.Context,
+	cl client.Client,
+	ent TEnt,
+) (ctrl.Result, error) {
+	cpRef, ok := getControlPlaneRef(ent).Get()
+	if !ok {
+		return ctrl.Result{}, nil
+	}
+
+	switch cpRef.Type {
+	case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
+		cp := konnectv1alpha1.KonnectControlPlane{}
+		nn := types.NamespacedName{
+			Name:      cpRef.KonnectNamespacedRef.Name,
+			Namespace: cpRef.KonnectNamespacedRef.Namespace,
+		}
+		if nn.Namespace == "" {
+			nn.Namespace = ent.GetNamespace()
+		}
+		if err := cl.Get(ctx, nn, &cp); err != nil {
+			if res, errStatus := updateStatusWithCondition(
+				ctx, cl, ent,
+				ControlPlaneRefValidConditionType,
+				metav1.ConditionFalse,
+				ControlPlaneRefReasonInvalid,
+				err.Error(),
+			); errStatus != nil || res.Requeue {
+				return res, errStatus
+			}
+			return ctrl.Result{}, err
+		}
+
+		cond, ok := k8sutils.GetCondition(KonnectEntityProgrammedConditionType, &cp)
+		if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
+			if res, errStatus := updateStatusWithCondition(
+				ctx, cl, ent,
+				ControlPlaneRefValidConditionType,
+				metav1.ConditionFalse,
+				ControlPlaneRefReasonInvalid,
+				fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
+			); errStatus != nil || res.Requeue {
+				return res, errStatus
+			}
+
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		old := ent.DeepCopyObject().(TEnt)
+		if err := controllerutil.SetOwnerReference(&cp, ent, cl.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
+		}
+		if err := cl.Patch(ctx, ent, client.MergeFrom(old)); err != nil {
+			if k8serrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
+		}
+
+		type EntityWithControlPlaneRef interface {
+			SetControlPlaneID(string)
+			GetControlPlaneID() string
+		}
+		// TODO(pmalek): make this generic.
+		// CP ID is not stored in KonnectEntityStatus because not all entities
+		// have a ControlPlaneRef, hence the type constraints in the reconciler can't be used.
+		if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
+			resource.SetControlPlaneID(cp.Status.ID)
+		}
+
+		if res, errStatus := updateStatusWithCondition(
+			ctx, cl, ent,
+			ControlPlaneRefValidConditionType,
+			metav1.ConditionTrue,
+			ControlPlaneRefReasonValid,
+			fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
+		); errStatus != nil || res.Requeue {
+			return res, errStatus
+		}
+
+		return ctrl.Result{}, nil
+
+	default:
+		return ctrl.Result{}, fmt.Errorf("unimplemented ControlPlane ref type %q", cpRef.Type)
+	}
 }
 
 func conditionMessageReferenceKonnectAPIAuthConfigurationInvalid(apiAuthRef types.NamespacedName) string {

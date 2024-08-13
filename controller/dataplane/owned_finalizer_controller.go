@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
@@ -199,7 +199,7 @@ func (r DataPlaneOwnedResourceFinalizerReconciler[T, PT]) Reconcile(ctx context.
 // objects owned by the given DataPlane.
 func requestsForDataPlaneOwnedObjects[T DataPlaneOwnedResource](cl client.Client) handler.MapFunc {
 	return func(ctx context.Context, dp client.Object) []ctrl.Request {
-		logger := k8slog.FromContext(ctx, "dataplane", dp.GetNamespace()+"/"+dp.GetName())
+		logger := ctrllog.FromContext(ctx, "dataplane", dp.GetNamespace()+"/"+dp.GetName())
 
 		switch any(*new(T)).(type) {
 		case corev1.Service:

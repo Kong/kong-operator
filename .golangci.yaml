@@ -57,6 +57,9 @@ linters-settings:
       - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
         alias: gateway${1}
 
+      - pkg: sigs.k8s.io/controller-runtime/pkg/log
+        alias: ctrllog
+
       - pkg: github.com/kong/gateway-operator/internal/types
         alias: gwtypes
   revive:

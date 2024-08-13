@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -159,7 +159,7 @@ func (r *Reconciler) listKongPluginInstallationsForSecret(ctx context.Context, o
 
 	var kpiList v1alpha1.KongPluginInstallationList
 	if err := r.List(ctx, &kpiList); err != nil {
-		k8slog.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			err,
 			"failed to run map funcs for secrets",
 		)

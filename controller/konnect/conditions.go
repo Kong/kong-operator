@@ -49,3 +49,17 @@ const (
 	// referenced by the entity is invalid.
 	KonnectEntityAPIAuthConfigurationReasonInvalid = "Invalid"
 )
+
+const (
+	// ControlPlaneRefValidConditionType is the type of the condition that indicates
+	// whether the ControlPlane reference is valid and points to an existing
+	// ControlPlane.
+	ControlPlaneRefValidConditionType = "ControlPlaneRefValid"
+
+	// ControlPlaneRefReasonValid is the reason used with the ControlPlaneRefValid
+	// condition type indicating that the ControlPlane reference is valid.
+	ControlPlaneRefReasonValid = "Valid"
+	// ControlPlaneRefReasonInvalid is the reason used with the ControlPlaneRefValid
+	// condition type indicating that the ControlPlane reference is invalid.
+	ControlPlaneRefReasonInvalid = "Invalid"
+)

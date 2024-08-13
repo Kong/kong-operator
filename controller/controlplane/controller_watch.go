@@ -10,7 +10,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
@@ -29,7 +29,7 @@ func (r *Reconciler) clusterRoleHasControlPlaneOwner(obj client.Object) bool {
 
 	clusterRole, ok := obj.(*rbacv1.ClusterRole)
 	if !ok {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run predicate function",
 			"expected", "ClusterRole", "found", reflect.TypeOf(obj),
@@ -45,7 +45,7 @@ func (r *Reconciler) clusterRoleBindingHasControlPlaneOwner(obj client.Object) b
 
 	clusterRoleBinding, ok := obj.(*rbacv1.ClusterRoleBinding)
 	if !ok {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run predicate function",
 			"expected", "ClusterRoleBinding", "found", reflect.TypeOf(obj),
@@ -61,7 +61,7 @@ func (r *Reconciler) validatingWebhookConfigurationHasControlPlaneOwner(obj clie
 
 	validatingWebhookConfig, ok := obj.(*admregv1.ValidatingWebhookConfiguration)
 	if !ok {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run predicate function",
 			"expected", "ValidatingWebhookConfiguration", "found", reflect.TypeOf(obj),
@@ -80,7 +80,7 @@ func (r *Reconciler) ClusterScopedObjHasControlPlaneOwner(ctx context.Context, o
 		// filtering here is just an optimization. If we fail here it's most likely because of some failure
 		// of the Kubernetes API and it's technically better to enqueue the object
 		// than to drop it for eventual consistency during cluster outages.
-		log.FromContext(ctx).Error(err, "could not list controlplanes in map func")
+		ctrllog.FromContext(ctx).Error(err, "could not list controlplanes in map func")
 		return true
 	}
 
@@ -100,7 +100,7 @@ func (r *Reconciler) ClusterScopedObjHasControlPlaneOwner(ctx context.Context, o
 func (r *Reconciler) getControlPlaneForClusterRole(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	clusterRole, ok := obj.(*rbacv1.ClusterRole)
 	if !ok {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run map funcs",
 			"expected", "ClusterRole", "found", reflect.TypeOf(obj),
@@ -114,7 +114,7 @@ func (r *Reconciler) getControlPlaneForClusterRole(ctx context.Context, obj clie
 func (r *Reconciler) getControlPlaneForClusterRoleBinding(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	clusterRoleBinding, ok := obj.(*rbacv1.ClusterRoleBinding)
 	if !ok {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run map funcs",
 			"expected", "ClusterRoleBinding", "found", reflect.TypeOf(obj),
@@ -128,7 +128,7 @@ func (r *Reconciler) getControlPlaneForClusterRoleBinding(ctx context.Context, o
 func (r *Reconciler) getControlPlaneForValidatingWebhookConfiguration(ctx context.Context, obj client.Object) []reconcile.Request {
 	validatingWebhookConfig, ok := obj.(*admregv1.ValidatingWebhookConfiguration)
 	if !ok {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run map funcs",
 			"expected", "ValidatingWebhookConfiguration", "found", reflect.TypeOf(obj),
@@ -142,7 +142,7 @@ func (r *Reconciler) getControlPlaneForValidatingWebhookConfiguration(ctx contex
 func (r *Reconciler) getControlPlaneRequestFromManagedByNameLabel(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	controlplanes := &operatorv1beta1.ControlPlaneList{}
 	if err := r.Client.List(ctx, controlplanes); err != nil {
-		log.FromContext(ctx).Error(err, "could not list controlplanes in map func")
+		ctrllog.FromContext(ctx).Error(err, "could not list controlplanes in map func")
 		return
 	}
 
@@ -190,7 +190,7 @@ func objectIsOwnedByControlPlane(obj client.Object, cp *operatorv1beta1.ControlP
 func (r *Reconciler) getControlPlanesFromDataPlaneDeployment(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	deployment, ok := obj.(*appsv1.Deployment)
 	if !ok {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to map ControlPlane on DataPlane Deployment",
 			"expected", "Deployment", "found", reflect.TypeOf(obj),
@@ -212,7 +212,7 @@ func (r *Reconciler) getControlPlanesFromDataPlaneDeployment(ctx context.Context
 	dataPlane := &operatorv1beta1.DataPlane{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: deployment.Namespace, Name: dataPlaneOwnerName}, dataPlane); err != nil {
 		if !k8serrors.IsNotFound(err) {
-			log.FromContext(ctx).Error(err, "failed to map ControlPlane on DataPlane Deployment")
+			ctrllog.FromContext(ctx).Error(err, "failed to map ControlPlane on DataPlane Deployment")
 		}
 		return
 	}
@@ -222,7 +222,7 @@ func (r *Reconciler) getControlPlanesFromDataPlaneDeployment(ctx context.Context
 func (r *Reconciler) getControlPlanesFromDataPlane(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	dataplane, ok := obj.(*operatorv1beta1.DataPlane)
 	if !ok {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to map ControlPlane on DataPlane",
 			"expected", "DataPlane", "found", reflect.TypeOf(obj),
@@ -236,7 +236,7 @@ func (r *Reconciler) getControlPlanesFromDataPlane(ctx context.Context, obj clie
 		client.MatchingFields{
 			index.DataPlaneNameIndex: dataplane.Name,
 		}); err != nil {
-		log.FromContext(ctx).Error(err, "failed to map ControlPlane on DataPlane")
+		ctrllog.FromContext(ctx).Error(err, "failed to map ControlPlane on DataPlane")
 		return nil
 	}
 

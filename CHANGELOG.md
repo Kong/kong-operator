@@ -42,6 +42,8 @@
   [#459](https://github.com/Kong/gateway-operator/pull/459)
 - Add `KonnectControlPlane` reconciler.
   [#462](https://github.com/Kong/gateway-operator/pull/462)
+- Add `KongService` reconciler for Konnect control planes.
+  [#470](https://github.com/Kong/gateway-operator/pull/470)
 
 ### Fixed
 

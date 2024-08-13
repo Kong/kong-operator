@@ -194,6 +194,24 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - kongservices
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongservices/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
   - kongupstreampolicies
   verbs:
   - get
@@ -641,6 +659,24 @@ rules:
   - konnect.konghq.com
   resources:
   - konnectapiauthconfigurations/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - konnect.konghq.com
+  resources:
+  - konnectcontrolplanes
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - konnect.konghq.com
+  resources:
+  - konnectcontrolplanes/status
   verbs:
   - get
   - patch
