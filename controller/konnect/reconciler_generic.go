@@ -20,6 +20,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -424,6 +425,11 @@ func getControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	switch e := any(e).(type) {
 	case *konnectv1alpha1.KonnectControlPlane:
 		return mo.None[configurationv1alpha1.ControlPlaneRef]()
+	case *configurationv1.KongConsumer:
+		if e.Spec.ControlPlaneRef == nil {
+			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+		}
+		return mo.Some(*e.Spec.ControlPlaneRef)
 	case *configurationv1alpha1.KongService:
 		if e.Spec.ControlPlaneRef == nil {
 			return mo.None[configurationv1alpha1.ControlPlaneRef]()

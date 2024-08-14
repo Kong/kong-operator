@@ -14,6 +14,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -48,6 +49,8 @@ func Create[
 		return e, createControlPlane(ctx, sdk, ent)
 	case *configurationv1alpha1.KongService:
 		return e, createService(ctx, sdk, ent)
+	case *configurationv1.KongConsumer:
+		return e, createConsumer(ctx, sdk, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -69,6 +72,8 @@ func Delete[
 		return deleteControlPlane(ctx, sdk, ent)
 	case *configurationv1alpha1.KongService:
 		return deleteService(ctx, sdk, ent)
+	case *configurationv1.KongConsumer:
+		return deleteConsumer(ctx, sdk, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -116,6 +121,8 @@ func Update[
 		return ctrl.Result{}, updateControlPlane(ctx, sdk, ent)
 	case *configurationv1alpha1.KongService:
 		return ctrl.Result{}, updateService(ctx, sdk, cl, ent)
+	case *configurationv1.KongConsumer:
+		return ctrl.Result{}, updateConsumer(ctx, sdk, cl, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
