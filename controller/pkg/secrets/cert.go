@@ -120,7 +120,7 @@ func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Se
 	}
 
 	certExpiryDuration := time.Second * time.Duration(*csr.Spec.ExpirationSeconds)
-	durationUntilExpiry := caCert.NotAfter.Sub(time.Now()) //nolint:gosimple
+	durationUntilExpiry := caCert.NotAfter.Sub(time.Now())
 	if durationUntilExpiry <= 0 {
 		return nil, fmt.Errorf("the signer has expired: %v", caCert.NotAfter)
 	}
