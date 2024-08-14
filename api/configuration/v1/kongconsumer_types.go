@@ -33,6 +33,8 @@ import (
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
 // +kubebuilder:validation:XValidation:rule="has(self.username) || has(self.custom_id)", message="Need to provide either username or custom_id"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
+// +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when entity is already Programmed."
 
 // KongConsumer is the Schema for the kongconsumers API.
 type KongConsumer struct {
@@ -62,7 +64,28 @@ type KongConsumer struct {
 	Status KongConsumerStatus `json:"status,omitempty"`
 }
 
+func (c *KongConsumer) InitKonnectStatus() {
+	c.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
+}
+
+func (c *KongConsumer) GetControlPlaneID() string {
+	if c.Status.Konnect == nil {
+		return ""
+	}
+	return c.Status.Konnect.ControlPlaneID
+}
+
+func (c *KongConsumer) SetControlPlaneID(id string) {
+	if c.Status.Konnect == nil {
+		c.InitKonnectStatus()
+	}
+	c.Status.Konnect.ControlPlaneID = id
+}
+
 func (c *KongConsumer) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
+	if c.Status.Konnect == nil {
+		return nil
+	}
 	return &c.Status.Konnect.KonnectEntityStatus
 }
 
@@ -71,10 +94,6 @@ func (c KongConsumer) GetTypeName() string {
 }
 
 func (c *KongConsumer) SetKonnectLabels(labels map[string]string) {
-}
-
-func (c *KongConsumer) GetKonnectAPIAuthConfigurationRef() konnectv1alpha1.KonnectAPIAuthConfigurationRef {
-	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
 }
 
 // GetConditions returns the Status Conditions
@@ -91,9 +110,6 @@ type KongConsumerSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this Consumer is associated with.
 	// +optional
 	ControlPlaneRef *configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
-
-	// KonnectConfiguration holds the Konnect configuration like authentication configuration.
-	KonnectConfiguration konnectv1alpha1.KonnectConfiguration `json:"konnect,omitempty"`
 }
 
 // +kubebuilder:object:root=true

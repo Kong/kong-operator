@@ -16,6 +16,7 @@ func TestKongService(t *testing.T) {
 	require.Empty(t, svc.GetKonnectStatus().GetOrgID())
 	require.Empty(t, svc.GetKonnectStatus().GetServerURL())
 
+	require.Equal(t, "", svc.GetControlPlaneID())
 	svc.SetControlPlaneID("123")
 	require.Equal(t, "123", svc.GetControlPlaneID())
 	require.Equal(t, "123", svc.Status.Konnect.ControlPlaneID)
