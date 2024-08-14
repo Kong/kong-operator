@@ -2,6 +2,7 @@ package konnect
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -72,7 +73,6 @@ func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(mgr ctrl.Manager) er
 		e   T
 		ent = TEnt(&e)
 		b   = ctrl.NewControllerManagedBy(mgr).
-			For(ent).
 			Named(entityTypeName[T]()).
 			WithOptions(controller.Options{
 				MaxConcurrentReconciles: MaxConcurrentReconciles,
@@ -110,7 +110,22 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	res, err := handleControlPlaneRef(ctx, r.Client, ent)
 	if err != nil || res.Requeue {
-		return res, err
+		// If the referenced ControlPlane is not found and the object is deleted,
+		// remove the finalizer and update the status.
+		// There's no need to remove the entity on Konnect because the ControlPlane
+		// does not exist anymore.
+		if !ent.GetDeletionTimestamp().IsZero() && errors.As(err, &ReferencedControlPlaneDoesNotExistError{}) {
+			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+				if err := r.Client.Update(ctx, ent); err != nil {
+					if k8serrors.IsConflict(err) {
+						return ctrl.Result{Requeue: true}, nil
+					}
+					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+				}
+			}
+		}
+		// Status update will requeue the entity.
+		return ctrl.Result{}, nil
 	}
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
@@ -372,13 +387,12 @@ func getAPIAuthRefNN[T SupportedKonnectEntityType, TEnt EntityType[T]](
 		if cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
 			return types.NamespacedName{}, fmt.Errorf("unsupported ControlPlane ref type %q", cpRef.Type)
 		}
+		// TODO(pmalek): handle cross namespace refs
 		nn := types.NamespacedName{
 			Name:      cpRef.KonnectNamespacedRef.Name,
-			Namespace: cpRef.KonnectNamespacedRef.Namespace,
+			Namespace: ent.GetNamespace(),
 		}
-		if nn.Namespace == "" {
-			nn.Namespace = ent.GetNamespace()
-		}
+
 		var cp konnectv1alpha1.KonnectControlPlane
 		if err := cl.Get(ctx, nn, &cp); err != nil {
 			return types.NamespacedName{}, fmt.Errorf("failed to get ControlPlane %s", nn)
@@ -411,7 +425,10 @@ func getControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	case *konnectv1alpha1.KonnectControlPlane:
 		return mo.None[configurationv1alpha1.ControlPlaneRef]()
 	case *configurationv1alpha1.KongService:
-		return mo.Some(e.Spec.ControlPlaneRef)
+		if e.Spec.ControlPlaneRef == nil {
+			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+		}
+		return mo.Some(*e.Spec.ControlPlaneRef)
 	default:
 		panic(fmt.Sprintf("unsupported entity type %T", e))
 	}
@@ -433,12 +450,10 @@ func handleControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	switch cpRef.Type {
 	case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
 		cp := konnectv1alpha1.KonnectControlPlane{}
+		// TODO(pmalek): handle cross namespace refs
 		nn := types.NamespacedName{
 			Name:      cpRef.KonnectNamespacedRef.Name,
-			Namespace: cpRef.KonnectNamespacedRef.Namespace,
-		}
-		if nn.Namespace == "" {
-			nn.Namespace = ent.GetNamespace()
+			Namespace: ent.GetNamespace(),
 		}
 		if err := cl.Get(ctx, nn, &cp); err != nil {
 			if res, errStatus := updateStatusWithCondition(
@@ -449,6 +464,12 @@ func handleControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 				err.Error(),
 			); errStatus != nil || res.Requeue {
 				return res, errStatus
+			}
+			if k8serrors.IsNotFound(err) {
+				return ctrl.Result{}, ReferencedControlPlaneDoesNotExistError{
+					Reference: nn,
+					Err:       err,
+				}
 			}
 			return ctrl.Result{}, err
 		}

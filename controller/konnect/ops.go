@@ -148,9 +148,13 @@ func logOpComplete[
 func wrapErrIfKonnectOpFailed[
 	T SupportedKonnectEntityType,
 	TEnt EntityType[T],
-](err error, op Op) error {
+](err error, op Op, e TEnt) error {
 	if err != nil {
-		var e TEnt
+		if e == nil {
+			return fmt.Errorf("failed to %s for %T: %w",
+				op, e, err,
+			)
+		}
 		return fmt.Errorf("failed to %s for %T %q: %w",
 			op, client.ObjectKeyFromObject(e), e, err,
 		)

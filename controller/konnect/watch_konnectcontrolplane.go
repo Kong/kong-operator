@@ -27,6 +27,9 @@ func KonnectControlPlaneReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.For(&konnectv1alpha1.KonnectControlPlane{})
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
