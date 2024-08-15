@@ -6,6 +6,7 @@ metadata:
 rules:
 - apiGroups:
   - ""
+  - ""
   resources:
   - events
   verbs:
@@ -71,14 +72,16 @@ rules:
   - configuration.konghq.com
   resources:
   - ingressclassparameterses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongclusterplugins
+  - kongconsumergroups
+  - kongconsumers
+  - kongcustomentities
+  - kongingresses
+  - konglicenses
+  - kongupstreampolicies
+  - kongvaults
+  - tcpingresses
+  - udpingresses
   verbs:
   - get
   - list
@@ -87,86 +90,17 @@ rules:
   - configuration.konghq.com
   resources:
   - kongclusterplugins/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongconsumergroups
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongconsumergroups/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongconsumers
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongconsumers/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongcustomentities
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongcustomentities/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongingresses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongingresses/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - konglicenses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - konglicenses/status
+  - kongplugins/status
+  - kongservices/status
+  - kongupstreampolicies/status
+  - kongvaults/status
+  - tcpingresses/status
+  - udpingresses/status
   verbs:
   - get
   - patch
@@ -186,14 +120,6 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - kongplugins/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongservices
   verbs:
   - get
@@ -201,78 +127,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongservices/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongupstreampolicies
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongupstreampolicies/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongvaults
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongvaults/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - tcpingresses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - tcpingresses/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - udpingresses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - udpingresses/status
-  verbs:
-  - get
-  - patch
-  - update
 - apiGroups:
   - coordination.k8s.io
   resources:
@@ -289,6 +143,8 @@ rules:
   - ""
   resources:
   - configmaps
+  - serviceaccounts
+  - services
   verbs:
   - create
   - delete
@@ -301,19 +157,14 @@ rules:
   - ""
   resources:
   - configmaps/status
+  - serviceaccounts/status
   verbs:
   - get
 - apiGroups:
   - ""
   resources:
-  - events
-  verbs:
-  - create
-  - patch
-- apiGroups:
-  - ""
-  resources:
   - namespaces
+  - pods
   verbs:
   - get
   - list
@@ -328,50 +179,12 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - pods
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - secrets
   verbs:
   - create
   - delete
   - get
   - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - serviceaccounts
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - serviceaccounts/status
-  verbs:
-  - get
-- apiGroups:
-  - ""
-  resources:
-  - services
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - ""
@@ -393,57 +206,7 @@ rules:
   - gateway-operator.konghq.com
   resources:
   - aigateways
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - gateway-operator.konghq.com
-  resources:
-  - aigateways/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - gateway-operator.konghq.com
-  resources:
-  - aigateways/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - gateway-operator.konghq.com
-  resources:
   - controlplanes
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - gateway-operator.konghq.com
-  resources:
-  - controlplanes/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - gateway-operator.konghq.com
-  resources:
-  - controlplanes/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - gateway-operator.konghq.com
-  resources:
   - dataplanes
   verbs:
   - create
@@ -456,13 +219,18 @@ rules:
 - apiGroups:
   - gateway-operator.konghq.com
   resources:
+  - aigateways/finalizers
+  - controlplanes/finalizers
   - dataplanes/finalizers
   verbs:
   - update
 - apiGroups:
   - gateway-operator.konghq.com
   resources:
+  - aigateways/status
+  - controlplanes/status
   - dataplanes/status
+  - kongplugininstallations/status
   verbs:
   - get
   - patch
@@ -486,17 +254,14 @@ rules:
   - update
   - watch
 - apiGroups:
-  - gateway-operator.konghq.com
-  resources:
-  - kongplugininstallations/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
   - gateway.networking.k8s.io
   resources:
   - gatewayclasses
+  - grpcroutes
+  - referencegrants
+  - tcproutes
+  - tlsroutes
+  - udproutes
   verbs:
   - get
   - list
@@ -505,6 +270,8 @@ rules:
   - gateway.networking.k8s.io
   resources:
   - gatewayclasses/status
+  - gateways/status
+  - grpcroutes/status
   verbs:
   - get
   - patch
@@ -513,6 +280,7 @@ rules:
   - gateway.networking.k8s.io
   resources:
   - gateways
+  - httproutes
   verbs:
   - create
   - delete
@@ -530,105 +298,19 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
-  - gateways/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - grpcroutes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - grpcroutes/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - httproutes
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
   - httproutes/status
+  - tcproutes/status
+  - tlsroutes/status
+  - udproutes/status
   verbs:
   - get
   - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - referencegrants
-  verbs:
-  - get
-  - list
-  - watch
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
   - referencegrants/status
   verbs:
   - get
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - tcproutes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - tcproutes/status
-  verbs:
-  - get
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - tlsroutes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - tlsroutes/status
-  verbs:
-  - get
-  - update
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - udproutes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - udproutes/status
-  verbs:
-  - get
-  - update
 - apiGroups:
   - incubator.ingress-controller.konghq.com
   resources:
@@ -649,23 +331,6 @@ rules:
   - konnect.konghq.com
   resources:
   - konnectapiauthconfigurations
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - konnect.konghq.com
-  resources:
-  - konnectapiauthconfigurations/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - konnect.konghq.com
-  resources:
   - konnectcontrolplanes
   verbs:
   - get
@@ -676,6 +341,7 @@ rules:
 - apiGroups:
   - konnect.konghq.com
   resources:
+  - konnectapiauthconfigurations/status
   - konnectcontrolplanes/status
   verbs:
   - get
@@ -685,13 +351,6 @@ rules:
   - networking.k8s.io
   resources:
   - ingressclasses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - networking.k8s.io
-  resources:
   - ingresses
   verbs:
   - get
@@ -733,23 +392,6 @@ rules:
   - rbac.authorization.k8s.io
   resources:
   - clusterrolebindings
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - clusterrolebindings/status
-  verbs:
-  - get
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
   - clusterroles
   verbs:
   - create
@@ -762,6 +404,7 @@ rules:
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
+  - clusterrolebindings/status
   - clusterroles/status
   verbs:
   - get
@@ -769,13 +412,6 @@ rules:
   - rbac.authorization.k8s.io
   resources:
   - rolebindings
-  verbs:
-  - create
-  - delete
-  - get
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
   - roles
   verbs:
   - create
