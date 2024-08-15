@@ -5,14 +5,6 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - ""
-  - ""
-  resources:
-  - events
-  verbs:
-  - create
-  - patch
-- apiGroups:
   - admissionregistration.k8s.io
   resources:
   - validatingwebhookconfigurations
@@ -160,6 +152,13 @@ rules:
   - serviceaccounts/status
   verbs:
   - get
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
 - apiGroups:
   - ""
   resources:
