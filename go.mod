@@ -217,7 +217,7 @@ replace (
 	k8s.io/component-base => k8s.io/component-base v0.30.3
 	k8s.io/component-helpers => k8s.io/component-helpers v0.30.3
 	k8s.io/controller-manager => k8s.io/controller-manager v0.30.3
-	k8s.io/cri-api => k8s.io/cri-api v0.30.3
+	k8s.io/cri-api => k8s.io/cri-api v0.30.4
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.30.3
 	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.30.3
 	k8s.io/endpointslice => k8s.io/endpointslice v0.30.3
