@@ -97,7 +97,7 @@ func Delete[
 func Update[
 	T SupportedKonnectEntityType,
 	TEnt EntityType[T],
-](ctx context.Context, sdk *sdkkonnectgo.SDK, cl client.Client, e *T) (ctrl.Result, error) {
+](ctx context.Context, sdk *sdkkonnectgo.SDK, syncPeriod time.Duration, cl client.Client, e *T) (ctrl.Result, error) {
 	var (
 		ent                = TEnt(e)
 		condProgrammed, ok = k8sutils.GetCondition(KonnectEntityProgrammedConditionType, ent)
@@ -110,8 +110,8 @@ func Update[
 		condProgrammed.Status == metav1.ConditionTrue &&
 		condProgrammed.Reason == KonnectEntityProgrammedReason &&
 		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration() &&
-		timeFromLastUpdate <= configurableSyncPeriod {
-		requeueAfter := configurableSyncPeriod - timeFromLastUpdate
+		timeFromLastUpdate <= syncPeriod {
+		requeueAfter := syncPeriod - timeFromLastUpdate
 		log.Debug(ctrllog.FromContext(ctx),
 			"no need for update, requeueing after configured sync period", e,
 			"last_update", condProgrammed.LastTransitionTime.Time,

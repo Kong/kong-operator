@@ -316,6 +316,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				sdkFactory,
 				c.DevelopmentMode,
 				mgr.GetClient(),
+				konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.KonnectControlPlane](c.KonnectSyncPeriod),
 			),
 		}
 		controllers[KongServiceControllerName] = ControllerDef{
@@ -324,6 +325,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				sdkFactory,
 				c.DevelopmentMode,
 				mgr.GetClient(),
+				konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongService](c.KonnectSyncPeriod),
 			),
 		}
 		controllers[KongConsumerControllerName] = ControllerDef{
@@ -332,6 +334,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				sdkFactory,
 				c.DevelopmentMode,
 				mgr.GetClient(),
+				konnect.WithKonnectEntitySyncPeriod[configurationv1.KongConsumer](c.KonnectSyncPeriod),
 			),
 		}
 	}
