@@ -63,6 +63,12 @@ func TestDataPlaneEssentials(t *testing.T) {
 										Image: helpers.GetDefaultDataPlaneImage(),
 									},
 								},
+								ImagePullSecrets: []corev1.LocalObjectReference{
+									{
+										// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+										Name: "regcred",
+									},
+								},
 							},
 						},
 					},
@@ -256,6 +262,12 @@ func TestDataPlaneUpdate(t *testing.T) {
 										},
 										Name:  consts.DataPlaneProxyContainerName,
 										Image: helpers.GetDefaultDataPlaneImage(),
+									},
+								},
+								ImagePullSecrets: []corev1.LocalObjectReference{
+									{
+										// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+										Name: "regcred",
 									},
 								},
 							},
@@ -529,6 +541,12 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 										Image: helpers.GetDefaultDataPlaneImage(),
 									},
 								},
+								ImagePullSecrets: []corev1.LocalObjectReference{
+									{
+										// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+										Name: "regcred",
+									},
+								},
 							},
 						},
 					},
@@ -720,6 +738,12 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 										},
 									},
 								},
+								ImagePullSecrets: []corev1.LocalObjectReference{
+									{
+										// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+										Name: "regcred",
+									},
+								},
 							},
 						},
 					},
@@ -853,6 +877,12 @@ func TestDataPlanePodDisruptionBudget(t *testing.T) {
 									{
 										Name:  consts.DataPlaneProxyContainerName,
 										Image: helpers.GetDefaultDataPlaneImage(),
+									},
+								},
+								ImagePullSecrets: []corev1.LocalObjectReference{
+									{
+										// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+										Name: "regcred",
 									},
 								},
 							},

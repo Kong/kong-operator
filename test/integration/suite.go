@@ -144,6 +144,10 @@ func TestMain(
 
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")
 	exitOnErr(clusters.CreateNamespace(GetCtx(), GetEnv().Cluster(), "kong-system"))
+	if _, err := helpers.CreateDockerSecretBasedOnEnvVars(
+		ctx, clients.K8sClient.CoreV1().Secrets("kong-system")); err != nil {
+		exitOnErr(err)
+	}
 
 	configPath, cleaner, err := config.DumpKustomizeConfigToTempDir()
 	exitOnErr(err)

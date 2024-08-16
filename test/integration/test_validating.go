@@ -89,6 +89,12 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 												},
 											},
 										},
+										ImagePullSecrets: []corev1.LocalObjectReference{
+											{
+												// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+												Name: "regcred",
+											},
+										},
 									},
 								},
 							},
@@ -123,6 +129,12 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 														Value: "xxx",
 													},
 												},
+											},
+										},
+										ImagePullSecrets: []corev1.LocalObjectReference{
+											{
+												// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+												Name: "regcred",
 											},
 										},
 									},
@@ -163,6 +175,12 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 														},
 													},
 												},
+											},
+										},
+										ImagePullSecrets: []corev1.LocalObjectReference{
+											{
+												// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+												Name: "regcred",
 											},
 										},
 									},
@@ -317,6 +335,12 @@ func testDataPlaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 												},
 											},
 										},
+										ImagePullSecrets: []corev1.LocalObjectReference{
+											{
+												// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+												Name: "regcred",
+											},
+										},
 									},
 								},
 							},
@@ -349,6 +373,12 @@ func testDataPlaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 														Value: "xxx",
 													},
 												},
+											},
+										},
+										ImagePullSecrets: []corev1.LocalObjectReference{
+											{
+												// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+												Name: "regcred",
 											},
 										},
 									},
@@ -388,6 +418,12 @@ func testDataPlaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 														},
 													},
 												},
+											},
+										},
+										ImagePullSecrets: []corev1.LocalObjectReference{
+											{
+												// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+												Name: "regcred",
 											},
 										},
 									},

@@ -57,6 +57,12 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 									Image: consts.DefaultControlPlaneImage,
 								},
 							},
+							ImagePullSecrets: []corev1.LocalObjectReference{
+								{
+									// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+									Name: "regcred",
+								},
+							},
 						},
 					},
 				},
@@ -85,6 +91,12 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 									{
 										Name:  consts.DataPlaneProxyContainerName,
 										Image: helpers.GetDefaultDataPlaneImage(),
+									},
+								},
+								ImagePullSecrets: []corev1.LocalObjectReference{
+									{
+										// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+										Name: "regcred",
 									},
 								},
 							},
@@ -182,6 +194,12 @@ func TestControlPlaneEssentials(t *testing.T) {
 										}(),
 									},
 								},
+								ImagePullSecrets: []corev1.LocalObjectReference{
+									{
+										// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+										Name: "regcred",
+									},
+								},
 							},
 						},
 					},
@@ -227,6 +245,12 @@ func TestControlPlaneEssentials(t *testing.T) {
 										p.PeriodSeconds = 1
 										return p
 									}(),
+								},
+							},
+							ImagePullSecrets: []corev1.LocalObjectReference{
+								{
+									// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+									Name: "regcred",
 								},
 							},
 						},
@@ -556,6 +580,12 @@ func TestControlPlaneUpdate(t *testing.T) {
 										InitialDelaySeconds: 1,
 										PeriodSeconds:       1,
 									},
+								},
+							},
+							ImagePullSecrets: []corev1.LocalObjectReference{
+								{
+									// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+									Name: "regcred",
 								},
 							},
 						},

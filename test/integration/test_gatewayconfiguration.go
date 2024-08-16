@@ -79,6 +79,12 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 										},
 									},
 								},
+								ImagePullSecrets: []corev1.LocalObjectReference{
+									{
+										// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+										Name: "regcred",
+									},
+								},
 							},
 						},
 					},
@@ -109,6 +115,12 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 											},
 										},
 									},
+								},
+							},
+							ImagePullSecrets: []corev1.LocalObjectReference{
+								{
+									// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+									Name: "regcred",
 								},
 							},
 						},

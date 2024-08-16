@@ -486,6 +486,12 @@ func testBlueGreenDataPlaneSpec() operatorv1beta1.DataPlaneSpec {
 									},
 								},
 							},
+							ImagePullSecrets: []corev1.LocalObjectReference{
+								{
+									// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+									Name: "regcred",
+								},
+							},
 						},
 					},
 				},

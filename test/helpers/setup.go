@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -46,6 +47,19 @@ func SetupTestEnv(t *testing.T, ctx context.Context, env environments.Environmen
 	require.NoError(t, err)
 	t.Logf("using test namespace: %s", namespace.Name)
 	cleaner.AddNamespace(namespace)
+
+	dockerHubSecret, err := CreateDockerSecretBasedOnEnvVars(
+		ctx,
+		env.Cluster().Client().CoreV1().Secrets(namespace.Name),
+	)
+	if err != nil {
+		if !errors.As(err, &MissingDockerHubEnvVarError{}) {
+			t.Fatalf("failed to create docker secret based on env vars: %v", err)
+		}
+	}
+	if err == nil {
+		cleaner.Add(dockerHubSecret)
+	}
 
 	t.Cleanup(func() {
 		if t.Failed() {

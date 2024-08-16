@@ -103,6 +103,12 @@ func GenerateGatewayConfiguration(namespace string) *operatorv1beta1.GatewayConf
 									},
 								},
 							},
+							ImagePullSecrets: []corev1.LocalObjectReference{
+								{
+									// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+									Name: "regcred",
+								},
+							},
 						},
 					},
 				},
@@ -130,6 +136,12 @@ func GenerateGatewayConfiguration(namespace string) *operatorv1beta1.GatewayConf
 												},
 											},
 										},
+									},
+								},
+								ImagePullSecrets: []corev1.LocalObjectReference{
+									{
+										// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+										Name: "regcred",
 									},
 								},
 							},

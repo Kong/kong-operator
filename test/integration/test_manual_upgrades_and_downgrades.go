@@ -63,6 +63,12 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 									},
 								},
 							},
+							ImagePullSecrets: []corev1.LocalObjectReference{
+								{
+									// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+									Name: "regcred",
+								},
+							},
 						},
 					},
 				},
@@ -81,6 +87,12 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 											PeriodSeconds:       1,
 											SuccessThreshold:    1,
 										},
+									},
+								},
+								ImagePullSecrets: []corev1.LocalObjectReference{
+									{
+										// Created by CreateDockerSecretBasedOnEnvVars in SetupTestEnv
+										Name: "regcred",
 									},
 								},
 							},

@@ -256,6 +256,8 @@ jobs:
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: integration-tests-webhook-enabled-${{ matrix.webhook-enabled }}.xml
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DOCKERHUB_PULL_TOKEN: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
+        DOCKERHUB_PULL_USERNAME: ${{ secrets.DOCKERHUB_PULL_USERNAME }}
 
     - name: upload diagnostics
       if: always()
@@ -308,6 +310,8 @@ jobs:
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: integration-tests-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}.xml
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DOCKERHUB_PULL_TOKEN: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
+        DOCKERHUB_PULL_USERNAME: ${{ secrets.DOCKERHUB_PULL_USERNAME }}
 
     - name: upload diagnostics
       if: always()
@@ -358,6 +362,8 @@ jobs:
         KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
         GOTESTSUM_JUNITFILE: integration-tests-provision-dataplane-fail.xml
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DOCKERHUB_PULL_TOKEN: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
+        DOCKERHUB_PULL_USERNAME: ${{ secrets.DOCKERHUB_PULL_USERNAME }}
     
     - name: upload diagnostics
       if: always()
