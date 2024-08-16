@@ -67,12 +67,19 @@ func createConsumer(
 	return nil
 }
 
+// updateConsumer updates a KongConsumer in Konnect.
+// The KongConsumer is assumed to have a Konnect ID set in status.
+// It returns an error if the KongConsumer does not have a ControlPlaneRef.
 func updateConsumer(
 	ctx context.Context,
 	sdk *sdkkonnectgo.SDK,
 	cl client.Client,
 	consumer *configurationv1.KongConsumer,
 ) error {
+	if consumer.Spec.ControlPlaneRef == nil {
+		return fmt.Errorf("can't update %T without a ControlPlaneRef", consumer)
+	}
+
 	// TODO(pmalek) handle other types of CP ref
 	// TODO(pmalek) handle cross namespace refs
 	nnCP := types.NamespacedName{
@@ -90,12 +97,6 @@ func updateConsumer(
 		return fmt.Errorf(
 			"can't update %T when referenced KonnectControlPlane %s does not have the Konnect ID",
 			consumer, nnCP,
-		)
-	}
-	if consumer.Status.Konnect == nil || consumer.Status.Konnect.ID == "" {
-		return fmt.Errorf(
-			"can't update %T %s when it does not have the Konnect ID",
-			consumer, client.ObjectKeyFromObject(consumer),
 		)
 	}
 
@@ -140,16 +141,15 @@ func updateConsumer(
 	return nil
 }
 
+// deleteConsumer deletes a KongConsumer in Konnect.
+// The KongConsumer is assumed to have a Konnect ID set in status.
+// It returns an error if the operation fails.
 func deleteConsumer(
 	ctx context.Context,
 	sdk *sdkkonnectgo.SDK,
 	consumer *configurationv1.KongConsumer,
 ) error {
 	id := consumer.Status.Konnect.GetKonnectID()
-	if id == "" {
-		return fmt.Errorf("can't remove %T without a Konnect ID", consumer)
-	}
-
 	_, err := sdk.Consumers.DeleteConsumer(ctx, consumer.Status.Konnect.ControlPlaneID, id)
 	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1.KongConsumer](err, DeleteOp, consumer); errWrapped != nil {
 		// Consumer delete operation returns an SDKError instead of a NotFoundError.

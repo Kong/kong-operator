@@ -61,10 +61,19 @@ func Create[
 }
 
 // Delete deletes a Konnect entity.
+// It returns an error if the entity does not have a Konnect ID or if the operation fails.
 func Delete[
 	T SupportedKonnectEntityType,
 	TEnt EntityType[T],
 ](ctx context.Context, sdk *sdkkonnectgo.SDK, cl client.Client, e *T) error {
+	ent := TEnt(e)
+	if ent.GetKonnectStatus().GetKonnectID() == "" {
+		return fmt.Errorf(
+			"can't delete %T %s when it does not have the Konnect ID",
+			ent, client.ObjectKeyFromObject(ent),
+		)
+	}
+
 	defer logOpComplete[T, TEnt](ctx, time.Now(), DeleteOp, e)
 
 	switch ent := any(e).(type) {
@@ -84,6 +93,7 @@ func Delete[
 }
 
 // Update updates a Konnect entity.
+// It returns an error if the entity does not have a Konnect ID or if the operation fails.
 func Update[
 	T SupportedKonnectEntityType,
 	TEnt EntityType[T],
@@ -112,6 +122,13 @@ func Update[
 		return ctrl.Result{
 			RequeueAfter: requeueAfter,
 		}, nil
+	}
+
+	if ent.GetKonnectStatus().GetKonnectID() == "" {
+		return ctrl.Result{}, fmt.Errorf(
+			"can't update %T %s when it does not have the Konnect ID",
+			ent, client.ObjectKeyFromObject(ent),
+		)
 	}
 
 	defer logOpComplete[T, TEnt](ctx, now, UpdateOp, e)

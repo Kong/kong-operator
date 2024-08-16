@@ -66,12 +66,20 @@ func createService(
 	return nil
 }
 
+// updateService updates the Konnect Service entity.
+// It is assumed that provided KongService has Konnect ID set in status.
+// It returns an error if the KongService does not have a ControlPlaneRef or
+// if the operation fails.
 func updateService(
 	ctx context.Context,
 	sdk *sdkkonnectgo.SDK,
 	cl client.Client,
 	svc *configurationv1alpha1.KongService,
 ) error {
+	if svc.Spec.ControlPlaneRef == nil {
+		return fmt.Errorf("can't update %T without a ControlPlaneRef", svc)
+	}
+
 	// TODO(pmalek) handle other types of CP ref
 	// TODO(pmalek) handle cross namespace refs
 	nnCP := types.NamespacedName{
@@ -89,12 +97,6 @@ func updateService(
 		return fmt.Errorf(
 			"can't update %T when referenced KonnectControlPlane %s does not have the Konnect ID",
 			svc, nnCP,
-		)
-	}
-	if svc.Status.Konnect == nil || svc.Status.Konnect.ID == "" {
-		return fmt.Errorf(
-			"can't update %T %s when it does not have the Konnect ID",
-			svc, client.ObjectKeyFromObject(svc),
 		)
 	}
 
@@ -139,16 +141,15 @@ func updateService(
 	return nil
 }
 
+// deleteService deletes a KongService in Konnect.
+// It is assumed that provided KongService has Konnect ID set in status.
+// It returns an error if the operation fails.
 func deleteService(
 	ctx context.Context,
 	sdk *sdkkonnectgo.SDK,
 	svc *configurationv1alpha1.KongService,
 ) error {
-	id := svc.Status.Konnect.GetKonnectID()
-	if id == "" {
-		return fmt.Errorf("can't remove %T without a Konnect ID", svc)
-	}
-
+	id := svc.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.Services.DeleteService(ctx, svc.Status.Konnect.ControlPlaneID, id)
 	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongService](err, DeleteOp, svc); errWrapped != nil {
 		// Service delete operation returns an SDKError instead of a NotFoundError.

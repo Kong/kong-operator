@@ -3,7 +3,6 @@ package konnect
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	"github.com/Kong/sdk-konnect-go/models/components"
@@ -55,16 +54,15 @@ func createControlPlane(
 	return nil
 }
 
+// deleteControlPlane deletes a Konnect ControlPlane.
+// It is assumed that the Konnect ControlPlane has a Konnect ID.
+
 func deleteControlPlane(
 	ctx context.Context,
 	sdk *sdkkonnectgo.SDK,
 	cp *konnectv1alpha1.KonnectControlPlane,
 ) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
-	if id == "" {
-		return fmt.Errorf("can't remove %T without a Konnect ID", cp)
-	}
-
 	_, err := sdk.ControlPlanes.DeleteControlPlane(ctx, id)
 	if errWrap := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, DeleteOp, cp); errWrap != nil {
 		var sdkError *sdkerrors.NotFoundError
@@ -84,16 +82,15 @@ func deleteControlPlane(
 	return nil
 }
 
+// updateControlPlane updates a Konnect ControlPlane.
+// It is assumed that the Konnect ControlPlane has a Konnect ID.
+// It returns an error if the operation fails.
 func updateControlPlane(
 	ctx context.Context,
 	sdk *sdkkonnectgo.SDK,
 	cp *konnectv1alpha1.KonnectControlPlane,
 ) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
-	if id == "" {
-		return fmt.Errorf("can't update %T without a Konnect ID", cp)
-	}
-
 	req := components.UpdateControlPlaneRequest{
 		Name:        sdkkonnectgo.String(cp.Spec.Name),
 		Description: cp.Spec.Description,
