@@ -56,7 +56,6 @@ func createControlPlane(
 
 // deleteControlPlane deletes a Konnect ControlPlane.
 // It is assumed that the Konnect ControlPlane has a Konnect ID.
-
 func deleteControlPlane(
 	ctx context.Context,
 	sdk *sdkkonnectgo.SDK,
