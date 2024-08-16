@@ -159,6 +159,13 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 		if !test.IsMetalLBDisabled() {
 			builder.WithAddons(metallb.New())
 		}
+
+		kindBuilder := kind.NewBuilder()
+		if configFile, err := helpers.CreateKindConfigWithDockerCredentialsBasedOnEnvVars(ctx); err == nil {
+			kindBuilder.WithConfig(configFile)
+			builder.WithClusterBuilder(kindBuilder)
+			t.Logf("using kind config file (%s)", configFile)
+		}
 	}
 	if imageLoad != "" {
 		imageLoader, err := loadimage.NewBuilder().WithImage(imageLoad)

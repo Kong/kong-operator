@@ -28,6 +28,7 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/modules/manager"
 	operatorclient "github.com/kong/kong-operator/pkg/clientset"
+	"github.com/kong/kong-operator/test/helpers"
 )
 
 // SetupControllerLogger sets up the controller logger.
@@ -96,6 +97,12 @@ func BuildEnvironment(ctx context.Context, existingCluster string, builderOpts .
 
 func buildEnvironmentOnNewKindCluster(ctx context.Context, builderOpts ...BuilderOpt) (environments.Environment, error) {
 	builder := environments.NewBuilder()
+
+	kindBuilder := kind.NewBuilder()
+	if configFile, err := helpers.CreateKindConfigWithDockerCredentialsBasedOnEnvVars(ctx); err == nil {
+		kindBuilder.WithConfig(configFile)
+		builder.WithClusterBuilder(kindBuilder)
+	}
 
 	for _, o := range builderOpts {
 		o(builder, kind.KindClusterType)
