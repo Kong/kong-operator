@@ -14,6 +14,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -48,6 +49,8 @@ func Create[
 		return e, createControlPlane(ctx, sdk, ent)
 	case *configurationv1alpha1.KongService:
 		return e, createService(ctx, sdk, ent)
+	case *configurationv1.KongConsumer:
+		return e, createConsumer(ctx, sdk, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -58,10 +61,19 @@ func Create[
 }
 
 // Delete deletes a Konnect entity.
+// It returns an error if the entity does not have a Konnect ID or if the operation fails.
 func Delete[
 	T SupportedKonnectEntityType,
 	TEnt EntityType[T],
 ](ctx context.Context, sdk *sdkkonnectgo.SDK, cl client.Client, e *T) error {
+	ent := TEnt(e)
+	if ent.GetKonnectStatus().GetKonnectID() == "" {
+		return fmt.Errorf(
+			"can't delete %T %s when it does not have the Konnect ID",
+			ent, client.ObjectKeyFromObject(ent),
+		)
+	}
+
 	defer logOpComplete[T, TEnt](ctx, time.Now(), DeleteOp, e)
 
 	switch ent := any(e).(type) {
@@ -69,6 +81,8 @@ func Delete[
 		return deleteControlPlane(ctx, sdk, ent)
 	case *configurationv1alpha1.KongService:
 		return deleteService(ctx, sdk, ent)
+	case *configurationv1.KongConsumer:
+		return deleteConsumer(ctx, sdk, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -79,6 +93,7 @@ func Delete[
 }
 
 // Update updates a Konnect entity.
+// It returns an error if the entity does not have a Konnect ID or if the operation fails.
 func Update[
 	T SupportedKonnectEntityType,
 	TEnt EntityType[T],
@@ -109,6 +124,13 @@ func Update[
 		}, nil
 	}
 
+	if ent.GetKonnectStatus().GetKonnectID() == "" {
+		return ctrl.Result{}, fmt.Errorf(
+			"can't update %T %s when it does not have the Konnect ID",
+			ent, client.ObjectKeyFromObject(ent),
+		)
+	}
+
 	defer logOpComplete[T, TEnt](ctx, now, UpdateOp, e)
 
 	switch ent := any(e).(type) {
@@ -116,6 +138,8 @@ func Update[
 		return ctrl.Result{}, updateControlPlane(ctx, sdk, ent)
 	case *configurationv1alpha1.KongService:
 		return ctrl.Result{}, updateService(ctx, sdk, cl, ent)
+	case *configurationv1.KongConsumer:
+		return ctrl.Result{}, updateConsumer(ctx, sdk, cl, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types

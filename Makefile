@@ -510,8 +510,7 @@ debug.skaffold.continuous: _ensure-kong-system-namespace
 
 # Install CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install
-install: manifests kustomize install-gateway-api-crds
-	$(KUSTOMIZE) build $(KIC_CRDS_URL) | kubectl apply -f -
+install: manifests kustomize install-gateway-api-crds install.kic-crds
 	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
 
 KUBERNETES_CONFIGURATION_CRDS_PACKAGE ?= github.com/kong/kubernetes-configuration
@@ -525,10 +524,14 @@ install.kubernetes-configuration-crds: kustomize
 
 # Install standard and experimental CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.all
-install.all: manifests kustomize install-gateway-api-crds install.kubernetes-configuration-crds
-	$(KUSTOMIZE) build $(KIC_CRDS_URL) | kubectl apply -f -
+install.all: manifests kustomize install-gateway-api-crds install.kic-crds install.kubernetes-configuration-crds
 	kubectl apply --server-side -f $(PROJECT_DIR)/config/crd/bases/
 	kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
+
+# Install KIC CRDs into the K8s cluster specified in ~/.kube/config.
+.PHONY: install.kic-crds
+install.kic-crds: kustomize
+	$(KUSTOMIZE) build $(KIC_CRDS_URL) | kubectl apply -f -
 
 # Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.

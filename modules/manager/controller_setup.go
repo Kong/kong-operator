@@ -28,6 +28,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -61,6 +62,8 @@ const (
 	KonnectControlPlaneControllerName = "KonnectControlPlane"
 	// KongServiceControllerName is the name of the KongService controller.
 	KongServiceControllerName = "KongService"
+	// KongConsumerControllerName is the name of the KongConsumer controller.
+	KongConsumerControllerName = "KongConsumer"
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
@@ -318,6 +321,14 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		controllers[KongServiceControllerName] = ControllerDef{
 			Enabled: c.KonnectControllersEnabled,
 			Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongService](
+				sdkFactory,
+				c.DevelopmentMode,
+				mgr.GetClient(),
+			),
+		}
+		controllers[KongConsumerControllerName] = ControllerDef{
+			Enabled: c.KonnectControllersEnabled,
+			Controller: konnect.NewKonnectEntityReconciler[configurationv1.KongConsumer](
 				sdkFactory,
 				c.DevelopmentMode,
 				mgr.GetClient(),

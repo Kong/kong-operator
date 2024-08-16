@@ -17,6 +17,7 @@ import (
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -29,16 +30,16 @@ import (
 //   reference from the object
 // - lists have their items stored in Items field, not returned via a method
 
-// KongServiceReconciliationWatchOptions returns the watch options for
-// the KongService.
-func KongServiceReconciliationWatchOptions(
+// KongConsumerReconciliationWatchOptions returns the watch options for
+// the KongConsumer.
+func KongConsumerReconciliationWatchOptions(
 	cl client.Client,
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&configurationv1alpha1.KongService{},
+			return b.For(&configurationv1.KongConsumer{},
 				builder.WithPredicates(
-					predicate.NewPredicateFuncs(kongServiceRefersToKonnectControlPlane),
+					predicate.NewPredicateFuncs(kongConsumerRefersToKonnectControlPlane),
 				),
 			)
 		},
@@ -46,7 +47,7 @@ func KongServiceReconciliationWatchOptions(
 			return b.Watches(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueKongServiceForKonnectAPIAuthConfiguration(cl),
+					enqueueKongConsumerForKonnectAPIAuthConfiguration(cl),
 				),
 			)
 		},
@@ -54,31 +55,31 @@ func KongServiceReconciliationWatchOptions(
 			return b.Watches(
 				&konnectv1alpha1.KonnectControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueKongServiceForKonnectControlPlane(cl),
+					enqueueKongConsumerForKonnectControlPlane(cl),
 				),
 			)
 		},
 	}
 }
 
-// kongServiceRefersToKonnectControlPlane returns true if the KongService
+// kongConsumerRefersToKonnectControlPlane returns true if the KongConsumer
 // refers to a KonnectControlPlane.
-func kongServiceRefersToKonnectControlPlane(obj client.Object) bool {
-	kongSvc, ok := obj.(*configurationv1alpha1.KongService)
+func kongConsumerRefersToKonnectControlPlane(obj client.Object) bool {
+	kongConsumer, ok := obj.(*configurationv1.KongConsumer)
 	if !ok {
 		ctrllog.FromContext(context.Background()).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run predicate function",
-			"expected", "KongService", "found", reflect.TypeOf(obj),
+			"expected", "KongConsumer", "found", reflect.TypeOf(obj),
 		)
 		return false
 	}
 
-	cpRef := kongSvc.Spec.ControlPlaneRef
+	cpRef := kongConsumer.Spec.ControlPlaneRef
 	return cpRef != nil && cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
 }
 
-func enqueueKongServiceForKonnectAPIAuthConfiguration(
+func enqueueKongConsumerForKonnectAPIAuthConfiguration(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -86,7 +87,7 @@ func enqueueKongServiceForKonnectAPIAuthConfiguration(
 		if !ok {
 			return nil
 		}
-		var l configurationv1alpha1.KongServiceList
+		var l configurationv1.KongConsumerList
 		if err := cl.List(ctx, &l, &client.ListOptions{
 			// TODO: change this when cross namespace refs are allowed.
 			Namespace: auth.GetNamespace(),
@@ -95,8 +96,8 @@ func enqueueKongServiceForKonnectAPIAuthConfiguration(
 		}
 
 		var ret []reconcile.Request
-		for _, svc := range l.Items {
-			cpRef, ok := getControlPlaneRef(&svc).Get()
+		for _, consumer := range l.Items {
+			cpRef, ok := getControlPlaneRef(&consumer).Get()
 			if !ok {
 				continue
 			}
@@ -105,7 +106,7 @@ func enqueueKongServiceForKonnectAPIAuthConfiguration(
 			case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
 				nn := types.NamespacedName{
 					Name:      cpRef.KonnectNamespacedRef.Name,
-					Namespace: svc.Namespace,
+					Namespace: consumer.Namespace,
 				}
 				// TODO: change this when cross namespace refs are allowed.
 				if nn.Namespace != auth.Namespace {
@@ -128,23 +129,23 @@ func enqueueKongServiceForKonnectAPIAuthConfiguration(
 
 				ret = append(ret, reconcile.Request{
 					NamespacedName: types.NamespacedName{
-						Namespace: svc.Namespace,
-						Name:      svc.Name,
+						Namespace: consumer.Namespace,
+						Name:      consumer.Name,
 					},
 				})
 
 			case configurationv1alpha1.ControlPlaneRefKonnectID:
 				ctrllog.FromContext(ctx).Error(
 					fmt.Errorf("unimplemented ControlPlaneRef type %q", cpRef.Type),
-					"unimplemented ControlPlaneRef for KongService",
-					"KongService", svc, "refType", cpRef.Type,
+					"unimplemented ControlPlaneRef for KongConsumer",
+					"KongConsumer", consumer, "refType", cpRef.Type,
 				)
 				continue
 
 			default:
 				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
-					"unsupported ControlPlaneRef for KongService",
-					"KongService", svc, "refType", cpRef.Type,
+					"unsupported ControlPlaneRef for KongConsumer",
+					"KongConsumer", consumer, "refType", cpRef.Type,
 				)
 				continue
 			}
@@ -153,7 +154,7 @@ func enqueueKongServiceForKonnectAPIAuthConfiguration(
 	}
 }
 
-func enqueueKongServiceForKonnectControlPlane(
+func enqueueKongConsumerForKonnectControlPlane(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -161,7 +162,7 @@ func enqueueKongServiceForKonnectControlPlane(
 		if !ok {
 			return nil
 		}
-		var l configurationv1alpha1.KongServiceList
+		var l configurationv1.KongConsumerList
 		if err := cl.List(ctx, &l, &client.ListOptions{
 			// TODO: change this when cross namespace refs are allowed.
 			Namespace: cp.GetNamespace(),
@@ -170,33 +171,37 @@ func enqueueKongServiceForKonnectControlPlane(
 		}
 
 		var ret []reconcile.Request
-		for _, svc := range l.Items {
-			switch svc.Spec.ControlPlaneRef.Type {
+		for _, consumer := range l.Items {
+			cpRef, ok := getControlPlaneRef(&consumer).Get()
+			if !ok {
+				continue
+			}
+			switch cpRef.Type {
 			case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
 				// TODO: change this when cross namespace refs are allowed.
-				if svc.Spec.ControlPlaneRef.KonnectNamespacedRef.Name != cp.Name {
+				if cpRef.KonnectNamespacedRef.Name != cp.Name {
 					continue
 				}
 
 				ret = append(ret, reconcile.Request{
 					NamespacedName: types.NamespacedName{
-						Namespace: svc.Namespace,
-						Name:      svc.Name,
+						Namespace: consumer.Namespace,
+						Name:      consumer.Name,
 					},
 				})
 
 			case configurationv1alpha1.ControlPlaneRefKonnectID:
 				ctrllog.FromContext(ctx).Error(
-					fmt.Errorf("unimplemented ControlPlaneRef type %q", svc.Spec.ControlPlaneRef.Type),
-					"unimplemented ControlPlaneRef for KongService",
-					"KongService", svc, "refType", svc.Spec.ControlPlaneRef.Type,
+					fmt.Errorf("unimplemented ControlPlaneRef type %q", cpRef.Type),
+					"unimplemented ControlPlaneRef for KongConsumer",
+					"KongConsumer", consumer, "refType", cpRef.Type,
 				)
 				continue
 
 			default:
 				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
-					"unsupported ControlPlaneRef for KongService",
-					"KongService", svc, "refType", svc.Spec.ControlPlaneRef.Type,
+					"unsupported ControlPlaneRef for KongConsumer",
+					"KongConsumer", consumer, "refType", cpRef.Type,
 				)
 				continue
 			}
