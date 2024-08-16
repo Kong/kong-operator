@@ -310,6 +310,7 @@ _test.unit: gotestsum
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
 		-coverprofile=coverage.unit.out \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS)" \
 		$(UNIT_TEST_PATHS)
 
 .PHONY: test.unit

@@ -105,11 +105,17 @@ func SetDefaultsVolume(v *corev1.Volume) {
 		if v.HostPath != nil {
 			pkgapiscorev1.SetDefaults_HostPathVolumeSource(v.HostPath)
 		}
-		if v.ScaleIO != nil {
-			pkgapiscorev1.SetDefaults_ScaleIOVolumeSource(v.ScaleIO)
+		if v.Secret != nil {
+			pkgapiscorev1.SetDefaults_SecretVolumeSource(v.Secret)
 		}
-		if v.RBD != nil {
-			pkgapiscorev1.SetDefaults_RBDVolumeSource(v.RBD)
+		if v.Projected != nil {
+			pkgapiscorev1.SetDefaults_ProjectedVolumeSource(v.Projected)
+		}
+		if v.ConfigMap != nil {
+			pkgapiscorev1.SetDefaults_ConfigMapVolumeSource(v.ConfigMap)
+		}
+		if v.DownwardAPI != nil {
+			pkgapiscorev1.SetDefaults_DownwardAPIVolumeSource(v.DownwardAPI)
 		}
 	}
 }
