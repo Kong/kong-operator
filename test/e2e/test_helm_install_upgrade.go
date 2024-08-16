@@ -24,6 +24,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func init() {
@@ -45,6 +46,8 @@ func TestHelmUpgrade(t *testing.T) {
 	// createEnvironment will queue up environment cleanup if necessary
 	// and dumping diagnostics if the test fails.
 	e := CreateEnvironment(t, ctx)
+	_, err := helpers.CreateDockerSecretBasedOnEnvVars(ctx, e.Clients.K8sClient.CoreV1().Secrets(e.Namespace.Name))
+	require.NoError(t, err)
 
 	// assertion is run after the upgrade to assert the state of the resources in the cluster.
 	type assertion struct {

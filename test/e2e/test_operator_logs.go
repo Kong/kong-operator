@@ -73,11 +73,14 @@ func TestOperatorLogs(t *testing.T) {
 	// createEnvironment will queue up environment cleanup if necessary
 	// and dumping diagnostics if the test fails.
 	e := CreateEnvironment(t, ctx, WithInstallViaKustomize())
+	_, err := helpers.CreateDockerSecretBasedOnEnvVars(ctx, e.Clients.K8sClient.CoreV1().Secrets(e.Namespace.Name))
+	require.NoError(t, err)
+
 	clients, testNamespace, cleaner := e.Clients, e.Namespace, e.Cleaner
 
 	t.Log("finding the Pod for the Gateway Operator")
 	podList := &corev1.PodList{}
-	err := clients.MgrClient.List(ctx, podList, client.MatchingLabels{
+	err = clients.MgrClient.List(ctx, podList, client.MatchingLabels{
 		"control-plane": "controller-manager",
 	})
 	require.NoError(t, err)

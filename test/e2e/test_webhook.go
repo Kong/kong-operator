@@ -11,6 +11,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func init() {
@@ -24,6 +25,9 @@ func TestDataPlaneValidatingWebhook(t *testing.T) {
 	// createEnvironment will queue up environment cleanup if necessary
 	// and dumping diagnostics if the test fails.
 	e := CreateEnvironment(t, ctx, WithInstallViaKustomize())
+	_, err := helpers.CreateDockerSecretBasedOnEnvVars(ctx, e.Clients.K8sClient.CoreV1().Secrets(e.Namespace.Name))
+	require.NoError(t, err)
+
 	clients, testNamespace := e.Clients, e.Namespace
 
 	testCases := []struct {
