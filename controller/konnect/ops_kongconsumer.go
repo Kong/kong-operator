@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -19,6 +18,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func createConsumer(
@@ -175,21 +175,7 @@ func kongConsumerToSDKConsumerInput(
 ) sdkkonnectgocomp.ConsumerInput {
 	return sdkkonnectgocomp.ConsumerInput{
 		CustomID: &consumer.CustomID,
-		Tags:     ExtractUserTags(consumer),
+		Tags:     metadata.ExtractTags(consumer),
 		Username: &consumer.Username,
 	}
-}
-
-// ExtractUserTags extracts a set of tags from a comma-separated string.
-// Copy pasted from: https://github.com/Kong/kubernetes-ingress-controller/blob/eb80ec2c58f4d53f8c6d7c997bcfb1f334b801e1/internal/annotations/annotations.go#L407-L416
-func ExtractUserTags(obj metav1.Object) []string {
-	anns := obj.GetAnnotations()
-	val := anns[AnnotationPrefix+UserTagKey]
-	// If the annotation is not present, the map provides an empty value,
-	// and splitting that will create a slice containing a single empty string tag.
-	// These aren't valid, hence this special case.
-	if len(val) == 0 {
-		return []string{}
-	}
-	return strings.Split(val, ",")
 }
