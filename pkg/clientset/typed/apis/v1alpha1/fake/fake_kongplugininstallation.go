@@ -41,22 +41,24 @@ var kongplugininstallationsKind = v1alpha1.SchemeGroupVersion.WithKind("KongPlug
 
 // Get takes name of the kongPluginInstallation, and returns the corresponding kongPluginInstallation object, and an error if there is any.
 func (c *FakeKongPluginInstallations) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.KongPluginInstallation, err error) {
+	emptyResult := &v1alpha1.KongPluginInstallation{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(kongplugininstallationsResource, c.ns, name), &v1alpha1.KongPluginInstallation{})
+		Invokes(testing.NewGetActionWithOptions(kongplugininstallationsResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongPluginInstallation), err
 }
 
 // List takes label and field selectors, and returns the list of KongPluginInstallations that match those selectors.
 func (c *FakeKongPluginInstallations) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.KongPluginInstallationList, err error) {
+	emptyResult := &v1alpha1.KongPluginInstallationList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(kongplugininstallationsResource, kongplugininstallationsKind, c.ns, opts), &v1alpha1.KongPluginInstallationList{})
+		Invokes(testing.NewListActionWithOptions(kongplugininstallationsResource, kongplugininstallationsKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeKongPluginInstallations) List(ctx context.Context, opts v1.ListOpti
 // Watch returns a watch.Interface that watches the requested kongPluginInstallations.
 func (c *FakeKongPluginInstallations) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(kongplugininstallationsResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(kongplugininstallationsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a kongPluginInstallation and creates it.  Returns the server's representation of the kongPluginInstallation, and an error, if there is any.
 func (c *FakeKongPluginInstallations) Create(ctx context.Context, kongPluginInstallation *v1alpha1.KongPluginInstallation, opts v1.CreateOptions) (result *v1alpha1.KongPluginInstallation, err error) {
+	emptyResult := &v1alpha1.KongPluginInstallation{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(kongplugininstallationsResource, c.ns, kongPluginInstallation), &v1alpha1.KongPluginInstallation{})
+		Invokes(testing.NewCreateActionWithOptions(kongplugininstallationsResource, c.ns, kongPluginInstallation, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongPluginInstallation), err
 }
 
 // Update takes the representation of a kongPluginInstallation and updates it. Returns the server's representation of the kongPluginInstallation, and an error, if there is any.
 func (c *FakeKongPluginInstallations) Update(ctx context.Context, kongPluginInstallation *v1alpha1.KongPluginInstallation, opts v1.UpdateOptions) (result *v1alpha1.KongPluginInstallation, err error) {
+	emptyResult := &v1alpha1.KongPluginInstallation{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(kongplugininstallationsResource, c.ns, kongPluginInstallation), &v1alpha1.KongPluginInstallation{})
+		Invokes(testing.NewUpdateActionWithOptions(kongplugininstallationsResource, c.ns, kongPluginInstallation, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongPluginInstallation), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeKongPluginInstallations) UpdateStatus(ctx context.Context, kongPluginInstallation *v1alpha1.KongPluginInstallation, opts v1.UpdateOptions) (*v1alpha1.KongPluginInstallation, error) {
+func (c *FakeKongPluginInstallations) UpdateStatus(ctx context.Context, kongPluginInstallation *v1alpha1.KongPluginInstallation, opts v1.UpdateOptions) (result *v1alpha1.KongPluginInstallation, err error) {
+	emptyResult := &v1alpha1.KongPluginInstallation{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(kongplugininstallationsResource, "status", c.ns, kongPluginInstallation), &v1alpha1.KongPluginInstallation{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(kongplugininstallationsResource, "status", c.ns, kongPluginInstallation, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongPluginInstallation), err
 }
@@ -123,7 +128,7 @@ func (c *FakeKongPluginInstallations) Delete(ctx context.Context, name string, o
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeKongPluginInstallations) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(kongplugininstallationsResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(kongplugininstallationsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.KongPluginInstallationList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeKongPluginInstallations) DeleteCollection(ctx context.Context, opts
 
 // Patch applies the patch and returns the patched kongPluginInstallation.
 func (c *FakeKongPluginInstallations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.KongPluginInstallation, err error) {
+	emptyResult := &v1alpha1.KongPluginInstallation{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(kongplugininstallationsResource, c.ns, name, pt, data, subresources...), &v1alpha1.KongPluginInstallation{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(kongplugininstallationsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.KongPluginInstallation), err
 }
