@@ -5,7 +5,8 @@ import "time"
 // ServiceType is a re-typing of string to be used to distinguish between proxy and admin service
 type ServiceType string
 
-// ----------------------------------------------------------------------------- // Consts - Standard Kubernetes Object Labels
+// -----------------------------------------------------------------------------
+// Consts - Standard Kubernetes Object Labels
 // -----------------------------------------------------------------------------
 
 const (
