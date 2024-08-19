@@ -55,6 +55,13 @@ func (c *KongService) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
 	return &c.Status.Konnect.KonnectEntityStatus
 }
 
+func (c *KongService) SetKonnectID(id string) {
+	if c.Status.Konnect == nil {
+		c.InitKonnectStatus()
+	}
+	c.Status.Konnect.ID = id
+}
+
 func (c *KongService) GetControlPlaneID() string {
 	if c.Status.Konnect == nil {
 		return ""

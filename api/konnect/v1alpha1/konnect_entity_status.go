@@ -77,3 +77,13 @@ type KonnectEntityStatusWithControlPlaneAndServiceRefs struct {
 	// ServiceID is the Konnect ID of the Service this entity is associated with.
 	ServiceID string `json:"serviceID,omitempty"`
 }
+
+// SetServerURL sets the server URL of the KonnectEntityStatus struct.
+func (in *KonnectEntityStatusWithControlPlaneAndServiceRefs) SetControlPlaneID(id string) {
+	in.ControlPlaneID = id
+}
+
+// GetServerURL sets the server URL of the KonnectEntityStatus struct.
+func (in *KonnectEntityStatusWithControlPlaneAndServiceRefs) GetControlPlaneID() string {
+	return in.ControlPlaneID
+}

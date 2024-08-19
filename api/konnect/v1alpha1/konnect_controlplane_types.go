@@ -76,6 +76,10 @@ func (c *KonnectControlPlane) SetKonnectLabels(labels map[string]string) {
 	c.Spec.Labels = labels
 }
 
+func (c *KonnectControlPlane) SetKonnectID(id string) {
+	c.Status.ID = id
+}
+
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
 func (c *KonnectControlPlane) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigurationRef {
 	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef

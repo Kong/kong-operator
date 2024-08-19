@@ -89,6 +89,13 @@ func (c *KongConsumer) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
 	return &c.Status.Konnect.KonnectEntityStatus
 }
 
+func (c *KongConsumer) SetKonnectID(id string) {
+	if c.Status.Konnect == nil {
+		c.InitKonnectStatus()
+	}
+	c.Status.Konnect.ID = id
+}
+
 func (c KongConsumer) GetTypeName() string {
 	return "KongConsumer"
 }

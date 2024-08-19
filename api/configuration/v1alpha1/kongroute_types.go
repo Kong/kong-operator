@@ -35,7 +35,7 @@ import (
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
-// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.konnect.authRef) || has(self.spec.konnect.authRef)", message="Konnect Configuration's API auth ref reference is required once set"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.serviceRef) || has(self.spec.serviceRef)", message="serviceRef is required once set"
 // +kubebuilder:validation:XValidation:rule="self.spec.protocols.exists(p, p == 'http') ? (has(self.spec.hosts) || has(self.spec.methods) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.headers) ) : true", message="If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set"
 type KongRoute struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -45,16 +45,40 @@ type KongRoute struct {
 	Status KongRouteStatus `json:"status,omitempty"`
 }
 
+func (c *KongRoute) InitKonnectStatus() {
+	c.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs{}
+}
+
 func (c *KongRoute) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
+	if c.Status.Konnect == nil {
+		return nil
+	}
 	return &c.Status.Konnect.KonnectEntityStatus
+}
+
+func (c *KongRoute) GetControlPlaneID() string {
+	if c.Status.Konnect == nil {
+		return ""
+	}
+	return c.Status.Konnect.ControlPlaneID
+}
+
+func (c *KongRoute) SetControlPlaneID(id string) {
+	if c.Status.Konnect == nil {
+		c.InitKonnectStatus()
+	}
+	c.Status.Konnect.ControlPlaneID = id
+}
+
+func (c *KongRoute) SetKonnectID(id string) {
+	if c.Status.Konnect == nil {
+		c.InitKonnectStatus()
+	}
+	c.Status.Konnect.ID = id
 }
 
 func (c KongRoute) GetTypeName() string {
 	return "KongRoute"
-}
-
-func (c *KongRoute) GetKonnectAPIAuthConfigurationRef() konnectv1alpha1.KonnectAPIAuthConfigurationRef {
-	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
 }
 
 // GetConditions returns the Status Conditions
@@ -69,17 +93,9 @@ func (c *KongRoute) SetConditions(conditions []metav1.Condition) {
 
 // KongRouteSpec defines specification of a Kong Route.
 type KongRouteSpec struct {
-	// ControlPlaneRef is a reference to a ControlPlane this Route is associated with.
-	// +kubebuilder:validation:Required
-	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef"`
-
 	// ServiceRef is a reference to a Service this Route is associated with.
 	// +optional
-	ServiceRef ServiceRef `json:"serviceRef,omitempty"`
-
-	// KonnectConfiguration holds the Konnect configuration like authentication configuration.
-	// +kubebuilder:validation:Required
-	KonnectConfiguration konnectv1alpha1.KonnectConfiguration `json:"konnect,omitempty"`
+	ServiceRef *ServiceRef `json:"serviceRef,omitempty"`
 
 	KongRouteAPISpec `json:",inline"`
 }
