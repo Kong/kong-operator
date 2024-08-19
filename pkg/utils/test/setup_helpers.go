@@ -19,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kong/gateway-operator/modules/manager"
@@ -186,17 +187,23 @@ func BuildMTLSCredentials(ctx context.Context, k8sClient *kubernetes.Clientset, 
 func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorclient.Clientset, env environments.Environment) error {
 	// CRDs for stable features
 	kubectlFlags := []string{"--server-side", "-v5"}
+	fmt.Printf("INFO: deploying KGO CRDs: %s\n", crdPath)
 	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), crdPath, kubectlFlags...); err != nil {
 		return err
 	}
+
+	fmt.Printf("INFO: deploying Gateway API CRDs: %s\n", GatewayStandardCRDsKustomizeURL)
 	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), GatewayStandardCRDsKustomizeURL); err != nil {
 		return err
 	}
+
+	fmt.Printf("INFO: deploying KIC CRDs: %s\n", kicCRDsKustomizeURL)
 	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kicCRDsKustomizeURL); err != nil {
 		return err
 	}
 
 	// CRDs for alpha/experimental features
+	fmt.Printf("INFO: deploying KGO AIGateway CRD: %s\n", crdPath)
 	if err := clusters.ApplyManifestByURL(ctx, env.Cluster(), path.Join(crdPath, AIGatewayCRDPath)); err != nil {
 		return err
 	}
@@ -216,9 +223,19 @@ func waitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Cli
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			if _, err := operatorClient.ApisV1beta1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); err == nil {
-				ready = true
+			fmt.Printf("INFO: checking KGO DataPlane CRD\n")
+			if _, err := operatorClient.ApisV1beta1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
+				continue
 			}
+			fmt.Printf("INFO: checking KGO ControlPlane CRD\n")
+			if _, err := operatorClient.ApisV1beta1().ControlPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
+				continue
+			}
+			fmt.Printf("INFO: checking KGO AIGateway CRD\n")
+			if _, err := operatorClient.ApisV1alpha1().AIGateways(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
+				continue
+			}
+			ready = true
 		}
 	}
 	return nil
