@@ -84,6 +84,7 @@ type Config struct {
 	// Controllers for specialty APIs and experimental features.
 	AIGatewayControllerEnabled              bool
 	KongPluginInstallationControllerEnabled bool
+	KonnectSyncPeriod                       time.Duration
 
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool

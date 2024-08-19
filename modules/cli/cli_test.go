@@ -11,6 +11,7 @@ import (
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 func TestParse(t *testing.T) {
@@ -149,6 +150,7 @@ func expectedDefaultCfg() manager.Config {
 		DataPlaneControllerEnabled:              true,
 		DataPlaneBlueGreenControllerEnabled:     true,
 		KonnectControllersEnabled:               false,
+		KonnectSyncPeriod:                       consts.DefaultKonnectSyncPeriod,
 		KongPluginInstallationControllerEnabled: false,
 		ValidatingWebhookEnabled:                true,
 		LoggerOpts:                              &zap.Options{},

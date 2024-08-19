@@ -1,5 +1,7 @@
 package consts
 
+import "time"
+
 // ServiceType is a re-typing of string to be used to distinguish between proxy and admin service
 type ServiceType string
 
@@ -148,4 +150,13 @@ const (
 	ClusterCertEnvKey = "KONG_CLUSTER_CERT"
 	// ClusterCertEnvKey is the environment variable name for the cluster certificate key.
 	ClusterCertKeyEnvKey = "KONG_CLUSTER_CERT_KEY"
+)
+
+// -----------------------------------------------------------------------------
+// Consts - Konnect related consts
+// -----------------------------------------------------------------------------
+
+const (
+	// DefaultKonnectSyncPeriod is the default sync period for Konnect entities.
+	DefaultKonnectSyncPeriod = time.Minute
 )

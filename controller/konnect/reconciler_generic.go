@@ -26,11 +26,6 @@ import (
 )
 
 const (
-	// TODO(pmalek): make configurable https://github.com/Kong/gateway-operator/issues/451
-	configurableSyncPeriod = 1 * time.Minute
-)
-
-const (
 	// KonnectCleanupFinalizer is the finalizer that is added to the Konnect
 	// entities when they are created in Konnect, and which is removed when
 	// the CR and Konnect entity are deleted.
@@ -43,6 +38,22 @@ type KonnectEntityReconciler[T SupportedKonnectEntityType, TEnt EntityType[T]] s
 	sdkFactory      SDKFactory
 	DevelopmentMode bool
 	Client          client.Client
+	SyncPeriod      time.Duration
+}
+
+// KonnectEntityReconcilerOption is a functional option for the KonnectEntityReconciler.
+type KonnectEntityReconcilerOption[
+	T SupportedKonnectEntityType,
+	TEnt EntityType[T],
+] func(*KonnectEntityReconciler[T, TEnt])
+
+// WithKonnectEntitySyncPeriod sets the sync period for the reconciler.
+func WithKonnectEntitySyncPeriod[T SupportedKonnectEntityType, TEnt EntityType[T]](
+	d time.Duration,
+) KonnectEntityReconcilerOption[T, TEnt] {
+	return func(r *KonnectEntityReconciler[T, TEnt]) {
+		r.SyncPeriod = d
+	}
 }
 
 // NewKonnectEntityReconciler returns a new KonnectEntityReconciler for the given
@@ -54,12 +65,18 @@ func NewKonnectEntityReconciler[
 	sdkFactory SDKFactory,
 	developmentMode bool,
 	client client.Client,
+	opts ...KonnectEntityReconcilerOption[T, TEnt],
 ) *KonnectEntityReconciler[T, TEnt] {
-	return &KonnectEntityReconciler[T, TEnt]{
+	r := &KonnectEntityReconciler[T, TEnt]{
 		sdkFactory:      sdkFactory,
 		DevelopmentMode: developmentMode,
 		Client:          client,
+		SyncPeriod:      consts.DefaultKonnectSyncPeriod,
 	}
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r
 }
 
 const (
@@ -317,7 +334,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if res, err := Update[T, TEnt](ctx, sdk, r.Client, ent); err != nil {
+	if res, err := Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, ent); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update object: %w", err)
 	} else if res.Requeue || res.RequeueAfter > 0 {
 		return res, nil
@@ -336,7 +353,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// Konnect does not allow subscribing to changes so we need to keep pushing the
 	// desired state periodically.
 	return ctrl.Result{
-		RequeueAfter: configurableSyncPeriod,
+		RequeueAfter: r.SyncPeriod,
 	}, nil
 }
 
