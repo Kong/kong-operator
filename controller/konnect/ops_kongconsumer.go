@@ -38,7 +38,7 @@ func createConsumer(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1.KongConsumer](err, CreateOp, consumer); errWrapped != nil {
+	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, consumer); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				KonnectEntityProgrammedConditionType,
@@ -57,7 +57,7 @@ func createConsumer(
 		k8sutils.NewConditionWithGeneration(
 			KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReason,
+			KonnectEntityProgrammedReasonProgrammed,
 			"",
 			consumer.GetGeneration(),
 		),
@@ -111,7 +111,7 @@ func updateConsumer(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1.KongConsumer](err, UpdateOp, consumer); errWrapped != nil {
+	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, consumer); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				KonnectEntityProgrammedConditionType,
@@ -131,7 +131,7 @@ func updateConsumer(
 		k8sutils.NewConditionWithGeneration(
 			KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReason,
+			KonnectEntityProgrammedReasonProgrammed,
 			"",
 			consumer.GetGeneration(),
 		),
@@ -151,15 +151,21 @@ func deleteConsumer(
 ) error {
 	id := consumer.Status.Konnect.GetKonnectID()
 	_, err := sdk.Consumers.DeleteConsumer(ctx, consumer.Status.Konnect.ControlPlaneID, id)
-	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1.KongConsumer](err, DeleteOp, consumer); errWrapped != nil {
+	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, consumer); errWrapped != nil {
 		// Consumer delete operation returns an SDKError instead of a NotFoundError.
 		var sdkError *sdkerrors.SDKError
-		if errors.As(errWrapped, &sdkError) && sdkError.StatusCode == 404 {
-			ctrllog.FromContext(ctx).
-				Info("entity not found in Konnect, skipping delete",
-					"op", DeleteOp, "type", consumer.GetTypeName(), "id", id,
-				)
-			return nil
+		if errors.As(errWrapped, &sdkError) {
+			if sdkError.StatusCode == 404 {
+				ctrllog.FromContext(ctx).
+					Info("entity not found in Konnect, skipping delete",
+						"op", DeleteOp, "type", consumer.GetTypeName(), "id", id,
+					)
+				return nil
+			}
+			return FailedKonnectOpError[configurationv1.KongConsumer]{
+				Op:  DeleteOp,
+				Err: sdkError,
+			}
 		}
 		return FailedKonnectOpError[configurationv1.KongConsumer]{
 			Op:  DeleteOp,

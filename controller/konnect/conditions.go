@@ -8,9 +8,12 @@ const (
 	// indicates whether the entity has been programmed in Konnect.
 	KonnectEntityProgrammedConditionType = "Programmed"
 
-	// KonnectEntityProgrammedReason is the reason for the Programmed condition.
+	// KonnectEntityProgrammedReasonProgrammed is the reason for the Programmed condition.
 	// It is set when the entity has been programmed in Konnect.
-	KonnectEntityProgrammedReason = "Programmed"
+	KonnectEntityProgrammedReasonProgrammed = "Programmed"
+	// KonnectEntityProgrammedReasonKonnectAPIOpFailed is the reason for the Programmed condition.
+	// It is set when the entity has failed to be programmed in Konnect.
+	KonnectEntityProgrammedReasonKonnectAPIOpFailed = "KonnectAPIOpFailed"
 )
 
 const (
@@ -62,4 +65,18 @@ const (
 	// ControlPlaneRefReasonInvalid is the reason used with the ControlPlaneRefValid
 	// condition type indicating that the ControlPlane reference is invalid.
 	ControlPlaneRefReasonInvalid = "Invalid"
+)
+
+const (
+	// KongServiceRefValidConditionType is the type of the condition that indicates
+	// whether the KongService reference is valid and points to an existing
+	// KongService.
+	KongServiceRefValidConditionType = "KongServiceRefValid"
+
+	// KongServiceRefReasonValid is the reason used with the KongServiceRefValid
+	// condition type indicating that the KongService reference is valid.
+	KongServiceRefReasonValid = "Valid"
+	// KongServiceRefReasonInvalid is the reason used with the KongServiceRefValid
+	// condition type indicating that the KongService reference is invalid.
+	KongServiceRefReasonInvalid = "Invalid"
 )

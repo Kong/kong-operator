@@ -19,10 +19,7 @@ func TestNewKonnectEntityReconciler(t *testing.T) {
 	testNewKonnectEntityReconciler(t, konnectv1alpha1.KonnectControlPlane{})
 	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongService{})
 	testNewKonnectEntityReconciler(t, configurationv1.KongConsumer{})
-
-	// TODO(pmalek): add support for KongRoute
-	// https://github.com/Kong/gateway-operator/issues/435
-	// testNewKonnectEntityReconciler(t, configurationv1alpha1.KongRoute{})
+	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongRoute{})
 
 	// TODO: GetConditions() and SetConditions() is missing from KongConsumerGroup.
 	// testNewKonnectEntityReconciler(t, configurationv1beta1.KongConsumerGroup{})

@@ -25,7 +25,7 @@ func createControlPlane(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
-	if errWrap := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, CreateOp, cp); errWrap != nil {
+	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cp); errWrap != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				KonnectEntityProgrammedConditionType,
@@ -44,7 +44,7 @@ func createControlPlane(
 		k8sutils.NewConditionWithGeneration(
 			KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReason,
+			KonnectEntityProgrammedReasonProgrammed,
 			"",
 			cp.GetGeneration(),
 		),
@@ -63,14 +63,21 @@ func deleteControlPlane(
 ) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.ControlPlanes.DeleteControlPlane(ctx, id)
-	if errWrap := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, DeleteOp, cp); errWrap != nil {
-		var sdkError *sdkerrors.NotFoundError
-		if errors.As(err, &sdkError) {
+	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, cp); errWrap != nil {
+		var sdkNotFoundError *sdkerrors.NotFoundError
+		if errors.As(err, &sdkNotFoundError) {
 			ctrllog.FromContext(ctx).
 				Info("entity not found in Konnect, skipping delete",
 					"op", DeleteOp, "type", cp.GetTypeName(), "id", id,
 				)
 			return nil
+		}
+		var sdkError *sdkerrors.SDKError
+		if errors.As(errWrap, &sdkError) {
+			return FailedKonnectOpError[konnectv1alpha1.KonnectControlPlane]{
+				Op:  DeleteOp,
+				Err: sdkError,
+			}
 		}
 		return FailedKonnectOpError[konnectv1alpha1.KonnectControlPlane]{
 			Op:  DeleteOp,
@@ -116,7 +123,7 @@ func updateControlPlane(
 		return nil
 	}
 
-	if errWrap := wrapErrIfKonnectOpFailed[konnectv1alpha1.KonnectControlPlane](err, UpdateOp, cp); errWrap != nil {
+	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, cp); errWrap != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				KonnectEntityProgrammedConditionType,
@@ -138,7 +145,7 @@ func updateControlPlane(
 		k8sutils.NewConditionWithGeneration(
 			KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReason,
+			KonnectEntityProgrammedReasonProgrammed,
 			"",
 			cp.GetGeneration(),
 		),

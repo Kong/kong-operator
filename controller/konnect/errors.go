@@ -43,3 +43,14 @@ func (e ReferencedControlPlaneDoesNotExistError) Error() string {
 func (e ReferencedControlPlaneDoesNotExistError) Unwrap() error {
 	return e.Err
 }
+
+// ReferencedKongServiceIsBeingDeleted is an error type that is returned when
+// a Konnect entity references a Kong Service which is being deleted.
+type ReferencedKongServiceIsBeingDeleted struct {
+	Reference types.NamespacedName
+}
+
+// Error implements the error interface.
+func (e ReferencedKongServiceIsBeingDeleted) Error() string {
+	return fmt.Sprintf("referenced Kong Service %s is being deleted", e.Reference)
+}

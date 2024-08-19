@@ -23,6 +23,8 @@ func ReconciliationWatchOptionsForEntity[
 	switch any(ent).(type) {
 	case *configurationv1.KongConsumer:
 		return KongConsumerReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.KongRoute:
+		return KongRouteReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.KongService:
 		return KongServiceReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectControlPlane:

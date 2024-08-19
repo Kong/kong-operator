@@ -37,6 +37,7 @@ type EntityType[T SupportedKonnectEntityType] interface {
 	GetConditions() []metav1.Condition
 	SetConditions([]metav1.Condition)
 	GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
+	SetKonnectID(string)
 }
 
 // EntityWithKonnectAPIAuthConfigurationRef is an interface that all Konnect entity types

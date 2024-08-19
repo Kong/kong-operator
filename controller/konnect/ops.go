@@ -49,6 +49,8 @@ func Create[
 		return e, createControlPlane(ctx, sdk, ent)
 	case *configurationv1alpha1.KongService:
 		return e, createService(ctx, sdk, ent)
+	case *configurationv1alpha1.KongRoute:
+		return e, createRoute(ctx, sdk, ent)
 	case *configurationv1.KongConsumer:
 		return e, createConsumer(ctx, sdk, ent)
 
@@ -81,6 +83,8 @@ func Delete[
 		return deleteControlPlane(ctx, sdk, ent)
 	case *configurationv1alpha1.KongService:
 		return deleteService(ctx, sdk, ent)
+	case *configurationv1alpha1.KongRoute:
+		return deleteRoute(ctx, sdk, ent)
 	case *configurationv1.KongConsumer:
 		return deleteConsumer(ctx, sdk, ent)
 
@@ -108,7 +112,7 @@ func Update[
 	// the configured sync period, requeue after the remaining time.
 	if ok &&
 		condProgrammed.Status == metav1.ConditionTrue &&
-		condProgrammed.Reason == KonnectEntityProgrammedReason &&
+		condProgrammed.Reason == KonnectEntityProgrammedReasonProgrammed &&
 		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration() &&
 		timeFromLastUpdate <= syncPeriod {
 		requeueAfter := syncPeriod - timeFromLastUpdate
@@ -138,6 +142,8 @@ func Update[
 		return ctrl.Result{}, updateControlPlane(ctx, sdk, ent)
 	case *configurationv1alpha1.KongService:
 		return ctrl.Result{}, updateService(ctx, sdk, cl, ent)
+	case *configurationv1alpha1.KongRoute:
+		return ctrl.Result{}, updateRoute(ctx, sdk, cl, ent)
 	case *configurationv1.KongConsumer:
 		return ctrl.Result{}, updateConsumer(ctx, sdk, cl, ent)
 
