@@ -137,7 +137,7 @@ func TestCreateKongService(t *testing.T) {
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
 				assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
+				require.True(t, ok, "Programmed condition not set on KonnectControlPlane")
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				assert.Equal(t, "FailedToCreate", cond.Reason)
 				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
@@ -350,7 +350,7 @@ func TestUpdateKongService(t *testing.T) {
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
 				assert.Equal(t, "123456789", svc.GetKonnectStatus().GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
+				require.True(t, ok, "Programmed condition not set on KonnectControlPlane")
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
 				assert.Equal(t, conditions.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
 				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
@@ -404,7 +404,7 @@ func TestUpdateKongService(t *testing.T) {
 				// the Konnect ID from the status? Probably not.
 				// assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
+				require.True(t, ok, "Programmed condition not set on KonnectControlPlane")
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				assert.Equal(t, "FailedToUpdate", cond.Reason)
 				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
@@ -470,7 +470,7 @@ func TestUpdateKongService(t *testing.T) {
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
 				assert.Equal(t, "123456789", svc.GetKonnectStatus().GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
+				require.True(t, ok, "Programmed condition not set on KonnectControlPlane")
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
 				assert.Equal(t, conditions.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
 				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
