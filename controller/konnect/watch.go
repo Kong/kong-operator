@@ -8,6 +8,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -21,6 +22,8 @@ func ReconciliationWatchOptionsForEntity[
 	ent TEnt,
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	switch any(ent).(type) {
+	case *configurationv1beta1.KongConsumerGroup:
+		return KongConsumerGroupReconciliationWatchOptions(cl)
 	case *configurationv1.KongConsumer:
 		return KongConsumerReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.KongRoute:

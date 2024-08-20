@@ -22,6 +22,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -527,6 +528,7 @@ func getServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	switch e := any(e).(type) {
 	case *configurationv1alpha1.KongService,
 		*configurationv1.KongConsumer,
+		*configurationv1beta1.KongConsumerGroup,
 		*konnectv1alpha1.KonnectControlPlane:
 		return mo.None[configurationv1alpha1.ServiceRef]()
 	case *configurationv1alpha1.KongRoute:
@@ -701,6 +703,11 @@ func getControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	case *konnectv1alpha1.KonnectControlPlane, *configurationv1alpha1.KongRoute:
 		return mo.None[configurationv1alpha1.ControlPlaneRef]()
 	case *configurationv1.KongConsumer:
+		if e.Spec.ControlPlaneRef == nil {
+			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+		}
+		return mo.Some(*e.Spec.ControlPlaneRef)
+	case *configurationv1beta1.KongConsumerGroup:
 		if e.Spec.ControlPlaneRef == nil {
 			return mo.None[configurationv1alpha1.ControlPlaneRef]()
 		}

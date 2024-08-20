@@ -30,6 +30,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -66,6 +67,8 @@ const (
 	KongRouteControllerName = "KongRoute"
 	// KongConsumerControllerName is the name of the KongConsumer controller.
 	KongConsumerControllerName = "KongConsumer"
+	// KongConsumerGroupControllerName is the name of the KongConsumerGroup controller.
+	KongConsumerGroupControllerName = "KongConsumerGroup"
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
@@ -346,6 +349,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				c.DevelopmentMode,
 				mgr.GetClient(),
 				konnect.WithKonnectEntitySyncPeriod[configurationv1.KongConsumer](c.KonnectSyncPeriod),
+			),
+		}
+		controllers[KongConsumerGroupControllerName] = ControllerDef{
+			Enabled: c.KonnectControllersEnabled,
+			Controller: konnect.NewKonnectEntityReconciler(
+				sdkFactory,
+				c.DevelopmentMode,
+				mgr.GetClient(),
+				konnect.WithKonnectEntitySyncPeriod[configurationv1beta1.KongConsumerGroup](c.KonnectSyncPeriod),
 			),
 		}
 	}

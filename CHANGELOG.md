@@ -48,6 +48,8 @@
   [#493](https://github.com/Kong/gateway-operator/pull/493)
 - Add `KongRoute` reconciler for Konnect control planes.
   [#506](https://github.com/Kong/gateway-operator/pull/506)
+- Add `KongConsumerGroup` reconciler for Konnect control planes.
+  [#510](https://github.com/Kong/gateway-operator/pull/510)
 
 ### Fixed
 
