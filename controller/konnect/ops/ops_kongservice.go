@@ -1,4 +1,4 @@
-package konnect
+package ops
 
 import (
 	"context"
@@ -7,24 +7,18 @@ import (
 
 	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	sdkkonnectgoerrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
-
-// ServicesSDK is the interface for the Konnect Service SDK.
-type ServicesSDK interface {
-	CreateService(ctx context.Context, controlPlaneID string, service sdkkonnectgocomp.ServiceInput, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.CreateServiceResponse, error)
-	UpsertService(ctx context.Context, req sdkkonnectgoops.UpsertServiceRequest, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.UpsertServiceResponse, error)
-	DeleteService(ctx context.Context, controlPlaneID, serviceID string, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.DeleteServiceResponse, error)
-}
 
 func createService(
 	ctx context.Context,
@@ -46,7 +40,7 @@ func createService(
 	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, svc); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				KonnectEntityProgrammedConditionType,
+				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToCreate",
 				errWrapped.Error(),
@@ -60,9 +54,9 @@ func createService(
 	svc.Status.Konnect.SetKonnectID(*resp.Service.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			KonnectEntityProgrammedConditionType,
+			conditions.KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReasonProgrammed,
+			conditions.KonnectEntityProgrammedReasonProgrammed,
 			"",
 			svc.GetGeneration(),
 		),
@@ -120,7 +114,7 @@ func updateService(
 	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, svc); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				KonnectEntityProgrammedConditionType,
+				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToCreate",
 				errWrapped.Error(),
@@ -135,9 +129,9 @@ func updateService(
 	svc.Status.Konnect.SetControlPlaneID(cp.Status.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			KonnectEntityProgrammedConditionType,
+			conditions.KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReasonProgrammed,
+			conditions.KonnectEntityProgrammedReasonProgrammed,
 			"",
 			svc.GetGeneration(),
 		),
@@ -159,7 +153,7 @@ func deleteService(
 	_, err := sdk.DeleteService(ctx, svc.Status.Konnect.ControlPlaneID, id)
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, svc); errWrapped != nil {
 		// Service delete operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkerrors.SDKError
+		var sdkError *sdkkonnectgoerrs.SDKError
 		if errors.As(errWrapped, &sdkError) {
 			switch sdkError.StatusCode {
 			case 404:

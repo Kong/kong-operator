@@ -1,0 +1,14 @@
+quiet: False
+inpackage: True
+disable-version-string: True
+with-expecter: True
+
+filename: "{{.InterfaceName | lower}}_mock_test.go"
+dir: "{{.InterfaceDir}}"
+mockname: "Mock{{.InterfaceName}}"
+outpkg: "{{.PackageName}}"
+
+packages:
+  github.com/kong/gateway-operator/controller/konnect/ops:
+    interfaces:
+      ControlPlaneSDK:

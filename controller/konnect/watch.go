@@ -6,6 +6,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/gateway-operator/controller/konnect/constraints"
+
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -15,8 +17,8 @@ import (
 // ReconciliationWatchOptionsForEntity returns the watch options for the given
 // Konnect entity type.
 func ReconciliationWatchOptionsForEntity[
-	T SupportedKonnectEntityType,
-	TEnt EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](
 	cl client.Client,
 	ent TEnt,

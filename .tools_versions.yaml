@@ -14,3 +14,5 @@ dlv: "1.23.0"
 gotestsum: "1.12.0"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
 crd-ref-docs: "0.1.0"
+# renovate: datasource=github-releases depName=vektra/mockery
+mockery: "2.44.2"

@@ -1,4 +1,4 @@
-package konnect
+package constraints
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,9 +24,9 @@ type SupportedKonnectEntityType interface {
 }
 
 // EntityType is an interface that all Konnect entity types must implement.
-// Separating this from SupportedKonnectEntityType allows us to use EntityType
+// Separating this from constraints.SupportedKonnectEntityType allows us to use EntityType
 // where client.Object is required, since it embeds client.Object and uses pointer
-// to refer to the SupportedKonnectEntityType.
+// to refer to the constraints.SupportedKonnectEntityType.
 type EntityType[T SupportedKonnectEntityType] interface {
 	*T
 	// Kubernetes Object methods

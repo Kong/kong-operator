@@ -1,4 +1,4 @@
-package konnect
+package ops
 
 import (
 	"context"
@@ -8,24 +8,18 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	sdkkonnectgoerrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
-
-// RoutesSDK is the interface for the Konnect Routes SDK.
-type RoutesSDK interface {
-	CreateRoute(ctx context.Context, controlPlaneID string, route sdkkonnectgocomp.RouteInput, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.CreateRouteResponse, error)
-	UpsertRoute(ctx context.Context, req sdkkonnectgoops.UpsertRouteRequest, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.UpsertRouteResponse, error)
-	DeleteRoute(ctx context.Context, controlPlaneID, routeID string, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.DeleteRouteResponse, error)
-}
 
 func createRoute(
 	ctx context.Context,
@@ -44,7 +38,7 @@ func createRoute(
 	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, route); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				KonnectEntityProgrammedConditionType,
+				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToCreate",
 				errWrapped.Error(),
@@ -58,9 +52,9 @@ func createRoute(
 	route.Status.Konnect.SetKonnectID(*resp.Route.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			KonnectEntityProgrammedConditionType,
+			conditions.KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReasonProgrammed,
+			conditions.KonnectEntityProgrammedReasonProgrammed,
 			"",
 			route.GetGeneration(),
 		),
@@ -136,7 +130,7 @@ func updateRoute(
 	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, route); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				KonnectEntityProgrammedConditionType,
+				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToCreate",
 				errWrapped.Error(),
@@ -151,9 +145,9 @@ func updateRoute(
 	route.Status.Konnect.SetControlPlaneID(cp.Status.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			KonnectEntityProgrammedConditionType,
+			conditions.KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReasonProgrammed,
+			conditions.KonnectEntityProgrammedReasonProgrammed,
 			"",
 			route.GetGeneration(),
 		),
@@ -175,7 +169,7 @@ func deleteRoute(
 	_, err := sdk.DeleteRoute(ctx, route.Status.Konnect.ControlPlaneID, id)
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, route); errWrapped != nil {
 		// Service delete operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkerrors.SDKError
+		var sdkError *sdkkonnectgoerrs.SDKError
 		if errors.As(errWrapped, &sdkError) {
 			if sdkError.StatusCode == 404 {
 				ctrllog.FromContext(ctx).
