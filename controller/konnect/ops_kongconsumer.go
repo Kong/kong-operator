@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/models/sdkerrors"
@@ -21,16 +20,23 @@ import (
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
+// ConsumersSDK is the interface for the Konnect Consumers SDK.
+type ConsumersSDK interface {
+	CreateConsumer(ctx context.Context, controlPlaneID string, consumerInput sdkkonnectgocomp.ConsumerInput, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.CreateConsumerResponse, error)
+	UpsertConsumer(ctx context.Context, upsertConsumerRequest sdkkonnectgoops.UpsertConsumerRequest, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.UpsertConsumerResponse, error)
+	DeleteConsumer(ctx context.Context, controlPlaneID string, consumerID string, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.DeleteConsumerResponse, error)
+}
+
 func createConsumer(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ConsumersSDK,
 	consumer *configurationv1.KongConsumer,
 ) error {
 	if consumer.GetControlPlaneID() == "" {
 		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", consumer, client.ObjectKeyFromObject(consumer))
 	}
 
-	resp, err := sdk.Consumers.CreateConsumer(ctx,
+	resp, err := sdk.CreateConsumer(ctx,
 		consumer.Status.Konnect.ControlPlaneID,
 		kongConsumerToSDKConsumerInput(consumer),
 	)
@@ -72,7 +78,7 @@ func createConsumer(
 // It returns an error if the KongConsumer does not have a ControlPlaneRef.
 func updateConsumer(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ConsumersSDK,
 	cl client.Client,
 	consumer *configurationv1.KongConsumer,
 ) error {
@@ -100,7 +106,7 @@ func updateConsumer(
 		)
 	}
 
-	resp, err := sdk.Consumers.UpsertConsumer(ctx,
+	resp, err := sdk.UpsertConsumer(ctx,
 		sdkkonnectgoops.UpsertConsumerRequest{
 			ControlPlaneID: cp.Status.ID,
 			ConsumerID:     consumer.GetKonnectStatus().GetKonnectID(),
@@ -146,11 +152,11 @@ func updateConsumer(
 // It returns an error if the operation fails.
 func deleteConsumer(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ConsumersSDK,
 	consumer *configurationv1.KongConsumer,
 ) error {
 	id := consumer.Status.Konnect.GetKonnectID()
-	_, err := sdk.Consumers.DeleteConsumer(ctx, consumer.Status.Konnect.ControlPlaneID, id)
+	_, err := sdk.DeleteConsumer(ctx, consumer.Status.Konnect.ControlPlaneID, id)
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, consumer); errWrapped != nil {
 		// Consumer delete operation returns an SDKError instead of a NotFoundError.
 		var sdkError *sdkerrors.SDKError

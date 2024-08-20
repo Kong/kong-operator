@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/models/sdkerrors"
@@ -20,16 +19,23 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
+// ServicesSDK is the interface for the Konnect Service SDK.
+type ServicesSDK interface {
+	CreateService(ctx context.Context, controlPlaneID string, service sdkkonnectgocomp.ServiceInput, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.CreateServiceResponse, error)
+	UpsertService(ctx context.Context, req sdkkonnectgoops.UpsertServiceRequest, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.UpsertServiceResponse, error)
+	DeleteService(ctx context.Context, controlPlaneID, serviceID string, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.DeleteServiceResponse, error)
+}
+
 func createService(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ServicesSDK,
 	svc *configurationv1alpha1.KongService,
 ) error {
 	if svc.GetControlPlaneID() == "" {
 		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", svc, client.ObjectKeyFromObject(svc))
 	}
 
-	resp, err := sdk.Services.CreateService(ctx,
+	resp, err := sdk.CreateService(ctx,
 		svc.Status.Konnect.ControlPlaneID,
 		kongServiceToSDKServiceInput(svc),
 	)
@@ -72,7 +78,7 @@ func createService(
 // if the operation fails.
 func updateService(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ServicesSDK,
 	cl client.Client,
 	svc *configurationv1alpha1.KongService,
 ) error {
@@ -100,7 +106,7 @@ func updateService(
 		)
 	}
 
-	resp, err := sdk.Services.UpsertService(ctx,
+	resp, err := sdk.UpsertService(ctx,
 		sdkkonnectgoops.UpsertServiceRequest{
 			ControlPlaneID: cp.Status.ID,
 			ServiceID:      svc.GetKonnectStatus().GetKonnectID(),
@@ -146,11 +152,11 @@ func updateService(
 // It returns an error if the operation fails.
 func deleteService(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ServicesSDK,
 	svc *configurationv1alpha1.KongService,
 ) error {
 	id := svc.GetKonnectStatus().GetKonnectID()
-	_, err := sdk.Services.DeleteService(ctx, svc.Status.Konnect.ControlPlaneID, id)
+	_, err := sdk.DeleteService(ctx, svc.Status.Konnect.ControlPlaneID, id)
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, svc); errWrapped != nil {
 		// Service delete operation returns an SDKError instead of a NotFoundError.
 		var sdkError *sdkerrors.SDKError

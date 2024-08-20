@@ -6,6 +6,7 @@ import (
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	"github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -15,12 +16,19 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
+// ControlPlaneSDK is the interface for the Konnect ControlPlane SDK.
+type ControlPlaneSDK interface {
+	CreateControlPlane(ctx context.Context, req components.CreateControlPlaneRequest, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.CreateControlPlaneResponse, error)
+	DeleteControlPlane(ctx context.Context, id string, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.DeleteControlPlaneResponse, error)
+	UpdateControlPlane(ctx context.Context, id string, req components.UpdateControlPlaneRequest, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.UpdateControlPlaneResponse, error)
+}
+
 func createControlPlane(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ControlPlaneSDK,
 	cp *konnectv1alpha1.KonnectControlPlane,
 ) error {
-	resp, err := sdk.ControlPlanes.CreateControlPlane(ctx, cp.Spec.CreateControlPlaneRequest)
+	resp, err := sdk.CreateControlPlane(ctx, cp.Spec.CreateControlPlaneRequest)
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
@@ -58,11 +66,11 @@ func createControlPlane(
 // It is assumed that the Konnect ControlPlane has a Konnect ID.
 func deleteControlPlane(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ControlPlaneSDK,
 	cp *konnectv1alpha1.KonnectControlPlane,
 ) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
-	_, err := sdk.ControlPlanes.DeleteControlPlane(ctx, id)
+	_, err := sdk.DeleteControlPlane(ctx, id)
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, cp); errWrap != nil {
 		var sdkNotFoundError *sdkerrors.NotFoundError
 		if errors.As(err, &sdkNotFoundError) {
@@ -93,7 +101,7 @@ func deleteControlPlane(
 // It returns an error if the operation fails.
 func updateControlPlane(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ControlPlaneSDK,
 	cp *konnectv1alpha1.KonnectControlPlane,
 ) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
@@ -105,7 +113,7 @@ func updateControlPlane(
 		Labels:      cp.Spec.Labels,
 	}
 
-	resp, err := sdk.ControlPlanes.UpdateControlPlane(ctx, id, req)
+	resp, err := sdk.UpdateControlPlane(ctx, id, req)
 	var sdkError *sdkerrors.NotFoundError
 	if errors.As(err, &sdkError) {
 		ctrllog.FromContext(ctx).

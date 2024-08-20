@@ -20,16 +20,23 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
+// RoutesSDK is the interface for the Konnect Routes SDK.
+type RoutesSDK interface {
+	CreateRoute(ctx context.Context, controlPlaneID string, route sdkkonnectgocomp.RouteInput, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.CreateRouteResponse, error)
+	UpsertRoute(ctx context.Context, req sdkkonnectgoops.UpsertRouteRequest, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.UpsertRouteResponse, error)
+	DeleteRoute(ctx context.Context, controlPlaneID, routeID string, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.DeleteRouteResponse, error)
+}
+
 func createRoute(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk RoutesSDK,
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	if route.GetControlPlaneID() == "" {
 		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", route, client.ObjectKeyFromObject(route))
 	}
 
-	resp, err := sdk.Routes.CreateRoute(ctx, route.Status.Konnect.ControlPlaneID, kongRouteToSDKRouteInput(route))
+	resp, err := sdk.CreateRoute(ctx, route.Status.Konnect.ControlPlaneID, kongRouteToSDKRouteInput(route))
 
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
@@ -69,7 +76,8 @@ func createRoute(
 // if the operation fails.
 func updateRoute(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	// sdk *sdkkonnectgo.SDK,
+	sdk RoutesSDK,
 	cl client.Client,
 	route *configurationv1alpha1.KongRoute,
 ) error {
@@ -114,7 +122,8 @@ func updateRoute(
 		)
 	}
 
-	resp, err := sdk.Routes.UpsertRoute(ctx, sdkkonnectgoops.UpsertRouteRequest{
+	resp, err := sdk.UpsertRoute(ctx, sdkkonnectgoops.UpsertRouteRequest{
+		// resp, err := sdk.UpsertRoute(ctx, sdkkonnectgoops.UpsertRouteRequest{
 		ControlPlaneID: cp.Status.ID,
 		RouteID:        route.Status.Konnect.ID,
 		Route:          kongRouteToSDKRouteInput(route),
@@ -159,11 +168,11 @@ func updateRoute(
 // It returns an error if the operation fails.
 func deleteRoute(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk RoutesSDK,
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	id := route.GetKonnectStatus().GetKonnectID()
-	_, err := sdk.Routes.DeleteRoute(ctx, route.Status.Konnect.ControlPlaneID, id)
+	_, err := sdk.DeleteRoute(ctx, route.Status.Konnect.ControlPlaneID, id)
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, route); errWrapped != nil {
 		// Service delete operation returns an SDKError instead of a NotFoundError.
 		var sdkError *sdkerrors.SDKError

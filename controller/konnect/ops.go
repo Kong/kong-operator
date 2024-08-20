@@ -47,13 +47,13 @@ func Create[
 
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectControlPlane:
-		return e, createControlPlane(ctx, sdk, ent)
+		return e, createControlPlane(ctx, sdk.ControlPlanes, ent)
 	case *configurationv1alpha1.KongService:
-		return e, createService(ctx, sdk, ent)
+		return e, createService(ctx, sdk.Services, ent)
 	case *configurationv1alpha1.KongRoute:
-		return e, createRoute(ctx, sdk, ent)
+		return e, createRoute(ctx, sdk.Routes, ent)
 	case *configurationv1.KongConsumer:
-		return e, createConsumer(ctx, sdk, ent)
+		return e, createConsumer(ctx, sdk.Consumers, ent)
 	case *configurationv1beta1.KongConsumerGroup:
 		return e, createConsumerGroup(ctx, sdk, ent)
 
@@ -83,13 +83,13 @@ func Delete[
 
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectControlPlane:
-		return deleteControlPlane(ctx, sdk, ent)
+		return deleteControlPlane(ctx, sdk.ControlPlanes, ent)
 	case *configurationv1alpha1.KongService:
-		return deleteService(ctx, sdk, ent)
+		return deleteService(ctx, sdk.Services, ent)
 	case *configurationv1alpha1.KongRoute:
-		return deleteRoute(ctx, sdk, ent)
+		return deleteRoute(ctx, sdk.Routes, ent)
 	case *configurationv1.KongConsumer:
-		return deleteConsumer(ctx, sdk, ent)
+		return deleteConsumer(ctx, sdk.Consumers, ent)
 	case *configurationv1beta1.KongConsumerGroup:
 		return deleteConsumerGroup(ctx, sdk, ent)
 
@@ -144,13 +144,13 @@ func Update[
 
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectControlPlane:
-		return ctrl.Result{}, updateControlPlane(ctx, sdk, ent)
+		return ctrl.Result{}, updateControlPlane(ctx, sdk.ControlPlanes, ent)
 	case *configurationv1alpha1.KongService:
-		return ctrl.Result{}, updateService(ctx, sdk, cl, ent)
+		return ctrl.Result{}, updateService(ctx, sdk.Services, cl, ent)
 	case *configurationv1alpha1.KongRoute:
-		return ctrl.Result{}, updateRoute(ctx, sdk, cl, ent)
+		return ctrl.Result{}, updateRoute(ctx, sdk.Routes, cl, ent)
 	case *configurationv1.KongConsumer:
-		return ctrl.Result{}, updateConsumer(ctx, sdk, cl, ent)
+		return ctrl.Result{}, updateConsumer(ctx, sdk.Consumers, cl, ent)
 	case *configurationv1beta1.KongConsumerGroup:
 		return ctrl.Result{}, updateConsumerGroup(ctx, sdk, cl, ent)
 
