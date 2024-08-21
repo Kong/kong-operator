@@ -573,7 +573,7 @@ func handleKongServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 				return res, errStatus
 			}
 
-			return ctrl.Result{}, fmt.Errorf("Can't get the referenced KongService %s: %w", nn, err)
+			return ctrl.Result{}, fmt.Errorf("can't get the referenced KongService %s: %w", nn, err)
 		}
 
 		// If referenced KongService is being deleted, return an error so that we
@@ -713,6 +713,11 @@ func getControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
 	case *configurationv1alpha1.KongService:
+		if e.Spec.ControlPlaneRef == nil {
+			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+		}
+		return mo.Some(*e.Spec.ControlPlaneRef)
+	case *configurationv1alpha1.KongPluginBinding:
 		if e.Spec.ControlPlaneRef == nil {
 			return mo.None[configurationv1alpha1.ControlPlaneRef]()
 		}

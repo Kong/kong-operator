@@ -231,13 +231,13 @@ func getTokenFromKonnectAPIAuthConfiguration(
 			return "", fmt.Errorf("failed to get Secret %s: %w", nn, err)
 		}
 		if secret.Labels == nil || secret.Labels[SecretCredentialLabel] != SecretCredentialLabelValueKonnect {
-			return "", fmt.Errorf("Secret %s does not have label %s: %s", nn, SecretCredentialLabel, SecretCredentialLabelValueKonnect)
+			return "", fmt.Errorf("secret %s does not have label %s: %s", nn, SecretCredentialLabel, SecretCredentialLabelValueKonnect)
 		}
 		if secret.Data == nil {
-			return "", fmt.Errorf("Secret %s has no data", nn)
+			return "", fmt.Errorf("secret %s has no data", nn)
 		}
 		if _, ok := secret.Data[SecretTokenKey]; !ok {
-			return "", fmt.Errorf("Secret %s does not have key %s", nn, SecretTokenKey)
+			return "", fmt.Errorf("secret %s does not have key %s", nn, SecretTokenKey)
 		}
 		return string(secret.Data[SecretTokenKey]), nil
 	}
