@@ -578,7 +578,7 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 	testCases := []struct {
 		name                       string
 		dataplaneDeploymentOptions operatorv1beta1.DeploymentOptions
-		expectedReplicasCount      int
+		expectedReplicasCount      int32
 	}{
 		{
 			name: "replicas=3",
