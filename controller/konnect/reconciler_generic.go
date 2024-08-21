@@ -153,15 +153,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			return ctrl.Result{}, err
 		}
 
-		// If the referenced KongService is being deleted (has a delete timestamp set)
-		// then we remove the entity.
+		// If the referenced KongService is being deleted (has a non zero deletion timestamp)
+		// then we remove the entity if it has not been deleted yet (deletion timestamp is zero).
 		// We do this because Konnect blocks deletion of entities like Services
 		// if they contain entities like Routes.
 		if ent.GetDeletionTimestamp().IsZero() {
 			if err := r.Client.Delete(ctx, ent); err != nil {
-				if k8serrors.IsConflict(err) {
-					return ctrl.Result{Requeue: true}, nil
-				}
 				return ctrl.Result{}, fmt.Errorf("failed to delete %s: %w", client.ObjectKeyFromObject(ent), err)
 			}
 			return ctrl.Result{}, nil
