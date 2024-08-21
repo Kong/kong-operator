@@ -114,13 +114,13 @@ func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Se
 		return nil, err
 	}
 
-	var usages []string
+	usages := make([]string, 0, len(csr.Spec.Usages))
 	for _, usage := range csr.Spec.Usages {
 		usages = append(usages, string(usage))
 	}
 
 	certExpiryDuration := time.Second * time.Duration(*csr.Spec.ExpirationSeconds)
-	durationUntilExpiry := caCert.NotAfter.Sub(time.Now())
+	durationUntilExpiry := time.Until(caCert.NotAfter)
 	if durationUntilExpiry <= 0 {
 		return nil, fmt.Errorf("the signer has expired: %v", caCert.NotAfter)
 	}

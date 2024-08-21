@@ -266,11 +266,11 @@ func ControlPlaneCRBContainsCRAndSA(t *testing.T, ctx context.Context, controlpl
 }
 
 // ControlPlaneHasNReadyPods checks if a ControlPlane has at least N ready Pods.
-func ControlPlaneHasNReadyPods(t *testing.T, ctx context.Context, controlplaneName types.NamespacedName, clients K8sClients, n int) func() bool {
+func ControlPlaneHasNReadyPods(t *testing.T, ctx context.Context, controlplaneName types.NamespacedName, clients K8sClients, n int32) func() bool {
 	return controlPlanePredicate(t, ctx, controlplaneName, func(controlplane *operatorv1beta1.ControlPlane) bool {
 		deployments := MustListControlPlaneDeployments(t, ctx, controlplane, clients)
 		return len(deployments) == 1 &&
-			*deployments[0].Spec.Replicas == int32(n) &&
+			*deployments[0].Spec.Replicas == n &&
 			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
 	}, clients.OperatorClient)
 }
@@ -417,13 +417,13 @@ func DataPlaneHasDeployment(
 }
 
 // DataPlaneHasNReadyPods checks if a DataPlane has at least N ready Pods.
-func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, n int) func() bool {
+func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, n int32) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		})
 		return len(deployments) == 1 &&
-			*deployments[0].Spec.Replicas == int32(n) &&
+			*deployments[0].Spec.Replicas == n &&
 			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
 	}, clients.OperatorClient)
 }

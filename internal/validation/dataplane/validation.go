@@ -215,7 +215,7 @@ func parseKongPortMaps(kongPortMapEnv string) (map[int32]int32, error) {
 		if err != nil {
 			return nil, fmt.Errorf("port %s cannot be parsed into number: %w", parts[1], err)
 		}
-		portNumberMap[int32(servicePort)] = int32(targetPort)
+		portNumberMap[int32(servicePort)] = int32(targetPort) //nolint:gosec
 	}
 	return portNumberMap, nil
 }
@@ -242,7 +242,7 @@ func parseKongProxyListenPortNumbers(kongProxyListenEnv string) ([]int32, error)
 		if err != nil {
 			return nil, fmt.Errorf("listening port %s cannot be parsed to number: %w", port, err)
 		}
-		retPorts = append(retPorts, int32(portNum))
+		retPorts = append(retPorts, int32(portNum)) //nolint:gosec
 	}
 	return retPorts, nil
 }
