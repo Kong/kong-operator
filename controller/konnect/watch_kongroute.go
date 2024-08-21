@@ -91,6 +91,14 @@ func enqueueKongRouteForKongService(
 		if !ok {
 			return nil
 		}
+
+		// If the KongService does not refer to a KonnectControlPlane,
+		// we do not need to enqueue any KongRoutes bound to this KongService.
+		cpRef := kongSvc.Spec.ControlPlaneRef
+		if cpRef == nil || cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
+			return nil
+		}
+
 		var l configurationv1alpha1.KongRouteList
 		if err := cl.List(ctx, &l, &client.ListOptions{
 			// TODO: change this when cross namespace refs are allowed.
@@ -126,7 +134,7 @@ func enqueueKongRouteForKongService(
 
 			default:
 				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
-					"unsupported ControlPlaneRef for KongRoute",
+					"unsupported ServiceRef for KongRoute",
 					"KongRoute", route, "refType", svcRef.Type,
 				)
 				continue
