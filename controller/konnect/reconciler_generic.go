@@ -147,7 +147,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, nil
 	}
 	// If a type has a KongService ref, handle it.
-	res, err = handlKongServiceRef(ctx, r.Client, ent)
+	res, err = handleKongServiceRef(ctx, r.Client, ent)
 	if err != nil {
 		if !errors.As(err, &ReferencedKongServiceIsBeingDeleted{}) {
 			return ctrl.Result{}, err
@@ -539,10 +539,10 @@ func getServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	}
 }
 
-// handlKongServiceRef handles the ServiceRef for the given entity.
+// handleKongServiceRef handles the ServiceRef for the given entity.
 // It sets the owner reference to the referenced KongService and updates the
 // status of the entity based on the referenced KongService status.
-func handlKongServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
+func handleKongServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	ctx context.Context,
 	cl client.Client,
 	ent TEnt,
