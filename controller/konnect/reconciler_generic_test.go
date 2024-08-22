@@ -12,6 +12,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -20,9 +21,7 @@ func TestNewKonnectEntityReconciler(t *testing.T) {
 	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongService{})
 	testNewKonnectEntityReconciler(t, configurationv1.KongConsumer{})
 	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongRoute{})
-
-	// TODO: GetConditions() and SetConditions() is missing from KongConsumerGroup.
-	// testNewKonnectEntityReconciler(t, configurationv1beta1.KongConsumerGroup{})
+	testNewKonnectEntityReconciler(t, configurationv1beta1.KongConsumerGroup{})
 }
 
 func testNewKonnectEntityReconciler[

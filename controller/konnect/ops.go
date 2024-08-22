@@ -16,6 +16,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -53,6 +54,8 @@ func Create[
 		return e, createRoute(ctx, sdk, ent)
 	case *configurationv1.KongConsumer:
 		return e, createConsumer(ctx, sdk, ent)
+	case *configurationv1beta1.KongConsumerGroup:
+		return e, createConsumerGroup(ctx, sdk, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -87,6 +90,8 @@ func Delete[
 		return deleteRoute(ctx, sdk, ent)
 	case *configurationv1.KongConsumer:
 		return deleteConsumer(ctx, sdk, ent)
+	case *configurationv1beta1.KongConsumerGroup:
+		return deleteConsumerGroup(ctx, sdk, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -146,6 +151,8 @@ func Update[
 		return ctrl.Result{}, updateRoute(ctx, sdk, cl, ent)
 	case *configurationv1.KongConsumer:
 		return ctrl.Result{}, updateConsumer(ctx, sdk, cl, ent)
+	case *configurationv1beta1.KongConsumerGroup:
+		return ctrl.Result{}, updateConsumerGroup(ctx, sdk, cl, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
