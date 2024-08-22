@@ -44,7 +44,7 @@ type KongService struct {
 	Status KongServiceStatus `json:"status,omitempty"`
 }
 
-func (c *KongService) InitKonnectStatus() {
+func (c *KongService) initKonnectStatus() {
 	c.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
 }
 
@@ -57,7 +57,7 @@ func (c *KongService) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
 
 func (c *KongService) SetKonnectID(id string) {
 	if c.Status.Konnect == nil {
-		c.InitKonnectStatus()
+		c.initKonnectStatus()
 	}
 	c.Status.Konnect.ID = id
 }
@@ -71,7 +71,7 @@ func (c *KongService) GetControlPlaneID() string {
 
 func (c *KongService) SetControlPlaneID(id string) {
 	if c.Status.Konnect == nil {
-		c.InitKonnectStatus()
+		c.initKonnectStatus()
 	}
 	c.Status.Konnect.ControlPlaneID = id
 }

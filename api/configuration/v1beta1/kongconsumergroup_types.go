@@ -18,6 +18,9 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // +genclient
@@ -28,18 +31,73 @@ import (
 // +kubebuilder:resource:shortName=kcg,categories=kong-ingress-controller
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
+// +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when entity is already Programmed."
 
 // KongConsumerGroup is the Schema for the kongconsumergroups API.
 type KongConsumerGroup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	Spec KongConsumerGroupSpec `json:"spec,omitempty"`
+
 	// Status represents the current status of the KongConsumerGroup resource.
 	Status KongConsumerGroupStatus `json:"status,omitempty"`
 }
 
+type KongConsumerGroupSpec struct {
+	// Name is the name of the ConsumerGroup in Kong.
+	Name *string `json:"name,omitempty"`
+
+	// ControlPlaneRef is a reference to a ControlPlane this ConsumerGroup is associated with.
+	// +optional
+	ControlPlaneRef *configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+}
+
+func (c *KongConsumerGroup) initKonnectStatus() {
+	c.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
+}
+
+func (c *KongConsumerGroup) GetControlPlaneID() string {
+	if c.Status.Konnect == nil {
+		return ""
+	}
+	return c.Status.Konnect.ControlPlaneID
+}
+
+func (c *KongConsumerGroup) SetControlPlaneID(id string) {
+	if c.Status.Konnect == nil {
+		c.initKonnectStatus()
+	}
+	c.Status.Konnect.ControlPlaneID = id
+}
+
+func (c *KongConsumerGroup) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
+	if c.Status.Konnect == nil {
+		return nil
+	}
+	return &c.Status.Konnect.KonnectEntityStatus
+}
+
+func (c *KongConsumerGroup) SetKonnectID(id string) {
+	if c.Status.Konnect == nil {
+		c.initKonnectStatus()
+	}
+	c.Status.Konnect.ID = id
+}
+
 func (c KongConsumerGroup) GetTypeName() string {
 	return "KongConsumerGroup"
+}
+
+// GetConditions returns the Status Conditions
+func (c *KongConsumerGroup) GetConditions() []metav1.Condition {
+	return c.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions
+func (c *KongConsumerGroup) SetConditions(conditions []metav1.Condition) {
+	c.Status.Conditions = conditions
 }
 
 // +kubebuilder:object:root=true
@@ -53,6 +111,10 @@ type KongConsumerGroupList struct {
 
 // KongConsumerGroupStatus represents the current status of the KongConsumerGroup resource.
 type KongConsumerGroupStatus struct {
+	// Konnect contains the Konnect entity status.
+	// +optional
+	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
+
 	// Conditions describe the current conditions of the KongConsumerGroup.
 	//
 	// Known condition types are:

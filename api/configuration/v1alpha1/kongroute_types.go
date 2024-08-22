@@ -45,7 +45,7 @@ type KongRoute struct {
 	Status KongRouteStatus `json:"status,omitempty"`
 }
 
-func (c *KongRoute) InitKonnectStatus() {
+func (c *KongRoute) initKonnectStatus() {
 	c.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs{}
 }
 
@@ -65,14 +65,14 @@ func (c *KongRoute) GetControlPlaneID() string {
 
 func (c *KongRoute) SetControlPlaneID(id string) {
 	if c.Status.Konnect == nil {
-		c.InitKonnectStatus()
+		c.initKonnectStatus()
 	}
 	c.Status.Konnect.ControlPlaneID = id
 }
 
 func (c *KongRoute) SetKonnectID(id string) {
 	if c.Status.Konnect == nil {
-		c.InitKonnectStatus()
+		c.initKonnectStatus()
 	}
 	c.Status.Konnect.ID = id
 }
