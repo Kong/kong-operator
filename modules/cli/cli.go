@@ -171,9 +171,6 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 		anonymousReportsEnabled = false
 	}
 
-	webhookCertificateConfigBaseImage := c.deferFlagValues.WebhookCertificateConfigBaseImage
-	webhookCertificateConfigShellImage := c.deferFlagValues.WebhookCertificateConfigShellImage
-
 	if c.deferFlagValues.Version {
 		type Version struct {
 			Release string `json:"release"`
@@ -225,8 +222,8 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	c.cfg.WebhookPort = manager.DefaultConfig().WebhookPort
 	c.cfg.LeaderElectionNamespace = controllerNamespace
 	c.cfg.AnonymousReports = anonymousReportsEnabled
-	c.cfg.WebhookCertificateConfigBaseImage = webhookCertificateConfigBaseImage
-	c.cfg.WebhookCertificateConfigShellImage = webhookCertificateConfigShellImage
+	c.cfg.WebhookCertificateConfigBaseImage = c.deferFlagValues.WebhookCertificateConfigBaseImage
+	c.cfg.WebhookCertificateConfigShellImage = c.deferFlagValues.WebhookCertificateConfigShellImage
 
 	return *c.cfg
 }
