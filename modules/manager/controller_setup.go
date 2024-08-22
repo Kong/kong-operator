@@ -62,6 +62,8 @@ const (
 	KonnectControlPlaneControllerName = "KonnectControlPlane"
 	// KongServiceControllerName is the name of the KongService controller.
 	KongServiceControllerName = "KongService"
+	// KongRouteControllerName is the name of the KongRoute controller.
+	KongRouteControllerName = "KongRoute"
 	// KongConsumerControllerName is the name of the KongConsumer controller.
 	KongConsumerControllerName = "KongConsumer"
 )
@@ -312,7 +314,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		}
 		controllers[KonnectControlPlaneControllerName] = ControllerDef{
 			Enabled: c.KonnectControllersEnabled,
-			Controller: konnect.NewKonnectEntityReconciler[konnectv1alpha1.KonnectControlPlane](
+			Controller: konnect.NewKonnectEntityReconciler(
 				sdkFactory,
 				c.DevelopmentMode,
 				mgr.GetClient(),
@@ -321,16 +323,25 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		}
 		controllers[KongServiceControllerName] = ControllerDef{
 			Enabled: c.KonnectControllersEnabled,
-			Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongService](
+			Controller: konnect.NewKonnectEntityReconciler(
 				sdkFactory,
 				c.DevelopmentMode,
 				mgr.GetClient(),
 				konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongService](c.KonnectSyncPeriod),
 			),
 		}
+		controllers[KongRouteControllerName] = ControllerDef{
+			Enabled: c.KonnectControllersEnabled,
+			Controller: konnect.NewKonnectEntityReconciler(
+				sdkFactory,
+				c.DevelopmentMode,
+				mgr.GetClient(),
+				konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongRoute](c.KonnectSyncPeriod),
+			),
+		}
 		controllers[KongConsumerControllerName] = ControllerDef{
 			Enabled: c.KonnectControllersEnabled,
-			Controller: konnect.NewKonnectEntityReconciler[configurationv1.KongConsumer](
+			Controller: konnect.NewKonnectEntityReconciler(
 				sdkFactory,
 				c.DevelopmentMode,
 				mgr.GetClient(),

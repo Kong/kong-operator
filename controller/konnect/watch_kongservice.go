@@ -171,6 +171,9 @@ func enqueueKongServiceForKonnectControlPlane(
 
 		var ret []reconcile.Request
 		for _, svc := range l.Items {
+			if svc.Spec.ControlPlaneRef == nil {
+				continue
+			}
 			switch svc.Spec.ControlPlaneRef.Type {
 			case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
 				// TODO: change this when cross namespace refs are allowed.

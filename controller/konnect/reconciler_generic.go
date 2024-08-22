@@ -126,6 +126,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	ctx = ctrllog.IntoContext(ctx, logger)
 	log.Debug(logger, "reconciling", ent)
 
+	// If a type has a ControlPlane ref, handle it.
 	res, err := handleControlPlaneRef(ctx, r.Client, ent)
 	if err != nil || res.Requeue {
 		// If the referenced ControlPlane is not found and the object is deleted,
@@ -145,6 +146,27 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// Status update will requeue the entity.
 		return ctrl.Result{}, nil
 	}
+	// If a type has a KongService ref, handle it.
+	res, err = handleKongServiceRef(ctx, r.Client, ent)
+	if err != nil {
+		if !errors.As(err, &ReferencedKongServiceIsBeingDeleted{}) {
+			return ctrl.Result{}, err
+		}
+
+		// If the referenced KongService is being deleted (has a non zero deletion timestamp)
+		// then we remove the entity if it has not been deleted yet (deletion timestamp is zero).
+		// We do this because Konnect blocks deletion of entities like Services
+		// if they contain entities like Routes.
+		if ent.GetDeletionTimestamp().IsZero() {
+			if err := r.Client.Delete(ctx, ent); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to delete %s: %w", client.ObjectKeyFromObject(ent), err)
+			}
+			return ctrl.Result{}, nil
+		}
+	} else if res.Requeue {
+		return res, nil
+	}
+
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to get APIAuth ref for %s: %w", client.ObjectKeyFromObject(ent), err)
@@ -274,6 +296,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 			if err := Delete[T, TEnt](ctx, sdk, r.Client, ent); err != nil {
+				if res, errStatus := updateStatusWithCondition(
+					ctx, r.Client, ent,
+					KonnectEntityProgrammedConditionType,
+					metav1.ConditionFalse,
+					KonnectEntityProgrammedReasonKonnectAPIOpFailed,
+					err.Error(),
+				); errStatus != nil || res.Requeue {
+					return res, errStatus
+				}
 				return ctrl.Result{}, err
 			}
 			if err := r.Client.Update(ctx, ent); err != nil {
@@ -357,6 +388,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}, nil
 }
 
+// EntityWithControlPlaneRef is an interface for entities that have a ControlPlaneRef.
+type EntityWithControlPlaneRef interface {
+	SetControlPlaneID(string)
+	GetControlPlaneID() string
+}
+
 func updateStatusWithCondition[T interface {
 	client.Object
 	k8sutils.ConditionsAware
@@ -393,6 +430,46 @@ func updateStatusWithCondition[T interface {
 	return ctrl.Result{}, nil
 }
 
+func getCPForRef(
+	ctx context.Context,
+	cl client.Client,
+	cpRef configurationv1alpha1.ControlPlaneRef,
+	namespace string,
+) (*konnectv1alpha1.KonnectControlPlane, error) {
+	if cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
+		return nil, fmt.Errorf("unsupported ControlPlane ref type %q", cpRef.Type)
+	}
+	// TODO(pmalek): handle cross namespace refs
+	nn := types.NamespacedName{
+		Name:      cpRef.KonnectNamespacedRef.Name,
+		Namespace: namespace,
+	}
+
+	var cp konnectv1alpha1.KonnectControlPlane
+	if err := cl.Get(ctx, nn, &cp); err != nil {
+		return nil, fmt.Errorf("failed to get ControlPlane %s", nn)
+	}
+	return &cp, nil
+}
+
+func getCPAuthRefForRef(
+	ctx context.Context,
+	cl client.Client,
+	cpRef configurationv1alpha1.ControlPlaneRef,
+	namespace string,
+) (types.NamespacedName, error) {
+	cp, err := getCPForRef(ctx, cl, cpRef, namespace)
+	if err != nil {
+		return types.NamespacedName{}, err
+	}
+
+	return types.NamespacedName{
+		Name: cp.GetKonnectAPIAuthConfigurationRef().Name,
+		// TODO(pmalek): enable if cross namespace refs are allowed
+		Namespace: cp.GetNamespace(),
+	}, nil
+}
+
 func getAPIAuthRefNN[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	ctx context.Context,
 	cl client.Client,
@@ -402,24 +479,32 @@ func getAPIAuthRefNN[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	// ref from the referenced ControlPlane.
 	cpRef, ok := getControlPlaneRef(ent).Get()
 	if ok {
-		if cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
-			return types.NamespacedName{}, fmt.Errorf("unsupported ControlPlane ref type %q", cpRef.Type)
+		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
+	}
+
+	// If the entity has a KongServiceRef, get the KonnectAPIAuthConfiguration
+	// ref from the referenced KongService.
+	svcRef, ok := getServiceRef(ent).Get()
+	if ok {
+		if svcRef.Type != configurationv1alpha1.ServiceRefNamespacedRef {
+			return types.NamespacedName{}, fmt.Errorf("unsupported KongService ref type %q", svcRef.Type)
 		}
 		// TODO(pmalek): handle cross namespace refs
 		nn := types.NamespacedName{
-			Name:      cpRef.KonnectNamespacedRef.Name,
+			Name:      svcRef.NamespacedRef.Name,
 			Namespace: ent.GetNamespace(),
 		}
 
-		var cp konnectv1alpha1.KonnectControlPlane
-		if err := cl.Get(ctx, nn, &cp); err != nil {
-			return types.NamespacedName{}, fmt.Errorf("failed to get ControlPlane %s", nn)
+		var svc configurationv1alpha1.KongService
+		if err := cl.Get(ctx, nn, &svc); err != nil {
+			return types.NamespacedName{}, fmt.Errorf("failed to get KongService %s", nn)
 		}
-		return types.NamespacedName{
-			Name: cp.GetKonnectAPIAuthConfigurationRef().Name,
-			// TODO(pmalek): enable if cross namespace refs are allowed
-			Namespace: cp.GetNamespace(),
-		}, nil
+
+		cpRef, ok := getControlPlaneRef(&svc).Get()
+		if !ok {
+			return types.NamespacedName{}, fmt.Errorf("KongService %s does not have a ControlPlaneRef", nn)
+		}
+		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
 	}
 
 	if ref, ok := any(ent).(EntityWithKonnectAPIAuthConfigurationRef); ok {
@@ -436,11 +521,184 @@ func getAPIAuthRefNN[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	)
 }
 
+func getServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
+	e TEnt,
+) mo.Option[configurationv1alpha1.ServiceRef] {
+	switch e := any(e).(type) {
+	case *configurationv1alpha1.KongService,
+		*configurationv1.KongConsumer,
+		*konnectv1alpha1.KonnectControlPlane:
+		return mo.None[configurationv1alpha1.ServiceRef]()
+	case *configurationv1alpha1.KongRoute:
+		if e.Spec.ServiceRef == nil {
+			return mo.None[configurationv1alpha1.ServiceRef]()
+		}
+		return mo.Some(*e.Spec.ServiceRef)
+	default:
+		panic(fmt.Sprintf("unsupported entity type %T", e))
+	}
+}
+
+// handleKongServiceRef handles the ServiceRef for the given entity.
+// It sets the owner reference to the referenced KongService and updates the
+// status of the entity based on the referenced KongService status.
+func handleKongServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
+	ctx context.Context,
+	cl client.Client,
+	ent TEnt,
+) (ctrl.Result, error) {
+	kongServiceRef, ok := getServiceRef(ent).Get()
+	if !ok {
+		return ctrl.Result{}, nil
+	}
+	switch kongServiceRef.Type {
+	case configurationv1alpha1.ServiceRefNamespacedRef:
+		svc := configurationv1alpha1.KongService{}
+		nn := types.NamespacedName{
+			Name: kongServiceRef.NamespacedRef.Name,
+			// TODO: handle cross namespace refs
+			Namespace: ent.GetNamespace(),
+		}
+
+		if err := cl.Get(ctx, nn, &svc); err != nil {
+			if res, errStatus := updateStatusWithCondition(
+				ctx, cl, ent,
+				KongServiceRefValidConditionType,
+				metav1.ConditionFalse,
+				KongServiceRefReasonInvalid,
+				err.Error(),
+			); errStatus != nil || res.Requeue {
+				return res, errStatus
+			}
+
+			return ctrl.Result{}, fmt.Errorf("Can't get the referenced KongService %s: %w", nn, err)
+		}
+
+		// If referenced KongService is being deleted, return an error so that we
+		// can remove the entity from Konnect first.
+		if delTimestamp := svc.GetDeletionTimestamp(); !delTimestamp.IsZero() {
+			return ctrl.Result{}, ReferencedKongServiceIsBeingDeleted{
+				Reference: nn,
+			}
+		}
+
+		cond, ok := k8sutils.GetCondition(KonnectEntityProgrammedConditionType, &svc)
+		if !ok || cond.Status != metav1.ConditionTrue {
+			ent.SetKonnectID("")
+			if res, err := updateStatusWithCondition(
+				ctx, cl, ent,
+				KongServiceRefValidConditionType,
+				metav1.ConditionFalse,
+				KongServiceRefReasonInvalid,
+				fmt.Sprintf("Referenced KongService %s is not programmed yet", nn),
+			); err != nil || res.Requeue {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		old := ent.DeepCopyObject().(TEnt)
+		if err := controllerutil.SetOwnerReference(&svc, ent, cl.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
+		}
+		if err := cl.Patch(ctx, ent, client.MergeFrom(old)); err != nil {
+			if k8serrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
+		}
+
+		// TODO(pmalek): make this generic.
+		// Service ID is not stored in KonnectEntityStatus because not all entities
+		// have a ServiceRef, hence the type constraints in the reconciler can't be used.
+		if route, ok := any(ent).(*configurationv1alpha1.KongRoute); ok {
+			if route.Status.Konnect == nil {
+				route.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs{}
+			}
+			route.Status.Konnect.ServiceID = svc.Status.Konnect.GetKonnectID()
+		}
+
+		if res, errStatus := updateStatusWithCondition(
+			ctx, cl, ent,
+			KongServiceRefValidConditionType,
+			metav1.ConditionTrue,
+			KongServiceRefReasonValid,
+			fmt.Sprintf("Referenced KongService %s programmed", nn),
+		); errStatus != nil || res.Requeue {
+			return res, errStatus
+		}
+
+		cpRef, ok := getControlPlaneRef(&svc).Get()
+		if !ok {
+			return ctrl.Result{}, fmt.Errorf(
+				"KongRoute references a KongService %s which does not have a ControlPlane ref",
+				client.ObjectKeyFromObject(&svc),
+			)
+		}
+		cp, err := getCPForRef(ctx, cl, cpRef, ent.GetNamespace())
+		if err != nil {
+			if res, errStatus := updateStatusWithCondition(
+				ctx, cl, ent,
+				ControlPlaneRefValidConditionType,
+				metav1.ConditionFalse,
+				ControlPlaneRefReasonInvalid,
+				err.Error(),
+			); errStatus != nil || res.Requeue {
+				return res, errStatus
+			}
+			if k8serrors.IsNotFound(err) {
+				return ctrl.Result{}, ReferencedControlPlaneDoesNotExistError{
+					Reference: nn,
+					Err:       err,
+				}
+			}
+			return ctrl.Result{}, err
+		}
+
+		cond, ok = k8sutils.GetCondition(KonnectEntityProgrammedConditionType, cp)
+		if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
+			if res, errStatus := updateStatusWithCondition(
+				ctx, cl, ent,
+				ControlPlaneRefValidConditionType,
+				metav1.ConditionFalse,
+				ControlPlaneRefReasonInvalid,
+				fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
+			); errStatus != nil || res.Requeue {
+				return res, errStatus
+			}
+
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		// TODO(pmalek): make this generic.
+		// CP ID is not stored in KonnectEntityStatus because not all entities
+		// have a ControlPlaneRef, hence the type constraints in the reconciler can't be used.
+		if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
+			resource.SetControlPlaneID(cp.Status.ID)
+		}
+
+		if res, errStatus := updateStatusWithCondition(
+			ctx, cl, ent,
+			ControlPlaneRefValidConditionType,
+			metav1.ConditionTrue,
+			ControlPlaneRefReasonValid,
+			fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
+		); errStatus != nil || res.Requeue {
+			return res, errStatus
+		}
+
+	default:
+		return ctrl.Result{}, fmt.Errorf("unimplemented KongService ref type %q", kongServiceRef.Type)
+	}
+
+	return ctrl.Result{}, nil
+}
+
 func getControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	e TEnt,
 ) mo.Option[configurationv1alpha1.ControlPlaneRef] {
 	switch e := any(e).(type) {
-	case *konnectv1alpha1.KonnectControlPlane:
+	case *konnectv1alpha1.KonnectControlPlane, *configurationv1alpha1.KongRoute:
 		return mo.None[configurationv1alpha1.ControlPlaneRef]()
 	case *configurationv1.KongConsumer:
 		if e.Spec.ControlPlaneRef == nil {
@@ -523,10 +781,6 @@ func handleControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 			return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
 		}
 
-		type EntityWithControlPlaneRef interface {
-			SetControlPlaneID(string)
-			GetControlPlaneID() string
-		}
 		// TODO(pmalek): make this generic.
 		// CP ID is not stored in KonnectEntityStatus because not all entities
 		// have a ControlPlaneRef, hence the type constraints in the reconciler can't be used.
