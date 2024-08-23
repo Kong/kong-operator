@@ -52,8 +52,8 @@ func New(m metadata.Info) *CLI {
 
 	// webhook and validation options
 	flagSet.BoolVar(&deferCfg.ValidatingWebhookEnabled, "enable-validating-webhook", true, "Enable the validating webhook.")
-	flagSet.StringVar(&deferCfg.WebhookCertificateConfigBaseImage, "webhook-certificate-config-base-image", consts.WebhookCertificateConfigBaseImage, "The base image for the certgen Jobs.")
-	flagSet.StringVar(&deferCfg.WebhookCertificateConfigShellImage, "webhook-certificate-config-shell-image", "busybox", "The shell image for the certgen Jobs.")
+	flagSet.StringVar(&cfg.WebhookCertificateConfigBaseImage, "webhook-certificate-config-base-image", consts.WebhookCertificateConfigBaseImage, "The base image for the certgen Jobs.")
+	flagSet.StringVar(&cfg.WebhookCertificateConfigShellImage, "webhook-certificate-config-shell-image", consts.WebhookCertificateConfigShellImage, "The shell image for the certgen Jobs.")
 
 	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information.")
 
@@ -90,12 +90,10 @@ type CLI struct {
 }
 
 type flagsForFurtherEvaluation struct {
-	DisableLeaderElection              bool
-	ClusterCASecretNamespace           string
-	ValidatingWebhookEnabled           bool
-	Version                            bool
-	WebhookCertificateConfigBaseImage  string
-	WebhookCertificateConfigShellImage string
+	DisableLeaderElection    bool
+	ClusterCASecretNamespace string
+	ValidatingWebhookEnabled bool
+	Version                  bool
 }
 
 const (
@@ -222,8 +220,6 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	c.cfg.WebhookPort = manager.DefaultConfig().WebhookPort
 	c.cfg.LeaderElectionNamespace = controllerNamespace
 	c.cfg.AnonymousReports = anonymousReportsEnabled
-	c.cfg.WebhookCertificateConfigBaseImage = c.deferFlagValues.WebhookCertificateConfigBaseImage
-	c.cfg.WebhookCertificateConfigShellImage = c.deferFlagValues.WebhookCertificateConfigShellImage
 
 	return *c.cfg
 }
