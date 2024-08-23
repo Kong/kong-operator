@@ -9,15 +9,15 @@ import (
 )
 
 func TestKongConsumerGroup(t *testing.T) {
-	c := &configurationv1beta1.KongConsumerGroup{}
+	cg := &configurationv1beta1.KongConsumerGroup{}
 
-	require.Nil(t, c.GetKonnectStatus())
-	require.Empty(t, c.GetKonnectStatus().GetKonnectID())
-	require.Empty(t, c.GetKonnectStatus().GetOrgID())
-	require.Empty(t, c.GetKonnectStatus().GetServerURL())
+	require.Nil(t, cg.GetKonnectStatus())
+	require.Empty(t, cg.GetKonnectStatus().GetKonnectID())
+	require.Empty(t, cg.GetKonnectStatus().GetOrgID())
+	require.Empty(t, cg.GetKonnectStatus().GetServerURL())
 
-	require.Equal(t, "", c.GetControlPlaneID())
-	c.SetControlPlaneID("123")
-	require.Equal(t, "123", c.GetControlPlaneID())
-	require.Equal(t, "123", c.Status.Konnect.ControlPlaneID)
+	require.Equal(t, "", cg.GetControlPlaneID())
+	cg.SetControlPlaneID("123")
+	require.Equal(t, "123", cg.GetControlPlaneID())
+	require.Equal(t, "123", cg.Status.Konnect.ControlPlaneID)
 }

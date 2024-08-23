@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Kong, Inc.
+Copyright 2024 Kong, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -45,50 +45,63 @@ type KongRoute struct {
 	Status KongRouteStatus `json:"status,omitempty"`
 }
 
-func (c *KongRoute) initKonnectStatus() {
-	c.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs{}
+func (r *KongRoute) initKonnectStatus() {
+	r.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs{}
 }
 
-func (c *KongRoute) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
-	if c.Status.Konnect == nil {
+// GetKonnectStatus returns the Konnect status contained in the KongRoute status.
+func (r *KongRoute) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
+	if r.Status.Konnect == nil {
 		return nil
 	}
-	return &c.Status.Konnect.KonnectEntityStatus
+	return &r.Status.Konnect.KonnectEntityStatus
 }
 
-func (c *KongRoute) GetControlPlaneID() string {
-	if c.Status.Konnect == nil {
+// GetControlPlaneID returns the Konnect Control Plane ID of the KongRoute.
+func (r *KongRoute) GetControlPlaneID() string {
+	if r.Status.Konnect == nil {
 		return ""
 	}
-	return c.Status.Konnect.ControlPlaneID
+	return r.Status.Konnect.ControlPlaneID
 }
 
-func (c *KongRoute) SetControlPlaneID(id string) {
-	if c.Status.Konnect == nil {
-		c.initKonnectStatus()
+// SetControlPlaneID sets the Konnect Control Plane ID in the KongRoute status.
+func (r *KongRoute) SetControlPlaneID(id string) {
+	if r.Status.Konnect == nil {
+		r.initKonnectStatus()
 	}
-	c.Status.Konnect.ControlPlaneID = id
+	r.Status.Konnect.ControlPlaneID = id
 }
 
-func (c *KongRoute) SetKonnectID(id string) {
-	if c.Status.Konnect == nil {
-		c.initKonnectStatus()
+// GetKonnectID returns the Konnect ID in the KongRoute status.
+func (r *KongRoute) GetKonnectID() string {
+	if r.Status.Konnect == nil {
+		return ""
 	}
-	c.Status.Konnect.ID = id
+	return r.Status.Konnect.ID
 }
 
-func (c KongRoute) GetTypeName() string {
+// SetKonnectID sets the Konnect ID in the KongRoute status.
+func (r *KongRoute) SetKonnectID(id string) {
+	if r.Status.Konnect == nil {
+		r.initKonnectStatus()
+	}
+	r.Status.Konnect.ID = id
+}
+
+// GetTypeName returns the KongRoute Kind name
+func (r KongRoute) GetTypeName() string {
 	return "KongRoute"
 }
 
 // GetConditions returns the Status Conditions
-func (c *KongRoute) GetConditions() []metav1.Condition {
-	return c.Status.Conditions
+func (r *KongRoute) GetConditions() []metav1.Condition {
+	return r.Status.Conditions
 }
 
 // SetConditions sets the Status Conditions
-func (c *KongRoute) SetConditions(conditions []metav1.Condition) {
-	c.Status.Conditions = conditions
+func (r *KongRoute) SetConditions(conditions []metav1.Condition) {
+	r.Status.Conditions = conditions
 }
 
 // KongRouteSpec defines specification of a Kong Route.

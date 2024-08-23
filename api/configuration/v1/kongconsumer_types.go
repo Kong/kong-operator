@@ -68,6 +68,7 @@ func (c *KongConsumer) initKonnectStatus() {
 	c.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
 }
 
+// GetControlPlaneID returns the ControlPlane ID in the KongConsumer status.
 func (c *KongConsumer) GetControlPlaneID() string {
 	if c.Status.Konnect == nil {
 		return ""
@@ -75,6 +76,7 @@ func (c *KongConsumer) GetControlPlaneID() string {
 	return c.Status.Konnect.ControlPlaneID
 }
 
+// SetControlPlaneID sets the ControlPlane ID in the KongConsumer status.
 func (c *KongConsumer) SetControlPlaneID(id string) {
 	if c.Status.Konnect == nil {
 		c.initKonnectStatus()
@@ -82,6 +84,7 @@ func (c *KongConsumer) SetControlPlaneID(id string) {
 	c.Status.Konnect.ControlPlaneID = id
 }
 
+// GetKonnectStatus returns the Konnect status contained in the KongConsumer status.
 func (c *KongConsumer) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
 	if c.Status.Konnect == nil {
 		return nil
@@ -89,6 +92,15 @@ func (c *KongConsumer) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
 	return &c.Status.Konnect.KonnectEntityStatus
 }
 
+// GetKonnectID returns the Konnect ID in the KongConsumer status.
+func (c *KongConsumer) GetKonnectID() string {
+	if c.Status.Konnect == nil {
+		return ""
+	}
+	return c.Status.Konnect.ID
+}
+
+// SetKonnectID sets the Konnect ID in the KongConsumer status.
 func (c *KongConsumer) SetKonnectID(id string) {
 	if c.Status.Konnect == nil {
 		c.initKonnectStatus()
@@ -96,11 +108,9 @@ func (c *KongConsumer) SetKonnectID(id string) {
 	c.Status.Konnect.ID = id
 }
 
+// GetTypeName returns the KongConsumer Kind name
 func (c KongConsumer) GetTypeName() string {
 	return "KongConsumer"
-}
-
-func (c *KongConsumer) SetKonnectLabels(labels map[string]string) {
 }
 
 // GetConditions returns the Status Conditions

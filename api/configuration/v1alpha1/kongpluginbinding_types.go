@@ -41,24 +41,63 @@ type KongPluginBinding struct {
 	Status KongPluginBindingStatus `json:"status,omitempty"`
 }
 
+func (b *KongPluginBinding) initKonnectStatus() {
+	b.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
+}
+
 // GetKonnectStatus returns the Konnect status contained in the KongPluginBinding status.
-func (c *KongPluginBinding) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
-	return &c.Status.Konnect.KonnectEntityStatus
+func (b *KongPluginBinding) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
+	if b.Status.Konnect == nil {
+		return nil
+	}
+	return &b.Status.Konnect.KonnectEntityStatus
+}
+
+// GetKonnectID returns the Konnect ID in the KongPluginBinding status.
+func (b *KongPluginBinding) GetKonnectID() string {
+	if b.Status.Konnect == nil {
+		return ""
+	}
+	return b.Status.Konnect.ID
+}
+
+// SetKonnectID sets the Konnect ID in the KongPluginBinding status.
+func (b *KongPluginBinding) SetKonnectID(id string) {
+	if b.Status.Konnect == nil {
+		b.initKonnectStatus()
+	}
+	b.Status.Konnect.ID = id
+}
+
+// GetControlPlaneID returns the ControlPlane ID in the KongPluginBinding status.
+func (b *KongPluginBinding) GetControlPlaneID() string {
+	if b.Status.Konnect == nil {
+		return ""
+	}
+	return b.Status.Konnect.ControlPlaneID
+}
+
+// SetControlPlaneID sets the ControlPlane ID in the KongPluginBinding status.
+func (b *KongPluginBinding) SetControlPlaneID(id string) {
+	if b.Status.Konnect == nil {
+		b.initKonnectStatus()
+	}
+	b.Status.Konnect.ControlPlaneID = id
 }
 
 // GetTypeName returns the KongPluginBinding Kind name
-func (c KongPluginBinding) GetTypeName() string {
+func (b KongPluginBinding) GetTypeName() string {
 	return "KongPluginBinding"
 }
 
 // GetConditions returns the Status Conditions
-func (c *KongPluginBinding) GetConditions() []metav1.Condition {
-	return c.Status.Conditions
+func (b *KongPluginBinding) GetConditions() []metav1.Condition {
+	return b.Status.Conditions
 }
 
 // SetConditions sets the Status Conditions
-func (c *KongPluginBinding) SetConditions(conditions []metav1.Condition) {
-	c.Status.Conditions = conditions
+func (b *KongPluginBinding) SetConditions(conditions []metav1.Condition) {
+	b.Status.Conditions = conditions
 }
 
 // KongPluginBindingSpec defines specification of a KongPluginBinding.

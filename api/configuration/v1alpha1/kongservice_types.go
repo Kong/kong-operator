@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Kong, Inc.
+Copyright 2024 Kong, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -44,53 +44,63 @@ type KongService struct {
 	Status KongServiceStatus `json:"status,omitempty"`
 }
 
-func (c *KongService) initKonnectStatus() {
-	c.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
+func (s *KongService) initKonnectStatus() {
+	s.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
 }
 
-func (c *KongService) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
-	if c.Status.Konnect == nil {
+// GetKonnectStatus returns the Konnect status contained in the KongService status.
+func (s *KongService) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
+	if s.Status.Konnect == nil {
 		return nil
 	}
-	return &c.Status.Konnect.KonnectEntityStatus
+	return &s.Status.Konnect.KonnectEntityStatus
 }
 
-func (c *KongService) SetKonnectID(id string) {
-	if c.Status.Konnect == nil {
-		c.initKonnectStatus()
-	}
-	c.Status.Konnect.ID = id
-}
-
-func (c *KongService) GetControlPlaneID() string {
-	if c.Status.Konnect == nil {
+// GetKonnectID returns the Konnect ID in the KongService status.
+func (s *KongService) GetKonnectID() string {
+	if s.Status.Konnect == nil {
 		return ""
 	}
-	return c.Status.Konnect.ControlPlaneID
+	return s.Status.Konnect.ID
 }
 
-func (c *KongService) SetControlPlaneID(id string) {
-	if c.Status.Konnect == nil {
-		c.initKonnectStatus()
+// SetKonnectID sets the Konnect ID in the KongService status.
+func (s *KongService) SetKonnectID(id string) {
+	if s.Status.Konnect == nil {
+		s.initKonnectStatus()
 	}
-	c.Status.Konnect.ControlPlaneID = id
+	s.Status.Konnect.ID = id
 }
 
-func (c KongService) GetTypeName() string {
+// GetControlPlaneID returns the ControlPlane ID in the KongService status.
+func (s *KongService) GetControlPlaneID() string {
+	if s.Status.Konnect == nil {
+		return ""
+	}
+	return s.Status.Konnect.ControlPlaneID
+}
+
+// SetControlPlaneID sets the ControlPlane ID in the KongService status.
+func (s *KongService) SetControlPlaneID(id string) {
+	if s.Status.Konnect == nil {
+		s.initKonnectStatus()
+	}
+	s.Status.Konnect.ControlPlaneID = id
+}
+
+// GetTypeName returns the KongService Kind name
+func (s KongService) GetTypeName() string {
 	return "KongService"
 }
 
-func (c *KongService) SetKonnectLabels(labels map[string]string) {
-}
-
 // GetConditions returns the Status Conditions
-func (c *KongService) GetConditions() []metav1.Condition {
-	return c.Status.Conditions
+func (s *KongService) GetConditions() []metav1.Condition {
+	return s.Status.Conditions
 }
 
 // SetConditions sets the Status Conditions
-func (c *KongService) SetConditions(conditions []metav1.Condition) {
-	c.Status.Conditions = conditions
+func (s *KongService) SetConditions(conditions []metav1.Condition) {
+	s.Status.Conditions = conditions
 }
 
 // KongServiceSpec defines specification of a Kong Route.
