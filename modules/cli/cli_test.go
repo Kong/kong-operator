@@ -78,6 +78,19 @@ func TestParse(t *testing.T) {
 				return cfg
 			},
 		},
+		{
+			name: "webhook certificate configuration arguments are set",
+			args: []string{
+				"--webhook-certificate-config-base-image=mybaseimage:42",
+				"--webhook-certificate-config-shell-image=shellimg",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.WebhookCertificateConfigBaseImage = "mybaseimage:42"
+				cfg.WebhookCertificateConfigShellImage = "shellimg"
+				return cfg
+			},
+		},
 	}
 
 	for _, tC := range testCases {
@@ -153,6 +166,8 @@ func expectedDefaultCfg() manager.Config {
 		KonnectSyncPeriod:                       consts.DefaultKonnectSyncPeriod,
 		KongPluginInstallationControllerEnabled: false,
 		ValidatingWebhookEnabled:                true,
+		WebhookCertificateConfigBaseImage:       consts.WebhookCertificateConfigBaseImage,
+		WebhookCertificateConfigShellImage:      consts.WebhookCertificateConfigShellImage,
 		LoggerOpts:                              &zap.Options{},
 	}
 }
