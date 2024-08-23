@@ -153,6 +153,8 @@ func expectedDefaultCfg() manager.Config {
 		KonnectSyncPeriod:                       consts.DefaultKonnectSyncPeriod,
 		KongPluginInstallationControllerEnabled: false,
 		ValidatingWebhookEnabled:                true,
+		WebhookCertificateConfigBaseImage:       consts.WebhookCertificateConfigBaseImage,
+		WebhookCertificateConfigShellImage:      "busybox",
 		LoggerOpts:                              &zap.Options{},
 	}
 }
