@@ -148,7 +148,7 @@ func Update[
 	case *konnectv1alpha1.KonnectControlPlane:
 		return ctrl.Result{}, updateControlPlane(ctx, sdk.ControlPlanes, ent)
 	case *configurationv1alpha1.KongService:
-		return ctrl.Result{}, updateService(ctx, sdk.Services, cl, ent)
+		return ctrl.Result{}, updateService(ctx, sdk.Services, ent)
 	case *configurationv1alpha1.KongRoute:
 		return ctrl.Result{}, updateRoute(ctx, sdk.Routes, cl, ent)
 	case *configurationv1.KongConsumer:

@@ -53,7 +53,7 @@ func TestCreateControlPlane(t *testing.T) {
 				return sdk, cp
 			},
 			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectControlPlane) {
-				assert.Equal(t, "12345", cp.Status.GetKonnectID())
+				assert.Equal(t, "12345", cp.GetKonnectStatus().GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
 				require.True(t, ok, "Programmed condition not set on KonnectControlPlane")
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
@@ -97,7 +97,7 @@ func TestCreateControlPlane(t *testing.T) {
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				assert.Equal(t, "FailedToCreate", cond.Reason)
 				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, "failed to create KonnectControlPlane default/cp-1: {\"status\":400,\"title\":\"\",\"instance\":\"\",\"detail\":\"bad request\",\"invalid_parameters\":null}", cond.Message)
+				assert.Equal(t, `failed to create KonnectControlPlane default/cp-1: {"status":400,"title":"","instance":"","detail":"bad request","invalid_parameters":null}`, cond.Message)
 			},
 			expectedErr: true,
 		},
@@ -197,7 +197,7 @@ func TestDeleteControlPlane(t *testing.T) {
 			expectedErr: true,
 		},
 		{
-			name: "not found error is ignore and considered a success when trying to delete",
+			name: "not found error is ignored and considered a success when trying to delete",
 			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectControlPlane) {
 				sdk := &MockControlPlaneSDK{}
 				cp := &konnectv1alpha1.KonnectControlPlane{
@@ -358,7 +358,7 @@ func TestUpdateControlPlane(t *testing.T) {
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				assert.Equal(t, "FailedToUpdate", cond.Reason)
 				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, "failed to update KonnectControlPlane default/cp-1: {\"status\":400,\"title\":\"\",\"instance\":\"\",\"detail\":\"bad request\",\"invalid_parameters\":null}", cond.Message)
+				assert.Equal(t, `failed to update KonnectControlPlane default/cp-1: {"status":400,"title":"","instance":"","detail":"bad request","invalid_parameters":null}`, cond.Message)
 			},
 			expectedErr: true,
 		},

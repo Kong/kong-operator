@@ -9,7 +9,6 @@ import (
 	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnectgoerrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -17,7 +16,6 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 func createService(
@@ -26,7 +24,10 @@ func createService(
 	svc *configurationv1alpha1.KongService,
 ) error {
 	if svc.GetControlPlaneID() == "" {
-		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", svc, client.ObjectKeyFromObject(svc))
+		return fmt.Errorf(
+			"can't create %T %s without a Konnect ControlPlane ID",
+			svc, client.ObjectKeyFromObject(svc),
+		)
 	}
 
 	resp, err := sdk.CreateService(ctx,
@@ -73,37 +74,19 @@ func createService(
 func updateService(
 	ctx context.Context,
 	sdk ServicesSDK,
-	cl client.Client,
 	svc *configurationv1alpha1.KongService,
 ) error {
-	if svc.Spec.ControlPlaneRef == nil {
-		return fmt.Errorf("can't update %T without a ControlPlaneRef", svc)
-	}
-
-	// TODO(pmalek) handle other types of CP ref
-	// TODO(pmalek) handle cross namespace refs
-	nnCP := types.NamespacedName{
-		Namespace: svc.Namespace,
-		Name:      svc.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
-	}
-	var cp konnectv1alpha1.KonnectControlPlane
-	if err := cl.Get(ctx, nnCP, &cp); err != nil {
-		return fmt.Errorf("failed to get KonnectControlPlane %s: for %T %s: %w",
-			nnCP, svc, client.ObjectKeyFromObject(svc), err,
+	if svc.GetControlPlaneID() == "" {
+		return fmt.Errorf("can't update  %T %s without a Konnect ControlPlane ID",
+			svc, client.ObjectKeyFromObject(svc),
 		)
 	}
 
-	if cp.Status.ID == "" {
-		return fmt.Errorf(
-			"can't update %T when referenced KonnectControlPlane %s does not have the Konnect ID",
-			svc, nnCP,
-		)
-	}
-
+	id := svc.GetKonnectStatus().GetKonnectID()
 	resp, err := sdk.UpsertService(ctx,
 		sdkkonnectgoops.UpsertServiceRequest{
-			ControlPlaneID: cp.Status.ID,
-			ServiceID:      svc.GetKonnectStatus().GetKonnectID(),
+			ControlPlaneID: svc.GetControlPlaneID(),
+			ServiceID:      id,
 			Service:        kongServiceToSDKServiceInput(svc),
 		},
 	)
@@ -112,11 +95,33 @@ func updateService(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, svc); errWrapped != nil {
+		// Service update operation returns an SDKError instead of a NotFoundError.
+		var sdkError *sdkkonnectgoerrs.SDKError
+		if errors.As(errWrapped, &sdkError) {
+			switch sdkError.StatusCode {
+			case 404:
+				if err := createService(ctx, sdk, svc); err != nil {
+					return FailedKonnectOpError[configurationv1alpha1.KongService]{
+						Op:  UpdateOp,
+						Err: err,
+					}
+				}
+				// Create succeeded, createService sets the status so no need to do this here.
+
+				return nil
+			default:
+				return FailedKonnectOpError[configurationv1alpha1.KongService]{
+					Op:  UpdateOp,
+					Err: sdkError,
+				}
+			}
+		}
+
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
-				"FailedToCreate",
+				"FailedToUpdate",
 				errWrapped.Error(),
 				svc.GetGeneration(),
 			),
@@ -126,7 +131,7 @@ func updateService(
 	}
 
 	svc.Status.Konnect.SetKonnectID(*resp.Service.ID)
-	svc.Status.Konnect.SetControlPlaneID(cp.Status.ID)
+	svc.Status.Konnect.SetControlPlaneID(svc.GetControlPlaneID())
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
 			conditions.KonnectEntityProgrammedConditionType,
