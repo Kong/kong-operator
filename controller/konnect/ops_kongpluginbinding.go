@@ -218,11 +218,11 @@ func getPluginBindingTargets(
 ) ([]client.Object, error) {
 	targets := pluginBinding.Spec.Targets
 	targetObjects := []client.Object{}
-	if targets.ServiceReference != nil && targets.ServiceReference.Kind != "KongService" {
-		return nil, fmt.Errorf("unsupported service target kind %q", targets.ServiceReference.Kind)
-	}
-
 	if targets.ServiceReference != nil {
+		if targets.ServiceReference.Kind != "KongService" {
+			return nil, fmt.Errorf("unsupported service target kind %q", targets.ServiceReference.Kind)
+		}
+
 		kongService := configurationv1alpha1.KongService{}
 		kongService.SetName(targets.ServiceReference.Name)
 		kongService.SetNamespace(pluginBinding.GetNamespace())
