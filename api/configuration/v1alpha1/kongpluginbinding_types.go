@@ -30,8 +30,8 @@ import (
 // +kubebuilder:resource:scope=Namespaced
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Plugin-kind",type=string,JSONPath=`.spec.pluginReference.kind`,description="Kind of the plugin"
-// +kubebuilder:printcolumn:name="Plugin-name",type=string,JSONPath=`.spec.pluginReference.name`,description="Name of the plugin"
+// +kubebuilder:printcolumn:name="Plugin-kind",type=string,JSONPath=`.spec.pluginRef.kind`,description="Kind of the plugin"
+// +kubebuilder:printcolumn:name="Plugin-name",type=string,JSONPath=`.spec.pluginRef.name`,description="Name of the plugin"
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 type KongPluginBinding struct {
 	metav1.TypeMeta   `json:",inline"`
