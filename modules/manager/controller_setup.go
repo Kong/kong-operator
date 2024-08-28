@@ -360,6 +360,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				konnect.WithKonnectEntitySyncPeriod[configurationv1beta1.KongConsumerGroup](c.KonnectSyncPeriod),
 			),
 		}
+		controllers[KongConsumerControllerName] = ControllerDef{
+			Enabled: c.KonnectControllersEnabled,
+			Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongPluginBinding](
+				sdkFactory,
+				c.DevelopmentMode,
+				mgr.GetClient(),
+				konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](c.KonnectSyncPeriod),
+			),
+		}
 	}
 
 	return controllers, nil

@@ -87,6 +87,7 @@ rules:
   - kongcustomentities/status
   - kongingresses/status
   - konglicenses/status
+  - kongpluginbindings/status
   - kongplugins/status
   - kongservices/status
   - kongupstreampolicies/status
@@ -100,10 +101,9 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - kongplugins
+  - kongpluginbindings
+  - kongservices
   verbs:
-  - create
-  - delete
   - get
   - list
   - patch
@@ -112,8 +112,10 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - kongservices
+  - kongplugins
   verbs:
+  - create
+  - delete
   - get
   - list
   - patch

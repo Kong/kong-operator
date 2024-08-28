@@ -42,7 +42,12 @@ const (
 func Create[
 	T SupportedKonnectEntityType,
 	TEnt EntityType[T],
-](ctx context.Context, sdk *sdkkonnectgo.SDK, cl client.Client, e *T) (*T, error) {
+](
+	ctx context.Context,
+	sdk *sdkkonnectgo.SDK,
+	cl client.Client,
+	e *T,
+) (*T, error) {
 	defer logOpComplete[T, TEnt](ctx, time.Now(), CreateOp, e)
 
 	switch ent := any(e).(type) {
@@ -56,6 +61,8 @@ func Create[
 		return e, createConsumer(ctx, sdk, ent)
 	case *configurationv1beta1.KongConsumerGroup:
 		return e, createConsumerGroup(ctx, sdk, ent)
+	case *configurationv1alpha1.KongPluginBinding:
+		return e, createPlugin(ctx, cl, sdk, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -92,6 +99,8 @@ func Delete[
 		return deleteConsumer(ctx, sdk, ent)
 	case *configurationv1beta1.KongConsumerGroup:
 		return deleteConsumerGroup(ctx, sdk, ent)
+	case *configurationv1alpha1.KongPluginBinding:
+		return deletePlugin(ctx, sdk, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -153,6 +162,8 @@ func Update[
 		return ctrl.Result{}, updateConsumer(ctx, sdk, cl, ent)
 	case *configurationv1beta1.KongConsumerGroup:
 		return ctrl.Result{}, updateConsumerGroup(ctx, sdk, cl, ent)
+	case *configurationv1alpha1.KongPluginBinding:
+		return ctrl.Result{}, updatePlugin(ctx, sdk, cl, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types

@@ -22,6 +22,7 @@ func TestNewKonnectEntityReconciler(t *testing.T) {
 	testNewKonnectEntityReconciler(t, configurationv1.KongConsumer{})
 	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongRoute{})
 	testNewKonnectEntityReconciler(t, configurationv1beta1.KongConsumerGroup{})
+	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongPluginBinding{})
 }
 
 func testNewKonnectEntityReconciler[
