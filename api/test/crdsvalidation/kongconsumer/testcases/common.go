@@ -10,6 +10,7 @@ import (
 type testCase struct {
 	Name                       string
 	KongConsumer               configurationv1.KongConsumer
+	KongConsumerStatus         *configurationv1.KongConsumerStatus
 	Update                     func(*configurationv1.KongConsumer)
 	ExpectedErrorMessage       *string
 	ExpectedUpdateErrorMessage *string

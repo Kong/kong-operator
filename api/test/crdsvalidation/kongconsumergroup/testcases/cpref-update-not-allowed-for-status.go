@@ -26,15 +26,15 @@ var updatesNotAllowedForStatus = testCasesGroup{
 						},
 					},
 				},
-				Status: configurationv1beta1.KongConsumerGroupStatus{
-					Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{},
-					Conditions: []metav1.Condition{
-						{
-							Type:               "Programmed",
-							Status:             metav1.ConditionTrue,
-							Reason:             "Valid",
-							LastTransitionTime: metav1.Now(),
-						},
+			},
+			KongConsumerGroupStatus: &configurationv1beta1.KongConsumerGroupStatus{
+				Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{},
+				Conditions: []metav1.Condition{
+					{
+						Type:               "Programmed",
+						Status:             metav1.ConditionTrue,
+						Reason:             "Valid",
+						LastTransitionTime: metav1.Now(),
 					},
 				},
 			},
@@ -55,15 +55,15 @@ var updatesNotAllowedForStatus = testCasesGroup{
 						},
 					},
 				},
-				Status: configurationv1beta1.KongConsumerGroupStatus{
-					Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{},
-					Conditions: []metav1.Condition{
-						{
-							Type:               "Programmed",
-							Status:             metav1.ConditionFalse,
-							Reason:             "NotProgrammed",
-							LastTransitionTime: metav1.Now(),
-						},
+			},
+			KongConsumerGroupStatus: &configurationv1beta1.KongConsumerGroupStatus{
+				Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{},
+				Conditions: []metav1.Condition{
+					{
+						Type:               "Programmed",
+						Status:             metav1.ConditionFalse,
+						Reason:             "NotProgrammed",
+						LastTransitionTime: metav1.Now(),
 					},
 				},
 			},

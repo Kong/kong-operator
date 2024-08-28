@@ -42,6 +42,7 @@ type KongConsumerGroup struct {
 	Spec KongConsumerGroupSpec `json:"spec,omitempty"`
 
 	// Status represents the current status of the KongConsumerGroup resource.
+	// +kubebuilder:default={conditions: {{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}}
 	Status KongConsumerGroupStatus `json:"status,omitempty"`
 }
 
@@ -129,7 +130,6 @@ type KongConsumerGroupStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	// +kubebuilder:validation:MaxItems=8
-	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 

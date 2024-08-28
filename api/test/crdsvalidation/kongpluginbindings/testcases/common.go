@@ -8,9 +8,12 @@ import (
 
 // testCase is a test case related to KongPluginBinding validation.
 type testCase struct {
-	Name                 string
-	KongPluginBinding    configurationv1alpha1.KongPluginBinding
-	ExpectedErrorMessage *string
+	Name                       string
+	KongPluginBinding          configurationv1alpha1.KongPluginBinding
+	KongPluginBindingStatus    *configurationv1alpha1.KongPluginBindingStatus
+	Update                     func(*configurationv1alpha1.KongPluginBinding)
+	ExpectedErrorMessage       *string
+	ExpectedUpdateErrorMessage *string
 }
 
 // testCasesGroup is a group of test cases related to KongPluginBinding validation. The grouping is done by a common theme.
@@ -28,6 +31,7 @@ func init() {
 		targetsCombinationsTCs,
 		crossTargetsTCs,
 		wrongTargetsGroupKindTCs,
+		updatesNotAllowedForStatusTCs,
 	)
 }
 

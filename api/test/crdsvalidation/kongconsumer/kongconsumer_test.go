@@ -33,14 +33,17 @@ func TestKongConsumer(t *testing.T) {
 						t.Cleanup(func() {
 							assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, entity.Name, metav1.DeleteOptions{})))
 						})
-						// Create doesn't set the status, so we need to update it explicitly.
-						entity.Status = tc.KongConsumer.Status
-						entity, err = cl.UpdateStatus(ctx, entity, metav1.UpdateOptions{})
-						assert.NoError(t, err)
 					}
 
 					if tc.ExpectedErrorMessage == nil {
 						assert.NoError(t, err)
+
+						// if the status has to be updated, update it.
+						if tc.KongConsumerStatus != nil {
+							entity.Status = *tc.KongConsumerStatus
+							entity, err = cl.UpdateStatus(ctx, entity, metav1.UpdateOptions{})
+							assert.NoError(t, err)
+						}
 
 						// Update the object and check if the update is allowed.
 						if tc.Update != nil {

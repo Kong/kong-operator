@@ -33,11 +33,15 @@ import (
 // +kubebuilder:printcolumn:name="Plugin-kind",type=string,JSONPath=`.spec.pluginRef.kind`,description="Kind of the plugin"
 // +kubebuilder:printcolumn:name="Plugin-name",type=string,JSONPath=`.spec.pluginRef.name`,description="Name of the plugin"
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
+// +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when entity is already Programmed."
 type KongPluginBinding struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   KongPluginBindingSpec   `json:"spec"`
+	Spec KongPluginBindingSpec `json:"spec"`
+
+	// +kubebuilder:default={conditions: {{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}}
 	Status KongPluginBindingStatus `json:"status,omitempty"`
 }
 
@@ -209,7 +213,6 @@ type KongPluginBindingStatus struct {
 	// +listMapKey=type
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=8
-	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 

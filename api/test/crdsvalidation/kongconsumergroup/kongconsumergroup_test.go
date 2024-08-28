@@ -1,4 +1,4 @@
-package kongpluginbindings
+package kongconsumer
 
 import (
 	"context"
@@ -10,16 +10,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	configurationv1alpha1client "github.com/kong/kubernetes-configuration/pkg/clientset/typed/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/test/crdsvalidation/kongpluginbindings/testcases"
+	configurationv1beta1client "github.com/kong/kubernetes-configuration/pkg/clientset/typed/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation/kongconsumergroup/testcases"
 )
 
-func TestKongPluginBindings(t *testing.T) {
+func TestKongConsumerGroup(t *testing.T) {
 	ctx := context.Background()
 	cfg, err := config.GetConfig()
 	require.NoError(t, err, "error loading Kubernetes config")
-	cl, err := configurationv1alpha1client.NewForConfig(cfg)
-	require.NoError(t, err, "error creating configurationv1alpha1 client")
+	cl, err := configurationv1beta1client.NewForConfig(cfg)
+	require.NoError(t, err, "error creating configurationv1 client")
 
 	for _, tcsGroup := range testcases.TestCases {
 		tcsGroup := tcsGroup
@@ -27,13 +27,14 @@ func TestKongPluginBindings(t *testing.T) {
 			for _, tc := range tcsGroup.TestCases {
 				tc := tc
 				t.Run(tc.Name, func(t *testing.T) {
-					cl := cl.KongPluginBindings(tc.KongPluginBinding.Namespace)
-					entity, err := cl.Create(ctx, &tc.KongPluginBinding, metav1.CreateOptions{})
+					cl := cl.KongConsumerGroups(tc.KongConsumerGroup.Namespace)
+					entity, err := cl.Create(ctx, &tc.KongConsumerGroup, metav1.CreateOptions{})
 					if err == nil {
 						t.Cleanup(func() {
 							assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, entity.Name, metav1.DeleteOptions{})))
 						})
 					}
+
 					if tc.ExpectedErrorMessage == nil {
 						assert.NoError(t, err)
 					} else {
@@ -42,8 +43,8 @@ func TestKongPluginBindings(t *testing.T) {
 					}
 
 					// if the status has to be updated, update it.
-					if tc.KongPluginBindingStatus != nil {
-						entity.Status = *tc.KongPluginBindingStatus
+					if tc.KongConsumerGroupStatus != nil {
+						entity.Status = *tc.KongConsumerGroupStatus
 						entity, err = cl.UpdateStatus(ctx, entity, metav1.UpdateOptions{})
 						assert.NoError(t, err)
 					}

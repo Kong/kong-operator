@@ -72,15 +72,14 @@ var cpRef = testCasesGroup{
 						Host: "example.com",
 					},
 				},
-
-				Status: configurationv1alpha1.KongServiceStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:               "Programmed",
-							Status:             metav1.ConditionTrue,
-							Reason:             "Programmed",
-							LastTransitionTime: metav1.Now(),
-						},
+			},
+			KongServiceStatus: &configurationv1alpha1.KongServiceStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:               "Programmed",
+						Status:             metav1.ConditionTrue,
+						Reason:             "Programmed",
+						LastTransitionTime: metav1.Now(),
 					},
 				},
 			},
@@ -104,15 +103,14 @@ var cpRef = testCasesGroup{
 						Host: "example.com",
 					},
 				},
-
-				Status: configurationv1alpha1.KongServiceStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:               "Programmed",
-							Status:             metav1.ConditionTrue,
-							Reason:             "Programmed",
-							LastTransitionTime: metav1.Now(),
-						},
+			},
+			KongServiceStatus: &configurationv1alpha1.KongServiceStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:               "Programmed",
+						Status:             metav1.ConditionTrue,
+						Reason:             "Programmed",
+						LastTransitionTime: metav1.Now(),
 					},
 				},
 			},
