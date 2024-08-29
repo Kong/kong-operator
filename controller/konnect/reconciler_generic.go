@@ -98,6 +98,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(mgr ctrl.Manager) er
 			})
 	)
 
+	for _, ind := range ReconciliationIndexOptionsForEntity(ent) {
+		if err := mgr.GetCache().IndexField(context.Background(), ind.IndexObject, ind.IndexField, ind.ExtractValue); err != nil {
+			fmt.Println("Create index:", err)
+			return err
+		}
+	}
+
 	for _, dep := range ReconciliationWatchOptionsForEntity(r.Client, ent) {
 		b = dep(b)
 	}
