@@ -222,6 +222,7 @@ func DefaultControllerConfigForTests() manager.Config {
 	cfg.AIGatewayControllerEnabled = true
 	cfg.ValidatingWebhookEnabled = webhookEnabled
 	cfg.AnonymousReports = false
+	cfg.KonnectControllersEnabled = true
 
 	cfg.NewClientFunc = func(config *rest.Config, options client.Options) (client.Client, error) {
 		// always hijack and impersonate the system service account here so that the manager

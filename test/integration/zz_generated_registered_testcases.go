@@ -28,6 +28,7 @@ func init() {
 		TestHTTPRouteWithTLS,
 		TestIngressEssentials,
 		TestKongPluginInstallationEssentials,
+		TestKonnectEntities,
 		TestManualGatewayUpgradesAndDowngrades,
 		TestScalingDataPlaneThroughGatewayConfiguration,
 	)

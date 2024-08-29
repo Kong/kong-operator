@@ -24,6 +24,7 @@ spec:
             - -zap-devel=true
             - -enable-controller-kongplugininstallation=true
             - -enable-validating-webhook=true
+            - -enable-controller-konnect=true
           name: manager
           env:
           - name: GATEWAY_OPERATOR_DEVELOPMENT_MODE

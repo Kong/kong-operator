@@ -18,7 +18,7 @@ func IndexOptionsForKongPluginBinding() []ReconciliationIndexOption {
 	return []ReconciliationIndexOption{
 		{
 			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
-			IndexField:   IndexFieldKongPluginBindingKongClusterPluginReference,
+			IndexField:   IndexFieldKongPluginBindingKongPluginReference,
 			ExtractValue: kongPluginReferencesFromKongPluginBinding,
 		},
 		{
