@@ -54,6 +54,7 @@
   [#516](https://github.com/Kong/gateway-operator/pull/516)
 - Add `KongPluginBinding` reconciler for Konnect Plugins.
   [#513](https://github.com/Kong/gateway-operator/pull/513)
+  [#535](https://github.com/Kong/gateway-operator/pull/535)
 
 ### Fixed
 
