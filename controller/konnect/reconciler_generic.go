@@ -39,7 +39,7 @@ const (
 // KonnectEntityReconciler reconciles a Konnect entities.
 // It uses the generic type constraints to constrain the supported types.
 type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]] struct {
-	sdkFactory      SDKFactory
+	sdkFactory      ops.SDKFactory
 	DevelopmentMode bool
 	Client          client.Client
 	SyncPeriod      time.Duration
@@ -66,7 +66,7 @@ func NewKonnectEntityReconciler[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](
-	sdkFactory SDKFactory,
+	sdkFactory ops.SDKFactory,
 	developmentMode bool,
 	client client.Client,
 	opts ...KonnectEntityReconcilerOption[T, TEnt],
@@ -288,7 +288,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// because the token is retrieved in runtime through KonnectAPIAuthConfiguration.
 	sdk := r.sdkFactory.NewKonnectSDK(
 		"https://"+apiAuth.Spec.ServerURL,
-		SDKToken(token),
+		ops.SDKToken(token),
 	)
 
 	if delTimestamp := ent.GetDeletionTimestamp(); !delTimestamp.IsZero() {

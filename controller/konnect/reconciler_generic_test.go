@@ -9,6 +9,7 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -38,7 +39,7 @@ func testNewKonnectEntityReconciler[
 ) {
 	t.Helper()
 
-	sdkFactory := NewSDKFactory()
+	sdkFactory := ops.NewSDKFactory()
 
 	t.Run(ent.GetTypeName(), func(t *testing.T) {
 		cl := fakectrlruntimeclient.NewFakeClient()

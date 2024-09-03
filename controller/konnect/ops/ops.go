@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,7 +45,7 @@ func Create[
 	TEnt constraints.EntityType[T],
 ](
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk SDKWrapper,
 	cl client.Client,
 	e *T,
 ) (*T, error) {
@@ -54,17 +53,17 @@ func Create[
 
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		return e, createControlPlane(ctx, sdk.ControlPlanes, ent)
+		return e, createControlPlane(ctx, sdk.GetControlPlaneSDK(), ent)
 	case *configurationv1alpha1.KongService:
-		return e, createService(ctx, sdk.Services, ent)
+		return e, createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
-		return e, createRoute(ctx, sdk.Routes, ent)
+		return e, createRoute(ctx, sdk.GetRoutesSDK(), ent)
 	case *configurationv1.KongConsumer:
-		return e, createConsumer(ctx, sdk.Consumers, ent)
+		return e, createConsumer(ctx, sdk.GetConsumersSDK(), ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		return e, createConsumerGroup(ctx, sdk.ConsumerGroups, ent)
+		return e, createConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.KongPluginBinding:
-		return e, createPlugin(ctx, cl, sdk.Plugins, ent)
+		return e, createPlugin(ctx, cl, sdk.GetPluginSDK(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -79,7 +78,7 @@ func Create[
 func Delete[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
-](ctx context.Context, sdk *sdkkonnectgo.SDK, cl client.Client, e *T) error {
+](ctx context.Context, sdk SDKWrapper, cl client.Client, e *T) error {
 	ent := TEnt(e)
 	if ent.GetKonnectStatus().GetKonnectID() == "" {
 		return fmt.Errorf(
@@ -92,17 +91,17 @@ func Delete[
 
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		return deleteControlPlane(ctx, sdk.ControlPlanes, ent)
+		return deleteControlPlane(ctx, sdk.GetControlPlaneSDK(), ent)
 	case *configurationv1alpha1.KongService:
-		return deleteService(ctx, sdk.Services, ent)
+		return deleteService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
-		return deleteRoute(ctx, sdk.Routes, ent)
+		return deleteRoute(ctx, sdk.GetRoutesSDK(), ent)
 	case *configurationv1.KongConsumer:
-		return deleteConsumer(ctx, sdk.Consumers, ent)
+		return deleteConsumer(ctx, sdk.GetConsumersSDK(), ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		return deleteConsumerGroup(ctx, sdk.ConsumerGroups, ent)
+		return deleteConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.KongPluginBinding:
-		return deletePlugin(ctx, sdk.Plugins, ent)
+		return deletePlugin(ctx, sdk.GetPluginSDK(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -117,7 +116,7 @@ func Delete[
 func Update[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
-](ctx context.Context, sdk *sdkkonnectgo.SDK, syncPeriod time.Duration, cl client.Client, e *T) (ctrl.Result, error) {
+](ctx context.Context, sdk SDKWrapper, syncPeriod time.Duration, cl client.Client, e *T) (ctrl.Result, error) {
 	var (
 		ent                = TEnt(e)
 		condProgrammed, ok = k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, ent)
@@ -155,17 +154,17 @@ func Update[
 
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		return ctrl.Result{}, updateControlPlane(ctx, sdk.ControlPlanes, ent)
+		return ctrl.Result{}, updateControlPlane(ctx, sdk.GetControlPlaneSDK(), ent)
 	case *configurationv1alpha1.KongService:
-		return ctrl.Result{}, updateService(ctx, sdk.Services, ent)
+		return ctrl.Result{}, updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
-		return ctrl.Result{}, updateRoute(ctx, sdk.Routes, cl, ent)
+		return ctrl.Result{}, updateRoute(ctx, sdk.GetRoutesSDK(), cl, ent)
 	case *configurationv1.KongConsumer:
-		return ctrl.Result{}, updateConsumer(ctx, sdk.Consumers, cl, ent)
+		return ctrl.Result{}, updateConsumer(ctx, sdk.GetConsumersSDK(), cl, ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		return ctrl.Result{}, updateConsumerGroup(ctx, sdk.ConsumerGroups, cl, ent)
+		return ctrl.Result{}, updateConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), cl, ent)
 	case *configurationv1alpha1.KongPluginBinding:
-		return ctrl.Result{}, updatePlugin(ctx, sdk.Plugins, cl, ent)
+		return ctrl.Result{}, updatePlugin(ctx, sdk.GetPluginSDK(), cl, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types

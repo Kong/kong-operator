@@ -7,6 +7,7 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 )
 
+// PluginSDK is the interface for Konnect plugin SDK.
 type PluginSDK interface {
 	CreatePlugin(ctx context.Context, controlPlaneID string, plugin sdkkonnectcomp.PluginInput, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreatePluginResponse, error)
 	UpsertPlugin(ctx context.Context, request sdkkonnectops.UpsertPluginRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertPluginResponse, error)

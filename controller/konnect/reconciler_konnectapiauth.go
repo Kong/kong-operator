@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/kong/gateway-operator/controller/konnect/conditions"
+	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -27,7 +28,7 @@ import (
 
 // KonnectAPIAuthConfigurationReconciler reconciles a KonnectAPIAuthConfiguration object.
 type KonnectAPIAuthConfigurationReconciler struct {
-	SDKFactory      SDKFactory
+	SDKFactory      ops.SDKFactory
 	DevelopmentMode bool
 	Client          client.Client
 }
@@ -45,7 +46,7 @@ const (
 
 // NewKonnectAPIAuthConfigurationReconciler creates a new KonnectAPIAuthConfigurationReconciler.
 func NewKonnectAPIAuthConfigurationReconciler(
-	sdkFactory SDKFactory,
+	sdkFactory ops.SDKFactory,
 	developmentMode bool,
 	client client.Client,
 ) *KonnectAPIAuthConfigurationReconciler {
@@ -138,7 +139,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 	}
 	sdk := r.SDKFactory.NewKonnectSDK(
 		serverURL,
-		SDKToken(token),
+		ops.SDKToken(token),
 	)
 
 	// TODO(pmalek): check if api auth config has a valid status condition
@@ -150,7 +151,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 	// NOTE: This is needed because currently the SDK only lists the prod global API as supported:
 	// https://github.com/Kong/sdk-konnect-go/blob/999d9a987e1aa7d2e09ac11b1450f4563adf21ea/models/operations/getorganizationsme.go#L10-L12
-	respOrg, err := sdk.Me.GetOrganizationsMe(ctx, sdkkonnectops.WithServerURL("https://"+apiAuth.Spec.ServerURL))
+	respOrg, err := sdk.GetMeSDK().GetOrganizationsMe(ctx, sdkkonnectops.WithServerURL("https://"+apiAuth.Spec.ServerURL))
 	if err != nil {
 		logger.Error(err, "failed to get organization info from Konnect")
 		if cond, ok := k8sutils.GetCondition(conditions.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
