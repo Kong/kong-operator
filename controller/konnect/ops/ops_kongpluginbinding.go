@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
@@ -32,7 +31,7 @@ import (
 func createPlugin(
 	ctx context.Context,
 	cl client.Client,
-	sdk *sdkkonnectgo.SDK,
+	sdk PluginSDK,
 	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) error {
 	controlPlaneID := pluginBinding.GetControlPlaneID()
@@ -44,7 +43,7 @@ func createPlugin(
 		return err
 	}
 
-	resp, err := sdk.Plugins.CreatePlugin(ctx,
+	resp, err := sdk.CreatePlugin(ctx,
 		controlPlaneID,
 		*pluginInput,
 	)
@@ -87,7 +86,7 @@ func createPlugin(
 // if the operation fails.
 func updatePlugin(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk PluginSDK,
 	cl client.Client,
 	pb *configurationv1alpha1.KongPluginBinding,
 ) error {
@@ -121,7 +120,7 @@ func updatePlugin(
 		return err
 	}
 
-	resp, err := sdk.Plugins.UpsertPlugin(ctx,
+	resp, err := sdk.UpsertPlugin(ctx,
 		sdkkonnectops.UpsertPluginRequest{
 			ControlPlaneID: controlPlaneID,
 			PluginID:       pb.GetKonnectID(),
@@ -167,11 +166,11 @@ func updatePlugin(
 // It returns an error if the operation fails.
 func deletePlugin(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk PluginSDK,
 	pb *configurationv1alpha1.KongPluginBinding,
 ) error {
 	id := pb.GetKonnectID()
-	_, err := sdk.Plugins.DeletePlugin(ctx, pb.GetControlPlaneID(), id)
+	_, err := sdk.DeletePlugin(ctx, pb.GetControlPlaneID(), id)
 	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongPluginBinding](err, DeleteOp, pb); errWrapped != nil {
 		// plugin delete operation returns an SDKError instead of a NotFoundError.
 		var sdkError *sdkkonnecterrs.SDKError

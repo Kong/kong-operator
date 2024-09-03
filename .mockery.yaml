@@ -13,3 +13,4 @@ packages:
     interfaces:
       ControlPlaneSDK:
       ServicesSDK:
+      PluginSDK:
