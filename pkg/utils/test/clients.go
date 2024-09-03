@@ -14,7 +14,9 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	operatorclient "github.com/kong/gateway-operator/pkg/clientset"
 
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -58,6 +60,12 @@ func NewK8sClients(env environments.Environment) (K8sClients, error) {
 		return clients, err
 	}
 	if err := configurationv1alpha1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
+		return clients, err
+	}
+	if err := configurationv1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
+		return clients, err
+	}
+	if err := configurationv1beta1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
 		return clients, err
 	}
 

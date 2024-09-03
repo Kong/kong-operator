@@ -262,8 +262,11 @@ func kongPluginBindingToSDKPluginInput(
 	}
 
 	pluginConfig := map[string]any{}
-	if err := json.Unmarshal(plugin.Config.Raw, &pluginConfig); err != nil {
-		return nil, err
+	if rawConfig := plugin.Config.Raw; rawConfig != nil {
+		// If the config is empty (a valid case), there's no need to unmarshal (as it would fail).
+		if err := json.Unmarshal(rawConfig, &pluginConfig); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal KongPlugin %s config: %w", client.ObjectKeyFromObject(plugin), err)
+		}
 	}
 
 	pluginInput := &sdkkonnectcomp.PluginInput{
