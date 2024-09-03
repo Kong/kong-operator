@@ -11,10 +11,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	konnectv1alpha1client "github.com/kong/kubernetes-configuration/pkg/clientset/typed/konnect/v1alpha1"
-	"github.com/kong/kubernetes-configuration/test/crdsvalidation/konnectcontrolplane/testcases"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation/konnectgatewaycontrolplane/testcases"
 )
 
-func TestKonnectControlPlane(t *testing.T) {
+func TestKonnectGatewayControlPlane(t *testing.T) {
 	ctx := context.Background()
 	cfg, err := config.GetConfig()
 	require.NoError(t, err, "error loading Kubernetes config")
@@ -27,14 +27,14 @@ func TestKonnectControlPlane(t *testing.T) {
 			for _, tc := range tcsGroup.TestCases {
 				tc := tc
 				t.Run(tc.Name, func(t *testing.T) {
-					cl := cl.KonnectControlPlanes(tc.KonnectControlPlane.Namespace)
-					entity, err := cl.Create(ctx, &tc.KonnectControlPlane, metav1.CreateOptions{})
+					cl := cl.KonnectGatewayControlPlanes(tc.KonnectGatewayControlPlane.Namespace)
+					entity, err := cl.Create(ctx, &tc.KonnectGatewayControlPlane, metav1.CreateOptions{})
 					if err == nil {
 						t.Cleanup(func() {
 							assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, entity.Name, metav1.DeleteOptions{})))
 						})
 						// Create doesn't set the status, so we need to update it explicitly.
-						entity.Status = tc.KonnectControlPlane.Status
+						entity.Status = tc.KonnectGatewayControlPlane.Status
 						entity, err = cl.UpdateStatus(ctx, entity, metav1.UpdateOptions{})
 						assert.NoError(t, err)
 					}

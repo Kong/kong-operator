@@ -15,9 +15,9 @@ var updatesNotAllowedForStatus = testCasesGroup{
 	TestCases: []testCase{
 		{
 			Name: "konnect.authRef change is not allowed for Programmed=True",
-			KonnectControlPlane: konnectv1alpha1.KonnectControlPlane{
+			KonnectGatewayControlPlane: konnectv1alpha1.KonnectGatewayControlPlane{
 				ObjectMeta: commonObjectMeta,
-				Spec: konnectv1alpha1.KonnectControlPlaneSpec{
+				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: components.CreateControlPlaneRequest{
 						Name:        "cp-1",
 						ClusterType: lo.ToPtr(components.ClusterTypeClusterTypeControlPlane),
@@ -28,7 +28,7 @@ var updatesNotAllowedForStatus = testCasesGroup{
 						},
 					},
 				},
-				Status: konnectv1alpha1.KonnectControlPlaneStatus{
+				Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:               "Programmed",
@@ -39,16 +39,16 @@ var updatesNotAllowedForStatus = testCasesGroup{
 					},
 				},
 			},
-			Update: func(kcp *konnectv1alpha1.KonnectControlPlane) {
+			Update: func(kcp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				kcp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name = "name-2"
 			},
 			ExpectedUpdateErrorMessage: lo.ToPtr("spec.konnect.authRef is immutable when entity is already Programme"),
 		},
 		{
 			Name: "konnect.authRef change is not allowed for APIAuthValid=True",
-			KonnectControlPlane: konnectv1alpha1.KonnectControlPlane{
+			KonnectGatewayControlPlane: konnectv1alpha1.KonnectGatewayControlPlane{
 				ObjectMeta: commonObjectMeta,
-				Spec: konnectv1alpha1.KonnectControlPlaneSpec{
+				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: components.CreateControlPlaneRequest{
 						Name:        "cp-1",
 						ClusterType: lo.ToPtr(components.ClusterTypeClusterTypeControlPlane),
@@ -59,7 +59,7 @@ var updatesNotAllowedForStatus = testCasesGroup{
 						},
 					},
 				},
-				Status: konnectv1alpha1.KonnectControlPlaneStatus{
+				Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:               "APIAuthValid",
@@ -70,16 +70,16 @@ var updatesNotAllowedForStatus = testCasesGroup{
 					},
 				},
 			},
-			Update: func(kcp *konnectv1alpha1.KonnectControlPlane) {
+			Update: func(kcp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				kcp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name = "name-2"
 			},
 			ExpectedUpdateErrorMessage: lo.ToPtr("spec.konnect.authRef is immutable when entity refers to a Valid API Auth Configuration"),
 		},
 		{
 			Name: "konnect.authRef change is allowed when cp is not Programmed=True nor APIAuthValid=True",
-			KonnectControlPlane: konnectv1alpha1.KonnectControlPlane{
+			KonnectGatewayControlPlane: konnectv1alpha1.KonnectGatewayControlPlane{
 				ObjectMeta: commonObjectMeta,
-				Spec: konnectv1alpha1.KonnectControlPlaneSpec{
+				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: components.CreateControlPlaneRequest{
 						Name:        "cp-1",
 						ClusterType: lo.ToPtr(components.ClusterTypeClusterTypeControlPlane),
@@ -90,7 +90,7 @@ var updatesNotAllowedForStatus = testCasesGroup{
 						},
 					},
 				},
-				Status: konnectv1alpha1.KonnectControlPlaneStatus{
+				Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:               "APIAuthValid",
@@ -107,7 +107,7 @@ var updatesNotAllowedForStatus = testCasesGroup{
 					},
 				},
 			},
-			Update: func(kcp *konnectv1alpha1.KonnectControlPlane) {
+			Update: func(kcp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				kcp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name = "name-2"
 			},
 		},
