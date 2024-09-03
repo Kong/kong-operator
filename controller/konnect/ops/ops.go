@@ -58,6 +58,8 @@ func Create[
 		return e, createConsumer(ctx, sdk.Consumers, ent)
 	case *configurationv1beta1.KongConsumerGroup:
 		return e, createConsumerGroup(ctx, sdk.ConsumerGroups, ent)
+	case *configurationv1alpha1.KongPluginBinding:
+		return e, createPlugin(ctx, cl, sdk, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -94,6 +96,8 @@ func Delete[
 		return deleteConsumer(ctx, sdk.Consumers, ent)
 	case *configurationv1beta1.KongConsumerGroup:
 		return deleteConsumerGroup(ctx, sdk.ConsumerGroups, ent)
+	case *configurationv1alpha1.KongPluginBinding:
+		return deletePlugin(ctx, sdk, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -155,6 +159,8 @@ func Update[
 		return ctrl.Result{}, updateConsumer(ctx, sdk.Consumers, cl, ent)
 	case *configurationv1beta1.KongConsumerGroup:
 		return ctrl.Result{}, updateConsumerGroup(ctx, sdk.ConsumerGroups, cl, ent)
+	case *configurationv1alpha1.KongPluginBinding:
+		return ctrl.Result{}, updatePlugin(ctx, sdk, cl, ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types

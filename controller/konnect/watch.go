@@ -34,6 +34,8 @@ func ReconciliationWatchOptionsForEntity[
 		return KongServiceReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectControlPlane:
 		return KonnectControlPlaneReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.KongPluginBinding:
+		return KongPluginBindingReconciliationWatchOptions(cl)
 	default:
 		panic(fmt.Sprintf("unsupported entity type %T", ent))
 	}

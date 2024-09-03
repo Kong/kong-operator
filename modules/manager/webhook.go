@@ -256,16 +256,18 @@ func (m *webhookManager) createWebhookResources(ctx context.Context) error {
 }
 
 func (m *webhookManager) createCertificateConfigJobs(ctx context.Context) error {
-	jobCertificateConfigImage := consts.WebhookCertificateConfigBaseImage
+	jobCertificateConfigBaseImage := m.cfg.WebhookCertificateConfigBaseImage
+	jobCertificateConfigShellImage := m.cfg.WebhookCertificateConfigShellImage
 	if relatedJobImage := os.Getenv("RELATED_IMAGE_CERTIFICATE_CONFIG"); relatedJobImage != "" {
 		// RELATED_IMAGE_CERTIFICATE_CONFIG is set by the operator-sdk when building the operator bundle.
 		// https://github.com/Kong/gateway-operator-archive/issues/261
-		jobCertificateConfigImage = relatedJobImage
+		jobCertificateConfigBaseImage = relatedJobImage
 	}
 	job := k8sresources.GenerateNewWebhookCertificateConfigJob(
 		m.cfg.ControllerNamespace,
 		consts.WebhookCertificateConfigName,
-		jobCertificateConfigImage,
+		jobCertificateConfigBaseImage,
+		jobCertificateConfigShellImage,
 		consts.WebhookCertificateConfigSecretName,
 		consts.WebhookName,
 	)

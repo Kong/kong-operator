@@ -101,6 +101,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(mgr ctrl.Manager) er
 			})
 	)
 
+	for _, ind := range ReconciliationIndexOptionsForEntity(ent) {
+		if err := mgr.GetCache().IndexField(context.Background(), ind.IndexObject, ind.IndexField, ind.ExtractValue); err != nil {
+			fmt.Println("Create index:", err)
+			return err
+		}
+	}
+
 	for _, dep := range ReconciliationWatchOptionsForEntity(r.Client, ent) {
 		b = dep(b)
 	}
@@ -577,7 +584,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 				return res, errStatus
 			}
 
-			return ctrl.Result{}, fmt.Errorf("Can't get the referenced KongService %s: %w", nn, err)
+			return ctrl.Result{}, fmt.Errorf("can't get the referenced KongService %s: %w", nn, err)
 		}
 
 		// If referenced KongService is being deleted, return an error so that we
@@ -717,6 +724,11 @@ func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
 	case *configurationv1alpha1.KongService:
+		if e.Spec.ControlPlaneRef == nil {
+			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+		}
+		return mo.Some(*e.Spec.ControlPlaneRef)
+	case *configurationv1alpha1.KongPluginBinding:
 		if e.Spec.ControlPlaneRef == nil {
 			return mo.None[configurationv1alpha1.ControlPlaneRef]()
 		}

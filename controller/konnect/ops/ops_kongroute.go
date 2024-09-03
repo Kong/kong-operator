@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
-	sdkkonnectgoerrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -116,8 +116,8 @@ func updateRoute(
 		)
 	}
 
-	resp, err := sdk.UpsertRoute(ctx, sdkkonnectgoops.UpsertRouteRequest{
-		// resp, err := sdk.UpsertRoute(ctx, sdkkonnectgoops.UpsertRouteRequest{
+	resp, err := sdk.UpsertRoute(ctx, sdkkonnectops.UpsertRouteRequest{
+		// resp, err := sdk.UpsertRoute(ctx, sdkkonnectops.UpsertRouteRequest{
 		ControlPlaneID: cp.Status.ID,
 		RouteID:        route.Status.Konnect.ID,
 		Route:          kongRouteToSDKRouteInput(route),
@@ -169,7 +169,7 @@ func deleteRoute(
 	_, err := sdk.DeleteRoute(ctx, route.Status.Konnect.ControlPlaneID, id)
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, route); errWrapped != nil {
 		// Service delete operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkkonnectgoerrs.SDKError
+		var sdkError *sdkkonnecterrs.SDKError
 		if errors.As(errWrapped, &sdkError) {
 			if sdkError.StatusCode == 404 {
 				ctrllog.FromContext(ctx).
@@ -194,8 +194,8 @@ func deleteRoute(
 
 func kongRouteToSDKRouteInput(
 	route *configurationv1alpha1.KongRoute,
-) sdkkonnectgocomp.RouteInput {
-	return sdkkonnectgocomp.RouteInput{
+) sdkkonnectcomp.RouteInput {
+	return sdkkonnectcomp.RouteInput{
 		Destinations:            route.Spec.KongRouteAPISpec.Destinations,
 		Headers:                 route.Spec.KongRouteAPISpec.Headers,
 		Hosts:                   route.Spec.KongRouteAPISpec.Hosts,
@@ -213,7 +213,7 @@ func kongRouteToSDKRouteInput(
 		Sources:                 route.Spec.KongRouteAPISpec.Sources,
 		StripPath:               route.Spec.KongRouteAPISpec.StripPath,
 		Tags:                    route.Spec.KongRouteAPISpec.Tags,
-		Service: &sdkkonnectgocomp.RouteService{
+		Service: &sdkkonnectcomp.RouteService{
 			ID: sdkkonnectgo.String(route.Status.Konnect.ServiceID),
 		},
 	}

@@ -5,8 +5,8 @@ import (
 	"errors"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkkonnectgoerrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -65,7 +65,7 @@ func deleteControlPlane(
 	id := cp.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteControlPlane(ctx, id)
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, cp); errWrap != nil {
-		var sdkNotFoundError *sdkkonnectgoerrs.NotFoundError
+		var sdkNotFoundError *sdkkonnecterrs.NotFoundError
 		if errors.As(err, &sdkNotFoundError) {
 			ctrllog.FromContext(ctx).
 				Info("entity not found in Konnect, skipping delete",
@@ -73,7 +73,7 @@ func deleteControlPlane(
 				)
 			return nil
 		}
-		var sdkError *sdkkonnectgoerrs.SDKError
+		var sdkError *sdkkonnecterrs.SDKError
 		if errors.As(errWrap, &sdkError) {
 			return FailedKonnectOpError[konnectv1alpha1.KonnectControlPlane]{
 				Op:  DeleteOp,
@@ -98,16 +98,16 @@ func updateControlPlane(
 	cp *konnectv1alpha1.KonnectControlPlane,
 ) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
-	req := sdkkonnectgocomp.UpdateControlPlaneRequest{
+	req := sdkkonnectcomp.UpdateControlPlaneRequest{
 		Name:        sdkkonnectgo.String(cp.Spec.Name),
 		Description: cp.Spec.Description,
-		AuthType:    (*sdkkonnectgocomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
+		AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
 		ProxyUrls:   cp.Spec.ProxyUrls,
 		Labels:      cp.Spec.Labels,
 	}
 
 	resp, err := sdk.UpdateControlPlane(ctx, id, req)
-	var sdkError *sdkkonnectgoerrs.NotFoundError
+	var sdkError *sdkkonnecterrs.NotFoundError
 	if errors.As(err, &sdkError) {
 		ctrllog.FromContext(ctx).
 			Info("entity not found in Konnect, trying to recreate",

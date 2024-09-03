@@ -50,6 +50,11 @@
   [#506](https://github.com/Kong/gateway-operator/pull/506)
 - Add `KongConsumerGroup` reconciler for Konnect control planes.
   [#510](https://github.com/Kong/gateway-operator/pull/510)
+- Added command line flags to configure the certificate generator job's images.
+  [#516](https://github.com/Kong/gateway-operator/pull/516)
+- Add `KongPluginBinding` reconciler for Konnect Plugins.
+  [#513](https://github.com/Kong/gateway-operator/pull/513)
+  [#535](https://github.com/Kong/gateway-operator/pull/535)
 
 ### Fixed
 

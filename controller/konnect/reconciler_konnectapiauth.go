@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -144,7 +144,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 	// NOTE: This is needed because currently the SDK only lists the prod global API as supported:
 	// https://github.com/Kong/sdk-konnect-go/blob/999d9a987e1aa7d2e09ac11b1450f4563adf21ea/models/operations/getorganizationsme.go#L10-L12
-	respOrg, err := sdk.Me.GetOrganizationsMe(ctx, sdkkonnectgoops.WithServerURL("https://"+apiAuth.Spec.ServerURL))
+	respOrg, err := sdk.Me.GetOrganizationsMe(ctx, sdkkonnectops.WithServerURL("https://"+apiAuth.Spec.ServerURL))
 	if err != nil {
 		logger.Error(err, "failed to get organization info from Konnect")
 		if cond, ok := k8sutils.GetCondition(conditions.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
@@ -232,13 +232,13 @@ func getTokenFromKonnectAPIAuthConfiguration(
 			return "", fmt.Errorf("failed to get Secret %s: %w", nn, err)
 		}
 		if secret.Labels == nil || secret.Labels[SecretCredentialLabel] != SecretCredentialLabelValueKonnect {
-			return "", fmt.Errorf("Secret %s does not have label %s: %s", nn, SecretCredentialLabel, SecretCredentialLabelValueKonnect)
+			return "", fmt.Errorf("secret %s does not have label %s: %s", nn, SecretCredentialLabel, SecretCredentialLabelValueKonnect)
 		}
 		if secret.Data == nil {
-			return "", fmt.Errorf("Secret %s has no data", nn)
+			return "", fmt.Errorf("secret %s has no data", nn)
 		}
 		if _, ok := secret.Data[SecretTokenKey]; !ok {
-			return "", fmt.Errorf("Secret %s does not have key %s", nn, SecretTokenKey)
+			return "", fmt.Errorf("secret %s does not have key %s", nn, SecretTokenKey)
 		}
 		return string(secret.Data[SecretTokenKey]), nil
 	}

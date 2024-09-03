@@ -92,7 +92,9 @@ type Config struct {
 	KonnectControllersEnabled bool
 
 	// webhook and validation options
-	ValidatingWebhookEnabled bool
+	ValidatingWebhookEnabled           bool
+	WebhookCertificateConfigBaseImage  string
+	WebhookCertificateConfigShellImage string
 }
 
 // DefaultConfig returns a default configuration for the manager.

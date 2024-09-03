@@ -23,6 +23,10 @@ func TestNewKonnectEntityReconciler(t *testing.T) {
 	testNewKonnectEntityReconciler(t, configurationv1.KongConsumer{})
 	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongRoute{})
 	testNewKonnectEntityReconciler(t, configurationv1beta1.KongConsumerGroup{})
+	// TODO: Reconcilers setting index require a real k8s API server:
+	// https://github.com/kubernetes-sigs/controller-runtime/issues/657
+	// Maybe we should import envtest.
+	// testNewKonnectEntityReconciler(t, configurationv1alpha1.KongPluginBinding{})
 }
 
 func testNewKonnectEntityReconciler[
@@ -39,9 +43,11 @@ func testNewKonnectEntityReconciler[
 	t.Run(ent.GetTypeName(), func(t *testing.T) {
 		cl := fakectrlruntimeclient.NewFakeClient()
 		mgr, err := ctrl.NewManager(&rest.Config{}, ctrl.Options{
+
 			Scheme: scheme.Get(),
 		})
 		require.NoError(t, err)
+
 		reconciler := NewKonnectEntityReconciler[T, TEnt](sdkFactory, false, cl)
 		require.NoError(t, reconciler.SetupWithManager(mgr))
 	})

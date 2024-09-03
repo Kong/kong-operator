@@ -64,11 +64,11 @@ linters-settings:
         alias: gwtypes
 
       - pkg: github.com/Kong/sdk-konnect-go/models/components
-        alias: sdkkonnectgocomp
+        alias: sdkkonnectcomp
       - pkg: github.com/Kong/sdk-konnect-go/models/operations
-        alias: sdkkonnectgoops
+        alias: sdkkonnectops
       - pkg: github.com/Kong/sdk-konnect-go/models/sdkerrors
-        alias: sdkkonnectgoerrs
+        alias: sdkkonnecterrs
   revive:
     rules:
       - name: errorf

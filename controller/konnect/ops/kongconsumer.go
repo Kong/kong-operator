@@ -3,13 +3,13 @@ package ops
 import (
 	"context"
 
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 )
 
 // ConsumersSDK is the interface for the Konnect Consumers SDK.
 type ConsumersSDK interface {
-	CreateConsumer(ctx context.Context, controlPlaneID string, consumerInput sdkkonnectgocomp.ConsumerInput, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.CreateConsumerResponse, error)
-	UpsertConsumer(ctx context.Context, upsertConsumerRequest sdkkonnectgoops.UpsertConsumerRequest, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.UpsertConsumerResponse, error)
-	DeleteConsumer(ctx context.Context, controlPlaneID string, consumerID string, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.DeleteConsumerResponse, error)
+	CreateConsumer(ctx context.Context, controlPlaneID string, consumerInput sdkkonnectcomp.ConsumerInput, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateConsumerResponse, error)
+	UpsertConsumer(ctx context.Context, upsertConsumerRequest sdkkonnectops.UpsertConsumerRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertConsumerResponse, error)
+	DeleteConsumer(ctx context.Context, controlPlaneID string, consumerID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteConsumerResponse, error)
 }
