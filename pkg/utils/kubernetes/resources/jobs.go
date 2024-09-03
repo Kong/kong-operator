@@ -18,7 +18,8 @@ import (
 // GenerateNewWebhookCertificateConfigJob generates the create and patch jobs for the certificateConfig
 func GenerateNewWebhookCertificateConfigJob(namespace,
 	serviceAccountName,
-	imageName,
+	baseImageName,
+	shellImageName,
 	secretName,
 	webhookName string,
 ) *batchv1.Job {
@@ -39,7 +40,7 @@ func GenerateNewWebhookCertificateConfigJob(namespace,
 					fmt.Sprintf("--namespace=%s", namespace),
 					fmt.Sprintf("--secret-name=%s", secretName),
 				},
-				Image:           imageName,
+				Image:           baseImageName,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 			},
 			{
@@ -53,7 +54,7 @@ func GenerateNewWebhookCertificateConfigJob(namespace,
 					fmt.Sprintf("--secret-name=%s", secretName),
 					"--patch-failure-policy=Fail",
 				},
-				Image:           imageName,
+				Image:           baseImageName,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 			},
 		}
@@ -61,7 +62,7 @@ func GenerateNewWebhookCertificateConfigJob(namespace,
 		j.Spec.Template.Spec.Containers = []corev1.Container{
 			{
 				Name:            "done",
-				Image:           "busybox",
+				Image:           shellImageName,
 				Args:            []string{"echo", "done"},
 				ImagePullPolicy: corev1.PullIfNotPresent,
 			},

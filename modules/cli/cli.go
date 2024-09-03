@@ -52,6 +52,8 @@ func New(m metadata.Info) *CLI {
 
 	// webhook and validation options
 	flagSet.BoolVar(&deferCfg.ValidatingWebhookEnabled, "enable-validating-webhook", true, "Enable the validating webhook.")
+	flagSet.StringVar(&cfg.WebhookCertificateConfigBaseImage, "webhook-certificate-config-base-image", consts.WebhookCertificateConfigBaseImage, "The base image for the certgen Jobs.")
+	flagSet.StringVar(&cfg.WebhookCertificateConfigShellImage, "webhook-certificate-config-shell-image", consts.WebhookCertificateConfigShellImage, "The shell image for the certgen Jobs.")
 
 	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information.")
 
