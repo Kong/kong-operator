@@ -3,9 +3,9 @@ package konnect
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 // ReconciliationIndexOption contains required options of index for a kind of object required for reconciliation.

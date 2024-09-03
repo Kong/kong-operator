@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
-	sdkkonnectgoerrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -101,7 +101,7 @@ func updateConsumerGroup(
 	}
 
 	resp, err := sdk.UpsertConsumerGroup(ctx,
-		sdkkonnectgoops.UpsertConsumerGroupRequest{
+		sdkkonnectops.UpsertConsumerGroupRequest{
 			ControlPlaneID:  cp.Status.ID,
 			ConsumerGroupID: group.GetKonnectStatus().GetKonnectID(),
 			ConsumerGroup:   kongConsumerGroupToSDKConsumerGroupInput(group),
@@ -153,7 +153,7 @@ func deleteConsumerGroup(
 	_, err := sdk.DeleteConsumerGroup(ctx, consumer.Status.Konnect.ControlPlaneID, id)
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, consumer); errWrapped != nil {
 		// Consumer delete operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkkonnectgoerrs.SDKError
+		var sdkError *sdkkonnecterrs.SDKError
 		if errors.As(errWrapped, &sdkError) {
 			if sdkError.StatusCode == 404 {
 				ctrllog.FromContext(ctx).
@@ -178,8 +178,8 @@ func deleteConsumerGroup(
 
 func kongConsumerGroupToSDKConsumerGroupInput(
 	group *configurationv1beta1.KongConsumerGroup,
-) sdkkonnectgocomp.ConsumerGroupInput {
-	return sdkkonnectgocomp.ConsumerGroupInput{
+) sdkkonnectcomp.ConsumerGroupInput {
+	return sdkkonnectcomp.ConsumerGroupInput{
 		Tags: metadata.ExtractTags(group),
 		Name: group.Spec.Name,
 	}

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
-	sdkkonnectgoerrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,8 +53,8 @@ func TestCreateKongService(t *testing.T) {
 					EXPECT().
 					CreateService(ctx, "123456789", kongServiceToSDKServiceInput(svc)).
 					Return(
-						&sdkkonnectgoops.CreateServiceResponse{
-							Service: &sdkkonnectgocomp.Service{
+						&sdkkonnectops.CreateServiceResponse{
+							Service: &sdkkonnectcomp.Service{
 								ID:   lo.ToPtr("12345"),
 								Host: "example.com",
 								Name: lo.ToPtr("svc-1"),
@@ -126,7 +126,7 @@ func TestCreateKongService(t *testing.T) {
 					CreateService(ctx, "123456789", kongServiceToSDKServiceInput(svc)).
 					Return(
 						nil,
-						&sdkkonnectgoerrs.BadRequestError{
+						&sdkkonnecterrs.BadRequestError{
 							Status: 400,
 							Detail: "bad request",
 						},
@@ -199,7 +199,7 @@ func TestDeleteKongService(t *testing.T) {
 					EXPECT().
 					DeleteService(ctx, "12345", "123456789").
 					Return(
-						&sdkkonnectgoops.DeleteServiceResponse{
+						&sdkkonnectops.DeleteServiceResponse{
 							StatusCode: 200,
 						},
 						nil,
@@ -232,7 +232,7 @@ func TestDeleteKongService(t *testing.T) {
 					DeleteService(ctx, "12345", "123456789").
 					Return(
 						nil,
-						&sdkkonnectgoerrs.BadRequestError{
+						&sdkkonnecterrs.BadRequestError{
 							Status: 400,
 							Detail: "bad request",
 						},
@@ -266,7 +266,7 @@ func TestDeleteKongService(t *testing.T) {
 					DeleteService(ctx, "12345", "123456789").
 					Return(
 						nil,
-						&sdkkonnectgoerrs.SDKError{
+						&sdkkonnecterrs.SDKError{
 							Message:    "not found",
 							StatusCode: 404,
 						},
@@ -328,16 +328,16 @@ func TestUpdateKongService(t *testing.T) {
 				sdk.
 					EXPECT().
 					UpsertService(ctx,
-						sdkkonnectgoops.UpsertServiceRequest{
+						sdkkonnectops.UpsertServiceRequest{
 							ControlPlaneID: "12345",
 							ServiceID:      "123456789",
 							Service:        kongServiceToSDKServiceInput(svc),
 						},
 					).
 					Return(
-						&sdkkonnectgoops.UpsertServiceResponse{
+						&sdkkonnectops.UpsertServiceResponse{
 							StatusCode: 200,
-							Service: &sdkkonnectgocomp.Service{
+							Service: &sdkkonnectcomp.Service{
 								ID:   lo.ToPtr("123456789"),
 								Name: lo.ToPtr("svc-1"),
 							},
@@ -383,7 +383,7 @@ func TestUpdateKongService(t *testing.T) {
 				sdk.
 					EXPECT().
 					UpsertService(ctx,
-						sdkkonnectgoops.UpsertServiceRequest{
+						sdkkonnectops.UpsertServiceRequest{
 							ControlPlaneID: "12345",
 							ServiceID:      "123456789",
 							Service:        kongServiceToSDKServiceInput(svc),
@@ -391,7 +391,7 @@ func TestUpdateKongService(t *testing.T) {
 					).
 					Return(
 						nil,
-						&sdkkonnectgoerrs.BadRequestError{
+						&sdkkonnecterrs.BadRequestError{
 							Status: 400,
 							Title:  "bad request",
 						},
@@ -438,7 +438,7 @@ func TestUpdateKongService(t *testing.T) {
 				sdk.
 					EXPECT().
 					UpsertService(ctx,
-						sdkkonnectgoops.UpsertServiceRequest{
+						sdkkonnectops.UpsertServiceRequest{
 							ControlPlaneID: "12345",
 							ServiceID:      "123456789",
 							Service:        kongServiceToSDKServiceInput(svc),
@@ -446,7 +446,7 @@ func TestUpdateKongService(t *testing.T) {
 					).
 					Return(
 						nil,
-						&sdkkonnectgoerrs.SDKError{
+						&sdkkonnecterrs.SDKError{
 							StatusCode: 404,
 							Message:    "not found",
 						},
@@ -456,8 +456,8 @@ func TestUpdateKongService(t *testing.T) {
 					EXPECT().
 					CreateService(ctx, "12345", kongServiceToSDKServiceInput(svc)).
 					Return(
-						&sdkkonnectgoops.CreateServiceResponse{
-							Service: &sdkkonnectgocomp.Service{
+						&sdkkonnectops.CreateServiceResponse{
+							Service: &sdkkonnectcomp.Service{
 								ID:   lo.ToPtr("123456789"),
 								Name: lo.ToPtr("svc-1"),
 							},

@@ -3,13 +3,13 @@ package ops
 import (
 	"context"
 
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 )
 
 // RoutesSDK is the interface for the Konnect Routes SDK.
 type RoutesSDK interface {
-	CreateRoute(ctx context.Context, controlPlaneID string, route sdkkonnectgocomp.RouteInput, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.CreateRouteResponse, error)
-	UpsertRoute(ctx context.Context, req sdkkonnectgoops.UpsertRouteRequest, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.UpsertRouteResponse, error)
-	DeleteRoute(ctx context.Context, controlPlaneID, routeID string, opts ...sdkkonnectgoops.Option) (*sdkkonnectgoops.DeleteRouteResponse, error)
+	CreateRoute(ctx context.Context, controlPlaneID string, route sdkkonnectcomp.RouteInput, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateRouteResponse, error)
+	UpsertRoute(ctx context.Context, req sdkkonnectops.UpsertRouteRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertRouteResponse, error)
+	DeleteRoute(ctx context.Context, controlPlaneID, routeID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteRouteResponse, error)
 }

@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
-	sdkkonnectgoerrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +32,7 @@ func TestCreateControlPlane(t *testing.T) {
 				sdk := &MockControlPlaneSDK{}
 				cp := &konnectv1alpha1.KonnectControlPlane{
 					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
-						CreateControlPlaneRequest: sdkkonnectgocomp.CreateControlPlaneRequest{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
 					},
@@ -42,8 +42,8 @@ func TestCreateControlPlane(t *testing.T) {
 					EXPECT().
 					CreateControlPlane(ctx, cp.Spec.CreateControlPlaneRequest).
 					Return(
-						&sdkkonnectgoops.CreateControlPlaneResponse{
-							ControlPlane: &sdkkonnectgocomp.ControlPlane{
+						&sdkkonnectops.CreateControlPlaneResponse{
+							ControlPlane: &sdkkonnectcomp.ControlPlane{
 								ID: "12345",
 							},
 						},
@@ -71,7 +71,7 @@ func TestCreateControlPlane(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
-						CreateControlPlaneRequest: sdkkonnectgocomp.CreateControlPlaneRequest{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
 					},
@@ -82,7 +82,7 @@ func TestCreateControlPlane(t *testing.T) {
 					CreateControlPlane(ctx, cp.Spec.CreateControlPlaneRequest).
 					Return(
 						nil,
-						&sdkkonnectgoerrs.BadRequestError{
+						&sdkkonnecterrs.BadRequestError{
 							Status: 400,
 							Detail: "bad request",
 						},
@@ -138,7 +138,7 @@ func TestDeleteControlPlane(t *testing.T) {
 				sdk := &MockControlPlaneSDK{}
 				cp := &konnectv1alpha1.KonnectControlPlane{
 					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
-						CreateControlPlaneRequest: sdkkonnectgocomp.CreateControlPlaneRequest{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
 					},
@@ -152,7 +152,7 @@ func TestDeleteControlPlane(t *testing.T) {
 					EXPECT().
 					DeleteControlPlane(ctx, "12345").
 					Return(
-						&sdkkonnectgoops.DeleteControlPlaneResponse{
+						&sdkkonnectops.DeleteControlPlaneResponse{
 							StatusCode: 200,
 						},
 						nil,
@@ -171,7 +171,7 @@ func TestDeleteControlPlane(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
-						CreateControlPlaneRequest: sdkkonnectgocomp.CreateControlPlaneRequest{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
 					},
@@ -186,7 +186,7 @@ func TestDeleteControlPlane(t *testing.T) {
 					DeleteControlPlane(ctx, "12345").
 					Return(
 						nil,
-						&sdkkonnectgoerrs.BadRequestError{
+						&sdkkonnecterrs.BadRequestError{
 							Status: 400,
 							Detail: "bad request",
 						},
@@ -206,7 +206,7 @@ func TestDeleteControlPlane(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
-						CreateControlPlaneRequest: sdkkonnectgocomp.CreateControlPlaneRequest{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
 					},
@@ -221,7 +221,7 @@ func TestDeleteControlPlane(t *testing.T) {
 					DeleteControlPlane(ctx, "12345").
 					Return(
 						nil,
-						&sdkkonnectgoerrs.NotFoundError{
+						&sdkkonnecterrs.NotFoundError{
 							Status: 404,
 							Detail: "not found",
 						},
@@ -267,7 +267,7 @@ func TestUpdateControlPlane(t *testing.T) {
 				sdk := &MockControlPlaneSDK{}
 				cp := &konnectv1alpha1.KonnectControlPlane{
 					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
-						CreateControlPlaneRequest: sdkkonnectgocomp.CreateControlPlaneRequest{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
 					},
@@ -280,17 +280,17 @@ func TestUpdateControlPlane(t *testing.T) {
 				sdk.
 					EXPECT().
 					UpdateControlPlane(ctx, "12345",
-						sdkkonnectgocomp.UpdateControlPlaneRequest{
+						sdkkonnectcomp.UpdateControlPlaneRequest{
 							Name:        sdkkonnectgo.String(cp.Spec.Name),
 							Description: cp.Spec.Description,
-							AuthType:    (*sdkkonnectgocomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
+							AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
 							ProxyUrls:   cp.Spec.ProxyUrls,
 							Labels:      cp.Spec.Labels,
 						},
 					).
 					Return(
-						&sdkkonnectgoops.UpdateControlPlaneResponse{
-							ControlPlane: &sdkkonnectgocomp.ControlPlane{
+						&sdkkonnectops.UpdateControlPlaneResponse{
+							ControlPlane: &sdkkonnectcomp.ControlPlane{
 								ID: "12345",
 							},
 						},
@@ -319,7 +319,7 @@ func TestUpdateControlPlane(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
-						CreateControlPlaneRequest: sdkkonnectgocomp.CreateControlPlaneRequest{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
 					},
@@ -333,17 +333,17 @@ func TestUpdateControlPlane(t *testing.T) {
 				sdk.
 					EXPECT().
 					UpdateControlPlane(ctx, "12345",
-						sdkkonnectgocomp.UpdateControlPlaneRequest{
+						sdkkonnectcomp.UpdateControlPlaneRequest{
 							Name:        sdkkonnectgo.String(cp.Spec.Name),
 							Description: cp.Spec.Description,
-							AuthType:    (*sdkkonnectgocomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
+							AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
 							ProxyUrls:   cp.Spec.ProxyUrls,
 							Labels:      cp.Spec.Labels,
 						},
 					).
 					Return(
 						nil,
-						&sdkkonnectgoerrs.BadRequestError{
+						&sdkkonnecterrs.BadRequestError{
 							Status: 400,
 							Detail: "bad request",
 						},
@@ -372,7 +372,7 @@ func TestUpdateControlPlane(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
-						CreateControlPlaneRequest: sdkkonnectgocomp.CreateControlPlaneRequest{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
 					},
@@ -386,17 +386,17 @@ func TestUpdateControlPlane(t *testing.T) {
 				sdk.
 					EXPECT().
 					UpdateControlPlane(ctx, "12345",
-						sdkkonnectgocomp.UpdateControlPlaneRequest{
+						sdkkonnectcomp.UpdateControlPlaneRequest{
 							Name:        sdkkonnectgo.String(cp.Spec.Name),
 							Description: cp.Spec.Description,
-							AuthType:    (*sdkkonnectgocomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
+							AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
 							ProxyUrls:   cp.Spec.ProxyUrls,
 							Labels:      cp.Spec.Labels,
 						},
 					).
 					Return(
 						nil,
-						&sdkkonnectgoerrs.NotFoundError{
+						&sdkkonnecterrs.NotFoundError{
 							Status: 404,
 							Detail: "not found",
 						},
@@ -406,8 +406,8 @@ func TestUpdateControlPlane(t *testing.T) {
 					EXPECT().
 					CreateControlPlane(ctx, cp.Spec.CreateControlPlaneRequest).
 					Return(
-						&sdkkonnectgoops.CreateControlPlaneResponse{
-							ControlPlane: &sdkkonnectgocomp.ControlPlane{
+						&sdkkonnectops.CreateControlPlaneResponse{
+							ControlPlane: &sdkkonnectcomp.ControlPlane{
 								ID: "12345",
 							},
 						},

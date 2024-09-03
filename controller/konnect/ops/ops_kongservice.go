@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
-	sdkkonnectgoerrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -84,7 +84,7 @@ func updateService(
 
 	id := svc.GetKonnectStatus().GetKonnectID()
 	resp, err := sdk.UpsertService(ctx,
-		sdkkonnectgoops.UpsertServiceRequest{
+		sdkkonnectops.UpsertServiceRequest{
 			ControlPlaneID: svc.GetControlPlaneID(),
 			ServiceID:      id,
 			Service:        kongServiceToSDKServiceInput(svc),
@@ -96,7 +96,7 @@ func updateService(
 	// that created that entity and already manages it, hm
 	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, svc); errWrapped != nil {
 		// Service update operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkkonnectgoerrs.SDKError
+		var sdkError *sdkkonnecterrs.SDKError
 		if errors.As(errWrapped, &sdkError) {
 			switch sdkError.StatusCode {
 			case 404:
@@ -158,7 +158,7 @@ func deleteService(
 	_, err := sdk.DeleteService(ctx, svc.Status.Konnect.ControlPlaneID, id)
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, svc); errWrapped != nil {
 		// Service delete operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkkonnectgoerrs.SDKError
+		var sdkError *sdkkonnecterrs.SDKError
 		if errors.As(errWrapped, &sdkError) {
 			switch sdkError.StatusCode {
 			case 404:
@@ -185,8 +185,8 @@ func deleteService(
 
 func kongServiceToSDKServiceInput(
 	svc *configurationv1alpha1.KongService,
-) sdkkonnectgocomp.ServiceInput {
-	return sdkkonnectgocomp.ServiceInput{
+) sdkkonnectcomp.ServiceInput {
+	return sdkkonnectcomp.ServiceInput{
 		URL:            svc.Spec.KongServiceAPISpec.URL,
 		ConnectTimeout: svc.Spec.KongServiceAPISpec.ConnectTimeout,
 		Enabled:        svc.Spec.KongServiceAPISpec.Enabled,

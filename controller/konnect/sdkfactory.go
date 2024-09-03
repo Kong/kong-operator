@@ -2,7 +2,7 @@ package konnect
 
 import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
 
 // SDKToken is a token used to authenticate with the Konnect SDK.
@@ -24,7 +24,7 @@ func NewSDKFactory() SDKFactory {
 func (f sdkFactory) NewKonnectSDK(serverURL string, token SDKToken) *sdkkonnectgo.SDK {
 	return sdkkonnectgo.New(
 		sdkkonnectgo.WithSecurity(
-			sdkkonnectgocomp.Security{
+			sdkkonnectcomp.Security{
 				PersonalAccessToken: sdkkonnectgo.String(string(token)),
 			},
 		),
