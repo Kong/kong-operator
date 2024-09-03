@@ -23,8 +23,18 @@ import (
 )
 
 func TestKonnectEntities(t *testing.T) {
+	// A cleaner is created underneath anyway, and a whole namespace is deleted eventually.
+	// We can't use a cleaner to delete objects because it handles deletes in FIFO order and that won't work in this
+	// case: KonnectAPIAuthConfiguration shouldn't be deleted before any other object as that is required for others to
+	// complete their finalizer which is deleting a reflecting entity in Konnect. That's why we're only cleaning up a
+	// KonnectControlPlane and waiting for its deletion synchronously with deleteObjectAndWaitForDeletionFn to ensure it
+	// was successfully deleted along with its children. The KonnectAPIAuthConfiguration is implicitly deleted along
+	// with the namespace.
 	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
+	// Let's generate a unique test ID that we can refer to in Konnect entities.
+	// Using only the first 8 characters of the UUID to keep the ID short enough for Konnect to accept it as a part
+	// of an entity name.
 	testID := uuid.NewString()[:8]
 	t.Logf("Running Konnect entities test with ID: %s", testID)
 
