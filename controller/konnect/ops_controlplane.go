@@ -18,7 +18,7 @@ import (
 func createControlPlane(
 	ctx context.Context,
 	sdk *sdkkonnectgo.SDK,
-	cp *konnectv1alpha1.KonnectControlPlane,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) error {
 	resp, err := sdk.ControlPlanes.CreateControlPlane(ctx, cp.Spec.CreateControlPlaneRequest)
 	// TODO: handle already exists
@@ -59,7 +59,7 @@ func createControlPlane(
 func deleteControlPlane(
 	ctx context.Context,
 	sdk *sdkkonnectgo.SDK,
-	cp *konnectv1alpha1.KonnectControlPlane,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.ControlPlanes.DeleteControlPlane(ctx, id)
@@ -74,12 +74,12 @@ func deleteControlPlane(
 		}
 		var sdkError *sdkerrors.SDKError
 		if errors.As(errWrap, &sdkError) {
-			return FailedKonnectOpError[konnectv1alpha1.KonnectControlPlane]{
+			return FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
 				Op:  DeleteOp,
 				Err: sdkError,
 			}
 		}
-		return FailedKonnectOpError[konnectv1alpha1.KonnectControlPlane]{
+		return FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
 			Op:  DeleteOp,
 			Err: errWrap,
 		}
@@ -94,7 +94,7 @@ func deleteControlPlane(
 func updateControlPlane(
 	ctx context.Context,
 	sdk *sdkkonnectgo.SDK,
-	cp *konnectv1alpha1.KonnectControlPlane,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
 	req := components.UpdateControlPlaneRequest{
@@ -113,7 +113,7 @@ func updateControlPlane(
 				"type", cp.GetTypeName(), "id", id,
 			)
 		if err := createControlPlane(ctx, sdk, cp); err != nil {
-			return FailedKonnectOpError[konnectv1alpha1.KonnectControlPlane]{
+			return FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
 				Op:  UpdateOp,
 				Err: err,
 			}
@@ -134,7 +134,7 @@ func updateControlPlane(
 			),
 			cp,
 		)
-		return FailedKonnectOpError[konnectv1alpha1.KonnectControlPlane]{
+		return FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
 			Op:  UpdateOp,
 			Err: errWrap,
 		}

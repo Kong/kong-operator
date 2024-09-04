@@ -12,7 +12,7 @@ import (
 )
 
 func TestWatchOptions(t *testing.T) {
-	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.KonnectControlPlane{})
+	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.KonnectGatewayControlPlane{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongService{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1.KongConsumer{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongRoute{})

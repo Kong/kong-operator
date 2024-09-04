@@ -86,16 +86,16 @@ func updateConsumerGroup(
 		Namespace: group.Namespace,
 		Name:      group.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
 	}
-	var cp konnectv1alpha1.KonnectControlPlane
+	var cp konnectv1alpha1.KonnectGatewayControlPlane
 	if err := cl.Get(ctx, nnCP, &cp); err != nil {
-		return fmt.Errorf("failed to get KonnectControlPlane %s: for %T %s: %w",
+		return fmt.Errorf("failed to get KonnectGatewayControlPlane %s: for %T %s: %w",
 			nnCP, group, client.ObjectKeyFromObject(group), err,
 		)
 	}
 
 	if cp.Status.ID == "" {
 		return fmt.Errorf(
-			"can't update %T when referenced KonnectControlPlane %s does not have the Konnect ID",
+			"can't update %T when referenced KonnectGatewayControlPlane %s does not have the Konnect ID",
 			group, nnCP,
 		)
 	}
