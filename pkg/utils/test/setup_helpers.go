@@ -26,7 +26,7 @@ import (
 	operatorclient "github.com/kong/gateway-operator/pkg/clientset"
 )
 
-const kicCRDsKustomizeURL = "https://github.com/Kong/kubernetes-ingress-controller/config/crd"
+const kongCRDsKustomizeURL = "https://github.com/Kong/kubernetes-configuration/config/crd"
 
 func noOpClose() error {
 	return nil
@@ -197,8 +197,8 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 		return err
 	}
 
-	fmt.Printf("INFO: deploying KIC CRDs: %s\n", kicCRDsKustomizeURL)
-	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kicCRDsKustomizeURL); err != nil {
+	fmt.Printf("INFO: deploying Kong (kubernetes-configuration) CRDs: %s\n", kongCRDsKustomizeURL)
+	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kongCRDsKustomizeURL); err != nil {
 		return err
 	}
 

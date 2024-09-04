@@ -44,7 +44,12 @@ const (
 func Create[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
-](ctx context.Context, sdk *sdkkonnectgo.SDK, cl client.Client, e *T) (*T, error) {
+](
+	ctx context.Context,
+	sdk *sdkkonnectgo.SDK,
+	cl client.Client,
+	e *T,
+) (*T, error) {
 	defer logOpComplete[T, TEnt](ctx, time.Now(), CreateOp, e)
 
 	switch ent := any(e).(type) {

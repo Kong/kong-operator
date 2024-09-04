@@ -151,6 +151,7 @@ rules:
   - konglicenses/status
   - kongpluginbindings/status
   - kongplugins/status
+  - kongroutes/status
   - kongservices/status
   - kongupstreampolicies/status
   - kongvaults/status
@@ -164,6 +165,7 @@ rules:
   - configuration.konghq.com
   resources:
   - kongpluginbindings
+  - kongroutes
   - kongservices
   verbs:
   - get

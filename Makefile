@@ -482,6 +482,7 @@ _run:
 		-enable-controller-controlplane \
 		-enable-controller-gateway \
 		-enable-controller-aigateway \
+		-enable-controller-konnect \
 		-zap-time-encoding iso8601 \
 		-zap-log-level 2 \
 		-zap-devel true

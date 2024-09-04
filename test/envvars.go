@@ -38,3 +38,13 @@ func IsMetalLBDisabled() bool {
 	}
 	return ret
 }
+
+// KonnectAccessToken returns the Konnect access token for the test environment.
+func KonnectAccessToken() string {
+	return os.Getenv("KONG_TEST_KONNECT_ACCESS_TOKEN")
+}
+
+// KonnectServerURL returns the Konnect server URL for the test environment.
+func KonnectServerURL() string {
+	return os.Getenv("KONG_TEST_KONNECT_SERVER_URL")
+}

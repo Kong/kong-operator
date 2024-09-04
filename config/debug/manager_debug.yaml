@@ -31,8 +31,9 @@ spec:
             - -zap-time-encoding=iso8601
             - -cluster-ca-secret-namespace=kong-system
             - -zap-log-level=debug
-            - -enable-controller-kongplugininstallation=true
-            - -enable-validating-webhook=true
+            - -enable-controller-kongplugininstallation
+            - -enable-controller-konnect
+            - -enable-validating-webhook
           name: manager
           env:
             - name: GATEWAY_OPERATOR_DEVELOPMENT_MODE
