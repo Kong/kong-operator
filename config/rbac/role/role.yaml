@@ -334,7 +334,7 @@ rules:
   - konnect.konghq.com
   resources:
   - konnectapiauthconfigurations
-  - konnectcontrolplanes
+  - konnectgatewaycontrolplanes
   verbs:
   - get
   - list
@@ -345,7 +345,7 @@ rules:
   - konnect.konghq.com
   resources:
   - konnectapiauthconfigurations/status
-  - konnectcontrolplanes/status
+  - konnectgatewaycontrolplanes/status
   verbs:
   - get
   - patch

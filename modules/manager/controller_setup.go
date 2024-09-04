@@ -59,8 +59,8 @@ const (
 
 	// KonnectAPIAuthConfigurationControllerName is the name of the KonnectAPIAuthConfiguration controller.
 	KonnectAPIAuthConfigurationControllerName = "KonnectAPIAuthConfiguration"
-	// KonnectControlPlaneControllerName is the name of the KonnectControlPlane controller.
-	KonnectControlPlaneControllerName = "KonnectControlPlane"
+	// KonnectGatewayControlPlaneControllerName is the name of the KonnectGatewayControlPlane controller.
+	KonnectGatewayControlPlaneControllerName = "KonnectGatewayControlPlane"
 	// KongServiceControllerName is the name of the KongService controller.
 	KongServiceControllerName = "KongService"
 	// KongRouteControllerName is the name of the KongRoute controller.
@@ -315,13 +315,13 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				mgr.GetClient(),
 			),
 		}
-		controllers[KonnectControlPlaneControllerName] = ControllerDef{
+		controllers[KonnectGatewayControlPlaneControllerName] = ControllerDef{
 			Enabled: c.KonnectControllersEnabled,
 			Controller: konnect.NewKonnectEntityReconciler(
 				sdkFactory,
 				c.DevelopmentMode,
 				mgr.GetClient(),
-				konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.KonnectControlPlane](c.KonnectSyncPeriod),
+				konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.KonnectGatewayControlPlane](c.KonnectSyncPeriod),
 			),
 		}
 		controllers[KongServiceControllerName] = ControllerDef{

@@ -8,7 +8,7 @@ spec:
   token: kpat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   serverURL: us.api.konghq.com
 ---
-kind: KonnectControlPlane
+kind: KonnectGatewayControlPlane
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
   name: test1

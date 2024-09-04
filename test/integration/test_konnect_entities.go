@@ -27,7 +27,7 @@ func TestKonnectEntities(t *testing.T) {
 	// We can't use a cleaner to delete objects because it handles deletes in FIFO order and that won't work in this
 	// case: KonnectAPIAuthConfiguration shouldn't be deleted before any other object as that is required for others to
 	// complete their finalizer which is deleting a reflecting entity in Konnect. That's why we're only cleaning up a
-	// KonnectControlPlane and waiting for its deletion synchronously with deleteObjectAndWaitForDeletionFn to ensure it
+	// KonnectGatewayControlPlane and waiting for its deletion synchronously with deleteObjectAndWaitForDeletionFn to ensure it
 	// was successfully deleted along with its children. The KonnectAPIAuthConfiguration is implicitly deleted along
 	// with the namespace.
 	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
@@ -54,13 +54,13 @@ func TestKonnectEntities(t *testing.T) {
 	require.NoError(t, err)
 
 	cpName := "cp-" + testID
-	t.Logf("Creating KonnectControlPlane %s", cpName)
-	cp := &konnectv1alpha1.KonnectControlPlane{
+	t.Logf("Creating KonnectGatewayControlPlane %s", cpName)
+	cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cpName,
 			Namespace: ns.Name,
 		},
-		Spec: konnectv1alpha1.KonnectControlPlaneSpec{
+		Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 			CreateControlPlaneRequest: components.CreateControlPlaneRequest{
 				Name:        cpName,
 				ClusterType: lo.ToPtr(components.ClusterTypeClusterTypeControlPlane),

@@ -20,27 +20,27 @@ import (
 //   reference from the object
 // - lists have their items stored in Items field, not returned via a method
 
-// KonnectControlPlaneReconciliationWatchOptions returns the watch options for
-// the KonnectControlPlane.
-func KonnectControlPlaneReconciliationWatchOptions(
+// KonnectGatewayControlPlaneReconciliationWatchOptions returns the watch options for
+// the KonnectGatewayControlPlane.
+func KonnectGatewayControlPlaneReconciliationWatchOptions(
 	cl client.Client,
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&konnectv1alpha1.KonnectControlPlane{})
+			return b.For(&konnectv1alpha1.KonnectGatewayControlPlane{})
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueKonnectControlPlaneForKonnectAPIAuthConfiguration(cl),
+					enqueueKonnectGatewayControlPlaneForKonnectAPIAuthConfiguration(cl),
 				),
 			)
 		},
 	}
 }
 
-func enqueueKonnectControlPlaneForKonnectAPIAuthConfiguration(
+func enqueueKonnectGatewayControlPlaneForKonnectAPIAuthConfiguration(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -48,7 +48,7 @@ func enqueueKonnectControlPlaneForKonnectAPIAuthConfiguration(
 		if !ok {
 			return nil
 		}
-		var l konnectv1alpha1.KonnectControlPlaneList
+		var l konnectv1alpha1.KonnectGatewayControlPlaneList
 		if err := cl.List(ctx, &l, &client.ListOptions{
 			// TODO: change this when cross namespace refs are allowed.
 			Namespace: auth.GetNamespace(),
