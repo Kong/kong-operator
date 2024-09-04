@@ -44,7 +44,7 @@ func KongPluginBindingReconciliationWatchOptions(
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.For(&configurationv1alpha1.KongPluginBinding{},
 				builder.WithPredicates(
-					predicate.NewPredicateFuncs(kongPluginBindingRefersToKonnectControlPlane),
+					predicate.NewPredicateFuncs(kongPluginBindingRefersToKonnectGatewayControlPlane),
 				),
 			)
 		},
@@ -58,9 +58,9 @@ func KongPluginBindingReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.KonnectControlPlane{},
+				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueKongPluginBindingForKonnectControlPlane(cl),
+					enqueueKongPluginBindingForKonnectGatewayControlPlane(cl),
 				),
 			)
 		},
@@ -90,9 +90,9 @@ func KongPluginBindingReconciliationWatchOptions(
 // KongPluginBinding reconciler - Watch Predicates
 // -----------------------------------------------------------------------------
 
-// kongPluginBindingRefersToKonnectControlPlane returns true if the KongPluginBinding
-// refers to a KonnectControlPlane.
-func kongPluginBindingRefersToKonnectControlPlane(obj client.Object) bool {
+// kongPluginBindingRefersToKonnectGatewayControlPlane returns true if the KongPluginBinding
+// refers to a KonnectGatewayControlPlane.
+func kongPluginBindingRefersToKonnectGatewayControlPlane(obj client.Object) bool {
 	kongPB, ok := obj.(*configurationv1alpha1.KongPluginBinding)
 	if !ok {
 		ctrllog.FromContext(context.Background()).Error(
@@ -144,12 +144,12 @@ func enqueueKongPluginBindingForKonnectAPIAuthConfiguration(
 				if nn.Namespace != auth.Namespace {
 					continue
 				}
-				var cp konnectv1alpha1.KonnectControlPlane
+				var cp konnectv1alpha1.KonnectGatewayControlPlane
 				if err := cl.Get(ctx, nn, &cp); err != nil {
 					ctrllog.FromContext(ctx).Error(
 						err,
-						"failed to get KonnectControlPlane",
-						"KonnectControlPlane", nn,
+						"failed to get KonnectGatewayControlPlane",
+						"KonnectGatewayControlPlane", nn,
 					)
 					continue
 				}
@@ -186,11 +186,11 @@ func enqueueKongPluginBindingForKonnectAPIAuthConfiguration(
 	}
 }
 
-func enqueueKongPluginBindingForKonnectControlPlane(
+func enqueueKongPluginBindingForKonnectGatewayControlPlane(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		cp, ok := obj.(*konnectv1alpha1.KonnectControlPlane)
+		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
 		if !ok {
 			return nil
 		}

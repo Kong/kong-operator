@@ -39,7 +39,7 @@ func KongConsumerReconciliationWatchOptions(
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.For(&configurationv1.KongConsumer{},
 				builder.WithPredicates(
-					predicate.NewPredicateFuncs(kongConsumerRefersToKonnectControlPlane),
+					predicate.NewPredicateFuncs(kongConsumerRefersToKonnectGatewayControlPlane),
 				),
 			)
 		},
@@ -53,18 +53,18 @@ func KongConsumerReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.KonnectControlPlane{},
+				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueKongConsumerForKonnectControlPlane(cl),
+					enqueueKongConsumerForKonnectGatewayControlPlane(cl),
 				),
 			)
 		},
 	}
 }
 
-// kongConsumerRefersToKonnectControlPlane returns true if the KongConsumer
-// refers to a KonnectControlPlane.
-func kongConsumerRefersToKonnectControlPlane(obj client.Object) bool {
+// kongConsumerRefersToKonnectGatewayControlPlane returns true if the KongConsumer
+// refers to a KonnectGatewayControlPlane.
+func kongConsumerRefersToKonnectGatewayControlPlane(obj client.Object) bool {
 	kongConsumer, ok := obj.(*configurationv1.KongConsumer)
 	if !ok {
 		ctrllog.FromContext(context.Background()).Error(
@@ -112,12 +112,12 @@ func enqueueKongConsumerForKonnectAPIAuthConfiguration(
 				if nn.Namespace != auth.Namespace {
 					continue
 				}
-				var cp konnectv1alpha1.KonnectControlPlane
+				var cp konnectv1alpha1.KonnectGatewayControlPlane
 				if err := cl.Get(ctx, nn, &cp); err != nil {
 					ctrllog.FromContext(ctx).Error(
 						err,
-						"failed to get KonnectControlPlane",
-						"KonnectControlPlane", nn,
+						"failed to get KonnectGatewayControlPlane",
+						"KonnectGatewayControlPlane", nn,
 					)
 					continue
 				}
@@ -154,11 +154,11 @@ func enqueueKongConsumerForKonnectAPIAuthConfiguration(
 	}
 }
 
-func enqueueKongConsumerForKonnectControlPlane(
+func enqueueKongConsumerForKonnectGatewayControlPlane(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		cp, ok := obj.(*konnectv1alpha1.KonnectControlPlane)
+		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
 		if !ok {
 			return nil
 		}

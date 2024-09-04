@@ -443,7 +443,7 @@ func getCPForRef(
 	cl client.Client,
 	cpRef configurationv1alpha1.ControlPlaneRef,
 	namespace string,
-) (*konnectv1alpha1.KonnectControlPlane, error) {
+) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
 	if cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
 		return nil, fmt.Errorf("unsupported ControlPlane ref type %q", cpRef.Type)
 	}
@@ -453,7 +453,7 @@ func getCPForRef(
 		Namespace: namespace,
 	}
 
-	var cp konnectv1alpha1.KonnectControlPlane
+	var cp konnectv1alpha1.KonnectGatewayControlPlane
 	if err := cl.Get(ctx, nn, &cp); err != nil {
 		return nil, fmt.Errorf("failed to get ControlPlane %s", nn)
 	}
@@ -536,7 +536,7 @@ func getServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	case *configurationv1alpha1.KongService,
 		*configurationv1.KongConsumer,
 		*configurationv1beta1.KongConsumerGroup,
-		*konnectv1alpha1.KonnectControlPlane:
+		*konnectv1alpha1.KonnectGatewayControlPlane:
 		return mo.None[configurationv1alpha1.ServiceRef]()
 	case *configurationv1alpha1.KongRoute:
 		if e.Spec.ServiceRef == nil {
@@ -707,7 +707,7 @@ func getControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	e TEnt,
 ) mo.Option[configurationv1alpha1.ControlPlaneRef] {
 	switch e := any(e).(type) {
-	case *konnectv1alpha1.KonnectControlPlane, *configurationv1alpha1.KongRoute:
+	case *konnectv1alpha1.KonnectGatewayControlPlane, *configurationv1alpha1.KongRoute:
 		return mo.None[configurationv1alpha1.ControlPlaneRef]()
 	case *configurationv1.KongConsumer:
 		if e.Spec.ControlPlaneRef == nil {
@@ -749,7 +749,7 @@ func handleControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 
 	switch cpRef.Type {
 	case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-		cp := konnectv1alpha1.KonnectControlPlane{}
+		cp := konnectv1alpha1.KonnectGatewayControlPlane{}
 		// TODO(pmalek): handle cross namespace refs
 		nn := types.NamespacedName{
 			Name:      cpRef.KonnectNamespacedRef.Name,
