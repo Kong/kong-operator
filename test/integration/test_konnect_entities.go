@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -61,9 +61,9 @@ func TestKonnectEntities(t *testing.T) {
 			Namespace: ns.Name,
 		},
 		Spec: konnectv1alpha1.KonnectControlPlaneSpec{
-			CreateControlPlaneRequest: components.CreateControlPlaneRequest{
+			CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 				Name:        cpName,
-				ClusterType: lo.ToPtr(components.ClusterTypeClusterTypeControlPlane),
+				ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
 				Labels:      map[string]string{"test_id": testID},
 			},
 			KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
