@@ -2,6 +2,7 @@ package konnect
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -156,6 +157,42 @@ func TestGetTokenFromKonnectAPIAuthConfiguration(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.expectedToken, token)
+		})
+	}
+}
+
+func TestGetKonnectServerURL(t *testing.T) {
+	var testCases = []struct {
+		name              string
+		serverURL         string
+		expectedServerURL string
+		expectedError     error
+	}{
+		{
+			name:              "valid Server URL, with scheme",
+			serverURL:         "https://konghq.com",
+			expectedServerURL: "https://konghq.com",
+		},
+		{
+			name:              "valid Server URL, without scheme",
+			serverURL:         "konghq.com",
+			expectedServerURL: "https://konghq.com",
+		},
+		{
+			name:              "invalid Server URL",
+			serverURL:         "http://konghq.com",
+			expectedServerURL: "",
+			expectedError:     errors.New("in case scheme is specified in the ServerURL, it must be https://: http://konghq.com"),
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			serverURL, err := getKonnectServerURL(tc.serverURL)
+
+			assert.Equal(t, tc.expectedError, err)
+			assert.Equal(t, tc.expectedServerURL, serverURL)
 		})
 	}
 }
