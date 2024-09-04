@@ -251,12 +251,10 @@ func getTokenFromKonnectAPIAuthConfiguration(
 	return "", fmt.Errorf("unknown KonnectAPIAuthType: %s", apiAuth.Spec.Type)
 }
 
+var serverURLRegexp = regexp.MustCompile(".*://")
+
 func getKonnectServerURL(serverURL string) (string, error) {
-	match, err := regexp.MatchString(`.*://`, serverURL)
-	if err != nil {
-		return "", fmt.Errorf("regexp check on ServerURL failed: %w", err)
-	}
-	if !match {
+	if !serverURLRegexp.MatchString(serverURL) {
 		serverURL = "https://" + serverURL
 	} else if !strings.HasPrefix(serverURL, "https://") {
 		return "", fmt.Errorf("in case scheme is specified in the ServerURL, it must be https://: %s", serverURL)
