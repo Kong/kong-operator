@@ -59,12 +59,24 @@ type DataPlaneKonnectExtensionSpec struct {
 	ControlPlaneRef configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
 	// ControlPlaneRegion is the region of the Konnect Control Plane.
+	//
+	// +kubebuilder:example:=us
 	// +kubebuilder:validation:Required
 	ControlPlaneRegion string `json:"controlPlaneRegion"`
 
-	// ServerURL is the URL of the Konnect server.
-	// +kubebuilder:validation:Required
-	ServerURL string `json:"serverURL"`
+	// ServerHostname is the fully qualified domain name of the konnect server. This
+	// matches the RFC 1123 definition of a hostname with 1 notable exception that
+	// numeric IP addresses are not allowed.
+	//
+	// Note that as per RFC1035 and RFC1123, a *label* must consist of lower case
+	// alphanumeric characters or '-', and must start and end with an alphanumeric
+	// character. No other punctuation is allowed.
+	//
+	// +kubebuilder:example:=foo.example.com
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	ServerHostname string `json:"serverHostname"`
 
 	// ClusterCertificateSecretName is a name of the Secret containing the Konnect Control Plane's cluster certificate.
 	// +kubebuilder:validation:Required
