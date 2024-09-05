@@ -56,6 +56,9 @@ MISE := $(shell which mise)
 mise:
 	@mise -V >/dev/null || (echo "mise - https://github.com/jdx/mise - not found. Please install it." && exit 1)
 
+mise-plugin-install: mise
+	@$(MISE) plugin install --yes -q $(DEP) $(URL)
+
 KIC_ROLE_GENERATOR = $(PROJECT_DIR)/bin/kic-role-generator
 .PHONY: kic-role-generator
 kic-role-generator:
@@ -306,13 +309,25 @@ INTEGRATION_TEST_TIMEOUT ?= "30m"
 CONFORMANCE_TEST_TIMEOUT ?= "20m"
 E2E_TEST_TIMEOUT ?= "20m"
 
+SETUP_ENVTEST_VERSION ?= 0.19.0
+SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
+.PHONY: setup-envtest
+setup-envtest: mise ## Download setup-envtest locally if necessary.
+	@$(MAKE) mise-plugin-install DEP=setup-envtest URL=https://github.com/pmalek/mise-setup-envtest.git
+	@$(MISE) install setup-envtest@$(SETUP_ENVTEST_VERSION)
+
+.PHONY: use-setup-envtest
+use-setup-envtest:
+	$(SETUP_ENVTEST) use
+
 .PHONY: test
 test: test.unit
 
 UNIT_TEST_PATHS := ./controller/... ./internal/... ./pkg/... ./modules/...
 
 .PHONY: _test.unit
-_test.unit: gotestsum
+_test.unit: gotestsum setup-envtest use-setup-envtest
+	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
