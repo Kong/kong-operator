@@ -146,3 +146,8 @@ issues:
       linters:
         - revive
       text: "exported: exported"
+    # Generated mock SDKs does not need comments on generated methods.
+    - path: controller/konnect/ops/.*_mock\.go
+      linters:
+        - revive
+      text: "exported: exported"
