@@ -22,16 +22,16 @@ func TestCreateControlPlane(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
 		name        string
-		mockCPPair  func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectControlPlane)
+		mockCPPair  func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
 		expectedErr bool
-		assertions  func(*testing.T, *konnectv1alpha1.KonnectControlPlane)
+		assertions  func(*testing.T, *konnectv1alpha1.KonnectGatewayControlPlane)
 	}{
 		{
 			name: "success",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectControlPlane) {
+			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
 				sdk := &MockControlPlaneSDK{}
-				cp := &konnectv1alpha1.KonnectControlPlane{
-					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
+				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
@@ -52,10 +52,10 @@ func TestCreateControlPlane(t *testing.T) {
 
 				return sdk, cp
 			},
-			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectControlPlane) {
+			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				assert.Equal(t, "12345", cp.GetKonnectStatus().GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
-				require.True(t, ok, "Programmed condition not set on KonnectControlPlane")
+				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
 				assert.Equal(t, conditions.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
 				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
@@ -63,14 +63,14 @@ func TestCreateControlPlane(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectControlPlane) {
+			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
 				sdk := &MockControlPlaneSDK{}
-				cp := &konnectv1alpha1.KonnectControlPlane{
+				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cp-1",
 						Namespace: "default",
 					},
-					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
@@ -90,14 +90,14 @@ func TestCreateControlPlane(t *testing.T) {
 
 				return sdk, cp
 			},
-			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectControlPlane) {
+			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				assert.Equal(t, "", cp.Status.GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
-				require.True(t, ok, "Programmed condition not set on KonnectControlPlane")
+				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				assert.Equal(t, "FailedToCreate", cond.Reason)
 				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, `failed to create KonnectControlPlane default/cp-1: {"status":400,"title":"","instance":"","detail":"bad request","invalid_parameters":null}`, cond.Message)
+				assert.Equal(t, `failed to create KonnectGatewayControlPlane default/cp-1: {"status":400,"title":"","instance":"","detail":"bad request","invalid_parameters":null}`, cond.Message)
 			},
 			expectedErr: true,
 		},
@@ -128,21 +128,21 @@ func TestDeleteControlPlane(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
 		name        string
-		mockCPPair  func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectControlPlane)
+		mockCPPair  func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
 		expectedErr bool
-		assertions  func(*testing.T, *konnectv1alpha1.KonnectControlPlane)
+		assertions  func(*testing.T, *konnectv1alpha1.KonnectGatewayControlPlane)
 	}{
 		{
 			name: "success",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectControlPlane) {
+			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
 				sdk := &MockControlPlaneSDK{}
-				cp := &konnectv1alpha1.KonnectControlPlane{
-					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
+				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
 					},
-					Status: konnectv1alpha1.KonnectControlPlaneStatus{
+					Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
 							ID: "12345",
 						},
@@ -163,19 +163,19 @@ func TestDeleteControlPlane(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectControlPlane) {
+			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
 				sdk := &MockControlPlaneSDK{}
-				cp := &konnectv1alpha1.KonnectControlPlane{
+				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cp-1",
 						Namespace: "default",
 					},
-					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
 					},
-					Status: konnectv1alpha1.KonnectControlPlaneStatus{
+					Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
 							ID: "12345",
 						},
@@ -198,19 +198,19 @@ func TestDeleteControlPlane(t *testing.T) {
 		},
 		{
 			name: "not found error is ignored and considered a success when trying to delete",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectControlPlane) {
+			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
 				sdk := &MockControlPlaneSDK{}
-				cp := &konnectv1alpha1.KonnectControlPlane{
+				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cp-1",
 						Namespace: "default",
 					},
-					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
 					},
-					Status: konnectv1alpha1.KonnectControlPlaneStatus{
+					Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
 							ID: "12345",
 						},
@@ -257,21 +257,21 @@ func TestUpdateControlPlane(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
 		name        string
-		mockCPPair  func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectControlPlane)
+		mockCPPair  func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
 		expectedErr bool
-		assertions  func(*testing.T, *konnectv1alpha1.KonnectControlPlane)
+		assertions  func(*testing.T, *konnectv1alpha1.KonnectGatewayControlPlane)
 	}{
 		{
 			name: "success",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectControlPlane) {
+			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
 				sdk := &MockControlPlaneSDK{}
-				cp := &konnectv1alpha1.KonnectControlPlane{
-					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
+				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
 					},
-					Status: konnectv1alpha1.KonnectControlPlaneStatus{
+					Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
 							ID: "12345",
 						},
@@ -299,10 +299,10 @@ func TestUpdateControlPlane(t *testing.T) {
 
 				return sdk, cp
 			},
-			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectControlPlane) {
+			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				assert.Equal(t, "12345", cp.Status.GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
-				require.True(t, ok, "Programmed condition not set on KonnectControlPlane")
+				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
 				assert.Equal(t, conditions.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
 				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
@@ -311,19 +311,19 @@ func TestUpdateControlPlane(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectControlPlane) {
+			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
 				sdk := &MockControlPlaneSDK{}
-				cp := &konnectv1alpha1.KonnectControlPlane{
+				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cp-1",
 						Namespace: "default",
 					},
-					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
 					},
-					Status: konnectv1alpha1.KonnectControlPlaneStatus{
+					Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
 							ID: "12345",
 						},
@@ -351,32 +351,32 @@ func TestUpdateControlPlane(t *testing.T) {
 
 				return sdk, cp
 			},
-			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectControlPlane) {
+			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				assert.Equal(t, "12345", cp.Status.GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
-				require.True(t, ok, "Programmed condition not set on KonnectControlPlane")
+				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				assert.Equal(t, "FailedToUpdate", cond.Reason)
 				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, `failed to update KonnectControlPlane default/cp-1: {"status":400,"title":"","instance":"","detail":"bad request","invalid_parameters":null}`, cond.Message)
+				assert.Equal(t, `failed to update KonnectGatewayControlPlane default/cp-1: {"status":400,"title":"","instance":"","detail":"bad request","invalid_parameters":null}`, cond.Message)
 			},
 			expectedErr: true,
 		},
 		{
 			name: "when not found then try to create",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectControlPlane) {
+			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
 				sdk := &MockControlPlaneSDK{}
-				cp := &konnectv1alpha1.KonnectControlPlane{
+				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cp-1",
 						Namespace: "default",
 					},
-					Spec: konnectv1alpha1.KonnectControlPlaneSpec{
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
 					},
-					Status: konnectv1alpha1.KonnectControlPlaneStatus{
+					Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
 							ID: "12345",
 						},
@@ -416,10 +416,10 @@ func TestUpdateControlPlane(t *testing.T) {
 
 				return sdk, cp
 			},
-			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectControlPlane) {
+			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				assert.Equal(t, "12345", cp.Status.GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
-				require.True(t, ok, "Programmed condition not set on KonnectControlPlane")
+				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
 				assert.Equal(t, conditions.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
 				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
