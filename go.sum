@@ -224,8 +224,8 @@ github.com/klauspost/compress v1.17.9 h1:6KIumPrER1LHsvBVuDa0r5xaG0Es51mhhB9BQB2
 github.com/klauspost/compress v1.17.9/go.mod h1:Di0epgTjJY877eYKx5yC51cX2A2Vl2ibi7bDH9ttBbw=
 github.com/kong/go-kong v0.58.0 h1:9Y1Hg7ahCS7Ig+iAb9CZyjeT3ARuDe9ohV7mVa8n/eU=
 github.com/kong/go-kong v0.58.0/go.mod h1:8Vt6HmtgLNgL/7bSwAlz3DIWqBtzG7qEt9+OnMiQOa0=
-github.com/kong/kubernetes-configuration v0.0.10-0.20240903120346-bbf3f3aa8742 h1:rca5gsKcQctA2IpUA51GW0eUXhU7IcdRHPXz7XmE+kY=
-github.com/kong/kubernetes-configuration v0.0.10-0.20240903120346-bbf3f3aa8742/go.mod h1:qrBecX5i10cKNcDBJnQLduhhcYh6CKAz7rDi+nLtjdk=
+github.com/kong/kubernetes-configuration v0.0.10 h1:abz/BAQ/Eht/JaUWJyxygOKWgCvLVbgStyKBzTvMHBY=
+github.com/kong/kubernetes-configuration v0.0.10/go.mod h1:qrBecX5i10cKNcDBJnQLduhhcYh6CKAz7rDi+nLtjdk=
 github.com/kong/kubernetes-ingress-controller/v3 v3.3.1 h1:uWlcwz5oAnVyUZdtDV9p2l9CdlHhLNTKey3AcHF/Jxs=
 github.com/kong/kubernetes-ingress-controller/v3 v3.3.1/go.mod h1:2CBAJ7/J+FyAFn7Y8OLoTO3ApM+qiGIgNLbCyy98Vqk=
 github.com/kong/kubernetes-telemetry v0.1.5 h1:xHwU1q0IvfEYqpj03po73ZKbVarnFPUwzkoFkdVnr9w=

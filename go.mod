@@ -18,7 +18,7 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-containerregistry v0.20.2
 	github.com/google/uuid v1.6.0
-	github.com/kong/kubernetes-configuration v0.0.10-0.20240903120346-bbf3f3aa8742
+	github.com/kong/kubernetes-configuration v0.0.10
 	github.com/kong/kubernetes-ingress-controller/v3 v3.3.1
 	github.com/kong/kubernetes-telemetry v0.1.5
 	github.com/kong/kubernetes-testing-framework v0.47.2
