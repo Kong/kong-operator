@@ -32,6 +32,10 @@ func (c *FakeApisV1alpha1) AIGateways(namespace string) v1alpha1.AIGatewayInterf
 	return &FakeAIGateways{c, namespace}
 }
 
+func (c *FakeApisV1alpha1) DataPlaneKonnectExtensions(namespace string) v1alpha1.DataPlaneKonnectExtensionInterface {
+	return &FakeDataPlaneKonnectExtensions{c, namespace}
+}
+
 func (c *FakeApisV1alpha1) DataPlaneMetricsExtensions(namespace string) v1alpha1.DataPlaneMetricsExtensionInterface {
 	return &FakeDataPlaneMetricsExtensions{c, namespace}
 }

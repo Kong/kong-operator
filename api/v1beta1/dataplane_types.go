@@ -21,6 +21,8 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/kong/gateway-operator/api/v1alpha1"
 )
 
 func init() {
@@ -32,6 +34,7 @@ func init() {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=kodp,categories=kong;all
+// +kubebuilder:validation:XValidation:message="Extension not allowed for DataPlane",rule="has(self.spec.extensions) ? self.spec.extensions.all(e, e.group == 'gateway-operator.konghq.com' && e.kind == 'DataPlaneKonnectExtension') : true"
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 
 // DataPlane is the Schema for the dataplanes API
@@ -68,6 +71,15 @@ type DataPlaneOptions struct {
 
 	// +optional
 	Resources DataPlaneResources `json:"resources"`
+
+	// Extensions provide additional or replacement features for the DataPlane
+	// resources to influence or enhance functionality.
+	// NOTE: since we have one extension only (DataPlaneKonnectExtension), we limit the amount of extensions to 1.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=0
+	// +kubebuilder:validation:MaxItems=1
+	Extensions []v1alpha1.ExtensionRef `json:"extensions,omitempty"`
 }
 
 // DataPlaneResources defines the resources that will be created and managed

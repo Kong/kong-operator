@@ -18,16 +18,19 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/gateway-operator/api/v1alpha1"
 )
 
 func init() {
 	SchemeBuilder.Register(&GatewayConfiguration{}, &GatewayConfigurationList{})
 }
 
-//+genclient
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:resource:shortName=kogc,categories=kong;all
+// +genclient
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=kogc,categories=kong;all
+// +kubebuilder:validation:XValidation:message="Extension not allowed for DataPlane config options",rule="has(self.spec.dataPlaneOptions.extensions) ? self.spec.dataPlaneOptions.extensions.all(e, e.group == 'gateway-operator.konghq.com' && e.kind == 'DataPlaneKonnectExtension') : true"
 
 // GatewayConfiguration is the Schema for the gatewayconfigurations API
 type GatewayConfiguration struct {
@@ -61,6 +64,15 @@ type GatewayConfigDataPlaneOptions struct {
 
 	// +optional
 	Network GatewayConfigDataPlaneNetworkOptions `json:"network"`
+
+	// Extensions provide additional or replacement features for the DataPlane
+	// resources to influence or enhance functionality.
+	// NOTE: since we have one extension only (DataPlaneKonnectExtension), we limit the amount of extensions to 1.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=0
+	// +kubebuilder:validation:MaxItems=1
+	Extensions []v1alpha1.ExtensionRef `json:"extensions,omitempty"`
 }
 
 // GatewayConfigDataPlaneNetworkOptions defines network related options for a DataPlane.
