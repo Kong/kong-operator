@@ -8,6 +8,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -29,8 +30,8 @@ func TestNewKonnectEntityReconciler(t *testing.T) {
 }
 
 func testNewKonnectEntityReconciler[
-	T SupportedKonnectEntityType,
-	TEnt EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](
 	t *testing.T,
 	ent T,

@@ -126,6 +126,13 @@ skaffold: mise yq ## Download skaffold locally if necessary.
 	@$(MISE) plugin install --yes -q skaffold
 	@$(MISE) install -q skaffold@$(SKAFFOLD_VERSION)
 
+MOCKERY_VERSION = $(shell $(YQ) -r '.mockery' < $(TOOLS_VERSIONS_FILE))
+MOCKERY = $(PROJECT_DIR)/bin/installs/mockery/$(MOCKERY_VERSION)/bin/mockery
+.PHONY: mockery
+mockery: mise yq ## Download mockery locally if necessary.
+	@$(MISE) plugin install --yes -q mockery https://github.com/cabify/asdf-mockery.git
+	@$(MISE) install -q mockery@$(MOCKERY_VERSION)
+
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
@@ -191,7 +198,7 @@ verify.generators: verify.repo generate verify.diff
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.api generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config
+generate: generate.api generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config generate.mocks
 
 .PHONY: generate.api
 generate.api: controller-gen
@@ -387,6 +394,11 @@ test.conformance:
 .PHONY: test.samples
 test.samples: kustomize
 	find ./config/samples -not -name "kustomization.*" -type f | sort | xargs -I{} bash -c "kubectl apply -f {}; kubectl delete -f {}"
+
+# https://github.com/vektra/mockery/issues/803#issuecomment-2287198024
+.PHONY: generate.mocks
+generate.mocks: mockery
+	GODEBUG=gotypesalias=0 $(MOCKERY)
 
 # ------------------------------------------------------------------------------
 # Gateway API

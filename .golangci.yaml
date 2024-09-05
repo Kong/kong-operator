@@ -62,6 +62,13 @@ linters-settings:
 
       - pkg: github.com/kong/gateway-operator/internal/types
         alias: gwtypes
+
+      - pkg: github.com/Kong/sdk-konnect-go/models/components
+        alias: sdkkonnectcomp
+      - pkg: github.com/Kong/sdk-konnect-go/models/operations
+        alias: sdkkonnectops
+      - pkg: github.com/Kong/sdk-konnect-go/models/sdkerrors
+        alias: sdkkonnecterrs
   revive:
     rules:
       - name: errorf

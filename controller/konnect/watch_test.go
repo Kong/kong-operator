@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/require"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/kong/gateway-operator/controller/konnect/constraints"
+
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -19,8 +21,8 @@ func TestWatchOptions(t *testing.T) {
 }
 
 func testReconciliationWatchOptionsForEntity[
-	T SupportedKonnectEntityType,
-	TEnt EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](
 	t *testing.T,
 	ent TEnt,

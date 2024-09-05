@@ -1,19 +1,19 @@
-package konnect
+package ops
 
 import (
 	"context"
 	"errors"
 	"fmt"
 
-	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -23,14 +23,14 @@ import (
 
 func createConsumerGroup(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ConsumerGroupSDK,
 	group *configurationv1beta1.KongConsumerGroup,
 ) error {
 	if group.GetControlPlaneID() == "" {
 		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", group, client.ObjectKeyFromObject(group))
 	}
 
-	resp, err := sdk.ConsumerGroups.CreateConsumerGroup(ctx,
+	resp, err := sdk.CreateConsumerGroup(ctx,
 		group.Status.Konnect.ControlPlaneID,
 		kongConsumerGroupToSDKConsumerGroupInput(group),
 	)
@@ -41,7 +41,7 @@ func createConsumerGroup(
 	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, group); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				KonnectEntityProgrammedConditionType,
+				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToCreate",
 				errWrapped.Error(),
@@ -55,9 +55,9 @@ func createConsumerGroup(
 	group.Status.Konnect.SetKonnectID(*resp.ConsumerGroup.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			KonnectEntityProgrammedConditionType,
+			conditions.KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReasonProgrammed,
+			conditions.KonnectEntityProgrammedReasonProgrammed,
 			"",
 			group.GetGeneration(),
 		),
@@ -72,7 +72,7 @@ func createConsumerGroup(
 // It returns an error if the KongConsumerGroup does not have a ControlPlaneRef.
 func updateConsumerGroup(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ConsumerGroupSDK,
 	cl client.Client,
 	group *configurationv1beta1.KongConsumerGroup,
 ) error {
@@ -100,8 +100,8 @@ func updateConsumerGroup(
 		)
 	}
 
-	resp, err := sdk.ConsumerGroups.UpsertConsumerGroup(ctx,
-		sdkkonnectgoops.UpsertConsumerGroupRequest{
+	resp, err := sdk.UpsertConsumerGroup(ctx,
+		sdkkonnectops.UpsertConsumerGroupRequest{
 			ControlPlaneID:  cp.Status.ID,
 			ConsumerGroupID: group.GetKonnectStatus().GetKonnectID(),
 			ConsumerGroup:   kongConsumerGroupToSDKConsumerGroupInput(group),
@@ -114,7 +114,7 @@ func updateConsumerGroup(
 	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, group); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				KonnectEntityProgrammedConditionType,
+				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToCreate",
 				errWrapped.Error(),
@@ -129,9 +129,9 @@ func updateConsumerGroup(
 	group.Status.Konnect.SetControlPlaneID(cp.Status.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			KonnectEntityProgrammedConditionType,
+			conditions.KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReasonProgrammed,
+			conditions.KonnectEntityProgrammedReasonProgrammed,
 			"",
 			group.GetGeneration(),
 		),
@@ -146,14 +146,14 @@ func updateConsumerGroup(
 // It returns an error if the operation fails.
 func deleteConsumerGroup(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ConsumerGroupSDK,
 	consumer *configurationv1beta1.KongConsumerGroup,
 ) error {
 	id := consumer.Status.Konnect.GetKonnectID()
-	_, err := sdk.ConsumerGroups.DeleteConsumerGroup(ctx, consumer.Status.Konnect.ControlPlaneID, id)
+	_, err := sdk.DeleteConsumerGroup(ctx, consumer.Status.Konnect.ControlPlaneID, id)
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, consumer); errWrapped != nil {
 		// Consumer delete operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkerrors.SDKError
+		var sdkError *sdkkonnecterrs.SDKError
 		if errors.As(errWrapped, &sdkError) {
 			if sdkError.StatusCode == 404 {
 				ctrllog.FromContext(ctx).
@@ -178,8 +178,8 @@ func deleteConsumerGroup(
 
 func kongConsumerGroupToSDKConsumerGroupInput(
 	group *configurationv1beta1.KongConsumerGroup,
-) sdkkonnectgocomp.ConsumerGroupInput {
-	return sdkkonnectgocomp.ConsumerGroupInput{
+) sdkkonnectcomp.ConsumerGroupInput {
+	return sdkkonnectcomp.ConsumerGroupInput{
 		Tags: metadata.ExtractTags(group),
 		Name: group.Spec.Name,
 	}

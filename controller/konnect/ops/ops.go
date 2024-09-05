@@ -1,4 +1,4 @@
-package konnect
+package ops
 
 import (
 	"context"
@@ -11,6 +11,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/kong/gateway-operator/controller/konnect/conditions"
+	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -40,8 +42,8 @@ const (
 
 // Create creates a Konnect entity.
 func Create[
-	T SupportedKonnectEntityType,
-	TEnt EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](
 	ctx context.Context,
 	sdk *sdkkonnectgo.SDK,
@@ -52,15 +54,15 @@ func Create[
 
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		return e, createControlPlane(ctx, sdk, ent)
+		return e, createControlPlane(ctx, sdk.ControlPlanes, ent)
 	case *configurationv1alpha1.KongService:
-		return e, createService(ctx, sdk, ent)
+		return e, createService(ctx, sdk.Services, ent)
 	case *configurationv1alpha1.KongRoute:
-		return e, createRoute(ctx, sdk, ent)
+		return e, createRoute(ctx, sdk.Routes, ent)
 	case *configurationv1.KongConsumer:
-		return e, createConsumer(ctx, sdk, ent)
+		return e, createConsumer(ctx, sdk.Consumers, ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		return e, createConsumerGroup(ctx, sdk, ent)
+		return e, createConsumerGroup(ctx, sdk.ConsumerGroups, ent)
 	case *configurationv1alpha1.KongPluginBinding:
 		return e, createPlugin(ctx, cl, sdk, ent)
 
@@ -75,8 +77,8 @@ func Create[
 // Delete deletes a Konnect entity.
 // It returns an error if the entity does not have a Konnect ID or if the operation fails.
 func Delete[
-	T SupportedKonnectEntityType,
-	TEnt EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](ctx context.Context, sdk *sdkkonnectgo.SDK, cl client.Client, e *T) error {
 	ent := TEnt(e)
 	if ent.GetKonnectStatus().GetKonnectID() == "" {
@@ -90,15 +92,15 @@ func Delete[
 
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		return deleteControlPlane(ctx, sdk, ent)
+		return deleteControlPlane(ctx, sdk.ControlPlanes, ent)
 	case *configurationv1alpha1.KongService:
-		return deleteService(ctx, sdk, ent)
+		return deleteService(ctx, sdk.Services, ent)
 	case *configurationv1alpha1.KongRoute:
-		return deleteRoute(ctx, sdk, ent)
+		return deleteRoute(ctx, sdk.Routes, ent)
 	case *configurationv1.KongConsumer:
-		return deleteConsumer(ctx, sdk, ent)
+		return deleteConsumer(ctx, sdk.Consumers, ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		return deleteConsumerGroup(ctx, sdk, ent)
+		return deleteConsumerGroup(ctx, sdk.ConsumerGroups, ent)
 	case *configurationv1alpha1.KongPluginBinding:
 		return deletePlugin(ctx, sdk, ent)
 
@@ -113,12 +115,12 @@ func Delete[
 // Update updates a Konnect entity.
 // It returns an error if the entity does not have a Konnect ID or if the operation fails.
 func Update[
-	T SupportedKonnectEntityType,
-	TEnt EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](ctx context.Context, sdk *sdkkonnectgo.SDK, syncPeriod time.Duration, cl client.Client, e *T) (ctrl.Result, error) {
 	var (
 		ent                = TEnt(e)
-		condProgrammed, ok = k8sutils.GetCondition(KonnectEntityProgrammedConditionType, ent)
+		condProgrammed, ok = k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, ent)
 		now                = time.Now()
 		timeFromLastUpdate = time.Since(condProgrammed.LastTransitionTime.Time)
 	)
@@ -126,7 +128,7 @@ func Update[
 	// the configured sync period, requeue after the remaining time.
 	if ok &&
 		condProgrammed.Status == metav1.ConditionTrue &&
-		condProgrammed.Reason == KonnectEntityProgrammedReasonProgrammed &&
+		condProgrammed.Reason == conditions.KonnectEntityProgrammedReasonProgrammed &&
 		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration() &&
 		timeFromLastUpdate <= syncPeriod {
 		requeueAfter := syncPeriod - timeFromLastUpdate
@@ -153,15 +155,15 @@ func Update[
 
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		return ctrl.Result{}, updateControlPlane(ctx, sdk, ent)
+		return ctrl.Result{}, updateControlPlane(ctx, sdk.ControlPlanes, ent)
 	case *configurationv1alpha1.KongService:
-		return ctrl.Result{}, updateService(ctx, sdk, cl, ent)
+		return ctrl.Result{}, updateService(ctx, sdk.Services, ent)
 	case *configurationv1alpha1.KongRoute:
-		return ctrl.Result{}, updateRoute(ctx, sdk, cl, ent)
+		return ctrl.Result{}, updateRoute(ctx, sdk.Routes, cl, ent)
 	case *configurationv1.KongConsumer:
-		return ctrl.Result{}, updateConsumer(ctx, sdk, cl, ent)
+		return ctrl.Result{}, updateConsumer(ctx, sdk.Consumers, cl, ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		return ctrl.Result{}, updateConsumerGroup(ctx, sdk, cl, ent)
+		return ctrl.Result{}, updateConsumerGroup(ctx, sdk.ConsumerGroups, cl, ent)
 	case *configurationv1alpha1.KongPluginBinding:
 		return ctrl.Result{}, updatePlugin(ctx, sdk, cl, ent)
 
@@ -174,8 +176,8 @@ func Update[
 }
 
 func logOpComplete[
-	T SupportedKonnectEntityType,
-	TEnt EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](ctx context.Context, start time.Time, op Op, e TEnt) {
 	s := e.GetKonnectStatus()
 	if s == nil {
@@ -186,7 +188,7 @@ func logOpComplete[
 		Info("operation in Konnect API complete",
 			"op", op,
 			"duration", time.Since(start),
-			"type", entityTypeName[T](),
+			"type", constraints.EntityTypeName[T](),
 			"konnect_id", s.GetKonnectID(),
 		)
 }
@@ -194,17 +196,18 @@ func logOpComplete[
 // wrapErrIfKonnectOpFailed checks the response from the Konnect API and returns a uniform
 // error for all Konnect entities if the operation failed.
 func wrapErrIfKonnectOpFailed[
-	T SupportedKonnectEntityType,
-	TEnt EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](err error, op Op, e TEnt) error {
 	if err != nil {
+		entityTypeName := constraints.EntityTypeName[T]()
 		if e == nil {
-			return fmt.Errorf("failed to %s for %T: %w",
-				op, e, err,
+			return fmt.Errorf("failed to %s %s: %w",
+				op, entityTypeName, err,
 			)
 		}
-		return fmt.Errorf("failed to %s for %T %q: %w",
-			op, client.ObjectKeyFromObject(e), e, err,
+		return fmt.Errorf("failed to %s %s %s: %w",
+			op, entityTypeName, client.ObjectKeyFromObject(e), err,
 		)
 	}
 	return nil

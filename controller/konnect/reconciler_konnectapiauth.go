@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -121,9 +122,9 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 	if err != nil {
 		if res, errStatus := updateStatusWithCondition(
 			ctx, r.Client, &apiAuth,
-			KonnectEntityAPIAuthConfigurationValidConditionType,
+			conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionFalse,
-			KonnectEntityAPIAuthConfigurationReasonInvalid,
+			conditions.KonnectEntityAPIAuthConfigurationReasonInvalid,
 			err.Error(),
 		); errStatus != nil || res.Requeue {
 			return res, errStatus
@@ -149,12 +150,12 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 	// NOTE: This is needed because currently the SDK only lists the prod global API as supported:
 	// https://github.com/Kong/sdk-konnect-go/blob/999d9a987e1aa7d2e09ac11b1450f4563adf21ea/models/operations/getorganizationsme.go#L10-L12
-	respOrg, err := sdk.Me.GetOrganizationsMe(ctx, sdkkonnectgoops.WithServerURL("https://"+apiAuth.Spec.ServerURL))
+	respOrg, err := sdk.Me.GetOrganizationsMe(ctx, sdkkonnectops.WithServerURL("https://"+apiAuth.Spec.ServerURL))
 	if err != nil {
 		logger.Error(err, "failed to get organization info from Konnect")
-		if cond, ok := k8sutils.GetCondition(KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
+		if cond, ok := k8sutils.GetCondition(conditions.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
 			cond.Status != metav1.ConditionFalse ||
-			cond.Reason != KonnectEntityAPIAuthConfigurationReasonInvalid ||
+			cond.Reason != conditions.KonnectEntityAPIAuthConfigurationReasonInvalid ||
 			cond.ObservedGeneration != apiAuth.GetGeneration() ||
 			apiAuth.Status.OrganizationID != "" ||
 			apiAuth.Status.ServerURL != apiAuth.Spec.ServerURL {
@@ -164,9 +165,9 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 			res, errUpdate := updateStatusWithCondition(
 				ctx, r.Client, &apiAuth,
-				KonnectEntityAPIAuthConfigurationValidConditionType,
+				conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
 				metav1.ConditionFalse,
-				KonnectEntityAPIAuthConfigurationReasonInvalid,
+				conditions.KonnectEntityAPIAuthConfigurationReasonInvalid,
 				err.Error(),
 			)
 			if errUpdate != nil || res.Requeue {
@@ -189,10 +190,10 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		}
 		condMessage = fmt.Sprintf("Token from Secret %s is valid", nn)
 	}
-	if cond, ok := k8sutils.GetCondition(KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
+	if cond, ok := k8sutils.GetCondition(conditions.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
 		cond.Status != metav1.ConditionTrue ||
 		cond.Message != condMessage ||
-		cond.Reason != KonnectEntityAPIAuthConfigurationReasonValid ||
+		cond.Reason != conditions.KonnectEntityAPIAuthConfigurationReasonValid ||
 		cond.ObservedGeneration != apiAuth.GetGeneration() ||
 		apiAuth.Status.OrganizationID != *respOrg.MeOrganization.ID ||
 		apiAuth.Status.ServerURL != apiAuth.Spec.ServerURL {
@@ -202,9 +203,9 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 		res, err := updateStatusWithCondition(
 			ctx, r.Client, &apiAuth,
-			KonnectEntityAPIAuthConfigurationValidConditionType,
+			conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityAPIAuthConfigurationReasonValid,
+			conditions.KonnectEntityAPIAuthConfigurationReasonValid,
 			condMessage,
 		)
 		if err != nil || res.Requeue {

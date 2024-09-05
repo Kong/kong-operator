@@ -1,4 +1,4 @@
-package konnect
+package ops
 
 import (
 	"context"
@@ -7,15 +7,16 @@ import (
 	"fmt"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -54,7 +55,7 @@ func createPlugin(
 	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongPluginBinding](err, CreateOp, pluginBinding); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				KonnectEntityProgrammedConditionType,
+				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToCreate",
 				errWrapped.Error(),
@@ -68,9 +69,9 @@ func createPlugin(
 	pluginBinding.SetKonnectID(*resp.Plugin.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			KonnectEntityProgrammedConditionType,
+			conditions.KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReasonProgrammed,
+			conditions.KonnectEntityProgrammedReasonProgrammed,
 			"",
 			pluginBinding.GetGeneration(),
 		),
@@ -121,7 +122,7 @@ func updatePlugin(
 	}
 
 	resp, err := sdk.Plugins.UpsertPlugin(ctx,
-		sdkkonnectgoops.UpsertPluginRequest{
+		sdkkonnectops.UpsertPluginRequest{
 			ControlPlaneID: controlPlaneID,
 			PluginID:       pb.GetKonnectID(),
 			Plugin:         *pluginInput,
@@ -134,7 +135,7 @@ func updatePlugin(
 	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongPluginBinding](err, UpdateOp, pb); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				KonnectEntityProgrammedConditionType,
+				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToCreate",
 				errWrapped.Error(),
@@ -149,9 +150,9 @@ func updatePlugin(
 	pb.Status.Konnect.SetControlPlaneID(cp.Status.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			KonnectEntityProgrammedConditionType,
+			conditions.KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReasonProgrammed,
+			conditions.KonnectEntityProgrammedReasonProgrammed,
 			"",
 			pb.GetGeneration(),
 		),
@@ -173,7 +174,7 @@ func deletePlugin(
 	_, err := sdk.Plugins.DeletePlugin(ctx, pb.GetControlPlaneID(), id)
 	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongPluginBinding](err, DeleteOp, pb); errWrapped != nil {
 		// plugin delete operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkerrors.SDKError
+		var sdkError *sdkkonnecterrs.SDKError
 		if errors.As(errWrapped, &sdkError) && sdkError.StatusCode == 404 {
 			ctrllog.FromContext(ctx).
 				Info("entity not found in Konnect, skipping delete",
@@ -195,7 +196,7 @@ func deletePlugin(
 // -----------------------------------------------------------------------------
 
 // getPluginInput returns the SDK PluginInput for the KongPluginBinding.
-func getPluginInput(ctx context.Context, cl client.Client, pluginBinding *configurationv1alpha1.KongPluginBinding) (*sdkkonnectgocomp.PluginInput, error) {
+func getPluginInput(ctx context.Context, cl client.Client, pluginBinding *configurationv1alpha1.KongPluginBinding) (*sdkkonnectcomp.PluginInput, error) {
 	plugin, err := getReferencedPlugin(ctx, cl, pluginBinding)
 	if err != nil {
 		return nil, err
@@ -256,7 +257,7 @@ func getReferencedPlugin(ctx context.Context, cl client.Client, pluginBinding *c
 func kongPluginBindingToSDKPluginInput(
 	plugin *configurationv1.KongPlugin,
 	targets []client.Object,
-) (*sdkkonnectgocomp.PluginInput, error) {
+) (*sdkkonnectcomp.PluginInput, error) {
 	if len(targets) == 0 {
 		return nil, fmt.Errorf("no targets found for KongPluginBinding %s", client.ObjectKeyFromObject(plugin))
 	}
@@ -266,7 +267,7 @@ func kongPluginBindingToSDKPluginInput(
 		return nil, err
 	}
 
-	pluginInput := &sdkkonnectgocomp.PluginInput{
+	pluginInput := &sdkkonnectcomp.PluginInput{
 		Name:    lo.ToPtr(plugin.PluginName),
 		Config:  pluginConfig,
 		Enabled: lo.ToPtr(!plugin.Disabled),
@@ -281,7 +282,7 @@ func kongPluginBindingToSDKPluginInput(
 			if id == "" {
 				return nil, fmt.Errorf("KongService %s is not configured in Konnect yet", client.ObjectKeyFromObject(t))
 			}
-			pluginInput.Service = &sdkkonnectgocomp.PluginService{
+			pluginInput.Service = &sdkkonnectcomp.PluginService{
 				ID: lo.ToPtr(t.GetKonnectStatus().ID),
 			}
 		// TODO(mlavacca): add support for KongRoute

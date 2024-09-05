@@ -16,6 +16,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/kong/gateway-operator/controller/konnect/conditions"
+	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -35,7 +38,7 @@ const (
 
 // KonnectEntityReconciler reconciles a Konnect entities.
 // It uses the generic type constraints to constrain the supported types.
-type KonnectEntityReconciler[T SupportedKonnectEntityType, TEnt EntityType[T]] struct {
+type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]] struct {
 	sdkFactory      SDKFactory
 	DevelopmentMode bool
 	Client          client.Client
@@ -44,12 +47,12 @@ type KonnectEntityReconciler[T SupportedKonnectEntityType, TEnt EntityType[T]] s
 
 // KonnectEntityReconcilerOption is a functional option for the KonnectEntityReconciler.
 type KonnectEntityReconcilerOption[
-	T SupportedKonnectEntityType,
-	TEnt EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ] func(*KonnectEntityReconciler[T, TEnt])
 
 // WithKonnectEntitySyncPeriod sets the sync period for the reconciler.
-func WithKonnectEntitySyncPeriod[T SupportedKonnectEntityType, TEnt EntityType[T]](
+func WithKonnectEntitySyncPeriod[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	d time.Duration,
 ) KonnectEntityReconcilerOption[T, TEnt] {
 	return func(r *KonnectEntityReconciler[T, TEnt]) {
@@ -60,8 +63,8 @@ func WithKonnectEntitySyncPeriod[T SupportedKonnectEntityType, TEnt EntityType[T
 // NewKonnectEntityReconciler returns a new KonnectEntityReconciler for the given
 // Konnect entity type.
 func NewKonnectEntityReconciler[
-	T SupportedKonnectEntityType,
-	TEnt EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](
 	sdkFactory SDKFactory,
 	developmentMode bool,
@@ -92,7 +95,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(mgr ctrl.Manager) er
 		e   T
 		ent = TEnt(&e)
 		b   = ctrl.NewControllerManagedBy(mgr).
-			Named(entityTypeName[T]()).
+			Named(constraints.EntityTypeName[T]()).
 			WithOptions(controller.Options{
 				MaxConcurrentReconciles: MaxConcurrentReconciles,
 			})
@@ -116,7 +119,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	ctx context.Context, req ctrl.Request,
 ) (ctrl.Result, error) {
 	var (
-		entityTypeName = entityTypeName[T]()
+		entityTypeName = constraints.EntityTypeName[T]()
 		logger         = log.GetLogger(ctx, entityTypeName, r.DevelopmentMode)
 	)
 
@@ -185,9 +188,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		if k8serrors.IsNotFound(err) {
 			if res, err := updateStatusWithCondition(
 				ctx, r.Client, ent,
-				KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
+				conditions.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
 				metav1.ConditionFalse,
-				KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound,
+				conditions.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound,
 				fmt.Sprintf("Referenced KonnectAPIAuthConfiguration %s not found", apiAuthRef),
 			); err != nil || res.Requeue {
 				return ctrl.Result{}, err
@@ -198,9 +201,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		if res, err := updateStatusWithCondition(
 			ctx, r.Client, ent,
-			KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
+			conditions.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
 			metav1.ConditionFalse,
-			KonnectEntityAPIAuthConfigurationResolvedRefReasonRefInvalid,
+			conditions.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefInvalid,
 			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is invalid: %v", apiAuthRef, err),
 		); err != nil || res.Requeue {
 			return ctrl.Result{}, err
@@ -210,15 +213,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 
 	// Update the status if the reference is resolved and it's not as expected.
-	if cond, present := k8sutils.GetCondition(KonnectEntityAPIAuthConfigurationResolvedRefConditionType, ent); !present ||
+	if cond, present := k8sutils.GetCondition(conditions.KonnectEntityAPIAuthConfigurationResolvedRefConditionType, ent); !present ||
 		cond.Status != metav1.ConditionTrue ||
 		cond.ObservedGeneration != ent.GetGeneration() ||
-		cond.Reason != KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef {
+		cond.Reason != conditions.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef {
 		if res, err := updateStatusWithCondition(
 			ctx, r.Client, ent,
-			KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
+			conditions.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef,
+			conditions.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef,
 			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is resolved", apiAuthRef),
 		); err != nil || res.Requeue {
 			return res, err
@@ -227,17 +230,17 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 
 	// Check if the referenced APIAuthConfiguration is valid.
-	if cond, present := k8sutils.GetCondition(KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !present ||
+	if cond, present := k8sutils.GetCondition(conditions.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !present ||
 		cond.Status != metav1.ConditionTrue ||
-		cond.Reason != KonnectEntityAPIAuthConfigurationReasonValid {
+		cond.Reason != conditions.KonnectEntityAPIAuthConfigurationReasonValid {
 
 		// If it's invalid then set the "APIAuthValid" status condition on
 		// the entity to False with "Invalid" reason.
 		if res, err := updateStatusWithCondition(
 			ctx, r.Client, ent,
-			KonnectEntityAPIAuthConfigurationValidConditionType,
+			conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionFalse,
-			KonnectEntityAPIAuthConfigurationReasonInvalid,
+			conditions.KonnectEntityAPIAuthConfigurationReasonInvalid,
 			conditionMessageReferenceKonnectAPIAuthConfigurationInvalid(apiAuthRef),
 		); err != nil || res.Requeue {
 			return res, err
@@ -249,17 +252,17 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// If the referenced APIAuthConfiguration is valid, set the "APIAuthValid"
 	// condition to True with "Valid" reason.
 	// Only perform the update if the condition is not as expected.
-	if cond, present := k8sutils.GetCondition(KonnectEntityAPIAuthConfigurationValidConditionType, ent); !present ||
+	if cond, present := k8sutils.GetCondition(conditions.KonnectEntityAPIAuthConfigurationValidConditionType, ent); !present ||
 		cond.Status != metav1.ConditionTrue ||
-		cond.Reason != KonnectEntityAPIAuthConfigurationReasonValid ||
+		cond.Reason != conditions.KonnectEntityAPIAuthConfigurationReasonValid ||
 		cond.ObservedGeneration != ent.GetGeneration() ||
 		cond.Message != conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef) {
 
 		if res, err := updateStatusWithCondition(
 			ctx, r.Client, ent,
-			KonnectEntityAPIAuthConfigurationValidConditionType,
+			conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityAPIAuthConfigurationReasonValid,
+			conditions.KonnectEntityAPIAuthConfigurationReasonValid,
 			conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef),
 		); err != nil || res.Requeue {
 			return res, err
@@ -271,9 +274,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	if err != nil {
 		if res, errStatus := updateStatusWithCondition(
 			ctx, r.Client, &apiAuth,
-			KonnectEntityAPIAuthConfigurationValidConditionType,
+			conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionFalse,
-			KonnectEntityAPIAuthConfigurationReasonInvalid,
+			conditions.KonnectEntityAPIAuthConfigurationReasonInvalid,
 			err.Error(),
 		); errStatus != nil || res.Requeue {
 			return res, errStatus
@@ -303,12 +306,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-			if err := Delete[T, TEnt](ctx, sdk, r.Client, ent); err != nil {
+			if err := ops.Delete[T, TEnt](ctx, sdk, r.Client, ent); err != nil {
 				if res, errStatus := updateStatusWithCondition(
 					ctx, r.Client, ent,
-					KonnectEntityProgrammedConditionType,
+					conditions.KonnectEntityProgrammedConditionType,
 					metav1.ConditionFalse,
-					KonnectEntityProgrammedReasonKonnectAPIOpFailed,
+					conditions.KonnectEntityProgrammedReasonKonnectAPIOpFailed,
 					err.Error(),
 				); errStatus != nil || res.Requeue {
 					return res, errStatus
@@ -333,7 +336,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// We should look at the "expectations" for this:
 	// https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go
 	if status := ent.GetKonnectStatus(); status == nil || status.GetKonnectID() == "" {
-		_, err := Create[T, TEnt](ctx, sdk, r.Client, ent)
+		_, err := ops.Create[T, TEnt](ctx, sdk, r.Client, ent)
 		if err != nil {
 			// TODO(pmalek): this is actually not 100% error prone because when status
 			// update fails we don't store the Konnect ID and hence the reconciler
@@ -345,8 +348,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				return ctrl.Result{}, fmt.Errorf("failed to update status after creating object: %w", err)
 			}
 
-			return ctrl.Result{}, FailedKonnectOpError[T]{
-				Op:  CreateOp,
+			return ctrl.Result{}, ops.FailedKonnectOpError[T]{
+				Op: ops.CreateOp,
+
 				Err: err,
 			}
 		}
@@ -373,7 +377,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if res, err := Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, ent); err != nil {
+	if res, err := ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, ent); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update object: %w", err)
 	} else if res.Requeue || res.RequeueAfter > 0 {
 		return res, nil
@@ -431,7 +435,7 @@ func updateStatusWithCondition[T interface {
 		}
 		return ctrl.Result{}, fmt.Errorf(
 			"failed to update status with %s condition: %w",
-			KonnectEntityAPIAuthConfigurationResolvedRefConditionType, err,
+			conditions.KonnectEntityAPIAuthConfigurationResolvedRefConditionType, err,
 		)
 	}
 
@@ -478,7 +482,7 @@ func getCPAuthRefForRef(
 	}, nil
 }
 
-func getAPIAuthRefNN[T SupportedKonnectEntityType, TEnt EntityType[T]](
+func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	ctx context.Context,
 	cl client.Client,
 	ent TEnt,
@@ -515,7 +519,7 @@ func getAPIAuthRefNN[T SupportedKonnectEntityType, TEnt EntityType[T]](
 		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
 	}
 
-	if ref, ok := any(ent).(EntityWithKonnectAPIAuthConfigurationRef); ok {
+	if ref, ok := any(ent).(constraints.EntityWithKonnectAPIAuthConfigurationRef); ok {
 		return types.NamespacedName{
 			Name: ref.GetKonnectAPIAuthConfigurationRef().Name,
 			// TODO(pmalek): enable if cross namespace refs are allowed
@@ -529,7 +533,7 @@ func getAPIAuthRefNN[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	)
 }
 
-func getServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
+func getServiceRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	e TEnt,
 ) mo.Option[configurationv1alpha1.ServiceRef] {
 	switch e := any(e).(type) {
@@ -551,7 +555,7 @@ func getServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 // handleKongServiceRef handles the ServiceRef for the given entity.
 // It sets the owner reference to the referenced KongService and updates the
 // status of the entity based on the referenced KongService status.
-func handleKongServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
+func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	ctx context.Context,
 	cl client.Client,
 	ent TEnt,
@@ -572,9 +576,9 @@ func handleKongServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 		if err := cl.Get(ctx, nn, &svc); err != nil {
 			if res, errStatus := updateStatusWithCondition(
 				ctx, cl, ent,
-				KongServiceRefValidConditionType,
+				conditions.KongServiceRefValidConditionType,
 				metav1.ConditionFalse,
-				KongServiceRefReasonInvalid,
+				conditions.KongServiceRefReasonInvalid,
 				err.Error(),
 			); errStatus != nil || res.Requeue {
 				return res, errStatus
@@ -591,14 +595,14 @@ func handleKongServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 			}
 		}
 
-		cond, ok := k8sutils.GetCondition(KonnectEntityProgrammedConditionType, &svc)
+		cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, &svc)
 		if !ok || cond.Status != metav1.ConditionTrue {
 			ent.SetKonnectID("")
 			if res, err := updateStatusWithCondition(
 				ctx, cl, ent,
-				KongServiceRefValidConditionType,
+				conditions.KongServiceRefValidConditionType,
 				metav1.ConditionFalse,
-				KongServiceRefReasonInvalid,
+				conditions.KongServiceRefReasonInvalid,
 				fmt.Sprintf("Referenced KongService %s is not programmed yet", nn),
 			); err != nil || res.Requeue {
 				return ctrl.Result{}, err
@@ -629,9 +633,9 @@ func handleKongServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 
 		if res, errStatus := updateStatusWithCondition(
 			ctx, cl, ent,
-			KongServiceRefValidConditionType,
+			conditions.KongServiceRefValidConditionType,
 			metav1.ConditionTrue,
-			KongServiceRefReasonValid,
+			conditions.KongServiceRefReasonValid,
 			fmt.Sprintf("Referenced KongService %s programmed", nn),
 		); errStatus != nil || res.Requeue {
 			return res, errStatus
@@ -648,9 +652,9 @@ func handleKongServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 		if err != nil {
 			if res, errStatus := updateStatusWithCondition(
 				ctx, cl, ent,
-				ControlPlaneRefValidConditionType,
+				conditions.ControlPlaneRefValidConditionType,
 				metav1.ConditionFalse,
-				ControlPlaneRefReasonInvalid,
+				conditions.ControlPlaneRefReasonInvalid,
 				err.Error(),
 			); errStatus != nil || res.Requeue {
 				return res, errStatus
@@ -664,13 +668,13 @@ func handleKongServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 			return ctrl.Result{}, err
 		}
 
-		cond, ok = k8sutils.GetCondition(KonnectEntityProgrammedConditionType, cp)
+		cond, ok = k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
 		if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
 			if res, errStatus := updateStatusWithCondition(
 				ctx, cl, ent,
-				ControlPlaneRefValidConditionType,
+				conditions.ControlPlaneRefValidConditionType,
 				metav1.ConditionFalse,
-				ControlPlaneRefReasonInvalid,
+				conditions.ControlPlaneRefReasonInvalid,
 				fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
 			); errStatus != nil || res.Requeue {
 				return res, errStatus
@@ -688,9 +692,9 @@ func handleKongServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 
 		if res, errStatus := updateStatusWithCondition(
 			ctx, cl, ent,
-			ControlPlaneRefValidConditionType,
+			conditions.ControlPlaneRefValidConditionType,
 			metav1.ConditionTrue,
-			ControlPlaneRefReasonValid,
+			conditions.ControlPlaneRefReasonValid,
 			fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
 		); errStatus != nil || res.Requeue {
 			return res, errStatus
@@ -703,7 +707,7 @@ func handleKongServiceRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 	return ctrl.Result{}, nil
 }
 
-func getControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
+func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	e TEnt,
 ) mo.Option[configurationv1alpha1.ControlPlaneRef] {
 	switch e := any(e).(type) {
@@ -737,7 +741,7 @@ func getControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 // handleControlPlaneRef handles the ControlPlaneRef for the given entity.
 // It sets the owner reference to the referenced ControlPlane and updates the
 // status of the entity based on the referenced ControlPlane status.
-func handleControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
+func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	ctx context.Context,
 	cl client.Client,
 	ent TEnt,
@@ -758,9 +762,9 @@ func handleControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 		if err := cl.Get(ctx, nn, &cp); err != nil {
 			if res, errStatus := updateStatusWithCondition(
 				ctx, cl, ent,
-				ControlPlaneRefValidConditionType,
+				conditions.ControlPlaneRefValidConditionType,
 				metav1.ConditionFalse,
-				ControlPlaneRefReasonInvalid,
+				conditions.ControlPlaneRefReasonInvalid,
 				err.Error(),
 			); errStatus != nil || res.Requeue {
 				return res, errStatus
@@ -774,13 +778,13 @@ func handleControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 			return ctrl.Result{}, err
 		}
 
-		cond, ok := k8sutils.GetCondition(KonnectEntityProgrammedConditionType, &cp)
+		cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, &cp)
 		if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
 			if res, errStatus := updateStatusWithCondition(
 				ctx, cl, ent,
-				ControlPlaneRefValidConditionType,
+				conditions.ControlPlaneRefValidConditionType,
 				metav1.ConditionFalse,
-				ControlPlaneRefReasonInvalid,
+				conditions.ControlPlaneRefReasonInvalid,
 				fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
 			); errStatus != nil || res.Requeue {
 				return res, errStatus
@@ -809,9 +813,9 @@ func handleControlPlaneRef[T SupportedKonnectEntityType, TEnt EntityType[T]](
 
 		if res, errStatus := updateStatusWithCondition(
 			ctx, cl, ent,
-			ControlPlaneRefValidConditionType,
+			conditions.ControlPlaneRefValidConditionType,
 			metav1.ConditionTrue,
-			ControlPlaneRefReasonValid,
+			conditions.ControlPlaneRefReasonValid,
 			fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
 		); errStatus != nil || res.Requeue {
 			return res, errStatus

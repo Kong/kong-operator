@@ -1,4 +1,4 @@
-package konnect
+package ops
 
 import (
 	"context"
@@ -6,14 +6,15 @@ import (
 	"fmt"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkkonnectgoops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -22,14 +23,14 @@ import (
 
 func createRoute(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk RoutesSDK,
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	if route.GetControlPlaneID() == "" {
 		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", route, client.ObjectKeyFromObject(route))
 	}
 
-	resp, err := sdk.Routes.CreateRoute(ctx, route.Status.Konnect.ControlPlaneID, kongRouteToSDKRouteInput(route))
+	resp, err := sdk.CreateRoute(ctx, route.Status.Konnect.ControlPlaneID, kongRouteToSDKRouteInput(route))
 
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
@@ -37,7 +38,7 @@ func createRoute(
 	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, route); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				KonnectEntityProgrammedConditionType,
+				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToCreate",
 				errWrapped.Error(),
@@ -51,9 +52,9 @@ func createRoute(
 	route.Status.Konnect.SetKonnectID(*resp.Route.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			KonnectEntityProgrammedConditionType,
+			conditions.KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReasonProgrammed,
+			conditions.KonnectEntityProgrammedReasonProgrammed,
 			"",
 			route.GetGeneration(),
 		),
@@ -69,7 +70,8 @@ func createRoute(
 // if the operation fails.
 func updateRoute(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	// sdk *sdkkonnectgo.SDK,
+	sdk RoutesSDK,
 	cl client.Client,
 	route *configurationv1alpha1.KongRoute,
 ) error {
@@ -114,7 +116,8 @@ func updateRoute(
 		)
 	}
 
-	resp, err := sdk.Routes.UpsertRoute(ctx, sdkkonnectgoops.UpsertRouteRequest{
+	resp, err := sdk.UpsertRoute(ctx, sdkkonnectops.UpsertRouteRequest{
+		// resp, err := sdk.UpsertRoute(ctx, sdkkonnectops.UpsertRouteRequest{
 		ControlPlaneID: cp.Status.ID,
 		RouteID:        route.Status.Konnect.ID,
 		Route:          kongRouteToSDKRouteInput(route),
@@ -127,7 +130,7 @@ func updateRoute(
 	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, route); errWrapped != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				KonnectEntityProgrammedConditionType,
+				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToCreate",
 				errWrapped.Error(),
@@ -142,9 +145,9 @@ func updateRoute(
 	route.Status.Konnect.SetControlPlaneID(cp.Status.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			KonnectEntityProgrammedConditionType,
+			conditions.KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReasonProgrammed,
+			conditions.KonnectEntityProgrammedReasonProgrammed,
 			"",
 			route.GetGeneration(),
 		),
@@ -159,14 +162,14 @@ func updateRoute(
 // It returns an error if the operation fails.
 func deleteRoute(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk RoutesSDK,
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	id := route.GetKonnectStatus().GetKonnectID()
-	_, err := sdk.Routes.DeleteRoute(ctx, route.Status.Konnect.ControlPlaneID, id)
+	_, err := sdk.DeleteRoute(ctx, route.Status.Konnect.ControlPlaneID, id)
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, route); errWrapped != nil {
 		// Service delete operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkerrors.SDKError
+		var sdkError *sdkkonnecterrs.SDKError
 		if errors.As(errWrapped, &sdkError) {
 			if sdkError.StatusCode == 404 {
 				ctrllog.FromContext(ctx).
@@ -191,8 +194,8 @@ func deleteRoute(
 
 func kongRouteToSDKRouteInput(
 	route *configurationv1alpha1.KongRoute,
-) sdkkonnectgocomp.RouteInput {
-	return sdkkonnectgocomp.RouteInput{
+) sdkkonnectcomp.RouteInput {
+	return sdkkonnectcomp.RouteInput{
 		Destinations:            route.Spec.KongRouteAPISpec.Destinations,
 		Headers:                 route.Spec.KongRouteAPISpec.Headers,
 		Hosts:                   route.Spec.KongRouteAPISpec.Hosts,
@@ -210,7 +213,7 @@ func kongRouteToSDKRouteInput(
 		Sources:                 route.Spec.KongRouteAPISpec.Sources,
 		StripPath:               route.Spec.KongRouteAPISpec.StripPath,
 		Tags:                    route.Spec.KongRouteAPISpec.Tags,
-		Service: &sdkkonnectgocomp.RouteService{
+		Service: &sdkkonnectcomp.RouteService{
 			ID: sdkkonnectgo.String(route.Status.Konnect.ServiceID),
 		},
 	}

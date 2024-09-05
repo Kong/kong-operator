@@ -1,4 +1,4 @@
-package konnect
+package conditions
 
 // TODO(pmalek): move this to Konnect API directory so that it's part of the API contract.
 // https://github.com/Kong/kubernetes-configuration/issues/14

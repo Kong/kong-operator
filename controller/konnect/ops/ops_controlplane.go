@@ -1,15 +1,16 @@
-package konnect
+package ops
 
 import (
 	"context"
 	"errors"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
-	"github.com/Kong/sdk-konnect-go/models/components"
-	"github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -17,10 +18,10 @@ import (
 
 func createControlPlane(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ControlPlaneSDK,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) error {
-	resp, err := sdk.ControlPlanes.CreateControlPlane(ctx, cp.Spec.CreateControlPlaneRequest)
+	resp, err := sdk.CreateControlPlane(ctx, cp.Spec.CreateControlPlaneRequest)
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
@@ -28,7 +29,7 @@ func createControlPlane(
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cp); errWrap != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				KonnectEntityProgrammedConditionType,
+				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToCreate",
 				errWrap.Error(),
@@ -42,9 +43,9 @@ func createControlPlane(
 	cp.Status.SetKonnectID(resp.ControlPlane.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			KonnectEntityProgrammedConditionType,
+			conditions.KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReasonProgrammed,
+			conditions.KonnectEntityProgrammedReasonProgrammed,
 			"",
 			cp.GetGeneration(),
 		),
@@ -58,13 +59,13 @@ func createControlPlane(
 // It is assumed that the Konnect ControlPlane has a Konnect ID.
 func deleteControlPlane(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ControlPlaneSDK,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
-	_, err := sdk.ControlPlanes.DeleteControlPlane(ctx, id)
+	_, err := sdk.DeleteControlPlane(ctx, id)
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, cp); errWrap != nil {
-		var sdkNotFoundError *sdkerrors.NotFoundError
+		var sdkNotFoundError *sdkkonnecterrs.NotFoundError
 		if errors.As(err, &sdkNotFoundError) {
 			ctrllog.FromContext(ctx).
 				Info("entity not found in Konnect, skipping delete",
@@ -72,7 +73,7 @@ func deleteControlPlane(
 				)
 			return nil
 		}
-		var sdkError *sdkerrors.SDKError
+		var sdkError *sdkkonnecterrs.SDKError
 		if errors.As(errWrap, &sdkError) {
 			return FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
 				Op:  DeleteOp,
@@ -93,20 +94,20 @@ func deleteControlPlane(
 // It returns an error if the operation fails.
 func updateControlPlane(
 	ctx context.Context,
-	sdk *sdkkonnectgo.SDK,
+	sdk ControlPlaneSDK,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
-	req := components.UpdateControlPlaneRequest{
+	req := sdkkonnectcomp.UpdateControlPlaneRequest{
 		Name:        sdkkonnectgo.String(cp.Spec.Name),
 		Description: cp.Spec.Description,
-		AuthType:    (*components.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
+		AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
 		ProxyUrls:   cp.Spec.ProxyUrls,
 		Labels:      cp.Spec.Labels,
 	}
 
-	resp, err := sdk.ControlPlanes.UpdateControlPlane(ctx, id, req)
-	var sdkError *sdkerrors.NotFoundError
+	resp, err := sdk.UpdateControlPlane(ctx, id, req)
+	var sdkError *sdkkonnecterrs.NotFoundError
 	if errors.As(err, &sdkError) {
 		ctrllog.FromContext(ctx).
 			Info("entity not found in Konnect, trying to recreate",
@@ -126,7 +127,7 @@ func updateControlPlane(
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, cp); errWrap != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				KonnectEntityProgrammedConditionType,
+				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
 				"FailedToUpdate",
 				errWrap.Error(),
@@ -143,9 +144,9 @@ func updateControlPlane(
 	cp.Status.SetKonnectID(resp.ControlPlane.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			KonnectEntityProgrammedConditionType,
+			conditions.KonnectEntityProgrammedConditionType,
 			metav1.ConditionTrue,
-			KonnectEntityProgrammedReasonProgrammed,
+			conditions.KonnectEntityProgrammedReasonProgrammed,
 			"",
 			cp.GetGeneration(),
 		),
