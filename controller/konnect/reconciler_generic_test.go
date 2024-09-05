@@ -39,6 +39,8 @@ func testNewKonnectEntityReconciler[
 ) {
 	t.Helper()
 
+	// TODO: use a mock Konnect SDK factory here and use envtest to trigger real reconciliations and Konnect requests
+	// https://github.com/Kong/gateway-operator/issues/540
 	sdkFactory := ops.NewSDKFactory()
 
 	t.Run(ent.GetTypeName(), func(t *testing.T) {

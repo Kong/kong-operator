@@ -13,4 +13,8 @@ packages:
     interfaces:
       ControlPlaneSDK:
       ServicesSDK:
+      RoutesSDK:
+      ConsumersSDK:
+      ConsumerGroupSDK:
       PluginSDK:
+      MeSDK:
