@@ -7,7 +7,7 @@ import (
 )
 
 // ReferencedControlPlaneDoesNotExistError is an error type that is returned when
-// a Konnect entity references a KonnectControlPlane that does not exist.
+// a Konnect entity references a KonnectGatewayControlPlane that does not exist.
 type ReferencedControlPlaneDoesNotExistError struct {
 	Reference types.NamespacedName
 	Err       error

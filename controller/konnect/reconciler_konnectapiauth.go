@@ -3,6 +3,8 @@ package konnect
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -130,8 +132,12 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		return ctrl.Result{}, err
 	}
 
+	serverURL, err := getKonnectServerURL(apiAuth.Spec.ServerURL)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	sdk := r.SDKFactory.NewKonnectSDK(
-		"https://"+apiAuth.Spec.ServerURL,
+		serverURL,
 		SDKToken(token),
 	)
 
@@ -244,4 +250,15 @@ func getTokenFromKonnectAPIAuthConfiguration(
 	}
 
 	return "", fmt.Errorf("unknown KonnectAPIAuthType: %s", apiAuth.Spec.Type)
+}
+
+var serverURLRegexp = regexp.MustCompile(".*://")
+
+func getKonnectServerURL(serverURL string) (string, error) {
+	if !serverURLRegexp.MatchString(serverURL) {
+		serverURL = "https://" + serverURL
+	} else if !strings.HasPrefix(serverURL, "https://") {
+		return "", fmt.Errorf("in case scheme is specified in the ServerURL, it must be https://: %s", serverURL)
+	}
+	return serverURL, nil
 }

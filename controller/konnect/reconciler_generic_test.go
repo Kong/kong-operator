@@ -18,7 +18,7 @@ import (
 )
 
 func TestNewKonnectEntityReconciler(t *testing.T) {
-	testNewKonnectEntityReconciler(t, konnectv1alpha1.KonnectControlPlane{})
+	testNewKonnectEntityReconciler(t, konnectv1alpha1.KonnectGatewayControlPlane{})
 	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongService{})
 	testNewKonnectEntityReconciler(t, configurationv1.KongConsumer{})
 	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongRoute{})

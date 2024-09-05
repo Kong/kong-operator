@@ -13,7 +13,7 @@ import (
 // SupportedKonnectEntityType is an interface that all Konnect entity types
 // must implement.
 type SupportedKonnectEntityType interface {
-	konnectv1alpha1.KonnectControlPlane |
+	konnectv1alpha1.KonnectGatewayControlPlane |
 		configurationv1alpha1.KongService |
 		configurationv1alpha1.KongRoute |
 		configurationv1.KongConsumer |

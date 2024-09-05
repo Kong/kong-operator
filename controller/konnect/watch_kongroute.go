@@ -36,7 +36,7 @@ func KongRouteReconciliationWatchOptions(
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.For(&configurationv1alpha1.KongRoute{},
 				builder.WithPredicates(
-					predicate.NewPredicateFuncs(kongRouteRefersToKonnectControlPlane(cl)),
+					predicate.NewPredicateFuncs(kongRouteRefersToKonnectGatewayControlPlane(cl)),
 				),
 			)
 		},
@@ -51,9 +51,9 @@ func KongRouteReconciliationWatchOptions(
 	}
 }
 
-// kongRouteRefersToKonnectControlPlane returns true if the KongRoute
-// refers to a KonnectControlPlane.
-func kongRouteRefersToKonnectControlPlane(cl client.Client) func(obj client.Object) bool {
+// kongRouteRefersToKonnectGatewayControlPlane returns true if the KongRoute
+// refers to a KonnectGatewayControlPlane.
+func kongRouteRefersToKonnectGatewayControlPlane(cl client.Client) func(obj client.Object) bool {
 	return func(obj client.Object) bool {
 		kongRoute, ok := obj.(*configurationv1alpha1.KongRoute)
 		if !ok {
@@ -92,7 +92,7 @@ func enqueueKongRouteForKongService(
 			return nil
 		}
 
-		// If the KongService does not refer to a KonnectControlPlane,
+		// If the KongService does not refer to a KonnectGatewayControlPlane,
 		// we do not need to enqueue any KongRoutes bound to this KongService.
 		cpRef := kongSvc.Spec.ControlPlaneRef
 		if cpRef == nil || cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {

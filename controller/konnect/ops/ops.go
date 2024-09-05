@@ -53,7 +53,7 @@ func Create[
 	defer logOpComplete[T, TEnt](ctx, time.Now(), CreateOp, e)
 
 	switch ent := any(e).(type) {
-	case *konnectv1alpha1.KonnectControlPlane:
+	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		return e, createControlPlane(ctx, sdk.ControlPlanes, ent)
 	case *configurationv1alpha1.KongService:
 		return e, createService(ctx, sdk.Services, ent)
@@ -91,7 +91,7 @@ func Delete[
 	defer logOpComplete[T, TEnt](ctx, time.Now(), DeleteOp, e)
 
 	switch ent := any(e).(type) {
-	case *konnectv1alpha1.KonnectControlPlane:
+	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		return deleteControlPlane(ctx, sdk.ControlPlanes, ent)
 	case *configurationv1alpha1.KongService:
 		return deleteService(ctx, sdk.Services, ent)
@@ -154,7 +154,7 @@ func Update[
 	defer logOpComplete[T, TEnt](ctx, now, UpdateOp, e)
 
 	switch ent := any(e).(type) {
-	case *konnectv1alpha1.KonnectControlPlane:
+	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		return ctrl.Result{}, updateControlPlane(ctx, sdk.ControlPlanes, ent)
 	case *configurationv1alpha1.KongService:
 		return ctrl.Result{}, updateService(ctx, sdk.Services, ent)

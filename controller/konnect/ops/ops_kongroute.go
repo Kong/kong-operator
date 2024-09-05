@@ -98,20 +98,20 @@ func updateRoute(
 		)
 	}
 
-	var cp konnectv1alpha1.KonnectControlPlane
+	var cp konnectv1alpha1.KonnectGatewayControlPlane
 	nnCP := types.NamespacedName{
 		Namespace: svc.Namespace,
 		Name:      svc.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
 	}
 	if err := cl.Get(ctx, nnCP, &cp); err != nil {
-		return fmt.Errorf("failed to get KonnectControlPlane %s: for KongRoute %s: %w",
+		return fmt.Errorf("failed to get KonnectGatewayControlPlane %s: for KongRoute %s: %w",
 			nnSvc, client.ObjectKeyFromObject(route), err,
 		)
 	}
 
 	if cp.Status.ID == "" {
 		return fmt.Errorf(
-			"can't update %T when referenced KonnectControlPlane %s does not have the Konnect ID",
+			"can't update %T when referenced KonnectGatewayControlPlane %s does not have the Konnect ID",
 			route, nnSvc,
 		)
 	}
