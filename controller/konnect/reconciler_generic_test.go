@@ -1,16 +1,24 @@
 package konnect
 
 import (
+	"context"
 	"testing"
+	"time"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
-	"k8s.io/client-go/rest"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/gateway-operator/test/envtest"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -19,15 +27,66 @@ import (
 )
 
 func TestNewKonnectEntityReconciler(t *testing.T) {
-	testNewKonnectEntityReconciler(t, konnectv1alpha1.KonnectGatewayControlPlane{})
-	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongService{})
-	testNewKonnectEntityReconciler(t, configurationv1.KongConsumer{})
-	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongRoute{})
-	testNewKonnectEntityReconciler(t, configurationv1beta1.KongConsumerGroup{})
-	// TODO: Reconcilers setting index require a real k8s API server:
-	// https://github.com/kubernetes-sigs/controller-runtime/issues/657
-	// Maybe we should import envtest.
-	// testNewKonnectEntityReconciler(t, configurationv1alpha1.KongPluginBinding{})
+	testNewKonnectEntityReconciler(t, konnectv1alpha1.KonnectGatewayControlPlane{}, konnectGatewayControlPlaneTestCases)
+	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongService{}, nil)
+	testNewKonnectEntityReconciler(t, configurationv1.KongConsumer{}, nil)
+	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongRoute{}, nil)
+	testNewKonnectEntityReconciler(t, configurationv1beta1.KongConsumerGroup{}, nil)
+	testNewKonnectEntityReconciler(t, configurationv1alpha1.KongPluginBinding{}, nil)
+}
+
+const (
+	testNamespaceName   = "test"
+	envTestWaitDuration = time.Second
+	envTestWaitTick     = 20 * time.Millisecond
+)
+
+type konnectEntityReconcilerTestCase struct {
+	name                string
+	objectOps           func(ctx context.Context, t *testing.T, cl client.Client)
+	eventuallyPredicate func(ctx context.Context, t *testing.T, cl client.Client) bool
+}
+
+var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
+	{
+		name: "should resolve auth",
+		objectOps: func(ctx context.Context, t *testing.T, cl client.Client) {
+			auth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "auth",
+					Namespace: testNamespaceName,
+				},
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+					Type:  konnectv1alpha1.KonnectAPIAuthTypeToken,
+					Token: "kpat_test",
+				},
+			}
+			require.NoError(t, cl.Create(ctx, auth))
+			cp := &konnectv1alpha1.KonnectGatewayControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cp-1",
+					Namespace: testNamespaceName,
+				},
+				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+					KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+						APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+							Name: "auth",
+						},
+					},
+				},
+			}
+			require.NoError(t, cl.Create(ctx, cp))
+		},
+		eventuallyPredicate: func(ctx context.Context, t *testing.T, cl client.Client) bool {
+			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
+			err := cl.Get(ctx, k8stypes.NamespacedName{Namespace: testNamespaceName, Name: "cp-1"}, cp)
+			require.NoError(t, err)
+			// TODO: setup mock Konnect SDK and verify that Konnect CP is "Created".
+			return lo.ContainsBy(cp.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == conditions.KonnectEntityAPIAuthConfigurationResolvedRefConditionType && condition.Status == metav1.ConditionTrue
+			})
+		},
+	},
 }
 
 func testNewKonnectEntityReconciler[
@@ -36,21 +95,53 @@ func testNewKonnectEntityReconciler[
 ](
 	t *testing.T,
 	ent T,
+	testCases []konnectEntityReconcilerTestCase,
 ) {
 	t.Helper()
 
-	// TODO: use a mock Konnect SDK factory here and use envtest to trigger real reconciliations and Konnect requests
 	sdkFactory := &ops.MockSDKFactory{}
 
 	t.Run(ent.GetTypeName(), func(t *testing.T) {
-		cl := fakectrlruntimeclient.NewFakeClient()
-		mgr, err := ctrl.NewManager(&rest.Config{}, ctrl.Options{
+		s := scheme.Get()
+		configurationv1alpha1.AddToScheme(s)
+		configurationv1beta1.AddToScheme(s)
+		konnectv1alpha1.AddToScheme(s)
+		cfg := envtest.Setup(t, s)
 
-			Scheme: scheme.Get(),
+		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+			Scheme: s,
+			Metrics: metricsserver.Options{
+				BindAddress: "0",
+			},
 		})
 		require.NoError(t, err)
 
+		cl := mgr.GetClient()
 		reconciler := NewKonnectEntityReconciler[T, TEnt](sdkFactory, false, cl)
 		require.NoError(t, reconciler.SetupWithManager(mgr))
+
+		err = cl.Create(context.Background(), &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test",
+			},
+		})
+		require.NoError(t, err)
+
+		t.Logf("Starting manager for test case %s", t.Name())
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go func() {
+			err := mgr.Start(ctx)
+			require.NoError(t, err)
+		}()
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				tc.objectOps(ctx, t, cl)
+				require.Eventually(t, func() bool {
+					return tc.eventuallyPredicate(ctx, t, cl)
+				}, envTestWaitDuration, envTestWaitTick)
+			})
+		}
 	})
 }
