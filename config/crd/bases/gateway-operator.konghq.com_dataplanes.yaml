@@ -8769,6 +8769,44 @@ spec:
                 x-kubernetes-validations:
                 - message: Using both replicas and scaling fields is not allowed.
                   rule: '!(has(self.scaling) && has(self.replicas))'
+              extensions:
+                description: |-
+                  Extensions provide additional or replacement features for the DataPlane
+                  resources to influence or enhance functionality.
+                  NOTE: since we have one extension only (DataPlaneKonnectExtension), we limit the amount of extensions to 1.
+                items:
+                  description: |-
+                    ExtensionRef corresponds to another resource in the Kubernetes cluster which
+                    defines extended behavior for a resource (e.g. ControlPlane).
+                  properties:
+                    group:
+                      default: gateway-operator.konghq.com
+                      description: Group is the group of the extension resource.
+                      type: string
+                    kind:
+                      description: Kind is kind of the extension resource.
+                      type: string
+                    name:
+                      description: Name is the name of the referred resource.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    namespace:
+                      description: |-
+                        Namespace is the namespace of the referred resource.
+
+                        For namespace-scoped resources if no Namespace is provided then the
+                        namespace of the parent object MUST be used.
+
+                        This field MUST not be set when referring to cluster-scoped resources.
+                      type: string
+                  required:
+                  - kind
+                  - name
+                  type: object
+                maxItems: 1
+                minItems: 0
+                type: array
               network:
                 description: DataPlaneNetworkOptions defines network related options
                   for a DataPlane.
@@ -9272,6 +9310,11 @@ spec:
             - replicas
             type: object
         type: object
+        x-kubernetes-validations:
+        - message: Extension not allowed for DataPlane
+          rule: 'has(self.spec.extensions) ? self.spec.extensions.all(e, e.group ==
+            ''gateway-operator.konghq.com'' && e.kind == ''DataPlaneKonnectExtension'')
+            : true'
     served: true
     storage: true
     subresources:

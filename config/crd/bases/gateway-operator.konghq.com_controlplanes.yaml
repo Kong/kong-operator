@@ -8094,6 +8094,7 @@ spec:
                     defines extended behavior for a resource (e.g. ControlPlane).
                   properties:
                     group:
+                      default: gateway-operator.konghq.com
                       description: Group is the group of the extension resource.
                       type: string
                     kind:
@@ -8114,7 +8115,6 @@ spec:
                         This field MUST not be set when referring to cluster-scoped resources.
                       type: string
                   required:
-                  - group
                   - kind
                   - name
                   type: object
