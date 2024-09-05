@@ -42,7 +42,7 @@ var updatesNotAllowedForStatus = testCasesGroup{
 			Update: func(kcp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				kcp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name = "name-2"
 			},
-			ExpectedUpdateErrorMessage: lo.ToPtr("spec.konnect.authRef is immutable when entity is already Programme"),
+			ExpectedUpdateErrorMessage: lo.ToPtr("spec.konnect.authRef is immutable when an entity is already Programme"),
 		},
 		{
 			Name: "konnect.authRef change is not allowed for APIAuthValid=True",
@@ -73,7 +73,7 @@ var updatesNotAllowedForStatus = testCasesGroup{
 			Update: func(kcp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				kcp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name = "name-2"
 			},
-			ExpectedUpdateErrorMessage: lo.ToPtr("spec.konnect.authRef is immutable when entity refers to a Valid API Auth Configuration"),
+			ExpectedUpdateErrorMessage: lo.ToPtr("spec.konnect.authRef is immutable when an entity refers to a Valid API Auth Configuration"),
 		},
 		{
 			Name: "konnect.authRef change is allowed when cp is not Programmed=True nor APIAuthValid=True",

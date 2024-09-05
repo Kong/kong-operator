@@ -58,7 +58,7 @@ var cpRef = testCasesGroup{
 			ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectID must be set"),
 		},
 		{
-			Name: "konnectNamespacedRef reference name cannot be changed when entity is Programmed",
+			Name: "konnectNamespacedRef reference name cannot be changed when an entity is Programmed",
 			KongService: configurationv1alpha1.KongService{
 				ObjectMeta: commonObjectMeta,
 				Spec: configurationv1alpha1.KongServiceSpec{
@@ -86,10 +86,10 @@ var cpRef = testCasesGroup{
 			Update: func(ks *configurationv1alpha1.KongService) {
 				ks.Spec.ControlPlaneRef.KonnectNamespacedRef.Name = "new-konnect-control-plane"
 			},
-			ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when entity is already Programmed."),
+			ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
 		},
 		{
-			Name: "konnectNamespacedRef reference type cannot be changed when entity is Programmed",
+			Name: "konnectNamespacedRef reference type cannot be changed when an entity is Programmed",
 			KongService: configurationv1alpha1.KongService{
 				ObjectMeta: commonObjectMeta,
 				Spec: configurationv1alpha1.KongServiceSpec{
@@ -117,7 +117,7 @@ var cpRef = testCasesGroup{
 			Update: func(ks *configurationv1alpha1.KongService) {
 				ks.Spec.ControlPlaneRef.Type = configurationv1alpha1.ControlPlaneRefKonnectID
 			},
-			ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when entity is already Programmed."),
+			ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
 		},
 	},
 }

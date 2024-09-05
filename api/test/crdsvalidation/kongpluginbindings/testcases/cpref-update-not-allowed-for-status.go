@@ -51,7 +51,7 @@ var updatesNotAllowedForStatusTCs = testCasesGroup{
 			Update: func(c *configurationv1alpha1.KongPluginBinding) {
 				c.Spec.ControlPlaneRef.KonnectNamespacedRef.Name = "new-konnect-control-plane"
 			},
-			ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when entity is already Programmed"),
+			ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
 		},
 		{
 			Name: "cpRef change is allowed when cp is not Programmed=True nor APIAuthValid=True",

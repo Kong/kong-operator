@@ -36,7 +36,8 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.serviceRef) || has(self.spec.serviceRef)", message="serviceRef is required once set"
-// +kubebuilder:validation:XValidation:rule="self.spec.protocols.exists(p, p == 'http') ? (has(self.spec.hosts) || has(self.spec.methods) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.headers) ) : true", message="If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set"
+// +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.serviceRef == self.spec.serviceRef", message="spec.serviceRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="has(self.spec.protocols) && self.spec.protocols.exists(p, p == 'http') ? (has(self.spec.hosts) || has(self.spec.methods) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.headers) ) : true", message="If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set"
 type KongRoute struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
