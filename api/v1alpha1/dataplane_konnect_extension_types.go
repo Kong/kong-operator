@@ -59,7 +59,7 @@ type DataPlaneKonnectExtensionSpec struct {
 	ControlPlaneRef configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
 	// ControlPlaneRegion is the region of the Konnect Control Plane.
-	// ++kubebuilder:validation:Required
+	// +kubebuilder:validation:Required
 	ControlPlaneRegion string `json:"controlPlaneRegion"`
 
 	// ServerURL is the URL of the Konnect server.
