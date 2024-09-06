@@ -9,6 +9,7 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -38,7 +39,8 @@ func testNewKonnectEntityReconciler[
 ) {
 	t.Helper()
 
-	sdkFactory := NewSDKFactory()
+	// TODO: use a mock Konnect SDK factory here and use envtest to trigger real reconciliations and Konnect requests
+	sdkFactory := &ops.MockSDKFactory{}
 
 	t.Run(ent.GetTypeName(), func(t *testing.T) {
 		cl := fakectrlruntimeclient.NewFakeClient()

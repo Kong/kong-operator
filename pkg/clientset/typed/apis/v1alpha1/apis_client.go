@@ -29,6 +29,7 @@ import (
 type ApisV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	AIGatewaysGetter
+	DataPlaneKonnectExtensionsGetter
 	DataPlaneMetricsExtensionsGetter
 	KongPluginInstallationsGetter
 }
@@ -40,6 +41,10 @@ type ApisV1alpha1Client struct {
 
 func (c *ApisV1alpha1Client) AIGateways(namespace string) AIGatewayInterface {
 	return newAIGateways(c, namespace)
+}
+
+func (c *ApisV1alpha1Client) DataPlaneKonnectExtensions(namespace string) DataPlaneKonnectExtensionInterface {
+	return newDataPlaneKonnectExtensions(c, namespace)
 }
 
 func (c *ApisV1alpha1Client) DataPlaneMetricsExtensions(namespace string) DataPlaneMetricsExtensionInterface {

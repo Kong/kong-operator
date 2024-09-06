@@ -3,7 +3,7 @@ inpackage: True
 disable-version-string: True
 with-expecter: True
 
-filename: "{{ trimSuffix .InterfaceFile \".go\" | base | lower }}_mock_test.go"
+filename: "{{ trimSuffix .InterfaceFile \".go\" | base | lower }}_mock.go"
 dir: "{{ .InterfaceDir }}"
 mockname: "Mock{{ .InterfaceName }}"
 outpkg: "{{ .PackageName }}"
@@ -13,3 +13,8 @@ packages:
     interfaces:
       ControlPlaneSDK:
       ServicesSDK:
+      RoutesSDK:
+      ConsumersSDK:
+      ConsumerGroupSDK:
+      PluginSDK:
+      MeSDK:

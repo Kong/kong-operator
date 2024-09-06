@@ -22,6 +22,7 @@ import (
 	"github.com/kong/gateway-operator/controller/gatewayclass"
 	"github.com/kong/gateway-operator/controller/kongplugininstallation"
 	"github.com/kong/gateway-operator/controller/konnect"
+	konnectops "github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/controller/specialized"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	dataplanevalidator "github.com/kong/gateway-operator/internal/validation/dataplane"
@@ -305,7 +306,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
-		sdkFactory := konnect.NewSDKFactory()
+		sdkFactory := konnectops.NewSDKFactory()
 
 		controllers[KonnectAPIAuthConfigurationControllerName] = ControllerDef{
 			Enabled: c.KonnectControllersEnabled,
