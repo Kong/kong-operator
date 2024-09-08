@@ -479,8 +479,7 @@ _run:
 	GATEWAY_OPERATOR_DEVELOPMENT_MODE=true go run ./cmd/main.go \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
-		-enable-controller-controlplane \
-		-enable-controller-gateway \
+		-enable-controller-kongplugininstallation \
 		-enable-controller-aigateway \
 		-enable-controller-konnect \
 		-zap-time-encoding iso8601 \

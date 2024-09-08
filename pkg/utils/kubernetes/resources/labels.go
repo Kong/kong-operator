@@ -14,8 +14,8 @@ import (
 )
 
 // LabelObjectAsDataPlaneManaged ensures that labels are set on the
-// provided object to signal that it's owned by a DataPlane resource and that its
-// lifecycle is managed by this operator.
+// provided object to signal that it's owned by a DataPlane resource
+// and that its lifecycle is managed by this operator.
 func LabelObjectAsDataPlaneManaged(obj metav1.Object) {
 	labels := obj.GetLabels()
 	if labels == nil {
@@ -25,6 +25,21 @@ func LabelObjectAsDataPlaneManaged(obj metav1.Object) {
 	// TODO: Remove adding this to managed resources after several versions with
 	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/156
 	labels[consts.GatewayOperatorManagedByLabelLegacy] = consts.DataPlaneManagedLabelValue
+	obj.SetLabels(labels)
+}
+
+// LabelObjectAsDataPlaneManaged ensures that labels are set on the
+// provided object to signal that it's owned by a KongPluginInstallation
+// resource and that its lifecycle is managed by this operator.
+func LabelObjectAsKongPluginInstallationManaged(obj metav1.Object) {
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	labels[consts.GatewayOperatorManagedByLabel] = consts.KongPluginInstallationManagedLabelValue
+	// TODO: Remove adding this to managed resources after several versions with
+	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/156
+	labels[consts.GatewayOperatorManagedByLabelLegacy] = consts.KongPluginInstallationManagedLabelValue
 	obj.SetLabels(labels)
 }
 

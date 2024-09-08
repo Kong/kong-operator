@@ -15,6 +15,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/gateway-operator/api/v1alpha1"
+	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
@@ -65,7 +66,9 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 		}
 		var found bool
 		respectiveCM, found = lo.Find(configMaps.Items, func(cm corev1.ConfigMap) bool {
-			return strings.HasPrefix(cm.Name, kpiNN.Name)
+			return cm.Labels[consts.GatewayOperatorManagedByLabel] == consts.KongPluginInstallationManagedLabelValue &&
+				cm.Annotations[consts.AnnotationKongPluginInstallationMappedKongPluginInstallation] == kpiNN.String() &&
+				strings.HasPrefix(cm.Name, kpiNN.Name)
 		})
 		if !assert.True(c, found) {
 			return
