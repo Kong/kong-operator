@@ -18,7 +18,9 @@ import (
 	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
 
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -111,12 +113,169 @@ func TestKonnectEntities(t *testing.T) {
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: ks.Name, Namespace: ks.Namespace}, ks)
 		require.NoError(t, err)
+
+		if !assert.NotNil(t, ks.Status.Konnect) {
+			return
+		}
 		assert.NotEmpty(t, ks.Status.Konnect.KonnectEntityStatus.GetKonnectID())
 		assert.NotEmpty(t, ks.Status.Konnect.KonnectEntityStatus.GetOrgID())
 		assert.NotEmpty(t, ks.Status.Konnect.KonnectEntityStatus.GetServerURL())
 	}, testutils.ObjectUpdateTimeout, time.Second)
 
-	// TODO(czeslavo): test all supported entities here
+	t.Logf("Creating KongRoute")
+	krName := "kr-" + testID
+	kr := configurationv1alpha1.KongRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      krName,
+			Namespace: ns.Name,
+		},
+		Spec: configurationv1alpha1.KongRouteSpec{
+			ServiceRef: &configurationv1alpha1.ServiceRef{
+				Type: configurationv1alpha1.ServiceRefNamespacedRef,
+				NamespacedRef: &configurationv1alpha1.NamespacedServiceRef{
+					Name: ks.Name,
+				},
+			},
+			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+				Name:  lo.ToPtr(krName),
+				Paths: []string{"/kr-" + testID},
+			},
+		},
+	}
+	err = GetClients().MgrClient.Create(GetCtx(), &kr)
+	require.NoError(t, err)
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, &kr))
+
+	t.Logf("Waiting for KongRoute to be updated with Konnect ID")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, &kr)
+		require.NoError(t, err)
+
+		if !assert.NotNil(t, kr.Status.Konnect) {
+			return
+		}
+		assert.NotEmpty(t, kr.Status.Konnect.KonnectEntityStatus.GetKonnectID())
+		assert.NotEmpty(t, kr.Status.Konnect.KonnectEntityStatus.GetOrgID())
+		assert.NotEmpty(t, kr.Status.Konnect.KonnectEntityStatus.GetServerURL())
+	}, testutils.ObjectUpdateTimeout, time.Second)
+
+	t.Logf("Creating KongConsumer")
+	kcName := "kc-" + testID
+	kc := configurationv1.KongConsumer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      kcName,
+			Namespace: ns.Name,
+		},
+		Username: kcName,
+		Spec: configurationv1.KongConsumerSpec{
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: cp.Name},
+			},
+		},
+	}
+	err = GetClients().MgrClient.Create(GetCtx(), &kc)
+	require.NoError(t, err)
+
+	t.Logf("Waiting for KongConsumer to be updated with Konnect ID")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kc.Name, Namespace: ns.Name}, &kc)
+		require.NoError(t, err)
+
+		if !assert.NotNil(t, kc.Status.Konnect) {
+			return
+		}
+		assert.NotEmpty(t, kc.Status.Konnect.KonnectEntityStatus.GetKonnectID())
+		assert.NotEmpty(t, kc.Status.Konnect.KonnectEntityStatus.GetOrgID())
+		assert.NotEmpty(t, kc.Status.Konnect.KonnectEntityStatus.GetServerURL())
+	}, testutils.ObjectUpdateTimeout, time.Second)
+
+	t.Logf("Creating KongConsumerGroup")
+	kcgName := "kcg-" + testID
+	kcg := configurationv1beta1.KongConsumerGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      kcgName,
+			Namespace: ns.Name,
+		},
+		Spec: configurationv1beta1.KongConsumerGroupSpec{
+			Name: lo.ToPtr(kcgName),
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: cp.Name,
+				},
+			},
+		},
+	}
+	err = GetClients().MgrClient.Create(GetCtx(), &kcg)
+	require.NoError(t, err)
+
+	t.Logf("Waiting for KongConsumerGroup to be updated with Konnect ID")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kcg.Name, Namespace: ns.Name}, &kcg)
+		require.NoError(t, err)
+
+		if !assert.NotNil(t, kcg.Status.Konnect) {
+			return
+		}
+		assert.NotEmpty(t, kcg.Status.Konnect.KonnectEntityStatus.GetKonnectID())
+		assert.NotEmpty(t, kcg.Status.Konnect.KonnectEntityStatus.GetOrgID())
+		assert.NotEmpty(t, kcg.Status.Konnect.KonnectEntityStatus.GetServerURL())
+	}, testutils.ObjectUpdateTimeout, time.Second)
+
+	t.Logf("Creating KongPlugin and KongPluginBinding")
+	kpName := "kp-" + testID
+	kp := configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      kpName,
+			Namespace: ns.Name,
+		},
+		PluginName: "key-auth",
+	}
+	err = GetClients().MgrClient.Create(GetCtx(), &kp)
+	require.NoError(t, err)
+
+	kpbName := "kpb-" + testID
+	kpb := configurationv1alpha1.KongPluginBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      kpbName,
+			Namespace: ns.Name,
+		},
+		Spec: configurationv1alpha1.KongPluginBindingSpec{
+			PluginReference: configurationv1alpha1.PluginRef{
+				Name: kp.Name,
+				Kind: lo.ToPtr("KongPlugin"),
+			},
+			Targets: configurationv1alpha1.KongPluginBindingTargets{
+				ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
+					Name:  ks.Name,
+					Kind:  "KongService",
+					Group: "configuration.konghq.com",
+				},
+			},
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: cp.Name,
+				},
+			},
+		},
+	}
+	err = GetClients().MgrClient.Create(GetCtx(), &kpb)
+	require.NoError(t, err)
+
+	t.Logf("Waiting for KongPluginBinding to be updated with Konnect ID")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kpb.Name, Namespace: ns.Name}, &kpb)
+		require.NoError(t, err)
+
+		if !assert.NotNil(t, kpb.Status.Konnect) {
+			return
+		}
+		assert.NotEmpty(t, kpb.Status.Konnect.KonnectEntityStatus.GetKonnectID())
+		assert.NotEmpty(t, kpb.Status.Konnect.KonnectEntityStatus.GetOrgID())
+		assert.NotEmpty(t, kpb.Status.Konnect.KonnectEntityStatus.GetServerURL())
+	}, testutils.ObjectUpdateTimeout, time.Second)
 }
 
 // deleteObjectAndWaitForDeletionFn returns a function that deletes the given object and waits for it to be gone.

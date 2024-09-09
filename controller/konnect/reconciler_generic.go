@@ -540,7 +540,8 @@ func getServiceRef[T constraints.SupportedKonnectEntityType, TEnt constraints.En
 	case *configurationv1alpha1.KongService,
 		*configurationv1.KongConsumer,
 		*configurationv1beta1.KongConsumerGroup,
-		*konnectv1alpha1.KonnectGatewayControlPlane:
+		*konnectv1alpha1.KonnectGatewayControlPlane,
+		*configurationv1alpha1.KongPluginBinding:
 		return mo.None[configurationv1alpha1.ServiceRef]()
 	case *configurationv1alpha1.KongRoute:
 		if e.Spec.ServiceRef == nil {
