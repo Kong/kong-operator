@@ -332,8 +332,6 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			ObjectsToAdd := []client.Object{
 				tc.dataplane,
@@ -429,7 +427,6 @@ func TestCanProceedWithPromotion(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			canProceed, err := canProceedWithPromotion(tc.dataplane)
 			if tc.expectedErr != nil {
@@ -561,7 +558,6 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 			fakeClient := fakectrlruntimeclient.

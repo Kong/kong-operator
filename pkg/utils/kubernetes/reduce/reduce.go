@@ -27,7 +27,6 @@ type PreDeleteHook func(ctx context.Context, cl client.Client, obj client.Object
 func ReduceSecrets(ctx context.Context, k8sClient client.Client, secrets []corev1.Secret, preDeleteHooks ...PreDeleteHook) error {
 	filteredSecrets := filterSecrets(secrets)
 	for _, secret := range filteredSecrets {
-		secret := secret
 		for _, hook := range preDeleteHooks {
 			if err := hook(ctx, k8sClient, &secret); err != nil {
 				return fmt.Errorf("failed to execute pre delete hook: %w", err)
@@ -46,7 +45,6 @@ func ReduceSecrets(ctx context.Context, k8sClient client.Client, secrets []corev
 func ReduceServiceAccounts(ctx context.Context, k8sClient client.Client, serviceAccounts []corev1.ServiceAccount) error {
 	filteredServiceAccounts := filterServiceAccounts(serviceAccounts)
 	for _, serviceAccount := range filteredServiceAccounts {
-		serviceAccount := serviceAccount
 		if err := k8sClient.Delete(ctx, &serviceAccount); client.IgnoreNotFound(err) != nil {
 			return err
 		}
@@ -60,7 +58,6 @@ func ReduceServiceAccounts(ctx context.Context, k8sClient client.Client, service
 func ReduceClusterRoles(ctx context.Context, k8sClient client.Client, clusterRoles []rbacv1.ClusterRole) error {
 	filteredClusterRoles := filterClusterRoles(clusterRoles)
 	for _, clusterRole := range filteredClusterRoles {
-		clusterRole := clusterRole
 		if err := k8sClient.Delete(ctx, &clusterRole); client.IgnoreNotFound(err) != nil {
 			return err
 		}
@@ -74,7 +71,6 @@ func ReduceClusterRoles(ctx context.Context, k8sClient client.Client, clusterRol
 func ReduceClusterRoleBindings(ctx context.Context, k8sClient client.Client, clusterRoleBindings []rbacv1.ClusterRoleBinding) error {
 	filteredCLusterRoleBindings := filterClusterRoleBindings(clusterRoleBindings)
 	for _, clusterRoleBinding := range filteredCLusterRoleBindings {
-		clusterRoleBinding := clusterRoleBinding
 		if err := k8sClient.Delete(ctx, &clusterRoleBinding); client.IgnoreNotFound(err) != nil {
 			return err
 		}
@@ -89,7 +85,6 @@ func ReduceClusterRoleBindings(ctx context.Context, k8sClient client.Client, clu
 func ReduceDeployments(ctx context.Context, k8sClient client.Client, deployments []appsv1.Deployment, preDeleteHooks ...PreDeleteHook) error {
 	filteredDeployments := filterDeployments(deployments)
 	for _, deployment := range filteredDeployments {
-		deployment := deployment
 		for _, hook := range preDeleteHooks {
 			if err := hook(ctx, k8sClient, &deployment); err != nil {
 				return fmt.Errorf("failed to execute pre delete hook: %w", err)
@@ -123,7 +118,6 @@ func ReduceServices(ctx context.Context, k8sClient client.Client, services []cor
 	}
 	filteredServices := filterServices(services, mappedEndpointSlices)
 	for _, service := range filteredServices {
-		service := service
 		for _, hook := range preDeleteHooks {
 			if err := hook(ctx, k8sClient, &service); err != nil {
 				return fmt.Errorf("failed to execute pre delete hook: %w", err)
@@ -142,7 +136,6 @@ func ReduceServices(ctx context.Context, k8sClient client.Client, services []cor
 func ReduceNetworkPolicies(ctx context.Context, k8sClient client.Client, networkPolicies []networkingv1.NetworkPolicy) error {
 	filteredNetworkPolicies := filterNetworkPolicies(networkPolicies)
 	for _, networkPolicy := range filteredNetworkPolicies {
-		networkPolicy := networkPolicy
 		if err := k8sClient.Delete(ctx, &networkPolicy); client.IgnoreNotFound(err) != nil {
 			return err
 		}
@@ -158,7 +151,6 @@ type HPAFilterFunc func([]autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2
 // ReduceHPAs detects the best HorizontalPodAutoscaler in the set and deletes all the others.
 func ReduceHPAs(ctx context.Context, k8sClient client.Client, hpas []autoscalingv2.HorizontalPodAutoscaler, filter HPAFilterFunc) error {
 	for _, hpa := range filter(hpas) {
-		hpa := hpa
 		if err := k8sClient.Delete(ctx, &hpa); client.IgnoreNotFound(err) != nil {
 			return err
 		}
@@ -174,7 +166,6 @@ type PDBFilterFunc func([]policyv1.PodDisruptionBudget) []policyv1.PodDisruption
 // ReducePodDisruptionBudgets detects the best PodDisruptionBudget in the set and deletes all the others.
 func ReducePodDisruptionBudgets(ctx context.Context, k8sClient client.Client, pdbs []policyv1.PodDisruptionBudget, filter PDBFilterFunc) error {
 	for _, pdb := range filter(pdbs) {
-		pdb := pdb
 		if err := k8sClient.Delete(ctx, &pdb); client.IgnoreNotFound(err) != nil {
 			return err
 		}
@@ -188,7 +179,6 @@ func ReducePodDisruptionBudgets(ctx context.Context, k8sClient client.Client, pd
 func ReduceValidatingWebhookConfigurations(ctx context.Context, k8sClient client.Client, webhookConfigurations []admregv1.ValidatingWebhookConfiguration) error {
 	filteredWebhookConfigurations := filterValidatingWebhookConfigurations(webhookConfigurations)
 	for _, webhookConfiguration := range filteredWebhookConfigurations {
-		webhookConfiguration := webhookConfiguration
 		if err := k8sClient.Delete(ctx, &webhookConfiguration); client.IgnoreNotFound(err) != nil {
 			return err
 		}
@@ -202,7 +192,6 @@ func ReduceValidatingWebhookConfigurations(ctx context.Context, k8sClient client
 func ReduceDataPlanes(ctx context.Context, k8sClient client.Client, dataplanes []operatorv1beta1.DataPlane) error {
 	filteredDataPlanes := filterDataPlanes(dataplanes)
 	for _, dataplane := range filteredDataPlanes {
-		dataplane := dataplane
 		if err := k8sClient.Delete(ctx, &dataplane); client.IgnoreNotFound(err) != nil {
 			return err
 		}

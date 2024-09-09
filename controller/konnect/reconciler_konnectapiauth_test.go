@@ -162,7 +162,7 @@ func TestGetTokenFromKonnectAPIAuthConfiguration(t *testing.T) {
 }
 
 func TestGetKonnectServerURL(t *testing.T) {
-	var testCases = []struct {
+	testCases := []struct {
 		name              string
 		serverURL         string
 		expectedServerURL string
@@ -187,7 +187,6 @@ func TestGetKonnectServerURL(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			serverURL, err := getKonnectServerURL(tc.serverURL)
 

@@ -410,7 +410,6 @@ func (r *BlueGreenReconciler) prunePreviewSubresources(
 	}
 
 	for _, s := range services {
-		s := s
 
 		secrets, err := k8sutils.ListSecretsForOwner(
 			ctx,
@@ -454,7 +453,6 @@ func removeObjectSliceWithDataPlaneOwnedFinalizer[
 	ctx context.Context, cl client.Client, resources []T,
 ) error {
 	for _, s := range resources {
-		s := s
 		service := PT(&s)
 
 		old := service.DeepCopy()
@@ -579,7 +577,6 @@ func (r *BlueGreenReconciler) reduceLiveDeployments(
 	})
 	// Delete all but the last deployment.
 	for _, deployment := range deployments[:len(deployments)-1] {
-		deployment := deployment
 		log.Debug(logger, "reducing live deployment", dataPlane,
 			"deployment", fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name))
 

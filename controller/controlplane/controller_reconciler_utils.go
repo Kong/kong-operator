@@ -712,7 +712,6 @@ func (r *Reconciler) ensureAdmissionWebhookService(
 
 	if !isAdmissionWebhookEnabled(ctx, cl, logger, cp) {
 		for _, svc := range services {
-			svc := svc
 			if err := cl.Delete(ctx, &svc); err != nil && !k8serrors.IsNotFound(err) {
 				return op.Noop, nil, fmt.Errorf("failed deleting ControlPlane admission webhook Service %s: %w", svc.Name, err)
 			}

@@ -471,7 +471,6 @@ func TestDeploymentOptionsV1AlphaDeepEqual(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ret := ControlPlaneDeploymentOptionsDeepEqual(tc.o1, tc.o2, tc.envsToIgnore...)
 			if tc.expect {
