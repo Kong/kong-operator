@@ -58,7 +58,7 @@ func NewKonnectAPIAuthConfigurationReconciler(
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *KonnectAPIAuthConfigurationReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *KonnectAPIAuthConfigurationReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	secretLabelPredicate, err := predicate.LabelSelectorPredicate(
 		metav1.LabelSelector{
 			MatchLabels: map[string]string{

@@ -204,7 +204,9 @@ func Run(
 		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
-	if err := setupIndexes(context.Background(), mgr, cfg); err != nil {
+	ctx := context.Background()
+
+	if err := setupIndexes(ctx, mgr, cfg); err != nil {
 		return err
 	}
 
@@ -218,7 +220,7 @@ func Run(
 			logger: ctrl.Log.WithName("webhook_manager"),
 			cfg:    &cfg,
 		}
-		if err := webhookMgr.PrepareWebhookServerWithControllers(context.Background(), setupControllers, admissionRequestHandler); err != nil {
+		if err := webhookMgr.PrepareWebhookServerWithControllers(ctx, setupControllers, admissionRequestHandler); err != nil {
 			return fmt.Errorf("unable to create webhook server: %w", err)
 		}
 
@@ -239,7 +241,7 @@ func Run(
 			return err
 		}
 		for _, c := range controllers {
-			if err := c.MaybeSetupWithManager(mgr); err != nil {
+			if err := c.MaybeSetupWithManager(ctx, mgr); err != nil {
 				return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
 			}
 		}
@@ -261,7 +263,7 @@ func Run(
 	// Enable anonnymous reporting when configured but not for development builds
 	// to reduce the noise.
 	if cfg.AnonymousReports && !cfg.DevelopmentMode {
-		stopAnonymousReports, err := setupAnonymousReports(context.Background(), restCfg, setupLog, metadata)
+		stopAnonymousReports, err := setupAnonymousReports(ctx, restCfg, setupLog, metadata)
 		if err != nil {
 			setupLog.Error(err, "failed setting up anonymous reports")
 		} else {

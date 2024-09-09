@@ -90,7 +90,7 @@ const (
 )
 
 // SetupWithManager sets up the controller with the given manager.
-func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(mgr ctrl.Manager) error {
+func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	var (
 		e   T
 		ent = TEnt(&e)
@@ -99,11 +99,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(mgr ctrl.Manager) er
 			WithOptions(controller.Options{
 				MaxConcurrentReconciles: MaxConcurrentReconciles,
 			})
+		entityTypeName = constraints.EntityTypeName[T]()
+		logger         = log.GetLogger(ctx, entityTypeName, r.DevelopmentMode)
 	)
 
 	for _, ind := range ReconciliationIndexOptionsForEntity(ent) {
-		if err := mgr.GetCache().IndexField(context.Background(), ind.IndexObject, ind.IndexField, ind.ExtractValue); err != nil {
-			fmt.Println("Create index:", err)
+		logger.Info("creating index", "entityTypeName", entityTypeName, "indexObject", ind.IndexObject, "indexField", ind.IndexField)
+		if err := mgr.GetCache().IndexField(ctx, ind.IndexObject, ind.IndexField, ind.ExtractValue); err != nil {
 			return err
 		}
 	}

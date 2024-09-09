@@ -160,7 +160,7 @@ func (m *webhookManager) Start(ctx context.Context) error {
 	}
 
 	for _, c := range controllers {
-		if err := c.MaybeSetupWithManager(m.mgr); err != nil {
+		if err := c.MaybeSetupWithManager(ctx, m.mgr); err != nil {
 			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
 		}
 	}

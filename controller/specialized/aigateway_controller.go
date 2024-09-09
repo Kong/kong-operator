@@ -35,7 +35,7 @@ type AIGatewayReconciler struct {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *AIGatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *AIGatewayReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		// watch AIGateway objects, filtering out any Gateways which are not
 		// configured with a supported GatewayClass controller name.

@@ -46,7 +46,7 @@ type Reconciler struct {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	r.eventRecorder = mgr.GetEventRecorderFor("dataplane")
 
 	return DataPlaneWatchBuilder(mgr).

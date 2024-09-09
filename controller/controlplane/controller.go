@@ -47,7 +47,7 @@ type Reconciler struct {
 const requeueWithoutBackoff = time.Millisecond * 200
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	// for owned objects we need to check if updates to the objects resulted in the
 	// removal of an OwnerReference to the parent object, and if so we need to
 	// enqueue the parent object so that reconciliation can create a replacement.
