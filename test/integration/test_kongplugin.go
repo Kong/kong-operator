@@ -37,7 +37,7 @@ func TestKongPlugins(t *testing.T) {
 		},
 		PluginName: "rate-limiting",
 		Config: apiextensionsv1.JSON{
-			Raw: []byte(`{"minute": "5", "policy": "local"}`),
+			Raw: []byte(`{"minute": 5, "policy": "local"}`),
 		},
 	}
 	err := GetClients().MgrClient.Create(GetCtx(), rateLimitingkongPlugin)
@@ -53,7 +53,7 @@ func TestKongPlugins(t *testing.T) {
 		},
 		PluginName: "proxy-cache",
 		Config: apiextensionsv1.JSON{
-			Raw: []byte(`{"response_code": ["200"], "request_method": ["GET", "HEAD"], "content_type": ["text/plain; charset=utf-8"], "cache_ttl": "300", "strategy": "memory"}`),
+			Raw: []byte(`{"response_code": [200], "request_method": ["GET", "HEAD"], "content_type": ["text/plain; charset=utf-8"], "cache_ttl": 300, "strategy": "memory"}`),
 		},
 	}
 	err = GetClients().MgrClient.Create(GetCtx(), proxyCachekongPlugin)
