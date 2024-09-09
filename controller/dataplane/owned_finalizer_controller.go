@@ -86,7 +86,7 @@ func NewDataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT D
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *DataPlaneOwnedResourceFinalizerReconciler[T, PT]) SetupWithManager(mgr ctrl.Manager) error {
+func (r *DataPlaneOwnedResourceFinalizerReconciler[T, PT]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	objectIsBeingDeleted := func(obj client.Object) bool {
 		return obj.GetDeletionTimestamp() != nil
 	}

@@ -90,7 +90,7 @@ func SetupControllersShim(mgr manager.Manager, c *Config) ([]ControllerDef, erro
 
 // Controller is a Kubernetes controller that can be plugged into Manager.
 type Controller interface {
-	SetupWithManager(ctrl.Manager) error
+	SetupWithManager(context.Context, ctrl.Manager) error
 }
 
 // AutoHandler decides whether the specific controller shall be enabled (true) or disabled (false).
@@ -109,12 +109,12 @@ func (c *ControllerDef) Name() string {
 
 // MaybeSetupWithManager runs SetupWithManager on the controller if it is enabled
 // and its AutoHandler (if any) indicates that it can load.
-func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
+func (c *ControllerDef) MaybeSetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	if !c.Enabled {
 		return nil
 	}
 
-	return c.Controller.SetupWithManager(mgr)
+	return c.Controller.SetupWithManager(ctx, mgr)
 }
 
 func setupIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {

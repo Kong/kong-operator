@@ -1,6 +1,7 @@
 package konnect
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,12 +46,11 @@ func testNewKonnectEntityReconciler[
 	t.Run(ent.GetTypeName(), func(t *testing.T) {
 		cl := fakectrlruntimeclient.NewFakeClient()
 		mgr, err := ctrl.NewManager(&rest.Config{}, ctrl.Options{
-
 			Scheme: scheme.Get(),
 		})
 		require.NoError(t, err)
 
 		reconciler := NewKonnectEntityReconciler[T, TEnt](sdkFactory, false, cl)
-		require.NoError(t, reconciler.SetupWithManager(mgr))
+		require.NoError(t, reconciler.SetupWithManager(context.Background(), mgr))
 	})
 }
