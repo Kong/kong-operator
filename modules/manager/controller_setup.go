@@ -70,6 +70,8 @@ const (
 	KongConsumerControllerName = "KongConsumer"
 	// KongConsumerGroupControllerName is the name of the KongConsumerGroup controller.
 	KongConsumerGroupControllerName = "KongConsumerGroup"
+	// KongPluginBindingControllerName is the name of the KongPluginBinding controller.
+	KongPluginBindingControllerName = "KongPluginBinding"
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
@@ -307,68 +309,78 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
 		sdkFactory := konnectops.NewSDKFactory()
+		konnectControllers := map[string]ControllerDef{
+			KonnectAPIAuthConfigurationControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectAPIAuthConfigurationReconciler(
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+				),
+			},
+			KonnectGatewayControlPlaneControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler(
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.KonnectGatewayControlPlane](c.KonnectSyncPeriod),
+				),
+			},
+			KongServiceControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler(
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongService](c.KonnectSyncPeriod),
+				),
+			},
+			KongRouteControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler(
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongRoute](c.KonnectSyncPeriod),
+				),
+			},
+			KongConsumerControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler(
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1.KongConsumer](c.KonnectSyncPeriod),
+				),
+			},
+			KongConsumerGroupControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler(
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1beta1.KongConsumerGroup](c.KonnectSyncPeriod),
+				),
+			},
+			KongPluginBindingControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongPluginBinding](
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](c.KonnectSyncPeriod),
+				),
+			},
+		}
 
-		controllers[KonnectAPIAuthConfigurationControllerName] = ControllerDef{
-			Enabled: c.KonnectControllersEnabled,
-			Controller: konnect.NewKonnectAPIAuthConfigurationReconciler(
-				sdkFactory,
-				c.DevelopmentMode,
-				mgr.GetClient(),
-			),
-		}
-		controllers[KonnectGatewayControlPlaneControllerName] = ControllerDef{
-			Enabled: c.KonnectControllersEnabled,
-			Controller: konnect.NewKonnectEntityReconciler(
-				sdkFactory,
-				c.DevelopmentMode,
-				mgr.GetClient(),
-				konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.KonnectGatewayControlPlane](c.KonnectSyncPeriod),
-			),
-		}
-		controllers[KongServiceControllerName] = ControllerDef{
-			Enabled: c.KonnectControllersEnabled,
-			Controller: konnect.NewKonnectEntityReconciler(
-				sdkFactory,
-				c.DevelopmentMode,
-				mgr.GetClient(),
-				konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongService](c.KonnectSyncPeriod),
-			),
-		}
-		controllers[KongRouteControllerName] = ControllerDef{
-			Enabled: c.KonnectControllersEnabled,
-			Controller: konnect.NewKonnectEntityReconciler(
-				sdkFactory,
-				c.DevelopmentMode,
-				mgr.GetClient(),
-				konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongRoute](c.KonnectSyncPeriod),
-			),
-		}
-		controllers[KongConsumerControllerName] = ControllerDef{
-			Enabled: c.KonnectControllersEnabled,
-			Controller: konnect.NewKonnectEntityReconciler(
-				sdkFactory,
-				c.DevelopmentMode,
-				mgr.GetClient(),
-				konnect.WithKonnectEntitySyncPeriod[configurationv1.KongConsumer](c.KonnectSyncPeriod),
-			),
-		}
-		controllers[KongConsumerGroupControllerName] = ControllerDef{
-			Enabled: c.KonnectControllersEnabled,
-			Controller: konnect.NewKonnectEntityReconciler(
-				sdkFactory,
-				c.DevelopmentMode,
-				mgr.GetClient(),
-				konnect.WithKonnectEntitySyncPeriod[configurationv1beta1.KongConsumerGroup](c.KonnectSyncPeriod),
-			),
-		}
-		controllers[KongConsumerControllerName] = ControllerDef{
-			Enabled: c.KonnectControllersEnabled,
-			Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongPluginBinding](
-				sdkFactory,
-				c.DevelopmentMode,
-				mgr.GetClient(),
-				konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](c.KonnectSyncPeriod),
-			),
+		// Merge Konnect controllers into the controllers map. This is done this way instead of directly assigning
+		// to the controllers map to avoid duplicate keys.
+		for name, controller := range konnectControllers {
+			if _, duplicate := controllers[name]; duplicate {
+				return nil, fmt.Errorf("duplicate controller key: %s", name)
+			}
+			controllers[name] = controller
 		}
 	}
 
