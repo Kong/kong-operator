@@ -56,7 +56,7 @@ spec:
     konnectNamespacedRef:
       name: demo-cp
   pluginRef:
-    name: proxy-cache-all-endpoints
+    name: rate-limit-5-min
   targets:
     serviceRef:
       name: service-1

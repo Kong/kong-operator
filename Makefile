@@ -421,11 +421,6 @@ GATEWAY_API_CRDS_STANDARD_URL = github.com/$(GATEWAY_API_REPO)/config/crd?ref=$(
 GATEWAY_API_CRDS_EXPERIMENTAL_URL = github.com/$(GATEWAY_API_REPO)/config/crd/experimental?ref=$(GATEWAY_API_VERSION)
 GATEWAY_API_RAW_REPO_URL = $(GATEWAY_API_RAW_REPO)/$(GATEWAY_API_VERSION)
 
-KIC_REPO ?= kong/kubernetes-ingress-controller
-KIC_PACKAGE ?= github.com/$(KIC_REPO)/v3
-KIC_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(KIC_PACKAGE))
-KIC_CRDS_URL ?= github.com/$(KIC_REPO)/config/crd?ref=$(KIC_VERSION)
-
 .PHONY: generate.gateway-api-urls
 generate.gateway-api-urls:
 	CRDS_STANDARD_URL="$(GATEWAY_API_CRDS_STANDARD_URL)" \
@@ -468,7 +463,7 @@ _ensure-kong-system-namespace:
 # on the tag that is used in code (defined in go.mod) address this by solving
 # https://github.com/Kong/gateway-operator/pull/480.
 .PHONY: run
-run: webhook-certs-dir manifests generate install-gateway-api-crds install _ensure-kong-system-namespace
+run: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace
 	@$(MAKE) _run
 
 # Run the operator without checking any preconditions, installing CRDs etc.
@@ -501,11 +496,12 @@ run.skaffold:
 		$(MAKE) _skaffold
 
 .PHONY: debug
-debug: webhook-certs-dir manifests generate install _ensure-kong-system-namespace
-	GATEWAY_OPERATOR_DEVELOPMENT_MODE=true dlv debug ./main.go -- \
+debug: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace
+	GATEWAY_OPERATOR_DEVELOPMENT_MODE=true dlv debug ./cmd/main.go -- \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		--enable-controller-aigateway \
+		--enable-controller-konnect \
 		-zap-time-encoding iso8601
 
 .PHONY: debug.skaffold
@@ -522,7 +518,7 @@ debug.skaffold.continuous: _ensure-kong-system-namespace
 
 # Install CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install
-install: manifests kustomize install-gateway-api-crds install.kic-crds
+install: manifests kustomize install-gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
 
 KUBERNETES_CONFIGURATION_CRDS_PACKAGE ?= github.com/kong/kubernetes-configuration
@@ -536,20 +532,14 @@ install.kubernetes-configuration-crds: kustomize
 
 # Install standard and experimental CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.all
-install.all: manifests kustomize install-gateway-api-crds install.kic-crds install.kubernetes-configuration-crds
+install.all: manifests kustomize install-gateway-api-crds install.kubernetes-configuration-crds
 	kubectl apply --server-side -f $(PROJECT_DIR)/config/crd/bases/
 	kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
-
-# Install KIC CRDs into the K8s cluster specified in ~/.kube/config.
-.PHONY: install.kic-crds
-install.kic-crds: kustomize
-	$(KUSTOMIZE) build $(KIC_CRDS_URL) | kubectl apply -f -
 
 # Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall
 uninstall: manifests kustomize uninstall-gateway-api-crds
-	$(KUSTOMIZE) build $(KIC_CRDS_URL) | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: uninstall.kubernetes-configuration-crds
@@ -560,7 +550,6 @@ uninstall.kubernetes-configuration-crds: kustomize
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall.all
 uninstall.all: manifests kustomize uninstall-gateway-api-crds uninstall.kubernetes-configuration-crds
-	$(KUSTOMIZE) build $(KIC_CRDS_URL) | kubectl apply -f -
 	kubectl delete --ignore-not-found=$(ignore-not-found) -f $(PROJECT_DIR)/config/crd/bases/
 
 # Deploy controller to the K8s cluster specified in ~/.kube/config.
