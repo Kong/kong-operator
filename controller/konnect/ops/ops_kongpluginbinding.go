@@ -11,7 +11,6 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -20,7 +19,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 // -----------------------------------------------------------------------------
@@ -95,32 +94,12 @@ func updatePlugin(
 		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", pb, client.ObjectKeyFromObject(pb))
 	}
 
-	// TODO(pmalek) handle other types of CP ref
-	// TODO(pmalek) handle cross namespace refs
-	nnCP := types.NamespacedName{
-		Namespace: pb.Namespace,
-		Name:      pb.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
-	}
-	var cp konnectv1alpha1.KonnectGatewayControlPlane
-	if err := cl.Get(ctx, nnCP, &cp); err != nil {
-		return fmt.Errorf("failed to get KonnectGatewayControlPlane %s: for %T %s: %w",
-			nnCP, pb, client.ObjectKeyFromObject(pb), err,
-		)
-	}
-
-	if cp.Status.ID == "" {
-		return fmt.Errorf(
-			"can't update %T when referenced KonnectGatewayControlPlane %s does not have the Konnect ID",
-			pb, nnCP,
-		)
-	}
-
 	pluginInput, err := getPluginInput(ctx, cl, pb)
 	if err != nil {
 		return err
 	}
 
-	resp, err := sdk.UpsertPlugin(ctx,
+	_, err = sdk.UpsertPlugin(ctx,
 		sdkkonnectops.UpsertPluginRequest{
 			ControlPlaneID: controlPlaneID,
 			PluginID:       pb.GetKonnectID(),
@@ -145,8 +124,6 @@ func updatePlugin(
 		return errWrapped
 	}
 
-	pb.Status.Konnect.SetKonnectID(*resp.Plugin.ID)
-	pb.Status.Konnect.SetControlPlaneID(cp.Status.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
 			conditions.KonnectEntityProgrammedConditionType,
@@ -273,6 +250,7 @@ func kongPluginBindingToSDKPluginInput(
 		Name:    lo.ToPtr(plugin.PluginName),
 		Config:  pluginConfig,
 		Enabled: lo.ToPtr(!plugin.Disabled),
+		Tags:    append(metadata.ExtractTags(plugin), GenerateKubernetesMetadataTags(plugin)...),
 	}
 
 	// TODO(mlavacca): check all the entities reference the same KonnectGatewayControlPlane

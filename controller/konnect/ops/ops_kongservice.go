@@ -83,7 +83,7 @@ func updateService(
 	}
 
 	id := svc.GetKonnectStatus().GetKonnectID()
-	resp, err := sdk.UpsertService(ctx,
+	_, err := sdk.UpsertService(ctx,
 		sdkkonnectops.UpsertServiceRequest{
 			ControlPlaneID: svc.GetControlPlaneID(),
 			ServiceID:      id,
@@ -130,8 +130,6 @@ func updateService(
 		return errWrapped
 	}
 
-	svc.Status.Konnect.SetKonnectID(*resp.Service.ID)
-	svc.Status.Konnect.SetControlPlaneID(svc.GetControlPlaneID())
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
 			conditions.KonnectEntityProgrammedConditionType,
@@ -197,7 +195,7 @@ func kongServiceToSDKServiceInput(
 		Protocol:       svc.Spec.KongServiceAPISpec.Protocol,
 		ReadTimeout:    svc.Spec.KongServiceAPISpec.ReadTimeout,
 		Retries:        svc.Spec.KongServiceAPISpec.Retries,
-		Tags:           svc.Spec.KongServiceAPISpec.Tags,
+		Tags:           append(svc.Spec.KongServiceAPISpec.Tags, GenerateKubernetesMetadataTags(svc)...),
 		TLSVerify:      svc.Spec.KongServiceAPISpec.TLSVerify,
 		TLSVerifyDepth: svc.Spec.KongServiceAPISpec.TLSVerifyDepth,
 		WriteTimeout:   svc.Spec.KongServiceAPISpec.WriteTimeout,

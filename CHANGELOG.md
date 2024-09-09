@@ -57,6 +57,8 @@
 - The `DataPlaneKonnectExtension` CRD has been introduced. Such a CRD can be attached
   to a `DataPlane` via the extensions field to have a konnect-flavored `DataPlane`.
   [#453](https://github.com/Kong/gateway-operator/pull/453)
+- Entities created in Konnect are now labeled  with origin Kubernetes object's metadata.
+  [#565](https://github.com/Kong/gateway-operator/pull/565)
 
 ### Fixed
 

@@ -21,7 +21,9 @@ func createControlPlane(
 	sdk ControlPlaneSDK,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) error {
-	resp, err := sdk.CreateControlPlane(ctx, cp.Spec.CreateControlPlaneRequest)
+	req := cp.Spec.CreateControlPlaneRequest
+	req.Labels = WithKubernetesMetadataLabels(cp, req.Labels)
+	resp, err := sdk.CreateControlPlane(ctx, req)
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
@@ -103,7 +105,7 @@ func updateControlPlane(
 		Description: cp.Spec.Description,
 		AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
 		ProxyUrls:   cp.Spec.ProxyUrls,
-		Labels:      cp.Spec.Labels,
+		Labels:      WithKubernetesMetadataLabels(cp, cp.Spec.Labels),
 	}
 
 	resp, err := sdk.UpdateControlPlane(ctx, id, req)

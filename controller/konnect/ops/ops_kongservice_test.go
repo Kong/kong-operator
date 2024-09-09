@@ -7,10 +7,13 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -493,4 +496,63 @@ func TestUpdateKongService(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	}
+}
+
+func TestCreateAndUpdateKongService_KubernetesMetadataConsistency(t *testing.T) {
+	var (
+		ctx = context.Background()
+		svc = &configurationv1alpha1.KongService{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "KongService",
+				APIVersion: "configuration.konghq.com/v1alpha1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "svc-1",
+				Namespace:       "default",
+				UID:             k8stypes.UID(uuid.NewString()),
+				ResourceVersion: "1",
+			},
+			Status: configurationv1alpha1.KongServiceStatus{
+				Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+					ControlPlaneID: uuid.NewString(),
+				},
+			},
+		}
+		sdk = &MockServicesSDK{}
+	)
+
+	t.Log("Triggering CreateService and capturing generated tags")
+	sdk.EXPECT().
+		CreateService(ctx, svc.GetControlPlaneID(), mock.Anything).
+		Return(&sdkkonnectops.CreateServiceResponse{
+			Service: &sdkkonnectcomp.Service{
+				ID: lo.ToPtr("12345"),
+			},
+		}, nil)
+	err := createService(ctx, sdk, svc)
+	require.NoError(t, err)
+	require.Len(t, sdk.Calls, 1)
+	call := sdk.Calls[0]
+	require.Equal(t, "CreateService", call.Method)
+	require.IsType(t, sdkkonnectcomp.ServiceInput{}, call.Arguments[2])
+	capturedCreateServiceTags := call.Arguments[2].(sdkkonnectcomp.ServiceInput).Tags
+
+	t.Log("Triggering UpdateService and capturing generated tags")
+	sdk.EXPECT().
+		UpsertService(ctx, mock.Anything).
+		Return(&sdkkonnectops.UpsertServiceResponse{
+			Service: &sdkkonnectcomp.Service{
+				ID: lo.ToPtr("12345"),
+			},
+		}, nil)
+	err = updateService(ctx, sdk, svc)
+	require.NoError(t, err)
+	require.Len(t, sdk.Calls, 2)
+	call = sdk.Calls[1]
+	require.Equal(t, "UpsertService", call.Method)
+	require.IsType(t, sdkkonnectops.UpsertServiceRequest{}, call.Arguments[1])
+	capturedUpsertServiceTags := call.Arguments[1].(sdkkonnectops.UpsertServiceRequest).Service.Tags
+
+	require.NotEmpty(t, capturedCreateServiceTags, "tags should be set on create")
+	require.Equal(t, capturedCreateServiceTags, capturedUpsertServiceTags, "tags should be consistent between create and update")
 }
