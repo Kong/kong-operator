@@ -23,6 +23,7 @@ import (
 	"github.com/kong/gateway-operator/controller/kongplugininstallation/image"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
 // Reconciler reconciles a KongPluginInstallation object.
@@ -74,6 +75,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	var kpi v1alpha1.KongPluginInstallation
 	if err := r.Client.Get(ctx, req.NamespacedName, &kpi); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	if err := setStatusConditionForKongPluginInstallation(
+		ctx, r.Client, &kpi, metav1.ConditionFalse, v1alpha1.KongPluginInstallationReasonPending, "fetching plugin is in progress",
+	); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	log.Trace(logger, "managing KongPluginInstallation resource", kpi)
@@ -127,8 +133,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if cmName := kpi.Status.UnderlyingConfigMapName; cmName != "" {
 			cm.Name = cmName
 		} else {
-			cm.GenerateName = kpi.Name
+			cm.GenerateName = kpi.Name + "-"
 		}
+		resources.LabelObjectAsKongPluginInstallationManaged(&cm)
+		resources.AnnotateConfigMapWithKongPluginInstallation(&cm, kpi)
 		cm.Namespace = kpi.Namespace
 		cm.Data = plugin
 		if err := ctrl.SetControllerReference(&kpi, &cm, r.Scheme); err != nil {
