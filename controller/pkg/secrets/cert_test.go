@@ -121,7 +121,6 @@ func Test_ensureContainerImageUpdated(t *testing.T) {
 			updated:       true,
 		},
 	} {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			container := generators.NewContainer("test", tt.originalImage, 80)
 			updated, err := ensureContainerImageUpdated(&container, tt.newImage)
@@ -338,8 +337,6 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 
@@ -392,7 +389,6 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 			_, err = x509.ParseECPrivateKey(tlsKeyPemBlock.Bytes)
 			require.NoError(t, err)
 		})
-
 	}
 }
 

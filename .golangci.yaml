@@ -4,16 +4,16 @@ linters:
   enable:
   - asciicheck
   - bodyclose
+  - copyloopvar
   - dogsled
   - durationcheck
   - errcheck
   - errorlint
   - exhaustive
-  - exportloopref
   - forbidigo
   - gci
-  - gofmt
   - gocritic
+  - gofmt
   - goimports
   - gomodguard
   - gosec
@@ -22,6 +22,7 @@ linters:
   - importas
   - ineffassign
   - misspell
+  - nakedret
   - nilerr
   - nolintlint
   - predeclared
@@ -32,7 +33,6 @@ linters:
   - unparam
   - unused
   - wastedassign
-  - nakedret
 linters-settings:
   gci:
     sections:

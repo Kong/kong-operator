@@ -96,7 +96,6 @@ func TestClusterroleHelpers(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.controlplane, func(t *testing.T) {
 			clusterRole, err := resources.GenerateNewClusterRoleForControlPlane(tc.controlplane, tc.image, tc.devMode)
 			if tc.expectedError != nil {

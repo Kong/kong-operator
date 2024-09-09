@@ -872,7 +872,6 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			d, err := makeControlPlaneDeployment()
 			require.NoError(t, err)

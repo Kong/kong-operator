@@ -208,7 +208,6 @@ func TestEnsureObjectMetaIsUpdated(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			toUpdate, ResultingMeta := EnsureObjectMetaIsUpdated(tc.existingObjMeta, tc.generatedObjMeta, tc.options...)
 			assert.Equal(t, tc.toUpdate, toUpdate)

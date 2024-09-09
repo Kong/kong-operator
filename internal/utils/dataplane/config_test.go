@@ -150,7 +150,6 @@ func TestFillDataPlaneProxyContainerEnvs(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			FillDataPlaneProxyContainerEnvs(tc.existing, tc.podTemplateSpec)
 			container := k8sutils.GetPodContainerByName(&tc.podTemplateSpec.Spec, consts.DataPlaneProxyContainerName)

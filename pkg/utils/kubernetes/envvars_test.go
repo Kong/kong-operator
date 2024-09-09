@@ -13,7 +13,6 @@ import (
 )
 
 func TestUpdateEnv(t *testing.T) {
-
 	exampleVarSource := &corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{
 			FieldPath: "metadata.name",
@@ -66,7 +65,6 @@ func TestUpdateEnv(t *testing.T) {
 }
 
 func TestUpdateEnvSource(t *testing.T) {
-
 	exampleVarSource := &corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{
 			FieldPath: "metadata.name",
@@ -291,11 +289,9 @@ func TestGetEnvValueFromContainer(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			c := b.Build()
-			value, found, err :=
-				GetEnvValueFromContainer(context.Background(), tc.container, "default", tc.key, c)
+			value, found, err := GetEnvValueFromContainer(context.Background(), tc.container, "default", tc.key, c)
 			if tc.hasError {
 				require.Error(t, err)
 				return

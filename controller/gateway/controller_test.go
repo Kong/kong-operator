@@ -300,8 +300,6 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			ObjectsToAdd := []controllerruntimeclient.Object{
 				tc.gateway,
@@ -455,7 +453,6 @@ func Test_setControlPlaneOptionsDefaults(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			setControlPlaneOptionsDefaults(&tc.input)
 			require.Equal(t, tc.expected, tc.input)
@@ -624,7 +621,6 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			setDataPlaneOptionsDefaults(&tc.input, consts.DefaultDataPlaneImage)
 			require.Equal(t, tc.expected, tc.input)

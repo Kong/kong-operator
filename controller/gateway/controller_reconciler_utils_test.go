@@ -67,8 +67,6 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
-
 		t.Run(tc.Name, func(t *testing.T) {
 			actual, err := parseKongListenEnv(tc.KongProxyListen)
 			require.NoError(t, err)
@@ -245,7 +243,6 @@ func TestGatewayAddressesFromService(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			addresses, err := gatewayAddressesFromService(tc.svc)
 			assert.Equal(t, tc.wantErr, err != nil)
@@ -487,8 +484,6 @@ func TestSetAcceptedOnGateway(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name, func(subt *testing.T) {
 			gateway := gatewayConditionsAndListenersAwareT{
 				Gateway: &gatewayv1.Gateway{
@@ -577,7 +572,6 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc := tc
 			err := setDataPlaneIngressServicePorts(&operatorv1beta1.DataPlaneOptions{}, tc.listeners)
 			if tc.expectedError == nil {
 				require.NoError(t, err)
@@ -701,7 +695,6 @@ func TestIsSecretCrossReferenceGranted(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.isGranted, isSecretCrossReferenceGranted("goodNamespace", goodSecretName, tc.referenceGrants))
 		})
@@ -848,7 +841,6 @@ func TestGatewayStatusNeedsUpdate(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.needsUpdate, gatewayStatusNeedsUpdate(tc.oldGateway, tc.newGateway))
 		})
@@ -1249,7 +1241,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
+
 		ctx := context.Background()
 		client := fakectrlruntimeclient.
 			NewClientBuilder().

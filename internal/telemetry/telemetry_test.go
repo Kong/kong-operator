@@ -333,7 +333,6 @@ func TestCreateManager(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			scheme := prepareScheme(t)
 			k8sclient := testk8sclient.NewSimpleClientset()
@@ -481,7 +480,6 @@ func TestTelemetryUpdates(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			scheme := prepareScheme(t)
 			// We need the custom list kinds to prevent:

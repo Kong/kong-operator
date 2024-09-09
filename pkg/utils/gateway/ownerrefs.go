@@ -45,7 +45,6 @@ func ListDataPlanesForGateway(
 
 	dataplanes := make([]operatorv1beta1.DataPlane, 0)
 	for _, dataplane := range dataplaneList.Items {
-		dataplane := dataplane
 		if k8sutils.IsOwnedByRefUID(&dataplane, gateway.UID) {
 			dataplanes = append(dataplanes, dataplane)
 		}
@@ -81,7 +80,6 @@ func ListControlPlanesForGateway(
 
 	controlplanes := make([]operatorv1beta1.ControlPlane, 0)
 	for _, controlplane := range controlplaneList.Items {
-		controlplane := controlplane
 		if k8sutils.IsOwnedByRefUID(&controlplane, gateway.UID) {
 			controlplanes = append(controlplanes, controlplane)
 		}
@@ -226,7 +224,6 @@ func ListNetworkPoliciesForGateway(
 
 	networkPolicies := make([]networkingv1.NetworkPolicy, 0)
 	for _, networkPolicy := range networkPolicyList.Items {
-		networkPolicy := networkPolicy
 		if k8sutils.IsOwnedByRefUID(&networkPolicy, gateway.UID) {
 			networkPolicies = append(networkPolicies, networkPolicy)
 		}

@@ -252,7 +252,6 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			cl := fake.NewClientBuilder().
 				WithScheme(scheme.Get()).
@@ -267,6 +266,5 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 				require.Equal(t, tc.expected, routes)
 			}
 		})
-
 	}
 }

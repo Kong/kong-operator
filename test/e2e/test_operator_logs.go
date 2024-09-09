@@ -180,7 +180,6 @@ func TestOperatorLogs(t *testing.T) {
 
 	t.Log("checking that all the subresources have been deleted")
 	for _, gateway := range gateways.Items {
-		gateway := gateway
 		dataplanes := testutils.MustListDataPlanesForGateway(t, ctx, &gateway, *clients)
 		assert.LessOrEqual(t, len(dataplanes), 1)
 		controlplanes := testutils.MustListControlPlanesForGateway(t, ctx, &gateway, *clients)

@@ -66,7 +66,6 @@ func TestFilterSecrets(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			filteredSecrets := filterSecrets(tc.secrets)
 			require.Equal(t, filteredSecrets, tc.filteredSecrets)
@@ -108,7 +107,6 @@ func TestFilterServiceAccounts(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			filteredSecrets := filterServiceAccounts(tc.serviceAccount)
 			require.Equal(t, filteredSecrets, tc.filteredServiceAccount)
@@ -488,7 +486,6 @@ func TestFilterDeployments(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			filteredDeployments := filterDeployments(tc.deployments)
 			require.Equal(t, tc.filteredDeployments, filteredDeployments)
@@ -769,7 +766,6 @@ func TestFilterServices(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			filteredServices := filterServices(tc.services, tc.endpointSlices)
 			require.Equal(t, filteredServices, tc.filteredServices)
@@ -848,7 +844,6 @@ func TestFilterValidatingWebhookConfigurations(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			filteredWebhooks := filterValidatingWebhookConfigurations(tc.webhooks)
 			filteredWebhookNames := lo.Map(filteredWebhooks, func(w admregv1.ValidatingWebhookConfiguration, _ int) string {
@@ -982,7 +977,6 @@ func TestFilterClusterRoles(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			filtered := filterClusterRoles(tc.clusterRoles)
 			filteredNames := lo.Map(filtered, func(w rbacv1.ClusterRole, _ int) string {
@@ -1027,7 +1021,6 @@ func TestFilterHPA(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			filtered := FilterHPAs(tc.hpas)
 			filteredNames := lo.Map(filtered, func(hpa autoscalingv2.HorizontalPodAutoscaler, _ int) string {
@@ -1072,7 +1065,6 @@ func TestFilterPodDisruptionBudgets(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			filtered := FilterPodDisruptionBudgets(tc.pdbs)
 			filteredNames := lo.Map(filtered, func(pdb policyv1.PodDisruptionBudget, _ int) string {

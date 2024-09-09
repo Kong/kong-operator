@@ -506,7 +506,6 @@ func TestDeploymentBuilder(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 
 		fakeClient := fakectrlruntimeclient.
 			NewClientBuilder().
@@ -608,8 +607,6 @@ func TestDataPlaneIngressServiceIsReady(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			res := dataPlaneIngressServiceIsReady(tc.dataPlaneIngressService)
 			assert.Equal(t, tc.expected, res)

@@ -40,7 +40,6 @@ func ListDeploymentsForOwner(
 
 	deployments := make([]appsv1.Deployment, 0)
 	for _, deployment := range deploymentList.Items {
-		deployment := deployment
 		if IsOwnedByRefUID(&deployment, uid) {
 			deployments = append(deployments, deployment)
 		}
@@ -75,7 +74,6 @@ func ListHPAsForOwner(
 
 	hpas := make([]autoscalingv2.HorizontalPodAutoscaler, 0)
 	for _, hpa := range hpaList.Items {
-		hpa := hpa
 		if IsOwnedByRefUID(&hpa, uid) {
 			hpas = append(hpas, hpa)
 		}
@@ -110,7 +108,6 @@ func ListPodDisruptionBudgetsForOwner(
 
 	var pdbs []policyv1.PodDisruptionBudget
 	for _, pdb := range pdbList.Items {
-		pdb := pdb
 		if IsOwnedByRefUID(&pdb, uid) {
 			pdbs = append(pdbs, pdb)
 		}
@@ -145,7 +142,6 @@ func ListServicesForOwner(
 
 	services := make([]corev1.Service, 0)
 	for _, service := range serviceList.Items {
-		service := service
 		if IsOwnedByRefUID(&service, uid) {
 			services = append(services, service)
 		}
@@ -180,7 +176,6 @@ func ListServiceAccountsForOwner(
 
 	serviceAccounts := make([]corev1.ServiceAccount, 0)
 	for _, serviceAccount := range serviceAccountList.Items {
-		serviceAccount := serviceAccount
 		if IsOwnedByRefUID(&serviceAccount, uid) {
 			serviceAccounts = append(serviceAccounts, serviceAccount)
 		}
@@ -250,7 +245,6 @@ func ListConfigMapsForOwner(ctx context.Context,
 
 	configMaps := make([]corev1.ConfigMap, 0)
 	for _, cm := range configMapList.Items {
-		cm := cm
 		if IsOwnedByRefUID(&cm, uid) {
 			configMaps = append(configMaps, cm)
 		}
@@ -280,7 +274,6 @@ func ListSecretsForOwner(ctx context.Context,
 
 	secrets := make([]corev1.Secret, 0)
 	for _, secret := range secretList.Items {
-		secret := secret
 		if IsOwnedByRefUID(&secret, uid) {
 			secrets = append(secrets, secret)
 		}

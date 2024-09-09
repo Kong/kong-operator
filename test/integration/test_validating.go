@@ -178,7 +178,6 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 
 	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			dataplane, err := dataplaneClient.Create(GetCtx(), tc.dataplane, metav1.CreateOptions{})
 			require.NoErrorf(t, err, "should not return error when create dataplane for case %s", tc.name)
@@ -403,7 +402,6 @@ func testDataPlaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 
 	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := dataplaneClient.Create(GetCtx(), tc.dataplane, metav1.CreateOptions{})
 			if tc.errMsg == "" {

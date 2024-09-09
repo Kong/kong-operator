@@ -64,7 +64,6 @@ func TestGetSelectorOverrides(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			newSelector, err := getSelectorOverrides(tc.annotationValue)
 			if tc.needsErr {
@@ -221,7 +220,6 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			svc, err := GenerateNewIngressServiceForDataPlane(tc.dataplane)
 			require.Equal(t, tc.expectedErr, err)

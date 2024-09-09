@@ -388,7 +388,6 @@ func TestHandleDataPlaneValidation(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			review := &admissionv1.AdmissionReview{
 				Request: &admissionv1.AdmissionRequest{

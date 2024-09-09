@@ -354,7 +354,6 @@ func TestValidateDeployOptions(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
 			v := &Validator{
 				c: b.Build(),
@@ -545,7 +544,6 @@ func TestDataPlaneIngressServiceOptions(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
 			b := fakeclient.NewClientBuilder()
 			v := &Validator{
@@ -813,7 +811,6 @@ func TestValidateUpdate(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.msg, func(t *testing.T) {
 			v := &Validator{
 				c: b.Build(),

@@ -79,7 +79,6 @@ func TestDataPlaneValidatingWebhook(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(testNamespace.Name)
 			_, err := dataplaneClient.Create(ctx, tc.dataplane, metav1.CreateOptions{})

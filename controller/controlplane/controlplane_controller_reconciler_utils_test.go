@@ -103,7 +103,6 @@ func TestEnsureClusterRole(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 
 		ObjectsToAdd := []controllerruntimeclient.Object{
 			&tc.controlplane,
@@ -243,7 +242,7 @@ func TestEnsureClusterRoleBinding(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
+
 		objectsToAdd := []controllerruntimeclient.Object{
 			controlPlane,
 		}
