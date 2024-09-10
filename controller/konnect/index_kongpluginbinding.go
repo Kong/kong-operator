@@ -11,13 +11,13 @@ const (
 	IndexFieldKongPluginBindingKongPluginReference = "kongPluginRef"
 	// IndexFieldKongPluginBindingKongClusterPluginReference is the index field for KongClusterPlugin -> KongPluginBinding.
 	IndexFieldKongPluginBindingKongClusterPluginReference = "kongClusterPluginRef"
-	// KongServiceRef is the index field for KongService -> KongPluginBinding.
+	// IndexFieldKongPluginBindingKongServiceReference is the index field for KongService -> KongPluginBinding.
 	IndexFieldKongPluginBindingKongServiceReference = "kongServiceRef"
-	// KongRouteRef is the index field for KongRoute -> KongPluginBinding.
+	// IndexFieldKongPluginBindingKongServiceReference is the index field for KongRoute -> KongPluginBinding.
 	IndexFieldKongPluginBindingKongRouteReference = "kongRouteRef"
-	// KongConsumerRef is the index field for KongConsumer -> KongPluginBinding.
+	// IndexFieldKongPluginBindingKongServiceReference is the index field for KongConsumer -> KongPluginBinding.
 	IndexFieldKongPluginBindingKongConsumerReference = "kongConsumerRef"
-	// KongConsumerGroupRef is the index field for KongConsumerGroup -> KongPluginBinding.
+	// IndexFieldKongPluginBindingKongServiceReference is the index field for KongConsumerGroup -> KongPluginBinding.
 	IndexFieldKongPluginBindingKongConsumerGroupReference = "kongConsumerGroupRef"
 )
 
