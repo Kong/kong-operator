@@ -192,8 +192,8 @@ func BuildMTLSCredentials(ctx context.Context, k8sClient *kubernetes.Clientset, 
 // ExtractModuleVersion extracts version of an imported module in go.mod.
 // If the module is not found, or we failed to parse the module version, it will return an error.
 func ExtractModuleVersion(moduleName string) (string, error) {
-	// TODO: use a path non relevant to the file itself
-	content, err := os.ReadFile("../../go.mod")
+	projectRoot := ProjectRootPath()
+	content, err := os.ReadFile(filepath.Join(projectRoot, "go.mod"))
 	if err != nil {
 		return "", err
 	}
@@ -229,7 +229,7 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 	// First extract version of `kong/kubernetes-configuration` module used
 	kongCRDVersion, err := ExtractModuleVersion(kubernetesConfigurationModuleName)
 	if err != nil {
-		return fmt.Errorf("failed to extract Kong CRD version: %w", err)
+		return fmt.Errorf("failed to extract Kong CRDs (%s) module's version: %w", kubernetesConfigurationModuleName, err)
 	}
 	// Then install CRDs from the module found in `$GOPATH`.
 	kongCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "kong",
