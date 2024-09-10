@@ -26,7 +26,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/samber/lo v1.47.0
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/mod v0.17.0
+	golang.org/x/mod v0.21.0
 	k8s.io/api v0.31.0
 	k8s.io/apimachinery v0.31.0
 	k8s.io/client-go v0.31.0
