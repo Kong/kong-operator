@@ -1,4 +1,3 @@
-// REVIEW: Should we add build tag like `//go:build envtest` here? We did not add it in integration/e2e tests.
 package envtest
 
 import (

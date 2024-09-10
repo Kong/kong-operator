@@ -327,7 +327,6 @@ UNIT_TEST_PATHS := ./controller/... ./internal/... ./pkg/... ./modules/...
 
 .PHONY: _test.unit
 _test.unit: gotestsum
-	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
