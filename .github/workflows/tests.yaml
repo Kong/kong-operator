@@ -173,6 +173,39 @@ jobs:
       with:
         name: tests-report
         path: unit-tests.xml
+  
+  envtest-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout repository
+      uses: actions/checkout@v4
+
+    - name: setup golang
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    - uses: jdx/mise-action@v2
+      with:
+        install: false
+
+    - name: run envtest tests
+      run: make test.envtest
+      env:
+        GOTESTSUM_JUNITFILE: "envtest-tests.xml"
+
+    - name: collect test coverage
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-envtest
+        path: coverage.envtest.out
+
+    - name: collect test report
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: envtest-tests.xml  
 
   conformance-tests:
     runs-on: ubuntu-latest
