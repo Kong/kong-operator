@@ -28,9 +28,9 @@ import (
 
 // KonnectAPIAuthConfigurationReconciler reconciles a KonnectAPIAuthConfiguration object.
 type KonnectAPIAuthConfigurationReconciler struct {
-	SDKFactory      ops.SDKFactory
-	DevelopmentMode bool
-	Client          client.Client
+	sdkFactory      ops.SDKFactory
+	developmentMode bool
+	client          client.Client
 }
 
 const (
@@ -51,9 +51,9 @@ func NewKonnectAPIAuthConfigurationReconciler(
 	client client.Client,
 ) *KonnectAPIAuthConfigurationReconciler {
 	return &KonnectAPIAuthConfigurationReconciler{
-		SDKFactory:      sdkFactory,
-		DevelopmentMode: developmentMode,
-		Client:          client,
+		sdkFactory:      sdkFactory,
+		developmentMode: developmentMode,
+		client:          client,
 	}
 }
 
@@ -89,7 +89,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 	ctx context.Context, req ctrl.Request,
 ) (ctrl.Result, error) {
 	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
-	if err := r.Client.Get(ctx, req.NamespacedName, &apiAuth); err != nil {
+	if err := r.client.Get(ctx, req.NamespacedName, &apiAuth); err != nil {
 		if k8serrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -98,7 +98,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 	var (
 		entityTypeName = "KonnectAPIAuthConfiguration"
-		logger         = log.GetLogger(ctx, entityTypeName, r.DevelopmentMode)
+		logger         = log.GetLogger(ctx, entityTypeName, r.developmentMode)
 	)
 
 	log.Debug(logger, "reconciling", apiAuth)
@@ -119,10 +119,10 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, &apiAuth)
+	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.client, &apiAuth)
 	if err != nil {
 		if res, errStatus := updateStatusWithCondition(
-			ctx, r.Client, &apiAuth,
+			ctx, r.client, &apiAuth,
 			conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionFalse,
 			conditions.KonnectEntityAPIAuthConfigurationReasonInvalid,
@@ -137,7 +137,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	sdk := r.SDKFactory.NewKonnectSDK(
+	sdk := r.sdkFactory.NewKonnectSDK(
 		serverURL,
 		ops.SDKToken(token),
 	)
@@ -165,7 +165,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 			apiAuth.Status.ServerURL = apiAuth.Spec.ServerURL
 
 			res, errUpdate := updateStatusWithCondition(
-				ctx, r.Client, &apiAuth,
+				ctx, r.client, &apiAuth,
 				conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
 				metav1.ConditionFalse,
 				conditions.KonnectEntityAPIAuthConfigurationReasonInvalid,
@@ -203,7 +203,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		apiAuth.Status.ServerURL = apiAuth.Spec.ServerURL
 
 		res, err := updateStatusWithCondition(
-			ctx, r.Client, &apiAuth,
+			ctx, r.client, &apiAuth,
 			conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionTrue,
 			conditions.KonnectEntityAPIAuthConfigurationReasonValid,
