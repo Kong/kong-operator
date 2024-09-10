@@ -136,6 +136,17 @@ mockery: mise yq ## Download mockery locally if necessary.
 	@$(MISE) plugin install --yes -q mockery https://github.com/cabify/asdf-mockery.git
 	@$(MISE) install -q mockery@$(MOCKERY_VERSION)
 
+SETUP_ENVTEST_VERSION = $(shell $(YQ) -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
+SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
+.PHONY: setup-envtest
+setup-envtest: mise ## Download setup-envtest locally if necessary.
+	@$(MAKE) mise-plugin-install DEP=setup-envtest URL=https://github.com/pmalek/mise-setup-envtest.git
+	@$(MISE) install setup-envtest@$(SETUP_ENVTEST_VERSION)
+
+.PHONY: use-setup-envtest
+use-setup-envtest:
+	$(SETUP_ENVTEST) use
+
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
@@ -309,24 +320,13 @@ INTEGRATION_TEST_TIMEOUT ?= "30m"
 CONFORMANCE_TEST_TIMEOUT ?= "20m"
 E2E_TEST_TIMEOUT ?= "20m"
 
-SETUP_ENVTEST_VERSION ?= 0.19.0
-SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
-.PHONY: setup-envtest
-setup-envtest: mise ## Download setup-envtest locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=setup-envtest URL=https://github.com/pmalek/mise-setup-envtest.git
-	@$(MISE) install setup-envtest@$(SETUP_ENVTEST_VERSION)
-
-.PHONY: use-setup-envtest
-use-setup-envtest:
-	$(SETUP_ENVTEST) use
-
 .PHONY: test
 test: test.unit
 
 UNIT_TEST_PATHS := ./controller/... ./internal/... ./pkg/... ./modules/...
 
 .PHONY: _test.unit
-_test.unit: gotestsum setup-envtest use-setup-envtest
+_test.unit: gotestsum
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
@@ -342,6 +342,31 @@ test.unit:
 .PHONY: test.unit.pretty
 test.unit.pretty:
 	@$(MAKE) _test.unit GOTESTSUM_FORMAT=pkgname GOTESTFLAGS="$(GOTESTFLAGS)" UNIT_TEST_PATHS="$(UNIT_TEST_PATHS)"
+
+ENVTEST_TEST_PATHS := ./test/envtest/...
+ENVTEST_TIMEOUT ?= 5m
+PKG_LIST=./controller/...,./internal/...,./pkg/...,./modules/...
+
+.PHONY: _test.envtest
+_test.envtest: gotestsum setup-envtest use-setup-envtest
+	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-race \
+		-timeout $(ENVTEST_TIMEOUT) \
+		-covermode=atomic \
+		-coverpkg=$(PKG_LIST) \
+		-coverprofile=coverage.envtest.out \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS)" \
+		$(ENVTEST_TEST_PATHS)
+
+.PHONY: test.envtest
+test.envtest:
+	$(MAKE) _test.envtest GOTESTSUM_FORMAT=standard-verbose
+
+.PHONY: test.envtest.pretty
+test.envtest.pretty:
+	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname
 
 .PHONY: _test.integration
 _test.integration: webhook-certs-dir gotestsum

@@ -1,4 +1,5 @@
-package konnect
+// REVIEW: Should we add build tag like `//go:build envtest` here? We did not add it in integration/e2e tests.
+package envtest
 
 import (
 	"context"
@@ -14,11 +15,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	"github.com/kong/gateway-operator/controller/konnect"
 	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
-	"github.com/kong/gateway-operator/test/envtest"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -103,22 +104,23 @@ func testNewKonnectEntityReconciler[
 
 	t.Run(ent.GetTypeName(), func(t *testing.T) {
 		s := scheme.Get()
-		require.NoError(t, configurationv1alpha1.AddToScheme(s))
-		require.NoError(t, configurationv1beta1.AddToScheme(s))
-		require.NoError(t, konnectv1alpha1.AddToScheme(s))
-		cfg := envtest.Setup(t, s)
+		cfg := Setup(t, s)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
 		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 			Scheme: s,
 			Metrics: metricsserver.Options{
+				// We do not need metrics server so we set BindAddress to 0 to disable it.
 				BindAddress: "0",
 			},
 		})
 		require.NoError(t, err)
 
 		cl := mgr.GetClient()
-		reconciler := NewKonnectEntityReconciler[T, TEnt](sdkFactory, false, cl)
-		require.NoError(t, reconciler.SetupWithManager(mgr))
+		reconciler := konnect.NewKonnectEntityReconciler[T, TEnt](sdkFactory, false, cl)
+		require.NoError(t, reconciler.SetupWithManager(ctx, mgr))
 
 		err = cl.Create(context.Background(), &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -128,8 +130,6 @@ func testNewKonnectEntityReconciler[
 		require.NoError(t, err)
 
 		t.Logf("Starting manager for test case %s", t.Name())
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
 		go func() {
 			err := mgr.Start(ctx)
 			require.NoError(t, err)

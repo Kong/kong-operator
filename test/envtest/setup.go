@@ -16,11 +16,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-)
 
-// TODO: extract the version from go.mod:
-// https://github.com/Kong/gateway-operator/issues/548
-const kongConfVersion = "v0.0.10"
+	testutil "github.com/kong/gateway-operator/pkg/utils/test"
+)
 
 // Setup sets up a test k8s API server environment and returned the configuration.
 func Setup(t *testing.T, scheme *k8sruntime.Scheme) *rest.Config {
@@ -49,6 +47,8 @@ func Setup(t *testing.T, scheme *k8sruntime.Scheme) *rest.Config {
 		}
 	}()
 
+	kongConfVersion, err := testutil.ExtractModuleVersion(testutil.KubernetesConfigurationModuleName)
+	require.NoError(t, err)
 	kongCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "kong", "kubernetes-configuration@"+kongConfVersion, "config", "crd")
 	kongBaseCRDPath := kongCRDPath + "/bases"
 	// we do not deal with incubator resources here, so we only install base CRDs.

@@ -31,7 +31,8 @@ import (
 )
 
 const (
-	kubernetesConfigurationModuleName = "github.com/kong/kubernetes-configuration"
+	// KubernetesConfigurationModuleName is the name of the module where we import and install Kong configuration CRDs from.
+	KubernetesConfigurationModuleName = "github.com/kong/kubernetes-configuration"
 )
 
 func noOpClose() error {
@@ -227,9 +228,9 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 
 	// CRDs for Kong configuration
 	// First extract version of `kong/kubernetes-configuration` module used
-	kongCRDVersion, err := ExtractModuleVersion(kubernetesConfigurationModuleName)
+	kongCRDVersion, err := ExtractModuleVersion(KubernetesConfigurationModuleName)
 	if err != nil {
-		return fmt.Errorf("failed to extract Kong CRDs (%s) module's version: %w", kubernetesConfigurationModuleName, err)
+		return fmt.Errorf("failed to extract Kong CRDs (%s) module's version: %w", KubernetesConfigurationModuleName, err)
 	}
 	// Then install CRDs from the module found in `$GOPATH`.
 	kongCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "kong",
