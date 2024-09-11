@@ -12,6 +12,18 @@ type MockSDKWrapper struct {
 
 var _ SDKWrapper = MockSDKWrapper{}
 
+func NewMockSDKWrapper() *MockSDKWrapper {
+	return &MockSDKWrapper{
+		ControlPlaneSDK:  &MockControlPlaneSDK{},
+		ServicesSDK:      &MockServicesSDK{},
+		RoutesSDK:        &MockRoutesSDK{},
+		ConsumersSDK:     &MockConsumersSDK{},
+		ConsumerGroupSDK: &MockConsumerGroupSDK{},
+		PluginSDK:        &MockPluginSDK{},
+		MeSDK:            &MockMeSDK{},
+	}
+}
+
 func (m MockSDKWrapper) GetControlPlaneSDK() ControlPlaneSDK {
 	return m.ControlPlaneSDK
 }
@@ -41,22 +53,14 @@ func (m MockSDKWrapper) GetMeSDK() MeSDK {
 }
 
 type MockSDKFactory struct {
-	w *MockSDKWrapper
+	SDK *MockSDKWrapper
 }
 
 var _ SDKFactory = MockSDKFactory{}
 
 func (m MockSDKFactory) NewKonnectSDK(_ string, _ SDKToken) SDKWrapper {
-	if m.w != nil {
-		return *m.w
+	if m.SDK != nil {
+		return *m.SDK
 	}
-	return &MockSDKWrapper{
-		ControlPlaneSDK:  &MockControlPlaneSDK{},
-		ServicesSDK:      &MockServicesSDK{},
-		RoutesSDK:        &MockRoutesSDK{},
-		ConsumersSDK:     &MockConsumersSDK{},
-		ConsumerGroupSDK: &MockConsumerGroupSDK{},
-		PluginSDK:        &MockPluginSDK{},
-		MeSDK:            &MockMeSDK{},
-	}
+	return NewMockSDKWrapper()
 }
