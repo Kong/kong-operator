@@ -11,6 +11,14 @@ const (
 	IndexFieldKongPluginBindingKongPluginReference = "kongPluginRef"
 	// IndexFieldKongPluginBindingKongClusterPluginReference is the index field for KongClusterPlugin -> KongPluginBinding.
 	IndexFieldKongPluginBindingKongClusterPluginReference = "kongClusterPluginRef"
+	// IndexFieldKongPluginBindingKongServiceReference is the index field for KongService -> KongPluginBinding.
+	IndexFieldKongPluginBindingKongServiceReference = "kongServiceRef"
+	// IndexFieldKongPluginBindingKongServiceReference is the index field for KongRoute -> KongPluginBinding.
+	IndexFieldKongPluginBindingKongRouteReference = "kongRouteRef"
+	// IndexFieldKongPluginBindingKongServiceReference is the index field for KongConsumer -> KongPluginBinding.
+	IndexFieldKongPluginBindingKongConsumerReference = "kongConsumerRef"
+	// IndexFieldKongPluginBindingKongServiceReference is the index field for KongConsumerGroup -> KongPluginBinding.
+	IndexFieldKongPluginBindingKongConsumerGroupReference = "kongConsumerGroupRef"
 )
 
 // IndexOptionsForKongPluginBinding returns required Index options for KongPluginBinding reconclier.
@@ -25,6 +33,26 @@ func IndexOptionsForKongPluginBinding() []ReconciliationIndexOption {
 			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
 			IndexField:   IndexFieldKongPluginBindingKongClusterPluginReference,
 			ExtractValue: kongClusterPluginReferencesFromKongPluginBinding,
+		},
+		{
+			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
+			IndexField:   IndexFieldKongPluginBindingKongServiceReference,
+			ExtractValue: kongServiceReferencesFromKongPluginBinding,
+		},
+		{
+			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
+			IndexField:   IndexFieldKongPluginBindingKongRouteReference,
+			ExtractValue: kongRouteReferencesFromKongPluginBinding,
+		},
+		{
+			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
+			IndexField:   IndexFieldKongPluginBindingKongConsumerReference,
+			ExtractValue: kongConsumerReferencesFromKongPluginBinding,
+		},
+		{
+			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
+			IndexField:   IndexFieldKongPluginBindingKongConsumerGroupReference,
+			ExtractValue: kongConsumerGroupReferencesFromKongPluginBinding,
 		},
 	}
 }
@@ -51,4 +79,56 @@ func kongClusterPluginReferencesFromKongPluginBinding(obj client.Object) []strin
 		return nil
 	}
 	return []string{binding.Spec.PluginReference.Name}
+}
+
+// kongServiceReferencesFromKongPluginBinding returns name of referenced KongService in KongPluginBinding spec.
+func kongServiceReferencesFromKongPluginBinding(obj client.Object) []string {
+	binding, ok := obj.(*configurationv1alpha1.KongPluginBinding)
+	if !ok {
+		return nil
+	}
+	if binding.Spec.Targets.ServiceReference == nil ||
+		binding.Spec.Targets.ServiceReference.Group != configurationv1alpha1.GroupVersion.Group ||
+		binding.Spec.Targets.ServiceReference.Kind != "KongService" {
+		return nil
+	}
+	return []string{binding.Spec.Targets.ServiceReference.Name}
+}
+
+// kongRouteReferencesFromKongPluginBinding returns name of referenced KongRoute in KongPluginBinding spec.
+func kongRouteReferencesFromKongPluginBinding(obj client.Object) []string {
+	binding, ok := obj.(*configurationv1alpha1.KongPluginBinding)
+	if !ok {
+		return nil
+	}
+	if binding.Spec.Targets.RouteReference == nil ||
+		binding.Spec.Targets.RouteReference.Group != configurationv1alpha1.GroupVersion.Group ||
+		binding.Spec.Targets.RouteReference.Kind != "KongRoute" {
+		return nil
+	}
+	return []string{binding.Spec.Targets.RouteReference.Name}
+}
+
+// kongConsumerReferencesFromKongPluginBinding returns name of referenced KongConsumer in KongPluginBinding spec.
+func kongConsumerReferencesFromKongPluginBinding(obj client.Object) []string {
+	binding, ok := obj.(*configurationv1alpha1.KongPluginBinding)
+	if !ok {
+		return nil
+	}
+	if binding.Spec.Targets.ConsumerReference == nil {
+		return nil
+	}
+	return []string{binding.Spec.Targets.ConsumerReference.Name}
+}
+
+// kongConsumerGroupReferencesFromKongPluginBinding returns name of referenced KongConsumerGroup in KongPluginBinding spec.
+func kongConsumerGroupReferencesFromKongPluginBinding(obj client.Object) []string {
+	binding, ok := obj.(*configurationv1alpha1.KongPluginBinding)
+	if !ok {
+		return nil
+	}
+	if binding.Spec.Targets.ConsumerGroupReference == nil {
+		return nil
+	}
+	return []string{binding.Spec.Targets.ConsumerGroupReference.Name}
 }

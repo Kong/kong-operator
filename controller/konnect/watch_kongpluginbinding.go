@@ -20,6 +20,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -80,9 +81,38 @@ func KongPluginBindingReconciliationWatchOptions(
 				),
 			)
 		},
-		// TODO(mlavacca): add KongService watch
-		// TODO(mlavacca): add KongConsumer watch
-		// TODO(mlavacca): add KongRoute watch
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongService{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKongPluginBindingForKongService(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongRoute{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKongPluginBindingForKongRoute(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1.KongConsumer{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKongPluginBindingForKongConsumer(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1beta1.KongConsumerGroup{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKongPluginBindingForKongConsumerGroup(cl),
+				),
+			)
+		},
 	}
 }
 
@@ -290,6 +320,142 @@ func enqueueKongPluginBindingForKongClusterPlugin(cl client.Client) func(
 		)
 		if err != nil {
 			ctrllog.FromContext(ctx).Error(err, "failed to list KongPluginBindings referencing KongClusterPlugin")
+		}
+
+		return lo.FilterMap(pluginBindingList.Items, func(pb configurationv1alpha1.KongPluginBinding, _ int) (reconcile.Request, bool) {
+			// Only put KongPluginBindings referencing to a Konnect control plane,
+			if pb.Spec.ControlPlaneRef == nil || pb.Spec.ControlPlaneRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
+				return reconcile.Request{}, false
+			}
+			return reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: pb.Namespace,
+					Name:      pb.Name,
+				},
+			}, true
+		})
+	}
+}
+
+func enqueueKongPluginBindingForKongService(cl client.Client) func(
+	ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		kongService, ok := obj.(*configurationv1alpha1.KongService)
+		if !ok {
+			return nil
+		}
+
+		pluginBindingList := configurationv1alpha1.KongPluginBindingList{}
+		err := cl.List(ctx, &pluginBindingList,
+			client.InNamespace(kongService.Namespace),
+			client.MatchingFields{
+				IndexFieldKongPluginBindingKongServiceReference: kongService.Name,
+			},
+		)
+		if err != nil {
+			ctrllog.FromContext(ctx).Error(err, "failed to list KongPluginBindings referencing KongServices")
+		}
+
+		return lo.FilterMap(pluginBindingList.Items, func(pb configurationv1alpha1.KongPluginBinding, _ int) (reconcile.Request, bool) {
+			// Only put KongPluginBindings referencing to a Konnect control plane,
+			if pb.Spec.ControlPlaneRef == nil || pb.Spec.ControlPlaneRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
+				return reconcile.Request{}, false
+			}
+			return reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: pb.Namespace,
+					Name:      pb.Name,
+				},
+			}, true
+		})
+	}
+}
+
+func enqueueKongPluginBindingForKongRoute(cl client.Client) func(
+	ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		kongRoute, ok := obj.(*configurationv1alpha1.KongRoute)
+		if !ok {
+			return nil
+		}
+
+		pluginBindingList := configurationv1alpha1.KongPluginBindingList{}
+		err := cl.List(ctx, &pluginBindingList,
+			client.InNamespace(kongRoute.Namespace),
+			client.MatchingFields{
+				IndexFieldKongPluginBindingKongRouteReference: kongRoute.Name,
+			},
+		)
+		if err != nil {
+			ctrllog.FromContext(ctx).Error(err, "failed to list KongPluginBindings referencing KongRoutes")
+		}
+
+		return lo.FilterMap(pluginBindingList.Items, func(pb configurationv1alpha1.KongPluginBinding, _ int) (reconcile.Request, bool) {
+			// Only put KongPluginBindings referencing to a Konnect control plane,
+			if pb.Spec.ControlPlaneRef == nil || pb.Spec.ControlPlaneRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
+				return reconcile.Request{}, false
+			}
+			return reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: pb.Namespace,
+					Name:      pb.Name,
+				},
+			}, true
+		})
+	}
+}
+
+func enqueueKongPluginBindingForKongConsumer(cl client.Client) func(
+	ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		kongConsumer, ok := obj.(*configurationv1.KongConsumer)
+		if !ok {
+			return nil
+		}
+
+		pluginBindingList := configurationv1alpha1.KongPluginBindingList{}
+		err := cl.List(ctx, &pluginBindingList,
+			client.InNamespace(kongConsumer.Namespace),
+			client.MatchingFields{
+				IndexFieldKongPluginBindingKongConsumerReference: kongConsumer.Name,
+			},
+		)
+		if err != nil {
+			ctrllog.FromContext(ctx).Error(err, "failed to list KongPluginBindings referencing KongConsumers")
+		}
+
+		return lo.FilterMap(pluginBindingList.Items, func(pb configurationv1alpha1.KongPluginBinding, _ int) (reconcile.Request, bool) {
+			// Only put KongPluginBindings referencing to a Konnect control plane,
+			if pb.Spec.ControlPlaneRef == nil || pb.Spec.ControlPlaneRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
+				return reconcile.Request{}, false
+			}
+			return reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: pb.Namespace,
+					Name:      pb.Name,
+				},
+			}, true
+		})
+	}
+}
+
+func enqueueKongPluginBindingForKongConsumerGroup(cl client.Client) func(
+	ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		kongConsumerGroup, ok := obj.(*configurationv1beta1.KongConsumerGroup)
+		if !ok {
+			return nil
+		}
+
+		pluginBindingList := configurationv1alpha1.KongPluginBindingList{}
+		err := cl.List(ctx, &pluginBindingList,
+			client.InNamespace(kongConsumerGroup.Namespace),
+			client.MatchingFields{
+				IndexFieldKongPluginBindingKongConsumerGroupReference: kongConsumerGroup.Name,
+			},
+		)
+		if err != nil {
+			ctrllog.FromContext(ctx).Error(err, "failed to list KongPluginBindings referencing KongConsumerGroups")
 		}
 
 		return lo.FilterMap(pluginBindingList.Items, func(pb configurationv1alpha1.KongPluginBinding, _ int) (reconcile.Request, bool) {
