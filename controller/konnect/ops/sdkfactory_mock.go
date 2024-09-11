@@ -53,14 +53,14 @@ func (m MockSDKWrapper) GetMeSDK() MeSDK {
 }
 
 type MockSDKFactory struct {
-	Wapper *MockSDKWrapper
+	SDK *MockSDKWrapper
 }
 
 var _ SDKFactory = MockSDKFactory{}
 
 func (m MockSDKFactory) NewKonnectSDK(_ string, _ SDKToken) SDKWrapper {
-	if m.Wapper != nil {
-		return *m.Wapper
+	if m.SDK != nil {
+		return *m.SDK
 	}
 	return MockSDKWrapper{
 		ControlPlaneSDK:  &MockControlPlaneSDK{},
