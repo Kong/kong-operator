@@ -79,7 +79,7 @@ func TestKongPlugins(t *testing.T) {
 			Name:      ksName,
 			Namespace: ns.Name,
 			Annotations: map[string]string{
-				"konghq.com/plugins": rateLimitingkongPluginName,
+				consts.PluginsAnnotationKey: rateLimitingkongPluginName,
 			},
 		},
 		Spec: configurationv1alpha1.KongServiceSpec{

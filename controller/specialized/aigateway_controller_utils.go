@@ -14,6 +14,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	v1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
@@ -194,7 +195,7 @@ func aiCloudGatewayToHTTPRoute(
 			Name:      fmt.Sprintf("%s-egress", aiCloudLLM.Identifier),
 			Namespace: aigateway.Namespace,
 			Annotations: map[string]string{
-				"konghq.com/plugins": strings.Join(plugins, ","),
+				consts.PluginsAnnotationKey: strings.Join(plugins, ","),
 			},
 		},
 		Spec: gatewayv1.HTTPRouteSpec{

@@ -146,7 +146,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, nil
 		}
 		// get the referenced plugins from the KongService annotations
-		plugins, ok := kongService.Annotations["konghq.com/plugins"]
+		plugins, ok := kongService.Annotations[consts.PluginsAnnotationKey]
 		if !ok {
 			// if the konghq.com/plugins annotation is not present, we need to delete all the managed
 			// KongPluginBindings that reference the KongService
