@@ -22,14 +22,14 @@ func TestCreateControlPlane(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
 		name        string
-		mockCPPair  func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
+		mockCPPair  func(*testing.T) (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
 		expectedErr bool
 		assertions  func(*testing.T, *konnectv1alpha1.KonnectGatewayControlPlane)
 	}{
 		{
 			name: "success",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
-				sdk := &MockControlPlaneSDK{}
+			mockCPPair: func(t *testing.T) (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
+				sdk := NewMockControlPlaneSDK(t)
 				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
@@ -63,8 +63,8 @@ func TestCreateControlPlane(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
-				sdk := &MockControlPlaneSDK{}
+			mockCPPair: func(t *testing.T) (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
+				sdk := NewMockControlPlaneSDK(t)
 				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cp-1",
@@ -105,13 +105,9 @@ func TestCreateControlPlane(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			sdk, cp := tc.mockCPPair()
+			sdk, cp := tc.mockCPPair(t)
 
 			err := createControlPlane(ctx, sdk, cp)
-			t.Cleanup(func() {
-				assert.True(t, sdk.AssertExpectations(t))
-			})
-
 			tc.assertions(t, cp)
 
 			if tc.expectedErr {
@@ -128,14 +124,14 @@ func TestDeleteControlPlane(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
 		name        string
-		mockCPPair  func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
+		mockCPPair  func(*testing.T) (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
 		expectedErr bool
 		assertions  func(*testing.T, *konnectv1alpha1.KonnectGatewayControlPlane)
 	}{
 		{
 			name: "success",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
-				sdk := &MockControlPlaneSDK{}
+			mockCPPair: func(t *testing.T) (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
+				sdk := NewMockControlPlaneSDK(t)
 				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
@@ -163,8 +159,8 @@ func TestDeleteControlPlane(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
-				sdk := &MockControlPlaneSDK{}
+			mockCPPair: func(t *testing.T) (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
+				sdk := NewMockControlPlaneSDK(t)
 				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cp-1",
@@ -198,8 +194,8 @@ func TestDeleteControlPlane(t *testing.T) {
 		},
 		{
 			name: "not found error is ignored and considered a success when trying to delete",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
-				sdk := &MockControlPlaneSDK{}
+			mockCPPair: func(t *testing.T) (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
+				sdk := NewMockControlPlaneSDK(t)
 				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cp-1",
@@ -234,7 +230,7 @@ func TestDeleteControlPlane(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			sdk, cp := tc.mockCPPair()
+			sdk, cp := tc.mockCPPair(t)
 
 			err := deleteControlPlane(ctx, sdk, cp)
 
@@ -248,7 +244,6 @@ func TestDeleteControlPlane(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			assert.True(t, sdk.AssertExpectations(t))
 		})
 	}
 }
@@ -257,14 +252,14 @@ func TestUpdateControlPlane(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
 		name        string
-		mockCPPair  func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
+		mockCPPair  func(*testing.T) (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
 		expectedErr bool
 		assertions  func(*testing.T, *konnectv1alpha1.KonnectGatewayControlPlane)
 	}{
 		{
 			name: "success",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
-				sdk := &MockControlPlaneSDK{}
+			mockCPPair: func(t *testing.T) (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
+				sdk := NewMockControlPlaneSDK(t)
 				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
@@ -311,8 +306,8 @@ func TestUpdateControlPlane(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
-				sdk := &MockControlPlaneSDK{}
+			mockCPPair: func(t *testing.T) (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
+				sdk := NewMockControlPlaneSDK(t)
 				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cp-1",
@@ -364,8 +359,8 @@ func TestUpdateControlPlane(t *testing.T) {
 		},
 		{
 			name: "when not found then try to create",
-			mockCPPair: func() (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
-				sdk := &MockControlPlaneSDK{}
+			mockCPPair: func(t *testing.T) (*MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
+				sdk := NewMockControlPlaneSDK(t)
 				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cp-1",
@@ -430,7 +425,7 @@ func TestUpdateControlPlane(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			sdk, cp := tc.mockCPPair()
+			sdk, cp := tc.mockCPPair(t)
 
 			err := updateControlPlane(ctx, sdk, cp)
 
@@ -444,7 +439,6 @@ func TestUpdateControlPlane(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			assert.True(t, sdk.AssertExpectations(t))
 		})
 	}
 }

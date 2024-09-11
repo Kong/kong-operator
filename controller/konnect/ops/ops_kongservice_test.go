@@ -23,14 +23,14 @@ func TestCreateKongService(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
 		name            string
-		mockServicePair func() (*MockServicesSDK, *configurationv1alpha1.KongService)
+		mockServicePair func(*testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService)
 		expectedErr     bool
 		assertions      func(*testing.T, *configurationv1alpha1.KongService)
 	}{
 		{
 			name: "success",
-			mockServicePair: func() (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := &MockServicesSDK{}
+			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
@@ -76,8 +76,8 @@ func TestCreateKongService(t *testing.T) {
 		},
 		{
 			name: "fail - no control plane ID in status returns an error and does not create the Service in Konnect",
-			mockServicePair: func() (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := &MockServicesSDK{}
+			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
@@ -101,8 +101,8 @@ func TestCreateKongService(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockServicePair: func() (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := &MockServicesSDK{}
+			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
@@ -149,12 +149,9 @@ func TestCreateKongService(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			sdk, svc := tc.mockServicePair()
+			sdk, svc := tc.mockServicePair(t)
 
 			err := createService(ctx, sdk, svc)
-			t.Cleanup(func() {
-				assert.True(t, sdk.AssertExpectations(t))
-			})
 
 			tc.assertions(t, svc)
 
@@ -172,14 +169,14 @@ func TestDeleteKongService(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
 		name            string
-		mockServicePair func() (*MockServicesSDK, *configurationv1alpha1.KongService)
+		mockServicePair func(*testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService)
 		expectedErr     bool
 		assertions      func(*testing.T, *configurationv1alpha1.KongService)
 	}{
 		{
 			name: "success",
-			mockServicePair: func() (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := &MockServicesSDK{}
+			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
@@ -210,8 +207,8 @@ func TestDeleteKongService(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockServicePair: func() (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := &MockServicesSDK{}
+			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
@@ -244,8 +241,8 @@ func TestDeleteKongService(t *testing.T) {
 		},
 		{
 			name: "not found error is ignored and considered a success when trying to delete",
-			mockServicePair: func() (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := &MockServicesSDK{}
+			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
@@ -279,7 +276,7 @@ func TestDeleteKongService(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			sdk, svc := tc.mockServicePair()
+			sdk, svc := tc.mockServicePair(t)
 
 			err := deleteService(ctx, sdk, svc)
 
@@ -293,7 +290,6 @@ func TestDeleteKongService(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			assert.True(t, sdk.AssertExpectations(t))
 		})
 	}
 }
@@ -302,14 +298,14 @@ func TestUpdateKongService(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
 		name            string
-		mockServicePair func() (*MockServicesSDK, *configurationv1alpha1.KongService)
+		mockServicePair func(*testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService)
 		expectedErr     bool
 		assertions      func(*testing.T, *configurationv1alpha1.KongService)
 	}{
 		{
 			name: "success",
-			mockServicePair: func() (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := &MockServicesSDK{}
+			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
@@ -359,8 +355,8 @@ func TestUpdateKongService(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockServicePair: func() (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := &MockServicesSDK{}
+			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
@@ -414,8 +410,8 @@ func TestUpdateKongService(t *testing.T) {
 		},
 		{
 			name: "when not found then try to create",
-			mockServicePair: func() (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := &MockServicesSDK{}
+			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
@@ -481,7 +477,7 @@ func TestUpdateKongService(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			sdk, svc := tc.mockServicePair()
+			sdk, svc := tc.mockServicePair(t)
 
 			err := updateService(ctx, sdk, svc)
 
@@ -495,7 +491,6 @@ func TestUpdateKongService(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			assert.True(t, sdk.AssertExpectations(t))
 		})
 	}
 }
