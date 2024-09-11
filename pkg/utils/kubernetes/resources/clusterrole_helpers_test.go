@@ -33,7 +33,7 @@ func TestClusterroleHelpers(t *testing.T) {
 			image:        "kong/kubernetes-ingress-controller:3.1",
 			devMode:      true,
 			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_2("test_3.1_dev")
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_3("test_3.1_dev")
 				resources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
@@ -48,7 +48,7 @@ func TestClusterroleHelpers(t *testing.T) {
 			image:        "kong/kubernetes-ingress-controller:3.0.0",
 			devMode:      true,
 			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_2("test_3.0_dev")
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_3("test_3.0_dev")
 				resources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
@@ -63,7 +63,7 @@ func TestClusterroleHelpers(t *testing.T) {
 			image:        "kong/kubernetes-ingress-controller:1.0",
 			devMode:      true,
 			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_2("test_unsupported_dev")
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_3("test_unsupported_dev")
 				resources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
@@ -78,7 +78,7 @@ func TestClusterroleHelpers(t *testing.T) {
 			image:        "test/development:main",
 			devMode:      true,
 			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_2("test_invalid_tag_dev")
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_3("test_invalid_tag_dev")
 				resources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
@@ -88,7 +88,17 @@ func TestClusterroleHelpers(t *testing.T) {
 			image:        "kong/kubernetes-ingress-controller:3.2.0",
 			devMode:      false,
 			expectedClusterRole: func() *rbacv1.ClusterRole {
-				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_2("cp-3-2-0")
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_2_lt3_3("cp-3-2-0")
+				resources.LabelObjectAsControlPlaneManaged(cr)
+				return cr
+			},
+		},
+		{
+			controlplane: "cp-3-3-0",
+			image:        "kong/kubernetes-ingress-controller:3.3.0",
+			devMode:      false,
+			expectedClusterRole: func() *rbacv1.ClusterRole {
+				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_3("cp-3-3-0")
 				resources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
