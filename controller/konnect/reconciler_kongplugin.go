@@ -38,7 +38,7 @@ func NewKongPluginReconciler(
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("KongPlugin").
 		For(&configurationv1.KongPlugin{}).

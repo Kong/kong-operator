@@ -385,6 +385,13 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](c.KonnectSyncPeriod),
 				),
 			},
+			KongPluginControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKongPluginReconciler(
+					c.DevelopmentMode,
+					mgr.GetClient(),
+				),
+			},
 		}
 
 		// Merge Konnect controllers into the controllers map. This is done this way instead of directly assigning
@@ -394,13 +401,6 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				return nil, fmt.Errorf("duplicate controller key: %s", name)
 			}
 			controllers[name] = controller
-		}
-		controllers[KongPluginControllerName] = ControllerDef{
-			Enabled: c.KonnectControllersEnabled,
-			Controller: konnect.NewKongPluginReconciler(
-				c.DevelopmentMode,
-				mgr.GetClient(),
-			),
 		}
 	}
 
