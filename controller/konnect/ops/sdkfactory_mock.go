@@ -62,13 +62,5 @@ func (m MockSDKFactory) NewKonnectSDK(_ string, _ SDKToken) SDKWrapper {
 	if m.SDK != nil {
 		return *m.SDK
 	}
-	return MockSDKWrapper{
-		ControlPlaneSDK:  &MockControlPlaneSDK{},
-		ServicesSDK:      &MockServicesSDK{},
-		RoutesSDK:        &MockRoutesSDK{},
-		ConsumersSDK:     &MockConsumersSDK{},
-		ConsumerGroupSDK: &MockConsumerGroupSDK{},
-		PluginSDK:        &MockPluginSDK{},
-		MeSDK:            &MockMeSDK{},
-	}
+	return NewMockSDKWrapper()
 }

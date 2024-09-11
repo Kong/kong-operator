@@ -46,7 +46,7 @@ func TestNewKonnectEntityReconciler(t *testing.T) {
 type konnectEntityReconcilerTestCase struct {
 	name                string
 	objectOps           func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace)
-	mockExpectations    func(sdk *ops.MockSDKWrapper, ns *corev1.Namespace)
+	mockExpectations    func(t *testing.T, sdk *ops.MockSDKWrapper, ns *corev1.Namespace)
 	eventuallyPredicate func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) bool
 }
 
@@ -101,7 +101,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			}
 			require.NoError(t, cl.Create(ctx, cp))
 		},
-		mockExpectations: func(sdk *ops.MockSDKWrapper, ns *corev1.Namespace) {
+		mockExpectations: func(t *testing.T, sdk *ops.MockSDKWrapper, ns *corev1.Namespace) {
 			sdk.ControlPlaneSDK.EXPECT().CreateControlPlane(mock.Anything, sdkkonnectcomp.CreateControlPlaneRequest{
 				Name:        "cp-1",
 				Description: lo.ToPtr("test control plane 1"),
@@ -110,6 +110,10 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					ID: "12345",
 				},
 			}, nil)
+			// verify that mock SDK is called as expected.
+			t.Cleanup(func() {
+				require.True(t, sdk.ControlPlaneSDK.AssertExpectations(t))
+			})
 		},
 		eventuallyPredicate: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) bool {
 			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
@@ -188,10 +192,11 @@ func testNewKonnectEntityReconciler[
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				tc.objectOps(ctx, t, cl, ns)
-				tc.mockExpectations(sdk, ns)
+				tc.mockExpectations(t, sdk, ns)
 				require.Eventually(t, func() bool {
 					return tc.eventuallyPredicate(ctx, t, cl, ns)
 				}, wait, tick)
+				require.True(t, sdk.ControlPlaneSDK.AssertExpectations(t))
 			})
 		}
 	})
