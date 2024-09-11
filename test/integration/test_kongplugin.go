@@ -42,8 +42,8 @@ func TestKongPlugins(t *testing.T) {
 
 	ns, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
-	t.Log("deploying a rate-limiting KongPlugin resource")
 	rateLimitingkongPluginName := "rate-limiting-kp-" + testID
+	t.Logf("deploying %s KongPlugin resource", rateLimitingkongPluginName)
 	rateLimitingkongPlugin := &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      rateLimitingkongPluginName,
@@ -57,8 +57,8 @@ func TestKongPlugins(t *testing.T) {
 	require.NoError(t, managerClient.Create(GetCtx(), rateLimitingkongPlugin))
 	cleaner.Add(rateLimitingkongPlugin)
 
-	t.Log("deploying a proxy-cache KongPlugin resource")
 	proxyCachekongPluginName := "proxy-cache-kp-" + testID
+	t.Logf("deploying %s KongPlugin resource", proxyCachekongPluginName)
 	proxyCachekongPlugin := &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      proxyCachekongPluginName,
@@ -72,8 +72,8 @@ func TestKongPlugins(t *testing.T) {
 	require.NoError(t, managerClient.Create(GetCtx(), proxyCachekongPlugin))
 	cleaner.Add(proxyCachekongPlugin)
 
-	t.Log("deploying a KongService resource")
 	ksName := "ks-" + testID
+	t.Logf("deploying KongService %s resource", ksName)
 	kongService := &configurationv1alpha1.KongService{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ksName,
@@ -92,7 +92,7 @@ func TestKongPlugins(t *testing.T) {
 	require.NoError(t, managerClient.Create(GetCtx(), kongService))
 	cleaner.Add(kongService)
 
-	t.Log("waiting for the managed KongPluginBinding to be created")
+	t.Logf("waiting for the managed KongPluginBinding to be created")
 	managedKPB := &configurationv1alpha1.KongPluginBinding{}
 	require.Eventually(t, func() bool {
 		kongPluginBindingList := &configurationv1alpha1.KongPluginBindingList{}
@@ -107,7 +107,7 @@ func TestKongPlugins(t *testing.T) {
 		return true
 	}, timeout, tickTime)
 
-	t.Log("delete managed kongPluginBinding, then check it gets recreated")
+	t.Logf("delete managed kongPluginBinding %s, then check it gets recreated", managedKPB.Name)
 	require.NoError(t, managerClient.Delete(GetCtx(), managedKPB))
 	require.Eventually(t, func() bool {
 		kongPluginBindingList := &configurationv1alpha1.KongPluginBindingList{}
@@ -122,7 +122,7 @@ func TestKongPlugins(t *testing.T) {
 		return true
 	}, timeout, tickTime)
 
-	t.Log("remove annotation from kongservice")
+	t.Logf("remove annotation from kongservice %s", kongService.Name)
 	newKongService := kongService.DeepCopy()
 	newKongService.Annotations = nil
 	require.Eventually(t, func() bool {
@@ -132,7 +132,7 @@ func TestKongPlugins(t *testing.T) {
 		return true
 	}, timeout, tickTime)
 
-	t.Log("then check the managed kpb gets deleted")
+	t.Log("then check the managed KongPluginBinding gets deleted")
 	require.Eventually(t, func() bool {
 		kongPluginBindingList := &configurationv1alpha1.KongPluginBindingList{}
 		err := managerClient.List(GetCtx(), kongPluginBindingList, client.InNamespace(ns.Name))
@@ -145,8 +145,8 @@ func TestKongPlugins(t *testing.T) {
 		return true
 	}, timeout, tickTime)
 
-	t.Log("deploying an unmanaged KongPluginBinding resource")
 	unmanagedKPBName := "kpb-" + testID
+	t.Logf("deploying unmanaged KongPluginBinding %s resource", unmanagedKPBName)
 	unmanagedKPB := &configurationv1alpha1.KongPluginBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      unmanagedKPBName,
@@ -176,14 +176,14 @@ func TestKongPlugins(t *testing.T) {
 		return controllerutil.ContainsFinalizer(proxyCachekongPlugin, consts.PluginInUseFinalizer)
 	}, timeout, tickTime)
 
-	t.Log("delete the proxy-cache plugin, then check it does not get collected")
+	t.Logf("delete the plugin %s, then check it does not get collected", proxyCachekongPluginName)
 	require.NoError(t, managerClient.Delete(GetCtx(), proxyCachekongPlugin))
 	require.Never(t, func() bool {
 		err := managerClient.Get(GetCtx(), client.ObjectKeyFromObject(proxyCachekongPlugin), proxyCachekongPlugin)
 		return k8serrors.IsNotFound(err)
 	}, timeout, tickTime)
 
-	t.Log("delete the unmanaged kongPluginBinding, then check the proxy-cache kongPlugin gets collected")
+	t.Logf("delete the unmanaged kongPluginBinding %s, then check the proxy-cache kongPlugin gets collected", unmanagedKPBName)
 	require.NoError(t, managerClient.Delete(GetCtx(), unmanagedKPB))
 	require.Eventually(t, func() bool {
 		kongPluginBindingList := &configurationv1alpha1.KongPluginBindingList{}
@@ -197,7 +197,7 @@ func TestKongPlugins(t *testing.T) {
 		return k8serrors.IsNotFound(managerClient.Get(GetCtx(), client.ObjectKeyFromObject(proxyCachekongPlugin), proxyCachekongPlugin))
 	}, timeout, tickTime)
 
-	t.Log("delete the kongservice and check it gets collected, as the kongPluginBinding finalizer should have been removed")
+	t.Logf("delete the kongservice %s and check it gets collected, as the kongPluginBinding finalizer should have been removed", ksName)
 	require.NoError(t, managerClient.Delete(GetCtx(), kongService))
 	require.Eventually(t, func() bool {
 		return k8serrors.IsNotFound(managerClient.Get(GetCtx(), client.ObjectKeyFromObject(kongService), kongService))
