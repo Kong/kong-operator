@@ -20,6 +20,11 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
+// TestKongPlugins is an integration that aims at testing the KongPluginBinding resources
+// are properly created and cleaned up when Konnect entities get annotated with KongPlugin names.
+// It also tests that unmanaged KongPluginBindings are properly handled when managed KongPluginBindings
+// are in play.
+// NOTE: this test does not test the Konnect integration. No resource created here will be pushed to Konnect.
 func TestKongPlugins(t *testing.T) {
 	t.Parallel()
 	// Let's generate a unique test ID that we can refer to in Konnect entities.
