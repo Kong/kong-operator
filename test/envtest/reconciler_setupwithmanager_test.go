@@ -5,7 +5,11 @@ import (
 	"testing"
 	"time"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/go-logr/logr/testr"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,12 +46,13 @@ func TestNewKonnectEntityReconciler(t *testing.T) {
 type konnectEntityReconcilerTestCase struct {
 	name                string
 	objectOps           func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace)
+	mockSDKSettings     func(t *testing.T, m *ops.MockSDKWrapper, ns *corev1.Namespace)
 	eventuallyPredicate func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) bool
 }
 
 var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 	{
-		name: "should resolve auth",
+		name: "should create control plane successfully",
 		objectOps: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) {
 			auth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
@@ -55,11 +60,28 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					Namespace: ns.Name,
 				},
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
-					Type:  konnectv1alpha1.KonnectAPIAuthTypeToken,
-					Token: "kpat_test",
+					Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
+					Token:     "kpat_test",
+					ServerURL: "127.0.0.1",
 				},
 			}
 			require.NoError(t, cl.Create(ctx, auth))
+			// We cannot create KonnectAPIAuthConfiguration with specified status, so we update the status after creating it.
+			auth.Status = konnectv1alpha1.KonnectAPIAuthConfigurationStatus{
+				OrganizationID: "org-1",
+				ServerURL:      "127.0.0.1",
+				Conditions: []metav1.Condition{
+					{
+						Type:               conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
+						ObservedGeneration: auth.GetGeneration(),
+						Status:             metav1.ConditionTrue,
+						Reason:             conditions.KonnectEntityAPIAuthConfigurationReasonValid,
+						LastTransitionTime: metav1.Now(),
+					},
+				},
+			}
+			require.NoError(t, cl.Status().Update(ctx, auth))
+			// Create KonnectGatewayControlPlane.
 			cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "cp-1",
@@ -71,9 +93,23 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							Name: "auth",
 						},
 					},
+					CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+						Name:        "cp-1",
+						Description: lo.ToPtr("test control plane 1"),
+					},
 				},
 			}
 			require.NoError(t, cl.Create(ctx, cp))
+		},
+		mockSDKSettings: func(t *testing.T, m *ops.MockSDKWrapper, ns *corev1.Namespace) {
+			m.ControlPlaneSDK.EXPECT().CreateControlPlane(mock.Anything, sdkkonnectcomp.CreateControlPlaneRequest{
+				Name:        "cp-1",
+				Description: lo.ToPtr("test control plane 1"),
+			}).Return(&sdkkonnectops.CreateControlPlaneResponse{
+				ControlPlane: &sdkkonnectcomp.ControlPlane{
+					ID: "12345",
+				},
+			}, nil)
 		},
 		eventuallyPredicate: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) bool {
 			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
@@ -86,10 +122,10 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					cp,
 				),
 			)
-			// TODO: setup mock Konnect SDK and verify that Konnect CP is "Created".
-			return lo.ContainsBy(cp.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == conditions.KonnectEntityAPIAuthConfigurationResolvedRefConditionType && condition.Status == metav1.ConditionTrue
-			})
+			return cp.Status.ID == "12345" && // Call of creating control plane should be OK
+				lo.ContainsBy(cp.Status.Conditions, func(condition metav1.Condition) bool { // "Programmed" condition should be true
+					return condition.Type == conditions.KonnectEntityProgrammedConditionType && condition.Status == metav1.ConditionTrue
+				})
 		},
 	},
 }
@@ -116,6 +152,7 @@ func testNewKonnectEntityReconciler[
 
 		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 			Scheme: scheme.Get(),
+			Logger: testr.New(t).V(1),
 			Metrics: metricsserver.Options{
 				// We do not need metrics server so we set BindAddress to 0 to disable it.
 				BindAddress: "0",
@@ -124,7 +161,10 @@ func testNewKonnectEntityReconciler[
 		require.NoError(t, err)
 
 		cl := mgr.GetClient()
-		reconciler := konnect.NewKonnectEntityReconciler[T, TEnt](&ops.MockSDKFactory{}, false, cl)
+		wrapper := ops.NewMockSDKWrapper()
+		reconciler := konnect.NewKonnectEntityReconciler[T, TEnt](&ops.MockSDKFactory{
+			Wapper: wrapper,
+		}, false, cl)
 		require.NoError(t, reconciler.SetupWithManager(ctx, mgr))
 
 		ns := &corev1.Namespace{
@@ -148,6 +188,7 @@ func testNewKonnectEntityReconciler[
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				tc.objectOps(ctx, t, cl, ns)
+				tc.mockSDKSettings(t, wrapper, ns)
 				require.Eventually(t, func() bool {
 					return tc.eventuallyPredicate(ctx, t, cl, ns)
 				}, wait, tick)
