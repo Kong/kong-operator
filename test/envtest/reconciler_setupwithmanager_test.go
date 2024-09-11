@@ -102,16 +102,18 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			require.NoError(t, cl.Create(ctx, cp))
 		},
 		mockExpectations: func(t *testing.T, sdk *ops.MockSDKWrapper, ns *corev1.Namespace) {
-			sdk.ControlPlaneSDK.EXPECT().
-				CreateControlPlane(mock.Anything, sdkkonnectcomp.CreateControlPlaneRequest{
-					Name:        "cp-1",
-					Description: lo.ToPtr("test control plane 1"),
-				}).
-				Return(&sdkkonnectops.CreateControlPlaneResponse{
-					ControlPlane: &sdkkonnectcomp.ControlPlane{
-						ID: "12345",
-					},
-				}, nil)
+			sdk.ControlPlaneSDK.EXPECT().CreateControlPlane(mock.Anything, mock.MatchedBy(func(req sdkkonnectcomp.CreateControlPlaneRequest) bool {
+				return req.Name == "cp-1" &&
+					req.Description != nil && *req.Description == "test control plane 1"
+			})).Return(&sdkkonnectops.CreateControlPlaneResponse{
+				ControlPlane: &sdkkonnectcomp.ControlPlane{
+					ID: "12345",
+				},
+			}, nil)
+			// verify that mock SDK is called as expected.
+			t.Cleanup(func() {
+				require.True(t, sdk.ControlPlaneSDK.AssertExpectations(t))
+			})
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
