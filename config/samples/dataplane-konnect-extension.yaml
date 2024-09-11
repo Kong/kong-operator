@@ -28,7 +28,9 @@ spec:
     konnectID: <YOUR-CP-KONNECT-ID>
   serverHostname: your.konnect.server
   controlPlaneRegion: eu
-  clusterCertificateSecretName: konnect-client-tls
+  konnectAuthConfiguration:
+    clusterCertificateSecretRef:
+      name: konnect-client-tls
 ---
 apiVersion: gateway-operator.konghq.com/v1beta1
 kind: DataPlane
