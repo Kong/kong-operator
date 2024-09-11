@@ -118,6 +118,9 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if len(pluginBindingsByServiceName[kongService.Name]) == 0 {
 			if controllerutil.RemoveFinalizer(&kongService, consts.CleanupPluginBindingFinalizer) {
 				if err = r.Client.Update(ctx, &kongService); err != nil {
+					if k8serrors.IsConflict(err) {
+						return ctrl.Result{Requeue: true}, nil
+					}
 					return ctrl.Result{}, err
 				}
 				log.Debug(logger, "KongService finalizer removed", kongService)
