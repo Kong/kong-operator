@@ -33,6 +33,7 @@ func init() {
 // and is intended to be referenced as extension by the dataplane API.
 // If a DataPlane successfully refers a DataPlaneKonnectExtension, the DataPlane
 // deployment spec gets customized to include the konnect-related configuration.
+// +kubebuilder:validation:XValidation:rule="oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable."
 type DataPlaneKonnectExtension struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -78,13 +79,26 @@ type DataPlaneKonnectExtensionSpec struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	ServerHostname string `json:"serverHostname"`
 
-	// ClusterCertificateSecretName is a name of the Secret containing the Konnect Control Plane's cluster certificate.
+	// KonnectAuthConfiguration must be used to configure the Konnect API authentication.
 	// +kubebuilder:validation:Required
-	ClusterCertificateSecretName string `json:"clusterCertificateSecretName"`
+	KonnectAuthConfiguration KonnectAPIAuthConfiguration `json:"konnectAuthConfiguration"`
 
 	// ClusterDataPlaneLabels is a set of labels that will be applied to the Konnect DataPlane.
 	// +optional
 	ClusterDataPlaneLabels map[string]string `json:"clusterDataPlaneLabels,omitempty"`
+}
+
+// KonnectAPIAuthConfiguration contains the configuration for the Konnect API authentication.
+type KonnectAPIAuthConfiguration struct {
+	// ClusterCertificateSecretName is a name of the Secret containing the Konnect Control Plane's cluster certificate.
+	// +kubebuilder:validation:Required
+	ClusterCertificateSecretName clusterCertificateSecretRef `json:"clusterCertificateSecretRef"`
+}
+
+type clusterCertificateSecretRef struct {
+	// Name is the name of the Secret containing the Konnect Control Plane's cluster certificate.
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
 }
 
 // DataPlaneKonnectExtensionStatus defines the observed state of DataPlaneKonnectExtension.
