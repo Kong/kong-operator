@@ -70,6 +70,11 @@
 - Requeue instead of reporting an error when a finalizer removal yields a conflict.
   [#454](https://github.com/Kong/gateway-operator/pull/454)
 
+### Changes
+
+- Default version of `ControlPlane` is bumped to 3.3.1
+  [#580](https://github.com/Kong/gateway-operator/pull/580)
+
 ## [v1.3.0]
 
 > Release date: 2024-06-24
