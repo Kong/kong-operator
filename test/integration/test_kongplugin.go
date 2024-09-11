@@ -30,8 +30,15 @@ func TestKongPlugins(t *testing.T) {
 	// Let's generate a unique test ID that we can refer to in Konnect entities.
 	// Using only the first 8 characters of the UUID to keep the ID short enough for Konnect to accept it as a part
 	// of an entity name.
-	testID := uuid.NewString()[:8]
-	managerClient := GetClients().MgrClient
+
+	const (
+		tickTime = 500 * time.Millisecond
+		timeout  = 30 * time.Second
+	)
+	var (
+		testID        = uuid.NewString()[:8]
+		managerClient = GetClients().MgrClient
+	)
 
 	ns, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -98,7 +105,7 @@ func TestKongPlugins(t *testing.T) {
 		}
 		managedKPB = &kongPluginBindingList.Items[0]
 		return true
-	}, 30*time.Second, time.Second)
+	}, timeout, tickTime)
 
 	t.Log("delete managed kongPluginBinding, then check it gets recreated")
 	require.NoError(t, managerClient.Delete(GetCtx(), managedKPB))
@@ -113,7 +120,7 @@ func TestKongPlugins(t *testing.T) {
 		}
 		managedKPB = &kongPluginBindingList.Items[0]
 		return true
-	}, 30*time.Second, time.Second)
+	}, timeout, tickTime)
 
 	t.Log("remove annotation from kongservice")
 	newKongService := kongService.DeepCopy()
@@ -123,7 +130,7 @@ func TestKongPlugins(t *testing.T) {
 			return false
 		}
 		return true
-	}, 30*time.Second, 5*time.Second)
+	}, timeout, tickTime)
 
 	t.Log("then check the managed kpb gets deleted")
 	require.Eventually(t, func() bool {
@@ -136,7 +143,7 @@ func TestKongPlugins(t *testing.T) {
 			return false
 		}
 		return true
-	}, 15*time.Second, time.Second)
+	}, timeout, tickTime)
 
 	t.Log("deploying an unmanaged KongPluginBinding resource")
 	unmanagedKPBName := "kpb-" + testID
@@ -167,14 +174,14 @@ func TestKongPlugins(t *testing.T) {
 			return false
 		}
 		return controllerutil.ContainsFinalizer(proxyCachekongPlugin, consts.PluginInUseFinalizer)
-	}, 15*time.Second, time.Second)
+	}, timeout, tickTime)
 
 	t.Log("delete the proxy-cache plugin, then check it does not get collected")
 	require.NoError(t, managerClient.Delete(GetCtx(), proxyCachekongPlugin))
 	require.Never(t, func() bool {
 		err := managerClient.Get(GetCtx(), client.ObjectKeyFromObject(proxyCachekongPlugin), proxyCachekongPlugin)
 		return k8serrors.IsNotFound(err)
-	}, 15*time.Second, time.Second)
+	}, timeout, tickTime)
 
 	t.Log("delete the unmanaged kongPluginBinding, then check the proxy-cache kongPlugin gets collected")
 	require.NoError(t, managerClient.Delete(GetCtx(), unmanagedKPB))
@@ -185,14 +192,14 @@ func TestKongPlugins(t *testing.T) {
 			return false
 		}
 		return len(kongPluginBindingList.Items) == 0
-	}, 15*time.Second, time.Second)
+	}, timeout, tickTime)
 	require.Eventually(t, func() bool {
 		return k8serrors.IsNotFound(managerClient.Get(GetCtx(), client.ObjectKeyFromObject(proxyCachekongPlugin), proxyCachekongPlugin))
-	}, 15*time.Second, time.Second)
+	}, timeout, tickTime)
 
 	t.Log("delete the kongservice and check it gets collected, as the kongPluginBinding finalizer should have been removed")
 	require.NoError(t, managerClient.Delete(GetCtx(), kongService))
 	require.Eventually(t, func() bool {
 		return k8serrors.IsNotFound(managerClient.Get(GetCtx(), client.ObjectKeyFromObject(kongService), kongService))
-	}, 15*time.Second, time.Second)
+	}, timeout, tickTime)
 }
