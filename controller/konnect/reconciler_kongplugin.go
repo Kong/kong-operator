@@ -87,6 +87,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// TODO(mlavacca): So far we are supporting only KongService targets here. We need to implement
 	// the same logic for KongRoute, KongConsumer, and KongConsumerGroup as well.
+	// https://github.com/Kong/gateway-operator/issues/583
 
 	// Group the PluginBindings by KongService name
 	pluginBindingsByServiceName := map[string][]configurationv1alpha1.KongPluginBinding{}
