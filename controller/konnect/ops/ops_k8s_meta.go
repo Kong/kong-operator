@@ -66,7 +66,7 @@ func GenerateKubernetesMetadataTags(obj client.Object) []string {
 	if k8sNamespace := obj.GetNamespace(); k8sNamespace != "" {
 		labels = append(labels, lo.Entry[string, string]{Key: KubernetesNamespaceLabelKey, Value: k8sNamespace})
 	}
-	var tags []string
+	tags := make([]string, 0, len(labels))
 	for _, label := range labels {
 		tags = append(tags, fmt.Sprintf("%s:%s", label.Key, label.Value))
 	}

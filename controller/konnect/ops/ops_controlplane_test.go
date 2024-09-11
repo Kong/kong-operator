@@ -9,8 +9,8 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -461,46 +461,52 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 				APIVersion: "konnect.konghq.com/v1alpha1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cp-1",
-				Namespace: "default",
-				UID:       k8stypes.UID(uuid.NewString()),
+				Name:       "cp-1",
+				Namespace:  "default",
+				UID:        k8stypes.UID(uuid.NewString()),
+				Generation: 2,
+			},
+			Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+				CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+					Name: "cp-1",
+				},
 			},
 		}
-		sdk = &MockControlPlaneSDK{}
+		sdk = NewMockControlPlaneSDK(t)
 	)
 
-	t.Log("Triggering CreateControlPlane and capturing generated tags")
+	t.Log("Triggering CreateControlPlane with expected labels")
+	expectedLabels := map[string]string{
+		"k8s-name":       "cp-1",
+		"k8s-namespace":  "default",
+		"k8s-uid":        string(cp.GetUID()),
+		"k8s-kind":       "KonnectGatewayControlPlane",
+		"k8s-group":      "konnect.konghq.com",
+		"k8s-version":    "v1alpha1",
+		"k8s-generation": "2",
+	}
 	sdk.EXPECT().
-		CreateControlPlane(ctx, mock.Anything).
+		CreateControlPlane(ctx, sdkkonnectcomp.CreateControlPlaneRequest{
+			Name:   "cp-1",
+			Labels: expectedLabels,
+		}).
 		Return(&sdkkonnectops.CreateControlPlaneResponse{
 			ControlPlane: &sdkkonnectcomp.ControlPlane{
 				ID: "12345",
 			},
 		}, nil)
-	err := createControlPlane(ctx, sdk, cp)
-	require.NoError(t, err)
-	require.Len(t, sdk.Calls, 1)
-	call := sdk.Calls[0]
-	require.Equal(t, "CreateControlPlane", call.Method)
-	require.IsType(t, sdkkonnectcomp.CreateControlPlaneRequest{}, call.Arguments[1])
-	capturedCreateLabels := call.Arguments[1].(sdkkonnectcomp.CreateControlPlaneRequest).Labels
+	require.NoError(t, createControlPlane(ctx, sdk, cp))
 
-	t.Log("Triggering UpdateControlPlane and capturing generated tags")
+	t.Log("Triggering UpdateControlPlane with expected labels")
 	sdk.EXPECT().
-		UpdateControlPlane(ctx, "12345", mock.Anything).
+		UpdateControlPlane(ctx, "12345", sdkkonnectcomp.UpdateControlPlaneRequest{
+			Name:   lo.ToPtr("cp-1"),
+			Labels: expectedLabels,
+		}).
 		Return(&sdkkonnectops.UpdateControlPlaneResponse{
 			ControlPlane: &sdkkonnectcomp.ControlPlane{
 				ID: "12345",
 			},
 		}, nil)
-	err = updateControlPlane(ctx, sdk, cp)
-	require.NoError(t, err)
-	require.Len(t, sdk.Calls, 2)
-	call = sdk.Calls[1]
-	require.Equal(t, "UpdateControlPlane", call.Method)
-	require.IsType(t, sdkkonnectcomp.UpdateControlPlaneRequest{}, call.Arguments[2])
-	capturedUpdateLabels := call.Arguments[2].(sdkkonnectcomp.UpdateControlPlaneRequest).Labels
-
-	require.NotEmpty(t, capturedCreateLabels, "labels should be captured during create")
-	require.Equal(t, capturedCreateLabels, capturedUpdateLabels, "labels should be consistent between create and update")
+	require.NoError(t, updateControlPlane(ctx, sdk, cp))
 }
