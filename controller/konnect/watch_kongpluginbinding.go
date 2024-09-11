@@ -347,6 +347,7 @@ func enqueueKongPluginBindingForKongService(cl client.Client) func(
 
 		pluginBindingList := configurationv1alpha1.KongPluginBindingList{}
 		err := cl.List(ctx, &pluginBindingList,
+			client.InNamespace(kongService.Namespace),
 			client.MatchingFields{
 				IndexFieldKongPluginBindingKongServiceReference: kongService.Name,
 			},
@@ -380,6 +381,7 @@ func enqueueKongPluginBindingForKongRoute(cl client.Client) func(
 
 		pluginBindingList := configurationv1alpha1.KongPluginBindingList{}
 		err := cl.List(ctx, &pluginBindingList,
+			client.InNamespace(kongRoute.Namespace),
 			client.MatchingFields{
 				IndexFieldKongPluginBindingKongRouteReference: kongRoute.Name,
 			},
@@ -413,6 +415,7 @@ func enqueueKongPluginBindingForKongConsumer(cl client.Client) func(
 
 		pluginBindingList := configurationv1alpha1.KongPluginBindingList{}
 		err := cl.List(ctx, &pluginBindingList,
+			client.InNamespace(kongConsumer.Namespace),
 			client.MatchingFields{
 				IndexFieldKongPluginBindingKongConsumerReference: kongConsumer.Name,
 			},
@@ -446,6 +449,7 @@ func enqueueKongPluginBindingForKongConsumerGroup(cl client.Client) func(
 
 		pluginBindingList := configurationv1alpha1.KongPluginBindingList{}
 		err := cl.List(ctx, &pluginBindingList,
+			client.InNamespace(kongConsumerGroup.Namespace),
 			client.MatchingFields{
 				IndexFieldKongPluginBindingKongConsumerGroupReference: kongConsumerGroup.Name,
 			},
