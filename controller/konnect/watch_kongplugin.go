@@ -18,7 +18,7 @@ import (
 
 // mapKongServices enqueue requests for KongPlugin objects based on KongService annotations.
 func (r *KongPluginReconciler) mapKongServices(ctx context.Context, obj client.Object) []reconcile.Request {
-	logger := log.GetLogger(ctx, "KongPlugin", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, "KongPlugin", r.developmentMode)
 	kongService, ok := obj.(*configurationv1alpha1.KongService)
 	if !ok {
 		log.Error(logger, errors.New("cannot cast object to KongService"), "KongService mapping handler", obj)
@@ -29,7 +29,7 @@ func (r *KongPluginReconciler) mapKongServices(ctx context.Context, obj client.O
 	if plugins, ok := kongService.Annotations["konghq.com/plugins"]; ok {
 		for _, p := range strings.Split(plugins, ",") {
 			kp := configurationv1.KongPlugin{}
-			if r.Client.Get(ctx, client.ObjectKey{Namespace: kongService.Namespace, Name: p}, &kp) == nil {
+			if r.client.Get(ctx, client.ObjectKey{Namespace: kongService.Namespace, Name: p}, &kp) == nil {
 				requests = append(requests, ctrl.Request{
 					NamespacedName: client.ObjectKey{
 						Namespace: kp.Namespace,
@@ -44,7 +44,7 @@ func (r *KongPluginReconciler) mapKongServices(ctx context.Context, obj client.O
 
 // mapKongPluginBindings enqueue requests for KongPlugins referenced by KongPluginBindings in their .spec.pluginRef field.
 func (r *KongPluginReconciler) mapKongPluginBindings(ctx context.Context, obj client.Object) []reconcile.Request {
-	logger := log.GetLogger(ctx, "KongPlugin", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, "KongPlugin", r.developmentMode)
 	kongPluginBinding, ok := obj.(*configurationv1alpha1.KongPluginBinding)
 	if !ok {
 		log.Error(logger, errors.New("cannot cast object to KongPluginBinding"), "KongPluginBinding mapping handler", obj)
