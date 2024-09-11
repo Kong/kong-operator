@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -16,6 +18,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func createService(
@@ -83,7 +86,7 @@ func updateService(
 	}
 
 	id := svc.GetKonnectStatus().GetKonnectID()
-	resp, err := sdk.UpsertService(ctx,
+	_, err := sdk.UpsertService(ctx,
 		sdkkonnectops.UpsertServiceRequest{
 			ControlPlaneID: svc.GetControlPlaneID(),
 			ServiceID:      id,
@@ -130,8 +133,6 @@ func updateService(
 		return errWrapped
 	}
 
-	svc.Status.Konnect.SetKonnectID(*resp.Service.ID)
-	svc.Status.Konnect.SetControlPlaneID(svc.GetControlPlaneID())
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
 			conditions.KonnectEntityProgrammedConditionType,
@@ -186,6 +187,14 @@ func deleteService(
 func kongServiceToSDKServiceInput(
 	svc *configurationv1alpha1.KongService,
 ) sdkkonnectcomp.ServiceInput {
+	var (
+		specTags       = svc.Spec.Tags
+		annotationTags = metadata.ExtractTags(svc)
+		k8sTags        = GenerateKubernetesMetadataTags(svc)
+	)
+	// Deduplicate tags to avoid rejection by Konnect.
+	tags := lo.Uniq(slices.Concat(specTags, annotationTags, k8sTags))
+
 	return sdkkonnectcomp.ServiceInput{
 		URL:            svc.Spec.KongServiceAPISpec.URL,
 		ConnectTimeout: svc.Spec.KongServiceAPISpec.ConnectTimeout,
@@ -197,7 +206,7 @@ func kongServiceToSDKServiceInput(
 		Protocol:       svc.Spec.KongServiceAPISpec.Protocol,
 		ReadTimeout:    svc.Spec.KongServiceAPISpec.ReadTimeout,
 		Retries:        svc.Spec.KongServiceAPISpec.Retries,
-		Tags:           svc.Spec.KongServiceAPISpec.Tags,
+		Tags:           tags,
 		TLSVerify:      svc.Spec.KongServiceAPISpec.TLSVerify,
 		TLSVerifyDepth: svc.Spec.KongServiceAPISpec.TLSVerifyDepth,
 		WriteTimeout:   svc.Spec.KongServiceAPISpec.WriteTimeout,

@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -18,7 +19,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func createRoute(
@@ -70,59 +71,19 @@ func createRoute(
 // if the operation fails.
 func updateRoute(
 	ctx context.Context,
-	// sdk *sdkkonnectgo.SDK,
 	sdk RoutesSDK,
-	cl client.Client,
 	route *configurationv1alpha1.KongRoute,
 ) error {
-	if route.Spec.ServiceRef == nil {
-		return fmt.Errorf("can't update %T without a ServiceRef", route)
+	cpID := route.GetControlPlaneID()
+	if cpID == "" {
+		return fmt.Errorf("can't update %T %s without a Konnect ControlPlane ID", route, client.ObjectKeyFromObject(route))
 	}
 
-	// TODO(pmalek) handle other types of CP ref
-	nnSvc := types.NamespacedName{
-		Namespace: route.Namespace,
-		Name:      route.Spec.ServiceRef.NamespacedRef.Name,
-	}
-	var svc configurationv1alpha1.KongService
-	if err := cl.Get(ctx, nnSvc, &svc); err != nil {
-		return fmt.Errorf("failed to get KongService %s: for KongRoute %s: %w",
-			nnSvc, client.ObjectKeyFromObject(route), err,
-		)
-	}
-
-	if svc.Status.Konnect.ID == "" {
-		return fmt.Errorf(
-			"can't update %T when referenced KongService %s does not have the Konnect ID",
-			route, nnSvc,
-		)
-	}
-
-	var cp konnectv1alpha1.KonnectGatewayControlPlane
-	nnCP := types.NamespacedName{
-		Namespace: svc.Namespace,
-		Name:      svc.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
-	}
-	if err := cl.Get(ctx, nnCP, &cp); err != nil {
-		return fmt.Errorf("failed to get KonnectGatewayControlPlane %s: for KongRoute %s: %w",
-			nnSvc, client.ObjectKeyFromObject(route), err,
-		)
-	}
-
-	if cp.Status.ID == "" {
-		return fmt.Errorf(
-			"can't update %T when referenced KonnectGatewayControlPlane %s does not have the Konnect ID",
-			route, nnSvc,
-		)
-	}
-
-	resp, err := sdk.UpsertRoute(ctx, sdkkonnectops.UpsertRouteRequest{
-		// resp, err := sdk.UpsertRoute(ctx, sdkkonnectops.UpsertRouteRequest{
-		ControlPlaneID: cp.Status.ID,
+	_, err := sdk.UpsertRoute(ctx, sdkkonnectops.UpsertRouteRequest{
+		ControlPlaneID: cpID,
 		RouteID:        route.Status.Konnect.ID,
 		Route:          kongRouteToSDKRouteInput(route),
-	},
-	)
+	})
 
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
@@ -141,8 +102,6 @@ func updateRoute(
 		return errWrapped
 	}
 
-	route.Status.Konnect.SetKonnectID(*resp.Route.ID)
-	route.Status.Konnect.SetControlPlaneID(cp.Status.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
 			conditions.KonnectEntityProgrammedConditionType,
@@ -195,6 +154,14 @@ func deleteRoute(
 func kongRouteToSDKRouteInput(
 	route *configurationv1alpha1.KongRoute,
 ) sdkkonnectcomp.RouteInput {
+	var (
+		specTags       = route.Spec.KongRouteAPISpec.Tags
+		annotationTags = metadata.ExtractTags(route)
+		k8sTags        = GenerateKubernetesMetadataTags(route)
+	)
+	// Deduplicate tags to avoid rejection by Konnect.
+	tags := lo.Uniq(slices.Concat(specTags, annotationTags, k8sTags))
+
 	return sdkkonnectcomp.RouteInput{
 		Destinations:            route.Spec.KongRouteAPISpec.Destinations,
 		Headers:                 route.Spec.KongRouteAPISpec.Headers,
@@ -212,7 +179,7 @@ func kongRouteToSDKRouteInput(
 		Snis:                    route.Spec.KongRouteAPISpec.Snis,
 		Sources:                 route.Spec.KongRouteAPISpec.Sources,
 		StripPath:               route.Spec.KongRouteAPISpec.StripPath,
-		Tags:                    route.Spec.KongRouteAPISpec.Tags,
+		Tags:                    tags,
 		Service: &sdkkonnectcomp.RouteService{
 			ID: sdkkonnectgo.String(route.Status.Konnect.ServiceID),
 		},

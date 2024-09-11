@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -20,7 +20,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 // -----------------------------------------------------------------------------
@@ -38,7 +38,7 @@ func createPlugin(
 	if controlPlaneID == "" {
 		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", pluginBinding, client.ObjectKeyFromObject(pluginBinding))
 	}
-	pluginInput, err := getPluginInput(ctx, cl, pluginBinding)
+	pluginInput, err := kongPluginBindingToSDKPluginInput(ctx, cl, pluginBinding)
 	if err != nil {
 		return err
 	}
@@ -95,32 +95,12 @@ func updatePlugin(
 		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", pb, client.ObjectKeyFromObject(pb))
 	}
 
-	// TODO(pmalek) handle other types of CP ref
-	// TODO(pmalek) handle cross namespace refs
-	nnCP := types.NamespacedName{
-		Namespace: pb.Namespace,
-		Name:      pb.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
-	}
-	var cp konnectv1alpha1.KonnectGatewayControlPlane
-	if err := cl.Get(ctx, nnCP, &cp); err != nil {
-		return fmt.Errorf("failed to get KonnectGatewayControlPlane %s: for %T %s: %w",
-			nnCP, pb, client.ObjectKeyFromObject(pb), err,
-		)
-	}
-
-	if cp.Status.ID == "" {
-		return fmt.Errorf(
-			"can't update %T when referenced KonnectGatewayControlPlane %s does not have the Konnect ID",
-			pb, nnCP,
-		)
-	}
-
-	pluginInput, err := getPluginInput(ctx, cl, pb)
+	pluginInput, err := kongPluginBindingToSDKPluginInput(ctx, cl, pb)
 	if err != nil {
 		return err
 	}
 
-	resp, err := sdk.UpsertPlugin(ctx,
+	_, err = sdk.UpsertPlugin(ctx,
 		sdkkonnectops.UpsertPluginRequest{
 			ControlPlaneID: controlPlaneID,
 			PluginID:       pb.GetKonnectID(),
@@ -145,8 +125,6 @@ func updatePlugin(
 		return errWrapped
 	}
 
-	pb.Status.Konnect.SetKonnectID(*resp.Plugin.ID)
-	pb.Status.Konnect.SetControlPlaneID(cp.Status.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
 			conditions.KonnectEntityProgrammedConditionType,
@@ -194,8 +172,14 @@ func deletePlugin(
 // Konnect KongPlugin - ops helpers
 // -----------------------------------------------------------------------------
 
-// getPluginInput returns the SDK PluginInput for the KongPluginBinding.
-func getPluginInput(ctx context.Context, cl client.Client, pluginBinding *configurationv1alpha1.KongPluginBinding) (*sdkkonnectcomp.PluginInput, error) {
+// kongPluginBindingToSDKPluginInput returns the SDK PluginInput for the KongPluginBinding.
+// It uses the client.Client to fetch the KongPlugin and the targets referenced by the KongPluginBinding that are needed
+// to create the SDK PluginInput.
+func kongPluginBindingToSDKPluginInput(
+	ctx context.Context,
+	cl client.Client,
+	pluginBinding *configurationv1alpha1.KongPluginBinding,
+) (*sdkkonnectcomp.PluginInput, error) {
 	plugin, err := getReferencedPlugin(ctx, cl, pluginBinding)
 	if err != nil {
 		return nil, err
@@ -206,7 +190,15 @@ func getPluginInput(ctx context.Context, cl client.Client, pluginBinding *config
 		return nil, err
 	}
 
-	return kongPluginBindingToSDKPluginInput(plugin, targets)
+	var (
+		pluginBindingAnnotationTags = metadata.ExtractTags(pluginBinding)
+		pluginAnnotationTags        = metadata.ExtractTags(plugin)
+		pluginBindingK8sTags        = GenerateKubernetesMetadataTags(pluginBinding)
+	)
+	// Deduplicate tags to avoid rejection by Konnect.
+	tags := lo.Uniq(slices.Concat(pluginBindingAnnotationTags, pluginAnnotationTags, pluginBindingK8sTags))
+
+	return kongPluginWithTargetsToKongPluginInput(plugin, targets, tags)
 }
 
 // getPluginBindingTargets returns the list of client objects referenced
@@ -252,10 +244,12 @@ func getReferencedPlugin(ctx context.Context, cl client.Client, pluginBinding *c
 	return &plugin, nil
 }
 
-// kongPluginBindingToSDKPluginInput converts a kongPluginConfiguration to an SKD PluginInput.
-func kongPluginBindingToSDKPluginInput(
+// kongPluginWithTargetsToKongPluginInput converts a KongPlugin configuration along with KongPluginBinding's targets and
+// tags to an SKD PluginInput.
+func kongPluginWithTargetsToKongPluginInput(
 	plugin *configurationv1.KongPlugin,
 	targets []client.Object,
+	tags []string,
 ) (*sdkkonnectcomp.PluginInput, error) {
 	if len(targets) == 0 {
 		return nil, fmt.Errorf("no targets found for KongPluginBinding %s", client.ObjectKeyFromObject(plugin))
@@ -273,6 +267,7 @@ func kongPluginBindingToSDKPluginInput(
 		Name:    lo.ToPtr(plugin.PluginName),
 		Config:  pluginConfig,
 		Enabled: lo.ToPtr(!plugin.Disabled),
+		Tags:    tags,
 	}
 
 	// TODO(mlavacca): check all the entities reference the same KonnectGatewayControlPlane

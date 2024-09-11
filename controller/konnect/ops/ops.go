@@ -158,11 +158,11 @@ func Update[
 	case *configurationv1alpha1.KongService:
 		return ctrl.Result{}, updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
-		return ctrl.Result{}, updateRoute(ctx, sdk.GetRoutesSDK(), cl, ent)
+		return ctrl.Result{}, updateRoute(ctx, sdk.GetRoutesSDK(), ent)
 	case *configurationv1.KongConsumer:
-		return ctrl.Result{}, updateConsumer(ctx, sdk.GetConsumersSDK(), cl, ent)
+		return ctrl.Result{}, updateConsumer(ctx, sdk.GetConsumersSDK(), ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		return ctrl.Result{}, updateConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), cl, ent)
+		return ctrl.Result{}, updateConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.KongPluginBinding:
 		return ctrl.Result{}, updatePlugin(ctx, sdk.GetPluginSDK(), cl, ent)
 

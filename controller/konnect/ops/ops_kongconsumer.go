@@ -9,7 +9,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -17,7 +16,6 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
@@ -26,12 +24,13 @@ func createConsumer(
 	sdk ConsumersSDK,
 	consumer *configurationv1.KongConsumer,
 ) error {
-	if consumer.GetControlPlaneID() == "" {
+	cpID := consumer.GetControlPlaneID()
+	if cpID == "" {
 		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", consumer, client.ObjectKeyFromObject(consumer))
 	}
 
 	resp, err := sdk.CreateConsumer(ctx,
-		consumer.Status.Konnect.ControlPlaneID,
+		cpID,
 		kongConsumerToSDKConsumerInput(consumer),
 	)
 
@@ -73,36 +72,16 @@ func createConsumer(
 func updateConsumer(
 	ctx context.Context,
 	sdk ConsumersSDK,
-	cl client.Client,
 	consumer *configurationv1.KongConsumer,
 ) error {
-	if consumer.Spec.ControlPlaneRef == nil {
-		return fmt.Errorf("can't update %T without a ControlPlaneRef", consumer)
+	cpID := consumer.GetControlPlaneID()
+	if cpID == "" {
+		return fmt.Errorf("can't update %T without a ControlPlaneID", consumer)
 	}
 
-	// TODO(pmalek) handle other types of CP ref
-	// TODO(pmalek) handle cross namespace refs
-	nnCP := types.NamespacedName{
-		Namespace: consumer.Namespace,
-		Name:      consumer.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
-	}
-	var cp konnectv1alpha1.KonnectGatewayControlPlane
-	if err := cl.Get(ctx, nnCP, &cp); err != nil {
-		return fmt.Errorf("failed to get KonnectGatewayControlPlane %s: for %T %s: %w",
-			nnCP, consumer, client.ObjectKeyFromObject(consumer), err,
-		)
-	}
-
-	if cp.Status.ID == "" {
-		return fmt.Errorf(
-			"can't update %T when referenced KonnectGatewayControlPlane %s does not have the Konnect ID",
-			consumer, nnCP,
-		)
-	}
-
-	resp, err := sdk.UpsertConsumer(ctx,
+	_, err := sdk.UpsertConsumer(ctx,
 		sdkkonnectops.UpsertConsumerRequest{
-			ControlPlaneID: cp.Status.ID,
+			ControlPlaneID: cpID,
 			ConsumerID:     consumer.GetKonnectStatus().GetKonnectID(),
 			Consumer:       kongConsumerToSDKConsumerInput(consumer),
 		},
@@ -125,8 +104,6 @@ func updateConsumer(
 		return errWrapped
 	}
 
-	consumer.Status.Konnect.SetKonnectID(*resp.Consumer.ID)
-	consumer.Status.Konnect.SetControlPlaneID(cp.Status.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
 			conditions.KonnectEntityProgrammedConditionType,
@@ -181,7 +158,7 @@ func kongConsumerToSDKConsumerInput(
 ) sdkkonnectcomp.ConsumerInput {
 	return sdkkonnectcomp.ConsumerInput{
 		CustomID: &consumer.CustomID,
-		Tags:     metadata.ExtractTags(consumer),
+		Tags:     append(metadata.ExtractTags(consumer), GenerateKubernetesMetadataTags(consumer)...),
 		Username: &consumer.Username,
 	}
 }
