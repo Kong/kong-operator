@@ -7,8 +7,8 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/go-logr/logr/testr"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -47,7 +47,7 @@ type konnectEntityReconcilerTestCase struct {
 	name                string
 	objectOps           func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace)
 	mockExpectations    func(t *testing.T, sdk *ops.MockSDKWrapper, ns *corev1.Namespace)
-	eventuallyPredicate func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) bool
+	eventuallyPredicate func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace)
 }
 
 var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
@@ -102,22 +102,20 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			require.NoError(t, cl.Create(ctx, cp))
 		},
 		mockExpectations: func(t *testing.T, sdk *ops.MockSDKWrapper, ns *corev1.Namespace) {
-			sdk.ControlPlaneSDK.EXPECT().CreateControlPlane(mock.Anything, sdkkonnectcomp.CreateControlPlaneRequest{
-				Name:        "cp-1",
-				Description: lo.ToPtr("test control plane 1"),
-			}).Return(&sdkkonnectops.CreateControlPlaneResponse{
-				ControlPlane: &sdkkonnectcomp.ControlPlane{
-					ID: "12345",
-				},
-			}, nil)
-			// verify that mock SDK is called as expected.
-			t.Cleanup(func() {
-				require.True(t, sdk.ControlPlaneSDK.AssertExpectations(t))
-			})
+			sdk.ControlPlaneSDK.EXPECT().
+				CreateControlPlane(mock.Anything, sdkkonnectcomp.CreateControlPlaneRequest{
+					Name:        "cp-1",
+					Description: lo.ToPtr("test control plane 1"),
+				}).
+				Return(&sdkkonnectops.CreateControlPlaneResponse{
+					ControlPlane: &sdkkonnectcomp.ControlPlane{
+						ID: "12345",
+					},
+				}, nil)
 		},
-		eventuallyPredicate: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) bool {
+		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
-			require.NoError(t,
+			if !assert.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
 						Namespace: ns.Name,
@@ -125,11 +123,18 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 					cp,
 				),
+			) {
+				return
+			}
+
+			assert.Equal(t, "12345", cp.Status.ID)
+			assert.True(t,
+				lo.ContainsBy(cp.Status.Conditions, func(condition metav1.Condition) bool {
+					return condition.Type == conditions.KonnectEntityProgrammedConditionType &&
+						condition.Status == metav1.ConditionTrue
+				}),
+				"Programmed condition should be set and it status should be true",
 			)
-			return cp.Status.ID == "12345" && // Call of creating control plane should be OK
-				lo.ContainsBy(cp.Status.Conditions, func(condition metav1.Condition) bool { // "Programmed" condition should be true
-					return condition.Type == conditions.KonnectEntityProgrammedConditionType && condition.Status == metav1.ConditionTrue
-				})
 		},
 	},
 }
@@ -156,7 +161,6 @@ func testNewKonnectEntityReconciler[
 
 		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 			Scheme: scheme.Get(),
-			Logger: testr.New(t).V(1),
 			Metrics: metricsserver.Options{
 				// We do not need metrics server so we set BindAddress to 0 to disable it.
 				BindAddress: "0",
@@ -165,10 +169,9 @@ func testNewKonnectEntityReconciler[
 		require.NoError(t, err)
 
 		cl := mgr.GetClient()
-		sdk := ops.NewMockSDKWrapper()
-		reconciler := konnect.NewKonnectEntityReconciler[T, TEnt](&ops.MockSDKFactory{
-			SDK: sdk,
-		}, false, cl)
+		factory := ops.NewMockSDKFactory(t)
+		sdk := factory.SDK
+		reconciler := konnect.NewKonnectEntityReconciler[T, TEnt](factory, false, cl)
 		require.NoError(t, reconciler.SetupWithManager(ctx, mgr))
 
 		ns := &corev1.Namespace{
@@ -193,10 +196,9 @@ func testNewKonnectEntityReconciler[
 			t.Run(tc.name, func(t *testing.T) {
 				tc.objectOps(ctx, t, cl, ns)
 				tc.mockExpectations(t, sdk, ns)
-				require.Eventually(t, func() bool {
-					return tc.eventuallyPredicate(ctx, t, cl, ns)
+				require.EventuallyWithT(t, func(collect *assert.CollectT) {
+					tc.eventuallyPredicate(ctx, collect, cl, ns)
 				}, wait, tick)
-				require.True(t, sdk.ControlPlaneSDK.AssertExpectations(t))
 			})
 		}
 	})

@@ -1,5 +1,11 @@
 package ops
 
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
 type MockSDKWrapper struct {
 	ControlPlaneSDK  *MockControlPlaneSDK
 	ServicesSDK      *MockServicesSDK
@@ -12,15 +18,15 @@ type MockSDKWrapper struct {
 
 var _ SDKWrapper = MockSDKWrapper{}
 
-func NewMockSDKWrapper() *MockSDKWrapper {
+func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 	return &MockSDKWrapper{
-		ControlPlaneSDK:  &MockControlPlaneSDK{},
-		ServicesSDK:      &MockServicesSDK{},
-		RoutesSDK:        &MockRoutesSDK{},
-		ConsumersSDK:     &MockConsumersSDK{},
-		ConsumerGroupSDK: &MockConsumerGroupSDK{},
-		PluginSDK:        &MockPluginSDK{},
-		MeSDK:            &MockMeSDK{},
+		ControlPlaneSDK:  NewMockControlPlaneSDK(t),
+		ServicesSDK:      NewMockServicesSDK(t),
+		RoutesSDK:        NewMockRoutesSDK(t),
+		ConsumersSDK:     NewMockConsumersSDK(t),
+		ConsumerGroupSDK: NewMockConsumerGroupSDK(t),
+		PluginSDK:        NewMockPluginSDK(t),
+		MeSDK:            NewMockMeSDK(t),
 	}
 }
 
@@ -53,14 +59,20 @@ func (m MockSDKWrapper) GetMeSDK() MeSDK {
 }
 
 type MockSDKFactory struct {
+	t   *testing.T
 	SDK *MockSDKWrapper
 }
 
 var _ SDKFactory = MockSDKFactory{}
 
-func (m MockSDKFactory) NewKonnectSDK(_ string, _ SDKToken) SDKWrapper {
-	if m.SDK != nil {
-		return *m.SDK
+func NewMockSDKFactory(t *testing.T) *MockSDKFactory {
+	return &MockSDKFactory{
+		t:   t,
+		SDK: NewMockSDKWrapperWithT(t),
 	}
-	return NewMockSDKWrapper()
+}
+
+func (m MockSDKFactory) NewKonnectSDK(_ string, _ SDKToken) SDKWrapper {
+	require.NotNil(m.t, m.SDK)
+	return *m.SDK
 }
