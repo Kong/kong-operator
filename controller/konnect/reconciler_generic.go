@@ -130,10 +130,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		ent = TEnt(&e)
 	)
 	if err := r.Client.Get(ctx, req.NamespacedName, ent); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	ctx = ctrllog.IntoContext(ctx, logger)
@@ -543,7 +540,8 @@ func getServiceRef[T constraints.SupportedKonnectEntityType, TEnt constraints.En
 		*configurationv1.KongConsumer,
 		*configurationv1beta1.KongConsumerGroup,
 		*konnectv1alpha1.KonnectGatewayControlPlane,
-		*configurationv1alpha1.KongPluginBinding:
+		*configurationv1alpha1.KongPluginBinding,
+		*configurationv1alpha1.KongUpstream:
 		return mo.None[configurationv1alpha1.ServiceRef]()
 	case *configurationv1alpha1.KongRoute:
 		if e.Spec.ServiceRef == nil {
@@ -732,6 +730,11 @@ func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
 	case *configurationv1alpha1.KongPluginBinding:
+		if e.Spec.ControlPlaneRef == nil {
+			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+		}
+		return mo.Some(*e.Spec.ControlPlaneRef)
+	case *configurationv1alpha1.KongUpstream:
 		if e.Spec.ControlPlaneRef == nil {
 			return mo.None[configurationv1alpha1.ControlPlaneRef]()
 		}

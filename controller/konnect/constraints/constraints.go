@@ -18,7 +18,8 @@ type SupportedKonnectEntityType interface {
 		configurationv1alpha1.KongRoute |
 		configurationv1.KongConsumer |
 		configurationv1beta1.KongConsumerGroup |
-		configurationv1alpha1.KongPluginBinding
+		configurationv1alpha1.KongPluginBinding |
+		configurationv1alpha1.KongUpstream
 	// TODO: add other types
 
 	GetTypeName() string

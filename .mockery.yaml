@@ -17,4 +17,5 @@ packages:
       ConsumersSDK:
       ConsumerGroupSDK:
       PluginSDK:
+      UpstreamsSDK:
       MeSDK:

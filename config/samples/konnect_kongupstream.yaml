@@ -1,0 +1,35 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-dev-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  serverURL: us.api.konghq.com
+---
+kind: KonnectGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: test1
+  namespace: default
+spec:
+  name: test1
+  labels:
+    app: test1
+    key1: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth-dev-1
+---
+kind: KongUpstream
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: upstream-1
+  namespace: default
+spec:
+  name: upstream-1
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: test1

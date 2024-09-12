@@ -154,6 +154,7 @@ rules:
   - kongroutes/status
   - kongservices/status
   - kongupstreampolicies/status
+  - kongupstreams/status
   - kongvaults/status
   - tcpingresses/status
   - udpingresses/status
@@ -167,6 +168,7 @@ rules:
   - kongpluginbindings
   - kongroutes
   - kongservices
+  - kongupstreams
   verbs:
   - get
   - list
