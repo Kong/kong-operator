@@ -47,10 +47,6 @@ spec:
             description: Spec is the specification of the DataPlaneKonnectExtension
               resource.
             properties:
-              clusterCertificateSecretName:
-                description: ClusterCertificateSecretName is a name of the Secret
-                  containing the Konnect Control Plane's cluster certificate.
-                type: string
               clusterDataPlaneLabels:
                 additionalProperties:
                   type: string
@@ -100,6 +96,24 @@ spec:
                   Plane.
                 example: us
                 type: string
+              konnectControlPlaneAPIAuthConfiguration:
+                description: AuthConfiguration must be used to configure the Konnect
+                  API authentication.
+                properties:
+                  clusterCertificateSecretRef:
+                    description: ClusterCertificateSecretName is a name of the Secret
+                      containing the Konnect Control Plane's cluster certificate.
+                    properties:
+                      name:
+                        description: Name is the name of the Secret containing the
+                          Konnect Control Plane's cluster certificate.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                required:
+                - clusterCertificateSecretRef
+                type: object
               serverHostname:
                 description: |-
                   ServerHostname is the fully qualified domain name of the konnect server. This
@@ -115,9 +129,9 @@ spec:
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
             required:
-            - clusterCertificateSecretName
             - controlPlaneRef
             - controlPlaneRegion
+            - konnectControlPlaneAPIAuthConfiguration
             - serverHostname
             type: object
           status:
@@ -151,6 +165,9 @@ spec:
                 type: array
             type: object
         type: object
+        x-kubernetes-validations:
+        - message: spec.controlPlaneRef is immutable.
+          rule: oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef
     served: true
     storage: true
     subresources:
