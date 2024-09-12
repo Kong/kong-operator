@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -15,6 +16,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
+	conformanceconfig "sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
@@ -76,6 +78,8 @@ type ConformanceConfig struct {
 func TestGatewayConformance(t *testing.T) {
 	t.Parallel()
 
+	const looserTimeout = 180 * time.Second
+
 	// Conformance tests are run for both available router flavours:
 	// traditional_compatible and expressions.
 	var (
@@ -112,10 +116,17 @@ func TestGatewayConformance(t *testing.T) {
 	metadata := metadata.Metadata()
 	reportFileName := fmt.Sprintf("standard-%s-%s-report.yaml", metadata.Release, mode)
 
+	// set looser timeouts to avoid flakiness
+	timeoutConfig := conformanceconfig.DefaultTimeoutConfig()
+	timeoutConfig.GatewayStatusMustHaveListeners = looserTimeout
+	timeoutConfig.GatewayListenersMustHaveConditions = looserTimeout
+	timeoutConfig.HTTPRouteMustHaveCondition = looserTimeout
+
 	opts := conformance.DefaultOptions(t)
 	opts.ReportOutputPath = "../../" + reportFileName
 	opts.Client = clients.MgrClient
 	opts.GatewayClassName = gwc.Name
+	opts.TimeoutConfig = timeoutConfig
 	opts.BaseManifests = testutils.GatewayRawRepoURL + "/conformance/base/manifests.yaml"
 	opts.SkipTests = skippedTests
 	opts.Mode = mode

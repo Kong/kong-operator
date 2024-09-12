@@ -89,11 +89,6 @@ func InitReady(resource ConditionsAndGenerationAware) bool {
 	return true
 }
 
-// InitProgrammed initializes the Programmed status to False
-func InitProgrammed(resource ConditionsAware) {
-	SetCondition(NewCondition(consts.ConditionType(gatewayv1.GatewayConditionProgrammed), metav1.ConditionFalse, consts.ConditionReason(gatewayv1.GatewayReasonPending), consts.DependenciesNotReadyMessage), resource)
-}
-
 // SetReadyWithGeneration sets the Ready status to True if all the other conditions are True.
 // It uses the provided generation to set the ObservedGeneration field.
 func SetReadyWithGeneration(resource ConditionsAndGenerationAware, generation int64) {
