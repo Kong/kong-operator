@@ -28,7 +28,7 @@ spec:
     konnectID: <YOUR-CP-KONNECT-ID>
   serverHostname: your.konnect.server
   controlPlaneRegion: eu
-  konnectAuthConfiguration:
+  konnectControlPlaneAPIAuthConfiguration:
     clusterCertificateSecretRef:
       name: konnect-client-tls
 ---

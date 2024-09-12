@@ -79,23 +79,24 @@ type DataPlaneKonnectExtensionSpec struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	ServerHostname string `json:"serverHostname"`
 
-	// KonnectAuthConfiguration must be used to configure the Konnect API authentication.
+	// AuthConfiguration must be used to configure the Konnect API authentication.
 	// +kubebuilder:validation:Required
-	KonnectAuthConfiguration KonnectAPIAuthConfiguration `json:"konnectAuthConfiguration"`
+	AuthConfiguration KonnectControlPlaneAPIAuthConfiguration `json:"konnectControlPlaneAPIAuthConfiguration"`
 
 	// ClusterDataPlaneLabels is a set of labels that will be applied to the Konnect DataPlane.
 	// +optional
 	ClusterDataPlaneLabels map[string]string `json:"clusterDataPlaneLabels,omitempty"`
 }
 
-// KonnectAPIAuthConfiguration contains the configuration for the Konnect API authentication.
-type KonnectAPIAuthConfiguration struct {
+// KonnectControlPlaneAPIAuthConfiguration contains the configuration to authenticate with Konnect API ControlPlane.
+type KonnectControlPlaneAPIAuthConfiguration struct {
 	// ClusterCertificateSecretName is a name of the Secret containing the Konnect Control Plane's cluster certificate.
 	// +kubebuilder:validation:Required
-	ClusterCertificateSecretName clusterCertificateSecretRef `json:"clusterCertificateSecretRef"`
+	ClusterCertificateSecretName ClusterCertificateSecretRef `json:"clusterCertificateSecretRef"`
 }
 
-type clusterCertificateSecretRef struct {
+// ClusterCertificateSecretRef contains the reference to the Secret containing the Konnect Control Plane's cluster certificate.
+type ClusterCertificateSecretRef struct {
 	// Name is the name of the Secret containing the Konnect Control Plane's cluster certificate.
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`

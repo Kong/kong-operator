@@ -96,9 +96,9 @@ spec:
                   Plane.
                 example: us
                 type: string
-              konnectAuthConfiguration:
-                description: KonnectAuthConfiguration must be used to configure the
-                  Konnect API authentication.
+              konnectControlPlaneAPIAuthConfiguration:
+                description: AuthConfiguration must be used to configure the Konnect
+                  API authentication.
                 properties:
                   clusterCertificateSecretRef:
                     description: ClusterCertificateSecretName is a name of the Secret
@@ -131,7 +131,7 @@ spec:
             required:
             - controlPlaneRef
             - controlPlaneRegion
-            - konnectAuthConfiguration
+            - konnectControlPlaneAPIAuthConfiguration
             - serverHostname
             type: object
           status:
