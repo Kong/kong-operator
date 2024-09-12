@@ -72,10 +72,16 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	log.Debug(logger, "reconciling", kongPlugin)
 
 	// Get the pluginBindings that use this KongPlugin
-	// TODO(mlavacca): use indexers instead of listing all KongPluginBindings
 	pluginBindings := []configurationv1alpha1.KongPluginBinding{}
 	referencingBindingList := configurationv1alpha1.KongPluginBindingList{}
-	err := r.client.List(ctx, &referencingBindingList, client.InNamespace(kongPlugin.Namespace))
+	err := r.client.List(
+		ctx,
+		&referencingBindingList,
+		client.MatchingFields{
+			IndexFieldKongPluginBindingKongPluginReference: kongPlugin.Name,
+		},
+		client.InNamespace(kongPlugin.Namespace),
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -103,7 +109,11 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Get all the KongServices referenced by the KongPluginBindings
 	// TODO(mlavacca): use indexers instead of listing all KongServices
 	kongServiceList := configurationv1alpha1.KongServiceList{}
-	err = r.client.List(ctx, &kongServiceList, client.InNamespace(kongPlugin.Namespace))
+	err = r.client.List(
+		ctx,
+		&kongServiceList,
+		client.InNamespace(kongPlugin.Namespace),
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -145,6 +155,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			log.Debug(logger, "KongService finalizer removed", kongService)
 			return ctrl.Result{}, nil
 		}
+
 		// get the referenced plugins from the KongService annotations
 		plugins, ok := kongService.Annotations[consts.PluginsAnnotationKey]
 		if !ok {
@@ -165,26 +176,33 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 		} else {
 			pluginSlice = strings.Split(plugins, ",")
+
 			for _, pb := range pluginBindings {
+				// if the kongPluginBinding targets the KongService,
 				if pb.Spec.Targets.ServiceReference != nil &&
 					pb.Spec.Targets.ServiceReference.Name == kongService.Name &&
+					// but the service does not contain the plugin referenced by the binding in the annotation, and
 					!lo.Contains(pluginSlice, pb.Spec.PluginReference.Name) &&
+					// the plugin is managed (created out of an annotation)
 					lo.ContainsBy(pb.OwnerReferences, func(ownerRef metav1.OwnerReference) bool {
 						if ownerRef.Kind == "KongPlugin" && ownerRef.Name == kongPlugin.Name && ownerRef.UID == kongPlugin.UID {
 							return true
 						}
 						return false
 					}) {
+					// then mark it for deletion, as the plugin is not referenced by the KongService anymore
 					pluginBindingsToDelete = append(pluginBindingsToDelete, pb)
 				}
 			}
 
+			// iterate over all the KondService annotations
 			for _, pluginName := range pluginSlice {
 				if pluginName != kongPlugin.Name {
 					continue
 				}
 
 				pluginReferenceFound = true
+				// if the KongPluginBinding does not exist yet, create it
 				if len(pluginBindingsByServiceName[kongService.Name]) == 0 {
 					kongPluginBinding := configurationv1alpha1.KongPluginBinding{
 						ObjectMeta: metav1.ObjectMeta{
