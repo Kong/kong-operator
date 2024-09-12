@@ -11,14 +11,14 @@ toolchain go1.22.5
 retract v1.2.2
 
 require (
-	github.com/Kong/sdk-konnect-go v0.0.6
+	github.com/Kong/sdk-konnect-go v0.0.12
 	github.com/Masterminds/semver v1.5.0
 	github.com/cert-manager/cert-manager v1.15.3
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-containerregistry v0.20.2
 	github.com/google/uuid v1.6.0
-	github.com/kong/kubernetes-configuration v0.0.11
+	github.com/kong/kubernetes-configuration v0.0.12
 	github.com/kong/kubernetes-ingress-controller/v3 v3.3.1
 	github.com/kong/kubernetes-telemetry v0.1.5
 	github.com/kong/kubernetes-testing-framework v0.47.2
