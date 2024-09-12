@@ -103,7 +103,7 @@ func (s *KongUpstream) SetConditions(conditions []metav1.Condition) {
 	s.Status.Conditions = conditions
 }
 
-// KongUpstreamSpec defines specification of a Kong Route.
+// KongUpstreamSpec defines specification of a Kong Upstream.
 type KongUpstreamSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this KongUpstream is associated with.
 	// +optional
@@ -112,7 +112,7 @@ type KongUpstreamSpec struct {
 	KongUpstreamAPISpec `json:",inline"`
 }
 
-// KongUpstreamAPISpec defines specification of a Kong Service.
+// KongUpstreamAPISpec defines specification of a Kong Upstream.
 type KongUpstreamAPISpec struct {
 	// Which load balancing algorithm to use.
 	Algorithm *sdkkonnectgocomp.UpstreamAlgorithm `default:"round-robin" json:"algorithm"`
@@ -151,7 +151,7 @@ type KongUpstreamAPISpec struct {
 	UseSrvName *bool `default:"false" json:"use_srv_name"`
 }
 
-// KongUpstreamStatus represents the current status of the Kong Service resource.
+// KongUpstreamStatus represents the current status of the Kong Upstream resource.
 type KongUpstreamStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -167,7 +167,7 @@ type KongUpstreamStatus struct {
 
 // +kubebuilder:object:root=true
 
-// KongUpstreamList contains a list of Kong Services.
+// KongUpstreamList contains a list of Kong Upstreams.
 type KongUpstreamList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
