@@ -5,6 +5,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
@@ -26,6 +27,8 @@ func ReconciliationIndexOptionsForEntity[
 		return IndexOptionsForKongPluginBinding()
 	case *configurationv1alpha1.KongCredentialBasicAuth:
 		return IndexOptionsForCredentialsBasicAuth()
+	case *configurationv1.KongConsumer:
+		return IndexOptionsForKongConsumer()
 	}
 	return nil
 }

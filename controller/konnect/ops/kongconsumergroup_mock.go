@@ -25,6 +25,80 @@ func (_m *MockConsumerGroupSDK) EXPECT() *MockConsumerGroupSDK_Expecter {
 	return &MockConsumerGroupSDK_Expecter{mock: &_m.Mock}
 }
 
+// AddConsumerToGroup provides a mock function with given fields: ctx, request, opts
+func (_m *MockConsumerGroupSDK) AddConsumerToGroup(ctx context.Context, request operations.AddConsumerToGroupRequest, opts ...operations.Option) (*operations.AddConsumerToGroupResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, request)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddConsumerToGroup")
+	}
+
+	var r0 *operations.AddConsumerToGroupResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, operations.AddConsumerToGroupRequest, ...operations.Option) (*operations.AddConsumerToGroupResponse, error)); ok {
+		return rf(ctx, request, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, operations.AddConsumerToGroupRequest, ...operations.Option) *operations.AddConsumerToGroupResponse); ok {
+		r0 = rf(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.AddConsumerToGroupResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, operations.AddConsumerToGroupRequest, ...operations.Option) error); ok {
+		r1 = rf(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockConsumerGroupSDK_AddConsumerToGroup_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddConsumerToGroup'
+type MockConsumerGroupSDK_AddConsumerToGroup_Call struct {
+	*mock.Call
+}
+
+// AddConsumerToGroup is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request operations.AddConsumerToGroupRequest
+//   - opts ...operations.Option
+func (_e *MockConsumerGroupSDK_Expecter) AddConsumerToGroup(ctx interface{}, request interface{}, opts ...interface{}) *MockConsumerGroupSDK_AddConsumerToGroup_Call {
+	return &MockConsumerGroupSDK_AddConsumerToGroup_Call{Call: _e.mock.On("AddConsumerToGroup",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockConsumerGroupSDK_AddConsumerToGroup_Call) Run(run func(ctx context.Context, request operations.AddConsumerToGroupRequest, opts ...operations.Option)) *MockConsumerGroupSDK_AddConsumerToGroup_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(operations.AddConsumerToGroupRequest), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockConsumerGroupSDK_AddConsumerToGroup_Call) Return(_a0 *operations.AddConsumerToGroupResponse, _a1 error) *MockConsumerGroupSDK_AddConsumerToGroup_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockConsumerGroupSDK_AddConsumerToGroup_Call) RunAndReturn(run func(context.Context, operations.AddConsumerToGroupRequest, ...operations.Option) (*operations.AddConsumerToGroupResponse, error)) *MockConsumerGroupSDK_AddConsumerToGroup_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateConsumerGroup provides a mock function with given fields: ctx, controlPlaneID, consumerInput, opts
 func (_m *MockConsumerGroupSDK) CreateConsumerGroup(ctx context.Context, controlPlaneID string, consumerInput components.ConsumerGroupInput, opts ...operations.Option) (*operations.CreateConsumerGroupResponse, error) {
 	_va := make([]interface{}, len(opts))
@@ -171,6 +245,154 @@ func (_c *MockConsumerGroupSDK_DeleteConsumerGroup_Call) Return(_a0 *operations.
 }
 
 func (_c *MockConsumerGroupSDK_DeleteConsumerGroup_Call) RunAndReturn(run func(context.Context, string, string, ...operations.Option) (*operations.DeleteConsumerGroupResponse, error)) *MockConsumerGroupSDK_DeleteConsumerGroup_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListConsumerGroupsForConsumer provides a mock function with given fields: ctx, request, opts
+func (_m *MockConsumerGroupSDK) ListConsumerGroupsForConsumer(ctx context.Context, request operations.ListConsumerGroupsForConsumerRequest, opts ...operations.Option) (*operations.ListConsumerGroupsForConsumerResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, request)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListConsumerGroupsForConsumer")
+	}
+
+	var r0 *operations.ListConsumerGroupsForConsumerResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, operations.ListConsumerGroupsForConsumerRequest, ...operations.Option) (*operations.ListConsumerGroupsForConsumerResponse, error)); ok {
+		return rf(ctx, request, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, operations.ListConsumerGroupsForConsumerRequest, ...operations.Option) *operations.ListConsumerGroupsForConsumerResponse); ok {
+		r0 = rf(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.ListConsumerGroupsForConsumerResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, operations.ListConsumerGroupsForConsumerRequest, ...operations.Option) error); ok {
+		r1 = rf(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListConsumerGroupsForConsumer'
+type MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call struct {
+	*mock.Call
+}
+
+// ListConsumerGroupsForConsumer is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request operations.ListConsumerGroupsForConsumerRequest
+//   - opts ...operations.Option
+func (_e *MockConsumerGroupSDK_Expecter) ListConsumerGroupsForConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call {
+	return &MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call{Call: _e.mock.On("ListConsumerGroupsForConsumer",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call) Run(run func(ctx context.Context, request operations.ListConsumerGroupsForConsumerRequest, opts ...operations.Option)) *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(operations.ListConsumerGroupsForConsumerRequest), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call) Return(_a0 *operations.ListConsumerGroupsForConsumerResponse, _a1 error) *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call) RunAndReturn(run func(context.Context, operations.ListConsumerGroupsForConsumerRequest, ...operations.Option) (*operations.ListConsumerGroupsForConsumerResponse, error)) *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RemoveConsumerFromGroup provides a mock function with given fields: ctx, request, opts
+func (_m *MockConsumerGroupSDK) RemoveConsumerFromGroup(ctx context.Context, request operations.RemoveConsumerFromGroupRequest, opts ...operations.Option) (*operations.RemoveConsumerFromGroupResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, request)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RemoveConsumerFromGroup")
+	}
+
+	var r0 *operations.RemoveConsumerFromGroupResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, operations.RemoveConsumerFromGroupRequest, ...operations.Option) (*operations.RemoveConsumerFromGroupResponse, error)); ok {
+		return rf(ctx, request, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, operations.RemoveConsumerFromGroupRequest, ...operations.Option) *operations.RemoveConsumerFromGroupResponse); ok {
+		r0 = rf(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.RemoveConsumerFromGroupResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, operations.RemoveConsumerFromGroupRequest, ...operations.Option) error); ok {
+		r1 = rf(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockConsumerGroupSDK_RemoveConsumerFromGroup_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveConsumerFromGroup'
+type MockConsumerGroupSDK_RemoveConsumerFromGroup_Call struct {
+	*mock.Call
+}
+
+// RemoveConsumerFromGroup is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request operations.RemoveConsumerFromGroupRequest
+//   - opts ...operations.Option
+func (_e *MockConsumerGroupSDK_Expecter) RemoveConsumerFromGroup(ctx interface{}, request interface{}, opts ...interface{}) *MockConsumerGroupSDK_RemoveConsumerFromGroup_Call {
+	return &MockConsumerGroupSDK_RemoveConsumerFromGroup_Call{Call: _e.mock.On("RemoveConsumerFromGroup",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockConsumerGroupSDK_RemoveConsumerFromGroup_Call) Run(run func(ctx context.Context, request operations.RemoveConsumerFromGroupRequest, opts ...operations.Option)) *MockConsumerGroupSDK_RemoveConsumerFromGroup_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(operations.RemoveConsumerFromGroupRequest), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockConsumerGroupSDK_RemoveConsumerFromGroup_Call) Return(_a0 *operations.RemoveConsumerFromGroupResponse, _a1 error) *MockConsumerGroupSDK_RemoveConsumerFromGroup_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockConsumerGroupSDK_RemoveConsumerFromGroup_Call) RunAndReturn(run func(context.Context, operations.RemoveConsumerFromGroupRequest, ...operations.Option) (*operations.RemoveConsumerFromGroupResponse, error)) *MockConsumerGroupSDK_RemoveConsumerFromGroup_Call {
 	_c.Call.Return(run)
 	return _c
 }

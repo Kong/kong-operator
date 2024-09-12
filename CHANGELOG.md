@@ -72,6 +72,9 @@
   the creation of a managed `KongPluginBinding` resource, which is taken by the
   `KongPluginBinding` reconciler to create the corresponding plugin object in Konnect.
   [#550](https://github.com/Kong/gateway-operator/pull/550)
+- `KongConsumer` associated with `ConsumerGroups` is now reconciled in Konnect by removing/adding
+  the consumer from/to the consumer groups.
+  [#592](https://github.com/Kong/gateway-operator/pull/592)
 - Add support for `KongConsumer` credentials:
   - basic-auth [#625](https://github.com/Kong/gateway-operator/pull/625)
 
