@@ -113,13 +113,24 @@ type KongUpstreamSpec struct {
 }
 
 // KongUpstreamAPISpec defines specification of a Kong Upstream.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.hash_fallback) || (self.hash_fallback != 'header' || has(self.hash_fallback_header))", message="hash_fallback_header is required when `hash_fallback` is set to `header`."
+// +kubebuilder:validation:XValidation:rule="!has(self.hash_fallback) || (self.hash_fallback != 'query_arg' || has(self.hash_fallback_query_arg))", message="hash_fallback_query_arg is required when `hash_fallback` is set to `query_arg`."
+// +kubebuilder:validation:XValidation:rule="!has(self.hash_fallback) || (self.hash_fallback != 'uri_capture' || has(self.hash_fallback_uri_capture))", message="hash_fallback_uri_capture is required when `hash_fallback` is set to `uri_capture`."
+// +kubebuilder:validation:XValidation:rule="!has(self.hash_fallback) || (self.hash_fallback != 'cookie' || has(self.hash_on_cookie))", message="hash_on_cookie is required when hash_fallback is set to `cookie`."
+// +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'cookie' || has(self.hash_on_cookie))", message="hash_on_cookie is required when hash_on is set to `cookie`."
+// +kubebuilder:validation:XValidation:rule="!has(self.hash_fallback) || (self.hash_fallback != 'cookie' || has(self.hash_on_cookie_path))", message="hash_on_cookie_path is required when hash_fallback is set to `cookie`."
+// +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'cookie' || has(self.hash_on_cookie_path))", message="hash_on_cookie_path is required when hash_on is set to `cookie`."
+// +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'header' || has(self.hash_on_header))", message="hash_on_header is required when hash_on is set to `header`."
+// +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'query_arg' || has(self.hash_on_query_arg))", message="hash_on_query_arg is required when `hash_on` is set to `query_arg`."
+// +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'uri_capture' || has(self.hash_on_uri_capture))", message="hash_on_uri_capture is required when `hash_on` is set to `uri_capture`."
 type KongUpstreamAPISpec struct {
 	// Which load balancing algorithm to use.
-	Algorithm *sdkkonnectgocomp.UpstreamAlgorithm `default:"round-robin" json:"algorithm"`
+	Algorithm *sdkkonnectgocomp.UpstreamAlgorithm `default:"round-robin" json:"algorithm,omitempty"`
 	// If set, the certificate to be used as client certificate while TLS handshaking to the upstream server.
 	ClientCertificate *sdkkonnectgocomp.UpstreamClientCertificate `json:"client_certificate,omitempty"`
 	// What to use as hashing input if the primary `hash_on` does not return a hash (eg. header is missing, or no Consumer identified). Not available if `hash_on` is set to `cookie`.
-	HashFallback *sdkkonnectgocomp.HashFallback `default:"none" json:"hash_fallback"`
+	HashFallback *sdkkonnectgocomp.HashFallback `default:"none" json:"hash_fallback,omitempty"`
 	// The header name to take the value from as hash input. Only required when `hash_fallback` is set to `header`.
 	HashFallbackHeader *string `json:"hash_fallback_header,omitempty"`
 	// The name of the query string argument to take the value from as hash input. Only required when `hash_fallback` is set to `query_arg`.
@@ -127,11 +138,11 @@ type KongUpstreamAPISpec struct {
 	// The name of the route URI capture to take the value from as hash input. Only required when `hash_fallback` is set to `uri_capture`.
 	HashFallbackURICapture *string `json:"hash_fallback_uri_capture,omitempty"`
 	// What to use as hashing input. Using `none` results in a weighted-round-robin scheme with no hashing.
-	HashOn *sdkkonnectgocomp.HashOn `default:"none" json:"hash_on"`
+	HashOn *sdkkonnectgocomp.HashOn `default:"none" json:"hash_on,omitempty"`
 	// The cookie name to take the value from as hash input. Only required when `hash_on` or `hash_fallback` is set to `cookie`. If the specified cookie is not in the request, Kong will generate a value and set the cookie in the response.
 	HashOnCookie *string `json:"hash_on_cookie,omitempty"`
 	// The cookie path to set in the response headers. Only required when `hash_on` or `hash_fallback` is set to `cookie`.
-	HashOnCookiePath *string `default:"/" json:"hash_on_cookie_path"`
+	HashOnCookiePath *string `default:"/" json:"hash_on_cookie_path,omitempty"`
 	// The header name to take the value from as hash input. Only required when `hash_on` is set to `header`.
 	HashOnHeader *string `json:"hash_on_header,omitempty"`
 	// The name of the query string argument to take the value from as hash input. Only required when `hash_on` is set to `query_arg`.
@@ -144,11 +155,13 @@ type KongUpstreamAPISpec struct {
 	// This is a hostname, which must be equal to the `host` of a Service.
 	Name *string `json:"name,omitempty"`
 	// The number of slots in the load balancer algorithm. If `algorithm` is set to `round-robin`, this setting determines the maximum number of slots. If `algorithm` is set to `consistent-hashing`, this setting determines the actual number of slots in the algorithm. Accepts an integer in the range `10`-`65536`.
-	Slots *int64 `default:"10000" json:"slots"`
+	// +kubebuilder:validation:Minimum=10
+	// +kubebuilder:validation:Maximum=65536
+	Slots *int64 `default:"10000" json:"slots,omitempty"`
 	// An optional set of strings associated with the Upstream for grouping and filtering.
 	Tags []string `json:"tags,omitempty"`
 	// If set, the balancer will use SRV hostname(if DNS Answer has SRV record) as the proxy upstream `Host`.
-	UseSrvName *bool `default:"false" json:"use_srv_name"`
+	UseSrvName *bool `default:"false" json:"use_srv_name,omitempty"`
 }
 
 // KongUpstreamStatus represents the current status of the Kong Upstream resource.
