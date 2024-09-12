@@ -262,6 +262,21 @@ Azure, e.t.c.).
 _Appears in:_
 - [LargeLanguageModels](#largelanguagemodels)
 
+#### ClusterCertificateSecretRef
+
+
+ClusterCertificateSecretRef contains the reference to the Secret containing the Konnect Control Plane's cluster certificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the Secret containing the Konnect Control Plane's cluster certificate. |
+
+
+_Appears in:_
+- [KonnectControlPlaneAPIAuthConfiguration](#konnectcontrolplaneapiauthconfiguration)
+
 #### DataPlaneKonnectExtensionSpec
 
 
@@ -274,7 +289,7 @@ DataPlaneKonnectExtensionSpec defines the desired state of DataPlaneKonnectExten
 | `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this DataPlaneKonnectExtension is associated with. |
 | `controlPlaneRegion` _string_ | ControlPlaneRegion is the region of the Konnect Control Plane. |
 | `serverHostname` _string_ | ServerHostname is the fully qualified domain name of the konnect server. This matches the RFC 1123 definition of a hostname with 1 notable exception that numeric IP addresses are not allowed.<br /><br /> Note that as per RFC1035 and RFC1123, a *label* must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character. No other punctuation is allowed. |
-| `clusterCertificateSecretName` _string_ | ClusterCertificateSecretName is a name of the Secret containing the Konnect Control Plane's cluster certificate. |
+| `konnectControlPlaneAPIAuthConfiguration` _[KonnectControlPlaneAPIAuthConfiguration](#konnectcontrolplaneapiauthconfiguration)_ | AuthConfiguration must be used to configure the Konnect API authentication. |
 | `clusterDataPlaneLabels` _object (keys:string, values:string)_ | ClusterDataPlaneLabels is a set of labels that will be applied to the Konnect DataPlane. |
 
 
@@ -401,6 +416,21 @@ KongPluginInstallationStatus defines the observed state of KongPluginInstallatio
 
 _Appears in:_
 - [KongPluginInstallation](#kongplugininstallation)
+
+#### KonnectControlPlaneAPIAuthConfiguration
+
+
+KonnectControlPlaneAPIAuthConfiguration contains the configuration to authenticate with Konnect API ControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `clusterCertificateSecretRef` _[ClusterCertificateSecretRef](#clustercertificatesecretref)_ | ClusterCertificateSecretName is a name of the Secret containing the Konnect Control Plane's cluster certificate. |
+
+
+_Appears in:_
+- [DataPlaneKonnectExtensionSpec](#dataplanekonnectextensionspec)
 
 #### LLMPrompt
 
