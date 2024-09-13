@@ -9,7 +9,6 @@ import (
 
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -90,10 +89,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 ) (ctrl.Result, error) {
 	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
 	if err := r.client.Get(ctx, req.NamespacedName, &apiAuth); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	var (

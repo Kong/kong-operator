@@ -13,7 +13,6 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -585,10 +584,7 @@ func (r *Reconciler) ensureOwnedClusterRolesDeleted(
 	)
 	for i := range clusterRoles {
 		err = r.Client.Delete(ctx, &clusterRoles[i])
-		if err != nil {
-			if k8serrors.IsNotFound(err) {
-				continue
-			}
+		if client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
 			continue
 		}
@@ -632,10 +628,7 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 	)
 	for i := range clusterRoleBindings {
 		err = r.Client.Delete(ctx, &clusterRoleBindings[i])
-		if err != nil {
-			if k8serrors.IsNotFound(err) {
-				continue
-			}
+		if client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
 			continue
 		}
@@ -678,10 +671,7 @@ func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx contex
 	)
 	for i := range validatingWebhookConfigurations {
 		err = r.Client.Delete(ctx, &validatingWebhookConfigurations[i])
-		if err != nil {
-			if k8serrors.IsNotFound(err) {
-				continue
-			}
+		if client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
 			continue
 		}
@@ -712,7 +702,7 @@ func (r *Reconciler) ensureAdmissionWebhookService(
 
 	if !isAdmissionWebhookEnabled(ctx, cl, logger, cp) {
 		for _, svc := range services {
-			if err := cl.Delete(ctx, &svc); err != nil && !k8serrors.IsNotFound(err) {
+			if err := cl.Delete(ctx, &svc); client.IgnoreNotFound(err) != nil {
 				return op.Noop, nil, fmt.Errorf("failed deleting ControlPlane admission webhook Service %s: %w", svc.Name, err)
 			}
 		}
@@ -824,7 +814,7 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 
 	if !isAdmissionWebhookEnabled(ctx, r.Client, logger, cp) {
 		for _, webhookConfiguration := range validatingWebhookConfigurations {
-			if err := r.Client.Delete(ctx, &webhookConfiguration); err != nil && !k8serrors.IsNotFound(err) {
+			if err := r.Client.Delete(ctx, &webhookConfiguration); client.IgnoreNotFound(err) != nil {
 				return op.Noop, fmt.Errorf("failed deleting ControlPlane admission webhook ValidatingWebhookConfiguration %s: %w", webhookConfiguration.Name, err)
 			}
 		}

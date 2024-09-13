@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -58,10 +57,7 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	var aigateway v1alpha1.AIGateway
 	if err := r.Client.Get(ctx, req.NamespacedName, &aigateway); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	log.Trace(logger, "verifying gatewayclass for aigateway", aigateway)

@@ -300,18 +300,14 @@ func (m *webhookManager) cleanupWebhookResources(ctx context.Context) error {
 			},
 		).
 		Build()
-	if err := m.client.Delete(ctx, validatingWebhookConfiguration); err != nil {
-		if !k8serrors.IsNotFound(err) {
-			return err
-		}
+	if err := m.client.Delete(ctx, validatingWebhookConfiguration); client.IgnoreNotFound(err) != nil {
+		return err
 	}
 
 	// delete the Service needed to expose the operator Webhook
 	webhookService := k8sresources.GenerateNewServiceForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookServiceName)
-	if err := m.client.Delete(ctx, webhookService); err != nil {
-		if !k8serrors.IsNotFound(err) {
-			return err
-		}
+	if err := m.client.Delete(ctx, webhookService); client.IgnoreNotFound(err) != nil {
+		return err
 	}
 
 	certSecret := &corev1.Secret{
@@ -320,10 +316,8 @@ func (m *webhookManager) cleanupWebhookResources(ctx context.Context) error {
 			Namespace: m.cfg.ControllerNamespace,
 		},
 	}
-	if err := m.client.Delete(ctx, certSecret); err != nil {
-		if !k8serrors.IsNotFound(err) {
-			return err
-		}
+	if err := m.client.Delete(ctx, certSecret); client.IgnoreNotFound(err) != nil {
+		return err
 	}
 
 	return nil
@@ -332,42 +326,32 @@ func (m *webhookManager) cleanupWebhookResources(ctx context.Context) error {
 func (m *webhookManager) cleanupCertificateConfigResources(ctx context.Context) error {
 	// delete the certificateConfig ServiceAccount
 	serviceAccount := k8sresources.GenerateNewServiceAccountForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
-	if err := m.client.Delete(ctx, serviceAccount); err != nil {
-		if !k8serrors.IsNotFound(err) {
-			return err
-		}
+	if err := m.client.Delete(ctx, serviceAccount); client.IgnoreNotFound(err) != nil {
+		return err
 	}
 
 	// delete the certificateConfig ClusterRole
 	clusterRole := k8sresources.GenerateNewClusterRoleForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
-	if err := m.client.Delete(ctx, clusterRole); err != nil {
-		if !k8serrors.IsNotFound(err) {
-			return err
-		}
+	if err := m.client.Delete(ctx, clusterRole); client.IgnoreNotFound(err) != nil {
+		return err
 	}
 
 	// delete the certificateConfig ClusterRoleBinding
 	clusterRoleBinding := k8sresources.GenerateNewClusterRoleBindingForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
-	if err := m.client.Delete(ctx, clusterRoleBinding); err != nil {
-		if !k8serrors.IsNotFound(err) {
-			return err
-		}
+	if err := m.client.Delete(ctx, clusterRoleBinding); client.IgnoreNotFound(err) != nil {
+		return err
 	}
 
 	// delete the certificateConfig Role
 	role := k8sresources.GenerateNewRoleForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
-	if err := m.client.Delete(ctx, role); err != nil {
-		if !k8serrors.IsNotFound(err) {
-			return err
-		}
+	if err := m.client.Delete(ctx, role); client.IgnoreNotFound(err) != nil {
+		return err
 	}
 
 	// delete the certificateConfig RoleBinding
 	roleBinding := k8sresources.GenerateNewRoleBindingForCertificateConfig(m.cfg.ControllerNamespace, consts.WebhookCertificateConfigName, consts.WebhookCertificateConfigLabelvalue)
-	if err := m.client.Delete(ctx, roleBinding); err != nil {
-		if !k8serrors.IsNotFound(err) {
-			return err
-		}
+	if err := m.client.Delete(ctx, roleBinding); client.IgnoreNotFound(err) != nil {
+		return err
 	}
 
 	return nil

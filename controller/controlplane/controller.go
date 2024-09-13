@@ -119,10 +119,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log.Trace(logger, "reconciling ControlPlane resource", req)
 	cp := new(operatorv1beta1.ControlPlane)
 	if err := r.Client.Get(ctx, req.NamespacedName, cp); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// controlplane is deleted, just run garbage collection for cluster wide resources.
@@ -449,7 +446,7 @@ func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, update
 	current := &operatorv1beta1.ControlPlane{}
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)
-	if err != nil && !k8serrors.IsNotFound(err) {
+	if client.IgnoreNotFound(err) != nil {
 		return ctrl.Result{}, err
 	}
 

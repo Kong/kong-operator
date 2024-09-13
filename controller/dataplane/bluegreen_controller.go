@@ -13,7 +13,6 @@ import (
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -87,10 +86,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	ctx = r.ContextInjector.InjectKeyValues(ctx)
 	var dataplane operatorv1beta1.DataPlane
 	if err := r.Client.Get(ctx, req.NamespacedName, &dataplane); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	logger := log.GetLogger(ctx, "dataplaneBlueGreen", r.DevelopmentMode)
@@ -459,17 +455,11 @@ func removeObjectSliceWithDataPlaneOwnedFinalizer[
 		service.SetFinalizers(lo.Reject(service.GetFinalizers(), func(f string, _ int) bool {
 			return f == consts.DataPlaneOwnedWaitForOwnerFinalizer
 		}))
-		if err := cl.Patch(ctx, service, client.MergeFrom(old)); err != nil {
-			if k8serrors.IsNotFound(err) {
-				continue
-			}
+		if err := cl.Patch(ctx, service, client.MergeFrom(old)); client.IgnoreNotFound(err) != nil {
 			return fmt.Errorf("failed to remove finalizer from %s %s: %w", service.GetObjectKind().GroupVersionKind().Kind, service.GetName(), err)
 		}
 
-		if err := cl.Delete(ctx, service); err != nil {
-			if k8serrors.IsNotFound(err) {
-				continue
-			}
+		if err := cl.Delete(ctx, service); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
