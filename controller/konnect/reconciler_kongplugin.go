@@ -54,6 +54,8 @@ func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Mana
 }
 
 // Reconcile reconciles a KongPlugin object.
+// The purpose of this reconciler is to handle annotations on Kong entities objects that reference KongPlugin objects.
+// As a result of such annotations, KongPluginBinding objects are created and managed by the controller.
 func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var (
 		entityTypeName = "KongPlugin"
