@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -195,7 +194,7 @@ func patchDataPlaneStatus(ctx context.Context, cl client.Client, logger logr.Log
 	current := &operatorv1beta1.DataPlane{}
 
 	err := cl.Get(ctx, client.ObjectKeyFromObject(updated), current)
-	if err != nil && !k8serrors.IsNotFound(err) {
+	if client.IgnoreNotFound(err) != nil {
 		return false, err
 	}
 
