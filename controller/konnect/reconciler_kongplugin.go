@@ -211,6 +211,10 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 									Name:  kongService.Name,
 								},
 							},
+							// TODO: Cross check this with other types of ControlPlaneRefs
+							// used by Route, Consumer and/or ConsumerGroups that also bind this plugin
+							// in this KongPluginBinding spec.
+							ControlPlaneRef: kongService.Spec.ControlPlaneRef,
 							PluginReference: configurationv1alpha1.PluginRef{
 								Name: kongPlugin.Name,
 							},
