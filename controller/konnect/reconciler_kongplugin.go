@@ -189,7 +189,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				}
 			}
 
-			// iterate over all the KondService annotations
+			// iterate over all the KongService annotations
 			for _, pluginName := range pluginSlice {
 				if pluginName != kongPlugin.Name {
 					continue
