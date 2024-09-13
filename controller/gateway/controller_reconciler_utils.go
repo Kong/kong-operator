@@ -555,11 +555,18 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 // It also sets the listeners Programmed condition by setting the underlying
 // Listener Programmed status to false.
 func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus() {
-	k8sutils.InitProgrammed(g)
+	k8sutils.SetCondition(
+		k8sutils.NewConditionWithGeneration(
+			consts.ConditionType(gatewayv1.GatewayConditionProgrammed),
+			metav1.ConditionFalse,
+			consts.ConditionReason(gatewayv1.GatewayReasonPending),
+			consts.DependenciesNotReadyMessage,
+			g.Generation),
+		g)
 	for i := range g.Spec.Listeners {
 		lStatus := listenerConditionsAware(&g.Status.Listeners[i])
-		_, ok := k8sutils.GetCondition(consts.ConditionType(gatewayv1.ListenerConditionProgrammed), lStatus)
-		if !ok {
+		cond, ok := k8sutils.GetCondition(consts.ConditionType(gatewayv1.ListenerConditionProgrammed), lStatus)
+		if !ok || cond.ObservedGeneration != g.Generation {
 			k8sutils.SetCondition(metav1.Condition{
 				Type:               string(gatewayv1.ListenerConditionProgrammed),
 				Status:             metav1.ConditionFalse,
@@ -1131,5 +1138,6 @@ func areConditionsEqual(cond1, cond2 metav1.Condition) bool {
 	return cond1.Type == cond2.Type &&
 		cond1.Status == cond2.Status &&
 		cond1.Reason == cond2.Reason &&
-		cond1.Message == cond2.Message
+		cond1.Message == cond2.Message &&
+		cond1.ObservedGeneration == cond2.ObservedGeneration
 }
