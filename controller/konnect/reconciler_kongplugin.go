@@ -101,6 +101,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Get all the KongServices referenced by the KongPluginBindings
 	// TODO(mlavacca): use indexers instead of listing all KongServices
+	// https://github.com/Kong/gateway-operator/issues/596
 	kongServiceList := configurationv1alpha1.KongServiceList{}
 	err = r.client.List(
 		ctx,
