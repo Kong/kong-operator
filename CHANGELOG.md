@@ -67,7 +67,7 @@
   in the `KongPluginBinding` reconciler.
   [#571](https://github.com/Kong/gateway-operator/pull/571)
 - Annotating `KongService`s with the `konghq.com/plugins` annotation results in
-  the creation of a managed `KongPluginBInding` resource, which is taken by the
+  the creation of a managed `KongPluginBinding` resource, which is taken by the
   `KongPluginBinding` reconciler to create the corresponding plugin object in Konnect.
   [#550](https://github.com/Kong/gateway-operator/pull/550)
 

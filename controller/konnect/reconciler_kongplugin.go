@@ -63,10 +63,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Fetch the KongPlugin instance
 	var kongPlugin configurationv1.KongPlugin
 	if err := r.client.Get(ctx, req.NamespacedName, &kongPlugin); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	log.Debug(logger, "reconciling", kongPlugin)
