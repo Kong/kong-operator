@@ -1,0 +1,49 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: demo-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  serverURL: eu.api.konghq.tech 
+---
+kind: KonnectGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: demo-cp
+  namespace: default
+spec:
+  name: demo-cp
+  labels:
+    app: demo-cp
+    key1: demo-cp
+  konnect:
+    authRef:
+      name: demo-auth
+      # namespace not required if APIAuthConfiguration is in the same namespace
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: rate-limit-5-min
+  namespace: default
+config:
+  minute: 5
+  policy: local
+plugin: rate-limiting
+---
+kind: KongService
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: service-1
+  namespace: default
+  annotations:
+    konghq.com/plugins: rate-limit-5-min
+spec:
+  name: service-1
+  host: example.com
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: demo-cp

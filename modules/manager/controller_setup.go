@@ -72,6 +72,8 @@ const (
 	KongConsumerGroupControllerName = "KongConsumerGroup"
 	// KongPluginBindingControllerName is the name of the KongPluginBinding controller.
 	KongPluginBindingControllerName = "KongPluginBinding"
+	// KongPluginControllerName is the name of the KongPlugin controller.
+	KongPluginControllerName = "KongPlugin"
 	// KongUpstreamControllerName is the name of the KongUpstream controller.
 	KongUpstreamControllerName = "KongUpstream"
 )
@@ -381,6 +383,13 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					c.DevelopmentMode,
 					mgr.GetClient(),
 					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](c.KonnectSyncPeriod),
+				),
+			},
+			KongPluginControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKongPluginReconciler(
+					c.DevelopmentMode,
+					mgr.GetClient(),
 				),
 			},
 		}
