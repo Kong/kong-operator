@@ -30,4 +30,7 @@ package konnect
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcredentialbasicauths,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcredentialbasicauths/status,verbs=get;update;patch
 
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongvaults,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongvaults/status,verbs=get;update;patch
+
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch

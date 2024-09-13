@@ -88,6 +88,8 @@ const (
 	KongKongCredentialBasicAuthControllerName = "KongCredentialBasicAuth" //nolint:gosec
 	// KongCACertificateControllerName is the name of the KongCACertificate controller.
 	KongCACertificateControllerName = "KongCACertificate"
+	// KongVaultContollerName is the name of KongVault controller.
+	KongVaultControllerName = "KongVault"
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
@@ -443,6 +445,14 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				Controller: konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongService](
 					c.DevelopmentMode,
 					mgr.GetClient(),
+},
+			KongVaultControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongVault](
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongVault](c.KonnectSyncPeriod),
 				),
 			},
 		}

@@ -22,8 +22,8 @@ type SupportedKonnectEntityType interface {
 		configurationv1alpha1.KongCredentialBasicAuth |
 		configurationv1alpha1.KongUpstream |
 		configurationv1alpha1.KongCACertificate |
-		configurationv1alpha1.KongTarget
-
+		configurationv1alpha1.KongTarget |
+		configurationv1alpha1.KongVault
 	// TODO: add other types
 
 	GetTypeName() string

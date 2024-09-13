@@ -15,6 +15,7 @@ type SDKWrapper interface {
 	GetPluginSDK() PluginSDK
 	GetUpstreamsSDK() UpstreamsSDK
 	GetTargetsSDK() TargetsSDK
+	GetVaultSDK() VaultSDK
 	GetMeSDK() MeSDK
 	GetBasicAuthCredentials() KongCredentialBasicAuthSDK
 	GetCACertificatesSDK() CACertificatesSDK
@@ -64,6 +65,11 @@ func (w sdkWrapper) GetUpstreamsSDK() UpstreamsSDK {
 // GetTargetsSDK returns the SDK to operate Targets.
 func (w sdkWrapper) GetTargetsSDK() TargetsSDK {
 	return w.sdk.Targets
+}
+
+// GetVaultSDK returns the SDK to operate Vaults.
+func (w sdkWrapper) GetVaultSDK() VaultSDK {
+	return w.sdk.Vaults
 }
 
 // GetMeSDK returns the "me" SDK to get current organization.
