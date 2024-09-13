@@ -13,6 +13,7 @@ type MockSDKWrapper struct {
 	ConsumersSDK     *MockConsumersSDK
 	ConsumerGroupSDK *MockConsumerGroupSDK
 	PluginSDK        *MockPluginSDK
+	UpstreamsSDK     *MockUpstreamsSDK
 	MeSDK            *MockMeSDK
 }
 
@@ -26,6 +27,7 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		ConsumersSDK:     NewMockConsumersSDK(t),
 		ConsumerGroupSDK: NewMockConsumerGroupSDK(t),
 		PluginSDK:        NewMockPluginSDK(t),
+		UpstreamsSDK:     NewMockUpstreamsSDK(t),
 		MeSDK:            NewMockMeSDK(t),
 	}
 }
@@ -52,6 +54,10 @@ func (m MockSDKWrapper) GetConsumerGroupsSDK() ConsumerGroupSDK {
 
 func (m MockSDKWrapper) GetPluginSDK() PluginSDK {
 	return m.PluginSDK
+}
+
+func (m MockSDKWrapper) GetUpstreamsSDK() UpstreamsSDK {
+	return m.UpstreamsSDK
 }
 
 func (m MockSDKWrapper) GetMeSDK() MeSDK {

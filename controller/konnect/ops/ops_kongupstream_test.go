@@ -22,30 +22,29 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-func TestCreateKongService(t *testing.T) {
+func TestCreateKongUpstream(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
-		name            string
-		mockServicePair func(*testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService)
-		expectedErr     bool
-		assertions      func(*testing.T, *configurationv1alpha1.KongService)
+		name             string
+		mockUpstreamPair func(*testing.T) (*MockUpstreamsSDK, *configurationv1alpha1.KongUpstream)
+		expectedErr      bool
+		assertions       func(*testing.T, *configurationv1alpha1.KongUpstream)
 	}{
 		{
 			name: "success",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
-				svc := &configurationv1alpha1.KongService{
+			mockUpstreamPair: func(t *testing.T) (*MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := NewMockUpstreamsSDK(t)
+				svc := &configurationv1alpha1.KongUpstream{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
 						Namespace: "default",
 					},
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 							Name: lo.ToPtr("svc-1"),
-							Host: "example.com",
 						},
 					},
-					Status: configurationv1alpha1.KongServiceStatus{
+					Status: configurationv1alpha1.KongUpstreamStatus{
 						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "123456789",
 						},
@@ -54,12 +53,11 @@ func TestCreateKongService(t *testing.T) {
 
 				sdk.
 					EXPECT().
-					CreateService(ctx, "123456789", kongServiceToSDKServiceInput(svc)).
+					CreateUpstream(ctx, "123456789", kongUpstreamToSDKUpstreamInput(svc)).
 					Return(
-						&sdkkonnectops.CreateServiceResponse{
-							Service: &sdkkonnectcomp.Service{
+						&sdkkonnectops.CreateUpstreamResponse{
+							Upstream: &sdkkonnectcomp.Upstream{
 								ID:   lo.ToPtr("12345"),
-								Host: "example.com",
 								Name: lo.ToPtr("svc-1"),
 							},
 						},
@@ -68,35 +66,34 @@ func TestCreateKongService(t *testing.T) {
 
 				return sdk, svc
 			},
-			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
+			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
 				assert.Equal(t, "12345", svc.GetKonnectStatus().GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KongService")
+				require.True(t, ok, "Programmed condition not set on KongUpstream")
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
 				assert.Equal(t, conditions.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
 				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
 			},
 		},
 		{
-			name: "fail - no control plane ID in status returns an error and does not create the Service in Konnect",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
-				svc := &configurationv1alpha1.KongService{
+			name: "fail - no control plane ID in status returns an error and does not create the Upstream in Konnect",
+			mockUpstreamPair: func(t *testing.T) (*MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := NewMockUpstreamsSDK(t)
+				svc := &configurationv1alpha1.KongUpstream{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
 						Namespace: "default",
 					},
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 							Name: lo.ToPtr("svc-1"),
-							Host: "example.com",
 						},
 					},
 				}
 
 				return sdk, svc
 			},
-			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
+			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
 				assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
 				// TODO: we should probably set a condition when the control plane ID is missing in the status.
 			},
@@ -104,20 +101,19 @@ func TestCreateKongService(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
-				svc := &configurationv1alpha1.KongService{
+			mockUpstreamPair: func(t *testing.T) (*MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := NewMockUpstreamsSDK(t)
+				svc := &configurationv1alpha1.KongUpstream{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
 						Namespace: "default",
 					},
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 							Name: lo.ToPtr("svc-1"),
-							Host: "example.com",
 						},
 					},
-					Status: configurationv1alpha1.KongServiceStatus{
+					Status: configurationv1alpha1.KongUpstreamStatus{
 						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "123456789",
 						},
@@ -126,7 +122,7 @@ func TestCreateKongService(t *testing.T) {
 
 				sdk.
 					EXPECT().
-					CreateService(ctx, "123456789", kongServiceToSDKServiceInput(svc)).
+					CreateUpstream(ctx, "123456789", kongUpstreamToSDKUpstreamInput(svc)).
 					Return(
 						nil,
 						&sdkkonnecterrs.BadRequestError{
@@ -137,14 +133,14 @@ func TestCreateKongService(t *testing.T) {
 
 				return sdk, svc
 			},
-			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
+			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
 				assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, svc)
 				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				assert.Equal(t, "FailedToCreate", cond.Reason)
 				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, `failed to create KongService default/svc-1: {"status":400,"title":"","instance":"","detail":"bad request","invalid_parameters":null}`, cond.Message)
+				assert.Equal(t, `failed to create KongUpstream default/svc-1: {"status":400,"title":"","instance":"","detail":"bad request","invalid_parameters":null}`, cond.Message)
 			},
 			expectedErr: true,
 		},
@@ -152,9 +148,9 @@ func TestCreateKongService(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			sdk, svc := tc.mockServicePair(t)
+			sdk, svc := tc.mockUpstreamPair(t)
 
-			err := createService(ctx, sdk, svc)
+			err := createUpstream(ctx, sdk, svc)
 
 			tc.assertions(t, svc)
 
@@ -168,25 +164,25 @@ func TestCreateKongService(t *testing.T) {
 	}
 }
 
-func TestDeleteKongService(t *testing.T) {
+func TestDeleteKongUpstream(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
-		name            string
-		mockServicePair func(*testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService)
-		expectedErr     bool
-		assertions      func(*testing.T, *configurationv1alpha1.KongService)
+		name             string
+		mockUpstreamPair func(*testing.T) (*MockUpstreamsSDK, *configurationv1alpha1.KongUpstream)
+		expectedErr      bool
+		assertions       func(*testing.T, *configurationv1alpha1.KongUpstream)
 	}{
 		{
 			name: "success",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
-				svc := &configurationv1alpha1.KongService{
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+			mockUpstreamPair: func(t *testing.T) (*MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := NewMockUpstreamsSDK(t)
+				svc := &configurationv1alpha1.KongUpstream{
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 							Name: lo.ToPtr("svc-1"),
 						},
 					},
-					Status: configurationv1alpha1.KongServiceStatus{
+					Status: configurationv1alpha1.KongUpstreamStatus{
 						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
@@ -197,9 +193,9 @@ func TestDeleteKongService(t *testing.T) {
 				}
 				sdk.
 					EXPECT().
-					DeleteService(ctx, "12345", "123456789").
+					DeleteUpstream(ctx, "12345", "123456789").
 					Return(
-						&sdkkonnectops.DeleteServiceResponse{
+						&sdkkonnectops.DeleteUpstreamResponse{
 							StatusCode: 200,
 						},
 						nil,
@@ -210,15 +206,15 @@ func TestDeleteKongService(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
-				svc := &configurationv1alpha1.KongService{
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+			mockUpstreamPair: func(t *testing.T) (*MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := NewMockUpstreamsSDK(t)
+				svc := &configurationv1alpha1.KongUpstream{
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 							Name: lo.ToPtr("svc-1"),
 						},
 					},
-					Status: configurationv1alpha1.KongServiceStatus{
+					Status: configurationv1alpha1.KongUpstreamStatus{
 						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
@@ -229,7 +225,7 @@ func TestDeleteKongService(t *testing.T) {
 				}
 				sdk.
 					EXPECT().
-					DeleteService(ctx, "12345", "123456789").
+					DeleteUpstream(ctx, "12345", "123456789").
 					Return(
 						nil,
 						&sdkkonnecterrs.BadRequestError{
@@ -244,15 +240,15 @@ func TestDeleteKongService(t *testing.T) {
 		},
 		{
 			name: "not found error is ignored and considered a success when trying to delete",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
-				svc := &configurationv1alpha1.KongService{
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+			mockUpstreamPair: func(t *testing.T) (*MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := NewMockUpstreamsSDK(t)
+				svc := &configurationv1alpha1.KongUpstream{
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 							Name: lo.ToPtr("svc-1"),
 						},
 					},
-					Status: configurationv1alpha1.KongServiceStatus{
+					Status: configurationv1alpha1.KongUpstreamStatus{
 						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
@@ -263,7 +259,7 @@ func TestDeleteKongService(t *testing.T) {
 				}
 				sdk.
 					EXPECT().
-					DeleteService(ctx, "12345", "123456789").
+					DeleteUpstream(ctx, "12345", "123456789").
 					Return(
 						nil,
 						&sdkkonnecterrs.SDKError{
@@ -279,9 +275,9 @@ func TestDeleteKongService(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			sdk, svc := tc.mockServicePair(t)
+			sdk, svc := tc.mockUpstreamPair(t)
 
-			err := deleteService(ctx, sdk, svc)
+			err := deleteUpstream(ctx, sdk, svc)
 
 			if tc.assertions != nil {
 				tc.assertions(t, svc)
@@ -297,25 +293,25 @@ func TestDeleteKongService(t *testing.T) {
 	}
 }
 
-func TestUpdateKongService(t *testing.T) {
+func TestUpdateKongUpstream(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
-		name            string
-		mockServicePair func(*testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService)
-		expectedErr     bool
-		assertions      func(*testing.T, *configurationv1alpha1.KongService)
+		name             string
+		mockUpstreamPair func(*testing.T) (*MockUpstreamsSDK, *configurationv1alpha1.KongUpstream)
+		expectedErr      bool
+		assertions       func(*testing.T, *configurationv1alpha1.KongUpstream)
 	}{
 		{
 			name: "success",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
-				svc := &configurationv1alpha1.KongService{
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+			mockUpstreamPair: func(t *testing.T) (*MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := NewMockUpstreamsSDK(t)
+				svc := &configurationv1alpha1.KongUpstream{
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 							Name: lo.ToPtr("svc-1"),
 						},
 					},
-					Status: configurationv1alpha1.KongServiceStatus{
+					Status: configurationv1alpha1.KongUpstreamStatus{
 						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
@@ -326,17 +322,17 @@ func TestUpdateKongService(t *testing.T) {
 				}
 				sdk.
 					EXPECT().
-					UpsertService(ctx,
-						sdkkonnectops.UpsertServiceRequest{
+					UpsertUpstream(ctx,
+						sdkkonnectops.UpsertUpstreamRequest{
 							ControlPlaneID: "12345",
-							ServiceID:      "123456789",
-							Service:        kongServiceToSDKServiceInput(svc),
+							UpstreamID:     "123456789",
+							Upstream:       kongUpstreamToSDKUpstreamInput(svc),
 						},
 					).
 					Return(
-						&sdkkonnectops.UpsertServiceResponse{
+						&sdkkonnectops.UpsertUpstreamResponse{
 							StatusCode: 200,
-							Service: &sdkkonnectcomp.Service{
+							Upstream: &sdkkonnectcomp.Upstream{
 								ID:   lo.ToPtr("123456789"),
 								Name: lo.ToPtr("svc-1"),
 							},
@@ -346,7 +342,7 @@ func TestUpdateKongService(t *testing.T) {
 
 				return sdk, svc
 			},
-			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
+			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
 				assert.Equal(t, "123456789", svc.GetKonnectStatus().GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, svc)
 				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
@@ -358,19 +354,19 @@ func TestUpdateKongService(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
-				svc := &configurationv1alpha1.KongService{
+			mockUpstreamPair: func(t *testing.T) (*MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := NewMockUpstreamsSDK(t)
+				svc := &configurationv1alpha1.KongUpstream{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
 						Namespace: "default",
 					},
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 							Name: lo.ToPtr("svc-1"),
 						},
 					},
-					Status: configurationv1alpha1.KongServiceStatus{
+					Status: configurationv1alpha1.KongUpstreamStatus{
 						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
@@ -381,11 +377,11 @@ func TestUpdateKongService(t *testing.T) {
 				}
 				sdk.
 					EXPECT().
-					UpsertService(ctx,
-						sdkkonnectops.UpsertServiceRequest{
+					UpsertUpstream(ctx,
+						sdkkonnectops.UpsertUpstreamRequest{
 							ControlPlaneID: "12345",
-							ServiceID:      "123456789",
-							Service:        kongServiceToSDKServiceInput(svc),
+							UpstreamID:     "123456789",
+							Upstream:       kongUpstreamToSDKUpstreamInput(svc),
 						},
 					).
 					Return(
@@ -398,8 +394,8 @@ func TestUpdateKongService(t *testing.T) {
 
 				return sdk, svc
 			},
-			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
-				// TODO: When we fail to update a KongService, do we want to clear
+			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
+				// TODO: When we fail to update a KongUpstream, do we want to clear
 				// the Konnect ID from the status? Probably not.
 				// assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, svc)
@@ -407,25 +403,25 @@ func TestUpdateKongService(t *testing.T) {
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				assert.Equal(t, "FailedToUpdate", cond.Reason)
 				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, `failed to update KongService default/svc-1: {"status":400,"title":"bad request","instance":"","detail":"","invalid_parameters":null}`, cond.Message)
+				assert.Equal(t, `failed to update KongUpstream default/svc-1: {"status":400,"title":"bad request","instance":"","detail":"","invalid_parameters":null}`, cond.Message)
 			},
 			expectedErr: true,
 		},
 		{
 			name: "when not found then try to create",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
-				svc := &configurationv1alpha1.KongService{
+			mockUpstreamPair: func(t *testing.T) (*MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := NewMockUpstreamsSDK(t)
+				svc := &configurationv1alpha1.KongUpstream{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
 						Namespace: "default",
 					},
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 							Name: lo.ToPtr("svc-1"),
 						},
 					},
-					Status: configurationv1alpha1.KongServiceStatus{
+					Status: configurationv1alpha1.KongUpstreamStatus{
 						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
@@ -436,11 +432,11 @@ func TestUpdateKongService(t *testing.T) {
 				}
 				sdk.
 					EXPECT().
-					UpsertService(ctx,
-						sdkkonnectops.UpsertServiceRequest{
+					UpsertUpstream(ctx,
+						sdkkonnectops.UpsertUpstreamRequest{
 							ControlPlaneID: "12345",
-							ServiceID:      "123456789",
-							Service:        kongServiceToSDKServiceInput(svc),
+							UpstreamID:     "123456789",
+							Upstream:       kongUpstreamToSDKUpstreamInput(svc),
 						},
 					).
 					Return(
@@ -453,10 +449,10 @@ func TestUpdateKongService(t *testing.T) {
 
 				sdk.
 					EXPECT().
-					CreateService(ctx, "12345", kongServiceToSDKServiceInput(svc)).
+					CreateUpstream(ctx, "12345", kongUpstreamToSDKUpstreamInput(svc)).
 					Return(
-						&sdkkonnectops.CreateServiceResponse{
-							Service: &sdkkonnectcomp.Service{
+						&sdkkonnectops.CreateUpstreamResponse{
+							Upstream: &sdkkonnectcomp.Upstream{
 								ID:   lo.ToPtr("123456789"),
 								Name: lo.ToPtr("svc-1"),
 							},
@@ -466,7 +462,7 @@ func TestUpdateKongService(t *testing.T) {
 
 				return sdk, svc
 			},
-			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
+			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
 				assert.Equal(t, "123456789", svc.GetKonnectStatus().GetKonnectID())
 				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, svc)
 				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
@@ -480,9 +476,9 @@ func TestUpdateKongService(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			sdk, svc := tc.mockServicePair(t)
+			sdk, svc := tc.mockUpstreamPair(t)
 
-			err := updateService(ctx, sdk, svc)
+			err := updateUpstream(ctx, sdk, svc)
 
 			if tc.assertions != nil {
 				tc.assertions(t, svc)
@@ -498,10 +494,10 @@ func TestUpdateKongService(t *testing.T) {
 	}
 }
 
-func TestCreateAndUpdateKongService_KubernetesMetadataConsistency(t *testing.T) {
-	svc := &configurationv1alpha1.KongService{
+func TestCreateAndUpdateKongUpstream_KubernetesMetadataConsistency(t *testing.T) {
+	svc := &configurationv1alpha1.KongUpstream{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongService",
+			Kind:       "KongUpstream",
 			APIVersion: "configuration.konghq.com/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -513,20 +509,20 @@ func TestCreateAndUpdateKongService_KubernetesMetadataConsistency(t *testing.T) 
 				konnectconsts.AnnotationTags: "tag1,tag2,duplicate-tag",
 			},
 		},
-		Status: configurationv1alpha1.KongServiceStatus{
+		Status: configurationv1alpha1.KongUpstreamStatus{
 			Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
 				ControlPlaneID: uuid.NewString(),
 			},
 		},
-		Spec: configurationv1alpha1.KongServiceSpec{
-			KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+		Spec: configurationv1alpha1.KongUpstreamSpec{
+			KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 				Tags: []string{"tag3", "tag4", "duplicate-tag"},
 			},
 		},
 	}
-	output := kongServiceToSDKServiceInput(svc)
+	output := kongUpstreamToSDKUpstreamInput(svc)
 	expectedTags := []string{
-		"k8s-kind:KongService",
+		"k8s-kind:KongUpstream",
 		"k8s-name:svc-1",
 		"k8s-uid:" + string(svc.GetUID()),
 		"k8s-version:v1alpha1",

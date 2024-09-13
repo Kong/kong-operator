@@ -72,6 +72,8 @@ const (
 	KongConsumerGroupControllerName = "KongConsumerGroup"
 	// KongPluginBindingControllerName is the name of the KongPluginBinding controller.
 	KongPluginBindingControllerName = "KongPluginBinding"
+	// KongUpstreamControllerName is the name of the KongUpstream controller.
+	KongUpstreamControllerName = "KongUpstream"
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
@@ -361,6 +363,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					c.DevelopmentMode,
 					mgr.GetClient(),
 					konnect.WithKonnectEntitySyncPeriod[configurationv1beta1.KongConsumerGroup](c.KonnectSyncPeriod),
+				),
+			},
+			KongUpstreamControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler(
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongUpstream](c.KonnectSyncPeriod),
 				),
 			},
 			KongPluginBindingControllerName: {

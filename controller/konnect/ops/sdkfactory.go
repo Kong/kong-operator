@@ -13,6 +13,7 @@ type SDKWrapper interface {
 	GetConsumersSDK() ConsumersSDK
 	GetConsumerGroupsSDK() ConsumerGroupSDK
 	GetPluginSDK() PluginSDK
+	GetUpstreamsSDK() UpstreamsSDK
 	GetMeSDK() MeSDK
 }
 
@@ -50,6 +51,11 @@ func (w sdkWrapper) GetConsumerGroupsSDK() ConsumerGroupSDK {
 // GetPluginSDK returns the SDK to operate plugins.
 func (w sdkWrapper) GetPluginSDK() PluginSDK {
 	return w.sdk.Plugins
+}
+
+// GetUpstreamSDK returns the SDK to operate Upstreams.
+func (w sdkWrapper) GetUpstreamsSDK() UpstreamsSDK {
+	return w.sdk.Upstreams
 }
 
 // GetMeSDK returns the "me" SDK to get current organization.
