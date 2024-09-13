@@ -128,7 +128,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 					}
 					return ctrl.Result{}, err
 				}
-				log.Debug(logger, "KongService finalizer removed", kongService)
+				log.Debug(logger, "KongService finalizer removed", kongService, "finalizer", consts.CleanupPluginBindingFinalizer)
 				return ctrl.Result{}, nil
 			}
 		}
@@ -137,6 +137,9 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if !kongService.DeletionTimestamp.IsZero() {
 			for _, pb := range pluginBindingsByServiceName[kongService.Name] {
 				if err := r.client.Delete(ctx, &pb); err != nil {
+					if k8serrors.IsNotFound(err) {
+						continue
+					}
 					return ctrl.Result{}, err
 				}
 				log.Debug(logger, "KongPluginBinding deleted", pb)
@@ -144,9 +147,12 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			// Once all the KongPluginBindings that use the KongService have been deleted, remove the finalizer.
 			controllerutil.RemoveFinalizer(&kongService, consts.CleanupPluginBindingFinalizer)
 			if err = r.client.Update(ctx, &kongService); err != nil {
+				if k8serrors.IsConflict(err) {
+					return ctrl.Result{Requeue: true}, nil
+				}
 				return ctrl.Result{}, err
 			}
-			log.Debug(logger, "KongService finalizer removed", kongService)
+			log.Debug(logger, "KongService finalizer removed", kongService, "finalizer", consts.CleanupPluginBindingFinalizer)
 			return ctrl.Result{}, nil
 		}
 
@@ -229,6 +235,9 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				// add a finalizer to the KongService that means the associated kongPluginBindings need to be cleaned up
 				if controllerutil.AddFinalizer(&kongService, consts.CleanupPluginBindingFinalizer) {
 					if err = r.client.Update(ctx, &kongService); err != nil {
+						if k8serrors.IsConflict(err) {
+							return ctrl.Result{Requeue: true}, nil
+						}
 						return ctrl.Result{}, err
 					}
 					log.Debug(logger, "KongService finalizer added", kongService)
@@ -239,6 +248,11 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 		// iterate over all the KongPluginBindings to be deleted and delete them.
 		for _, pb := range pluginBindingsToDelete {
+			// NOTE: we check the deletion timestamp here because attempting to delete
+			// and return here would prevent KongPlugin finalizer update below.
+			if !pb.DeletionTimestamp.IsZero() {
+				continue
+			}
 			if err = r.client.Delete(ctx, &pb); err != nil {
 				if k8serrors.IsNotFound(err) {
 					continue
@@ -256,17 +270,23 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if pluginReferenceFound {
 		if controllerutil.AddFinalizer(&kongPlugin, consts.PluginInUseFinalizer) {
 			if err = r.client.Update(ctx, &kongPlugin); err != nil {
+				if k8serrors.IsConflict(err) {
+					return ctrl.Result{Requeue: true}, nil
+				}
 				return ctrl.Result{}, err
 			}
-			log.Debug(logger, "KongPlugin finalizer added", kongPlugin)
+			log.Debug(logger, "KongPlugin finalizer added", kongPlugin, "finalizer", consts.PluginInUseFinalizer)
 			return ctrl.Result{}, nil
 		}
 	} else {
 		if controllerutil.RemoveFinalizer(&kongPlugin, consts.PluginInUseFinalizer) {
 			if err = r.client.Update(ctx, &kongPlugin); err != nil {
+				if k8serrors.IsConflict(err) {
+					return ctrl.Result{Requeue: true}, nil
+				}
 				return ctrl.Result{}, err
 			}
-			log.Debug(logger, "KongPlugin finalizer removed", kongPlugin)
+			log.Debug(logger, "KongPlugin finalizer removed", kongPlugin, "finalizer", consts.PluginInUseFinalizer)
 			return ctrl.Result{}, nil
 		}
 	}
