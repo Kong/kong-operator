@@ -211,6 +211,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 									Name:  kongService.Name,
 								},
 							},
+							ControlPlaneRef: kongService.Spec.ControlPlaneRef,
 							PluginReference: configurationv1alpha1.PluginRef{
 								Name: kongPlugin.Name,
 							},
