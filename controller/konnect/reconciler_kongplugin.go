@@ -69,23 +69,17 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	log.Debug(logger, "reconciling", kongPlugin)
 
 	// Get the pluginBindings that use this KongPlugin
-	pluginBindings := []configurationv1alpha1.KongPluginBinding{}
-	referencingBindingList := configurationv1alpha1.KongPluginBindingList{}
+	kongPluginBindingList := configurationv1alpha1.KongPluginBindingList{}
 	err := r.client.List(
 		ctx,
-		&referencingBindingList,
+		&kongPluginBindingList,
 		client.MatchingFields{
-			IndexFieldKongPluginBindingKongPluginReference: kongPlugin.Name,
+			IndexFieldKongPluginBindingKongPluginReference: kongPlugin.Namespace + "/" + kongPlugin.Name,
 		},
 		client.InNamespace(kongPlugin.Namespace),
 	)
 	if err != nil {
 		return ctrl.Result{}, err
-	}
-	for _, pluginBinding := range referencingBindingList.Items {
-		if pluginBinding.Spec.PluginReference.Name == kongPlugin.Name {
-			pluginBindings = append(pluginBindings, pluginBinding)
-		}
 	}
 
 	// TODO(mlavacca): So far we are supporting only KongService targets here. We need to implement
@@ -94,7 +88,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Group the PluginBindings by KongService name
 	pluginBindingsByServiceName := map[string][]configurationv1alpha1.KongPluginBinding{}
-	for _, pluginBinding := range pluginBindings {
+	for _, pluginBinding := range kongPluginBindingList.Items {
 		if pluginBinding.Spec.Targets.ServiceReference == nil ||
 			pluginBinding.Spec.Targets.ServiceReference.Group != configurationv1alpha1.GroupVersion.Group ||
 			pluginBinding.Spec.Targets.ServiceReference.Kind != "KongService" {
@@ -174,7 +168,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		} else {
 			pluginSlice = strings.Split(plugins, ",")
 
-			for _, pb := range pluginBindings {
+			for _, pb := range kongPluginBindingList.Items {
 				// if the kongPluginBinding targets the KongService,
 				if pb.Spec.Targets.ServiceReference != nil &&
 					pb.Spec.Targets.ServiceReference.Name == kongService.Name &&
