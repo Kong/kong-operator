@@ -6,4 +6,7 @@ const (
 
 	// UserTagKey is the key for the user tag annotation.
 	UserTagKey = "/tags"
+
+	// AnnotationTags is the key for the tags annotation.
+	AnnotationTags = AnnotationPrefix + UserTagKey
 )

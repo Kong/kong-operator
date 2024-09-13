@@ -11,6 +11,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	konnectconsts "github.com/kong/gateway-operator/controller/konnect/consts"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -31,7 +32,7 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 			UID:        k8stypes.UID(uuid.NewString()),
 			Generation: 2,
 			Annotations: map[string]string{
-				"konghq.com/tags": "tag1,tag2,duplicate-tag",
+				konnectconsts.AnnotationTags: "tag1,tag2,duplicate-tag",
 			},
 		},
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
@@ -62,7 +63,7 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 				Name:      "plugin-1",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"konghq.com/tags": "tag3,tag4,duplicate-tag",
+					konnectconsts.AnnotationTags: "tag3,tag4,duplicate-tag",
 				},
 			},
 			PluginName: "basic-auth",
