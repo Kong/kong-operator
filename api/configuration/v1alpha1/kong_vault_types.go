@@ -39,6 +39,8 @@ const (
 // +kubebuilder:printcolumn:name="Description",type=string,JSONPath=`.spec.description`,description="Description",priority=1
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
 // +kubebuilder:validation:XValidation:rule="self.spec.prefix == oldSelf.spec.prefix", message="The spec.prefix field is immutable"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
+// +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
 
 // KongVault is the schema for kongvaults API which defines a custom Kong vault.
 // A Kong vault is a storage to store sensitive data, where the values can be referenced in configuration of plugins.
@@ -77,6 +79,14 @@ func (v *KongVault) SetKonnectID(id string) {
 		v.initKonnectStatus()
 	}
 	v.Status.Konnect.ID = id
+}
+
+// GetControlPlaneID returns the ControlPlane ID in the KongVault status.
+func (v *KongVault) GetControlPlaneID() string {
+	if v.Status.Konnect == nil {
+		return ""
+	}
+	return v.Status.Konnect.ControlPlaneID
 }
 
 // SetControlPlaneID sets the ControlPlane ID in the KongVault status.
