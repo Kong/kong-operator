@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -13,6 +12,8 @@ import (
 
 	"github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
 // -----------------------------------------------------------------------------

@@ -118,7 +118,7 @@ and [Zoom][zoom] links.
 [gwapi]:https://github.com/kubernetes-sigs/gateway-api
 [go-dev-site]: https://go.dev/
 [disc]:https://github.com/kong/gateway-operator/discussions
-[issues]:https://github.com/kong/kubernetes-ingress-controller/issues
+[issues]:https://github.com/Kong/gateway-operator/issues
 [slack]:https://kubernetes.slack.com/messages/kong
 [kong-meet]:https://konghq.com/online-meetups/
 [zoom]:https://zoom.us
