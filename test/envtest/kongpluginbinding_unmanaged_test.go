@@ -72,7 +72,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			nil,
 		)
 	factory.SDK.ServicesSDK.EXPECT().
-		UpsertService(mock.Anything, mock.Anything, mock.Anything).
+		UpsertService(mock.Anything, mock.Anything, mock.Anything).Maybe().
 		Return(
 			&sdkkonnectops.UpsertServiceResponse{
 				Service: &sdkkonnectcomp.Service{

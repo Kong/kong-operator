@@ -71,7 +71,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			nil,
 		)
 	factory.SDK.ServicesSDK.EXPECT().
-		UpsertService(mock.Anything, mock.Anything, mock.Anything).
+		UpsertService(mock.Anything, mock.Anything, mock.Anything).Maybe().
 		Return(
 			&sdkkonnectops.UpsertServiceResponse{
 				Service: &sdkkonnectcomp.Service{
@@ -105,30 +105,6 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	require.NoError(t, clientNamespaced.Create(ctx, rateLimitingkongPlugin))
 	t.Logf("deployed %s KongPlugin (%s) resource", client.ObjectKeyFromObject(rateLimitingkongPlugin), rateLimitingkongPlugin.PluginName)
 
-	kongserviceName := "kongservice-1"
-	kongService := &configurationv1alpha1.KongService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: kongserviceName,
-			Annotations: map[string]string{
-				consts.PluginsAnnotationKey: rateLimitingkongPlugin.Name,
-			},
-		},
-		Spec: configurationv1alpha1.KongServiceSpec{
-			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-					Name: cp.Name,
-				},
-			},
-			KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-				Name: lo.ToPtr(kongserviceName),
-				URL:  lo.ToPtr("http://example.com"),
-			},
-		},
-	}
-	require.NoError(t, clientNamespaced.Create(ctx, kongService))
-	t.Logf("deployed %s KongService resource", client.ObjectKeyFromObject(kongService))
-
 	pluginID := uuid.NewString()
 	factory.SDK.PluginSDK.EXPECT().
 		CreatePlugin(mock.Anything, mock.Anything, mock.Anything).
@@ -150,6 +126,29 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			},
 			nil,
 		)
+
+	kongService := &configurationv1alpha1.KongService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kongservice-1",
+			Annotations: map[string]string{
+				consts.PluginsAnnotationKey: rateLimitingkongPlugin.Name,
+			},
+		},
+		Spec: configurationv1alpha1.KongServiceSpec{
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: cp.Name,
+				},
+			},
+			KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+				Name: lo.ToPtr("kongservice-1"),
+				URL:  lo.ToPtr("http://example.com"),
+			},
+		},
+	}
+	require.NoError(t, clientNamespaced.Create(ctx, kongService))
+	t.Logf("deployed %s KongService resource", client.ObjectKeyFromObject(kongService))
 
 	t.Logf("waiting for KongPluginBinding to be created")
 	w, err := clientWithWatch.Watch(ctx, &configurationv1alpha1.KongPluginBindingList{}, client.InNamespace(ns.Name))
@@ -197,8 +196,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			nil,
 		)
 
-	kongPluginList := configurationv1.KongPluginList{}
-	wPlugins, err := clientWithWatch.Watch(ctx, &kongPluginList, client.InNamespace(ns.Name))
+	wPlugins, err := clientWithWatch.Watch(ctx, &configurationv1.KongPluginList{}, client.InNamespace(ns.Name))
 	require.NoError(t, err)
 	t.Cleanup(func() { wPlugins.Stop() })
 

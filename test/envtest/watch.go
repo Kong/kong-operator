@@ -3,10 +3,15 @@ package envtest
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
+)
+
+const (
+	clientWatchTimeout = 30 * time.Second
 )
 
 // watchFor watches for an event of type eventType using the provided watch.Interface.
@@ -23,6 +28,9 @@ func watchFor[
 	failMsg string,
 ) T {
 	t.Helper()
+
+	ctx, cancel := context.WithTimeout(ctx, clientWatchTimeout)
+	defer cancel()
 
 	var ret T
 	for found := false; !found; {
