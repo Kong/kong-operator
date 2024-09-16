@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sync"
 
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v3/pkg/apis/configuration/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,6 +15,8 @@ import (
 	v1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
 // ----------------------------------------------------------------------------
