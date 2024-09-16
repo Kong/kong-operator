@@ -20,23 +20,3 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func MakeLogger(level string, formatter string, output io.Writer) *zap.Logger {
-	encoder := zapcore.NewConsoleEncoder(zapcore.EncoderConfig{
-		TimeKey:        "time",
-		LevelKey:       "level",
-		NameKey:        "logger",
-		CallerKey:      "caller",
-		FunctionKey:    zapcore.OmitKey,
-		MessageKey:     "msg",
-		StacktraceKey:  "stacktrace",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.RFC3339TimeEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
-	})
-
-	core := zapcore.NewCore(encoder, zapcore.AddSync(output), zap.DebugLevel)
-
-	return zap.New(core)
-}
