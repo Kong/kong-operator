@@ -149,10 +149,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			nil,
 		)
 
-	kongPluginList := configurationv1.KongPluginList{}
-	wServices, err := clientWithWatch.Watch(ctx, &kongPluginList, client.InNamespace(ns.Name))
-	require.NoError(t, err)
-	t.Cleanup(func() { wServices.Stop() })
+	wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 	kpb := deployKongPluginBinding(t, ctx, clientNamespaced,
 		configurationv1alpha1.KongPluginBindingSpec{
 			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
@@ -180,7 +177,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		consts.PluginInUseFinalizer,
 		client.ObjectKeyFromObject(proxyCacheKongPlugin),
 	)
-	_ = watchFor(t, ctx, wServices, watch.Modified,
+	_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
 		func(kp *configurationv1.KongPlugin) bool {
 			return kp.Name == proxyCacheKongPlugin.Name &&
 				controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
@@ -188,11 +185,21 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		"KongPlugin wasn't updated to get the plugin-in-use finalizer",
 	)
 
+	factory.SDK.PluginSDK.EXPECT().
+		DeletePlugin(mock.Anything, cp.GetKonnectStatus().ID, mock.Anything).
+		Return(
+			&sdkkonnectops.DeletePluginResponse{
+				StatusCode: 200,
+			},
+			nil,
+		)
+
 	t.Logf("delete the KongPlugin %s, then check it does not get collected", client.ObjectKeyFromObject(proxyCacheKongPlugin))
 	require.NoError(t, clientNamespaced.Delete(ctx, proxyCacheKongPlugin))
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		err = clientNamespaced.Get(ctx, client.ObjectKeyFromObject(proxyCacheKongPlugin), proxyCacheKongPlugin)
-		assert.False(c, k8serrors.IsNotFound(err))
+		assert.False(c, k8serrors.IsNotFound(
+			clientNamespaced.Get(ctx, client.ObjectKeyFromObject(proxyCacheKongPlugin), proxyCacheKongPlugin),
+		))
 		assert.True(c, proxyCacheKongPlugin.DeletionTimestamp != nil)
 		assert.True(c, controllerutil.ContainsFinalizer(proxyCacheKongPlugin, consts.PluginInUseFinalizer))
 	}, waitTime, tickTime)
@@ -201,17 +208,6 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		client.ObjectKeyFromObject(kpb),
 		client.ObjectKeyFromObject(proxyCacheKongPlugin),
 	)
-	factory.SDK.PluginSDK.EXPECT().
-		DeletePlugin(mock.Anything, mock.Anything, mock.Anything).
-		Return(
-			&sdkkonnectops.DeletePluginResponse{
-				StatusCode: 200,
-			},
-			nil,
-		)
-	wKongPlugin, err := clientWithWatch.Watch(ctx, &kongPluginList, client.InNamespace(ns.Name))
-	require.NoError(t, err)
-	t.Cleanup(func() { wKongPlugin.Stop() })
 	require.NoError(t, clientNamespaced.Delete(ctx, kpb))
 	_ = watchFor(t, ctx, wKongPlugin, watch.Deleted,
 		func(kp *configurationv1.KongPlugin) bool {
@@ -225,7 +221,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		client.ObjectKeyFromObject(kongService),
 	)
 	factory.SDK.ServicesSDK.EXPECT().
-		DeleteService(mock.Anything, mock.Anything, mock.Anything).
+		DeleteService(mock.Anything, cp.GetKonnectStatus().ID, mock.Anything).
 		Return(
 			&sdkkonnectops.DeleteServiceResponse{
 				StatusCode: 200,
@@ -234,8 +230,9 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 	require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		err = clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongService), kongService)
-		assert.True(c, k8serrors.IsNotFound(err))
+		assert.True(c, k8serrors.IsNotFound(
+			clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongService), kongService),
+		))
 	}, waitTime, tickTime)
 
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
