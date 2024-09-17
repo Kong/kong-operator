@@ -16,7 +16,8 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// deployKonnectAPIAuthConfiguration deploys a KonnectAPIAuthConfiguration resource and returns the resource.
+// deployKonnectAPIAuthConfiguration deploys a KonnectAPIAuthConfiguration resource
+// and returns the resource.
 func deployKonnectAPIAuthConfiguration(
 	t *testing.T,
 	ctx context.Context,
@@ -37,24 +38,15 @@ func deployKonnectAPIAuthConfiguration(
 	require.NoError(t, cl.Create(ctx, apiAuth))
 	t.Logf("deployed %s KonnectAPIAuthConfiguration resource", client.ObjectKeyFromObject(apiAuth))
 
-	apiAuth.Status.Conditions = []metav1.Condition{
-		{
-			Type:               conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
-			Status:             metav1.ConditionTrue,
-			Reason:             conditions.KonnectEntityAPIAuthConfigurationReasonValid,
-			ObservedGeneration: apiAuth.GetGeneration(),
-			LastTransitionTime: metav1.Now(),
-		},
-	}
-	require.NoError(t, cl.Status().Update(ctx, apiAuth))
 	return apiAuth
 }
 
-// deployKonnectAPIAuthConfigurationWithID deploys a KonnectAPIAuthConfiguration resource and returns the resource.
-// The Status ID and Programmed condition are set on the CP using status Update() call.
+// deployKonnectAPIAuthConfigurationWithProgrammed deploys a KonnectAPIAuthConfiguration
+// resource and returns the resource.
+// The Programmed condition is set on the returned resource using status Update() call.
 // It can be useful where the reconciler for KonnectAPIAuthConfiguration is not started
 // and hence the status has to be filled manually.
-func deployKonnectAPIAuthConfigurationWithID(
+func deployKonnectAPIAuthConfigurationWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -62,7 +54,6 @@ func deployKonnectAPIAuthConfigurationWithID(
 	t.Helper()
 
 	apiAuth := deployKonnectAPIAuthConfiguration(t, ctx, cl)
-
 	apiAuth.Status.Conditions = []metav1.Condition{
 		{
 			Type:               conditions.KonnectEntityAPIAuthConfigurationValidConditionType,

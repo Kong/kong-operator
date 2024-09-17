@@ -56,7 +56,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 	require.NoError(t, clientWithWatch.Create(ctx, ns))
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
-	apiAuth := deployKonnectAPIAuthConfigurationWithID(t, ctx, clientNamespaced)
+	apiAuth := deployKonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 	cp := deployKonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	factory := ops.NewMockSDKFactory(t)
