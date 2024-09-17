@@ -32,8 +32,8 @@ import (
 func TestKongPluginBindingManaged(t *testing.T) {
 	const (
 		konnectSyncTime = 100 * time.Millisecond
-		waitTime        = 30 * time.Second
-		tickTime        = 100 * time.Millisecond
+		waitTime        = 20 * time.Second
+		tickTime        = 500 * time.Millisecond
 	)
 
 	// Setup up the envtest environment and share it across the test cases.
@@ -56,13 +56,13 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	require.NoError(t, clientWithWatch.Create(ctx, ns))
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
-	apiAuth := deployKonnectAPIAuthConfiguration(t, ctx, clientNamespaced)
-	cp := deployKonnectGatewayControlPlane(t, ctx, clientNamespaced, apiAuth)
+	apiAuth := deployKonnectAPIAuthConfigurationWithID(t, ctx, clientNamespaced)
+	cp := deployKonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	factory := ops.NewMockSDKFactory(t)
 	serviceID := uuid.NewString()
 	factory.SDK.ServicesSDK.EXPECT().
-		CreateService(mock.Anything, cp.Status.ID, mock.Anything).
+		CreateService(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
 		Return(
 			&sdkkonnectops.CreateServiceResponse{
 				Service: &sdkkonnectcomp.Service{
@@ -96,7 +96,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 	pluginID := uuid.NewString()
 	factory.SDK.PluginSDK.EXPECT().
-		CreatePlugin(mock.Anything, mock.Anything, mock.Anything).
+		CreatePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
 		Return(
 			&sdkkonnectops.CreatePluginResponse{
 				Plugin: &sdkkonnectcomp.Plugin{
@@ -129,28 +129,26 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	t.Logf("deployed %s KongPlugin (%s) resource", client.ObjectKeyFromObject(rateLimitingkongPlugin), rateLimitingkongPlugin.PluginName)
 
 	wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-	kongService := &configurationv1alpha1.KongService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "kongservice-1",
-			Annotations: map[string]string{
-				consts.PluginsAnnotationKey: rateLimitingkongPlugin.Name,
-			},
-		},
-		Spec: configurationv1alpha1.KongServiceSpec{
-			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-					Name: cp.Name,
+	kongService := deployKongService(t, ctx, clientNamespaced,
+		&configurationv1alpha1.KongService{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					consts.PluginsAnnotationKey: rateLimitingkongPlugin.Name,
 				},
 			},
-			KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-				Name: lo.ToPtr("kongservice-1"),
-				URL:  lo.ToPtr("http://example.com"),
+			Spec: configurationv1alpha1.KongServiceSpec{
+				ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+						Name: cp.Name,
+					},
+				},
+				KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+					URL: lo.ToPtr("http://example.com"),
+				},
 			},
 		},
-	}
-	require.NoError(t, clientNamespaced.Create(ctx, kongService))
-	t.Logf("deployed %s KongService resource", client.ObjectKeyFromObject(kongService))
+	)
 
 	t.Logf("waiting for KongPluginBinding to be created")
 	kongPluginBinding := watchFor(t, ctx, wKongPluginBinding, watch.Added,
@@ -187,7 +185,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	)
 
 	factory.SDK.PluginSDK.EXPECT().
-		DeletePlugin(mock.Anything, cp.GetKonnectStatus().ID, mock.Anything).
+		DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
 		Return(
 			&sdkkonnectops.DeletePluginResponse{
 				StatusCode: 200,
