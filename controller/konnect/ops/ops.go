@@ -37,8 +37,6 @@ const (
 	UpdateOp Op = "update"
 	// DeleteOp is the operation type for deleting a Konnect entity.
 	DeleteOp Op = "delete"
-	// ListOp is the operation type for listing Konnect entities.
-	ListOp Op = "list"
 )
 
 // Create creates a Konnect entity.

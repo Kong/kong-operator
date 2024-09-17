@@ -14,6 +14,12 @@ const (
 	// KonnectEntityProgrammedReasonKonnectAPIOpFailed is the reason for the Programmed condition.
 	// It is set when the entity has failed to be programmed in Konnect.
 	KonnectEntityProgrammedReasonKonnectAPIOpFailed = "KonnectAPIOpFailed"
+	// KonnectEntityProgrammedReasonFailedToResolveConsumerGroupRefs is the reason for the Programmed condition.
+	// It is set when one or more KongConsumerGroup references could not be resolved.
+	KonnectEntityProgrammedReasonFailedToResolveConsumerGroupRefs = "FailedToResolveConsumerGroupRefs"
+	// KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect is the reason for the Programmed condition.
+	// It is set when one or more KongConsumerGroup references could not be reconciled with Konnect.
+	KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect = "FailedToReconcileConsumerGroupsWithKonnect"
 )
 
 const (

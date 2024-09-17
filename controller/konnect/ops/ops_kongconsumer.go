@@ -49,7 +49,7 @@ func createConsumer(
 			k8sutils.NewConditionWithGeneration(
 				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
-				"FailedToCreate",
+				conditions.KonnectEntityProgrammedReasonKonnectAPIOpFailed,
 				errWrapped.Error(),
 				consumer.GetGeneration(),
 			),
@@ -112,7 +112,7 @@ func updateConsumer(
 			k8sutils.NewConditionWithGeneration(
 				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
-				"FailedToCreate",
+				conditions.KonnectEntityProgrammedReasonKonnectAPIOpFailed,
 				errWrapped.Error(),
 				consumer.GetGeneration(),
 			),
@@ -162,7 +162,7 @@ func handleConsumerGroupAssignments(
 			k8sutils.NewConditionWithGeneration(
 				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
-				"FailedToResolveConsumerGroupRefs",
+				conditions.KonnectEntityProgrammedReasonFailedToResolveConsumerGroupRefs,
 				err.Error(),
 				consumer.GetGeneration(),
 			),
@@ -182,7 +182,7 @@ func handleConsumerGroupAssignments(
 			k8sutils.NewConditionWithGeneration(
 				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
-				"FailedToReconcileConsumerGroupsWithKonnect",
+				conditions.KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect,
 				err.Error(),
 				consumer.GetGeneration(),
 			),
@@ -208,21 +208,12 @@ func reconcileConsumerGroupsWithKonnect(
 		ControlPlaneID: cpID,
 		ConsumerID:     consumer.GetKonnectStatus().GetKonnectID(),
 	})
-	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, consumer); errWrapped != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToListConsumerGroupsForConsumer",
-				errWrapped.Error(),
-				consumer.GetGeneration(),
-			),
-			consumer,
-		)
-		return errWrapped
+	if err != nil {
+		return fmt.Errorf("failed to list ConsumerGroups for Consumer %s/%s: %w", consumer.GetNamespace(), consumer.GetName(), err)
 	}
-	// Filter out empty IDs with lo.Compact just in case Konnect returns them.
+	// Filter out empty IDs with lo.Compact just in case we get nil IDs in the response.
 	actualConsumerGroupsIDs := lo.Compact(lo.Map(cgsResp.Object.Data, func(cg sdkkonnectcomp.ConsumerGroup, _ int) string {
+		// Convert nil IDs to empty strings.
 		return lo.FromPtrOr(cg.GetID(), "")
 	}))
 
@@ -242,18 +233,8 @@ func reconcileConsumerGroupsWithKonnect(
 				ConsumerID: lo.ToPtr(consumer.GetKonnectStatus().GetKonnectID()),
 			},
 		})
-		if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, consumer); errWrapped != nil {
-			k8sutils.SetCondition(
-				k8sutils.NewConditionWithGeneration(
-					conditions.KonnectEntityProgrammedConditionType,
-					metav1.ConditionFalse,
-					"FailedToAddToConsumerGroup",
-					errWrapped.Error(),
-					consumer.GetGeneration(),
-				),
-				consumer,
-			)
-			return errWrapped
+		if err != nil {
+			return fmt.Errorf("failed to add Consumer %s/%s to ConsumerGroup %s: %w", consumer.GetNamespace(), consumer.GetName(), cgID, err)
 		}
 	}
 
@@ -264,18 +245,8 @@ func reconcileConsumerGroupsWithKonnect(
 			ConsumerGroupID: cgID,
 			ConsumerID:      consumer.GetKonnectStatus().GetKonnectID(),
 		})
-		if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, consumer); errWrapped != nil {
-			k8sutils.SetCondition(
-				k8sutils.NewConditionWithGeneration(
-					conditions.KonnectEntityProgrammedConditionType,
-					metav1.ConditionFalse,
-					"FailedToRemoveFromConsumerGroup",
-					errWrapped.Error(),
-					consumer.GetGeneration(),
-				),
-				consumer,
-			)
-			return errWrapped
+		if err != nil {
+			return fmt.Errorf("failed to remove Consumer %s/%s from ConsumerGroup %s: %w", consumer.GetNamespace(), consumer.GetName(), cgID, err)
 		}
 	}
 
@@ -284,7 +255,7 @@ func reconcileConsumerGroupsWithKonnect(
 
 func populateConsumerGroupRefsValidCondition(invalidConsumerGroups []invalidConsumerGroupRef, consumer *configurationv1.KongConsumer) {
 	if len(invalidConsumerGroups) > 0 {
-		var reasons []string
+		reasons := make([]string, 0, len(invalidConsumerGroups))
 		for _, cg := range invalidConsumerGroups {
 			reasons = append(reasons, fmt.Sprintf("%s: %s", cg.Name, cg.Reason))
 		}
