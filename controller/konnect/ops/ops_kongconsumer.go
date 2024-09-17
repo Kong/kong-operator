@@ -209,7 +209,7 @@ func reconcileConsumerGroupsWithKonnect(
 		ConsumerID:     consumer.GetKonnectStatus().GetKonnectID(),
 	})
 	if err != nil {
-		return fmt.Errorf("failed to list ConsumerGroups for Consumer %s/%s: %w", consumer.GetNamespace(), consumer.GetName(), err)
+		return fmt.Errorf("failed to list ConsumerGroups for Consumer %s: %w", client.ObjectKeyFromObject(consumer), err)
 	}
 	// Filter out empty IDs with lo.Compact just in case we get nil IDs in the response.
 	actualConsumerGroupsIDs := lo.Compact(lo.Map(cgsResp.Object.Data, func(cg sdkkonnectcomp.ConsumerGroup, _ int) string {
@@ -234,7 +234,7 @@ func reconcileConsumerGroupsWithKonnect(
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("failed to add Consumer %s/%s to ConsumerGroup %s: %w", consumer.GetNamespace(), consumer.GetName(), cgID, err)
+			return fmt.Errorf("failed to add Consumer %s to ConsumerGroup %s: %w", client.ObjectKeyFromObject(consumer), cgID, err)
 		}
 	}
 
@@ -246,7 +246,7 @@ func reconcileConsumerGroupsWithKonnect(
 			ConsumerID:      consumer.GetKonnectStatus().GetKonnectID(),
 		})
 		if err != nil {
-			return fmt.Errorf("failed to remove Consumer %s/%s from ConsumerGroup %s: %w", consumer.GetNamespace(), consumer.GetName(), cgID, err)
+			return fmt.Errorf("failed to remove Consumer %s from ConsumerGroup %s: %w", client.ObjectKeyFromObject(consumer), cgID, err)
 		}
 	}
 
