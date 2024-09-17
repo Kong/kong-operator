@@ -1,8 +1,9 @@
 package testcases
 
 import (
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/samber/lo"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 var vaultSpec = testCasesGroup{
@@ -38,7 +39,7 @@ var vaultSpec = testCasesGroup{
 				},
 			},
 			Update: func(v *configurationv1alpha1.KongVault) {
-				v.Spec.Prefix = v.Spec.Prefix + "-1"
+				v.Spec.Prefix += "-1"
 			},
 			ExpectedUpdateErrorMessage: lo.ToPtr("The spec.prefix field is immutable"),
 		},

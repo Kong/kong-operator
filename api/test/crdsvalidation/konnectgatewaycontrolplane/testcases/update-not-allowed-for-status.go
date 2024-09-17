@@ -1,9 +1,10 @@
 package testcases
 
 import (
-	"github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -18,9 +19,9 @@ var updatesNotAllowedForStatus = testCasesGroup{
 			KonnectGatewayControlPlane: konnectv1alpha1.KonnectGatewayControlPlane{
 				ObjectMeta: commonObjectMeta,
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-					CreateControlPlaneRequest: components.CreateControlPlaneRequest{
+					CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 						Name:        "cp-1",
-						ClusterType: lo.ToPtr(components.ClusterTypeClusterTypeControlPlane),
+						ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
 					},
 					KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
 						APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
@@ -49,9 +50,9 @@ var updatesNotAllowedForStatus = testCasesGroup{
 			KonnectGatewayControlPlane: konnectv1alpha1.KonnectGatewayControlPlane{
 				ObjectMeta: commonObjectMeta,
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-					CreateControlPlaneRequest: components.CreateControlPlaneRequest{
+					CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 						Name:        "cp-1",
-						ClusterType: lo.ToPtr(components.ClusterTypeClusterTypeControlPlane),
+						ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
 					},
 					KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
 						APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
@@ -80,9 +81,9 @@ var updatesNotAllowedForStatus = testCasesGroup{
 			KonnectGatewayControlPlane: konnectv1alpha1.KonnectGatewayControlPlane{
 				ObjectMeta: commonObjectMeta,
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-					CreateControlPlaneRequest: components.CreateControlPlaneRequest{
+					CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 						Name:        "cp-1",
-						ClusterType: lo.ToPtr(components.ClusterTypeClusterTypeControlPlane),
+						ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
 					},
 					KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
 						APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{

@@ -22,10 +22,8 @@ func TestKongConsumer(t *testing.T) {
 	require.NoError(t, err, "error creating configurationv1 client")
 
 	for _, tcsGroup := range testcases.TestCases {
-		tcsGroup := tcsGroup
 		t.Run(tcsGroup.Name, func(t *testing.T) {
 			for _, tc := range tcsGroup.TestCases {
-				tc := tc
 				t.Run(tc.Name, func(t *testing.T) {
 					cl := cl.KongConsumers(tc.KongConsumer.Namespace)
 					entity, err := cl.Create(ctx, &tc.KongConsumer, metav1.CreateOptions{})

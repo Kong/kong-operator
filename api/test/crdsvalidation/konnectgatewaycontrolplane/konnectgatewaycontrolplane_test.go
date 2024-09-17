@@ -22,10 +22,8 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 	require.NoError(t, err, "error creating konnectv1alpha1client client")
 
 	for _, tcsGroup := range testcases.TestCases {
-		tcsGroup := tcsGroup
 		t.Run(tcsGroup.Name, func(t *testing.T) {
 			for _, tc := range tcsGroup.TestCases {
-				tc := tc
 				t.Run(tc.Name, func(t *testing.T) {
 					cl := cl.KonnectGatewayControlPlanes(tc.KonnectGatewayControlPlane.Namespace)
 					entity, err := cl.Create(ctx, &tc.KonnectGatewayControlPlane, metav1.CreateOptions{})

@@ -1,9 +1,11 @@
 package testcases
 
 import (
-	"github.com/Kong/sdk-konnect-go/models/components"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/samber/lo"
+
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 var protocols = testCasesGroup{
@@ -34,7 +36,7 @@ var protocols = testCasesGroup{
 						NamespacedRef: &configurationv1alpha1.NamespacedServiceRef{Name: "svc"},
 					},
 					KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-						Protocols: []components.RouteProtocols{"http"},
+						Protocols: []sdkkonnectcomp.RouteProtocols{"http"},
 						Hosts:     []string{"example.com"},
 					},
 				},
@@ -50,7 +52,7 @@ var protocols = testCasesGroup{
 						NamespacedRef: &configurationv1alpha1.NamespacedServiceRef{Name: "svc"},
 					},
 					KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-						Protocols: []components.RouteProtocols{"http"},
+						Protocols: []sdkkonnectcomp.RouteProtocols{"http"},
 					},
 				},
 			},

@@ -22,10 +22,8 @@ func TestKongPluginBindings(t *testing.T) {
 	require.NoError(t, err, "error creating configurationv1alpha1 client")
 
 	for _, tcsGroup := range testcases.TestCases {
-		tcsGroup := tcsGroup
 		t.Run(tcsGroup.Name, func(t *testing.T) {
 			for _, tc := range tcsGroup.TestCases {
-				tc := tc
 				t.Run(tc.Name, func(t *testing.T) {
 					cl := cl.KongPluginBindings(tc.KongPluginBinding.Namespace)
 					entity, err := cl.Create(ctx, &tc.KongPluginBinding, metav1.CreateOptions{})

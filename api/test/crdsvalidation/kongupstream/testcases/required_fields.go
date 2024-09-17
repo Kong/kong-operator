@@ -1,9 +1,11 @@
 package testcases
 
 import (
-	"github.com/Kong/sdk-konnect-go/models/components"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/samber/lo"
+
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 var requiredFields = testCasesGroup{
@@ -21,7 +23,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashFallback:       lo.ToPtr(components.HashFallbackHeader),
+						HashFallback:       lo.ToPtr(sdkkonnectcomp.HashFallbackHeader),
 						HashFallbackHeader: lo.ToPtr("X-Hash-Fallback"),
 					},
 				},
@@ -39,7 +41,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashFallback: lo.ToPtr(components.HashFallbackHeader),
+						HashFallback: lo.ToPtr(sdkkonnectcomp.HashFallbackHeader),
 					},
 				},
 			},
@@ -57,7 +59,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashFallback:         lo.ToPtr(components.HashFallbackQueryArg),
+						HashFallback:         lo.ToPtr(sdkkonnectcomp.HashFallbackQueryArg),
 						HashFallbackQueryArg: lo.ToPtr("arg"),
 					},
 				},
@@ -75,7 +77,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashFallback: lo.ToPtr(components.HashFallbackQueryArg),
+						HashFallback: lo.ToPtr(sdkkonnectcomp.HashFallbackQueryArg),
 					},
 				},
 			},
@@ -93,7 +95,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashFallback:           lo.ToPtr(components.HashFallbackURICapture),
+						HashFallback:           lo.ToPtr(sdkkonnectcomp.HashFallbackURICapture),
 						HashFallbackURICapture: lo.ToPtr("arg"),
 					},
 				},
@@ -111,7 +113,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashFallback: lo.ToPtr(components.HashFallbackURICapture),
+						HashFallback: lo.ToPtr(sdkkonnectcomp.HashFallbackURICapture),
 					},
 				},
 			},
@@ -129,7 +131,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashOn:           lo.ToPtr(components.HashOnCookie),
+						HashOn:           lo.ToPtr(sdkkonnectcomp.HashOnCookie),
 						HashOnCookie:     lo.ToPtr("cookie"),
 						HashOnCookiePath: lo.ToPtr("X-Hash-On-Cookie-Path"),
 					},
@@ -148,7 +150,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashFallback:     lo.ToPtr(components.HashFallbackCookie),
+						HashFallback:     lo.ToPtr(sdkkonnectcomp.HashFallbackCookie),
 						HashOnCookie:     lo.ToPtr("cookie"),
 						HashOnCookiePath: lo.ToPtr("X-Hash-On-Cookie-Path"),
 					},
@@ -167,7 +169,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashOn:           lo.ToPtr(components.HashOnCookie),
+						HashOn:           lo.ToPtr(sdkkonnectcomp.HashOnCookie),
 						HashOnCookiePath: lo.ToPtr("X-Hash-On-Cookie-Path"),
 					},
 				},
@@ -186,7 +188,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashFallback:     lo.ToPtr(components.HashFallbackCookie),
+						HashFallback:     lo.ToPtr(sdkkonnectcomp.HashFallbackCookie),
 						HashOnCookiePath: lo.ToPtr("X-Hash-On-Cookie-Path"),
 					},
 				},
@@ -205,7 +207,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashOn:       lo.ToPtr(components.HashOnCookie),
+						HashOn:       lo.ToPtr(sdkkonnectcomp.HashOnCookie),
 						HashOnCookie: lo.ToPtr("cookie"),
 					},
 				},
@@ -224,7 +226,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashFallback: lo.ToPtr(components.HashFallbackCookie),
+						HashFallback: lo.ToPtr(sdkkonnectcomp.HashFallbackCookie),
 						HashOnCookie: lo.ToPtr("cookie"),
 					},
 				},
@@ -243,7 +245,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashFallback: lo.ToPtr(components.HashFallbackCookie),
+						HashFallback: lo.ToPtr(sdkkonnectcomp.HashFallbackCookie),
 					},
 				},
 			},
@@ -261,7 +263,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashOn: lo.ToPtr(components.HashOnCookie),
+						HashOn: lo.ToPtr(sdkkonnectcomp.HashOnCookie),
 					},
 				},
 			},
@@ -279,7 +281,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashOn: lo.ToPtr(components.HashOnHeader),
+						HashOn: lo.ToPtr(sdkkonnectcomp.HashOnHeader),
 					},
 				},
 			},
@@ -297,7 +299,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashOn:         lo.ToPtr(components.HashOnQueryArg),
+						HashOn:         lo.ToPtr(sdkkonnectcomp.HashOnQueryArg),
 						HashOnQueryArg: lo.ToPtr("arg"),
 					},
 				},
@@ -315,7 +317,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashOn: lo.ToPtr(components.HashOnQueryArg),
+						HashOn: lo.ToPtr(sdkkonnectcomp.HashOnQueryArg),
 					},
 				},
 			},
@@ -333,7 +335,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashOn:           lo.ToPtr(components.HashOnURICapture),
+						HashOn:           lo.ToPtr(sdkkonnectcomp.HashOnURICapture),
 						HashOnURICapture: lo.ToPtr("arg"),
 					},
 				},
@@ -351,7 +353,7 @@ var requiredFields = testCasesGroup{
 						},
 					},
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						HashOn: lo.ToPtr(components.HashOnURICapture),
+						HashOn: lo.ToPtr(sdkkonnectcomp.HashOnURICapture),
 					},
 				},
 			},
