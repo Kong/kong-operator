@@ -63,16 +63,44 @@ spec:
                   in Image. It must follow the format in https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry.
                   It is optional. If the image is public, omit this field.
                 properties:
+                  group:
+                    default: ""
+                    description: |-
+                      Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                      When unspecified or empty string, core API group is inferred.
+                    maxLength: 253
+                    pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                  kind:
+                    default: Secret
+                    description: Kind is kind of the referent. For example "Secret".
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                    type: string
                   name:
-                    description: name is unique within a namespace to reference a
-                      secret resource.
+                    description: Name is the name of the referent.
+                    maxLength: 253
+                    minLength: 1
                     type: string
                   namespace:
-                    description: namespace defines the space within which the secret
-                      name must be unique.
+                    description: |-
+                      Namespace is the namespace of the referenced object. When unspecified, the local
+                      namespace is inferred.
+
+                      Note that when a namespace different than the local namespace is specified,
+                      a ReferenceGrant object is required in the referent namespace to allow that
+                      namespace's owner to accept the reference. See the ReferenceGrant
+                      documentation for details.
+
+                      Support: Core
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                     type: string
+                required:
+                - name
                 type: object
-                x-kubernetes-map-type: atomic
             required:
             - image
             type: object

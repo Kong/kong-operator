@@ -17,8 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func init() {
@@ -66,7 +66,7 @@ type KongPluginInstallationSpec struct {
 	// It is optional. If the image is public, omit this field.
 	//
 	//+optional
-	ImagePullSecretRef *corev1.SecretReference `json:"imagePullSecretRef,omitempty"`
+	ImagePullSecretRef *gatewayv1.SecretObjectReference `json:"imagePullSecretRef,omitempty"`
 }
 
 // KongPluginInstallationStatus defines the observed state of KongPluginInstallation.
