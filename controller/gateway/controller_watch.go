@@ -17,6 +17,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
+	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -75,21 +76,6 @@ func (r *Reconciler) gatewayConfigurationMatchesController(obj client.Object) bo
 		}
 	}
 
-	return false
-}
-
-// Predicates to filter only the ReferenceGrants that allow a Gateway
-// cross-namespace reference.
-func referenceGrantHasGatewayFrom(obj client.Object) bool {
-	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
-	if !ok {
-		return false
-	}
-	for _, from := range grant.Spec.From {
-		if from.Kind == "Gateway" && from.Group == gatewayv1.GroupName {
-			return true
-		}
-	}
 	return false
 }
 
@@ -204,19 +190,12 @@ func (r *Reconciler) listReferenceGrantsForGateway(ctx context.Context, obj clie
 		logger.Error(err, "Failed to list gateways in watch", "referencegrant", grant.Name)
 		return nil
 	}
-	recs := []reconcile.Request{}
+	var recs []reconcile.Request
 	for _, gateway := range gateways.Items {
-		for _, from := range grant.Spec.From {
-			if string(from.Namespace) == gateway.Namespace &&
-				from.Kind == gatewayv1beta1.Kind("Gateway") &&
-				from.Group == gatewayv1beta1.Group("gateway.networking.k8s.io") {
-				recs = append(recs, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: gateway.Namespace,
-						Name:      gateway.Name,
-					},
-				})
-			}
+		if ref.IsReferenceGrantForObj(grant, &gateway) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: client.ObjectKeyFromObject(&gateway),
+			})
 		}
 	}
 	return recs

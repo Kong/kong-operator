@@ -582,125 +582,6 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 	}
 }
 
-func TestIsSecretCrossReferenceGranted(t *testing.T) {
-	customizeReferenceGrant := func(rg gatewayv1beta1.ReferenceGrant, opts ...func(rg *gatewayv1beta1.ReferenceGrant)) gatewayv1beta1.ReferenceGrant {
-		rg = *rg.DeepCopy()
-		for _, opt := range opts {
-			opt(&rg)
-		}
-		return rg
-	}
-
-	badSecretName := gwtypes.ObjectName("wrong-secret")
-	emptySecretName := gwtypes.ObjectName("")
-	goodSecretName := gwtypes.ObjectName("good-secret")
-	referenceGrant := gatewayv1beta1.ReferenceGrant{
-		Spec: gatewayv1beta1.ReferenceGrantSpec{
-			From: []gatewayv1beta1.ReferenceGrantFrom{
-				{
-					Group:     gatewayv1.GroupName,
-					Kind:      "Gateway",
-					Namespace: "goodNamespace",
-				},
-			},
-			To: []gatewayv1beta1.ReferenceGrantTo{
-				{
-					Group: "",
-					Kind:  "Secret",
-					Name:  &goodSecretName,
-				},
-			},
-		},
-	}
-
-	testCases := []struct {
-		name            string
-		referenceGrants []gatewayv1beta1.ReferenceGrant
-		isGranted       bool
-	}{
-		{
-			name:      "no referenceGrants",
-			isGranted: false,
-		},
-		{
-			name: "granted",
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				referenceGrant,
-			},
-			isGranted: true,
-		},
-		{
-			name: "not granted, bad 'from' group",
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrant, func(rg *gatewayv1beta1.ReferenceGrant) {
-					rg.Spec.From[0].Group = "wrong-group"
-				}),
-			},
-			isGranted: false,
-		},
-		{
-			name: "not granted, bad 'to' group",
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrant, func(rg *gatewayv1beta1.ReferenceGrant) {
-					rg.Spec.To[0].Group = "wrong-group"
-				}),
-			},
-			isGranted: false,
-		},
-		{
-			name: "not granted, bad 'from' kind",
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrant, func(rg *gatewayv1beta1.ReferenceGrant) {
-					rg.Spec.From[0].Kind = "wrong-kind"
-				}),
-			},
-			isGranted: false,
-		},
-		{
-			name: "not granted, bad 'to' kind",
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrant, func(rg *gatewayv1beta1.ReferenceGrant) {
-					rg.Spec.To[0].Kind = "wrong-kind"
-				}),
-			},
-			isGranted: false,
-		},
-		{
-			name: "not granted, bad 'from' namespace",
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrant, func(rg *gatewayv1beta1.ReferenceGrant) {
-					rg.Spec.From[0].Namespace = "bad-namespace"
-				}),
-			},
-			isGranted: false,
-		},
-		{
-			name: "not granted, empty 'to' secret name",
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrant, func(rg *gatewayv1beta1.ReferenceGrant) {
-					rg.Spec.To[0].Name = &emptySecretName
-				}),
-			},
-			isGranted: false,
-		},
-		{
-			name: "not granted, bad 'to' secret name",
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrant, func(rg *gatewayv1beta1.ReferenceGrant) {
-					rg.Spec.To[0].Name = &badSecretName
-				}),
-			},
-			isGranted: false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.isGranted, isSecretCrossReferenceGranted("goodNamespace", goodSecretName, tc.referenceGrants))
-		})
-	}
-}
-
 func TestGatewayStatusNeedsUpdate(t *testing.T) {
 	customizeGateway := func(gateway gatewayv1.Gateway, opts ...func(*gatewayv1.Gateway)) *gatewayv1.Gateway {
 		newGateway := gateway.DeepCopy()
@@ -1177,7 +1058,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 							{
 								Group: "",
 								Kind:  "Secret",
-								Name:  (*gwtypes.ObjectName)(lo.ToPtr("test-secret")),
+								Name:  (lo.ToPtr(gwtypes.ObjectName("test-secret"))),
 							},
 						},
 					},
@@ -1198,7 +1079,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			},
 		},
 		{
-			name:             "tls well-formed, with unallowed cross-namespace reference",
+			name:             "tls well-formed, with not allowed cross-namespace reference",
 			gatewayNamespace: "default",
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
@@ -1234,7 +1115,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
 				Status:             metav1.ConditionFalse,
 				Reason:             string(gatewayv1.ListenerReasonRefNotPermitted),
-				Message:            "Secret other-namespace/test-secret reference not allowed by any referenceGrant.",
+				Message:            "Secret other-namespace/test-secret reference not allowed by any ReferenceGrant.",
 				ObservedGeneration: generation,
 			},
 		},
@@ -1251,11 +1132,21 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			Build()
 
 		t.Run(tc.name, func(t *testing.T) {
-			supportedKinds, resolvedRefsCondition, err := getSupportedKindsWithResolvedRefsCondition(ctx,
+			supportedKinds, resolvedRefsCondition, err := getSupportedKindsWithResolvedRefsCondition(
+				ctx,
 				client,
-				tc.gatewayNamespace,
+				gatewayv1.Gateway{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: gatewayv1.GroupVersion.String(),
+						Kind:       "Gateway",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: tc.gatewayNamespace,
+					},
+				},
 				generation,
-				tc.listener)
+				tc.listener,
+			)
 
 			assert.NoError(t, err)
 			assert.Equal(t, supportedKinds, tc.expectedSupportedKinds)
