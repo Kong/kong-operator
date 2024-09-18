@@ -3,7 +3,6 @@ package envtest
 import (
 	"context"
 	"testing"
-	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -12,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,6 +20,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
+	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 
@@ -30,30 +29,19 @@ import (
 )
 
 func TestKongPluginBindingManaged(t *testing.T) {
-	const (
-		konnectSyncTime = 100 * time.Millisecond
-		waitTime        = 20 * time.Second
-		tickTime        = 500 * time.Millisecond
-	)
-
-	// Setup up the envtest environment and share it across the test cases.
-	cfg := Setup(t, scheme.Get())
 	t.Parallel()
-
 	ctx, cancel := Context(t, context.Background())
 	defer cancel()
+
+	// Setup up the envtest environment.
+	cfg, ns := Setup(t, ctx, scheme.Get())
+
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
 
 	clientWithWatch, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
 		Scheme: scheme.Get(),
 	})
 	require.NoError(t, err)
-	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "test-",
-		},
-	}
-	require.NoError(t, clientWithWatch.Create(ctx, ns))
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
 	apiAuth := deployKonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
@@ -82,6 +70,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			nil,
 		)
 
+	require.NoError(t, manager.SetupCacheIndicesForKonnectTypes(ctx, mgr, false))
 	reconcilers := []Reconciler{
 		konnect.NewKongPluginReconciler(false, mgr.GetClient()),
 		konnect.NewKonnectEntityReconciler(factory, false, mgr.GetClient(),
@@ -129,6 +118,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	t.Logf("deployed %s KongPlugin (%s) resource", client.ObjectKeyFromObject(rateLimitingkongPlugin), rateLimitingkongPlugin.PluginName)
 
 	wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+	wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 	kongService := deployKongService(t, ctx, clientNamespaced,
 		&configurationv1alpha1.KongService{
 			ObjectMeta: metav1.ObjectMeta{
@@ -158,6 +148,17 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				kpb.Spec.PluginReference.Name == rateLimitingkongPlugin.Name
 		},
 		"KongPluginBinding wasn't created",
+	)
+	t.Logf(
+		"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
+		client.ObjectKeyFromObject(rateLimitingkongPlugin),
+	)
+	_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
+		func(kp *configurationv1.KongPlugin) bool {
+			return kp.Name == rateLimitingkongPlugin.Name &&
+				controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
+		},
+		"KongPlugin wasn't updated to get plugin-in-use finalizer added",
 	)
 
 	t.Logf("delete managed kongPluginBinding %s, then check it gets recreated", client.ObjectKeyFromObject(kongPluginBinding))
@@ -197,7 +198,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		"checking that managed KongPlugin %s gets plugin-in-use finalizer removed",
 		client.ObjectKeyFromObject(rateLimitingkongPlugin),
 	)
-	wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+	wKongPlugin = setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 	kongServiceToPatch := kongService.DeepCopy()
 	delete(kongServiceToPatch.Annotations, consts.PluginsAnnotationKey)
 	require.NoError(t, clientNamespaced.Patch(ctx, kongServiceToPatch, client.MergeFrom(kongService)))

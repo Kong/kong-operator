@@ -3,7 +3,6 @@ package envtest
 import (
 	"context"
 	"testing"
-	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -12,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,6 +20,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
+	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 
@@ -30,30 +29,19 @@ import (
 )
 
 func TestKongPluginBindingUnmanaged(t *testing.T) {
-	const (
-		konnectSyncTime = 100 * time.Millisecond
-		waitTime        = 20 * time.Second
-		tickTime        = 500 * time.Millisecond
-	)
-
-	// Setup up the envtest environment and share it across the test cases.
-	cfg := Setup(t, scheme.Get())
 	t.Parallel()
-
 	ctx, cancel := Context(t, context.Background())
 	defer cancel()
+
+	// Setup up the envtest environment.
+	cfg, ns := Setup(t, ctx, scheme.Get())
+
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
 
 	clientWithWatch, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
 		Scheme: scheme.Get(),
 	})
 	require.NoError(t, err)
-	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "test-",
-		},
-	}
-	require.NoError(t, clientWithWatch.Create(ctx, ns))
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
 	apiAuth := deployKonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
@@ -82,6 +70,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			nil,
 		)
 
+	require.NoError(t, manager.SetupCacheIndicesForKonnectTypes(ctx, mgr, false))
 	reconcilers := []Reconciler{
 		konnect.NewKongPluginReconciler(false, mgr.GetClient()),
 		konnect.NewKonnectEntityReconciler(factory, false, mgr.GetClient(),

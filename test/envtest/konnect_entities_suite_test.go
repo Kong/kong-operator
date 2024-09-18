@@ -29,7 +29,7 @@ import (
 // TestKonnectEntityReconcilers tests Konnect entity reconcilers. The test cases are run against a real Kubernetes API
 // server provided by the envtest package and a mock Konnect SDK.
 func TestKonnectEntityReconcilers(t *testing.T) {
-	cfg := Setup(t, scheme.Get())
+	cfg, _ := Setup(t, context.Background(), scheme.Get())
 
 	testNewKonnectEntityReconciler(t, cfg, konnectv1alpha1.KonnectGatewayControlPlane{}, konnectGatewayControlPlaneTestCases)
 	testNewKonnectEntityReconciler(t, cfg, configurationv1alpha1.KongService{}, nil)

@@ -166,16 +166,6 @@ rules:
   - configuration.konghq.com
   resources:
   - kongpluginbindings
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
   - kongplugins
   verbs:
   - create
