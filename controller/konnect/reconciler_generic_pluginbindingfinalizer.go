@@ -23,7 +23,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
-// KonnectEntityPluginBindingFinalizerReconciler reconciles a Konnect entities.
+// KonnectEntityPluginBindingFinalizerReconciler reconciles Konnect entities that may be referenced by KongPluginBinding.
 // It uses the generic type constraints to constrain the supported types.
 type KonnectEntityPluginBindingFinalizerReconciler[
 	T constraints.SupportedKonnectEntityPluginReferenceableType,
