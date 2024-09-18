@@ -121,7 +121,7 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) Reconcile(
 		ctx,
 		&kongPluginBindingList,
 		client.MatchingFields{
-			getIndexField(ent): ent.GetName(),
+			r.getKongPluginBindingIndexFieldForType(): ent.GetName(),
 		},
 	)
 	if err != nil {
@@ -181,10 +181,12 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) Reconcile(
 	return ctrl.Result{}, nil
 }
 
-func getIndexField[
-	T constraints.SupportedKonnectEntityPluginReferenceableType,
-	TEnt constraints.EntityType[T],
-](ent TEnt) string {
+func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) getKongPluginBindingIndexFieldForType() string {
+	var (
+		e   T
+		ent = TEnt(&e)
+	)
+
 	switch any(ent).(type) {
 	case *configurationv1alpha1.KongService:
 		return IndexFieldKongPluginBindingKongServiceReference
