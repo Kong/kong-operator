@@ -42,6 +42,8 @@ If the troubleshooting section does not contain the answer to the problem you en
 
 - [ ] When the release tag is created add a test case in [upgrade E2E test][helm_upgrade_test] with just published tag so that an upgrade path from previous major/minor version is tested.
   - [ ] When the release contains breaking changes which precludes an automated upgrade make sure to add a comment to this test for future readers.
+- [ ] Schedule a retro meeting and invite the team. Link the invite in the [retro notes](https://docs.google.com/document/d/15gDtl425zyttbDwA8qQrh5yBgTD5OpnhjOquqfSJUx4/edit#heading=h.biunbyheelys)
+
 
 [docs_repo]: https://github.com/Kong/docs.konghq.com/
 [cli_ref_docs]: https://docs.konghq.com/gateway-operator/latest/reference/cli-arguments/
