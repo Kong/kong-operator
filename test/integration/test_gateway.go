@@ -29,6 +29,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
+	"github.com/kong/gateway-operator/test/helpers/envs"
 )
 
 func TestGatewayEssentials(t *testing.T) {
@@ -940,13 +941,13 @@ func setGatewayConfigurationEnvProxyPort(t *testing.T, gatewayConfiguration *ope
 	container := k8sutils.GetPodContainerByName(&dpOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 	require.NotNil(t, container)
 
-	container.Env = SetEnvValueByName(container.Env,
+	container.Env = envs.SetValueByName(container.Env,
 		"KONG_PROXY_LISTEN",
 		fmt.Sprintf("0.0.0.0:%d reuseport backlog=16384, 0.0.0.0:%d http2 ssl reuseport backlog=16384", proxyPort, proxySSLPort),
 	)
-	container.Env = SetEnvValueByName(container.Env,
+	container.Env = envs.SetValueByName(container.Env,
 		"KONG_PORT_MAPS",
-		fmt.Sprintf("80:%d, 443:%d", proxyPort, proxySSLPort),
+		fmt.Sprintf("80:%d,443:%d", proxyPort, proxySSLPort),
 	)
 
 	gatewayConfiguration.Spec.DataPlaneOptions = dpOptions
@@ -963,7 +964,7 @@ func setGatewayConfigurationEnvAdminAPIPort(t *testing.T, gatewayConfiguration *
 	container := k8sutils.GetPodContainerByName(&dpOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 	require.NotNil(t, container)
 
-	container.Env = SetEnvValueByName(container.Env,
+	container.Env = envs.SetValueByName(container.Env,
 		"KONG_ADMIN_LISTEN",
 		fmt.Sprintf("0.0.0.0:%d ssl reuseport backlog=16384", adminAPIPort),
 	)
