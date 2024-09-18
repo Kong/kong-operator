@@ -28,7 +28,7 @@ func getKongVaultControlPlaneID(vault *configurationv1alpha1.KongVault) string {
 	if vault.Status.Konnect == nil {
 		return ""
 	}
-	return vault.Status.Konnect.ID
+	return vault.Status.Konnect.ControlPlaneID
 }
 
 func createVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1.KongVault) error {
@@ -60,7 +60,7 @@ func createVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1
 		return errWrapped
 	}
 
-	vault.Status.Konnect.SetKonnectID(*resp.Vault.ID)
+	vault.SetKonnectID(*resp.Vault.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
 			conditions.KonnectEntityProgrammedConditionType,
