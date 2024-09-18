@@ -16,9 +16,12 @@ type ReconciliationIndexOption struct {
 }
 
 // ReconciliationIndexOptionsForEntity returns required index options for controller reconciliing the entity.
-func ReconciliationIndexOptionsForEntity[T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T]](ent TEnt) []ReconciliationIndexOption {
-	switch any(ent).(type) { //nolint:gocritic // TODO: add index options required for other entities
+func ReconciliationIndexOptionsForEntity[
+	TEnt constraints.EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+]() []ReconciliationIndexOption {
+	var e TEnt
+	switch any(e).(type) { //nolint:gocritic // TODO: add index options required for other entities
 	case *configurationv1alpha1.KongPluginBinding:
 		return IndexOptionsForKongPluginBinding()
 	}

@@ -88,16 +88,8 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// the same logic for KongRoute, KongConsumer, and KongConsumerGroup as well.
 	// https://github.com/Kong/gateway-operator/issues/583
 
-	// Group the PluginBindings by KongService name
-	pluginBindingsByServiceName := map[string][]configurationv1alpha1.KongPluginBinding{}
-	for _, pluginBinding := range kongPluginBindingList.Items {
-		if pluginBinding.Spec.Targets.ServiceReference == nil ||
-			pluginBinding.Spec.Targets.ServiceReference.Group != configurationv1alpha1.GroupVersion.Group ||
-			pluginBinding.Spec.Targets.ServiceReference.Kind != "KongService" {
-			continue
-		}
-		pluginBindingsByServiceName[pluginBinding.Spec.Targets.ServiceReference.Name] = append(pluginBindingsByServiceName[pluginBinding.Spec.Targets.ServiceReference.Name], pluginBinding)
-	}
+	// Group the PluginBindings by reference type and name.
+	bindingMapping := mapKongPluginBindingsByTargetTypeAndRef(kongPluginBindingList.Items)
 
 	// Get all the KongServices referenced by the KongPluginBindings
 	// TODO(mlavacca): use indexers instead of listing all KongServices
@@ -116,52 +108,18 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// pluginReferenceFound represents whether the plugin is referenced by any KongService
 	var pluginReferenceFound bool
 	for _, kongService := range kongServiceList.Items {
-		var pluginSlice []string
-
-		// in case no kongpluginbindings are referencing the kongservice, but it has the finalizer,
-		// we need to remove the finalizer.
-		if len(pluginBindingsByServiceName[kongService.Name]) == 0 {
-			if controllerutil.RemoveFinalizer(&kongService, consts.CleanupPluginBindingFinalizer) {
-				if err = r.client.Update(ctx, &kongService); err != nil {
-					if k8serrors.IsConflict(err) {
-						return ctrl.Result{Requeue: true}, nil
-					}
-					return ctrl.Result{}, err
-				}
-				log.Debug(logger, "KongService finalizer removed", kongService, "finalizer", consts.CleanupPluginBindingFinalizer)
-				return ctrl.Result{}, nil
-			}
-		}
-
-		// if the KongService is marked for deletion, we need to delete all the PluginBindings that reference it.
 		if !kongService.DeletionTimestamp.IsZero() {
-			for _, pb := range pluginBindingsByServiceName[kongService.Name] {
-				if err := r.client.Delete(ctx, &pb); err != nil {
-					if k8serrors.IsNotFound(err) {
-						continue
-					}
-					return ctrl.Result{}, err
-				}
-				log.Debug(logger, "KongPluginBinding deleted", pb)
-			}
-			// Once all the KongPluginBindings that use the KongService have been deleted, remove the finalizer.
-			controllerutil.RemoveFinalizer(&kongService, consts.CleanupPluginBindingFinalizer)
-			if err = r.client.Update(ctx, &kongService); err != nil {
-				if k8serrors.IsConflict(err) {
-					return ctrl.Result{Requeue: true}, nil
-				}
-				return ctrl.Result{}, err
-			}
-			log.Debug(logger, "KongService finalizer removed", kongService, "finalizer", consts.CleanupPluginBindingFinalizer)
-			return ctrl.Result{}, nil
+			continue
 		}
+
+		var pluginSlice []string
 
 		// get the referenced plugins from the KongService annotations
 		plugins, ok := kongService.Annotations[consts.PluginsAnnotationKey]
 		if !ok {
 			// if the konghq.com/plugins annotation is not present, we need to delete all the managed
 			// KongPluginBindings that reference the KongService
-			for _, pb := range pluginBindingsByServiceName[kongService.Name] {
+			for _, pb := range bindingMapping.byServiceName[kongService.Name] {
 				if lo.ContainsBy(pb.OwnerReferences, func(ownerRef metav1.OwnerReference) bool {
 					if ownerRef.Kind == "KongPlugin" && ownerRef.Name == kongPlugin.Name && ownerRef.UID == kongPlugin.UID {
 						return true
@@ -203,7 +161,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 				pluginReferenceFound = true
 				// if the KongPluginBinding does not exist yet, create it
-				if len(pluginBindingsByServiceName[kongService.Name]) == 0 {
+				if len(bindingMapping.byServiceName[kongService.Name]) == 0 {
 					kongPluginBinding := configurationv1alpha1.KongPluginBinding{
 						ObjectMeta: metav1.ObjectMeta{
 							GenerateName: kongPlugin.Name + "-",
@@ -232,36 +190,25 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 					}
 					log.Debug(logger, "Managed KongPluginBinding created", kongPluginBinding)
 				}
-				// add a finalizer to the KongService that means the associated kongPluginBindings need to be cleaned up
-				if controllerutil.AddFinalizer(&kongService, consts.CleanupPluginBindingFinalizer) {
-					if err = r.client.Update(ctx, &kongService); err != nil {
-						if k8serrors.IsConflict(err) {
-							return ctrl.Result{Requeue: true}, nil
-						}
-						return ctrl.Result{}, err
-					}
-					log.Debug(logger, "KongService finalizer added", kongService)
-					return ctrl.Result{}, nil
-				}
 			}
 		}
+	}
 
-		// iterate over all the KongPluginBindings to be deleted and delete them.
-		for _, pb := range pluginBindingsToDelete {
-			// NOTE: we check the deletion timestamp here because attempting to delete
-			// and return here would prevent KongPlugin finalizer update below.
-			if !pb.DeletionTimestamp.IsZero() {
+	// iterate over all the KongPluginBindings to be deleted and delete them.
+	for _, pb := range pluginBindingsToDelete {
+		// NOTE: we check the deletion timestamp here because attempting to delete
+		// and return here would prevent KongPlugin finalizer update below.
+		if !pb.DeletionTimestamp.IsZero() {
+			continue
+		}
+		if err = r.client.Delete(ctx, &pb); err != nil {
+			if k8serrors.IsNotFound(err) {
 				continue
 			}
-			if err = r.client.Delete(ctx, &pb); err != nil {
-				if k8serrors.IsNotFound(err) {
-					continue
-				}
-				return ctrl.Result{}, err
-			}
-			log.Info(logger, "KongPluginBinding deleted", pb)
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, err
 		}
+		log.Info(logger, "KongPluginBinding deleted", pb)
+		return ctrl.Result{}, nil
 	}
 
 	// If some KongService is using the plugin, add a finalizer on the plugin.
@@ -293,4 +240,33 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	log.Debug(logger, "reconciliation completed", kongPlugin)
 	return ctrl.Result{}, nil
+}
+
+type kongPluginBindingMapping struct {
+	byServiceName map[string][]configurationv1alpha1.KongPluginBinding
+	byRouteName   map[string][]configurationv1alpha1.KongPluginBinding
+}
+
+func mapKongPluginBindingsByTargetTypeAndRef(bindings []configurationv1alpha1.KongPluginBinding) kongPluginBindingMapping {
+	ret := kongPluginBindingMapping{
+		byServiceName: map[string][]configurationv1alpha1.KongPluginBinding{},
+		byRouteName:   map[string][]configurationv1alpha1.KongPluginBinding{},
+	}
+
+	for _, b := range bindings {
+		serviceRef := b.Spec.Targets.ServiceReference
+		if serviceRef != nil &&
+			serviceRef.Group == configurationv1alpha1.GroupVersion.Group &&
+			serviceRef.Kind == "KongService" {
+			ret.byServiceName[serviceRef.Name] = append(ret.byServiceName[serviceRef.Name], b)
+		}
+
+		routeRef := b.Spec.Targets.RouteReference
+		if routeRef != nil &&
+			routeRef.Group == configurationv1alpha1.GroupVersion.Group &&
+			routeRef.Kind == "KongRoute" {
+			ret.byRouteName[routeRef.Name] = append(ret.byRouteName[routeRef.Name], b)
+		}
+	}
+	return ret
 }

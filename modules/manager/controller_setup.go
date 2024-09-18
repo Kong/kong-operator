@@ -22,7 +22,9 @@ import (
 	"github.com/kong/gateway-operator/controller/gatewayclass"
 	"github.com/kong/gateway-operator/controller/kongplugininstallation"
 	"github.com/kong/gateway-operator/controller/konnect"
+	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	konnectops "github.com/kong/gateway-operator/controller/konnect/ops"
+	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/specialized"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	dataplanevalidator "github.com/kong/gateway-operator/internal/validation/dataplane"
@@ -76,6 +78,8 @@ const (
 	KongPluginControllerName = "KongPlugin"
 	// KongUpstreamControllerName is the name of the KongUpstream controller.
 	KongUpstreamControllerName = "KongUpstream"
+	// KongServicePluginBindingFinalizerControllerName is the name of the KongService PluginBinding finalizer controller.
+	KongServicePluginBindingFinalizerControllerName = "KongServicePluginBindingFinalizer"
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
@@ -132,6 +136,8 @@ func setupIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 
 // SetupControllers returns a list of ControllerDefs based on config.
 func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef, error) {
+	ctx := context.Background()
+
 	// These checks prevent controller-runtime spamming in logs about failing
 	// to get informer from cache.
 	// This way we only ever check the CRD once and issue clear log entry about
@@ -312,6 +318,10 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
+		if err := SetupCacheIndicesForKonnectTypes(ctx, mgr, c.DevelopmentMode); err != nil {
+			return nil, err
+		}
+
 		sdkFactory := konnectops.NewSDKFactory()
 		konnectControllers := map[string]ControllerDef{
 			KonnectAPIAuthConfigurationControllerName: {
@@ -392,6 +402,14 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					mgr.GetClient(),
 				),
 			},
+			// Controllers responsible for cleaning up KongPluginBinding cleanup finalizers.
+			KongServicePluginBindingFinalizerControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongService](
+					c.DevelopmentMode,
+					mgr.GetClient(),
+				),
+			},
 		}
 
 		// Merge Konnect controllers into the controllers map. This is done this way instead of directly assigning
@@ -405,4 +423,39 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 	}
 
 	return controllers, nil
+}
+
+// SetupCacheIndicesForKonnectTypes sets up the cache indices for the controllers.
+// This is done only once because 1 manager's cache can only have one index with
+// a predefined key and so that different controllers can share the same indices.
+func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, developmentMode bool) error {
+	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.KongPluginBinding](ctx, mgr, developmentMode); err != nil {
+		return fmt.Errorf("failed to setup cache indices for %s: %w",
+			constraints.EntityTypeName[configurationv1alpha1.KongPluginBinding](), err)
+	}
+	return nil
+}
+
+func setupCacheIndicesForKonnectType[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ctx context.Context, mgr manager.Manager, developmentMode bool) error {
+	var (
+		entityTypeName = constraints.EntityTypeName[T]()
+		logger         = log.GetLogger(ctx, entityTypeName, developmentMode)
+	)
+	for _, ind := range konnect.ReconciliationIndexOptionsForEntity[TEnt]() {
+		logger.Info("creating index",
+			"entityTypeName", entityTypeName,
+			"indexObject", ind.IndexObject,
+			"indexField", ind.IndexField,
+		)
+		err := mgr.
+			GetCache().
+			IndexField(ctx, ind.IndexObject, ind.IndexField, ind.ExtractValue)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

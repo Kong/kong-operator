@@ -42,6 +42,17 @@ type EntityType[T SupportedKonnectEntityType] interface {
 	SetKonnectID(string)
 }
 
+// SupportedKonnectEntityPluginReferenceableType is an interface that all Konnect
+// entity types that can be referenced by a KonnectPluginBinding must implement.
+type SupportedKonnectEntityPluginReferenceableType interface {
+	configurationv1alpha1.KongService |
+		configurationv1alpha1.KongRoute |
+		configurationv1.KongConsumer |
+		configurationv1beta1.KongConsumerGroup
+
+	GetTypeName() string
+}
+
 // EntityWithKonnectAPIAuthConfigurationRef is an interface that all Konnect entity types
 // that reference a KonnectAPIAuthConfiguration must implement.
 // More specifically Konnect's ControlPlane does implement that, while all the other
