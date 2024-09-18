@@ -9,15 +9,13 @@ import (
 const (
 	// IndexFieldKongPluginBindingKongPluginReference is the index field for KongPlugin -> KongPluginBinding.
 	IndexFieldKongPluginBindingKongPluginReference = "kongPluginRef"
-	// IndexFieldKongPluginBindingKongClusterPluginReference is the index field for KongClusterPlugin -> KongPluginBinding.
-	IndexFieldKongPluginBindingKongClusterPluginReference = "kongClusterPluginRef"
 	// IndexFieldKongPluginBindingKongServiceReference is the index field for KongService -> KongPluginBinding.
 	IndexFieldKongPluginBindingKongServiceReference = "kongServiceRef"
-	// IndexFieldKongPluginBindingKongServiceReference is the index field for KongRoute -> KongPluginBinding.
+	// IndexFieldKongPluginBindingKongRouteReference is the index field for KongRoute -> KongPluginBinding.
 	IndexFieldKongPluginBindingKongRouteReference = "kongRouteRef"
-	// IndexFieldKongPluginBindingKongServiceReference is the index field for KongConsumer -> KongPluginBinding.
+	// IndexFieldKongPluginBindingKongConsumerReference is the index field for KongConsumer -> KongPluginBinding.
 	IndexFieldKongPluginBindingKongConsumerReference = "kongConsumerRef"
-	// IndexFieldKongPluginBindingKongServiceReference is the index field for KongConsumerGroup -> KongPluginBinding.
+	// IndexFieldKongPluginBindingKongConsumerGroupReference is the index field for KongConsumerGroup -> KongPluginBinding.
 	IndexFieldKongPluginBindingKongConsumerGroupReference = "kongConsumerGroupRef"
 )
 
@@ -28,11 +26,6 @@ func IndexOptionsForKongPluginBinding() []ReconciliationIndexOption {
 			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
 			IndexField:   IndexFieldKongPluginBindingKongPluginReference,
 			ExtractValue: kongPluginReferencesFromKongPluginBinding,
-		},
-		{
-			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
-			IndexField:   IndexFieldKongPluginBindingKongClusterPluginReference,
-			ExtractValue: kongClusterPluginReferencesFromKongPluginBinding,
 		},
 		{
 			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
@@ -67,18 +60,6 @@ func kongPluginReferencesFromKongPluginBinding(obj client.Object) []string {
 		return nil
 	}
 	return []string{binding.Namespace + "/" + binding.Spec.PluginReference.Name}
-}
-
-// kongClusterPluginReferencesFromKongPluginBinding returns name of referenced KongClusterPlugin in KongPluginBinding spec.
-func kongClusterPluginReferencesFromKongPluginBinding(obj client.Object) []string {
-	binding, ok := obj.(*configurationv1alpha1.KongPluginBinding)
-	if !ok {
-		return nil
-	}
-	if binding.Spec.PluginReference.Kind == nil || *binding.Spec.PluginReference.Kind != "KongClusterPlugin" {
-		return nil
-	}
-	return []string{binding.Spec.PluginReference.Name}
 }
 
 // kongServiceReferencesFromKongPluginBinding returns name of referenced KongService in KongPluginBinding spec.
