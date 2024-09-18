@@ -37,6 +37,7 @@ func TestKonnectEntityReconcilers(t *testing.T) {
 	testNewKonnectEntityReconciler(t, cfg, configurationv1alpha1.KongRoute{}, nil)
 	testNewKonnectEntityReconciler(t, cfg, configurationv1beta1.KongConsumerGroup{}, nil)
 	testNewKonnectEntityReconciler(t, cfg, configurationv1alpha1.KongPluginBinding{}, nil)
+	testNewKonnectEntityReconciler(t, cfg, configurationv1alpha1.CredentialBasicAuth{}, nil)
 }
 
 type konnectEntityReconcilerTestCase struct {

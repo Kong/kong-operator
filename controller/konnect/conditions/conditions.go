@@ -80,3 +80,17 @@ const (
 	// condition type indicating that the KongService reference is invalid.
 	KongServiceRefReasonInvalid = "Invalid"
 )
+
+const (
+	// KongConsumerRefValidConditionType is the type of the condition that indicates
+	// whether the KongConsumer reference is valid and points to an existing
+	// KongConsumer.
+	KongConsumerRefValidConditionType = "KongConsumerRefValid"
+
+	// KongConsumerRefReasonValid is the reason used with the KongConsumerRefValid
+	// condition type indicating that the KongConsumer reference is valid.
+	KongConsumerRefReasonValid = "Valid"
+	// KongConsumerRefReasonInvalid is the reason used with the KongConsumerRefValid
+	// condition type indicating that the KongConsumer reference is invalid.
+	KongConsumerRefReasonInvalid = "Invalid"
+)

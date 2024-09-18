@@ -35,3 +35,14 @@ type ReferencedKongServiceIsBeingDeleted struct {
 func (e ReferencedKongServiceIsBeingDeleted) Error() string {
 	return fmt.Sprintf("referenced Kong Service %s is being deleted", e.Reference)
 }
+
+// ReferencedKongConsumerIsBeingDeleted is an error type that is returned when
+// a Konnect entity references a Kong Consumer which is being deleted.
+type ReferencedKongConsumerIsBeingDeleted struct {
+	Reference types.NamespacedName
+}
+
+// Error implements the error interface.
+func (e ReferencedKongConsumerIsBeingDeleted) Error() string {
+	return fmt.Sprintf("referenced Kong Consumer %s is being deleted", e.Reference)
+}

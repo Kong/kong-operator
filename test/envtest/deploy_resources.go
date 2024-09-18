@@ -12,6 +12,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/conditions"
 
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -140,6 +141,33 @@ func deployKongService(
 	require.NoError(t, cl.Status().Update(ctx, kongService))
 
 	return kongService
+}
+
+// deployKongConsumerWithProgrammed deploys a KongConsumer resource and returns the resource.
+func deployKongConsumerWithProgrammed(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	consumer *configurationv1.KongConsumer,
+) *configurationv1.KongConsumer {
+	t.Helper()
+
+	consumer.GenerateName = "kongconsumer-"
+	require.NoError(t, cl.Create(ctx, consumer))
+	t.Logf("deployed %s KongConsumer resource", client.ObjectKeyFromObject(consumer))
+
+	consumer.Status.Conditions = []metav1.Condition{
+		{
+			Type:               conditions.KonnectEntityProgrammedConditionType,
+			Status:             metav1.ConditionTrue,
+			Reason:             conditions.KonnectEntityProgrammedReasonProgrammed,
+			ObservedGeneration: consumer.GetGeneration(),
+			LastTransitionTime: metav1.Now(),
+		},
+	}
+	require.NoError(t, cl.Status().Update(ctx, consumer))
+
+	return consumer
 }
 
 // deployKongPluginBinding deploys a KongPluginBinding resource and returns the resource.

@@ -15,6 +15,7 @@ type SDKWrapper interface {
 	GetPluginSDK() PluginSDK
 	GetUpstreamsSDK() UpstreamsSDK
 	GetMeSDK() MeSDK
+	GetBasicAuthCredentials() CredentialBasicAuthSDK
 }
 
 type sdkWrapper struct {
@@ -61,6 +62,11 @@ func (w sdkWrapper) GetUpstreamsSDK() UpstreamsSDK {
 // GetMeSDK returns the "me" SDK to get current organization.
 func (w sdkWrapper) GetMeSDK() MeSDK {
 	return w.sdk.Me
+}
+
+// GetBasicAuthCredentials returns the BasicAuthCredentials SDK to get current organization.
+func (w sdkWrapper) GetBasicAuthCredentials() CredentialBasicAuthSDK {
+	return w.sdk.BasicAuthCredentials
 }
 
 // SDKToken is a token used to authenticate with the Konnect SDK.

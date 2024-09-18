@@ -80,6 +80,10 @@ const (
 	KongUpstreamControllerName = "KongUpstream"
 	// KongServicePluginBindingFinalizerControllerName is the name of the KongService PluginBinding finalizer controller.
 	KongServicePluginBindingFinalizerControllerName = "KongServicePluginBindingFinalizer"
+	// KongCredentialsSecretControllerName is the name of the Credentials Secret controller.
+	KongCredentialsSecretControllerName = "KongCredentialSecret"
+	// KongCredentialBasicAuthControllerName is the name of the CredentialBasicAuth controller.
+	KongCredentialBasicAuthControllerName = "CredentialBasicAuth" //nolint:gosec
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
@@ -388,11 +392,20 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			},
 			KongPluginBindingControllerName: {
 				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongPluginBinding](
+				Controller: konnect.NewKonnectEntityReconciler(
 					sdkFactory,
 					c.DevelopmentMode,
 					mgr.GetClient(),
 					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](c.KonnectSyncPeriod),
+				),
+			},
+			KongCredentialBasicAuthControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler(
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.CredentialBasicAuth](c.KonnectSyncPeriod),
 				),
 			},
 			KongPluginControllerName: {
@@ -432,6 +445,10 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.KongPluginBinding](ctx, mgr, developmentMode); err != nil {
 		return fmt.Errorf("failed to setup cache indices for %s: %w",
 			constraints.EntityTypeName[configurationv1alpha1.KongPluginBinding](), err)
+	}
+	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.CredentialBasicAuth](ctx, mgr, developmentMode); err != nil {
+		return fmt.Errorf("failed to setup cache indices for %s: %w",
+			constraints.EntityTypeName[configurationv1alpha1.CredentialBasicAuth](), err)
 	}
 	return nil
 }

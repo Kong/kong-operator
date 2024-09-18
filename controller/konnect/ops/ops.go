@@ -66,6 +66,8 @@ func Create[
 		return e, createPlugin(ctx, cl, sdk.GetPluginSDK(), ent)
 	case *configurationv1alpha1.KongUpstream:
 		return e, createUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
+	case *configurationv1alpha1.CredentialBasicAuth:
+		return e, createCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -106,6 +108,8 @@ func Delete[
 		return deletePlugin(ctx, sdk.GetPluginSDK(), ent)
 	case *configurationv1alpha1.KongUpstream:
 		return deleteUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
+	case *configurationv1alpha1.CredentialBasicAuth:
+		return deleteCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -171,6 +175,8 @@ func Update[
 		return ctrl.Result{}, updatePlugin(ctx, sdk.GetPluginSDK(), cl, ent)
 	case *configurationv1alpha1.KongUpstream:
 		return ctrl.Result{}, updateUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
+	case *configurationv1alpha1.CredentialBasicAuth:
+		return ctrl.Result{}, updateCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
