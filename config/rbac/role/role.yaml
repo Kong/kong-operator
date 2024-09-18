@@ -124,7 +124,6 @@ rules:
   - kongconsumers
   - kongcredentialacls
   - kongcredentialapikeys
-  - kongcredentialbasicauths
   - kongcredentialhmacs
   - kongcredentialjwts
   - kongdataplaneclientcertificates
@@ -202,6 +201,7 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - kongcredentialbasicauths
   - kongpluginbindings
   - kongplugins
   verbs:

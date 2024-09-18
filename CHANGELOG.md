@@ -53,6 +53,10 @@
   It requires the experimental version of Gateway API (as of v1.2.x) installed in
   your cluster, and the flag `--enable-gateway-api-experimental` set.
   [#1010](https://github.com/Kong/gateway-operator/pull/1010)
+- Added support for `KongConsumer` `credentials` in Konnect entities support.
+  Users can now specify credentials for `KongConsumer`s in `Secret`s and reference
+  them in `KongConsumer`s' `credentials` field.
+  - `basic-auth` [#1120](https://github.com/Kong/gateway-operator/pull/1120)
 
 ### Changed
 
