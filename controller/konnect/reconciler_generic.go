@@ -563,7 +563,11 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 	// ref from the referenced ControlPlane.
 	cpRef, ok := getControlPlaneRef(ent).Get()
 	if ok {
-		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
+		cpNamespace := ent.GetNamespace()
+		if cpRef.KonnectNamespacedRef.Namespace != "" {
+			cpNamespace = cpRef.KonnectNamespacedRef.Namespace
+		}
+		return getCPAuthRefForRef(ctx, cl, cpRef, cpNamespace)
 	}
 
 	// If the entity has a KongServiceRef, get the KonnectAPIAuthConfiguration
@@ -1016,6 +1020,11 @@ func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 			return mo.None[configurationv1alpha1.ControlPlaneRef]()
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
+	case *configurationv1alpha1.KongVault:
+		if e.Spec.ControlPlaneRef == nil {
+			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+		}
+		return mo.Some(*e.Spec.ControlPlaneRef)
 	default:
 		panic(fmt.Sprintf("unsupported entity type %T", e))
 	}
@@ -1041,6 +1050,11 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		nn := types.NamespacedName{
 			Name:      cpRef.KonnectNamespacedRef.Name,
 			Namespace: ent.GetNamespace(),
+		}
+		// Set namespace of control plane when it is non-empty. Only applyies for KongVaults now.
+		// REVIEW: add type check here?
+		if cpRef.KonnectNamespacedRef.Namespace != "" {
+			nn.Namespace = cpRef.KonnectNamespacedRef.Namespace
 		}
 		if err := cl.Get(ctx, nn, &cp); err != nil {
 			if res, errStatus := updateStatusWithCondition(

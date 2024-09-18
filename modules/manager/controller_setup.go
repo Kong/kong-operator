@@ -445,7 +445,8 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				Controller: konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongService](
 					c.DevelopmentMode,
 					mgr.GetClient(),
-},
+				),
+			},
 			KongVaultControllerName: {
 				Enabled: c.KonnectControllersEnabled,
 				Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongVault](

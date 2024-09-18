@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/gateway-operator/controller/konnect/conditions"
@@ -20,6 +21,13 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
+
+func mustConvertKongVaultToVaultInput(t *testing.T, vault *configurationv1alpha1.KongVault) sdkkonnectcomp.VaultInput {
+	t.Helper()
+	input, err := kongVaultToVaultInput(vault)
+	require.NoError(t, err)
+	return input
+}
 
 func TestCreateKongVault(t *testing.T) {
 	testCases := []struct {
@@ -37,7 +45,9 @@ func TestCreateKongVault(t *testing.T) {
 						Name: "vault-1",
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{
-
+						Config: apiextensionsv1.JSON{
+							Raw: []byte(`{}`),
+						},
 						Backend: "aws",
 						Prefix:  "aws-vault1",
 					},
@@ -47,13 +57,13 @@ func TestCreateKongVault(t *testing.T) {
 						},
 					},
 				}
-				sdk.EXPECT().CreateVault(mock.Anything, "123456789", kongVaultToVaultInput(vault)).
+				sdk.EXPECT().CreateVault(mock.Anything, "123456789", mustConvertKongVaultToVaultInput(t, vault)).
 					Return(
 						&sdkkonnectops.CreateVaultResponse{
 							Vault: &sdkkonnectcomp.Vault{
 								ID:     lo.ToPtr("12345"),
-								Name:   lo.ToPtr("aws"),
-								Prefix: lo.ToPtr("aws-vault1"),
+								Name:   "aws",
+								Prefix: "aws-vault1",
 							},
 						},
 						nil,
@@ -77,7 +87,9 @@ func TestCreateKongVault(t *testing.T) {
 						Name: "vault-no-cpid",
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{
-
+						Config: apiextensionsv1.JSON{
+							Raw: []byte(`{}`),
+						},
 						Backend: "aws",
 						Prefix:  "aws-vault1",
 					},
@@ -99,6 +111,9 @@ func TestCreateKongVault(t *testing.T) {
 						Name: "vault-1",
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{
+						Config: apiextensionsv1.JSON{
+							Raw: []byte(`{}`),
+						},
 						Backend: "aws",
 						Prefix:  "aws-vault1",
 					},
@@ -108,7 +123,7 @@ func TestCreateKongVault(t *testing.T) {
 						},
 					},
 				}
-				sdk.EXPECT().CreateVault(mock.Anything, "123456789", kongVaultToVaultInput(vault)).
+				sdk.EXPECT().CreateVault(mock.Anything, "123456789", mustConvertKongVaultToVaultInput(t, vault)).
 					Return(
 						&sdkkonnectops.CreateVaultResponse{
 							Vault:      nil,
@@ -163,6 +178,9 @@ func TestUpdateKongVault(t *testing.T) {
 						Name: "vault-1",
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{
+						Config: apiextensionsv1.JSON{
+							Raw: []byte(`{}`),
+						},
 						Backend:     "aws",
 						Prefix:      "aws-vault1",
 						Description: "test vault",
@@ -179,14 +197,14 @@ func TestUpdateKongVault(t *testing.T) {
 				sdk.EXPECT().UpsertVault(mock.Anything, sdkkonnectops.UpsertVaultRequest{
 					VaultID:        "12345",
 					ControlPlaneID: "123456789",
-					Vault:          kongVaultToVaultInput(vault),
+					Vault:          mustConvertKongVaultToVaultInput(t, vault),
 				}).
 					Return(
 						&sdkkonnectops.UpsertVaultResponse{
 							Vault: &sdkkonnectcomp.Vault{
 								ID:          lo.ToPtr("12345"),
-								Name:        lo.ToPtr("aws"),
-								Prefix:      lo.ToPtr("aws-vault1"),
+								Name:        "aws",
+								Prefix:      "aws-vault1",
 								Description: lo.ToPtr("test vault"),
 							},
 						},
@@ -212,6 +230,9 @@ func TestUpdateKongVault(t *testing.T) {
 						Name: "vault-1",
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{
+						Config: apiextensionsv1.JSON{
+							Raw: []byte(`{}`),
+						},
 						Backend:     "aws",
 						Prefix:      "aws-vault1",
 						Description: "test vault",
@@ -228,7 +249,7 @@ func TestUpdateKongVault(t *testing.T) {
 				sdk.EXPECT().UpsertVault(mock.Anything, sdkkonnectops.UpsertVaultRequest{
 					VaultID:        "12345",
 					ControlPlaneID: "123456789",
-					Vault:          kongVaultToVaultInput(vault),
+					Vault:          mustConvertKongVaultToVaultInput(t, vault),
 				}).Return(&sdkkonnectops.UpsertVaultResponse{
 					StatusCode: http.StatusBadRequest,
 				}, &sdkkonnecterrs.BadRequestError{
@@ -254,6 +275,9 @@ func TestUpdateKongVault(t *testing.T) {
 						Name: "vault-1",
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{
+						Config: apiextensionsv1.JSON{
+							Raw: []byte(`{}`),
+						},
 						Backend:     "aws",
 						Prefix:      "aws-vault1",
 						Description: "test vault",
@@ -270,18 +294,18 @@ func TestUpdateKongVault(t *testing.T) {
 				sdk.EXPECT().UpsertVault(mock.Anything, sdkkonnectops.UpsertVaultRequest{
 					VaultID:        "12345",
 					ControlPlaneID: "123456789",
-					Vault:          kongVaultToVaultInput(vault),
+					Vault:          mustConvertKongVaultToVaultInput(t, vault),
 				}).Return(nil, &sdkkonnecterrs.SDKError{
 					Message:    "not found",
 					StatusCode: http.StatusNotFound,
 				})
-				sdk.EXPECT().CreateVault(mock.Anything, "123456789", kongVaultToVaultInput(vault)).
+				sdk.EXPECT().CreateVault(mock.Anything, "123456789", mustConvertKongVaultToVaultInput(t, vault)).
 					Return(
 						&sdkkonnectops.CreateVaultResponse{
 							Vault: &sdkkonnectcomp.Vault{
 								ID:     lo.ToPtr("12345"),
-								Name:   lo.ToPtr("aws"),
-								Prefix: lo.ToPtr("aws-vault1"),
+								Name:   "aws",
+								Prefix: "aws-vault1",
 							},
 						},
 						nil,
