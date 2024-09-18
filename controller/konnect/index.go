@@ -5,6 +5,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
@@ -21,9 +22,13 @@ func ReconciliationIndexOptionsForEntity[
 	T constraints.SupportedKonnectEntityType,
 ]() []ReconciliationIndexOption {
 	var e TEnt
-	switch any(e).(type) { //nolint:gocritic // TODO: add index options required for other entities
+	switch any(e).(type) {
 	case *configurationv1alpha1.KongPluginBinding:
 		return IndexOptionsForKongPluginBinding()
+	case *configurationv1.KongConsumer:
+		return IndexOptionsForKongConsumer()
+	case *configurationv1alpha1.CredentialBasicAuth:
+		return IndexOptionsForCredentialsBasicAuth()
 	}
 	return nil
 }

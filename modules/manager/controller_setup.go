@@ -80,6 +80,8 @@ const (
 	KongUpstreamControllerName = "KongUpstream"
 	// KongServicePluginBindingFinalizerControllerName is the name of the KongService PluginBinding finalizer controller.
 	KongServicePluginBindingFinalizerControllerName = "KongServicePluginBindingFinalizer"
+	// KongCredentialsSecretControllerName is the name of the Credentials Secret controller.
+	KongCredentialsSecretControllerName = "KongCredentialSecret"
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
@@ -410,6 +412,14 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					mgr.GetClient(),
 				),
 			},
+			// TODO(pmalek)
+			KongCredentialsSecretControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKongCredentialSecretReconciler(
+					c.DevelopmentMode,
+					mgr.GetClient(),
+				),
+			},
 		}
 
 		// Merge Konnect controllers into the controllers map. This is done this way instead of directly assigning
@@ -432,6 +442,14 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.KongPluginBinding](ctx, mgr, developmentMode); err != nil {
 		return fmt.Errorf("failed to setup cache indices for %s: %w",
 			constraints.EntityTypeName[configurationv1alpha1.KongPluginBinding](), err)
+	}
+	if err := setupCacheIndicesForKonnectType[configurationv1.KongConsumer](ctx, mgr, developmentMode); err != nil {
+		return fmt.Errorf("failed to setup cache indices for %s: %w",
+			constraints.EntityTypeName[configurationv1.KongConsumer](), err)
+	}
+	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.CredentialBasicAuth](ctx, mgr, developmentMode); err != nil {
+		return fmt.Errorf("failed to setup cache indices for %s: %w",
+			constraints.EntityTypeName[configurationv1alpha1.CredentialBasicAuth](), err)
 	}
 	return nil
 }

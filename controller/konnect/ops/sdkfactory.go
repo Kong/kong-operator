@@ -63,6 +63,11 @@ func (w sdkWrapper) GetMeSDK() MeSDK {
 	return w.sdk.Me
 }
 
+// GetBasicAuthCredentials returns the BasicAuthCredentials SDK to get current organization.
+func (w sdkWrapper) GetBasicAuthCredentials() CredentialBasicAuthSDK {
+	return w.sdk.BasicAuthCredentials
+}
+
 // SDKToken is a token used to authenticate with the Konnect SDK.
 type SDKToken string
 

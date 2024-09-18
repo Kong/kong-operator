@@ -335,6 +335,26 @@ rules:
 - apiGroups:
   - konnect.konghq.com
   resources:
+  - credentialbasicauths
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - konnect.konghq.com
+  resources:
+  - kongconsumers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - konnect.konghq.com
+  resources:
   - konnectapiauthconfigurations
   - konnectgatewaycontrolplanes
   verbs:
