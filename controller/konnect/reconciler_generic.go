@@ -211,6 +211,27 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, nil
 	}
 
+	// If a type has a KongUpstream ref (KongTarget), handle it.
+	res, err = handleKongUpstreamRef(ctx, r.Client, ent)
+	if err != nil {
+		if !errors.As(err, &ReferencedKongUpstreamIsBeingDeleted{}) {
+			return ctrl.Result{}, err
+		}
+
+		// If the referenced KongUpstream is being deleted (has a non zero deletion timestamp)
+		// then we remove the entity if it has not been deleted yet (deletion timestamp is zero).
+		// We do this because Konnect blocks deletion of entities like Services/Upstreams
+		// if they contain entities like Routes/Targets.
+		if ent.GetDeletionTimestamp().IsZero() {
+			if err := r.Client.Delete(ctx, ent); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to delete %s: %w", client.ObjectKeyFromObject(ent), err)
+			}
+			return ctrl.Result{}, nil
+		}
+	} else if res.Requeue {
+		return res, nil
+	}
+
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to get APIAuth ref for %s: %w", client.ObjectKeyFromObject(ent), err)
@@ -577,7 +598,7 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 	if ref, ok := any(ent).(constraints.EntityWithKonnectAPIAuthConfigurationRef); ok {
 		return types.NamespacedName{
 			Name: ref.GetKonnectAPIAuthConfigurationRef().Name,
-			// TODO(pmalek): enable if cross namespace refs are allowed
+			// TODO: enable if cross namespace refs are allowed
 			Namespace: ent.GetNamespace(),
 		}, nil
 	}
@@ -923,6 +944,7 @@ func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 	switch e := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane,
 		*configurationv1alpha1.KongRoute,
+		*configurationv1alpha1.KongTarget,
 		*configurationv1alpha1.KongCredentialBasicAuth:
 		return mo.None[configurationv1alpha1.ControlPlaneRef]()
 	case *configurationv1.KongConsumer:

@@ -102,6 +102,7 @@ func TestKonnectEntities(t *testing.T) {
 			KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 				Name: lo.ToPtr(ksName),
 				URL:  lo.ToPtr("http://example.com"),
+				Host: "example.com",
 			},
 		},
 	}
@@ -246,6 +247,75 @@ func TestKonnectEntities(t *testing.T) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kpb.Name, Namespace: ns.Name}, &kpb)
 		require.NoError(t, err)
 		assertKonnectEntityProgrammed(t, kpb.GetConditions(), kpb.GetKonnectStatus())
+	}, testutils.ObjectUpdateTimeout, time.Second)
+
+	t.Log("Creating KongUpstream")
+	kupName := "kup-" + testID
+	kup := &configurationv1alpha1.KongUpstream{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      kupName,
+			Namespace: ns.Name,
+		},
+		Spec: configurationv1alpha1.KongUpstreamSpec{
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: cp.Name,
+				},
+			},
+			KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+				Name:      ks.Spec.Host,
+				Slots:     lo.ToPtr(int64(16384)),
+				Algorithm: sdkkonnectcomp.UpstreamAlgorithmConsistentHashing.ToPointer(),
+			},
+		},
+	}
+	err = GetClients().MgrClient.Create(GetCtx(), kup)
+	require.NoError(t, err)
+
+	t.Log("Waiting for KongUpstream to be updated with Konnect ID")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kup.Name, Namespace: ns.Name}, kup)
+		require.NoError(t, err)
+
+		if !assert.NotNil(t, kup.Status.Konnect) {
+			return
+		}
+		assert.NotEmpty(t, kup.Status.Konnect.KonnectEntityStatus.GetKonnectID())
+		assert.NotEmpty(t, kup.Status.Konnect.KonnectEntityStatus.GetOrgID())
+		assert.NotEmpty(t, kup.Status.Konnect.KonnectEntityStatus.GetServerURL())
+	}, testutils.ObjectUpdateTimeout, time.Second)
+
+	t.Log("Creating KongTarget")
+	ktName := "kt-" + testID
+	kt := &configurationv1alpha1.KongTarget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ktName,
+			Namespace: ns.Name,
+		},
+		Spec: configurationv1alpha1.KongTargetSpec{
+			UpstreamRef: configurationv1alpha1.TargetRef{
+				Name: kupName,
+			},
+			KongTargetAPISpec: configurationv1alpha1.KongTargetAPISpec{
+				Target: "example.com",
+				Weight: 100,
+			},
+		},
+	}
+	err = GetClients().MgrClient.Create(GetCtx(), kt)
+	require.NoError(t, err)
+
+	t.Log("Waiting for KongTarget to be updated with Konnect ID")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kt.Name, Namespace: ns.Name}, kt)
+		require.NoError(t, err)
+		if !assert.NotNil(t, kt.Status.Konnect) {
+			return
+		}
+		assert.NotEmpty(t, kt.Status.Konnect.KonnectEntityStatus.GetKonnectID())
+		assert.NotEmpty(t, kt.Status.Konnect.KonnectEntityStatus.GetOrgID())
+		assert.NotEmpty(t, kt.Status.Konnect.KonnectEntityStatus.GetServerURL())
 	}, testutils.ObjectUpdateTimeout, time.Second)
 }
 

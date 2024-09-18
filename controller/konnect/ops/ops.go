@@ -70,6 +70,8 @@ func Create[
 		return e, createKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return e, createCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
+	case *configurationv1alpha1.KongTarget:
+		return e, createTarget(ctx, sdk.GetTargetsSDK(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -114,6 +116,9 @@ func Delete[
 		return deleteKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return deleteCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
+	case *configurationv1alpha1.KongTarget:
+		return deleteTarget(ctx, sdk.GetTargetsSDK(), ent)
+
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 
@@ -182,6 +187,9 @@ func Update[
 		return ctrl.Result{}, updateKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return ctrl.Result{}, updateCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
+	case *configurationv1alpha1.KongTarget:
+		return ctrl.Result{}, updateTarget(ctx, sdk.GetTargetsSDK(), ent)
+
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 

@@ -18,6 +18,7 @@ packages:
       ConsumerGroupSDK:
       PluginSDK:
       UpstreamsSDK:
+      TargetsSDK:
       MeSDK:
       KongCredentialBasicAuthSDK:
       CACertificatesSDK:

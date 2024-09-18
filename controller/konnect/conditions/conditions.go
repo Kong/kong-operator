@@ -114,3 +114,17 @@ const (
 	// condition type indicating that one or more KongConsumerGroup references are invalid.
 	KongConsumerGroupRefsReasonInvalid = "Invalid"
 )
+
+const (
+	// KongUpstreamRefValidConditionType is the type of the condition that indicates
+	// whether the KongUpstream reference is valid and points to an existing
+	// KongUpstreamRefValid.
+	KongUpstreamRefValidConditionType = "KongUpstreamRefValid"
+
+	// KongUpstreamRefReasonValid is the reason used with the KongUpstreamRefValid
+	// condition type indicating that the KongUpstream reference is valid.
+	KongUpstreamRefReasonValid = "Valid"
+	// KongUpstreamRefReasonInvalid is the reason used with the KongUpstreamRefValid
+	// condition type indicating that the KongUpstream reference is invalid.
+	KongUpstreamRefReasonInvalid = "Invalid"
+)
