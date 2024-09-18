@@ -25,6 +25,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/controller"
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
@@ -43,8 +44,6 @@ type Reconciler struct {
 	ClusterCASecretNamespace string
 	DevelopmentMode          bool
 }
-
-const requeueWithoutBackoff = time.Millisecond * 200
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
@@ -212,13 +211,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if err := r.Client.Update(ctx, cp); err != nil {
 			if k8serrors.IsConflict(err) {
 				log.Debug(logger, "conflict found when updating ControlPlane, retrying", cp)
-				return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+				return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
 			}
 			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane's finalizers : %w", err)
 		}
 		// Requeue to ensure that we do not miss next reconciliation request in case
 		// AddFinalizer calls returned true but the update resulted in a noop.
-		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
 	}
 
 	k8sutils.InitReady(cp)
@@ -289,7 +288,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if err != nil {
 			if k8serrors.IsConflict(err) {
 				log.Debug(logger, "conflict found when updating ControlPlane resource, retrying", cp)
-				return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+				return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
 			}
 			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane: %w", err)
 		}
@@ -304,7 +303,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				"conflict found when trying to ensure ControlPlane's DataPlane configuration was up to date, retrying",
 				cp,
 			)
-			return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+			return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
 		}
 		return ctrl.Result{}, err
 	}
@@ -367,7 +366,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure webhook resources: %w", err)
 	} else if res != op.Noop {
-		return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
 	}
 	deploymentParams.AdmissionWebhookCertSecretName = admissionWebhookCertificateSecretName
 
@@ -455,7 +454,7 @@ func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, update
 		if err := r.Client.Status().Patch(ctx, updated, client.MergeFrom(current)); err != nil {
 			if k8serrors.IsConflict(err) {
 				log.Debug(logger, "conflict found when updating ControlPlane, retrying", current)
-				return ctrl.Result{Requeue: true, RequeueAfter: requeueWithoutBackoff}, nil
+				return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
 			}
 			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane's status : %w", err)
 		}

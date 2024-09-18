@@ -1,4 +1,4 @@
-package controllers
+package controller
 
 // -----------------------------------------------------------------------------
 // Webhook manager - RBAC Permissions
