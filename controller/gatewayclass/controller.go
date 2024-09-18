@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -13,8 +13,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/kong/gateway-operator/controller"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
+	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
@@ -45,29 +47,36 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	gwc := gatewayclass.NewDecorator()
 	if err := r.Client.Get(ctx, req.NamespacedName, gwc.GatewayClass); err != nil {
-		if errors.IsNotFound(err) {
-			log.Debug(logger, "object enqueued no longer exists, skipping", req)
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Debug(logger, "processing gatewayclass", gwc)
+	log.Debug(logger, "processing gatewayclass", gwc.GatewayClass)
 
-	if gwc.IsControlled() {
-		if !gwc.IsAccepted() {
-			acceptedCondition := metav1.Condition{
-				Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
-				Status:             metav1.ConditionTrue,
-				ObservedGeneration: gwc.Generation,
-				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1.GatewayClassReasonAccepted),
-				Message:            "the gatewayclass has been accepted by the operator",
+	if !gwc.IsControlled() {
+		return ctrl.Result{}, nil
+	}
+
+	if !gwc.IsAccepted() {
+		oldGwc := gwc.DeepCopy()
+
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(
+				consts.ConditionType(gatewayv1.GatewayClassConditionStatusAccepted),
+				metav1.ConditionTrue,
+				consts.ConditionReason(gatewayv1.GatewayClassReasonAccepted),
+				"the gatewayclass has been accepted by the operator",
+				gwc.GetGeneration(),
+			),
+			gwc,
+		)
+		if err := r.Status().Patch(ctx, gwc.GatewayClass, client.MergeFrom(oldGwc)); err != nil {
+			if k8serrors.IsConflict(err) {
+				log.Debug(logger, "conflict found when updating GatewayClass, retrying", gwc.GatewayClass)
+				return ctrl.Result{
+					Requeue:      true,
+					RequeueAfter: controller.RequeueWithoutBackoff,
+				}, nil
 			}
-			k8sutils.SetCondition(acceptedCondition, gwc)
-			if err := r.Status().Update(ctx, gwc.GatewayClass); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed updating GatewayClass: %w", err)
-			}
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, fmt.Errorf("failed patching GatewayClass: %w", err)
 		}
 	}
 

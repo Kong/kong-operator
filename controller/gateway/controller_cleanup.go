@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/kong/gateway-operator/controller"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 )
@@ -19,8 +20,6 @@ import (
 // ----------------------------------------------------------------------------
 // Reconciler - Cleanup
 // ----------------------------------------------------------------------------
-
-const requeueWithoutBackoff = 200 * time.Millisecond
 
 // cleanup determines whether cleanup is needed/underway for a Gateway and
 // performs all necessary cleanup steps.
@@ -163,7 +162,7 @@ func handleGatewayFinalizerPatchOrUpdateError(err error, gateway *gatewayv1.Gate
 	if k8serrors.IsNotFound(err) || k8serrors.IsConflict(err) {
 		return ctrl.Result{
 			Requeue:      true,
-			RequeueAfter: requeueWithoutBackoff,
+			RequeueAfter: controller.RequeueWithoutBackoff,
 		}, nil
 	}
 
@@ -175,7 +174,7 @@ func handleGatewayFinalizerPatchOrUpdateError(err error, gateway *gatewayv1.Gate
 		log.Debug(logger, "failed to delete a finalizer on Gateway, requeueing request", gateway, "cause", cause)
 		return ctrl.Result{
 			Requeue:      true,
-			RequeueAfter: requeueWithoutBackoff,
+			RequeueAfter: controller.RequeueWithoutBackoff,
 		}, nil
 	}
 

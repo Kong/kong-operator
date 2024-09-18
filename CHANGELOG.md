@@ -78,6 +78,8 @@
   [#369](https://github.com/Kong/gateway-operator/pull/369)
 - Requeue instead of reporting an error when a finalizer removal yields a conflict.
   [#454](https://github.com/Kong/gateway-operator/pull/454)
+- Requeue instead of reporting an error when a GatewayClass status update yields a conflict.
+  [#612](https://github.com/Kong/gateway-operator/pull/612)
 
 ### Changes
 
