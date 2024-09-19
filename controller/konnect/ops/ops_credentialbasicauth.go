@@ -71,9 +71,9 @@ func createCredentialBasicAuth(
 	return nil
 }
 
-// updateRoute updates the Konnect Route entity.
-// It is assumed that provided KongRoute has Konnect ID set in status.
-// It returns an error if the KongRoute does not have a ControlPlaneRef or
+// updateCredentialBasicAuth updates the Konnect BasicAuth entity.
+// It is assumed that the provided BasicAuth has Konnect ID set in status.
+// It returns an error if the BasicAuth does not have a ControlPlaneRef or
 // if the operation fails.
 func updateCredentialBasicAuth(
 	ctx context.Context,
@@ -123,8 +123,8 @@ func updateCredentialBasicAuth(
 	return nil
 }
 
-// deleteRoute deletes a KongRoute in Konnect.
-// It is assumed that provided KongRoute has Konnect ID set in status.
+// deleteCredentialBasicAuth deletes a BasicAuth credential in Konnect.
+// It is assumed that the provided BasicAuth has Konnect ID set in status.
 // It returns an error if the operation fails.
 func deleteCredentialBasicAuth(
 	ctx context.Context,
