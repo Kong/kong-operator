@@ -25,7 +25,7 @@ type testCasesGroup struct {
 var TestCases = []testCasesGroup{}
 
 func init() {
-	TestCases = append(TestCases, controlPlaneRef, upstreamRef, kongTargetAPISpec)
+	TestCases = append(TestCases, upstreamRef, kongTargetAPISpec)
 }
 
 var commonObjectMeta = metav1.ObjectMeta{

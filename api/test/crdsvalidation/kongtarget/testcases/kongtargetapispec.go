@@ -14,10 +14,6 @@ var kongTargetAPISpec = testCasesGroup{
 			KongTarget: configurationv1alpha1.KongTarget{
 				ObjectMeta: commonObjectMeta,
 				Spec: configurationv1alpha1.KongTargetSpec{
-					ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-						Type:      configurationv1alpha1.ControlPlaneRefKonnectID,
-						KonnectID: lo.ToPtr("konnect-1"),
-					},
 					UpstreamRef: configurationv1alpha1.TargetRef{
 						Name: "upstream",
 					},

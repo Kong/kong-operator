@@ -87,3 +87,13 @@ func (in *KonnectEntityStatusWithControlPlaneAndServiceRefs) SetControlPlaneID(i
 func (in *KonnectEntityStatusWithControlPlaneAndServiceRefs) GetControlPlaneID() string {
 	return in.ControlPlaneID
 }
+
+type KonnectEntityStatusWithControlPlaneAndUpstreamRefs struct {
+	KonnectEntityStatus `json:",inline"`
+
+	// ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with.
+	ControlPlaneID string `json:"controlPlaneID,omitempty"`
+
+	// UpstreamID is the Konnect ID of the Upstream this entity is associated with.
+	UpstreamID string `json:"upstreamID,omitempty"`
+}
