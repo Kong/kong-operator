@@ -583,21 +583,13 @@ func getServiceRef[T constraints.SupportedKonnectEntityType, TEnt constraints.En
 	e TEnt,
 ) mo.Option[configurationv1alpha1.ServiceRef] {
 	switch e := any(e).(type) {
-	case *configurationv1alpha1.KongService,
-		*configurationv1.KongConsumer,
-		*configurationv1beta1.KongConsumerGroup,
-		*konnectv1alpha1.KonnectGatewayControlPlane,
-		*configurationv1alpha1.KongPluginBinding,
-		*configurationv1alpha1.KongUpstream,
-		*configurationv1alpha1.CredentialBasicAuth:
-		return mo.None[configurationv1alpha1.ServiceRef]()
 	case *configurationv1alpha1.KongRoute:
 		if e.Spec.ServiceRef == nil {
 			return mo.None[configurationv1alpha1.ServiceRef]()
 		}
 		return mo.Some(*e.Spec.ServiceRef)
 	default:
-		panic(fmt.Sprintf("unsupported entity type %T", e))
+		return mo.None[configurationv1alpha1.ServiceRef]()
 	}
 }
 
