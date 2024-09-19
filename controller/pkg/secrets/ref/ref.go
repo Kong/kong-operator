@@ -32,7 +32,7 @@ func ReferenceGrantForSecretFrom(group gatewayv1.Group, kind gatewayv1.Kind) pre
 	)
 }
 
-// IsReferenceGrantForObj checks if the ReferenceGrant in .Spec.From specifies Group and Kind of the object.
+// IsReferenceGrantForObj checks if ReferenceGrant's from clause matches the provided object's Group, Kind and namespace.
 func IsReferenceGrantForObj(referenceGrant *gatewayv1beta1.ReferenceGrant, obj client.Object) bool {
 	for _, from := range referenceGrant.Spec.From {
 		if string(from.Namespace) == obj.GetNamespace() &&
