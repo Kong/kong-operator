@@ -21,10 +21,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
+	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
@@ -571,7 +571,7 @@ func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus()
 
 func (g *gatewayConditionsAndListenersAwareT) setResolvedRefsAndSupportedKinds(ctx context.Context, c client.Client) error {
 	for i, listener := range g.Spec.Listeners {
-		supportedKinds, resolvedRefsCondition, err := getSupportedKindsWithResolvedRefsCondition(ctx, c, g.GetNamespace(), g.Generation, listener)
+		supportedKinds, resolvedRefsCondition, err := getSupportedKindsWithResolvedRefsCondition(ctx, c, *g.Gateway, g.Generation, listener)
 		if err != nil {
 			return err
 		}
@@ -861,7 +861,7 @@ func setDataPlaneIngressServicePorts(opts *operatorv1beta1.DataPlaneOptions, lis
 
 // getSupportedKindsWithResolvedRefsCondition returns all the route kinds supported by the listener, along with the resolvedRefs
 // condition, that is based on the presence of errors in such a field.
-func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Client, gatewayNamespace string, generation int64, listener gatewayv1.Listener) (supportedKinds []gatewayv1.RouteGroupKind, resolvedRefsCondition metav1.Condition, err error) {
+func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Client, gateway gatewayv1.Gateway, generation int64, listener gatewayv1.Listener) (supportedKinds []gatewayv1.RouteGroupKind, resolvedRefsCondition metav1.Condition, err error) {
 	supportedKinds = make([]gatewayv1.RouteGroupKind, 0)
 	resolvedRefsCondition = metav1.Condition{
 		Type:               string(gatewayv1.ListenerConditionResolvedRefs),
@@ -887,34 +887,22 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 		} else {
 			isValidGroupKind := true
 			certificateRef := listener.TLS.CertificateRefs[0]
-			if certificateRef.Group != nil && *certificateRef.Group != "" && *certificateRef.Group != gatewayv1.Group(corev1.SchemeGroupVersion.Group) {
+			gatewayNamespace := gatewayv1.Namespace(gateway.Namespace)
+			ref.EnsureNamespaceInSecretRef(&certificateRef, gatewayNamespace)
+
+			if err := ref.DoesFieldReferenceCoreV1Secret(certificateRef, "CertificateRef"); err != nil {
 				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
-				message = conditionMessage(message, fmt.Sprintf("Group %s not supported in CertificateRef", *certificateRef.Group))
+				message = conditionMessage(message, err.Error())
 				isValidGroupKind = false
-			}
-			if certificateRef.Kind != nil && *certificateRef.Kind != "" && *certificateRef.Kind != gatewayv1.Kind("Secret") {
-				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
-				message = conditionMessage(message, fmt.Sprintf("Kind %s not supported in CertificateRef", *certificateRef.Kind))
-				isValidGroupKind = false
-			}
-			secretNamespace := gatewayNamespace
-			if certificateRef.Namespace != nil && *certificateRef.Namespace != "" {
-				secretNamespace = string(*certificateRef.Namespace)
 			}
 
-			isReferenceGranted := true
-			// In case there is a cross-namespace reference, check if there is any referenceGrant allowing it.
-			if secretNamespace != gatewayNamespace {
-				referenceGrantList := &gatewayv1beta1.ReferenceGrantList{}
-				err = c.List(ctx, referenceGrantList, client.InNamespace(secretNamespace))
-				if err != nil {
-					return nil, metav1.Condition{}, fmt.Errorf("failed to list ReferenceGrants: %w", err)
-				}
-				if !isSecretCrossReferenceGranted(gatewayv1.Namespace(gatewayNamespace), certificateRef.Name, referenceGrantList.Items) {
-					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonRefNotPermitted)
-					message = conditionMessage(message, fmt.Sprintf("Secret %s/%s reference not allowed by any referenceGrant", secretNamespace, certificateRef.Name))
-					isReferenceGranted = false
-				}
+			msg, isReferenceGranted, err := ref.CheckReferenceGrantForSecret(ctx, c, &gateway, certificateRef)
+			if err != nil {
+				return nil, metav1.Condition{}, fmt.Errorf("failed to resolve reference: %w", err)
+			}
+			if !isReferenceGranted {
+				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonRefNotPermitted)
+				message = conditionMessage(message, msg)
 			}
 
 			var secretExists bool
@@ -922,7 +910,7 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 			if isValidGroupKind && isReferenceGranted {
 				// Get the secret and check it exists.
 				err = c.Get(ctx, types.NamespacedName{
-					Namespace: secretNamespace,
+					Namespace: string(*certificateRef.Namespace),
 					Name:      string(certificateRef.Name),
 				}, certificateSecret)
 				if err != nil {
@@ -930,7 +918,7 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 						return nil, metav1.Condition{}, fmt.Errorf("failed to get Secret: %w", err)
 					}
 					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
-					message = conditionMessage(message, fmt.Sprintf("Referenced secret %s/%s does not exist", secretNamespace, certificateRef.Name))
+					message = conditionMessage(message, fmt.Sprintf("Referenced secret %s/%s does not exist", *certificateRef.Namespace, certificateRef.Name))
 				} else {
 					secretExists = true
 				}
@@ -978,51 +966,17 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 	return supportedKinds, resolvedRefsCondition, nil
 }
 
-func isSecretCrossReferenceGranted(gatewayNamespace gatewayv1.Namespace, secretName gatewayv1.ObjectName, referenceGrants []gatewayv1beta1.ReferenceGrant) bool {
-	for _, rg := range referenceGrants {
-		var fromFound bool
-		for _, from := range rg.Spec.From {
-			if from.Group != gatewayv1.GroupName {
-				continue
-			}
-			if from.Kind != "Gateway" {
-				continue
-			}
-			if from.Namespace != gatewayNamespace {
-				continue
-			}
-			fromFound = true
-			break
-		}
-		if fromFound {
-			for _, to := range rg.Spec.To {
-				if to.Group != "" && to.Group != "core" {
-					continue
-				}
-				if to.Kind != "Secret" {
-					continue
-				}
-				if to.Name != nil && secretName != *to.Name {
-					continue
-				}
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // conditionMessage updates a condition message string with an additional message, for use when a problem
 // condition has multiple concurrent causes. It ensures all messages end with a period. New messages are
 // appended to the end of the current message with a leading space separating them.
 func conditionMessage(oldStr, newStr string) string {
+	if len(newStr) > 0 && !strings.HasSuffix(newStr, ".") {
+		newStr += "."
+	}
 	if oldStr == "" {
-		return fmt.Sprintf("%s.", newStr)
+		return newStr
 	}
-	if strings.HasSuffix(newStr, ".") {
-		return fmt.Sprintf("%s %s", oldStr, newStr)
-	}
-	return fmt.Sprintf("%s %s.", oldStr, newStr)
+	return fmt.Sprintf("%s %s", oldStr, newStr)
 }
 
 type proxyListenEndpoint struct {

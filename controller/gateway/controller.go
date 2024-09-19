@@ -28,6 +28,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
+	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	"github.com/kong/gateway-operator/controller/pkg/watch"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -87,7 +88,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Watches(
 			&gatewayv1beta1.ReferenceGrant{},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
-			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom))).
+			builder.WithPredicates(ref.ReferenceGrantForSecretFrom(gatewayv1.GroupName, gatewayv1beta1.Kind("Gateway")))).
 		// watch HTTPRoutes so that Gateway listener status can be updated.
 		Watches(
 			&gatewayv1beta1.HTTPRoute{},
