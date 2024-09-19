@@ -1,4 +1,4 @@
-package kongconsumer
+package kongconsumergroup
 
 import (
 	"context"

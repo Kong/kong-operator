@@ -58,14 +58,44 @@ type KonnectEntityStatusWithControlPlaneRef struct {
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
 }
 
-// SetServerURL sets the server URL of the KonnectEntityStatus struct.
+// SetControlPlaneID sets the ControlPlane ID of the KonnectEntityStatus struct.
 func (in *KonnectEntityStatusWithControlPlaneRef) SetControlPlaneID(id string) {
 	in.ControlPlaneID = id
 }
 
-// GetServerURL sets the server URL of the KonnectEntityStatus struct.
+// GetControlPlaneID sets the ControlPlane ID of the KonnectEntityStatus struct.
 func (in *KonnectEntityStatusWithControlPlaneRef) GetControlPlaneID() string {
 	return in.ControlPlaneID
+}
+
+type KonnectEntityStatusWithControlPlaneAndConsumerRefs struct {
+	KonnectEntityStatus `json:",inline"`
+
+	// ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with.
+	ControlPlaneID string `json:"controlPlaneID,omitempty"`
+
+	// ConsumerID is the Konnect ID of the Consumer this entity is associated with.
+	ConsumerID string `json:"consumerID,omitempty"`
+}
+
+// SetControlPlaneID sets the ControlPlane ID of the KonnectEntityStatus struct.
+func (in *KonnectEntityStatusWithControlPlaneAndConsumerRefs) SetControlPlaneID(id string) {
+	in.ControlPlaneID = id
+}
+
+// GetControlPlaneID sets the ControlPlane ID of the KonnectEntityStatus struct.
+func (in *KonnectEntityStatusWithControlPlaneAndConsumerRefs) GetControlPlaneID() string {
+	return in.ControlPlaneID
+}
+
+// SetConsumerID sets the Consumer ID of the KonnectEntityStatus struct.
+func (in *KonnectEntityStatusWithControlPlaneAndConsumerRefs) SetConsumerID(id string) {
+	in.ConsumerID = id
+}
+
+// GetConsumerID sets the Consumer ID of the KonnectEntityStatus struct.
+func (in *KonnectEntityStatusWithControlPlaneAndConsumerRefs) GetConsumerID() string {
+	return in.ConsumerID
 }
 
 type KonnectEntityStatusWithControlPlaneAndServiceRefs struct {

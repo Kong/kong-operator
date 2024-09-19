@@ -53,6 +53,10 @@ func TestKonnectFuncs(t *testing.T) {
 			typeName: "KongVault",
 			object:   &configurationv1alpha1.KongVault{},
 		},
+		{
+			typeName: "CredentialBasicAuth",
+			object:   &configurationv1alpha1.CredentialBasicAuth{},
+		},
 	}
 
 	for _, tc := range testcases {
