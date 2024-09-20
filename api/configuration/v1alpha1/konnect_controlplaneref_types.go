@@ -41,4 +41,10 @@ type KonnectNamespacedRef struct {
 
 	// TODO: Implement cross namespace references:
 	// https://github.com/Kong/kubernetes-configuration/issues/36
+
+	// Namespace is the namespace where the Konnect Control Plane is in.
+	// Currently only cluster scoped resources (KongVault) are allowed to set `konnectNamespacedRef.namespace`.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
 }

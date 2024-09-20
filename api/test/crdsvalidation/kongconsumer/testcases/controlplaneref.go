@@ -1,0 +1,31 @@
+package testcases
+
+import (
+	"github.com/samber/lo"
+
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+)
+
+var controlPlaneRef = testCasesGroup{
+	Name: "fields of controlPlaneRef",
+	TestCases: []testCase{
+		{
+			Name: "cpRef cannot have namespace",
+			KongConsumer: configurationv1.KongConsumer{
+				ObjectMeta: commonObjectMeta,
+				Spec: configurationv1.KongConsumerSpec{
+					ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							Name:      "test-konnect-control-plane",
+							Namespace: "another-namespace",
+						},
+					},
+				},
+				Username: "username-1",
+			},
+			ExpectedErrorMessage: lo.ToPtr("spec.controlPlaneRef cannot specify namespace for namespaced resource"),
+		},
+	},
+}

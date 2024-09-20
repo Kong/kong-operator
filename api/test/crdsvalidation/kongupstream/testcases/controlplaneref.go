@@ -52,6 +52,23 @@ var cpRef = testCasesGroup{
 			ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectID must be set"),
 		},
 		{
+			Name: "providing namespace in konnectNamespacedRef yields an error",
+			KongUpstream: configurationv1alpha1.KongUpstream{
+				ObjectMeta: commonObjectMeta,
+				Spec: configurationv1alpha1.KongUpstreamSpec{
+					ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							Name:      "test-konnect-control-plane",
+							Namespace: "another-namespace",
+						},
+					},
+					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{},
+				},
+			},
+			ExpectedErrorMessage: lo.ToPtr("spec.controlPlaneRef cannot specify namespace for namespaced resource"),
+		},
+		{
 			Name: "konnectNamespacedRef reference name cannot be changed when an entity is Programmed",
 			KongUpstream: configurationv1alpha1.KongUpstream{
 				ObjectMeta: commonObjectMeta,

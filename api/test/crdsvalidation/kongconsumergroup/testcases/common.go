@@ -29,6 +29,7 @@ var TestCases = []testCasesGroup{}
 func init() {
 	TestCases = append(TestCases,
 		fields,
+		controlPlaneRef,
 		updatesNotAllowedForStatus,
 	)
 }
