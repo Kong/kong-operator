@@ -70,6 +70,8 @@
   the creation of a managed `KongPluginBinding` resource, which is taken by the
   `KongPluginBinding` reconciler to create the corresponding plugin object in Konnect.
   [#550](https://github.com/Kong/gateway-operator/pull/550)
+- Add support for `KongConsumer` credentials:
+  - basic-auth [#625](https://github.com/Kong/gateway-operator/pull/625)
 
 ### Fixed
 

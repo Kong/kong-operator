@@ -19,3 +19,4 @@ packages:
       PluginSDK:
       UpstreamsSDK:
       MeSDK:
+      CredentialBasicAuthSDK:

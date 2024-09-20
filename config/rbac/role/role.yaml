@@ -125,6 +125,7 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - credentialbasicauths
   - ingressclassparameterses
   - kongclusterplugins
   - kongconsumergroups
@@ -143,6 +144,7 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - credentialbasicauths/status
   - kongclusterplugins/status
   - kongconsumergroups/status
   - kongconsumers/status

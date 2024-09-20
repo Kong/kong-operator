@@ -38,6 +38,8 @@ func ReconciliationWatchOptionsForEntity[
 		return KongPluginBindingReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.KongUpstream:
 		return KongUpstreamReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.CredentialBasicAuth:
+		return CredentialBasicAuthReconciliationWatchOptions(cl)
 	default:
 		panic(fmt.Sprintf("unsupported entity type %T", ent))
 	}
