@@ -51,7 +51,7 @@ func (e ReferencedKongConsumerIsBeingDeleted) Error() string {
 	)
 }
 
-// ReferencedKongConsumerDoesNotExist is an error type that is returned when
+// ReferencedKongConsumerDoesNotExist is an error type that is returned when the referenced KongConsumer does not exist.
 type ReferencedKongConsumerDoesNotExist struct {
 	Reference types.NamespacedName
 	Err       error
