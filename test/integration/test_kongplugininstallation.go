@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,6 +14,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -89,6 +92,16 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 	require.Equal(t, pluginExpectedContent(), recreatedCM.Data)
 
 	if registryCreds := GetKongPluginImageRegistryCredentialsForTests(); registryCreds != "" {
+		// Create secondNamespace with K8s client to check cross-namespace capabilities.
+		secondNamespace := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: uuid.NewString(),
+			},
+		}
+		_, err := GetClients().K8sClient.CoreV1().Namespaces().Create(GetCtx(), secondNamespace, metav1.CreateOptions{})
+		require.NoError(t, err)
+		cleaner.Add(secondNamespace)
+
 		t.Log("update KongPluginInstallation resource to a private image")
 		kpi, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Get(GetCtx(), kpiNN.Name, metav1.GetOptions{})
 		kpi.Spec.Image = registryUrl + "plugin-example-private/valid:0.1.0"
@@ -100,28 +113,63 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 			t, kpiNN, metav1.ConditionFalse, "response status code 403: denied: Unauthenticated request. Unauthenticated requests do not have permission",
 		)
 
-		t.Log("update KongPluginInstallation resource with credentials reference")
+		t.Log("update KongPluginInstallation resource with credentials reference in other namespace")
 		kpi, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Get(GetCtx(), kpiNN.Name, metav1.GetOptions{})
-		secretRef := corev1.SecretReference{Name: "kong-plugin-image-registry-credentials"} // Namespace is not specified, it will be inferred.
+		require.NoError(t, err)
+		secretRef := gatewayv1.SecretObjectReference{
+			Kind:      lo.ToPtr(gatewayv1.Kind("Secret")),
+			Namespace: lo.ToPtr(gatewayv1.Namespace(secondNamespace.Name)),
+			Name:      "kong-plugin-image-registry-credentials",
+		}
 		kpi.Spec.ImagePullSecretRef = &secretRef
 		_, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Update(GetCtx(), kpi, metav1.UpdateOptions{})
 		require.NoError(t, err)
+		t.Log("waiting for the KongPluginInstallation resource to be reconciled and report missing ReferenceGrant for the Secret with credentials")
+		checkKongPluginInstallationConditions(
+			t, kpiNN, metav1.ConditionFalse, fmt.Sprintf("Secret %s/%s reference not allowed by any ReferenceGrant", *secretRef.Namespace, secretRef.Name),
+		)
+		t.Log("add missing ReferenceGrant for the Secret with credentials")
+		refGrant := &gatewayv1beta1.ReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kong-plugin-image-registry-credentials",
+				Namespace: secondNamespace.Name,
+			},
+			Spec: gatewayv1beta1.ReferenceGrantSpec{
+				To: []gatewayv1beta1.ReferenceGrantTo{
+					{
+						Kind: gatewayv1.Kind("Secret"),
+						Name: lo.ToPtr(secretRef.Name),
+					},
+				},
+				From: []gatewayv1beta1.ReferenceGrantFrom{
+					{
+						Group:     gatewayv1.Group(v1alpha1.SchemeGroupVersion.Group),
+						Kind:      gatewayv1.Kind("KongPluginInstallation"),
+						Namespace: gatewayv1.Namespace(namespace.Name),
+					},
+				},
+			},
+		}
+		_, err = GetClients().GatewayClient.GatewayV1beta1().ReferenceGrants(secondNamespace.Name).Create(GetCtx(), refGrant, metav1.CreateOptions{})
+		require.NoError(t, err)
+
 		t.Log("waiting for the KongPluginInstallation resource to be reconciled and report missing Secret with credentials")
 		checkKongPluginInstallationConditions(
-			t, kpiNN, metav1.ConditionFalse, fmt.Sprintf(`cannot retrieve secret "%s/%s"`, kpiNN.Namespace, secretRef.Name),
+			t, kpiNN, metav1.ConditionFalse, fmt.Sprintf(`cannot retrieve secret "%s/%s"`, *secretRef.Namespace, secretRef.Name),
 		)
 
 		t.Log("add missing Secret with credentials")
 		secret := corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: secretRef.Name,
+				Name:      string(secretRef.Name),
+				Namespace: secondNamespace.Name,
 			},
 			Type: corev1.SecretTypeDockerConfigJson,
 			StringData: map[string]string{
 				".dockerconfigjson": registryCreds,
 			},
 		}
-		_, err = GetClients().K8sClient.CoreV1().Secrets(kpiNN.Namespace).Create(GetCtx(), &secret, metav1.CreateOptions{})
+		_, err = GetClients().K8sClient.CoreV1().Secrets(secondNamespace.Name).Create(GetCtx(), &secret, metav1.CreateOptions{})
 		require.NoError(t, err)
 		t.Log("waiting for the KongPluginInstallation resource to be reconciled successfully")
 		checkKongPluginInstallationConditions(

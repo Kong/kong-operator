@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"oras.land/oras-go/v2/registry/remote/credentials"
@@ -18,13 +20,18 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/controller/kongplugininstallation/image"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
+
+const kindKongPluginInstallation = gatewayv1.Kind("KongPluginInstallation")
 
 // Reconciler reconciles a KongPluginInstallation object.
 type Reconciler struct {
@@ -64,6 +71,15 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 				}),
 			),
 		).
+		Watches(
+			&gatewayv1beta1.ReferenceGrant{},
+			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForKongPluginInstallation),
+			builder.WithPredicates(
+				ref.ReferenceGrantForSecretFrom(
+					gatewayv1.Group(v1alpha1.SchemeGroupVersion.Group), kindKongPluginInstallation,
+				),
+			),
+		).
 		Complete(r)
 }
 
@@ -86,21 +102,36 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	var credentialsStore credentials.Store
 	if kpi.Spec.ImagePullSecretRef != nil {
 		log.Trace(logger, "getting secret for KongPluginInstallation resource", kpi)
-		secretNN := client.ObjectKey{
-			Namespace: kpi.Spec.ImagePullSecretRef.Namespace,
-			Name:      kpi.Spec.ImagePullSecretRef.Name,
+		kpiNamespace := gatewayv1.Namespace(kpi.Namespace)
+		imagePullSecretRef := kpi.Spec.ImagePullSecretRef
+		ref.EnsureNamespaceInSecretRef(imagePullSecretRef, kpiNamespace)
+		if err := ref.DoesFieldReferenceCoreV1Secret(*imagePullSecretRef, "imagePullSecretRef"); err != nil {
+			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, err.Error())
 		}
-		if secretNN.Namespace == "" {
-			secretNN.Namespace = req.Namespace
+		whyNotGrantedMsg, isReferenceGranted, refErr := ref.CheckReferenceGrantForSecret(
+			ctx, r.Client, &kpi, *imagePullSecretRef,
+		)
+		if refErr != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to resolve reference: %w", refErr)
+		}
+		if !isReferenceGranted {
+			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, whyNotGrantedMsg)
 		}
 
+		secretNN := client.ObjectKey{
+			Namespace: string(*imagePullSecretRef.Namespace),
+			Name:      string(imagePullSecretRef.Name),
+		}
 		var secret corev1.Secret
 		if err := r.Client.Get(
 			ctx,
 			secretNN,
 			&secret,
 		); err != nil {
-			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, fmt.Sprintf("cannot retrieve secret %q, because: %s", secretNN, err))
+			if k8serrors.IsNotFound(err) {
+				return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, fmt.Sprintf("cannot retrieve secret %q, because: %s", secretNN, err))
+			}
+			return ctrl.Result{}, fmt.Errorf("something unexpected during fetching secret %s: %w", secretNN, err)
 		}
 
 		const requiredKey = ".dockerconfigjson"
@@ -179,15 +210,41 @@ func (r *Reconciler) listKongPluginInstallationsForSecret(ctx context.Context, o
 		if kpi.Spec.ImagePullSecretRef == nil {
 			continue
 		}
-		if kpi.Spec.ImagePullSecretRef.Namespace == "" {
-			kpi.Spec.ImagePullSecretRef.Namespace = kpi.Namespace
+		ref.EnsureNamespaceInSecretRef(kpi.Spec.ImagePullSecretRef, gatewayv1.Namespace(kpi.Namespace))
+		if err := ref.DoesFieldReferenceCoreV1Secret(*kpi.Spec.ImagePullSecretRef, "imagePullSecretRef"); err != nil {
+			continue
 		}
-		if kpi.Spec.ImagePullSecretRef.Namespace == namespace && kpi.Spec.ImagePullSecretRef.Name == name {
+		if string(*kpi.Spec.ImagePullSecretRef.Namespace) == namespace && string(kpi.Spec.ImagePullSecretRef.Name) == name {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: client.ObjectKey{
-					Name:      kpi.Name,
-					Namespace: kpi.Namespace,
-				},
+				NamespacedName: client.ObjectKeyFromObject(&kpi),
+			})
+		}
+	}
+	return recs
+}
+
+func (r *Reconciler) listReferenceGrantsForKongPluginInstallation(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx)
+
+	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+	if !ok {
+		logger.Error(
+			fmt.Errorf("unexpected object type"),
+			"ReferenceGrant watch predicate received unexpected object type",
+			"expected", "*gatewayapi.ReferenceGrant", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	var kpiList v1alpha1.KongPluginInstallationList
+	if err := r.Client.List(ctx, &kpiList); err != nil {
+		logger.Error(err, "Failed to list KongPluginInstallations in watch", "referencegrant", grant.Name)
+		return nil
+	}
+	var recs []reconcile.Request
+	for _, kpi := range kpiList.Items {
+		if ref.IsReferenceGrantForObj(grant, &kpi) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: client.ObjectKeyFromObject(&kpi),
 			})
 		}
 	}
