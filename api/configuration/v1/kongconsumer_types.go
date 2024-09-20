@@ -66,65 +66,6 @@ type KongConsumer struct {
 	Status KongConsumerStatus `json:"status,omitempty"`
 }
 
-func (c *KongConsumer) initKonnectStatus() {
-	c.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
-}
-
-// GetControlPlaneID returns the ControlPlane ID in the KongConsumer status.
-func (c *KongConsumer) GetControlPlaneID() string {
-	if c.Status.Konnect == nil {
-		return ""
-	}
-	return c.Status.Konnect.ControlPlaneID
-}
-
-// SetControlPlaneID sets the ControlPlane ID in the KongConsumer status.
-func (c *KongConsumer) SetControlPlaneID(id string) {
-	if c.Status.Konnect == nil {
-		c.initKonnectStatus()
-	}
-	c.Status.Konnect.ControlPlaneID = id
-}
-
-// GetKonnectStatus returns the Konnect status contained in the KongConsumer status.
-func (c *KongConsumer) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
-	if c.Status.Konnect == nil {
-		return nil
-	}
-	return &c.Status.Konnect.KonnectEntityStatus
-}
-
-// GetKonnectID returns the Konnect ID in the KongConsumer status.
-func (c *KongConsumer) GetKonnectID() string {
-	if c.Status.Konnect == nil {
-		return ""
-	}
-	return c.Status.Konnect.ID
-}
-
-// SetKonnectID sets the Konnect ID in the KongConsumer status.
-func (c *KongConsumer) SetKonnectID(id string) {
-	if c.Status.Konnect == nil {
-		c.initKonnectStatus()
-	}
-	c.Status.Konnect.ID = id
-}
-
-// GetTypeName returns the KongConsumer Kind name
-func (c KongConsumer) GetTypeName() string {
-	return "KongConsumer"
-}
-
-// GetConditions returns the Status Conditions
-func (c *KongConsumer) GetConditions() []metav1.Condition {
-	return c.Status.Conditions
-}
-
-// SetConditions sets the Status Conditions
-func (c *KongConsumer) SetConditions(conditions []metav1.Condition) {
-	c.Status.Conditions = conditions
-}
-
 type KongConsumerSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this Consumer is associated with.
 	// +optional

@@ -47,68 +47,9 @@ type KongCredentialBasicAuth struct {
 	Status KongCredentialBasicAuthStatus `json:"status,omitempty"`
 }
 
-func (s *KongCredentialBasicAuth) initKonnectStatus() {
-	s.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
-}
-
-// GetKonnectStatus returns the Konnect status contained in the KongCredentialBasicAuth status.
-func (s *KongCredentialBasicAuth) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
-	if s.Status.Konnect == nil {
-		return nil
-	}
-	return &s.Status.Konnect.KonnectEntityStatus
-}
-
-// GetKonnectID returns the Konnect ID in the KongCredentialBasicAuth status.
-func (s *KongCredentialBasicAuth) GetKonnectID() string {
-	if s.Status.Konnect == nil {
-		return ""
-	}
-	return s.Status.Konnect.ID
-}
-
-// SetKonnectID sets the Konnect ID in the KongCredentialBasicAuth status.
-func (s *KongCredentialBasicAuth) SetKonnectID(id string) {
-	if s.Status.Konnect == nil {
-		s.initKonnectStatus()
-	}
-	s.Status.Konnect.ID = id
-}
-
-// GetControlPlaneID returns the ControlPlane ID in the KongCredentialBasicAuth status.
-func (s *KongCredentialBasicAuth) GetControlPlaneID() string {
-	if s.Status.Konnect == nil {
-		return ""
-	}
-	return s.Status.Konnect.ControlPlaneID
-}
-
-// SetControlPlaneID sets the ControlPlane ID in the KongCredentialBasicAuth status.
-func (s *KongCredentialBasicAuth) SetControlPlaneID(id string) {
-	if s.Status.Konnect == nil {
-		s.initKonnectStatus()
-	}
-	s.Status.Konnect.ControlPlaneID = id
-}
-
-// GetTypeName returns the KongCredentialBasicAuth Kind name
-func (s KongCredentialBasicAuth) GetTypeName() string {
-	return "KongCredentialBasicAuth"
-}
-
-// GetConditions returns the Status Conditions
-func (s *KongCredentialBasicAuth) GetConditions() []metav1.Condition {
-	return s.Status.Conditions
-}
-
-// SetConditions sets the Status Conditions
-func (s *KongCredentialBasicAuth) SetConditions(conditions []metav1.Condition) {
-	s.Status.Conditions = conditions
-}
-
 // KongCredentialBasicAuthSpec defines specification of a Kong Route.
 type KongCredentialBasicAuthSpec struct {
-	// ConsumerRef is a reference to a Consumer this KongCredentialBasicAuth is associated with.
+	// ConsumerRef is a reference to a Consumer this CredentialBasicAuth is associated with.
 	//
 	// +kubebuilder:validation:Required
 	ConsumerRef corev1.LocalObjectReference `json:"consumerRef"`

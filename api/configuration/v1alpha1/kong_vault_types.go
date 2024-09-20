@@ -52,66 +52,6 @@ type KongVault struct {
 	Status            KongVaultStatus `json:"status,omitempty"`
 }
 
-// initKonnectStatus initializes the Konnect status of KongVualt when it is empty.
-func (v *KongVault) initKonnectStatus() {
-	v.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
-}
-
-// GetKonnectStatus returns the Konnect status contained in the KongVault status.
-func (v *KongVault) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
-	if v.Status.Konnect == nil {
-		return nil
-	}
-	return &v.Status.Konnect.KonnectEntityStatus
-}
-
-// GetKonnectID returns the Konnect ID in the KongVault status.
-func (v *KongVault) GetKonnectID() string {
-	if v.Status.Konnect == nil {
-		return ""
-	}
-	return v.Status.Konnect.ID
-}
-
-// SetKonnectID sets the Konnect ID in the KongVault status.
-func (v *KongVault) SetKonnectID(id string) {
-	if v.Status.Konnect == nil {
-		v.initKonnectStatus()
-	}
-	v.Status.Konnect.ID = id
-}
-
-// GetControlPlaneID returns the ControlPlane ID in the KongVault status.
-func (v *KongVault) GetControlPlaneID() string {
-	if v.Status.Konnect == nil {
-		return ""
-	}
-	return v.Status.Konnect.ControlPlaneID
-}
-
-// SetControlPlaneID sets the ControlPlane ID in the KongVault status.
-func (v *KongVault) SetControlPlaneID(id string) {
-	if v.Status.Konnect == nil {
-		v.initKonnectStatus()
-	}
-	v.Status.Konnect.ControlPlaneID = id
-}
-
-// GetTypeName returns the KongVault Kind name
-func (v KongVault) GetTypeName() string {
-	return "KongVault"
-}
-
-// GetConditions returns the Status Conditions in the KongVault.
-func (v *KongVault) GetConditions() []metav1.Condition {
-	return v.Status.Conditions
-}
-
-// SetConditions sets the Status Conditions in the KongVault.
-func (v *KongVault) SetConditions(conditions []metav1.Condition) {
-	v.Status.Conditions = conditions
-}
-
 // KongVaultSpec defines specification of a custom Kong vault.
 type KongVaultSpec struct {
 	// Backend is the type of the backend storing the secrets in the vault.

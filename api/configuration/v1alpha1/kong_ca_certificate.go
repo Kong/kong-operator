@@ -27,65 +27,6 @@ type KongCACertificate struct {
 	Status KongCACertificateStatus `json:"status,omitempty"`
 }
 
-// GetKonnectStatus returns the Konnect status contained in the KongRoute status.
-func (r *KongCACertificate) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
-	if r.Status.Konnect == nil {
-		return nil
-	}
-	return &r.Status.Konnect.KonnectEntityStatus
-}
-
-// GetControlPlaneID returns the Konnect Control Plane ID of the KongCACertificate.
-func (r *KongCACertificate) GetControlPlaneID() string {
-	if r.Status.Konnect == nil {
-		return ""
-	}
-	return r.Status.Konnect.ControlPlaneID
-}
-
-// SetControlPlaneID sets the Konnect Control Plane ID in the KongCACertificate status.
-func (r *KongCACertificate) SetControlPlaneID(id string) {
-	if r.Status.Konnect == nil {
-		r.initKonnectStatus()
-	}
-	r.Status.Konnect.ControlPlaneID = id
-}
-
-// GetKonnectID returns the Konnect ID in the KongCACertificate status.
-func (r *KongCACertificate) GetKonnectID() string {
-	if r.Status.Konnect == nil {
-		return ""
-	}
-	return r.Status.Konnect.ID
-}
-
-// SetKonnectID sets the Konnect ID in the KongCACertificate status.
-func (r *KongCACertificate) SetKonnectID(id string) {
-	if r.Status.Konnect == nil {
-		r.initKonnectStatus()
-	}
-	r.Status.Konnect.ID = id
-}
-
-// GetTypeName returns the KongCACertificate Kind name.
-func (r KongCACertificate) GetTypeName() string {
-	return "KongCACertificate"
-}
-
-// GetConditions returns the Status Conditions.
-func (r *KongCACertificate) GetConditions() []metav1.Condition {
-	return r.Status.Conditions
-}
-
-// SetConditions sets the Status Conditions.
-func (r *KongCACertificate) SetConditions(conditions []metav1.Condition) {
-	r.Status.Conditions = conditions
-}
-
-func (r *KongCACertificate) initKonnectStatus() {
-	r.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
-}
-
 // KongCACertificateSpec contains the specification for the KongCACertificate.
 type KongCACertificateSpec struct {
 	// ControlPlaneRef references the Konnect Control Plane that this KongCACertificate should be created in.

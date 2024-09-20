@@ -48,65 +48,6 @@ type KongRoute struct {
 	Status KongRouteStatus `json:"status,omitempty"`
 }
 
-func (r *KongRoute) initKonnectStatus() {
-	r.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs{}
-}
-
-// GetKonnectStatus returns the Konnect status contained in the KongRoute status.
-func (r *KongRoute) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
-	if r.Status.Konnect == nil {
-		return nil
-	}
-	return &r.Status.Konnect.KonnectEntityStatus
-}
-
-// GetControlPlaneID returns the Konnect Control Plane ID of the KongRoute.
-func (r *KongRoute) GetControlPlaneID() string {
-	if r.Status.Konnect == nil {
-		return ""
-	}
-	return r.Status.Konnect.ControlPlaneID
-}
-
-// SetControlPlaneID sets the Konnect Control Plane ID in the KongRoute status.
-func (r *KongRoute) SetControlPlaneID(id string) {
-	if r.Status.Konnect == nil {
-		r.initKonnectStatus()
-	}
-	r.Status.Konnect.ControlPlaneID = id
-}
-
-// GetKonnectID returns the Konnect ID in the KongRoute status.
-func (r *KongRoute) GetKonnectID() string {
-	if r.Status.Konnect == nil {
-		return ""
-	}
-	return r.Status.Konnect.ID
-}
-
-// SetKonnectID sets the Konnect ID in the KongRoute status.
-func (r *KongRoute) SetKonnectID(id string) {
-	if r.Status.Konnect == nil {
-		r.initKonnectStatus()
-	}
-	r.Status.Konnect.ID = id
-}
-
-// GetTypeName returns the KongRoute Kind name
-func (r KongRoute) GetTypeName() string {
-	return "KongRoute"
-}
-
-// GetConditions returns the Status Conditions
-func (r *KongRoute) GetConditions() []metav1.Condition {
-	return r.Status.Conditions
-}
-
-// SetConditions sets the Status Conditions
-func (r *KongRoute) SetConditions(conditions []metav1.Condition) {
-	r.Status.Conditions = conditions
-}
-
 // KongRouteSpec defines specification of a Kong Route.
 type KongRouteSpec struct {
 	// ServiceRef is a reference to a Service this Route is associated with.

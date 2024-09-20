@@ -40,65 +40,6 @@ type KongTarget struct {
 	Status KongTargetStatus `json:"status,omitempty"`
 }
 
-func (t *KongTarget) initKonnectStatus() {
-	t.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndUpstreamRefs{}
-}
-
-// GetKonnectStatus returns the Konnect status contained in the KongTarget status.
-func (t *KongTarget) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
-	if t.Status.Konnect == nil {
-		return nil
-	}
-	return &t.Status.Konnect.KonnectEntityStatus
-}
-
-// GetKonnectID returns the Konnect ID in the KongTarget status.
-func (t *KongTarget) GetKonnectID() string {
-	if t.Status.Konnect == nil {
-		return ""
-	}
-	return t.Status.Konnect.ID
-}
-
-// SetKonnectID sets the Konnect ID in the KongTarget status.
-func (t *KongTarget) SetKonnectID(id string) {
-	if t.Status.Konnect == nil {
-		t.initKonnectStatus()
-	}
-	t.Status.Konnect.ID = id
-}
-
-// GetControlPlaneID returns the ControlPlane ID in the KongTarget status.
-func (t *KongTarget) GetControlPlaneID() string {
-	if t.Status.Konnect == nil {
-		return ""
-	}
-	return t.Status.Konnect.ControlPlaneID
-}
-
-// SetControlPlaneID sets the ControlPlane ID in the KongTarget status.
-func (t *KongTarget) SetControlPlaneID(id string) {
-	if t.Status.Konnect == nil {
-		t.initKonnectStatus()
-	}
-	t.Status.Konnect.ControlPlaneID = id
-}
-
-// GetTypeName returns the KongTarget Kind name.
-func (t KongTarget) GetTypeName() string {
-	return "KongTarget"
-}
-
-// GetConditions returns the Status Conditions.
-func (t *KongTarget) GetConditions() []metav1.Condition {
-	return t.Status.Conditions
-}
-
-// SetConditions sets the Status Conditions.
-func (t *KongTarget) SetConditions(conditions []metav1.Condition) {
-	t.Status.Conditions = conditions
-}
-
 type KongTargetSpec struct {
 	// UpstreamRef is a reference to a KongUpstream this KongTarget is attached to.
 	UpstreamRef TargetRef `json:"upstreamRef"`

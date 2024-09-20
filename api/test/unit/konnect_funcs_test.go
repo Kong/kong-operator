@@ -30,6 +30,10 @@ func TestKonnectFuncs(t *testing.T) {
 			object:   &configurationv1.KongConsumer{},
 		},
 		{
+			typeName: "KongCACertificate",
+			object:   &configurationv1alpha1.KongCACertificate{},
+		},
+		{
 			typeName: "KongConsumerGroup",
 			object:   &configurationv1beta1.KongConsumerGroup{},
 		},
