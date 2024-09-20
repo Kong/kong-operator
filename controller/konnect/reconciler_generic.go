@@ -958,6 +958,11 @@ func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 			return mo.None[configurationv1alpha1.ControlPlaneRef]()
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
+	case *configurationv1alpha1.KongCACertificate:
+		if e.Spec.ControlPlaneRef == nil {
+			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+		}
+		return mo.Some(*e.Spec.ControlPlaneRef)
 	default:
 		panic(fmt.Sprintf("unsupported entity type %T", e))
 	}

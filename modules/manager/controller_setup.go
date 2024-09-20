@@ -394,7 +394,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			},
 			KongCACertificateControllerName: {
 				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongCACertificate](
+				Controller: konnect.NewKonnectEntityReconciler(
 					sdkFactory,
 					c.DevelopmentMode,
 					mgr.GetClient(),

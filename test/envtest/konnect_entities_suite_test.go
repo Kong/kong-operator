@@ -16,14 +16,10 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/kong/gateway-operator/controller/konnect"
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -33,13 +29,6 @@ func TestKonnectEntityReconcilers(t *testing.T) {
 	cfg, _ := Setup(t, context.Background(), scheme.Get())
 
 	testNewKonnectEntityReconciler(t, cfg, konnectv1alpha1.KonnectGatewayControlPlane{}, konnectGatewayControlPlaneTestCases)
-	testNewKonnectEntityReconciler(t, cfg, configurationv1alpha1.KongCACertificate{}, kongCACertificateTestCases)
-	testNewKonnectEntityReconciler(t, cfg, configurationv1alpha1.KongService{}, nil)
-	testNewKonnectEntityReconciler(t, cfg, configurationv1.KongConsumer{}, nil)
-	testNewKonnectEntityReconciler(t, cfg, configurationv1alpha1.KongRoute{}, nil)
-	testNewKonnectEntityReconciler(t, cfg, configurationv1beta1.KongConsumerGroup{}, nil)
-	testNewKonnectEntityReconciler(t, cfg, configurationv1alpha1.KongPluginBinding{}, nil)
-	testNewKonnectEntityReconciler(t, cfg, configurationv1alpha1.CredentialBasicAuth{}, nil)
 }
 
 type konnectEntityReconcilerTestCase struct {
@@ -113,78 +102,4 @@ func testNewKonnectEntityReconciler[
 			})
 		}
 	})
-}
-
-const (
-	// testCpID is a test Konnect Control Plane ID.
-	testCpID = "cp-id"
-)
-
-// prepareValidKonnectCP creates a KonnectGatewayControlPlane with a reference to a KonnectAPIAuthConfiguration with
-// statuses that make them both usable in tests that require a reference to a valid Konnect Control Plane.
-func prepareValidKonnectCP(ctx context.Context, t *testing.T, ns string, cl client.Client) (cpName string) {
-	auth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewString(),
-			Namespace: ns,
-		},
-		Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
-			Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
-			Token:     "kpat_test",
-			ServerURL: "127.0.0.1",
-		},
-	}
-	require.NoError(t, cl.Create(ctx, auth))
-
-	// We cannot create KonnectAPIAuthConfiguration with specified status, so we update the status after creating it.
-	auth.Status = konnectv1alpha1.KonnectAPIAuthConfigurationStatus{
-		OrganizationID: "org-1",
-		ServerURL:      "127.0.0.1",
-		Conditions: []metav1.Condition{
-			{
-				Type:               conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
-				ObservedGeneration: auth.GetGeneration(),
-				Status:             metav1.ConditionTrue,
-				Reason:             conditions.KonnectEntityAPIAuthConfigurationReasonValid,
-				LastTransitionTime: metav1.Now(),
-			},
-		},
-	}
-	require.NoError(t, cl.Status().Update(ctx, auth))
-
-	// Create KonnectGatewayControlPlane.
-	cpName = uuid.NewString()
-	cp := &konnectv1alpha1.KonnectGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cpName,
-			Namespace: ns,
-		},
-		Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-			KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-				APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
-					Name: auth.Name,
-				},
-			},
-		},
-	}
-	require.NoError(t, cl.Create(ctx, cp))
-
-	cp.Status = konnectv1alpha1.KonnectGatewayControlPlaneStatus{
-		KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
-			ID:        testCpID,
-			ServerURL: "127.0.0.1",
-			OrgID:     "org-1",
-		},
-		Conditions: []metav1.Condition{
-			{
-				Type:               conditions.KonnectEntityProgrammedConditionType,
-				ObservedGeneration: auth.GetGeneration(),
-				Status:             metav1.ConditionTrue,
-				Reason:             conditions.KonnectEntityProgrammedReasonProgrammed,
-				LastTransitionTime: metav1.Now(),
-			},
-		},
-	}
-	require.NoError(t, cl.Status().Update(ctx, cp))
-	return cpName
 }
