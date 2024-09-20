@@ -65,6 +65,10 @@ func TestKonnectFuncs(t *testing.T) {
 			typeName: "KongKey",
 			object:   &configurationv1alpha1.KongKey{},
 		},
+		{
+			typeName: "KongCredentialAPIKey",
+			object:   &configurationv1alpha1.KongCredentialAPIKey{},
+		},
 	}
 
 	for _, tc := range testcases {

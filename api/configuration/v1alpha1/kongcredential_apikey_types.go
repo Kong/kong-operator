@@ -23,7 +23,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// KongCredentialBasicAuth is the schema for BasicAuth credentials API which defines a BasicAuth credential for consumers.
+// KongCredentialAPIKey is the schema for API key credentials API which defines a API key credential for consumers.
 //
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -33,47 +33,42 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.consumerRef == self.spec.consumerRef",message="spec.consumerRef is immutable when an entity is already Programmed"
-type KongCredentialBasicAuth struct {
+type KongCredentialAPIKey struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec contains the BasicAuth credential specification.
-	Spec KongCredentialBasicAuthSpec `json:"spec"`
+	// Spec contains the API Key credential specification.
+	Spec KongCredentialAPIKeySpec `json:"spec"`
 
-	// Status contains the BasicAuth credential status.
+	// Status contains the API Key credential status.
 	//
 	// +kubebuilder:default={conditions: {{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}}
-	Status KongCredentialBasicAuthStatus `json:"status,omitempty"`
+	Status KongCredentialAPIKeyStatus `json:"status,omitempty"`
 }
 
-// KongCredentialBasicAuthSpec defines specification of a Kong Route.
-type KongCredentialBasicAuthSpec struct {
-	// ConsumerRef is a reference to a Consumer this CredentialBasicAuth is associated with.
+// KongCredentialAPIKeySpec defines specification of a Kong Route.
+type KongCredentialAPIKeySpec struct {
+	// ConsumerRef is a reference to a Consumer this KongCredentialAPIKey is associated with.
 	//
 	// +kubebuilder:validation:Required
 	ConsumerRef corev1.LocalObjectReference `json:"consumerRef"`
 
-	KongCredentialBasicAuthAPISpec `json:",inline"`
+	KongCredentialAPIKeyAPISpec `json:",inline"`
 }
 
-// KongCredentialBasicAuthAPISpec defines specification of a BasicAuth credential.
-type KongCredentialBasicAuthAPISpec struct {
-	// Password is the password for the BasicAuth credential.
+// KongCredentialAPIKeyAPISpec defines specification of a API Key credential.
+type KongCredentialAPIKeyAPISpec struct {
+	// Key is the key for the API Key credential.
 	//
 	// +kubebuilder:validation:Required
-	Password string `json:"password"`
+	Key string `json:"username"`
 
-	// Tags is a list of tags for the BasicAuth credential.
+	// Tags is a list of tags for the API Key credential.
 	Tags []string `json:"tags,omitempty"`
-
-	// Username is the username for the BasicAuth credential.
-	//
-	// +kubebuilder:validation:Required
-	Username string `json:"username"`
 }
 
-// KongCredentialBasicAuthStatus represents the current status of the BasicAuth credential resource.
-type KongCredentialBasicAuthStatus struct {
+// KongCredentialAPIKeyStatus represents the current status of the API Key credential resource.
+type KongCredentialAPIKeyStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
 	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs `json:"konnect,omitempty"`
@@ -88,13 +83,13 @@ type KongCredentialBasicAuthStatus struct {
 
 // +kubebuilder:object:root=true
 
-// KongCredentialBasicAuthList contains a list of BasicAuth credentials.
-type KongCredentialBasicAuthList struct {
+// KongCredentialAPIKeyList contains a list of API Key credentials.
+type KongCredentialAPIKeyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongCredentialBasicAuth `json:"items"`
+	Items           []KongCredentialAPIKey `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&KongCredentialBasicAuth{}, &KongCredentialBasicAuthList{})
+	SchemeBuilder.Register(&KongCredentialAPIKey{}, &KongCredentialAPIKeyList{})
 }
