@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -186,4 +187,36 @@ func deployKongPluginBinding(
 
 	require.NoError(t, cl.Status().Update(ctx, kpb))
 	return kpb
+}
+
+// deployCredentialBasicAuth deploys a CredentialBasicAuth resource and returns the resource.
+func deployCredentialBasicAuth(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	consumerName string,
+	username string,
+	password string,
+) *configurationv1alpha1.CredentialBasicAuth {
+	t.Helper()
+
+	c := &configurationv1alpha1.CredentialBasicAuth{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "basic-auth-",
+		},
+		Spec: configurationv1alpha1.CredentialBasicAuthSpec{
+			ConsumerRef: corev1.LocalObjectReference{
+				Name: consumerName,
+			},
+			CredentialBasicAuthAPISpec: configurationv1alpha1.CredentialBasicAuthAPISpec{
+				Password: password,
+				Username: username,
+			},
+		},
+	}
+
+	require.NoError(t, cl.Create(ctx, c))
+	t.Logf("deployed new unmanaged CredentialBasicAuth %s", client.ObjectKeyFromObject(c))
+
+	return c
 }

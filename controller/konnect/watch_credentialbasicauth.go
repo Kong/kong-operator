@@ -43,6 +43,14 @@ func CredentialBasicAuthReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&configurationv1.KongConsumer{},
+				handler.EnqueueRequestsFromMapFunc(
+					credentialBasicAuthForKongConsumer(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
 					credentialBasicAuthForKonnectAPIAuthConfiguration(cl),
@@ -203,6 +211,39 @@ func credentialBasicAuthForKonnectGatewayControlPlane(
 				},
 				)
 			}
+		}
+		return ret
+	}
+}
+
+func credentialBasicAuthForKongConsumer(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		consumer, ok := obj.(*configurationv1.KongConsumer)
+		if !ok {
+			return nil
+		}
+		var l configurationv1alpha1.CredentialBasicAuthList
+		if err := cl.List(ctx, &l,
+			client.MatchingFields{
+				IndexFieldCredentialBasicAuthReferencesKongConsumer: consumer.Name,
+			},
+			// TODO: change this when cross namespace refs are allowed.
+			client.InNamespace(consumer.GetNamespace()),
+		); err != nil {
+			return nil
+		}
+
+		var ret []reconcile.Request
+		for _, cred := range l.Items {
+			ret = append(ret, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: cred.Namespace,
+					Name:      cred.Name,
+				},
+			},
+			)
 		}
 		return ret
 	}
