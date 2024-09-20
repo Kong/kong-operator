@@ -12,13 +12,13 @@ var requiredFields = testCasesGroup{
 	TestCases: []testCase{
 		{
 			Name: "password is required",
-			CredentialBasicAuth: configurationv1alpha1.CredentialBasicAuth{
+			KongCredentialBasicAuth: configurationv1alpha1.KongCredentialBasicAuth{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.CredentialBasicAuthSpec{
+				Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
 					ConsumerRef: corev1.LocalObjectReference{
 						Name: "test-kong-consumer",
 					},
-					CredentialBasicAuthAPISpec: configurationv1alpha1.CredentialBasicAuthAPISpec{
+					KongCredentialBasicAuthAPISpec: configurationv1alpha1.KongCredentialBasicAuthAPISpec{
 						Username: "username",
 					},
 				},
@@ -27,13 +27,13 @@ var requiredFields = testCasesGroup{
 		},
 		{
 			Name: "username is required",
-			CredentialBasicAuth: configurationv1alpha1.CredentialBasicAuth{
+			KongCredentialBasicAuth: configurationv1alpha1.KongCredentialBasicAuth{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.CredentialBasicAuthSpec{
+				Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
 					ConsumerRef: corev1.LocalObjectReference{
 						Name: "test-kong-consumer",
 					},
-					CredentialBasicAuthAPISpec: configurationv1alpha1.CredentialBasicAuthAPISpec{
+					KongCredentialBasicAuthAPISpec: configurationv1alpha1.KongCredentialBasicAuthAPISpec{
 						Password: "password",
 					},
 				},
@@ -42,13 +42,13 @@ var requiredFields = testCasesGroup{
 		},
 		{
 			Name: "password and username are required",
-			CredentialBasicAuth: configurationv1alpha1.CredentialBasicAuth{
+			KongCredentialBasicAuth: configurationv1alpha1.KongCredentialBasicAuth{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.CredentialBasicAuthSpec{
+				Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
 					ConsumerRef: corev1.LocalObjectReference{
 						Name: "test-kong-consumer",
 					},
-					CredentialBasicAuthAPISpec: configurationv1alpha1.CredentialBasicAuthAPISpec{
+					KongCredentialBasicAuthAPISpec: configurationv1alpha1.KongCredentialBasicAuthAPISpec{
 						Username: "username",
 						Password: "password",
 					},

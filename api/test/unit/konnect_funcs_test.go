@@ -54,8 +54,8 @@ func TestKonnectFuncs(t *testing.T) {
 			object:   &configurationv1alpha1.KongVault{},
 		},
 		{
-			typeName: "CredentialBasicAuth",
-			object:   &configurationv1alpha1.CredentialBasicAuth{},
+			typeName: "KongCredentialBasicAuth",
+			object:   &configurationv1alpha1.KongCredentialBasicAuth{},
 		},
 	}
 

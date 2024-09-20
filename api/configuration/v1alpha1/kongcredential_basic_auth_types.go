@@ -23,7 +23,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// CredentialBasicAuth is the schema for BasicAuth credentials API which defines a BasicAuth credential for consumers.
+// KongCredentialBasicAuth is the schema for BasicAuth credentials API which defines a BasicAuth credential for consumers.
 //
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -34,90 +34,90 @@ import (
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.consumerRef) || has(self.spec.consumerRef)",message="consumerRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.consumerRef == self.spec.consumerRef",message="spec.consumerRef is immutable when an entity is already Programmed"
-type CredentialBasicAuth struct {
+type KongCredentialBasicAuth struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec contains the BasicAuth credential specification.
-	Spec CredentialBasicAuthSpec `json:"spec"`
+	Spec KongCredentialBasicAuthSpec `json:"spec"`
 
 	// Status contains the BasicAuth credential status.
 	//
 	// +kubebuilder:default={conditions: {{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}}
-	Status CredentialBasicAuthStatus `json:"status,omitempty"`
+	Status KongCredentialBasicAuthStatus `json:"status,omitempty"`
 }
 
-func (s *CredentialBasicAuth) initKonnectStatus() {
+func (s *KongCredentialBasicAuth) initKonnectStatus() {
 	s.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
 }
 
-// GetKonnectStatus returns the Konnect status contained in the CredentialBasicAuth status.
-func (s *CredentialBasicAuth) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
+// GetKonnectStatus returns the Konnect status contained in the KongCredentialBasicAuth status.
+func (s *KongCredentialBasicAuth) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
 	if s.Status.Konnect == nil {
 		return nil
 	}
 	return &s.Status.Konnect.KonnectEntityStatus
 }
 
-// GetKonnectID returns the Konnect ID in the CredentialBasicAuth status.
-func (s *CredentialBasicAuth) GetKonnectID() string {
+// GetKonnectID returns the Konnect ID in the KongCredentialBasicAuth status.
+func (s *KongCredentialBasicAuth) GetKonnectID() string {
 	if s.Status.Konnect == nil {
 		return ""
 	}
 	return s.Status.Konnect.ID
 }
 
-// SetKonnectID sets the Konnect ID in the CredentialBasicAuth status.
-func (s *CredentialBasicAuth) SetKonnectID(id string) {
+// SetKonnectID sets the Konnect ID in the KongCredentialBasicAuth status.
+func (s *KongCredentialBasicAuth) SetKonnectID(id string) {
 	if s.Status.Konnect == nil {
 		s.initKonnectStatus()
 	}
 	s.Status.Konnect.ID = id
 }
 
-// GetControlPlaneID returns the ControlPlane ID in the CredentialBasicAuth status.
-func (s *CredentialBasicAuth) GetControlPlaneID() string {
+// GetControlPlaneID returns the ControlPlane ID in the KongCredentialBasicAuth status.
+func (s *KongCredentialBasicAuth) GetControlPlaneID() string {
 	if s.Status.Konnect == nil {
 		return ""
 	}
 	return s.Status.Konnect.ControlPlaneID
 }
 
-// SetControlPlaneID sets the ControlPlane ID in the CredentialBasicAuth status.
-func (s *CredentialBasicAuth) SetControlPlaneID(id string) {
+// SetControlPlaneID sets the ControlPlane ID in the KongCredentialBasicAuth status.
+func (s *KongCredentialBasicAuth) SetControlPlaneID(id string) {
 	if s.Status.Konnect == nil {
 		s.initKonnectStatus()
 	}
 	s.Status.Konnect.ControlPlaneID = id
 }
 
-// GetTypeName returns the CredentialBasicAuth Kind name
-func (s CredentialBasicAuth) GetTypeName() string {
-	return "CredentialBasicAuth"
+// GetTypeName returns the KongCredentialBasicAuth Kind name
+func (s KongCredentialBasicAuth) GetTypeName() string {
+	return "KongCredentialBasicAuth"
 }
 
 // GetConditions returns the Status Conditions
-func (s *CredentialBasicAuth) GetConditions() []metav1.Condition {
+func (s *KongCredentialBasicAuth) GetConditions() []metav1.Condition {
 	return s.Status.Conditions
 }
 
 // SetConditions sets the Status Conditions
-func (s *CredentialBasicAuth) SetConditions(conditions []metav1.Condition) {
+func (s *KongCredentialBasicAuth) SetConditions(conditions []metav1.Condition) {
 	s.Status.Conditions = conditions
 }
 
-// CredentialBasicAuthSpec defines specification of a Kong Route.
-type CredentialBasicAuthSpec struct {
-	// ConsumerRef is a reference to a Consumer this CredentialBasicAuth is associated with.
+// KongCredentialBasicAuthSpec defines specification of a Kong Route.
+type KongCredentialBasicAuthSpec struct {
+	// ConsumerRef is a reference to a Consumer this KongCredentialBasicAuth is associated with.
 	//
 	// +kubebuilder:validation:Required
 	ConsumerRef corev1.LocalObjectReference `json:"consumerRef"`
 
-	CredentialBasicAuthAPISpec `json:",inline"`
+	KongCredentialBasicAuthAPISpec `json:",inline"`
 }
 
-// CredentialBasicAuthAPISpec defines specification of a BasicAuth credential.
-type CredentialBasicAuthAPISpec struct {
+// KongCredentialBasicAuthAPISpec defines specification of a BasicAuth credential.
+type KongCredentialBasicAuthAPISpec struct {
 	// Password is the password for the BasicAuth credential.
 	//
 	// +kubebuilder:validation:Required
@@ -132,8 +132,8 @@ type CredentialBasicAuthAPISpec struct {
 	Username string `json:"username"`
 }
 
-// CredentialBasicAuthStatus represents the current status of the BasicAuth credential resource.
-type CredentialBasicAuthStatus struct {
+// KongCredentialBasicAuthStatus represents the current status of the BasicAuth credential resource.
+type KongCredentialBasicAuthStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
 	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs `json:"konnect,omitempty"`
@@ -148,13 +148,13 @@ type CredentialBasicAuthStatus struct {
 
 // +kubebuilder:object:root=true
 
-// CredentialBasicAuthList contains a list of BasicAuth credentials.
-type CredentialBasicAuthList struct {
+// KongCredentialBasicAuthList contains a list of BasicAuth credentials.
+type KongCredentialBasicAuthList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []CredentialBasicAuth `json:"items"`
+	Items           []KongCredentialBasicAuth `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&CredentialBasicAuth{}, &CredentialBasicAuthList{})
+	SchemeBuilder.Register(&KongCredentialBasicAuth{}, &KongCredentialBasicAuthList{})
 }

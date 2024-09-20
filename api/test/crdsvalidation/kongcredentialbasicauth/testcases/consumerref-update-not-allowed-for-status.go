@@ -16,19 +16,19 @@ var updatesNotAllowedForStatus = testCasesGroup{
 	TestCases: []testCase{
 		{
 			Name: "consumerRef change is not allowed for Programmed=True",
-			CredentialBasicAuth: configurationv1alpha1.CredentialBasicAuth{
+			KongCredentialBasicAuth: configurationv1alpha1.KongCredentialBasicAuth{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.CredentialBasicAuthSpec{
+				Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
 					ConsumerRef: corev1.LocalObjectReference{
 						Name: "test-kong-consumer",
 					},
-					CredentialBasicAuthAPISpec: configurationv1alpha1.CredentialBasicAuthAPISpec{
+					KongCredentialBasicAuthAPISpec: configurationv1alpha1.KongCredentialBasicAuthAPISpec{
 						Password: "password",
 						Username: "username",
 					},
 				},
 			},
-			CredentialBasicAuthStatus: &configurationv1alpha1.CredentialBasicAuthStatus{
+			KongCredentialBasicAuthStatus: &configurationv1alpha1.KongCredentialBasicAuthStatus{
 				Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{},
 				Conditions: []metav1.Condition{
 					{
@@ -39,26 +39,26 @@ var updatesNotAllowedForStatus = testCasesGroup{
 					},
 				},
 			},
-			Update: func(c *configurationv1alpha1.CredentialBasicAuth) {
+			Update: func(c *configurationv1alpha1.KongCredentialBasicAuth) {
 				c.Spec.ConsumerRef.Name = "new-consumer"
 			},
 			ExpectedUpdateErrorMessage: lo.ToPtr("spec.consumerRef is immutable when an entity is already Programmed"),
 		},
 		{
 			Name: "consumerRef change is allowed when consumer is not Programmed=True nor APIAuthValid=True",
-			CredentialBasicAuth: configurationv1alpha1.CredentialBasicAuth{
+			KongCredentialBasicAuth: configurationv1alpha1.KongCredentialBasicAuth{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.CredentialBasicAuthSpec{
+				Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
 					ConsumerRef: corev1.LocalObjectReference{
 						Name: "test-kong-consumer",
 					},
-					CredentialBasicAuthAPISpec: configurationv1alpha1.CredentialBasicAuthAPISpec{
+					KongCredentialBasicAuthAPISpec: configurationv1alpha1.KongCredentialBasicAuthAPISpec{
 						Password: "password",
 						Username: "username",
 					},
 				},
 			},
-			CredentialBasicAuthStatus: &configurationv1alpha1.CredentialBasicAuthStatus{
+			KongCredentialBasicAuthStatus: &configurationv1alpha1.KongCredentialBasicAuthStatus{
 				Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{},
 				Conditions: []metav1.Condition{
 					{
@@ -69,7 +69,7 @@ var updatesNotAllowedForStatus = testCasesGroup{
 					},
 				},
 			},
-			Update: func(c *configurationv1alpha1.CredentialBasicAuth) {
+			Update: func(c *configurationv1alpha1.KongCredentialBasicAuth) {
 				c.Spec.ConsumerRef.Name = "new-consumer"
 			},
 		},
