@@ -173,20 +173,38 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// If a type has a KongConsumer ref, handle it.
 	res, err = handleKongConsumerRef(ctx, r.Client, ent)
 	if err != nil {
-		if !errors.As(err, &ReferencedKongConsumerIsBeingDeleted{}) {
-			return ctrl.Result{}, err
+		// If the referenced KongConsumer is being deleted and the object
+		// is not being deleted yet then requeue until it will
+		// get the deletion timestamp set due to having the owner set to KongConsumer.
+		if errors.As(err, &ReferencedKongConsumerIsBeingDeleted{}) &&
+			ent.GetDeletionTimestamp().IsZero() {
+			return res, nil
 		}
 
-		// If the referenced KongConsumer is being deleted (has a non zero deletion timestamp)
-		// then we remove the entity if it has not been deleted yet (deletion timestamp is zero).
-		// We do this because Konnect blocks deletion of entities like Credentials
-		// if they contain entities like Routes.
-		if ent.GetDeletionTimestamp().IsZero() {
-			if err := r.Client.Delete(ctx, ent); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to delete %s: %w", client.ObjectKeyFromObject(ent), err)
+		// If the referenced KongConsumer is not found or is being deleted
+		// and the object is being deleted, remove the finalizer and let the
+		// deletion proceed without trying to delete the entity from Konnect
+		// as the KongConsumer deletion will (or already has - in case of the consumer being gone)
+		// take care of it on the Konnect side.
+		if errors.As(err, &ReferencedKongConsumerDoesNotExist{}) ||
+			errors.As(err, &ReferencedKongConsumerIsBeingDeleted{}) {
+			if !ent.GetDeletionTimestamp().IsZero() {
+				if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+					if err := r.Client.Update(ctx, ent); err != nil {
+						if k8serrors.IsConflict(err) {
+							return ctrl.Result{Requeue: true}, nil
+						}
+						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+					}
+					log.Debug(logger, "finalizer removed as the owning KongConsumer is being deleted or is already gone", ent,
+						"finalizer", KonnectCleanupFinalizer,
+					)
+				}
 			}
 			return ctrl.Result{}, nil
 		}
+
+		return ctrl.Result{}, err
 	} else if res.Requeue {
 		return res, nil
 	}
@@ -777,15 +795,21 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			return res, errStatus
 		}
 
-		return ctrl.Result{}, fmt.Errorf("can't get the referenced KongConsumer %s: %w", nn, err)
+		return ctrl.Result{}, ReferencedKongConsumerDoesNotExist{
+			Reference: nn,
+			Err:       err,
+		}
 	}
 
 	// If referenced KongConsumer is being deleted, return an error so that we
 	// can remove the entity from Konnect first.
 	if delTimestamp := consumer.GetDeletionTimestamp(); !delTimestamp.IsZero() {
-		return ctrl.Result{}, ReferencedKongConsumerIsBeingDeleted{
-			Reference: nn,
-		}
+		return ctrl.Result{
+				Requeue:      true,
+				RequeueAfter: time.Until(delTimestamp.Time),
+			}, ReferencedKongConsumerIsBeingDeleted{
+				Reference: nn,
+			}
 	}
 
 	cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, &consumer)

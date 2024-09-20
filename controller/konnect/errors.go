@@ -46,3 +46,14 @@ type ReferencedKongConsumerIsBeingDeleted struct {
 func (e ReferencedKongConsumerIsBeingDeleted) Error() string {
 	return fmt.Sprintf("referenced Kong Consumer %s is being deleted", e.Reference)
 }
+
+// ReferencedKongConsumerDoesNotExist is an error type that is returned when
+type ReferencedKongConsumerDoesNotExist struct {
+	Reference types.NamespacedName
+	Err       error
+}
+
+// Error implements the error interface.
+func (e ReferencedKongConsumerDoesNotExist) Error() string {
+	return fmt.Sprintf("referenced Kong Consumer %s does not exist: %v", e.Reference, e.Err)
+}
