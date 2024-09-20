@@ -127,3 +127,33 @@ type KonnectEntityStatusWithControlPlaneAndUpstreamRefs struct {
 	// UpstreamID is the Konnect ID of the Upstream this entity is associated with.
 	UpstreamID string `json:"upstreamID,omitempty"`
 }
+
+type KonnectEntityStatusWithControlPlaneAndKeySetRef struct {
+	KonnectEntityStatus `json:",inline"`
+
+	// ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with.
+	ControlPlaneID string `json:"controlPlaneID,omitempty"`
+
+	// KeySetID is the Konnect ID of the KeySet this entity is associated with.
+	KeySetID string `json:"keySetID,omitempty"`
+}
+
+// SetControlPlaneID sets the ControlPlane ID of the KonnectEntityStatus struct.
+func (in *KonnectEntityStatusWithControlPlaneAndKeySetRef) SetControlPlaneID(id string) {
+	in.ControlPlaneID = id
+}
+
+// GetControlPlaneID sets the ControlPlane ID of the KonnectEntityStatus struct.
+func (in *KonnectEntityStatusWithControlPlaneAndKeySetRef) GetControlPlaneID() string {
+	return in.ControlPlaneID
+}
+
+// SetKeySetID sets the KeySet ID of the KonnectEntityStatus struct.
+func (in *KonnectEntityStatusWithControlPlaneAndKeySetRef) SetKeySetID(id string) {
+	in.KeySetID = id
+}
+
+// GetKeySetID sets the KeySet ID of the KonnectEntityStatus struct.
+func (in *KonnectEntityStatusWithControlPlaneAndKeySetRef) GetKeySetID() string {
+	return in.KeySetID
+}
