@@ -176,9 +176,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the referenced KongConsumer is being deleted and the object
 		// is not being deleted yet then requeue until it will
 		// get the deletion timestamp set due to having the owner set to KongConsumer.
-		if errors.As(err, &ReferencedKongConsumerIsBeingDeleted{}) &&
+		if errDel := (&ReferencedKongConsumerIsBeingDeleted{}); errors.As(err, errDel) &&
 			ent.GetDeletionTimestamp().IsZero() {
-			return res, nil
+			return ctrl.Result{
+				RequeueAfter: time.Until(errDel.DeletionTimestamp),
+			}, nil
 		}
 
 		// If the referenced KongConsumer is not found or is being deleted
@@ -804,12 +806,10 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	// If referenced KongConsumer is being deleted, return an error so that we
 	// can remove the entity from Konnect first.
 	if delTimestamp := consumer.GetDeletionTimestamp(); !delTimestamp.IsZero() {
-		return ctrl.Result{
-				Requeue:      true,
-				RequeueAfter: time.Until(delTimestamp.Time),
-			}, ReferencedKongConsumerIsBeingDeleted{
-				Reference: nn,
-			}
+		return ctrl.Result{}, ReferencedKongConsumerIsBeingDeleted{
+			Reference:         nn,
+			DeletionTimestamp: delTimestamp.Time,
+		}
 	}
 
 	cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, &consumer)

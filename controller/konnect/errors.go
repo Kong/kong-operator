@@ -2,6 +2,7 @@ package konnect
 
 import (
 	"fmt"
+	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -39,12 +40,15 @@ func (e ReferencedKongServiceIsBeingDeleted) Error() string {
 // ReferencedKongConsumerIsBeingDeleted is an error type that is returned when
 // a Konnect entity references a Kong Consumer which is being deleted.
 type ReferencedKongConsumerIsBeingDeleted struct {
-	Reference types.NamespacedName
+	Reference         types.NamespacedName
+	DeletionTimestamp time.Time
 }
 
 // Error implements the error interface.
 func (e ReferencedKongConsumerIsBeingDeleted) Error() string {
-	return fmt.Sprintf("referenced Kong Consumer %s is being deleted", e.Reference)
+	return fmt.Sprintf("referenced Kong Consumer %s is being deleted (deletion timestamp: %s)",
+		e.Reference, e.DeletionTimestamp,
+	)
 }
 
 // ReferencedKongConsumerDoesNotExist is an error type that is returned when
