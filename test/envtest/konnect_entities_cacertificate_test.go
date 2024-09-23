@@ -54,12 +54,11 @@ func TestKongCACertificate(t *testing.T) {
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
 	factory := ops.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	reconcilers := []Reconciler{
+	StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, false, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCACertificate](konnectInfiniteSyncTime),
 		),
-	}
-	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+	)
 
 	t.Log("Setting up clients")
 	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
