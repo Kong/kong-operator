@@ -10,12 +10,8 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
@@ -42,31 +38,13 @@ func createKongCredentialBasicAuth(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, cred); errWrapped != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToCreate",
-				errWrapped.Error(),
-				cred.GetGeneration(),
-			),
-			cred,
-		)
-		return errWrapped
+	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cred); errWrap != nil {
+		SetKonnectEntityProgrammedConditionFalse(cred, "FailedToCreate", errWrap.Error())
+		return errWrap
 	}
 
 	cred.Status.Konnect.SetKonnectID(*resp.BasicAuth.ID)
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			cred.GetGeneration(),
-		),
-		cred,
-	)
+	SetKonnectEntityProgrammedCondition(cred)
 
 	return nil
 }
@@ -95,30 +73,12 @@ func updateKongCredentialBasicAuth(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, cred); errWrapped != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToCreate",
-				errWrapped.Error(),
-				cred.GetGeneration(),
-			),
-			cred,
-		)
-		return errWrapped
+	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, cred); errWrap != nil {
+		SetKonnectEntityProgrammedConditionFalse(cred, "FailedToUpdate", errWrap.Error())
+		return errWrap
 	}
 
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			cred.GetGeneration(),
-		),
-		cred,
-	)
+	SetKonnectEntityProgrammedCondition(cred)
 
 	return nil
 }
@@ -139,10 +99,10 @@ func deleteKongCredentialBasicAuth(
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 			BasicAuthID:                 id,
 		})
-	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, cred); errWrapped != nil {
+	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, cred); errWrap != nil {
 		// Service delete operation returns an SDKError instead of a NotFoundError.
 		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrapped, &sdkError) {
+		if errors.As(errWrap, &sdkError) {
 			if sdkError.StatusCode == 404 {
 				ctrllog.FromContext(ctx).
 					Info("entity not found in Konnect, skipping delete",
@@ -157,7 +117,7 @@ func deleteKongCredentialBasicAuth(
 		}
 		return FailedKonnectOpError[configurationv1alpha1.KongService]{
 			Op:  DeleteOp,
-			Err: errWrapped,
+			Err: errWrap,
 		}
 	}
 

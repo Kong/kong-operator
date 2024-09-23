@@ -7,11 +7,7 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -29,30 +25,12 @@ func createControlPlane(
 	// that created that entity and already manages it, hm
 	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cp); errWrap != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToCreate",
-				errWrap.Error(),
-				cp.GetGeneration(),
-			),
-			cp,
-		)
+		SetKonnectEntityProgrammedConditionFalse(cp, "FailedToCreate", errWrap.Error())
 		return errWrap
 	}
 
 	cp.Status.SetKonnectID(*resp.ControlPlane.ID)
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			cp.GetGeneration(),
-		),
-		cp,
-	)
+	SetKonnectEntityProgrammedCondition(cp)
 
 	return nil
 }
@@ -127,16 +105,7 @@ func updateControlPlane(
 	}
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, cp); errWrap != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToUpdate",
-				errWrap.Error(),
-				cp.GetGeneration(),
-			),
-			cp,
-		)
+		SetKonnectEntityProgrammedConditionFalse(cp, "FailedToUpdate", errWrap.Error())
 		return FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
 			Op:  UpdateOp,
 			Err: errWrap,
@@ -144,16 +113,7 @@ func updateControlPlane(
 	}
 
 	cp.Status.SetKonnectID(*resp.ControlPlane.ID)
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			cp.GetGeneration(),
-		),
-		cp,
-	)
+	SetKonnectEntityProgrammedCondition(cp)
 
 	return nil
 }
