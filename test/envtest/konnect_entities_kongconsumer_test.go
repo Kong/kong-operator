@@ -151,7 +151,7 @@ func TestKongConsumer(t *testing.T) {
 
 		sdk.ConsumerGroupSDK.EXPECT().CreateConsumerGroup(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
 			mock.MatchedBy(func(input sdkkonnectcomp.ConsumerGroupInput) bool {
-				return input.Name != nil && *input.Name == consumerGroupName
+				return input.Name == consumerGroupName
 			}),
 		).Return(&sdkkonnectops.CreateConsumerGroupResponse{
 			ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{

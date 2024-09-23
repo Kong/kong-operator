@@ -196,6 +196,11 @@ func handleConsumerGroupAssignments(
 // reconcileConsumerGroupsWithKonnect reconciles the ConsumerGroups assigned to a KongConsumer in Konnect. It calculates
 // the difference between the desired ConsumerGroups and the actual ConsumerGroups in Konnect and adds or removes the
 // Consumer from the ConsumerGroups accordingly. It returns an error if any of the Konnect operations fail.
+//
+// TODO: https://github.com/Kong/gateway-operator/issues/634
+// Please note this implementation relies on imperative operations to list, add and remove Consumers from ConsumerGroups.
+// This is because the Konnect API does not provide a way to atomically assign a Consumer to multiple ConsumerGroups
+// declaratively. It's to be changed once such an API is made available (KOKO-1952).
 func reconcileConsumerGroupsWithKonnect(
 	ctx context.Context,
 	desiredConsumerGroupsIDs []string,

@@ -42,6 +42,8 @@ metadata:
   namespace: default
 username: consumer-1
 custom_id: 08433C12-2B81-4738-B61D-3AA2136F0212
+consumerGroups:
+  - consumer-group-1
 spec:
   controlPlaneRef:
     type: konnectNamespacedRef
@@ -51,7 +53,7 @@ spec:
 kind: KongConsumerGroup
 apiVersion: configuration.konghq.com/v1beta1
 metadata:
-  name: consumer-consumer-1
+  name: consumer-group-1
   namespace: default
 spec:
   name: consumer-group-1

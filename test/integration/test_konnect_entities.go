@@ -191,8 +191,7 @@ func TestKonnectEntities(t *testing.T) {
 			},
 		},
 	}
-	err = GetClients().MgrClient.Create(GetCtx(), &kc)
-	require.NoError(t, err)
+	require.NoError(t, GetClients().MgrClient.Create(GetCtx(), &kc))
 
 	t.Logf("Waiting for KongConsumer to be updated with Konnect ID and Programmed")
 	require.EventuallyWithT(t, func(t *assert.CollectT) {

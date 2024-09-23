@@ -305,7 +305,7 @@ func deployKongConsumerGroupAttachedToCP(
 					Name: cp.Name,
 				},
 			},
-			Name: lo.ToPtr(cgName),
+			Name: cgName,
 		},
 	}
 
