@@ -11,12 +11,8 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -32,13 +28,13 @@ func createPlugin(
 	ctx context.Context,
 	cl client.Client,
 	sdk PluginSDK,
-	pluginBinding *configurationv1alpha1.KongPluginBinding,
+	pb *configurationv1alpha1.KongPluginBinding,
 ) error {
-	controlPlaneID := pluginBinding.GetControlPlaneID()
+	controlPlaneID := pb.GetControlPlaneID()
 	if controlPlaneID == "" {
-		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", pluginBinding, client.ObjectKeyFromObject(pluginBinding))
+		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", pb, client.ObjectKeyFromObject(pb))
 	}
-	pluginInput, err := kongPluginBindingToSDKPluginInput(ctx, cl, pluginBinding)
+	pluginInput, err := kongPluginBindingToSDKPluginInput(ctx, cl, pb)
 	if err != nil {
 		return err
 	}
@@ -51,31 +47,13 @@ func createPlugin(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongPluginBinding](err, CreateOp, pluginBinding); errWrapped != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToCreate",
-				errWrapped.Error(),
-				pluginBinding.GetGeneration(),
-			),
-			pluginBinding,
-		)
-		return errWrapped
+	if errWrap := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongPluginBinding](err, CreateOp, pb); errWrap != nil {
+		SetKonnectEntityProgrammedConditionFalse(pb, "FailedToCreate", errWrap.Error())
+		return errWrap
 	}
 
-	pluginBinding.SetKonnectID(*resp.Plugin.ID)
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			pluginBinding.GetGeneration(),
-		),
-		pluginBinding,
-	)
+	pb.SetKonnectID(*resp.Plugin.ID)
+	SetKonnectEntityProgrammedCondition(pb)
 
 	return nil
 }
@@ -111,30 +89,11 @@ func updatePlugin(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongPluginBinding](err, UpdateOp, pb); errWrapped != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToCreate",
-				errWrapped.Error(),
-				pb.GetGeneration(),
-			),
-			pb,
-		)
-		return errWrapped
+	if errWrap := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongPluginBinding](err, UpdateOp, pb); errWrap != nil {
+		SetKonnectEntityProgrammedConditionFalse(pb, "FailedToUpdate", errWrap.Error())
+		return errWrap
 	}
-
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			pb.GetGeneration(),
-		),
-		pb,
-	)
+	SetKonnectEntityProgrammedCondition(pb)
 
 	return nil
 }
@@ -149,10 +108,10 @@ func deletePlugin(
 ) error {
 	id := pb.GetKonnectID()
 	_, err := sdk.DeletePlugin(ctx, pb.GetControlPlaneID(), id)
-	if errWrapped := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongPluginBinding](err, DeleteOp, pb); errWrapped != nil {
+	if errWrap := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongPluginBinding](err, DeleteOp, pb); errWrap != nil {
 		// plugin delete operation returns an SDKError instead of a NotFoundError.
 		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrapped, &sdkError) && sdkError.StatusCode == 404 {
+		if errors.As(errWrap, &sdkError) && sdkError.StatusCode == 404 {
 			ctrllog.FromContext(ctx).
 				Info("entity not found in Konnect, skipping delete",
 					"op", DeleteOp, "type", pb.GetTypeName(), "id", id,
@@ -161,7 +120,7 @@ func deletePlugin(
 		}
 		return FailedKonnectOpError[configurationv1alpha1.KongPluginBinding]{
 			Op:  DeleteOp,
-			Err: errWrapped,
+			Err: errWrap,
 		}
 	}
 

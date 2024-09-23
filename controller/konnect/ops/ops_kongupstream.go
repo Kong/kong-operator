@@ -10,12 +10,8 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
@@ -41,31 +37,13 @@ func createUpstream(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, upstream); errWrapped != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToCreate",
-				errWrapped.Error(),
-				upstream.GetGeneration(),
-			),
-			upstream,
-		)
-		return errWrapped
+	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, upstream); errWrap != nil {
+		SetKonnectEntityProgrammedConditionFalse(upstream, "FailedToCreate", errWrap.Error())
+		return errWrap
 	}
 
 	upstream.Status.Konnect.SetKonnectID(*resp.Upstream.ID)
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			upstream.GetGeneration(),
-		),
-		upstream,
-	)
+	SetKonnectEntityProgrammedCondition(upstream)
 
 	return nil
 }
@@ -97,10 +75,10 @@ func updateUpstream(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, upstream); errWrapped != nil {
+	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, upstream); errWrap != nil {
 		// Upstream update operation returns an SDKError instead of a NotFoundError.
 		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrapped, &sdkError) {
+		if errors.As(errWrap, &sdkError) {
 			switch sdkError.StatusCode {
 			case 404:
 				if err := createUpstream(ctx, sdk, upstream); err != nil {
@@ -120,29 +98,11 @@ func updateUpstream(
 			}
 		}
 
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToUpdate",
-				errWrapped.Error(),
-				upstream.GetGeneration(),
-			),
-			upstream,
-		)
-		return errWrapped
+		SetKonnectEntityProgrammedConditionFalse(upstream, "FailedToUpdate", errWrap.Error())
+		return errWrap
 	}
 
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			upstream.GetGeneration(),
-		),
-		upstream,
-	)
+	SetKonnectEntityProgrammedCondition(upstream)
 
 	return nil
 }
@@ -157,10 +117,10 @@ func deleteUpstream(
 ) error {
 	id := svc.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteUpstream(ctx, svc.Status.Konnect.ControlPlaneID, id)
-	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, svc); errWrapped != nil {
+	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, svc); errWrap != nil {
 		// Upstream delete operation returns an SDKError instead of a NotFoundError.
 		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrapped, &sdkError) {
+		if errors.As(errWrap, &sdkError) {
 			switch sdkError.StatusCode {
 			case 404:
 				ctrllog.FromContext(ctx).
@@ -177,7 +137,7 @@ func deleteUpstream(
 		}
 		return FailedKonnectOpError[configurationv1alpha1.KongUpstream]{
 			Op:  DeleteOp,
-			Err: errWrapped,
+			Err: errWrap,
 		}
 	}
 

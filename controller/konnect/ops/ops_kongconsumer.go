@@ -44,18 +44,9 @@ func createConsumer(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, consumer); errWrapped != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				conditions.KonnectEntityProgrammedReasonKonnectAPIOpFailed,
-				errWrapped.Error(),
-				consumer.GetGeneration(),
-			),
-			consumer,
-		)
-		return errWrapped
+	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, consumer); errWrap != nil {
+		SetKonnectEntityProgrammedConditionFalse(consumer, conditions.KonnectEntityProgrammedReasonKonnectAPIOpFailed, errWrap.Error())
+		return errWrap
 	}
 
 	// Set the Konnect ID in the status to keep it even if ConsumerGroup assignments fail.
@@ -67,16 +58,7 @@ func createConsumer(
 
 	// The Consumer is considered Programmed if it was successfully created and all its _valid_ ConsumerGroup references
 	// are in sync.
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			consumer.GetGeneration(),
-		),
-		consumer,
-	)
+	SetKonnectEntityProgrammedCondition(consumer)
 
 	return nil
 }
@@ -107,18 +89,9 @@ func updateConsumer(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, consumer); errWrapped != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				conditions.KonnectEntityProgrammedReasonKonnectAPIOpFailed,
-				errWrapped.Error(),
-				consumer.GetGeneration(),
-			),
-			consumer,
-		)
-		return errWrapped
+	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, consumer); errWrap != nil {
+		SetKonnectEntityProgrammedConditionFalse(consumer, conditions.KonnectEntityProgrammedReasonKonnectAPIOpFailed, errWrap.Error())
+		return errWrap
 	}
 
 	if err = handleConsumerGroupAssignments(ctx, consumer, cl, cgSDK, cpID); err != nil {
@@ -127,16 +100,7 @@ func updateConsumer(
 
 	// The Consumer is considered Programmed if it was successfully updated and all its _valid_ ConsumerGroup references
 	// are in sync.
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			consumer.GetGeneration(),
-		),
-		consumer,
-	)
+	SetKonnectEntityProgrammedCondition(consumer)
 
 	return nil
 }
@@ -342,10 +306,10 @@ func deleteConsumer(
 ) error {
 	id := consumer.Status.Konnect.GetKonnectID()
 	_, err := sdk.DeleteConsumer(ctx, consumer.Status.Konnect.ControlPlaneID, id)
-	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, consumer); errWrapped != nil {
+	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, consumer); errWrap != nil {
 		// Consumer delete operation returns an SDKError instead of a NotFoundError.
 		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrapped, &sdkError) {
+		if errors.As(errWrap, &sdkError) {
 			if sdkError.StatusCode == 404 {
 				ctrllog.FromContext(ctx).
 					Info("entity not found in Konnect, skipping delete",
@@ -360,7 +324,7 @@ func deleteConsumer(
 		}
 		return FailedKonnectOpError[configurationv1.KongConsumer]{
 			Op:  DeleteOp,
-			Err: errWrapped,
+			Err: errWrap,
 		}
 	}
 

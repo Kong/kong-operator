@@ -11,12 +11,8 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
@@ -36,31 +32,13 @@ func createRoute(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, route); errWrapped != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToCreate",
-				errWrapped.Error(),
-				route.GetGeneration(),
-			),
-			route,
-		)
-		return errWrapped
+	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, route); errWrap != nil {
+		SetKonnectEntityProgrammedConditionFalse(route, "FailedToCreate", errWrap.Error())
+		return errWrap
 	}
 
 	route.Status.Konnect.SetKonnectID(*resp.Route.ID)
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			route.GetGeneration(),
-		),
-		route,
-	)
+	SetKonnectEntityProgrammedCondition(route)
 
 	return nil
 }
@@ -88,30 +66,12 @@ func updateRoute(
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
-	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, route); errWrapped != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToCreate",
-				errWrapped.Error(),
-				route.GetGeneration(),
-			),
-			route,
-		)
-		return errWrapped
+	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, route); errWrap != nil {
+		SetKonnectEntityProgrammedConditionFalse(route, "FailedToUpdate", errWrap.Error())
+		return errWrap
 	}
 
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			route.GetGeneration(),
-		),
-		route,
-	)
+	SetKonnectEntityProgrammedCondition(route)
 
 	return nil
 }
@@ -126,10 +86,10 @@ func deleteRoute(
 ) error {
 	id := route.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteRoute(ctx, route.Status.Konnect.ControlPlaneID, id)
-	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, route); errWrapped != nil {
+	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, route); errWrap != nil {
 		// Service delete operation returns an SDKError instead of a NotFoundError.
 		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrapped, &sdkError) {
+		if errors.As(errWrap, &sdkError) {
 			if sdkError.StatusCode == 404 {
 				ctrllog.FromContext(ctx).
 					Info("entity not found in Konnect, skipping delete",
@@ -144,7 +104,7 @@ func deleteRoute(
 		}
 		return FailedKonnectOpError[configurationv1alpha1.KongService]{
 			Op:  DeleteOp,
-			Err: errWrapped,
+			Err: errWrap,
 		}
 	}
 
