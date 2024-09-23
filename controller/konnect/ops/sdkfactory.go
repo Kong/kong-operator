@@ -16,6 +16,7 @@ type SDKWrapper interface {
 	GetUpstreamsSDK() UpstreamsSDK
 	GetMeSDK() MeSDK
 	GetBasicAuthCredentials() CredentialBasicAuthSDK
+	GetCACertificatesSDK() CACertificatesSDK
 }
 
 type sdkWrapper struct {
@@ -54,7 +55,7 @@ func (w sdkWrapper) GetPluginSDK() PluginSDK {
 	return w.sdk.Plugins
 }
 
-// GetUpstreamSDK returns the SDK to operate Upstreams.
+// GetUpstreamsSDK returns the SDK to operate Upstreams.
 func (w sdkWrapper) GetUpstreamsSDK() UpstreamsSDK {
 	return w.sdk.Upstreams
 }
@@ -62,6 +63,11 @@ func (w sdkWrapper) GetUpstreamsSDK() UpstreamsSDK {
 // GetMeSDK returns the "me" SDK to get current organization.
 func (w sdkWrapper) GetMeSDK() MeSDK {
 	return w.sdk.Me
+}
+
+// GetCACertificatesSDK returns the SDK to operate CA certificates.
+func (w sdkWrapper) GetCACertificatesSDK() CACertificatesSDK {
+	return w.sdk.CACertificates
 }
 
 // GetBasicAuthCredentials returns the BasicAuthCredentials SDK to get current organization.

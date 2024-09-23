@@ -68,6 +68,8 @@ func Create[
 		return e, createUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
 	case *configurationv1alpha1.CredentialBasicAuth:
 		return e, createCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
+	case *configurationv1alpha1.KongCACertificate:
+		return e, createCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -110,7 +112,8 @@ func Delete[
 		return deleteUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
 	case *configurationv1alpha1.CredentialBasicAuth:
 		return deleteCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
-
+	case *configurationv1alpha1.KongCACertificate:
+		return deleteCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 
@@ -177,7 +180,8 @@ func Update[
 		return ctrl.Result{}, updateUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
 	case *configurationv1alpha1.CredentialBasicAuth:
 		return ctrl.Result{}, updateCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
-
+	case *configurationv1alpha1.KongCACertificate:
+		return ctrl.Result{}, updateCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 

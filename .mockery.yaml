@@ -20,3 +20,4 @@ packages:
       UpstreamsSDK:
       MeSDK:
       CredentialBasicAuthSDK:
+      CACertificatesSDK:

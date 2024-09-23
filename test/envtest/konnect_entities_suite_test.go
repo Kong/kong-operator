@@ -20,9 +20,6 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -32,12 +29,6 @@ func TestKonnectEntityReconcilers(t *testing.T) {
 	cfg, _ := Setup(t, context.Background(), scheme.Get())
 
 	testNewKonnectEntityReconciler(t, cfg, konnectv1alpha1.KonnectGatewayControlPlane{}, konnectGatewayControlPlaneTestCases)
-	testNewKonnectEntityReconciler(t, cfg, configurationv1alpha1.KongService{}, nil)
-	testNewKonnectEntityReconciler(t, cfg, configurationv1.KongConsumer{}, nil)
-	testNewKonnectEntityReconciler(t, cfg, configurationv1alpha1.KongRoute{}, nil)
-	testNewKonnectEntityReconciler(t, cfg, configurationv1beta1.KongConsumerGroup{}, nil)
-	testNewKonnectEntityReconciler(t, cfg, configurationv1alpha1.KongPluginBinding{}, nil)
-	testNewKonnectEntityReconciler(t, cfg, configurationv1alpha1.CredentialBasicAuth{}, nil)
 }
 
 type konnectEntityReconcilerTestCase struct {

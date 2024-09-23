@@ -18,6 +18,7 @@ func TestWatchOptions(t *testing.T) {
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongService{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1.KongConsumer{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongRoute{})
+	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongCACertificate{})
 }
 
 func testReconciliationWatchOptionsForEntity[

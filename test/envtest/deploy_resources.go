@@ -220,3 +220,34 @@ func deployCredentialBasicAuth(
 
 	return c
 }
+
+// deployKongCACertificateAttachedToCP deploys a KongCACertificate resource attached to a CP and returns the resource.
+func deployKongCACertificateAttachedToCP(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+) *configurationv1alpha1.KongCACertificate {
+	t.Helper()
+
+	cert := &configurationv1alpha1.KongCACertificate{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "cacert-",
+		},
+		Spec: configurationv1alpha1.KongCACertificateSpec{
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: cp.GetName(),
+				},
+			},
+			KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
+				Cert: dummyValidCACertPEM,
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, cert))
+	t.Logf("deployed new KongCACertificate %s", client.ObjectKeyFromObject(cert))
+
+	return cert
+}
