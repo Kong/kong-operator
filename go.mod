@@ -11,7 +11,7 @@ toolchain go1.22.5
 retract v1.2.2
 
 require (
-	github.com/Kong/sdk-konnect-go v0.0.12
+	github.com/Kong/sdk-konnect-go v0.0.14
 	github.com/Masterminds/semver v1.5.0
 	github.com/cert-manager/cert-manager v1.15.3
 	github.com/cloudflare/cfssl v1.6.5
