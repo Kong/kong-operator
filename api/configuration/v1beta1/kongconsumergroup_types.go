@@ -49,7 +49,7 @@ type KongConsumerGroup struct {
 
 type KongConsumerGroupSpec struct {
 	// Name is the name of the ConsumerGroup in Kong.
-	Name *string `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
 
 	// ControlPlaneRef is a reference to a ControlPlane this ConsumerGroup is associated with.
 	// +optional

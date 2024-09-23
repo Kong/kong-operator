@@ -95,7 +95,7 @@ type KongUpstreamAPISpec struct {
 	// The hostname to be used as `Host` header when proxying requests through Kong.
 	HostHeader *string `json:"host_header,omitempty"`
 	// This is a hostname, which must be equal to the `host` of a Service.
-	Name *string `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
 	// The number of slots in the load balancer algorithm. If `algorithm` is set to `round-robin`, this setting determines the maximum number of slots. If `algorithm` is set to `consistent-hashing`, this setting determines the actual number of slots in the algorithm. Accepts an integer in the range `10`-`65536`.
 	// +kubebuilder:validation:Minimum=10
 	// +kubebuilder:validation:Maximum=65536
