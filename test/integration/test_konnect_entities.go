@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -83,9 +84,7 @@ func TestKonnectEntities(t *testing.T) {
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 		require.NoError(t, err)
-		assert.NotEmpty(t, cp.Status.KonnectEntityStatus.GetKonnectID())
-		assert.NotEmpty(t, cp.Status.KonnectEntityStatus.GetOrgID())
-		assert.NotEmpty(t, cp.Status.KonnectEntityStatus.GetServerURL())
+		assertKonnectEntityProgrammed(t, cp.GetConditions(), cp.GetKonnectStatus())
 	}, testutils.ObjectUpdateTimeout, time.Second)
 
 	t.Logf("Creating KongService")
@@ -113,13 +112,7 @@ func TestKonnectEntities(t *testing.T) {
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: ks.Name, Namespace: ks.Namespace}, ks)
 		require.NoError(t, err)
-
-		if !assert.NotNil(t, ks.Status.Konnect) {
-			return
-		}
-		assert.NotEmpty(t, ks.Status.Konnect.KonnectEntityStatus.GetKonnectID())
-		assert.NotEmpty(t, ks.Status.Konnect.KonnectEntityStatus.GetOrgID())
-		assert.NotEmpty(t, ks.Status.Konnect.KonnectEntityStatus.GetServerURL())
+		assertKonnectEntityProgrammed(t, ks.GetConditions(), ks.GetKonnectStatus())
 	}, testutils.ObjectUpdateTimeout, time.Second)
 
 	t.Logf("Creating KongRoute")
@@ -150,44 +143,7 @@ func TestKonnectEntities(t *testing.T) {
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, &kr)
 		require.NoError(t, err)
-
-		if !assert.NotNil(t, kr.Status.Konnect) {
-			return
-		}
-		assert.NotEmpty(t, kr.Status.Konnect.KonnectEntityStatus.GetKonnectID())
-		assert.NotEmpty(t, kr.Status.Konnect.KonnectEntityStatus.GetOrgID())
-		assert.NotEmpty(t, kr.Status.Konnect.KonnectEntityStatus.GetServerURL())
-	}, testutils.ObjectUpdateTimeout, time.Second)
-
-	t.Logf("Creating KongConsumer")
-	kcName := "kc-" + testID
-	kc := configurationv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      kcName,
-			Namespace: ns.Name,
-		},
-		Username: kcName,
-		Spec: configurationv1.KongConsumerSpec{
-			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-				Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: cp.Name},
-			},
-		},
-	}
-	err = GetClients().MgrClient.Create(GetCtx(), &kc)
-	require.NoError(t, err)
-
-	t.Logf("Waiting for KongConsumer to be updated with Konnect ID")
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kc.Name, Namespace: ns.Name}, &kc)
-		require.NoError(t, err)
-
-		if !assert.NotNil(t, kc.Status.Konnect) {
-			return
-		}
-		assert.NotEmpty(t, kc.Status.Konnect.KonnectEntityStatus.GetKonnectID())
-		assert.NotEmpty(t, kc.Status.Konnect.KonnectEntityStatus.GetOrgID())
-		assert.NotEmpty(t, kc.Status.Konnect.KonnectEntityStatus.GetServerURL())
+		assertKonnectEntityProgrammed(t, kr.GetConditions(), kr.GetKonnectStatus())
 	}, testutils.ObjectUpdateTimeout, time.Second)
 
 	t.Logf("Creating KongConsumerGroup")
@@ -214,13 +170,34 @@ func TestKonnectEntities(t *testing.T) {
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kcg.Name, Namespace: ns.Name}, &kcg)
 		require.NoError(t, err)
+		assertKonnectEntityProgrammed(t, kcg.GetConditions(), kcg.GetKonnectStatus())
+	}, testutils.ObjectUpdateTimeout, time.Second)
 
-		if !assert.NotNil(t, kcg.Status.Konnect) {
-			return
-		}
-		assert.NotEmpty(t, kcg.Status.Konnect.KonnectEntityStatus.GetKonnectID())
-		assert.NotEmpty(t, kcg.Status.Konnect.KonnectEntityStatus.GetOrgID())
-		assert.NotEmpty(t, kcg.Status.Konnect.KonnectEntityStatus.GetServerURL())
+	t.Logf("Creating KongConsumer")
+	kcName := "kc-" + testID
+	kc := configurationv1.KongConsumer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      kcName,
+			Namespace: ns.Name,
+		},
+		Username: kcName,
+		ConsumerGroups: []string{
+			kcg.Name,
+		},
+		Spec: configurationv1.KongConsumerSpec{
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: cp.Name},
+			},
+		},
+	}
+	require.NoError(t, GetClients().MgrClient.Create(GetCtx(), &kc))
+
+	t.Logf("Waiting for KongConsumer to be updated with Konnect ID and Programmed")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kc.Name, Namespace: ns.Name}, &kc)
+		require.NoError(t, err)
+		assertKonnectEntityProgrammed(t, kc.GetConditions(), kc.GetKonnectStatus())
 	}, testutils.ObjectUpdateTimeout, time.Second)
 
 	t.Logf("Creating KongPlugin and KongPluginBinding")
@@ -268,13 +245,7 @@ func TestKonnectEntities(t *testing.T) {
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kpb.Name, Namespace: ns.Name}, &kpb)
 		require.NoError(t, err)
-
-		if !assert.NotNil(t, kpb.Status.Konnect) {
-			return
-		}
-		assert.NotEmpty(t, kpb.Status.Konnect.KonnectEntityStatus.GetKonnectID())
-		assert.NotEmpty(t, kpb.Status.Konnect.KonnectEntityStatus.GetOrgID())
-		assert.NotEmpty(t, kpb.Status.Konnect.KonnectEntityStatus.GetServerURL())
+		assertKonnectEntityProgrammed(t, kpb.GetConditions(), kpb.GetKonnectStatus())
 	}, testutils.ObjectUpdateTimeout, time.Second)
 }
 
@@ -290,4 +261,20 @@ func deleteObjectAndWaitForDeletionFn(t *testing.T, obj client.Object) func() {
 			assert.True(t, k8serrors.IsNotFound(err))
 		}, testutils.ObjectUpdateTimeout, time.Second)
 	}
+}
+
+// assertKonnectEntityProgrammed asserts that the KonnectEntityProgrammed condition is set to true and the Konnect
+// status fields are populated.
+func assertKonnectEntityProgrammed(t assert.TestingT, cs []metav1.Condition, konnectStatus *konnectv1alpha1.KonnectEntityStatus) {
+	if !assert.NotNil(t, konnectStatus) {
+		return
+	}
+	assert.NotEmpty(t, konnectStatus.GetKonnectID())
+	assert.NotEmpty(t, konnectStatus.GetOrgID())
+	assert.NotEmpty(t, konnectStatus.GetServerURL())
+
+	assert.True(t, lo.ContainsBy(cs, func(condition metav1.Condition) bool {
+		return condition.Type == conditions.KonnectEntityProgrammedConditionType &&
+			condition.Status == metav1.ConditionTrue
+	}))
 }

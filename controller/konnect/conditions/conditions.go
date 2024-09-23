@@ -14,6 +14,12 @@ const (
 	// KonnectEntityProgrammedReasonKonnectAPIOpFailed is the reason for the Programmed condition.
 	// It is set when the entity has failed to be programmed in Konnect.
 	KonnectEntityProgrammedReasonKonnectAPIOpFailed = "KonnectAPIOpFailed"
+	// KonnectEntityProgrammedReasonFailedToResolveConsumerGroupRefs is the reason for the Programmed condition.
+	// It is set when one or more KongConsumerGroup references could not be resolved.
+	KonnectEntityProgrammedReasonFailedToResolveConsumerGroupRefs = "FailedToResolveConsumerGroupRefs"
+	// KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect is the reason for the Programmed condition.
+	// It is set when one or more KongConsumerGroup references could not be reconciled with Konnect.
+	KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect = "FailedToReconcileConsumerGroupsWithKonnect"
 )
 
 const (
@@ -93,4 +99,18 @@ const (
 	// KongConsumerRefReasonInvalid is the reason used with the KongConsumerRefValid
 	// condition type indicating that the KongConsumer reference is invalid.
 	KongConsumerRefReasonInvalid = "Invalid"
+)
+
+const (
+	// KongConsumerGroupRefsValidConditionType is the type of the condition that indicates
+	// whether the KongConsumerGroups referenced by the entity are valid and all point to
+	// existing KongConsumerGroups.
+	KongConsumerGroupRefsValidConditionType = "KongConsumerGroupRefsValid"
+
+	// KongConsumerGroupRefsReasonValid is the reason used with the KongConsumerGroupRefsValid
+	// condition type indicating that all KongConsumerGroup references are valid.
+	KongConsumerGroupRefsReasonValid = "Valid"
+	// KongConsumerGroupRefsReasonInvalid is the reason used with the KongConsumerGroupRefsValid
+	// condition type indicating that one or more KongConsumerGroup references are invalid.
+	KongConsumerGroupRefsReasonInvalid = "Invalid"
 )

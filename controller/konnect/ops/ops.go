@@ -59,7 +59,7 @@ func Create[
 	case *configurationv1alpha1.KongRoute:
 		return e, createRoute(ctx, sdk.GetRoutesSDK(), ent)
 	case *configurationv1.KongConsumer:
-		return e, createConsumer(ctx, sdk.GetConsumersSDK(), ent)
+		return e, createConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent)
 	case *configurationv1beta1.KongConsumerGroup:
 		return e, createConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.KongPluginBinding:
@@ -171,7 +171,7 @@ func Update[
 	case *configurationv1alpha1.KongRoute:
 		return ctrl.Result{}, updateRoute(ctx, sdk.GetRoutesSDK(), ent)
 	case *configurationv1.KongConsumer:
-		return ctrl.Result{}, updateConsumer(ctx, sdk.GetConsumersSDK(), ent)
+		return ctrl.Result{}, updateConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent)
 	case *configurationv1beta1.KongConsumerGroup:
 		return ctrl.Result{}, updateConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.KongPluginBinding:

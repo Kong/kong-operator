@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -19,6 +20,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -56,6 +58,14 @@ func KongConsumerReconciliationWatchOptions(
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueKongConsumerForKonnectGatewayControlPlane(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1beta1.KongConsumerGroup{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKongConsumerForKongConsumerGroup(cl),
 				),
 			)
 		},
@@ -207,5 +217,30 @@ func enqueueKongConsumerForKonnectGatewayControlPlane(
 			}
 		}
 		return ret
+	}
+}
+
+func enqueueKongConsumerForKongConsumerGroup(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		group, ok := obj.(*configurationv1beta1.KongConsumerGroup)
+		if !ok {
+			return nil
+		}
+		var l configurationv1.KongConsumerList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			IndexFieldKongConsumerOnKongConsumerGroup: group.Name,
+		}); err != nil {
+			return nil
+		}
+		return lo.Map(l.Items, func(consumer configurationv1.KongConsumer, _ int) reconcile.Request {
+			return reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: consumer.Namespace,
+					Name:      consumer.Name,
+				},
+			}
+		})
 	}
 }
