@@ -96,7 +96,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 	t.Log("attach configured KongPlugin with KongPluginInstallation to the HTTPRoute")
 	attachKongPluginBasedOnKPIToRoute(t, cleaner, httpRouteNN, kpiPublicNN)
 
-	t.Log("verify that plugin is in properly configured and works")
+	t.Log("verify that plugin is properly configured and works")
 	verifyCustomPlugins(t, ip, expectedHeadersForMyHeader)
 
 	if registryCreds := GetKongPluginImageRegistryCredentialsForTests(); registryCreds != "" {
@@ -202,6 +202,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 		checkDataPlaneStatus(t, namespace.Name, metav1.ConditionTrue, consts.ResourceReadyReason, "")
 		t.Log("attach configured KongPlugin to the HTTPRoute")
 		attachKongPluginBasedOnKPIToRoute(t, cleaner, httpRouteNN, kpiPrivateNN)
+		t.Log("verify that plugin is properly configured and works")
 		verifyCustomPlugins(t, ip, expectedHeadersForMyHeader, expectedHeadersForMyHeader2)
 	} else {
 		t.Log("skipping private image test - no credentials provided")
@@ -364,7 +365,7 @@ func checkDataPlaneStatus(
 }
 
 func verifyCustomPlugins(t *testing.T, ip string, expectedHeaders ...http.Header) {
-	t.Log("verify that plugin is in place and works")
+	t.Helper()
 	httpClient, err := helpers.CreateHTTPClient(nil, "")
 	require.NoError(t, err)
 	require.EventuallyWithT(t, func(c *assert.CollectT) {

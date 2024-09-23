@@ -178,12 +178,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "ensuring generation of deployment configuration for KongPluginInstallations configured for DataPlane", dataplane)
-	kpisForDeployment, reconcileResult, err := ensureMappedConfigMapToKongPluginInstallationForDataPlane(ctx, logger, r.Client, dataplane)
+	kpisForDeployment, requeue, err := ensureMappedConfigMapToKongPluginInstallationForDataPlane(ctx, logger, r.Client, dataplane)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot ensure KongPluginInstallation for DataPlane: %w", err)
 	}
-	if reconcileResult.Requeue {
-		return reconcileResult, nil
+	if requeue {
+		return ctrl.Result{Requeue: true}, nil
 	}
 	deploymentOpts = append(deploymentOpts, withCustomPlugins(kpisForDeployment...))
 
@@ -220,10 +220,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	if reconcileResult, err := ensureDataPlaneReadyStatus(ctx, r.Client, logger, dataplane, dataplane.Generation); err != nil {
+	if res, err := ensureDataPlaneReadyStatus(ctx, r.Client, logger, dataplane, dataplane.Generation); err != nil {
 		return ctrl.Result{}, err
-	} else if reconcileResult.Requeue {
-		return reconcileResult, nil
+	} else if res.Requeue {
+		return res, nil
 	}
 
 	log.Debug(logger, "reconciliation complete for DataPlane resource", dataplane)

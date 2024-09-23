@@ -14,7 +14,6 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
@@ -92,25 +91,25 @@ func (r *Reconciler) ensureDataPlaneAddressesStatus(
 // of custom plugins that are intended to be used to generate a Deployment.
 func ensureMappedConfigMapToKongPluginInstallationForDataPlane(
 	ctx context.Context, logger logr.Logger, c client.Client, dataplane *operatorv1beta1.DataPlane,
-) ([]customPlugin, ctrl.Result, error) {
+) (cps []customPlugin, requeue bool, err error) {
 	configMapsOwned, err := findCustomPluginConfigMapsOwnedByDataPlane(ctx, c, dataplane)
 	if err != nil {
-		return nil, ctrl.Result{}, err
+		return nil, false, err
 	}
 	configMapsToRetain := make(map[types.NamespacedName]struct{}, len(configMapsOwned))
 
-	var cps []customPlugin
 	for _, kpiNN := range dataplane.Spec.PluginsToInstall {
 		kpiNN := types.NamespacedName(kpiNN)
 		if kpiNN.Namespace == "" {
 			kpiNN.Namespace = dataplane.Namespace
 		}
 
-		cp, reconciliationResult, err := populateDedicatedConfigMapForKongPluginInstallation(
+		var cp customPlugin
+		cp, requeue, err = populateDedicatedConfigMapForKongPluginInstallation(
 			ctx, logger, c, configMapsOwned, kpiNN, dataplane,
 		)
-		if err != nil || reconciliationResult.Requeue {
-			return nil, reconciliationResult, err
+		if err != nil || requeue {
+			return nil, requeue, err
 		}
 		configMapsToRetain[cp.ConfigMapNN] = struct{}{}
 		cps = append(cps, cp)
@@ -118,12 +117,12 @@ func ensureMappedConfigMapToKongPluginInstallationForDataPlane(
 	for _, cm := range configMapsOwned {
 		if _, retain := configMapsToRetain[client.ObjectKeyFromObject(&cm)]; !retain {
 			if err := c.Delete(ctx, &cm); client.IgnoreNotFound(err) != nil {
-				return nil, ctrl.Result{}, err
+				return nil, false, err
 			}
 		}
 	}
 
-	return cps, ctrl.Result{}, nil
+	return cps, false, nil
 }
 
 func findCustomPluginConfigMapsOwnedByDataPlane(
@@ -146,13 +145,13 @@ func populateDedicatedConfigMapForKongPluginInstallation(
 	cms []corev1.ConfigMap,
 	kpiNN types.NamespacedName,
 	dataplane *operatorv1beta1.DataPlane,
-) (customPlugin, ctrl.Result, error) {
+) (cp customPlugin, requeue bool, err error) {
 	kpi, ready, err := verifyKPIReadinessForDataPlane(ctx, logger, c, dataplane, kpiNN)
 	if err != nil {
-		return customPlugin{}, ctrl.Result{}, err
+		return customPlugin{}, false, err
 	}
 	if !ready {
-		return customPlugin{}, ctrl.Result{Requeue: true}, nil
+		return customPlugin{}, true, nil
 	}
 
 	var underlyingCM corev1.ConfigMap
@@ -162,7 +161,7 @@ func populateDedicatedConfigMapForKongPluginInstallation(
 	}
 	log.Trace(logger, fmt.Sprintf("Fetch underlying ConfigMap %s for KongPluginInstallation", backingCMNN), kpi)
 	if err := c.Get(ctx, backingCMNN, &underlyingCM); err != nil {
-		return customPlugin{}, ctrl.Result{}, fmt.Errorf("could not fetch underlying ConfigMap to clone %s: %w", backingCMNN, err)
+		return customPlugin{}, false, fmt.Errorf("could not fetch underlying ConfigMap to clone %s: %w", backingCMNN, err)
 	}
 
 	log.Trace(logger, "Find ConfigMap mapped to KongPluginInstallation", kpi)
@@ -181,35 +180,36 @@ func populateDedicatedConfigMapForKongPluginInstallation(
 		k8sresources.AnnotateConfigMapWithKongPluginInstallation(&cm, kpi)
 		cm.Data = underlyingCM.Data
 		if err := c.Create(ctx, &cm); err != nil {
-			return customPlugin{}, ctrl.Result{}, fmt.Errorf("could not create new ConfigMap for KongPluginInstallation: %w", err)
+			return customPlugin{}, false, fmt.Errorf("could not create new ConfigMap for KongPluginInstallation: %w", err)
 		}
 	case 1:
 		log.Trace(logger, fmt.Sprintf("Check if update existing ConfigMap %s for KongPluginInstallation", client.ObjectKeyFromObject(&cm)), kpi)
 		cm = mappedConfigMapForKPI[0]
 		if maps.Equal(cm.Data, underlyingCM.Data) {
 			log.Trace(logger, fmt.Sprintf("Nothing to update in existing ConfigMap %s for KongPluginInstallation", client.ObjectKeyFromObject(&cm)), kpi)
-			return customPlugin{}, ctrl.Result{}, nil
-		}
-		log.Trace(logger, fmt.Sprintf("Update existing ConfigMap %s for KongPluginInstallation", client.ObjectKeyFromObject(&cm)), kpi)
-		cm.Data = underlyingCM.Data
-		if err := c.Update(ctx, &cm); err != nil {
-			if k8serrors.IsConflict(err) {
-				return customPlugin{}, ctrl.Result{Requeue: true}, nil
+		} else {
+			log.Trace(logger, fmt.Sprintf("Update existing ConfigMap %s for KongPluginInstallation", client.ObjectKeyFromObject(&cm)), kpi)
+			cm.Data = underlyingCM.Data
+			if err := c.Update(ctx, &cm); err != nil {
+				if k8serrors.IsConflict(err) {
+					return customPlugin{}, true, nil
+				}
+				return customPlugin{}, false, fmt.Errorf("could not update mapped: %w", err)
 			}
-			return customPlugin{}, ctrl.Result{}, fmt.Errorf("could not update mapped: %w", err)
 		}
+
 	default:
 		// It should never happen.
 		names := strings.Join(lo.Map(mappedConfigMapForKPI, func(cm corev1.ConfigMap, _ int) string {
 			return client.ObjectKeyFromObject(&cm).String()
 		}), ", ")
-		return customPlugin{}, ctrl.Result{}, fmt.Errorf("unexpected error happened - more than one ConfigMap found: %s", names)
+		return customPlugin{}, false, fmt.Errorf("unexpected error happened - more than one ConfigMap found: %s", names)
 	}
 	return customPlugin{
 		Name:        kpi.Name,
 		ConfigMapNN: client.ObjectKeyFromObject(&cm),
 		Generation:  kpi.Generation,
-	}, ctrl.Result{}, nil
+	}, false, nil
 }
 
 // verifyKPIReadinessForDataPlane updates DataPlane status conditions based on status of KPI object.
