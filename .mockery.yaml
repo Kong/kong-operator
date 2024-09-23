@@ -21,5 +21,6 @@ packages:
       TargetsSDK:
       VaultSDK:
       MeSDK:
+      KongCredentialAPIKeySDK:
       KongCredentialBasicAuthSDK:
       CACertificatesSDK:

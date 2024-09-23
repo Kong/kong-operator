@@ -67,7 +67,9 @@ func Create[
 	case *configurationv1alpha1.KongUpstream:
 		return e, createUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialBasicAuth:
-		return e, createKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
+		return e, createKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialAPIKey:
+		return e, createKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return e, createCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
@@ -115,7 +117,9 @@ func Delete[
 	case *configurationv1alpha1.KongUpstream:
 		return deleteUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialBasicAuth:
-		return deleteKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
+		return deleteKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialAPIKey:
+		return deleteKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return deleteCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
@@ -208,7 +212,9 @@ func Update[
 	case *configurationv1alpha1.KongUpstream:
 		return ctrl.Result{}, updateUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialBasicAuth:
-		return ctrl.Result{}, updateKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
+		return ctrl.Result{}, updateKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialAPIKey:
+		return ctrl.Result{}, updateKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return ctrl.Result{}, updateCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongTarget:

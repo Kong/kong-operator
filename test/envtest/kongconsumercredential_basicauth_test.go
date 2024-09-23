@@ -80,7 +80,7 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 	}
 
 	factory := ops.NewMockSDKFactory(t)
-	factory.SDK.BasicAuthCredentials.EXPECT().
+	factory.SDK.KongCredentialsBasicAuthSDK.EXPECT().
 		CreateBasicAuthWithConsumer(
 			mock.Anything,
 			sdkkonnectops.CreateBasicAuthWithConsumerRequest{
@@ -101,7 +101,7 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 			},
 			nil,
 		)
-	factory.SDK.BasicAuthCredentials.EXPECT().
+	factory.SDK.KongCredentialsBasicAuthSDK.EXPECT().
 		UpsertBasicAuthWithConsumer(mock.Anything, mock.Anything, mock.Anything).Maybe().
 		Return(
 			&sdkkonnectops.UpsertBasicAuthWithConsumerResponse{
@@ -122,10 +122,10 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, factory.SDK.BasicAuthCredentials.AssertExpectations(t))
+		assert.True(c, factory.SDK.KongCredentialsBasicAuthSDK.AssertExpectations(t))
 	}, waitTime, tickTime)
 
-	factory.SDK.BasicAuthCredentials.EXPECT().
+	factory.SDK.KongCredentialsBasicAuthSDK.EXPECT().
 		DeleteBasicAuthWithConsumer(
 			mock.Anything,
 			sdkkonnectops.DeleteBasicAuthWithConsumerRequest{
@@ -143,7 +143,7 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 	require.NoError(t, clientNamespaced.Delete(ctx, KongCredentialBasicAuth))
 
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, factory.SDK.BasicAuthCredentials.AssertExpectations(t))
+		assert.True(c, factory.SDK.KongCredentialsBasicAuthSDK.AssertExpectations(t))
 	}, waitTime, tickTime)
 
 	w := setupWatch[configurationv1alpha1.KongCredentialBasicAuthList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))

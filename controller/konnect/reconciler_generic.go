@@ -658,6 +658,8 @@ func getConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constraints.E
 	switch e := any(e).(type) {
 	case *configurationv1alpha1.KongCredentialBasicAuth:
 		return mo.Some(e.Spec.ConsumerRef)
+	case *configurationv1alpha1.KongCredentialAPIKey:
+		return mo.Some(e.Spec.ConsumerRef)
 	default:
 		return mo.None[corev1.LocalObjectReference]()
 	}
@@ -911,6 +913,12 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		}
 		cred.Status.Konnect.ConsumerID = consumer.Status.Konnect.GetKonnectID()
 	}
+	if cred, ok := any(ent).(*configurationv1alpha1.KongCredentialAPIKey); ok {
+		if cred.Status.Konnect == nil {
+			cred.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
+		}
+		cred.Status.Konnect.ConsumerID = consumer.Status.Konnect.GetKonnectID()
+	}
 
 	if res, errStatus := updateStatusWithCondition(
 		ctx, cl, ent,
@@ -985,11 +993,6 @@ func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 	e TEnt,
 ) mo.Option[configurationv1alpha1.ControlPlaneRef] {
 	switch e := any(e).(type) {
-	case *konnectv1alpha1.KonnectGatewayControlPlane,
-		*configurationv1alpha1.KongRoute,
-		*configurationv1alpha1.KongTarget,
-		*configurationv1alpha1.KongCredentialBasicAuth:
-		return mo.None[configurationv1alpha1.ControlPlaneRef]()
 	case *configurationv1.KongConsumer:
 		if e.Spec.ControlPlaneRef == nil {
 			return mo.None[configurationv1alpha1.ControlPlaneRef]()
@@ -1025,8 +1028,9 @@ func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 			return mo.None[configurationv1alpha1.ControlPlaneRef]()
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
+
 	default:
-		panic(fmt.Sprintf("unsupported entity type %T", e))
+		return mo.None[configurationv1alpha1.ControlPlaneRef]()
 	}
 }
 

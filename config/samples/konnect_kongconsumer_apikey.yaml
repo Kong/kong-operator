@@ -1,0 +1,45 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-dev-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  serverURL: us.api.konghq.com
+---
+kind: KonnectGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: test-cp-basic-auth
+  namespace: default
+spec:
+  name: test-cp-basic-auth
+  labels:
+    app: test-cp-basic-auth
+    key1: test-cp-basic-auth
+  konnect:
+    authRef:
+      name: konnect-api-auth-dev-1
+---
+kind: KongConsumer
+apiVersion: configuration.konghq.com/v1
+metadata:
+  name: consumer-api-key-1
+  namespace: default
+username: consumer1
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: test-cp-basic-auth
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongCredentialAPIKey
+metadata:
+  name: api-key-1
+  namespace: default
+spec:
+  consumerRef:
+    name: consumer-api-key-1
+  key: secretkey
