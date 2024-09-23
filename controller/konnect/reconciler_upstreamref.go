@@ -74,6 +74,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		}
 	}
 
+	// requeue it if referenced KongUpstream is not programmed yet so we cannot do the following work.
 	cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, kongUpstream)
 	if !ok || cond.Status != metav1.ConditionTrue {
 		ent.SetKonnectID("")
@@ -89,6 +90,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	// Set owner reference of referenced KongUpstream and the reconciled entity.
 	old := ent.DeepCopyObject().(TEnt)
 	if err := controllerutil.SetOwnerReference(kongUpstream, ent, cl.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
@@ -100,6 +102,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
 	}
 
+	// TODO: make this more generic.
 	if target, ok := any(ent).(*configurationv1alpha1.KongTarget); ok {
 		if target.Status.Konnect == nil {
 			target.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndUpstreamRefs{}
@@ -118,6 +121,9 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	}
 
 	cpRef, ok := getControlPlaneRef(kongUpstream).Get()
+	// REVIEW: the logic will cause KongTarget referencing to a KongUpstream that is not controlled by Konnect entity reconcilers
+	// fall into endless reconcile backoff (so do KongRoute).
+	// In such case, should we just ignore the KongTarget and treat it as not controlled?
 	if !ok {
 		return ctrl.Result{}, fmt.Errorf(
 			"%T references a KongUpstream %s which does not have a ControlPlane ref",
@@ -136,6 +142,8 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			return res, errStatus
 		}
 		if k8serrors.IsNotFound(err) {
+			// REVIEW: `getCPForRef` generates a new error but does not wrap the original error from client.Get so this is never reached.
+			// Should we change that?
 			return ctrl.Result{}, ReferencedControlPlaneDoesNotExistError{
 				Reference: nn,
 				Err:       err,

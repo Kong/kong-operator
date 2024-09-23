@@ -317,6 +317,10 @@ func TestKonnectEntities(t *testing.T) {
 		assert.NotEmpty(t, kt.Status.Konnect.KonnectEntityStatus.GetOrgID())
 		assert.NotEmpty(t, kt.Status.Konnect.KonnectEntityStatus.GetServerURL())
 	}, testutils.ObjectUpdateTimeout, time.Second)
+
+	// Should delete KongTarget because it will block deletion of KongUpstream owning it.
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kt))
+
 }
 
 // deleteObjectAndWaitForDeletionFn returns a function that deletes the given object and waits for it to be gone.
