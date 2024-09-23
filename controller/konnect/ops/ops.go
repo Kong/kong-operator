@@ -66,8 +66,8 @@ func Create[
 		return e, createPlugin(ctx, cl, sdk.GetPluginSDK(), ent)
 	case *configurationv1alpha1.KongUpstream:
 		return e, createUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
-	case *configurationv1alpha1.CredentialBasicAuth:
-		return e, createCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
+	case *configurationv1alpha1.KongCredentialBasicAuth:
+		return e, createKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return e, createCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 
@@ -110,8 +110,8 @@ func Delete[
 		return deletePlugin(ctx, sdk.GetPluginSDK(), ent)
 	case *configurationv1alpha1.KongUpstream:
 		return deleteUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
-	case *configurationv1alpha1.CredentialBasicAuth:
-		return deleteCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
+	case *configurationv1alpha1.KongCredentialBasicAuth:
+		return deleteKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return deleteCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 		// ---------------------------------------------------------------------
@@ -178,8 +178,8 @@ func Update[
 		return ctrl.Result{}, updatePlugin(ctx, sdk.GetPluginSDK(), cl, ent)
 	case *configurationv1alpha1.KongUpstream:
 		return ctrl.Result{}, updateUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
-	case *configurationv1alpha1.CredentialBasicAuth:
-		return ctrl.Result{}, updateCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
+	case *configurationv1alpha1.KongCredentialBasicAuth:
+		return ctrl.Result{}, updateKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentials(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return ctrl.Result{}, updateCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 		// ---------------------------------------------------------------------

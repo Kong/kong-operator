@@ -49,7 +49,7 @@ func TestCreateControlPlane(t *testing.T) {
 					Return(
 						&sdkkonnectops.CreateControlPlaneResponse{
 							ControlPlane: &sdkkonnectcomp.ControlPlane{
-								ID: "12345",
+								ID: lo.ToPtr("12345"),
 							},
 						},
 						nil,
@@ -293,7 +293,7 @@ func TestUpdateControlPlane(t *testing.T) {
 					Return(
 						&sdkkonnectops.UpdateControlPlaneResponse{
 							ControlPlane: &sdkkonnectcomp.ControlPlane{
-								ID: "12345",
+								ID: lo.ToPtr("12345"),
 							},
 						},
 						nil,
@@ -412,7 +412,7 @@ func TestUpdateControlPlane(t *testing.T) {
 					Return(
 						&sdkkonnectops.CreateControlPlaneResponse{
 							ControlPlane: &sdkkonnectcomp.ControlPlane{
-								ID: "12345",
+								ID: lo.ToPtr("12345"),
 							},
 						},
 						nil,
@@ -492,7 +492,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 		}).
 		Return(&sdkkonnectops.CreateControlPlaneResponse{
 			ControlPlane: &sdkkonnectcomp.ControlPlane{
-				ID: "12345",
+				ID: lo.ToPtr("12345"),
 			},
 		}, nil)
 	require.NoError(t, createControlPlane(ctx, sdk, cp))
@@ -505,7 +505,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 		}).
 		Return(&sdkkonnectops.UpdateControlPlaneResponse{
 			ControlPlane: &sdkkonnectcomp.ControlPlane{
-				ID: "12345",
+				ID: lo.ToPtr("12345"),
 			},
 		}, nil)
 	require.NoError(t, updateControlPlane(ctx, sdk, cp))

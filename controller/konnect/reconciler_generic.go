@@ -592,7 +592,7 @@ func getConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constraints.E
 	e TEnt,
 ) mo.Option[corev1.LocalObjectReference] {
 	switch e := any(e).(type) {
-	case *configurationv1alpha1.CredentialBasicAuth:
+	case *configurationv1alpha1.KongCredentialBasicAuth:
 		return mo.Some(e.Spec.ConsumerRef)
 	default:
 		return mo.None[corev1.LocalObjectReference]()
@@ -841,7 +841,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	// TODO(pmalek): make this generic.
 	// Consumer ID is not stored in KonnectEntityStatus because not all entities
 	// have a ConsumerRef, hence the type constraints in the reconciler can't be used.
-	if cred, ok := any(ent).(*configurationv1alpha1.CredentialBasicAuth); ok {
+	if cred, ok := any(ent).(*configurationv1alpha1.KongCredentialBasicAuth); ok {
 		if cred.Status.Konnect == nil {
 			cred.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
 		}
@@ -923,7 +923,7 @@ func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 	switch e := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane,
 		*configurationv1alpha1.KongRoute,
-		*configurationv1alpha1.CredentialBasicAuth:
+		*configurationv1alpha1.KongCredentialBasicAuth:
 		return mo.None[configurationv1alpha1.ControlPlaneRef]()
 	case *configurationv1.KongConsumer:
 		if e.Spec.ControlPlaneRef == nil {

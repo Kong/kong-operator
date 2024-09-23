@@ -151,7 +151,7 @@ func kongCACertificateToCACertificateInput(cert *configurationv1alpha1.KongCACer
 		k8sMetaTags    = GenerateKubernetesMetadataTags(cert)
 	)
 	return sdkkonnectcomp.CACertificateInput{
-		Cert: lo.ToPtr(cert.Spec.Cert),
+		Cert: cert.Spec.Cert,
 		// Deduplicate tags to avoid rejection by Konnect.
 		Tags: lo.Uniq(slices.Concat(annotationTags, specTags, k8sMetaTags)),
 	}

@@ -189,26 +189,26 @@ func deployKongPluginBinding(
 	return kpb
 }
 
-// deployCredentialBasicAuth deploys a CredentialBasicAuth resource and returns the resource.
-func deployCredentialBasicAuth(
+// deployKongCredentialBasicAuth deploys a KongCredentialBasicAuth resource and returns the resource.
+func deployKongCredentialBasicAuth(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
 	consumerName string,
 	username string,
 	password string,
-) *configurationv1alpha1.CredentialBasicAuth {
+) *configurationv1alpha1.KongCredentialBasicAuth {
 	t.Helper()
 
-	c := &configurationv1alpha1.CredentialBasicAuth{
+	c := &configurationv1alpha1.KongCredentialBasicAuth{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "basic-auth-",
 		},
-		Spec: configurationv1alpha1.CredentialBasicAuthSpec{
+		Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
 			ConsumerRef: corev1.LocalObjectReference{
 				Name: consumerName,
 			},
-			CredentialBasicAuthAPISpec: configurationv1alpha1.CredentialBasicAuthAPISpec{
+			KongCredentialBasicAuthAPISpec: configurationv1alpha1.KongCredentialBasicAuthAPISpec{
 				Password: password,
 				Username: username,
 			},
@@ -216,7 +216,7 @@ func deployCredentialBasicAuth(
 	}
 
 	require.NoError(t, cl.Create(ctx, c))
-	t.Logf("deployed new unmanaged CredentialBasicAuth %s", client.ObjectKeyFromObject(c))
+	t.Logf("deployed new unmanaged KongCredentialBasicAuth %s", client.ObjectKeyFromObject(c))
 
 	return c
 }

@@ -125,11 +125,11 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - credentialbasicauths
   - ingressclassparameterses
   - kongclusterplugins
   - kongconsumergroups
   - kongconsumers
+  - kongcredentialbasicauths
   - kongcustomentities
   - kongingresses
   - konglicenses
@@ -144,10 +144,10 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - credentialbasicauths/status
   - kongclusterplugins/status
   - kongconsumergroups/status
   - kongconsumers/status
+  - kongcredentialbasicauths/status
   - kongcustomentities/status
   - kongingresses/status
   - konglicenses/status

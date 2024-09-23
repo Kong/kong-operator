@@ -52,8 +52,7 @@ func TestKongCACertificate(t *testing.T) {
 	t.Log("Setting up SDK expectations on KongCACertificate creation")
 	sdk.CACertificatesSDK.EXPECT().CreateCaCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
 		mock.MatchedBy(func(input sdkkonnectcomp.CACertificateInput) bool {
-			return input.Cert != nil &&
-				*input.Cert == dummyValidCACertPEM
+			return input.Cert == dummyValidCACertPEM
 		}),
 	).Return(&sdkkonnectops.CreateCaCertificateResponse{
 		CACertificate: &sdkkonnectcomp.CACertificate{

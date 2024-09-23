@@ -78,7 +78,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					req.Description != nil && *req.Description == "test control plane 1"
 			})).Return(&sdkkonnectops.CreateControlPlaneResponse{
 				ControlPlane: &sdkkonnectcomp.ControlPlane{
-					ID: "12345",
+					ID: lo.ToPtr("12345"),
 				},
 			}, nil)
 			// verify that mock SDK is called as expected.

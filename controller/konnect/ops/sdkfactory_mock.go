@@ -15,7 +15,7 @@ type MockSDKWrapper struct {
 	PluginSDK            *MockPluginSDK
 	UpstreamsSDK         *MockUpstreamsSDK
 	MeSDK                *MockMeSDK
-	BasicAuthCredentials *MockCredentialBasicAuthSDK
+	BasicAuthCredentials *MockKongCredentialBasicAuthSDK
 	CACertificatesSDK    *MockCACertificatesSDK
 }
 
@@ -31,7 +31,7 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		PluginSDK:            NewMockPluginSDK(t),
 		UpstreamsSDK:         NewMockUpstreamsSDK(t),
 		MeSDK:                NewMockMeSDK(t),
-		BasicAuthCredentials: NewMockCredentialBasicAuthSDK(t),
+		BasicAuthCredentials: NewMockKongCredentialBasicAuthSDK(t),
 		CACertificatesSDK:    NewMockCACertificatesSDK(t),
 	}
 }
@@ -64,7 +64,7 @@ func (m MockSDKWrapper) GetUpstreamsSDK() UpstreamsSDK {
 	return m.UpstreamsSDK
 }
 
-func (m MockSDKWrapper) GetBasicAuthCredentials() CredentialBasicAuthSDK {
+func (m MockSDKWrapper) GetBasicAuthCredentials() KongCredentialBasicAuthSDK {
 	return m.BasicAuthCredentials
 }
 

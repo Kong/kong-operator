@@ -7,24 +7,24 @@ import (
 )
 
 const (
-	// IndexFieldCredentialBasicAuthReferencesKongConsumer is the index name for CredentialBasicAuth -> Consumer.
-	IndexFieldCredentialBasicAuthReferencesKongConsumer = "kongCredentialsBasicAuthConsumerRef"
+	// IndexFieldKongCredentialBasicAuthReferencesKongConsumer is the index name for KongCredentialBasicAuth -> Consumer.
+	IndexFieldKongCredentialBasicAuthReferencesKongConsumer = "kongCredentialsBasicAuthConsumerRef"
 )
 
-// IndexOptionsForCredentialsBasicAuth returns required Index options for CredentialBasicAuth.
+// IndexOptionsForCredentialsBasicAuth returns required Index options for KongCredentialBasicAuth.
 func IndexOptionsForCredentialsBasicAuth() []ReconciliationIndexOption {
 	return []ReconciliationIndexOption{
 		{
-			IndexObject:  &configurationv1alpha1.CredentialBasicAuth{},
-			IndexField:   IndexFieldCredentialBasicAuthReferencesKongConsumer,
-			ExtractValue: kongCredentialBasicAuthReferencesConsumer,
+			IndexObject:  &configurationv1alpha1.KongCredentialBasicAuth{},
+			IndexField:   IndexFieldKongCredentialBasicAuthReferencesKongConsumer,
+			ExtractValue: kongKongCredentialBasicAuthReferencesConsumer,
 		},
 	}
 }
 
-// kongCredentialBasicAuthReferencesConsumer returns the name of referenced Consumer.
-func kongCredentialBasicAuthReferencesConsumer(obj client.Object) []string {
-	cred, ok := obj.(*configurationv1alpha1.CredentialBasicAuth)
+// kongKongCredentialBasicAuthReferencesConsumer returns the name of referenced Consumer.
+func kongKongCredentialBasicAuthReferencesConsumer(obj client.Object) []string {
+	cred, ok := obj.(*configurationv1alpha1.KongCredentialBasicAuth)
 	if !ok {
 		return nil
 	}

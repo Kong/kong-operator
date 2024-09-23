@@ -19,5 +19,5 @@ packages:
       PluginSDK:
       UpstreamsSDK:
       MeSDK:
-      CredentialBasicAuthSDK:
+      KongCredentialBasicAuthSDK:
       CACertificatesSDK:

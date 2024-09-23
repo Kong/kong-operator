@@ -198,7 +198,7 @@ func TestKonnectEntities(t *testing.T) {
 			Namespace: ns.Name,
 		},
 		Spec: configurationv1beta1.KongConsumerGroupSpec{
-			Name: lo.ToPtr(kcgName),
+			Name: kcgName,
 			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
 				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
