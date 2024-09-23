@@ -19,7 +19,7 @@ type SupportedKonnectEntityType interface {
 		configurationv1.KongConsumer |
 		configurationv1beta1.KongConsumerGroup |
 		configurationv1alpha1.KongPluginBinding |
-		configurationv1alpha1.CredentialBasicAuth |
+		configurationv1alpha1.KongCredentialBasicAuth |
 		configurationv1alpha1.KongUpstream |
 		configurationv1alpha1.KongCACertificate
 	// TODO: add other types

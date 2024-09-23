@@ -71,6 +71,11 @@ spec:
                       name:
                         description: Name is the name of the Konnect Control Plane.
                         type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace where the Konnect Control Plane is in.
+                          Currently only cluster scoped resources (KongVault) are allowed to set `konnectNamespacedRef.namespace`.
+                        type: string
                     required:
                     - name
                     type: object

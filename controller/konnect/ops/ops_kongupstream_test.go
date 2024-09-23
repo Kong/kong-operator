@@ -41,7 +41,7 @@ func TestCreateKongUpstream(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: "svc-1",
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
@@ -58,7 +58,7 @@ func TestCreateKongUpstream(t *testing.T) {
 						&sdkkonnectops.CreateUpstreamResponse{
 							Upstream: &sdkkonnectcomp.Upstream{
 								ID:   lo.ToPtr("12345"),
-								Name: lo.ToPtr("svc-1"),
+								Name: "svc-1",
 							},
 						},
 						nil,
@@ -86,7 +86,7 @@ func TestCreateKongUpstream(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: "svc-1",
 						},
 					},
 				}
@@ -110,7 +110,7 @@ func TestCreateKongUpstream(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: "svc-1",
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
@@ -179,7 +179,7 @@ func TestDeleteKongUpstream(t *testing.T) {
 				svc := &configurationv1alpha1.KongUpstream{
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: "svc-1",
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
@@ -211,7 +211,7 @@ func TestDeleteKongUpstream(t *testing.T) {
 				svc := &configurationv1alpha1.KongUpstream{
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: "svc-1",
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
@@ -245,7 +245,7 @@ func TestDeleteKongUpstream(t *testing.T) {
 				svc := &configurationv1alpha1.KongUpstream{
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: "svc-1",
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
@@ -308,7 +308,7 @@ func TestUpdateKongUpstream(t *testing.T) {
 				svc := &configurationv1alpha1.KongUpstream{
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: "svc-1",
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
@@ -334,7 +334,7 @@ func TestUpdateKongUpstream(t *testing.T) {
 							StatusCode: 200,
 							Upstream: &sdkkonnectcomp.Upstream{
 								ID:   lo.ToPtr("123456789"),
-								Name: lo.ToPtr("svc-1"),
+								Name: "svc-1",
 							},
 						},
 						nil,
@@ -363,7 +363,7 @@ func TestUpdateKongUpstream(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: "svc-1",
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
@@ -418,7 +418,7 @@ func TestUpdateKongUpstream(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: "svc-1",
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
@@ -454,7 +454,7 @@ func TestUpdateKongUpstream(t *testing.T) {
 						&sdkkonnectops.CreateUpstreamResponse{
 							Upstream: &sdkkonnectcomp.Upstream{
 								ID:   lo.ToPtr("123456789"),
-								Name: lo.ToPtr("svc-1"),
+								Name: "svc-1",
 							},
 						},
 						nil,

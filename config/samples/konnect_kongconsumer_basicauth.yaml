@@ -35,7 +35,7 @@ spec:
       name: test-cp-basic-auth
 ---
 apiVersion: configuration.konghq.com/v1alpha1
-kind: CredentialBasicAuth
+kind: KongCredentialBasicAuth
 metadata:
   name: basic-auth-1
   namespace: default

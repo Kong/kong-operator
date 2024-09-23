@@ -15,7 +15,7 @@ type SDKWrapper interface {
 	GetPluginSDK() PluginSDK
 	GetUpstreamsSDK() UpstreamsSDK
 	GetMeSDK() MeSDK
-	GetBasicAuthCredentials() CredentialBasicAuthSDK
+	GetBasicAuthCredentials() KongCredentialBasicAuthSDK
 	GetCACertificatesSDK() CACertificatesSDK
 }
 
@@ -71,7 +71,7 @@ func (w sdkWrapper) GetCACertificatesSDK() CACertificatesSDK {
 }
 
 // GetBasicAuthCredentials returns the BasicAuthCredentials SDK to get current organization.
-func (w sdkWrapper) GetBasicAuthCredentials() CredentialBasicAuthSDK {
+func (w sdkWrapper) GetBasicAuthCredentials() KongCredentialBasicAuthSDK {
 	return w.sdk.BasicAuthCredentials
 }
 

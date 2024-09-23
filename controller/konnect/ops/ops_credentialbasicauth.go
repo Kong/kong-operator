@@ -21,10 +21,10 @@ import (
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
-func createCredentialBasicAuth(
+func createKongCredentialBasicAuth(
 	ctx context.Context,
-	sdk CredentialBasicAuthSDK,
-	cred *configurationv1alpha1.CredentialBasicAuth,
+	sdk KongCredentialBasicAuthSDK,
+	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) error {
 	cpID := cred.GetControlPlaneID()
 	if cpID == "" {
@@ -35,7 +35,7 @@ func createCredentialBasicAuth(
 		sdkkonnectops.CreateBasicAuthWithConsumerRequest{
 			ControlPlaneID:              cpID,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
-			BasicAuthWithoutParents:     credentialBasicAuthToBasicAuthWithoutParents(cred),
+			BasicAuthWithoutParents:     kongCredentialBasicAuthToBasicAuthWithoutParents(cred),
 		},
 	)
 
@@ -71,14 +71,14 @@ func createCredentialBasicAuth(
 	return nil
 }
 
-// updateCredentialBasicAuth updates the Konnect BasicAuth entity.
+// updateKongCredentialBasicAuth updates the Konnect BasicAuth entity.
 // It is assumed that the provided BasicAuth has Konnect ID set in status.
 // It returns an error if the BasicAuth does not have a ControlPlaneRef or
 // if the operation fails.
-func updateCredentialBasicAuth(
+func updateKongCredentialBasicAuth(
 	ctx context.Context,
-	sdk CredentialBasicAuthSDK,
-	cred *configurationv1alpha1.CredentialBasicAuth,
+	sdk KongCredentialBasicAuthSDK,
+	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) error {
 	cpID := cred.GetControlPlaneID()
 	if cpID == "" {
@@ -89,7 +89,7 @@ func updateCredentialBasicAuth(
 		ControlPlaneID:              cpID,
 		ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 		BasicAuthID:                 cred.GetKonnectStatus().GetKonnectID(),
-		BasicAuthWithoutParents:     credentialBasicAuthToBasicAuthWithoutParents(cred),
+		BasicAuthWithoutParents:     kongCredentialBasicAuthToBasicAuthWithoutParents(cred),
 	})
 
 	// TODO: handle already exists
@@ -123,13 +123,13 @@ func updateCredentialBasicAuth(
 	return nil
 }
 
-// deleteCredentialBasicAuth deletes a BasicAuth credential in Konnect.
+// deleteKongCredentialBasicAuth deletes a BasicAuth credential in Konnect.
 // It is assumed that the provided BasicAuth has Konnect ID set in status.
 // It returns an error if the operation fails.
-func deleteCredentialBasicAuth(
+func deleteKongCredentialBasicAuth(
 	ctx context.Context,
-	sdk CredentialBasicAuthSDK,
-	cred *configurationv1alpha1.CredentialBasicAuth,
+	sdk KongCredentialBasicAuthSDK,
+	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) error {
 	cpID := cred.GetControlPlaneID()
 	id := cred.GetKonnectStatus().GetKonnectID()
@@ -150,7 +150,7 @@ func deleteCredentialBasicAuth(
 					)
 				return nil
 			}
-			return FailedKonnectOpError[configurationv1alpha1.CredentialBasicAuth]{
+			return FailedKonnectOpError[configurationv1alpha1.KongCredentialBasicAuth]{
 				Op:  DeleteOp,
 				Err: sdkError,
 			}
@@ -164,8 +164,8 @@ func deleteCredentialBasicAuth(
 	return nil
 }
 
-func credentialBasicAuthToBasicAuthWithoutParents(
-	cred *configurationv1alpha1.CredentialBasicAuth,
+func kongCredentialBasicAuthToBasicAuthWithoutParents(
+	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) sdkkonnectcomp.BasicAuthWithoutParents {
 	var (
 		specTags       = cred.Spec.Tags

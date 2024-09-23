@@ -42,7 +42,7 @@ func createControlPlane(
 		return errWrap
 	}
 
-	cp.Status.SetKonnectID(resp.ControlPlane.ID)
+	cp.Status.SetKonnectID(*resp.ControlPlane.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
 			conditions.KonnectEntityProgrammedConditionType,
@@ -143,7 +143,7 @@ func updateControlPlane(
 		}
 	}
 
-	cp.Status.SetKonnectID(resp.ControlPlane.ID)
+	cp.Status.SetKonnectID(*resp.ControlPlane.ID)
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
 			conditions.KonnectEntityProgrammedConditionType,

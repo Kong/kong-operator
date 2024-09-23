@@ -28,16 +28,16 @@ import (
 //   reference from the object
 // - lists have their items stored in Items field, not returned via a method
 
-// CredentialBasicAuthReconciliationWatchOptions returns the watch options for
-// the CredentialBasicAuth.
-func CredentialBasicAuthReconciliationWatchOptions(
+// kongCredentialBasicAuthReconciliationWatchOptions returns the watch options for
+// the KongCredentialBasicAuth.
+func kongCredentialBasicAuthReconciliationWatchOptions(
 	cl client.Client,
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&configurationv1alpha1.CredentialBasicAuth{},
+			return b.For(&configurationv1alpha1.KongCredentialBasicAuth{},
 				builder.WithPredicates(
-					predicate.NewPredicateFuncs(CredentialBasicAuthRefersToKonnectGatewayControlPlane(cl)),
+					predicate.NewPredicateFuncs(kongCredentialBasicAuthRefersToKonnectGatewayControlPlane(cl)),
 				),
 			)
 		},
@@ -45,7 +45,7 @@ func CredentialBasicAuthReconciliationWatchOptions(
 			return b.Watches(
 				&configurationv1.KongConsumer{},
 				handler.EnqueueRequestsFromMapFunc(
-					credentialBasicAuthForKongConsumer(cl),
+					kongCredentialBasicAuthForKongConsumer(cl),
 				),
 			)
 		},
@@ -53,7 +53,7 @@ func CredentialBasicAuthReconciliationWatchOptions(
 			return b.Watches(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
-					credentialBasicAuthForKonnectAPIAuthConfiguration(cl),
+					kongCredentialBasicAuthForKonnectAPIAuthConfiguration(cl),
 				),
 			)
 		},
@@ -61,30 +61,30 @@ func CredentialBasicAuthReconciliationWatchOptions(
 			return b.Watches(
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
-					credentialBasicAuthForKonnectGatewayControlPlane(cl),
+					kongCredentialBasicAuthForKonnectGatewayControlPlane(cl),
 				),
 			)
 		},
 	}
 }
 
-// CredentialBasicAuthRefersToKonnectGatewayControlPlane returns true if the CredentialBasicAuth
+// kongCredentialBasicAuthRefersToKonnectGatewayControlPlane returns true if the KongCredentialBasicAuth
 // refers to a KonnectGatewayControlPlane.
-func CredentialBasicAuthRefersToKonnectGatewayControlPlane(cl client.Client) func(obj client.Object) bool {
+func kongCredentialBasicAuthRefersToKonnectGatewayControlPlane(cl client.Client) func(obj client.Object) bool {
 	return func(obj client.Object) bool {
-		credentialBasicAuth, ok := obj.(*configurationv1alpha1.CredentialBasicAuth)
+		KongCredentialBasicAuth, ok := obj.(*configurationv1alpha1.KongCredentialBasicAuth)
 		if !ok {
 			ctrllog.FromContext(context.Background()).Error(
 				operatorerrors.ErrUnexpectedObject,
 				"failed to run predicate function",
-				"expected", "CredentialBasicAuth", "found", reflect.TypeOf(obj),
+				"expected", "KongCredentialBasicAuth", "found", reflect.TypeOf(obj),
 			)
 			return false
 		}
 
-		consumerRef := credentialBasicAuth.Spec.ConsumerRef
+		consumerRef := KongCredentialBasicAuth.Spec.ConsumerRef
 		nn := types.NamespacedName{
-			Namespace: credentialBasicAuth.Namespace,
+			Namespace: KongCredentialBasicAuth.Namespace,
 			Name:      consumerRef.Name,
 		}
 		consumer := configurationv1.KongConsumer{}
@@ -97,7 +97,7 @@ func CredentialBasicAuthRefersToKonnectGatewayControlPlane(cl client.Client) fun
 	}
 }
 
-func credentialBasicAuthForKonnectAPIAuthConfiguration(
+func kongCredentialBasicAuthForKonnectAPIAuthConfiguration(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -143,10 +143,10 @@ func credentialBasicAuthForKonnectAPIAuthConfiguration(
 				continue
 			}
 
-			var credList configurationv1alpha1.CredentialBasicAuthList
+			var credList configurationv1alpha1.KongCredentialBasicAuthList
 			if err := cl.List(ctx, &credList,
 				client.MatchingFields{
-					IndexFieldCredentialBasicAuthReferencesKongConsumer: consumer.Name,
+					IndexFieldKongCredentialBasicAuthReferencesKongConsumer: consumer.Name,
 				},
 				client.InNamespace(auth.GetNamespace()),
 			); err != nil {
@@ -167,7 +167,7 @@ func credentialBasicAuthForKonnectAPIAuthConfiguration(
 	}
 }
 
-func credentialBasicAuthForKonnectGatewayControlPlane(
+func kongCredentialBasicAuthForKonnectGatewayControlPlane(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -192,10 +192,10 @@ func credentialBasicAuthForKonnectGatewayControlPlane(
 				continue
 			}
 
-			var credList configurationv1alpha1.CredentialBasicAuthList
+			var credList configurationv1alpha1.KongCredentialBasicAuthList
 			if err := cl.List(ctx, &credList,
 				client.MatchingFields{
-					IndexFieldCredentialBasicAuthReferencesKongConsumer: consumer.Name,
+					IndexFieldKongCredentialBasicAuthReferencesKongConsumer: consumer.Name,
 				},
 				client.InNamespace(cp.GetNamespace()),
 			); err != nil {
@@ -216,7 +216,7 @@ func credentialBasicAuthForKonnectGatewayControlPlane(
 	}
 }
 
-func credentialBasicAuthForKongConsumer(
+func kongCredentialBasicAuthForKongConsumer(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -224,10 +224,10 @@ func credentialBasicAuthForKongConsumer(
 		if !ok {
 			return nil
 		}
-		var l configurationv1alpha1.CredentialBasicAuthList
+		var l configurationv1alpha1.KongCredentialBasicAuthList
 		if err := cl.List(ctx, &l,
 			client.MatchingFields{
-				IndexFieldCredentialBasicAuthReferencesKongConsumer: consumer.Name,
+				IndexFieldKongCredentialBasicAuthReferencesKongConsumer: consumer.Name,
 			},
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(consumer.GetNamespace()),

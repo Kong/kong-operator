@@ -264,7 +264,7 @@ func kongPluginWithTargetsToKongPluginInput(
 	}
 
 	pluginInput := &sdkkonnectcomp.PluginInput{
-		Name:    lo.ToPtr(plugin.PluginName),
+		Name:    plugin.PluginName,
 		Config:  pluginConfig,
 		Enabled: lo.ToPtr(!plugin.Disabled),
 		Tags:    tags,

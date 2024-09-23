@@ -62,6 +62,7 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.
 		Scheme:             scheme,
 		Paths:              []string{kongBaseCRDPath},
 		ErrorIfPathMissing: true,
+		MaxTime:            30 * time.Second,
 	})
 	require.NoError(t, err)
 

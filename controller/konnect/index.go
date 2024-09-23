@@ -24,7 +24,7 @@ func ReconciliationIndexOptionsForEntity[
 	switch any(e).(type) {
 	case *configurationv1alpha1.KongPluginBinding:
 		return IndexOptionsForKongPluginBinding()
-	case *configurationv1alpha1.CredentialBasicAuth:
+	case *configurationv1alpha1.KongCredentialBasicAuth:
 		return IndexOptionsForCredentialsBasicAuth()
 	}
 	return nil
