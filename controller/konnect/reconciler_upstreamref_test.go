@@ -28,7 +28,9 @@ type handleUpstreamRefTestCase[T constraints.SupportedKonnectEntityType, TEnt co
 	expectResult        ctrl.Result
 	expectError         bool
 	expectErrorContains string
-	// REVIEW: add assertions on modified ent?
+	// Returns true if the updated entity satisfy the assertion.
+	// Returns false and error message if entity fails to satisfy it.
+	updatedEntAssertions []func(TEnt) (ok bool, message string)
 }
 
 var testKongUpstreamOK = &configurationv1alpha1.KongUpstream{
@@ -224,6 +226,23 @@ func TestHandleUpstreamRef(t *testing.T) {
 			},
 			expectResult: ctrl.Result{},
 			expectError:  false,
+			updatedEntAssertions: []func(*configurationv1alpha1.KongTarget) (bool, string){
+				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
+					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionTrue
+					}), "KongTarget does not have KongUpsteamRefValid condition set to True"
+				},
+				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
+					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == conditions.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionTrue
+					}), "KongTarget does not have ControlPlaneRefValid condition set to True"
+				},
+				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
+					return lo.ContainsBy(kt.OwnerReferences, func(o metav1.OwnerReference) bool {
+						return o.Kind == "KongUpstream" && o.Name == "upstream-ok"
+					}), "OwnerReference of KongTarget is not set"
+				},
+			},
 		},
 		{
 			name: "upstream ref not found",
@@ -240,6 +259,13 @@ func TestHandleUpstreamRef(t *testing.T) {
 			},
 			expectError:         true,
 			expectErrorContains: "can't get the referenced KongUpstream",
+			updatedEntAssertions: []func(*configurationv1alpha1.KongTarget) (bool, string){
+				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
+					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionFalse
+					}), "KongTarget does not have KongUpsteamRefValid condition set to False"
+				},
+			},
 		},
 		{
 			name: "referenced KongUpstream not programmed",
@@ -257,6 +283,15 @@ func TestHandleUpstreamRef(t *testing.T) {
 			objects:      []client.Object{testKongUpstreamNotProgrammed},
 			expectError:  false,
 			expectResult: ctrl.Result{Requeue: true},
+			updatedEntAssertions: []func(*configurationv1alpha1.KongTarget) (bool, string){
+				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
+					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionFalse &&
+							c.Message == fmt.Sprintf("Referenced KongUpstream %s/%s is not programmed yet",
+								testKongUpstreamNotProgrammed.Namespace, testKongUpstreamNotProgrammed.Name)
+					}), "KongTarget does not have KongUpsteamRefValid condition set to False"
+				},
+			},
 		},
 		{
 			name: "referenced KongUpstream has no ControlPlaneRef",
@@ -271,9 +306,17 @@ func TestHandleUpstreamRef(t *testing.T) {
 					},
 				},
 			},
-			objects:             []client.Object{testKongUpstreamNoControlPlaneRef},
-			expectError:         true,
-			expectErrorContains: fmt.Sprintf("references a KongUpstream %s/%s which does not have a ControlPlane ref", testKongUpstreamNoControlPlaneRef.Namespace, testKongUpstreamNoControlPlaneRef.Name),
+			objects:     []client.Object{testKongUpstreamNoControlPlaneRef},
+			expectError: true,
+			expectErrorContains: fmt.Sprintf("references a KongUpstream %s/%s which does not have a ControlPlane ref",
+				testKongUpstreamNoControlPlaneRef.Namespace, testKongUpstreamNoControlPlaneRef.Name),
+			updatedEntAssertions: []func(*configurationv1alpha1.KongTarget) (bool, string){
+				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
+					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionTrue
+					}), "KongTarget does not have KongUpsteamRefValid condition set to True"
+				},
+			},
 		},
 		{
 			name: "referenced KongUpstream is being deleted",
@@ -307,7 +350,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 			},
 			objects:     []client.Object{testKongUpstreamControlPlaneRefNotFound},
 			expectError: true,
-			expectErrorContains: fmt.Sprintf("failed to get ControlPlane %s/%s",
+			expectErrorContains: fmt.Sprintf("referenced Control Plane %s/%s does not exist",
 				testKongUpstreamControlPlaneRefNotFound.Namespace,
 				testKongUpstreamControlPlaneRefNotFound.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
 			),
@@ -331,6 +374,18 @@ func TestHandleUpstreamRef(t *testing.T) {
 			},
 			expectError:  false,
 			expectResult: ctrl.Result{Requeue: true},
+			updatedEntAssertions: []func(*configurationv1alpha1.KongTarget) (bool, string){
+				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
+					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionTrue
+					}), "KongTarget does not have KongUpsteamRefValid condition set to True"
+				},
+				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
+					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == conditions.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionFalse
+					}), "KongTarget does not have ControlPlaneRefValid condition set to False"
+				},
+			},
 		},
 	}
 	testHandleUpstreamRef(t, testCases)
@@ -352,6 +407,14 @@ func testHandleUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			require.NoError(t, fakeClient.SubResource("status").Update(context.Background(), tc.ent))
 
 			res, err := handleKongUpstreamRef(context.Background(), fakeClient, tc.ent)
+
+			var updatedEnt TEnt = tc.ent.DeepCopyObject().(TEnt)
+			require.NoError(t, fakeClient.Get(context.Background(), client.ObjectKeyFromObject(tc.ent), updatedEnt))
+			for _, assertion := range tc.updatedEntAssertions {
+				ok, msg := assertion(updatedEnt)
+				require.True(t, ok, msg)
+			}
+
 			if tc.expectError {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.expectErrorContains)

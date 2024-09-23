@@ -513,7 +513,7 @@ func getCPForRef(
 
 	var cp konnectv1alpha1.KonnectGatewayControlPlane
 	if err := cl.Get(ctx, nn, &cp); err != nil {
-		return nil, fmt.Errorf("failed to get ControlPlane %s", nn)
+		return nil, fmt.Errorf("failed to get ControlPlane %s: %w", nn, err)
 	}
 	return &cp, nil
 }

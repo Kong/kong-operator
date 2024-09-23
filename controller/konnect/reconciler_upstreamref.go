@@ -33,7 +33,7 @@ func getKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 	}
 }
 
-// handleKongUpstreamRef handles KongUpstram reference if the entity referenced some KongUpstream.
+// handleKongUpstreamRef handles KongUpstream reference if the entity references a KongUpstream.
 // Now applies to KongTarget.
 func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	ctx context.Context,
@@ -121,9 +121,9 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	}
 
 	cpRef, ok := getControlPlaneRef(kongUpstream).Get()
-	// REVIEW: the logic will cause KongTarget referencing to a KongUpstream that is not controlled by Konnect entity reconcilers
-	// fall into endless reconcile backoff (so do KongRoute).
-	// In such case, should we just ignore the KongTarget and treat it as not controlled?
+	// TODO: ignore the entity if referenced KongUpstream does not have a Konnect control plane reference
+	// because this situation is likely to mean that they are not controlled by us:
+	// https://github.com/Kong/gateway-operator/issues/629
 	if !ok {
 		return ctrl.Result{}, fmt.Errorf(
 			"%T references a KongUpstream %s which does not have a ControlPlane ref",
@@ -142,11 +142,12 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			return res, errStatus
 		}
 		if k8serrors.IsNotFound(err) {
-			// REVIEW: `getCPForRef` generates a new error but does not wrap the original error from client.Get so this is never reached.
-			// Should we change that?
 			return ctrl.Result{}, ReferencedControlPlaneDoesNotExistError{
-				Reference: nn,
-				Err:       err,
+				Reference: types.NamespacedName{
+					Namespace: ent.GetNamespace(),
+					Name:      cpRef.KonnectNamespacedRef.Name,
+				},
+				Err: err,
 			}
 		}
 		return ctrl.Result{}, err
