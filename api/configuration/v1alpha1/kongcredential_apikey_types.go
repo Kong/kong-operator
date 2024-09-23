@@ -61,7 +61,7 @@ type KongCredentialAPIKeyAPISpec struct {
 	// Key is the key for the API Key credential.
 	//
 	// +kubebuilder:validation:Required
-	Key string `json:"username"`
+	Key string `json:"key"`
 
 	// Tags is a list of tags for the API Key credential.
 	Tags []string `json:"tags,omitempty"`
