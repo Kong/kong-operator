@@ -15,6 +15,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -250,4 +251,66 @@ func deployKongCACertificateAttachedToCP(
 	t.Logf("deployed new KongCACertificate %s", client.ObjectKeyFromObject(cert))
 
 	return cert
+}
+
+// deployKongConsumer deploys a KongConsumer resource attached to a Control Plane and returns the resource.
+func deployKongConsumerAttachedToCP(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	username string,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+) *configurationv1.KongConsumer {
+	t.Helper()
+
+	c := &configurationv1.KongConsumer{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "consumer-",
+		},
+		Spec: configurationv1.KongConsumerSpec{
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: cp.Name,
+				},
+			},
+		},
+		Username: username,
+	}
+
+	require.NoError(t, cl.Create(ctx, c))
+	t.Logf("deployed new KongConsumer %s", client.ObjectKeyFromObject(c))
+
+	return c
+}
+
+// deployKongConsumerGroupAttachedToCP deploys a KongConsumerGroup resource attached to a Control Plane and returns the resource.
+func deployKongConsumerGroupAttachedToCP(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	cgName string,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+) configurationv1beta1.KongConsumerGroup {
+	t.Helper()
+
+	cg := configurationv1beta1.KongConsumerGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "consumer-group-",
+		},
+		Spec: configurationv1beta1.KongConsumerGroupSpec{
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: cp.Name,
+				},
+			},
+			Name: lo.ToPtr(cgName),
+		},
+	}
+
+	require.NoError(t, cl.Create(ctx, &cg))
+	t.Logf("deployed new KongConsumerGroup %s", client.ObjectKeyFromObject(&cg))
+
+	return cg
 }

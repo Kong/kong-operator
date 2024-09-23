@@ -211,8 +211,11 @@ func reconcileConsumerGroupsWithKonnect(
 	if err != nil {
 		return fmt.Errorf("failed to list ConsumerGroups for Consumer %s: %w", client.ObjectKeyFromObject(consumer), err)
 	}
+
+	// Account for an unexpected case where the response body is nil.
+	respBody := lo.FromPtrOr(cgsResp.Object, sdkkonnectops.ListConsumerGroupsForConsumerResponseBody{})
 	// Filter out empty IDs with lo.Compact just in case we get nil IDs in the response.
-	actualConsumerGroupsIDs := lo.Compact(lo.Map(cgsResp.Object.Data, func(cg sdkkonnectcomp.ConsumerGroup, _ int) string {
+	actualConsumerGroupsIDs := lo.Compact(lo.Map(respBody.Data, func(cg sdkkonnectcomp.ConsumerGroup, _ int) string {
 		// Convert nil IDs to empty strings.
 		return lo.FromPtrOr(cg.GetID(), "")
 	}))
