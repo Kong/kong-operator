@@ -232,7 +232,7 @@ func deployKongCACertificateAttachedToCP(
 
 	cert := &configurationv1alpha1.KongCACertificate{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "cert-",
+			GenerateName: "cacert-",
 		},
 		Spec: configurationv1alpha1.KongCACertificateSpec{
 			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
