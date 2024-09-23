@@ -17,7 +17,6 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
@@ -92,7 +91,7 @@ func updateCACertificate(ctx context.Context, sdk CACertificatesSDK, cert *confi
 			k8sutils.NewConditionWithGeneration(
 				conditions.KonnectEntityProgrammedConditionType,
 				metav1.ConditionFalse,
-				"FailedToCreate",
+				"FailedToUpdate",
 				errWrapped.Error(),
 				cert.GetGeneration(),
 			),
@@ -131,12 +130,12 @@ func deleteCACertificate(ctx context.Context, sdk CACertificatesSDK, cert *confi
 					)
 				return nil
 			}
-			return FailedKonnectOpError[configurationv1.KongConsumer]{
+			return FailedKonnectOpError[configurationv1alpha1.KongCACertificate]{
 				Op:  DeleteOp,
 				Err: sdkError,
 			}
 		}
-		return FailedKonnectOpError[configurationv1.KongConsumer]{
+		return FailedKonnectOpError[configurationv1alpha1.KongCACertificate]{
 			Op:  DeleteOp,
 			Err: errWrapped,
 		}
