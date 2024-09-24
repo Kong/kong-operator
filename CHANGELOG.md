@@ -72,10 +72,12 @@
 - Add `KongService`, `KongRoute`, `KongConsumer`, and `KongConsumerGroup` watchers
   in the `KongPluginBinding` reconciler.
   [#571](https://github.com/Kong/gateway-operator/pull/571)
-- Annotating `KongService`s with the `konghq.com/plugins` annotation results in
-  the creation of a managed `KongPluginBinding` resource, which is taken by the
-  `KongPluginBinding` reconciler to create the corresponding plugin object in Konnect.
-  [#550](https://github.com/Kong/gateway-operator/pull/550)
+- Annotating the following resource with the `konghq.com/plugins` annotation results in
+  the creation of a managed `KongPluginBinding` resource:
+  - `KongService` [#550](https://github.com/Kong/gateway-operator/pull/550)
+  - `KongRoute` [#644](https://github.com/Kong/gateway-operator/pull/644)
+  These `KongPluginBinding`s are taken by the `KongPluginBinding` reconciler
+  to create the corresponding plugin objects in Konnect.
 - `KongConsumer` associated with `ConsumerGroups` is now reconciled in Konnect by removing/adding
   the consumer from/to the consumer groups.
   [#592](https://github.com/Kong/gateway-operator/pull/592)

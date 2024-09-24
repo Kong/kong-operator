@@ -487,12 +487,19 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 // a predefined key and so that different controllers can share the same indices.
 func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, developmentMode bool) error {
 	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.KongPluginBinding](ctx, mgr, developmentMode); err != nil {
-		return fmt.Errorf("failed to setup cache indices for %s: %w",
-			constraints.EntityTypeName[configurationv1alpha1.KongPluginBinding](), err)
+		return err
 	}
 	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.KongCredentialBasicAuth](ctx, mgr, developmentMode); err != nil {
-		return fmt.Errorf("failed to setup cache indices for %s: %w",
-			constraints.EntityTypeName[configurationv1alpha1.KongCredentialBasicAuth](), err)
+		return err
+	}
+	if err := setupCacheIndicesForKonnectType[configurationv1.KongConsumer](ctx, mgr, developmentMode); err != nil {
+		return err
+	}
+	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.KongService](ctx, mgr, developmentMode); err != nil {
+		return err
+	}
+	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.KongRoute](ctx, mgr, developmentMode); err != nil {
+		return err
 	}
 	return nil
 }
@@ -515,7 +522,7 @@ func setupCacheIndicesForKonnectType[
 			GetCache().
 			IndexField(ctx, ind.IndexObject, ind.IndexField, ind.ExtractValue)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to setup cache indices for %s: %w", constraints.EntityTypeName[T](), err)
 		}
 	}
 	return nil
