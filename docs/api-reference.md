@@ -834,6 +834,7 @@ deploy the DataPlane.
 | `network` _[DataPlaneNetworkOptions](#dataplanenetworkoptions)_ |  |
 | `resources` _[DataPlaneResources](#dataplaneresources)_ |  |
 | `extensions` _[ExtensionRef](#extensionref) array_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (DataPlaneKonnectExtension), we limit the amount of extensions to 1. |
+| `pluginsToInstall` _[NamespacedName](#namespacedname) array_ | PluginsToInstall is a list of KongPluginInstallation resources that will be installed and available in the DataPlane. |
 
 
 _Appears in:_
@@ -969,6 +970,7 @@ DataPlaneSpec defines the desired state of DataPlane
 | `network` _[DataPlaneNetworkOptions](#dataplanenetworkoptions)_ |  |
 | `resources` _[DataPlaneResources](#dataplaneresources)_ |  |
 | `extensions` _[ExtensionRef](#extensionref) array_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (DataPlaneKonnectExtension), we limit the amount of extensions to 1. |
+| `pluginsToInstall` _[NamespacedName](#namespacedname) array_ | PluginsToInstall is a list of KongPluginInstallation resources that will be installed and available in the DataPlane. |
 
 
 _Appears in:_
@@ -1044,6 +1046,7 @@ configure and deploy a DataPlane object.
 | `deployment` _[DataPlaneDeploymentOptions](#dataplanedeploymentoptions)_ |  |
 | `network` _[GatewayConfigDataPlaneNetworkOptions](#gatewayconfigdataplanenetworkoptions)_ |  |
 | `extensions` _[ExtensionRef](#extensionref) array_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (DataPlaneKonnectExtension), we limit the amount of extensions to 1. |
+| `pluginsToInstall` _[NamespacedName](#namespacedname) array_ | PluginsToInstall is a list of KongPluginInstallation resources that will be installed and available in the Gateways (DataPlanes) that use this GatewayConfig. |
 
 
 _Appears in:_
@@ -1165,6 +1168,9 @@ NamespacedName is a resource identified by name and optional namespace.
 
 
 _Appears in:_
+- [DataPlaneOptions](#dataplaneoptions)
+- [DataPlaneSpec](#dataplanespec)
+- [GatewayConfigDataPlaneOptions](#gatewayconfigdataplaneoptions)
 - [KonnectCertificateOptions](#konnectcertificateoptions)
 
 #### PodDisruptionBudget

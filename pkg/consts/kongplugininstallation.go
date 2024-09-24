@@ -5,7 +5,11 @@ const (
 	// KongPluginInstallation controller.
 	KongPluginInstallationManagedLabelValue = "kong-plugin-installation"
 
-	// AnnotationKongPluginInstallationName is the annotation key used to store the name of the KongPluginInstallation
+	// AnnotationMappedToKongPluginInstallation is the annotation key used to store the name of the KongPluginInstallation
 	// that maps to particular ConfigMap.
-	AnnotationKongPluginInstallationMappedKongPluginInstallation = OperatorLabelPrefix + "mapped-to-kong-plugin-installation"
+	AnnotationMappedToKongPluginInstallation = OperatorLabelPrefix + "mapped-to-kong-plugin-installation"
+
+	// AnnotationKongPluginInstallationGenerationInternal is the annotation key used to store KongPluginInstallation
+	// and its generation, internal usage to re-trigger deployment when KongPluginInstallation changes.
+	AnnotationKongPluginInstallationGenerationInternal = OperatorLabelPrefix + "kong-plugin-installation-generation"
 )

@@ -31,7 +31,7 @@
   [#387](https://github.com/Kong/gateway-operator/pull/387)
 - Introduce `KongPluginInstallation` CRD to allow installing custom Kong
   plugins distributed as container images.
-  [#400](https://github.com/Kong/gateway-operator/pull/400), [#424](https://github.com/Kong/gateway-operator/pull/424), [#474](https://github.com/Kong/gateway-operator/pull/474), [#560](https://github.com/Kong/gateway-operator/pull/560), [#615](https://github.com/Kong/gateway-operator/pull/615)
+  [#400](https://github.com/Kong/gateway-operator/pull/400), [#424](https://github.com/Kong/gateway-operator/pull/424), [#474](https://github.com/Kong/gateway-operator/pull/474), [#560](https://github.com/Kong/gateway-operator/pull/560), [#615](https://github.com/Kong/gateway-operator/pull/615), [#476](https://github.com/Kong/gateway-operator/pull/476)
 - Extended `DataPlane` API with a possibility to specify `PodDisruptionBudget` to be
   created for the `DataPlane` deployments via `spec.resources.podDisruptionBudget`.
   [#464](https://github.com/Kong/gateway-operator/pull/464)

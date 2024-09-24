@@ -51,7 +51,7 @@ func (r *Reconciler) createDataPlane(ctx context.Context,
 		},
 	}
 	if gatewayConfig.Spec.DataPlaneOptions != nil {
-		dataplane.Spec.DataPlaneOptions = *gatewayConfigDataPlaneOptionsToDataPlaneOptions(*gatewayConfig.Spec.DataPlaneOptions)
+		dataplane.Spec.DataPlaneOptions = *gatewayConfigDataPlaneOptionsToDataPlaneOptions(gatewayConfig.Namespace, *gatewayConfig.Spec.DataPlaneOptions)
 	}
 	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions, r.DefaultDataPlaneImage)
 	if err := setDataPlaneIngressServicePorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners); err != nil {
@@ -126,9 +126,20 @@ func (r *Reconciler) getGatewayAddresses(
 	return gatewayAddressesFromService(services[0])
 }
 
-func gatewayConfigDataPlaneOptionsToDataPlaneOptions(opts operatorv1beta1.GatewayConfigDataPlaneOptions) *operatorv1beta1.DataPlaneOptions {
+func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
+	gatewayConfigNamespace string, opts operatorv1beta1.GatewayConfigDataPlaneOptions,
+) *operatorv1beta1.DataPlaneOptions {
+	// When Namespace is not provided, the GatewayConfiguration's namespace is assumed.
+	pluginsToInstall := lo.Map(opts.PluginsToInstall, func(pluginReference operatorv1beta1.NamespacedName, _ int) operatorv1beta1.NamespacedName {
+		if pluginReference.Namespace == "" {
+			pluginReference.Namespace = gatewayConfigNamespace
+		}
+		return pluginReference
+	})
+
 	dataPlaneOptions := &operatorv1beta1.DataPlaneOptions{
-		Deployment: opts.Deployment,
+		Deployment:       opts.Deployment,
+		PluginsToInstall: pluginsToInstall,
 	}
 
 	if opts.Network.Services != nil && opts.Network.Services.Ingress != nil {

@@ -2,197 +2,274 @@ package integration
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/controller/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
+	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
+
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
 func TestKongPluginInstallationEssentials(t *testing.T) {
-	t.Parallel()
-
+	if webhookEnabled {
+		// It can't be tested with webhook, because it rejects resources immediately, that would
+		// be accepted by the controller taking into account the eventual consistency nature of K8s.
+		t.Skip("webhook is enabled, skipping the test (due to webhook validation limitations)")
+	}
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	const registryUrl = "northamerica-northeast1-docker.pkg.dev/k8s-team-playground/"
+
+	const pluginInvalidLayersImage = registryUrl + "plugin-example/invalid-layers"
+
+	const pluginMyHeaderImage = registryUrl + "plugin-example/myheader"
+	expectedHeadersForMyHeader := http.Header{"myheader": {"roar"}}
+
+	const pluginMyHeader2Image = registryUrl + "plugin-example-private/myheader-2"
+	expectedHeadersForMyHeader2 := http.Header{"newheader": {"amazing"}}
+
 	t.Log("deploying an invalid KongPluginInstallation resource")
-	kpiNN := k8stypes.NamespacedName{
+	kpiPublicNN := k8stypes.NamespacedName{
 		Name:      "test-kpi",
 		Namespace: namespace.Name,
 	}
-	kpi := &v1alpha1.KongPluginInstallation{
+	kpiPublic := &operatorv1alpha1.KongPluginInstallation{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kpiNN.Name,
+			Name:      kpiPublicNN.Name,
+			Namespace: kpiPublicNN.Namespace,
 		},
-		Spec: v1alpha1.KongPluginInstallationSpec{
-			Image: registryUrl + "plugin-example/invalid-layers",
+		Spec: operatorv1alpha1.KongPluginInstallationSpec{
+			Image: pluginInvalidLayersImage,
 		},
 	}
-	kpi, err := GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Create(GetCtx(), kpi, metav1.CreateOptions{})
+	kpiPublic, err := GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(namespace.Name).Create(GetCtx(), kpiPublic, metav1.CreateOptions{})
 	require.NoError(t, err)
-	cleaner.Add(kpi)
+	cleaner.Add(kpiPublic)
+
 	t.Log("waiting for the KongPluginInstallation resource to be rejected, because of the invalid image")
 	checkKongPluginInstallationConditions(
-		t,
-		kpiNN,
-		metav1.ConditionFalse,
-		`problem with the image: "northamerica-northeast1-docker.pkg.dev/k8s-team-playground/plugin-example/invalid-layers" error: expected exactly one layer with plugin, found 2 layers`)
+		t, kpiPublicNN, metav1.ConditionFalse,
+		fmt.Sprintf(`problem with the image: "%s" error: expected exactly one layer with plugin, found 2 layers`, pluginInvalidLayersImage),
+	)
+
+	t.Log("deploy Gateway with example service and HTTPRoute")
+	ip, gatewayConfigNN, httpRouteNN := deployGatewayWithKPI(t, cleaner, namespace.Name)
+	t.Log("attach broken KPI to the Gateway")
+	attachKPI(t, gatewayConfigNN, kpiPublicNN)
+	t.Log("ensure that status of the DataPlane is not ready with proper description of the issue")
+	checkDataPlaneStatus(
+		t, namespace.Name, metav1.ConditionFalse, dataplane.DataPlaneConditionReferencedResourcesNotAvailable,
+		fmt.Sprintf("something wrong with referenced KongPluginInstallation %s, please check it", client.ObjectKeyFromObject(kpiPublic)),
+	)
 
 	t.Log("updating KongPluginInstallation resource to a valid image")
-	kpi, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Get(GetCtx(), kpiNN.Name, metav1.GetOptions{})
-	kpi.Spec.Image = registryUrl + "plugin-example/valid:0.1.0"
+	kpiPublic, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiPublicNN.Namespace).Get(GetCtx(), kpiPublicNN.Name, metav1.GetOptions{})
+	kpiPublic.Spec.Image = pluginMyHeaderImage
 	require.NoError(t, err)
-	_, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Update(GetCtx(), kpi, metav1.UpdateOptions{})
+	_, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiPublicNN.Namespace).Update(GetCtx(), kpiPublic, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	t.Log("waiting for the KongPluginInstallation resource to be accepted")
-	checkKongPluginInstallationConditions(t, kpiNN, metav1.ConditionTrue, "plugin successfully saved in cluster as ConfigMap")
+	checkKongPluginInstallationConditions(t, kpiPublicNN, metav1.ConditionTrue, "plugin successfully saved in cluster as ConfigMap")
 
-	var respectiveCM corev1.ConfigMap
-	t.Log("check creation and content of respective ConfigMap")
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		configMaps, err := GetClients().K8sClient.CoreV1().ConfigMaps(namespace.Name).List(GetCtx(), metav1.ListOptions{})
-		if !assert.NoError(c, err) {
-			return
-		}
-		var found bool
-		respectiveCM, found = lo.Find(configMaps.Items, func(cm corev1.ConfigMap) bool {
-			return cm.Labels[consts.GatewayOperatorManagedByLabel] == consts.KongPluginInstallationManagedLabelValue &&
-				cm.Annotations[consts.AnnotationKongPluginInstallationMappedKongPluginInstallation] == kpiNN.String() &&
-				strings.HasPrefix(cm.Name, kpiNN.Name)
-		})
-		if !assert.True(c, found) {
-			return
-		}
-	}, 15*time.Second, time.Second)
-	require.Equal(t, pluginExpectedContent(), respectiveCM.Data)
+	t.Log("waiting for the DataPlane that reference KongPluginInstallation to be ready")
+	checkDataPlaneStatus(t, namespace.Name, metav1.ConditionTrue, consts.ResourceReadyReason, "")
+	t.Log("attach configured KongPlugin with KongPluginInstallation to the HTTPRoute")
+	attachKongPluginBasedOnKPIToRoute(t, cleaner, httpRouteNN, kpiPublicNN)
 
-	t.Log("delete respective ConfigMap to check if it will be recreated")
-	var respectiveCMName = respectiveCM.Name
-	err = GetClients().K8sClient.CoreV1().ConfigMaps(namespace.Name).Delete(GetCtx(), respectiveCMName, metav1.DeleteOptions{})
-	require.NoError(t, err)
-	t.Log("check recreation of respective ConfigMap")
-	var recreatedCM *corev1.ConfigMap
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		recreatedCM, err = GetClients().K8sClient.CoreV1().ConfigMaps(kpiNN.Namespace).Get(GetCtx(), respectiveCMName, metav1.GetOptions{})
-		assert.NoError(c, err)
-	}, 15*time.Second, time.Second)
-	require.Equal(t, pluginExpectedContent(), recreatedCM.Data)
+	t.Log("verify that plugin is properly configured and works")
+	verifyCustomPlugins(t, ip, expectedHeadersForMyHeader)
 
 	if registryCreds := GetKongPluginImageRegistryCredentialsForTests(); registryCreds != "" {
-		// Create secondNamespace with K8s client to check cross-namespace capabilities.
-		secondNamespace := &corev1.Namespace{
+		// Create kpiPrivateNamespace with K8s client to check cross-namespace capabilities.
+		t.Log("add additional KongPluginInstallation resource from a private image")
+		kpiPrivateNN := k8stypes.NamespacedName{
+			Name:      "test-kpi-private",
+			Namespace: createRandomNamespace(t),
+		}
+		kpiPrivate := &operatorv1alpha1.KongPluginInstallation{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: uuid.NewString(),
+				Name:      kpiPrivateNN.Name,
+				Namespace: kpiPrivateNN.Namespace,
+			},
+			Spec: operatorv1alpha1.KongPluginInstallationSpec{
+				Image: pluginMyHeader2Image,
 			},
 		}
-		_, err := GetClients().K8sClient.CoreV1().Namespaces().Create(GetCtx(), secondNamespace, metav1.CreateOptions{})
 		require.NoError(t, err)
-		cleaner.Add(secondNamespace)
-
-		t.Log("update KongPluginInstallation resource to a private image")
-		kpi, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Get(GetCtx(), kpiNN.Name, metav1.GetOptions{})
-		kpi.Spec.Image = registryUrl + "plugin-example-private/valid:0.1.0"
-		require.NoError(t, err)
-		_, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Update(GetCtx(), kpi, metav1.UpdateOptions{})
+		_, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiPrivateNN.Namespace).Create(GetCtx(), kpiPrivate, metav1.CreateOptions{})
 		require.NoError(t, err)
 		t.Log("waiting for the KongPluginInstallation resource to be reconciled and report unauthenticated request")
 		checkKongPluginInstallationConditions(
-			t, kpiNN, metav1.ConditionFalse, "response status code 403: denied: Unauthenticated request. Unauthenticated requests do not have permission",
+			t, kpiPrivateNN, metav1.ConditionFalse, "response status code 403: denied: Unauthenticated request. Unauthenticated requests do not have permission",
 		)
 
-		t.Log("update KongPluginInstallation resource with credentials reference in other namespace")
-		kpi, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Get(GetCtx(), kpiNN.Name, metav1.GetOptions{})
+		t.Log("update KongPluginInstallation resource with credentials reference in other namespace than KongPluginInstallation")
+		namespaceForSecret := createRandomNamespace(t)
+		kpiPrivate, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiPrivateNN.Namespace).Get(GetCtx(), kpiPrivateNN.Name, metav1.GetOptions{})
 		require.NoError(t, err)
+		const kindSecret = gatewayv1.Kind("Secret")
 		secretRef := gatewayv1.SecretObjectReference{
-			Kind:      lo.ToPtr(gatewayv1.Kind("Secret")),
-			Namespace: lo.ToPtr(gatewayv1.Namespace(secondNamespace.Name)),
+			Kind:      lo.ToPtr(kindSecret),
+			Namespace: lo.ToPtr(gatewayv1.Namespace(namespaceForSecret)),
 			Name:      "kong-plugin-image-registry-credentials",
 		}
-		kpi.Spec.ImagePullSecretRef = &secretRef
-		_, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Update(GetCtx(), kpi, metav1.UpdateOptions{})
+		kpiPrivate.Spec.ImagePullSecretRef = &secretRef
+		_, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiPrivateNN.Namespace).Update(GetCtx(), kpiPrivate, metav1.UpdateOptions{})
 		require.NoError(t, err)
 		t.Log("waiting for the KongPluginInstallation resource to be reconciled and report missing ReferenceGrant for the Secret with credentials")
 		checkKongPluginInstallationConditions(
-			t, kpiNN, metav1.ConditionFalse, fmt.Sprintf("Secret %s/%s reference not allowed by any ReferenceGrant", *secretRef.Namespace, secretRef.Name),
+			t, kpiPrivateNN, metav1.ConditionFalse, fmt.Sprintf("Secret %s/%s reference not allowed by any ReferenceGrant", *secretRef.Namespace, secretRef.Name),
 		)
+		attachKPI(t, gatewayConfigNN, kpiPrivateNN)
+		checkDataPlaneStatus(
+			t, namespace.Name, metav1.ConditionFalse, dataplane.DataPlaneConditionReferencedResourcesNotAvailable,
+			fmt.Sprintf("something wrong with referenced KongPluginInstallation %s, please check it", client.ObjectKeyFromObject(kpiPrivate)),
+		)
+
 		t.Log("add missing ReferenceGrant for the Secret with credentials")
 		refGrant := &gatewayv1beta1.ReferenceGrant{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kong-plugin-image-registry-credentials",
-				Namespace: secondNamespace.Name,
+				Namespace: namespaceForSecret,
 			},
 			Spec: gatewayv1beta1.ReferenceGrantSpec{
 				To: []gatewayv1beta1.ReferenceGrantTo{
 					{
-						Kind: gatewayv1.Kind("Secret"),
+						Kind: kindSecret,
 						Name: lo.ToPtr(secretRef.Name),
 					},
 				},
 				From: []gatewayv1beta1.ReferenceGrantFrom{
 					{
-						Group:     gatewayv1.Group(v1alpha1.SchemeGroupVersion.Group),
+						Group:     gatewayv1.Group(operatorv1alpha1.SchemeGroupVersion.Group),
 						Kind:      gatewayv1.Kind("KongPluginInstallation"),
-						Namespace: gatewayv1.Namespace(namespace.Name),
+						Namespace: gatewayv1.Namespace(kpiPrivate.Namespace),
 					},
 				},
 			},
 		}
-		_, err = GetClients().GatewayClient.GatewayV1beta1().ReferenceGrants(secondNamespace.Name).Create(GetCtx(), refGrant, metav1.CreateOptions{})
+		_, err = GetClients().GatewayClient.GatewayV1beta1().ReferenceGrants(namespaceForSecret).Create(GetCtx(), refGrant, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		t.Log("waiting for the KongPluginInstallation resource to be reconciled and report missing Secret with credentials")
 		checkKongPluginInstallationConditions(
-			t, kpiNN, metav1.ConditionFalse, fmt.Sprintf(`cannot retrieve secret "%s/%s"`, *secretRef.Namespace, secretRef.Name),
+			t, kpiPrivateNN, metav1.ConditionFalse,
+			fmt.Sprintf(`referenced Secret "%s/%s" not found`, *secretRef.Namespace, secretRef.Name),
+		)
+		checkDataPlaneStatus(
+			t, namespace.Name, metav1.ConditionFalse, dataplane.DataPlaneConditionReferencedResourcesNotAvailable,
+			fmt.Sprintf("something wrong with referenced KongPluginInstallation %s, please check it", client.ObjectKeyFromObject(kpiPrivate)),
 		)
 
 		t.Log("add missing Secret with credentials")
 		secret := corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      string(secretRef.Name),
-				Namespace: secondNamespace.Name,
+				Name: string(secretRef.Name),
 			},
 			Type: corev1.SecretTypeDockerConfigJson,
 			StringData: map[string]string{
 				".dockerconfigjson": registryCreds,
 			},
 		}
-		_, err = GetClients().K8sClient.CoreV1().Secrets(secondNamespace.Name).Create(GetCtx(), &secret, metav1.CreateOptions{})
+		_, err = GetClients().K8sClient.CoreV1().Secrets(string(*secretRef.Namespace)).Create(GetCtx(), &secret, metav1.CreateOptions{})
 		require.NoError(t, err)
 		t.Log("waiting for the KongPluginInstallation resource to be reconciled successfully")
 		checkKongPluginInstallationConditions(
-			t, kpiNN, metav1.ConditionTrue, "plugin successfully saved in cluster as ConfigMap",
+			t, kpiPrivateNN, metav1.ConditionTrue, "plugin successfully saved in cluster as ConfigMap",
 		)
-		var updatedCM *corev1.ConfigMap
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			updatedCM, err = GetClients().K8sClient.CoreV1().ConfigMaps(kpiNN.Namespace).Get(GetCtx(), respectiveCMName, metav1.GetOptions{})
-			assert.NoError(c, err)
-			assert.Equal(c, privatePluginExpectedContent(), updatedCM.Data)
-		}, 15*time.Second, time.Second)
+
+		t.Log("waiting for the DataPlane that reference KongPluginInstallation to be ready")
+		checkDataPlaneStatus(t, namespace.Name, metav1.ConditionTrue, consts.ResourceReadyReason, "")
+		t.Log("attach configured KongPlugin to the HTTPRoute")
+		attachKongPluginBasedOnKPIToRoute(t, cleaner, httpRouteNN, kpiPrivateNN)
+		t.Log("verify that plugin is properly configured and works")
+		verifyCustomPlugins(t, ip, expectedHeadersForMyHeader, expectedHeadersForMyHeader2)
 	} else {
 		t.Log("skipping private image test - no credentials provided")
 	}
+}
 
-	t.Log("delete KongPluginInstallation resource")
-	err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiNN.Namespace).Delete(GetCtx(), kpiNN.Name, metav1.DeleteOptions{})
+func deployGatewayWithKPI(
+	t *testing.T, cleaner *clusters.Cleaner, namespace string,
+) (gatewayIPAddress string, gatewayConfigNN, httpRouteNN k8stypes.NamespacedName) {
+	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace)
+	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
+	gatewayConfig, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
-	t.Log("check deletion of respective ConfigMap")
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		_, err := GetClients().K8sClient.CoreV1().ConfigMaps(kpiNN.Namespace).Get(GetCtx(), respectiveCM.Name, metav1.GetOptions{})
-		assert.True(c, apierrors.IsNotFound(err), "ConfigMap not deleted")
-	}, 15*time.Second, time.Second)
+	cleaner.Add(gatewayConfig)
+
+	gatewayClass := helpers.MustGenerateGatewayClass(t, gatewayv1.ParametersReference{
+		Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
+		Kind:      gatewayv1.Kind("GatewayConfiguration"),
+		Namespace: (*gatewayv1.Namespace)(&gatewayConfig.Namespace),
+		Name:      gatewayConfig.Name,
+	})
+	t.Logf("deploying GatewayClass %s", gatewayClass.Name)
+	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gatewayClass)
+
+	gatewayNSN := k8stypes.NamespacedName{
+		Name:      uuid.NewString(),
+		Namespace: namespace,
+	}
+	gateway := helpers.GenerateGateway(gatewayNSN, gatewayClass)
+	t.Logf("deploying Gateway %s/%s", gateway.Namespace, gateway.Name)
+	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace).Create(GetCtx(), gateway, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gateway)
+
+	t.Logf("verifying Gateway %s/%s gets an IP address", gateway.Namespace, gateway.Name)
+	require.Eventually(t, testutils.GatewayIPAddressExist(t, GetCtx(), gatewayNSN, clients), 4*testutils.SubresourceReadinessWait, time.Second)
+	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayNSN, clients)
+
+	t.Log("deploying backend deployment (httpbin) of HTTPRoute")
+	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err = GetEnv().Cluster().Client().AppsV1().Deployments(namespace).Create(GetCtx(), deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
+	_, err = GetEnv().Cluster().Client().CoreV1().Services(namespace).Create(GetCtx(), service, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	httpRoute := helpers.GenerateHTTPRoute(namespace, gateway.Name, service.Name)
+	t.Logf("creating httproute %s/%s to access deployment %s via kong", httpRoute.Namespace, httpRoute.Name, deployment.Name)
+	require.EventuallyWithT(t,
+		func(c *assert.CollectT) {
+			result, err := GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace).Create(GetCtx(), httpRoute, metav1.CreateOptions{})
+			if err != nil {
+				t.Logf("failed to deploy httproute: %v", err)
+				c.Errorf("failed to deploy httproute: %v", err)
+				return
+			}
+			cleaner.Add(result)
+		},
+		testutils.DefaultIngressWait, testutils.WaitIngressTick,
+	)
+
+	return gateway.Status.Addresses[0].Value, client.ObjectKeyFromObject(gatewayConfig), client.ObjectKeyFromObject(httpRoute)
 }
 
 func checkKongPluginInstallationConditions(
@@ -202,7 +279,6 @@ func checkKongPluginInstallationConditions(
 	expectedMessage string,
 ) {
 	t.Helper()
-
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		kpi, err := GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(namespacedName.Namespace).Get(GetCtx(), namespacedName.Name, metav1.GetOptions{})
 		if !assert.NoError(c, err) {
@@ -212,27 +288,110 @@ func checkKongPluginInstallationConditions(
 			return
 		}
 		status := kpi.Status.Conditions[0]
-		assert.EqualValues(c, v1alpha1.KongPluginInstallationConditionStatusAccepted, status.Type)
+		assert.EqualValues(c, operatorv1alpha1.KongPluginInstallationConditionStatusAccepted, status.Type)
 		assert.EqualValues(c, conditionStatus, status.Status)
 		if conditionStatus == metav1.ConditionTrue {
-			assert.EqualValues(c, v1alpha1.KongPluginInstallationReasonReady, status.Reason)
+			assert.EqualValues(c, operatorv1alpha1.KongPluginInstallationReasonReady, status.Reason)
 		} else {
-			assert.EqualValues(c, v1alpha1.KongPluginInstallationReasonFailed, status.Reason)
+			assert.EqualValues(c, operatorv1alpha1.KongPluginInstallationReasonFailed, status.Reason)
 		}
 		assert.Contains(c, status.Message, expectedMessage)
 	}, 15*time.Second, time.Second)
 }
 
-func pluginExpectedContent() map[string]string {
-	return map[string]string{
-		"handler.lua": "handler-content\n",
-		"schema.lua":  "schema-content\n",
-	}
+func attachKPI(t *testing.T, gatewayConfigNN k8stypes.NamespacedName, kpiNN k8stypes.NamespacedName) {
+	t.Helper()
+	gatewayConfig, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(gatewayConfigNN.Namespace).Get(GetCtx(), gatewayConfigNN.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	gatewayConfig.Spec.DataPlaneOptions.PluginsToInstall = append(gatewayConfig.Spec.DataPlaneOptions.PluginsToInstall, operatorv1beta1.NamespacedName(kpiNN))
+	_, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(gatewayConfigNN.Namespace).Update(GetCtx(), gatewayConfig, metav1.UpdateOptions{})
+	require.NoError(t, err)
 }
 
-func privatePluginExpectedContent() map[string]string {
-	return map[string]string{
-		"handler.lua": "handler-content-private\n",
-		"schema.lua":  "schema-content-private\n",
+func attachKongPluginBasedOnKPIToRoute(t *testing.T, cleaner *clusters.Cleaner, httpRouteNN, kpiNN k8stypes.NamespacedName) {
+	kongPluginName := kpiNN.Name + "-plugin"
+	// To have it in the same namespace as the HTTPRoute to which it is attached.
+	kongPluginNamespace := httpRouteNN.Namespace
+	kongPlugin := configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      kongPluginName,
+			Namespace: kongPluginNamespace,
+		},
+		PluginName: kpiNN.Name,
 	}
+	_, err := GetClients().ConfigurationClient.ConfigurationV1().KongPlugins(kongPluginNamespace).Create(GetCtx(), &kongPlugin, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(&kongPlugin)
+
+	t.Logf("attaching KongPlugin to GatewayConfiguration")
+	// Update httpRoute with KongPlugin
+	httpRoute, err := GetClients().GatewayClient.GatewayV1().HTTPRoutes(httpRouteNN.Namespace).Get(GetCtx(), httpRouteNN.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	const kpAnnotation = "konghq.com/plugins"
+	httpRoute.Annotations[kpAnnotation] = strings.Join(
+		append(strings.Split(httpRoute.Annotations[kpAnnotation], ","), kongPluginName), ",",
+	)
+	_, err = GetClients().GatewayClient.GatewayV1().HTTPRoutes(httpRouteNN.Namespace).Update(GetCtx(), httpRoute, metav1.UpdateOptions{})
+	require.NoError(t, err)
+}
+
+func checkDataPlaneStatus(
+	t *testing.T,
+	namespace string,
+	expectedConditionStatus metav1.ConditionStatus,
+	expectedConditionReason consts.ConditionReason,
+	expectedConditionMessage string,
+) {
+	t.Helper()
+	var dp operatorv1beta1.DataPlane
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		dps, err := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace).List(GetCtx(), metav1.ListOptions{})
+		if !assert.NoError(c, err) {
+			return
+		}
+		if assert.Len(c, dps.Items, 1) {
+			dp = dps.Items[0]
+		}
+		if !assert.Len(c, dp.Status.Conditions, 1) {
+			return
+		}
+
+		condition := dp.Status.Conditions[0]
+		assert.EqualValues(c, consts.ReadyType, condition.Type)
+		assert.EqualValues(c, expectedConditionStatus, condition.Status)
+		assert.EqualValues(c, expectedConditionReason, condition.Reason)
+		assert.Equal(c, expectedConditionMessage, condition.Message)
+	}, 2*time.Minute, time.Second)
+}
+
+func verifyCustomPlugins(t *testing.T, ip string, expectedHeaders ...http.Header) {
+	t.Helper()
+	httpClient, err := helpers.CreateHTTPClient(nil, "")
+	require.NoError(t, err)
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		resp, err := httpClient.Get(fmt.Sprintf("http://%s/test", ip))
+		if !assert.NoError(c, err) {
+			return
+		}
+		defer resp.Body.Close()
+		if !assert.Equal(c, http.StatusOK, resp.StatusCode) {
+			return
+		}
+		for _, h := range expectedHeaders {
+			for k, v := range h {
+				assert.Equal(c, v, resp.Header.Values(k))
+			}
+		}
+	}, 15*time.Second, time.Second)
+}
+
+func createRandomNamespace(t *testing.T) string {
+	namespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+		},
+	}
+	_, err := GetClients().K8sClient.CoreV1().Namespaces().Create(GetCtx(), namespace, metav1.CreateOptions{})
+	require.NoError(t, err)
+	return namespace.Name
 }

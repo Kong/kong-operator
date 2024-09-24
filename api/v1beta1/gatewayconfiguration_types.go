@@ -73,6 +73,11 @@ type GatewayConfigDataPlaneOptions struct {
 	// +kubebuilder:validation:MinItems=0
 	// +kubebuilder:validation:MaxItems=1
 	Extensions []v1alpha1.ExtensionRef `json:"extensions,omitempty"`
+	// PluginsToInstall is a list of KongPluginInstallation resources that
+	// will be installed and available in the Gateways (DataPlanes) that
+	// use this GatewayConfig.
+	// +optional
+	PluginsToInstall []NamespacedName `json:"pluginsToInstall,omitempty"`
 }
 
 // GatewayConfigDataPlaneNetworkOptions defines network related options for a DataPlane.

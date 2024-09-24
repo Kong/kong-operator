@@ -17174,6 +17174,23 @@ spec:
                             type: object
                         type: object
                     type: object
+                  pluginsToInstall:
+                    description: |-
+                      PluginsToInstall is a list of KongPluginInstallation resources that
+                      will be installed and available in the Gateways (DataPlanes) that
+                      use this GatewayConfig.
+                    items:
+                      description: NamespacedName is a resource identified by name
+                        and optional namespace.
+                      properties:
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                 type: object
             type: object
           status:

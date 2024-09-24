@@ -86,7 +86,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		log.Info(logger, "failed to validate dataplane: "+err.Error(), dataplane)
 		r.eventRecorder.Event(dataplane, "Warning", "ValidationFailed", err.Error())
-		markErr := r.ensureDataPlaneIsMarkedNotReady(ctx, logger, dataplane, DataPlaneConditionValidationFailed, err.Error())
+		markErr := ensureDataPlaneIsMarkedNotReady(ctx, logger, r.Client, dataplane, DataPlaneConditionValidationFailed, err.Error())
 		return ctrl.Result{}, markErr
 	}
 
@@ -162,7 +162,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	log.Trace(logger, "ensuring DataPlane has service addesses in status", dataplaneIngressService)
+	log.Trace(logger, "ensuring DataPlane has service addresses in status", dataplaneIngressService)
 	if updated, err := r.ensureDataPlaneAddressesStatus(ctx, logger, dataplane, dataplaneIngressService); err != nil {
 		return ctrl.Result{}, err
 	} else if updated {
@@ -176,6 +176,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	deploymentOpts := []k8sresources.DeploymentOpt{
 		labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),
 	}
+
+	log.Trace(logger, "ensuring generation of deployment configuration for KongPluginInstallations configured for DataPlane", dataplane)
+	kpisForDeployment, requeue, err := ensureMappedConfigMapToKongPluginInstallationForDataPlane(ctx, logger, r.Client, dataplane)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("cannot ensure KongPluginInstallation for DataPlane: %w", err)
+	}
+	if requeue {
+		return ctrl.Result{Requeue: true}, nil
+	}
+	deploymentOpts = append(deploymentOpts, withCustomPlugins(kpisForDeployment...))
+
 	deploymentBuilder := NewDeploymentBuilder(logger.WithName("deployment_builder"), r.Client).
 		WithBeforeCallbacks(r.Callbacks.BeforeDeployment).
 		WithAfterCallbacks(r.Callbacks.AfterDeployment).
@@ -186,8 +197,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.DevelopmentMode)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("could not build Deployment for DataPlane %s: %w",
-			dpNn, err)
+		return ctrl.Result{}, fmt.Errorf("could not build Deployment for DataPlane %s: %w", dpNn, err)
 	}
 	if res != op.Noop {
 		return ctrl.Result{}, nil

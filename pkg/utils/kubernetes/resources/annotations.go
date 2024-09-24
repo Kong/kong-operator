@@ -16,6 +16,6 @@ func AnnotateConfigMapWithKongPluginInstallation(cm *corev1.ConfigMap, kpi v1alp
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
-	annotations[consts.AnnotationKongPluginInstallationMappedKongPluginInstallation] = client.ObjectKeyFromObject(&kpi).String()
+	annotations[consts.AnnotationMappedToKongPluginInstallation] = client.ObjectKeyFromObject(&kpi).String()
 	cm.SetAnnotations(annotations)
 }
