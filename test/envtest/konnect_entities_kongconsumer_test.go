@@ -163,7 +163,7 @@ func TestKongConsumer(t *testing.T) {
 			},
 		}, nil)
 
-		t.Log("Setting up SDK expectation on possibly updating KongConsumer ( due to asynchronous nature of updates between KongConsumer and KongConsumerGroup)")
+		t.Log("Setting up SDK expectation on possibly updating KongConsumer (due to asynchronous nature of updates between KongConsumer and KongConsumerGroup)")
 		sdk.ConsumersSDK.EXPECT().
 			UpsertConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertConsumerRequest) bool {
 				return r.ConsumerID == consumerID
