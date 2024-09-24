@@ -241,6 +241,64 @@ func (obj *KongCACertificate) GetConditions() []metav1.Condition {
 func (obj *KongCACertificate) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+func (obj *KongCertificate) initKonnectStatus() {
+	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
+}
+
+// GetKonnectStatus returns the Konnect status contained in the KongCertificate status.
+func (obj *KongCertificate) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
+	if obj.Status.Konnect == nil {
+		return nil
+	}
+	return &obj.Status.Konnect.KonnectEntityStatus
+}
+
+// GetKonnectID returns the Konnect ID in the KongCertificate status.
+func (obj *KongCertificate) GetKonnectID() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.ID
+}
+
+// SetKonnectID sets the Konnect ID in the KongCertificate status.
+func (obj *KongCertificate) SetKonnectID(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ID = id
+}
+
+// GetControlPlaneID returns the ControlPlane ID in the KongCertificate status.
+func (obj *KongCertificate) GetControlPlaneID() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.ControlPlaneID
+}
+
+// SetControlPlaneID sets the ControlPlane ID in the KongCertificate status.
+func (obj *KongCertificate) SetControlPlaneID(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ControlPlaneID = id
+}
+
+// GetTypeName returns the KongCertificate Kind name
+func (obj KongCertificate) GetTypeName() string {
+	return "KongCertificate"
+}
+
+// GetConditions returns the Status Conditions
+func (obj *KongCertificate) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions
+func (obj *KongCertificate) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
+}
 func (obj *KongPluginBinding) initKonnectStatus() {
 	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
 }
