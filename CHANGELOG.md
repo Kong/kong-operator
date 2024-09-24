@@ -58,6 +58,8 @@
   [#516](https://github.com/Kong/gateway-operator/pull/516)
 - Add `KongPluginBinding` reconciler for Konnect Plugins.
   [#513](https://github.com/Kong/gateway-operator/pull/513), [#535](https://github.com/Kong/gateway-operator/pull/535)
+- Add `KongTarget` reconciler for Konnect Targets.
+  [#627](https://github.com/Kong/gateway-operator/pull/627)
 - The `DataPlaneKonnectExtension` CRD has been introduced. Such a CRD can be attached
   to a `DataPlane` via the extensions field to have a konnect-flavored `DataPlane`.
   [#453](https://github.com/Kong/gateway-operator/pull/453), [#578](https://github.com/Kong/gateway-operator/pull/578)

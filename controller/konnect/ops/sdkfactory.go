@@ -14,6 +14,7 @@ type SDKWrapper interface {
 	GetConsumerGroupsSDK() ConsumerGroupSDK
 	GetPluginSDK() PluginSDK
 	GetUpstreamsSDK() UpstreamsSDK
+	GetTargetsSDK() TargetsSDK
 	GetMeSDK() MeSDK
 	GetBasicAuthCredentials() KongCredentialBasicAuthSDK
 	GetCACertificatesSDK() CACertificatesSDK
@@ -58,6 +59,11 @@ func (w sdkWrapper) GetPluginSDK() PluginSDK {
 // GetUpstreamsSDK returns the SDK to operate Upstreams.
 func (w sdkWrapper) GetUpstreamsSDK() UpstreamsSDK {
 	return w.sdk.Upstreams
+}
+
+// GetTargetsSDK returns the SDK to operate Targets.
+func (w sdkWrapper) GetTargetsSDK() TargetsSDK {
+	return w.sdk.Targets
 }
 
 // GetMeSDK returns the "me" SDK to get current organization.

@@ -155,6 +155,7 @@ rules:
   - kongplugins/status
   - kongroutes/status
   - kongservices/status
+  - kongtargets/status
   - kongupstreampolicies/status
   - kongupstreams/status
   - kongvaults/status
@@ -182,6 +183,7 @@ rules:
   resources:
   - kongroutes
   - kongservices
+  - kongtargets
   - kongupstreams
   verbs:
   - get

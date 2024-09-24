@@ -211,6 +211,45 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, nil
 	}
 
+	// If a type has a KongUpstream ref (KongTarget), handle it.
+	res, err = handleKongUpstreamRef(ctx, r.Client, ent)
+	if err != nil {
+		// If the referenced KongUpstream is being deleted and the object
+		// is not being deleted yet then requeue until it will
+		// get the deletion timestamp set due to having the owner set to KongUpstream.
+		if errDel := (&ReferencedKongUpstreamIsBeingDeleted{}); errors.As(err, errDel) &&
+			ent.GetDeletionTimestamp().IsZero() {
+			return ctrl.Result{
+				RequeueAfter: time.Until(errDel.DeletionTimestamp),
+			}, nil
+		}
+
+		// If the referenced KongUpstream is not found or is being deleted
+		// and the object is being deleted, remove the finalizer and let the
+		// deletion proceed without trying to delete the entity from Konnect
+		// as the KongUpstream deletion will take care of it on the Konnect side.
+		if errors.As(err, &ReferencedKongUpstreamIsBeingDeleted{}) ||
+			errors.As(err, &ReferencedKongUpstreamDoesNotExist{}) {
+			if !ent.GetDeletionTimestamp().IsZero() {
+				if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+					if err := r.Client.Update(ctx, ent); err != nil {
+						if k8serrors.IsConflict(err) {
+							return ctrl.Result{Requeue: true}, nil
+						}
+						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+					}
+					log.Debug(logger, "finalizer removed as the owning KongUpstream is being deleted or is already gone", ent,
+						"finalizer", KonnectCleanupFinalizer,
+					)
+				}
+			}
+		}
+
+		return ctrl.Result{}, err
+	} else if res.Requeue {
+		return res, nil
+	}
+
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to get APIAuth ref for %s: %w", client.ObjectKeyFromObject(ent), err)
@@ -492,7 +531,7 @@ func getCPForRef(
 
 	var cp konnectv1alpha1.KonnectGatewayControlPlane
 	if err := cl.Get(ctx, nn, &cp); err != nil {
-		return nil, fmt.Errorf("failed to get ControlPlane %s", nn)
+		return nil, fmt.Errorf("failed to get ControlPlane %s: %w", nn, err)
 	}
 	return &cp, nil
 }
@@ -574,10 +613,31 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
 	}
 
+	// If the entity has a KongUpstreamRef, get the KonnectAPIAuthConfiguration
+	// ref from the referenced KongUpstream.
+	upsteramRef, ok := getKongUpstreamRef(ent).Get()
+	if ok {
+		nn := types.NamespacedName{
+			Name:      upsteramRef.Name,
+			Namespace: ent.GetNamespace(),
+		}
+
+		var upstream configurationv1alpha1.KongUpstream
+		if err := cl.Get(ctx, nn, &upstream); err != nil {
+			return types.NamespacedName{}, fmt.Errorf("failed to get KongUpstream %s", nn)
+		}
+
+		cpRef, ok := getControlPlaneRef(&upstream).Get()
+		if !ok {
+			return types.NamespacedName{}, fmt.Errorf("KongUpstream %s does not have a ControlPlaneRef", nn)
+		}
+		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
+	}
+
 	if ref, ok := any(ent).(constraints.EntityWithKonnectAPIAuthConfigurationRef); ok {
 		return types.NamespacedName{
 			Name: ref.GetKonnectAPIAuthConfigurationRef().Name,
-			// TODO(pmalek): enable if cross namespace refs are allowed
+			// TODO: enable if cross namespace refs are allowed
 			Namespace: ent.GetNamespace(),
 		}, nil
 	}
@@ -923,6 +983,7 @@ func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 	switch e := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane,
 		*configurationv1alpha1.KongRoute,
+		*configurationv1alpha1.KongTarget,
 		*configurationv1alpha1.KongCredentialBasicAuth:
 		return mo.None[configurationv1alpha1.ControlPlaneRef]()
 	case *configurationv1.KongConsumer:

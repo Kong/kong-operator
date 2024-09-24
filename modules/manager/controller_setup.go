@@ -78,6 +78,8 @@ const (
 	KongPluginControllerName = "KongPlugin"
 	// KongUpstreamControllerName is the name of the KongUpstream controller.
 	KongUpstreamControllerName = "KongUpstream"
+	// KongTargetControllerName is the name of the KongTarget controller.
+	KongTargetControllerName = "KongTarget"
 	// KongServicePluginBindingFinalizerControllerName is the name of the KongService PluginBinding finalizer controller.
 	KongServicePluginBindingFinalizerControllerName = "KongServicePluginBindingFinalizer"
 	// KongCredentialsSecretControllerName is the name of the Credentials Secret controller.
@@ -399,6 +401,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					c.DevelopmentMode,
 					mgr.GetClient(),
 					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCACertificate](c.KonnectSyncPeriod),
+				),
+			},
+			KongTargetControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler(
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongTarget](c.KonnectSyncPeriod),
 				),
 			},
 			KongPluginBindingControllerName: {
