@@ -283,7 +283,7 @@ func resolveConsumerGroupsKonnectIDs(
 		desiredConsumerGroupsIDs = append(desiredConsumerGroupsIDs, cg.GetKonnectStatus().GetKonnectID())
 	}
 	if len(invalidConsumerGroups) > 0 {
-		err := fmt.Errorf("some KongConsumerGroups couldnt' be assigned to KongConsumer, see KongConsumer status for details")
+		err := errors.New("some KongConsumerGroups couldn't be assigned to KongConsumer, see KongConsumer status for details")
 		return desiredConsumerGroupsIDs, invalidConsumerGroups, err
 	}
 	return desiredConsumerGroupsIDs, invalidConsumerGroups, nil
