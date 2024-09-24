@@ -65,10 +65,24 @@ func (e ReferencedKongConsumerDoesNotExist) Error() string {
 // ReferencedKongUpstreamIsBeingDeleted is an error type that is returned when
 // a Konnect entity references a Kong Upstream which is being deleted.
 type ReferencedKongUpstreamIsBeingDeleted struct {
-	Reference types.NamespacedName
+	Reference         types.NamespacedName
+	DeletionTimestamp time.Time
 }
 
 // Error implements the error interface.
 func (e ReferencedKongUpstreamIsBeingDeleted) Error() string {
-	return fmt.Sprintf("referenced Kong Upstream %s is being deleted", e.Reference)
+	return fmt.Sprintf("referenced Kong Upstream %s is being deleted (deletion timestamp: %s)",
+		e.Reference, e.DeletionTimestamp)
+}
+
+// ReferencedKongUpstreamDoesNotExist is an error type that is returned when
+// a Konnect entity references a Kong Upstream which does not exist.
+type ReferencedKongUpstreamDoesNotExist struct {
+	Reference types.NamespacedName
+	Err       error
+}
+
+// Error implements the error interface.
+func (e ReferencedKongUpstreamDoesNotExist) Error() string {
+	return fmt.Sprintf("referenced Kong Upstream %s does not exist: %v", e.Reference, e.Err)
 }

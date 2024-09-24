@@ -214,20 +214,38 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// If a type has a KongUpstream ref (KongTarget), handle it.
 	res, err = handleKongUpstreamRef(ctx, r.Client, ent)
 	if err != nil {
-		if !errors.As(err, &ReferencedKongUpstreamIsBeingDeleted{}) {
-			return ctrl.Result{}, err
+		// If the referenced KongUpstream is being deleted and the object
+		// is not being deleted yet then requeue until it will
+		// get the deletion timestamp set due to having the owner set to KongUpstream.
+		if errDel := (&ReferencedKongUpstreamIsBeingDeleted{}); errors.As(err, errDel) &&
+			ent.GetDeletionTimestamp().IsZero() {
+			return ctrl.Result{
+				RequeueAfter: time.Until(errDel.DeletionTimestamp),
+			}, nil
 		}
 
-		// If the referenced KongUpstream is being deleted (has a non zero deletion timestamp)
-		// then we remove the entity if it has not been deleted yet (deletion timestamp is zero).
-		// We do this because Konnect blocks deletion of entities like Services/Upstreams
-		// if they contain entities like Routes/Targets.
-		if ent.GetDeletionTimestamp().IsZero() {
-			if err := r.Client.Delete(ctx, ent); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to delete %s: %w", client.ObjectKeyFromObject(ent), err)
+		// If the referenced KongUpstream is not found or is being deleted
+		// and the object is being deleted, remove the finalizer and let the
+		// deletion proceed without trying to delete the entity from Konnect
+		// as the KongUpstream deletion will take care of it on the Konnect side.
+		if errors.As(err, &ReferencedKongUpstreamIsBeingDeleted{}) ||
+			errors.As(err, &ReferencedKongUpstreamDoesNotExist{}) {
+			if !ent.GetDeletionTimestamp().IsZero() {
+				if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+					if err := r.Client.Update(ctx, ent); err != nil {
+						if k8serrors.IsConflict(err) {
+							return ctrl.Result{Requeue: true}, nil
+						}
+						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+					}
+					log.Debug(logger, "finalizer removed as the owning KongUpstream is being deleted or is already gone", ent,
+						"finalizer", KonnectCleanupFinalizer,
+					)
+				}
 			}
-			return ctrl.Result{}, nil
 		}
+
+		return ctrl.Result{}, err
 	} else if res.Requeue {
 		return res, nil
 	}

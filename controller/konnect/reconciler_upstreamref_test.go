@@ -258,7 +258,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 				},
 			},
 			expectError:         true,
-			expectErrorContains: "can't get the referenced KongUpstream",
+			expectErrorContains: "referenced Kong Upstream default/upstream-nonexist does not exist",
 			updatedEntAssertions: []func(*configurationv1alpha1.KongTarget) (bool, string){
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {

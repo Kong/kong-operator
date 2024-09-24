@@ -11,12 +11,8 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
@@ -42,30 +38,12 @@ func createTarget(
 	})
 
 	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, target); errWrapped != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToCreate",
-				errWrapped.Error(),
-				target.GetGeneration(),
-			),
-			target,
-		)
+		SetKonnectEntityProgrammedConditionFalse(target, "FailedToCreate", errWrapped.Error())
 		return errWrapped
 	}
 
 	target.Status.Konnect.SetKonnectID(*resp.Target.ID)
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			target.GetGeneration(),
-		),
-		target,
-	)
+	SetKonnectEntityProgrammedCondition(target)
 
 	return nil
 }
@@ -91,30 +69,11 @@ func updateTarget(
 	})
 
 	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, target); errWrapped != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToUpdate",
-				errWrapped.Error(),
-				target.GetGeneration(),
-			),
-			target,
-		)
+		SetKonnectEntityProgrammedConditionFalse(target, "FailedToUpdate", errWrapped.Error())
 		return errWrapped
 	}
 
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			target.GetGeneration(),
-		),
-		target,
-	)
-
+	SetKonnectEntityProgrammedCondition(target)
 	return nil
 }
 
