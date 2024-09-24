@@ -121,37 +121,20 @@ func handleConsumerGroupAssignments(
 ) error {
 	// Resolve the Konnect IDs of the ConsumerGroups referenced by the KongConsumer.
 	desiredConsumerGroupsIDs, invalidConsumerGroups, err := resolveConsumerGroupsKonnectIDs(ctx, consumer, cl)
-	if err != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				conditions.KonnectEntityProgrammedReasonFailedToResolveConsumerGroupRefs,
-				err.Error(),
-				consumer.GetGeneration(),
-			),
-			consumer,
-		)
-		return err
-	}
 
 	// Even if we have invalid ConsumerGroup references, we carry on with the ones that are valid. Invalid ones will be
 	// reported in the condition.
 	populateConsumerGroupRefsValidCondition(invalidConsumerGroups, consumer)
 
+	if err != nil {
+		SetKonnectEntityProgrammedConditionFalse(consumer, conditions.KonnectEntityProgrammedReasonFailedToResolveConsumerGroupRefs, err.Error())
+		return err
+	}
+
 	// Reconcile the ConsumerGroups assigned to the KongConsumer in Konnect (list the actual ConsumerGroups, calculate the
 	// difference, and add/remove the Consumer from the ConsumerGroups accordingly).
 	if err := reconcileConsumerGroupsWithKonnect(ctx, desiredConsumerGroupsIDs, cgSDK, cpID, consumer); err != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				conditions.KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect,
-				err.Error(),
-				consumer.GetGeneration(),
-			),
-			consumer,
-		)
+		SetKonnectEntityProgrammedConditionFalse(consumer, conditions.KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect, err.Error())
 		return err
 	}
 	return nil
@@ -198,6 +181,9 @@ func reconcileConsumerGroupsWithKonnect(
 
 	// Adding consumer to consumer groups that it is not assigned to yet.
 	for _, cgID := range consumerGroupsToBeAddedTo {
+		log.Debug(ctrllog.FromContext(ctx), "adding KongConsumer to group", consumer,
+			"group", cgID,
+		)
 		_, err := cgSDK.AddConsumerToGroup(ctx, sdkkonnectops.AddConsumerToGroupRequest{
 			ControlPlaneID:  cpID,
 			ConsumerGroupID: cgID,
@@ -212,6 +198,9 @@ func reconcileConsumerGroupsWithKonnect(
 
 	// Removing consumer from consumer groups that it is not assigned to anymore.
 	for _, cgID := range consumerGroupsToBeRemovedFrom {
+		log.Debug(ctrllog.FromContext(ctx), "removing KongConsumer from group", consumer,
+			"group", cgID,
+		)
 		_, err := cgSDK.RemoveConsumerFromGroup(ctx, sdkkonnectops.RemoveConsumerFromGroupRequest{
 			ControlPlaneID:  cpID,
 			ConsumerGroupID: cgID,
@@ -284,7 +273,7 @@ func resolveConsumerGroupsKonnectIDs(
 			}
 			return nil, nil, fmt.Errorf("failed to get KongConsumerGroup %s/%s: %w", consumer.Namespace, cgName, err)
 		}
-		if cg.GetKonnectStatus() != nil && cg.GetKonnectStatus().GetKonnectID() == "" {
+		if cg.GetKonnectStatus() == nil || cg.GetKonnectStatus().GetKonnectID() == "" {
 			invalidConsumerGroups = append(invalidConsumerGroups, invalidConsumerGroupRef{
 				Name:   cgName,
 				Reason: "NotCreatedInKonnect",
@@ -292,6 +281,10 @@ func resolveConsumerGroupsKonnectIDs(
 			continue
 		}
 		desiredConsumerGroupsIDs = append(desiredConsumerGroupsIDs, cg.GetKonnectStatus().GetKonnectID())
+	}
+	if len(invalidConsumerGroups) > 0 {
+		err := fmt.Errorf("some KongConsumerGroups couldnt' be assigned to KongConsumer, see KongConsumer status for details")
+		return desiredConsumerGroupsIDs, invalidConsumerGroups, err
 	}
 	return desiredConsumerGroupsIDs, invalidConsumerGroups, nil
 }

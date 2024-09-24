@@ -127,18 +127,20 @@ func Delete[
 	}
 }
 
-// Update updates a Konnect entity.
-// It returns an error if the entity does not have a Konnect ID or if the operation fails.
-func Update[
+func shouldUpdate[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
-](ctx context.Context, sdk SDKWrapper, syncPeriod time.Duration, cl client.Client, e *T) (ctrl.Result, error) {
+](
+	ctx context.Context,
+	ent TEnt,
+	syncPeriod time.Duration,
+	now time.Time,
+) (bool, ctrl.Result) {
 	var (
-		ent                = TEnt(e)
 		condProgrammed, ok = k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, ent)
-		now                = time.Now()
 		timeFromLastUpdate = time.Since(condProgrammed.LastTransitionTime.Time)
 	)
+
 	// If the entity is already programmed and the last update was less than
 	// the configured sync period, requeue after the remaining time.
 	if ok &&
@@ -148,15 +150,33 @@ func Update[
 		timeFromLastUpdate <= syncPeriod {
 		requeueAfter := syncPeriod - timeFromLastUpdate
 		log.Debug(ctrllog.FromContext(ctx),
-			"no need for update, requeueing after configured sync period", e,
+			"no need for update, requeueing after configured sync period", ent,
 			"last_update", condProgrammed.LastTransitionTime.Time,
 			"time_from_last_update", timeFromLastUpdate,
 			"requeue_after", requeueAfter,
 			"requeue_at", now.Add(requeueAfter),
 		)
-		return ctrl.Result{
+		return false, ctrl.Result{
 			RequeueAfter: requeueAfter,
-		}, nil
+		}
+	}
+
+	return true, ctrl.Result{}
+}
+
+// Update updates a Konnect entity.
+// It returns an error if the entity does not have a Konnect ID or if the operation fails.
+func Update[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ctx context.Context, sdk SDKWrapper, syncPeriod time.Duration, cl client.Client, e *T) (ctrl.Result, error) {
+	var (
+		ent = TEnt(e)
+		now = time.Now()
+	)
+
+	if ok, res := shouldUpdate(ctx, ent, syncPeriod, now); !ok {
+		return res, nil
 	}
 
 	if ent.GetKonnectStatus().GetKonnectID() == "" {
