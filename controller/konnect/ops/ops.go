@@ -72,6 +72,8 @@ func Create[
 		return e, createKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return e, createCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
+	case *configurationv1alpha1.KongCertificate:
+		return e, createCertificate(ctx, sdk.GetCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
 		return e, createTarget(ctx, sdk.GetTargetsSDK(), ent)
 	case *configurationv1alpha1.KongVault:
@@ -122,6 +124,8 @@ func Delete[
 		return deleteKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return deleteCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
+	case *configurationv1alpha1.KongCertificate:
+		return deleteCertificate(ctx, sdk.GetCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
 		return deleteTarget(ctx, sdk.GetTargetsSDK(), ent)
 	case *configurationv1alpha1.KongVault:
@@ -217,6 +221,8 @@ func Update[
 		return ctrl.Result{}, updateKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return ctrl.Result{}, updateCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
+	case *configurationv1alpha1.KongCertificate:
+		return ctrl.Result{}, updateCertificate(ctx, sdk.GetCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
 		return ctrl.Result{}, updateTarget(ctx, sdk.GetTargetsSDK(), ent)
 	case *configurationv1alpha1.KongVault:

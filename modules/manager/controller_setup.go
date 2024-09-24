@@ -90,6 +90,8 @@ const (
 	KongKongCredentialAPIKeyControllerName = "KongCredentialAPIKey" //nolint:gosec
 	// KongCACertificateControllerName is the name of the KongCACertificate controller.
 	KongCACertificateControllerName = "KongCACertificate"
+	// KongCertificateControllerName is the name of the KongCertificate controller.
+	KongCertificateControllerName = "KongCertificate"
 	// KongVaultContollerName is the name of KongVault controller.
 	KongVaultControllerName = "KongVault"
 )
@@ -405,6 +407,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					c.DevelopmentMode,
 					mgr.GetClient(),
 					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCACertificate](c.KonnectSyncPeriod),
+				),
+			},
+			KongCertificateControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler(
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCertificate](c.KonnectSyncPeriod),
 				),
 			},
 			KongTargetControllerName: {

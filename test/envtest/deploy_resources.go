@@ -251,6 +251,38 @@ func deployKongCACertificateAttachedToCP(
 	return cert
 }
 
+// deployKongCertificateAttachedToCP deploys a KongCertificate resource attached to a CP and returns the resource.
+func deployKongCertificateAttachedToCP(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+) *configurationv1alpha1.KongCertificate {
+	t.Helper()
+
+	cert := &configurationv1alpha1.KongCertificate{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "cert-",
+		},
+		Spec: configurationv1alpha1.KongCertificateSpec{
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: cp.GetName(),
+				},
+			},
+			KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+				Cert: dummyValidCertPEM,
+				Key:  dummyValidCertKeyPEM,
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, cert))
+	t.Logf("deployed new KongCertificate %s", client.ObjectKeyFromObject(cert))
+
+	return cert
+}
+
 // deployKongConsumer deploys a KongConsumer resource attached to a Control Plane and returns the resource.
 func deployKongConsumerAttachedToCP(
 	t *testing.T,

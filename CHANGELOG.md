@@ -54,6 +54,8 @@
   [#510](https://github.com/Kong/gateway-operator/pull/510)
 - Add `KongCACertificate` reconciler for Konnect CA certificates.
   [#626](https://github.com/Kong/gateway-operator/pull/626)
+- Add `KongCertificate` reconciler for Konnect Certificates.
+  [#643](https://github.com/Kong/gateway-operator/pull/643)
 - Added command line flags to configure the certificate generator job's images.
   [#516](https://github.com/Kong/gateway-operator/pull/516)
 - Add `KongPluginBinding` reconciler for Konnect Plugins.
