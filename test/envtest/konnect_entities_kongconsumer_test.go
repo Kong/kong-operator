@@ -63,21 +63,31 @@ func TestKongConsumer(t *testing.T) {
 			username   = "user-1"
 		)
 		t.Log("Setting up SDK expectations on KongConsumer creation")
-		sdk.ConsumersSDK.EXPECT().CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
-				return input.Username != nil && *input.Username == username
-			}),
-		).Return(&sdkkonnectops.CreateConsumerResponse{
+		sdk.ConsumersSDK.EXPECT().
+			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
+				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
+					return input.Username != nil && *input.Username == username
+				}),
+			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
 				ID: lo.ToPtr(consumerID),
 			},
 		}, nil)
 
+		t.Log("Setting up SDK expectation on possibly updating KongConsumer ( due to asynchronous nature of updates between KongConsumer and KongConsumerGroup)")
+		sdk.ConsumersSDK.EXPECT().
+			UpsertConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertConsumerRequest) bool {
+				return r.ConsumerID == consumerID
+			})).
+			Return(&sdkkonnectops.UpsertConsumerResponse{}, nil).
+			Maybe()
+
 		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		sdk.ConsumerGroupSDK.EXPECT().ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
-			ConsumerID:     consumerID,
-			ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
-		}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
+		sdk.ConsumerGroupSDK.EXPECT().
+			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
+				ConsumerID:     consumerID,
+				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
+			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
 
 		t.Log("Creating KongConsumer")
 		createdConsumer := deployKongConsumerAttachedToCP(t, ctx, clientNamespaced, username, cp)
@@ -99,10 +109,12 @@ func TestKongConsumer(t *testing.T) {
 		}, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongConsumer update")
-		sdk.ConsumersSDK.EXPECT().UpsertConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertConsumerRequest) bool {
-			return r.ConsumerID == consumerID &&
-				r.Consumer.Username != nil && *r.Consumer.Username == "user-1-updated"
-		})).Return(&sdkkonnectops.UpsertConsumerResponse{}, nil)
+		sdk.ConsumersSDK.EXPECT().
+			UpsertConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertConsumerRequest) bool {
+				return r.ConsumerID == consumerID &&
+					r.Consumer.Username != nil && *r.Consumer.Username == "user-1-updated"
+			})).
+			Return(&sdkkonnectops.UpsertConsumerResponse{}, nil)
 
 		t.Log("Patching KongConsumer")
 		consumerToPatch := createdConsumer.DeepCopy()
@@ -115,7 +127,8 @@ func TestKongConsumer(t *testing.T) {
 		}, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongConsumer deletion")
-		sdk.ConsumersSDK.EXPECT().DeleteConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), consumerID).
+		sdk.ConsumersSDK.EXPECT().
+			DeleteConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), consumerID).
 			Return(&sdkkonnectops.DeleteConsumerResponse{}, nil)
 
 		t.Log("Deleting KongConsumer")
@@ -139,42 +152,54 @@ func TestKongConsumer(t *testing.T) {
 			consumerGroupName = "consumer-group-1"
 		)
 		t.Log("Setting up SDK expectations on KongConsumer creation with ConsumerGroup")
-		sdk.ConsumersSDK.EXPECT().CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
-				return input.Username != nil && *input.Username == username
-			}),
-		).Return(&sdkkonnectops.CreateConsumerResponse{
+		sdk.ConsumersSDK.EXPECT().
+			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
+				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
+					return input.Username != nil && *input.Username == username
+				}),
+			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
 				ID: lo.ToPtr(consumerID),
 			},
 		}, nil)
 
-		sdk.ConsumerGroupSDK.EXPECT().CreateConsumerGroup(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input sdkkonnectcomp.ConsumerGroupInput) bool {
-				return input.Name == consumerGroupName
-			}),
-		).Return(&sdkkonnectops.CreateConsumerGroupResponse{
+		t.Log("Setting up SDK expectation on possibly updating KongConsumer (due to asynchronous nature of updates between KongConsumer and KongConsumerGroup)")
+		sdk.ConsumersSDK.EXPECT().
+			UpsertConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertConsumerRequest) bool {
+				return r.ConsumerID == consumerID
+			})).
+			Return(&sdkkonnectops.UpsertConsumerResponse{}, nil).
+			Maybe()
+
+		sdk.ConsumerGroupSDK.EXPECT().
+			CreateConsumerGroup(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
+				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerGroupInput) bool {
+					return input.Name == consumerGroupName
+				}),
+			).Return(&sdkkonnectops.CreateConsumerGroupResponse{
 			ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{
 				ID: lo.ToPtr(cgID),
 			},
 		}, nil)
 
 		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		emptyListCall := sdk.ConsumerGroupSDK.EXPECT().ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
-			ConsumerID:     consumerID,
-			ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
-		}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{
+		emptyListCall := sdk.ConsumerGroupSDK.EXPECT().
+			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
+				ConsumerID:     consumerID,
+				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
+			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{
 			// Returning no ConsumerGroups associated with the Consumer in Konnect to trigger addition.
 		}, nil)
 
 		t.Log("Setting up SDK expectation on adding Consumer to ConsumerGroup")
-		sdk.ConsumerGroupSDK.EXPECT().AddConsumerToGroup(mock.Anything, sdkkonnectops.AddConsumerToGroupRequest{
-			ConsumerGroupID: cgID,
-			ControlPlaneID:  cp.GetKonnectStatus().GetKonnectID(),
-			RequestBody: &sdkkonnectops.AddConsumerToGroupRequestBody{
-				ConsumerID: lo.ToPtr(consumerID),
-			},
-		}).Return(&sdkkonnectops.AddConsumerToGroupResponse{}, nil)
+		sdk.ConsumerGroupSDK.EXPECT().
+			AddConsumerToGroup(mock.Anything, sdkkonnectops.AddConsumerToGroupRequest{
+				ConsumerGroupID: cgID,
+				ControlPlaneID:  cp.GetKonnectStatus().GetKonnectID(),
+				RequestBody: &sdkkonnectops.AddConsumerToGroupRequestBody{
+					ConsumerID: lo.ToPtr(consumerID),
+				},
+			}).Return(&sdkkonnectops.AddConsumerToGroupResponse{}, nil)
 
 		t.Log("Creating KongConsumerGroup")
 		createdConsumerGroup := deployKongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, consumerGroupName, cp)
@@ -213,16 +238,19 @@ func TestKongConsumer(t *testing.T) {
 		}, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongConsumer update with ConsumerGroup")
-		sdk.ConsumersSDK.EXPECT().UpsertConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertConsumerRequest) bool {
-			return r.ConsumerID == consumerID &&
-				r.Consumer.Username != nil && *r.Consumer.Username == "user-2-updated"
-		})).Return(&sdkkonnectops.UpsertConsumerResponse{}, nil)
+		sdk.ConsumersSDK.EXPECT().
+			UpsertConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertConsumerRequest) bool {
+				return r.ConsumerID == consumerID &&
+					r.Consumer.Username != nil && *r.Consumer.Username == "user-2-updated"
+			})).
+			Return(&sdkkonnectops.UpsertConsumerResponse{}, nil)
 
 		emptyListCall.Unset() // Unset the previous expectation to allow the new one to be set.
-		sdk.ConsumerGroupSDK.EXPECT().ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
-			ConsumerID:     consumerID,
-			ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
-		}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{
+		sdk.ConsumerGroupSDK.EXPECT().
+			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
+				ConsumerID:     consumerID,
+				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
+			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{
 			Object: &sdkkonnectops.ListConsumerGroupsForConsumerResponseBody{
 				Data: []sdkkonnectcomp.ConsumerGroup{
 					{
@@ -239,11 +267,12 @@ func TestKongConsumer(t *testing.T) {
 			},
 		}, nil)
 
-		sdk.ConsumerGroupSDK.EXPECT().RemoveConsumerFromGroup(mock.Anything, sdkkonnectops.RemoveConsumerFromGroupRequest{
-			ConsumerGroupID: "not-defined-in-crd",
-			ControlPlaneID:  cp.GetKonnectStatus().GetKonnectID(),
-			ConsumerID:      consumerID,
-		}).Return(&sdkkonnectops.RemoveConsumerFromGroupResponse{}, nil)
+		sdk.ConsumerGroupSDK.EXPECT().
+			RemoveConsumerFromGroup(mock.Anything, sdkkonnectops.RemoveConsumerFromGroupRequest{
+				ConsumerGroupID: "not-defined-in-crd",
+				ControlPlaneID:  cp.GetKonnectStatus().GetKonnectID(),
+				ConsumerID:      consumerID,
+			}).Return(&sdkkonnectops.RemoveConsumerFromGroupResponse{}, nil)
 
 		t.Log("Patching KongConsumer to trigger reconciliation")
 		consumerToPatch := createdConsumer.DeepCopy()
