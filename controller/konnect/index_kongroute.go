@@ -14,8 +14,6 @@ import (
 const (
 	// IndexFieldKongRouteOnReferencedPluginNames is the index field for KongRoute -> KongPlugin.
 	IndexFieldKongRouteOnReferencedPluginNames = "kongRouteKongPluginRef"
-	// IndexFieldKongRouteOnServiceReference is the index field for KongRoute -> Service.
-	IndexFieldKongRouteOnServiceReference = "kongRouteServiceRef"
 )
 
 // IndexOptionsForKongRoute returns required Index options for KongRoute reconciler.
