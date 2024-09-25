@@ -7,36 +7,38 @@ import (
 )
 
 type MockSDKWrapper struct {
-	ControlPlaneSDK      *MockControlPlaneSDK
-	ServicesSDK          *MockServicesSDK
-	RoutesSDK            *MockRoutesSDK
-	ConsumersSDK         *MockConsumersSDK
-	ConsumerGroupSDK     *MockConsumerGroupSDK
-	PluginSDK            *MockPluginSDK
-	UpstreamsSDK         *MockUpstreamsSDK
-	TargetsSDK           *MockTargetsSDK
-	MeSDK                *MockMeSDK
-	BasicAuthCredentials *MockKongCredentialBasicAuthSDK
-	CACertificatesSDK    *MockCACertificatesSDK
-	VaultSDK             *MockVaultSDK
+	ControlPlaneSDK             *MockControlPlaneSDK
+	ServicesSDK                 *MockServicesSDK
+	RoutesSDK                   *MockRoutesSDK
+	ConsumersSDK                *MockConsumersSDK
+	ConsumerGroupSDK            *MockConsumerGroupSDK
+	PluginSDK                   *MockPluginSDK
+	UpstreamsSDK                *MockUpstreamsSDK
+	TargetsSDK                  *MockTargetsSDK
+	MeSDK                       *MockMeSDK
+	KongCredentialsBasicAuthSDK *MockKongCredentialBasicAuthSDK
+	KongCredentialsAPIKeySDK    *MockKongCredentialAPIKeySDK
+	CACertificatesSDK           *MockCACertificatesSDK
+	VaultSDK                    *MockVaultSDK
 }
 
 var _ SDKWrapper = MockSDKWrapper{}
 
 func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 	return &MockSDKWrapper{
-		ControlPlaneSDK:      NewMockControlPlaneSDK(t),
-		ServicesSDK:          NewMockServicesSDK(t),
-		RoutesSDK:            NewMockRoutesSDK(t),
-		ConsumersSDK:         NewMockConsumersSDK(t),
-		ConsumerGroupSDK:     NewMockConsumerGroupSDK(t),
-		PluginSDK:            NewMockPluginSDK(t),
-		UpstreamsSDK:         NewMockUpstreamsSDK(t),
-		TargetsSDK:           NewMockTargetsSDK(t),
-		MeSDK:                NewMockMeSDK(t),
-		BasicAuthCredentials: NewMockKongCredentialBasicAuthSDK(t),
-		CACertificatesSDK:    NewMockCACertificatesSDK(t),
-		VaultSDK:             NewMockVaultSDK(t),
+		ControlPlaneSDK:             NewMockControlPlaneSDK(t),
+		ServicesSDK:                 NewMockServicesSDK(t),
+		RoutesSDK:                   NewMockRoutesSDK(t),
+		ConsumersSDK:                NewMockConsumersSDK(t),
+		ConsumerGroupSDK:            NewMockConsumerGroupSDK(t),
+		PluginSDK:                   NewMockPluginSDK(t),
+		UpstreamsSDK:                NewMockUpstreamsSDK(t),
+		TargetsSDK:                  NewMockTargetsSDK(t),
+		MeSDK:                       NewMockMeSDK(t),
+		KongCredentialsBasicAuthSDK: NewMockKongCredentialBasicAuthSDK(t),
+		KongCredentialsAPIKeySDK:    NewMockKongCredentialAPIKeySDK(t),
+		CACertificatesSDK:           NewMockCACertificatesSDK(t),
+		VaultSDK:                    NewMockVaultSDK(t),
 	}
 }
 
@@ -68,8 +70,12 @@ func (m MockSDKWrapper) GetUpstreamsSDK() UpstreamsSDK {
 	return m.UpstreamsSDK
 }
 
-func (m MockSDKWrapper) GetBasicAuthCredentials() KongCredentialBasicAuthSDK {
-	return m.BasicAuthCredentials
+func (m MockSDKWrapper) GetBasicAuthCredentialsSDK() KongCredentialBasicAuthSDK {
+	return m.KongCredentialsBasicAuthSDK
+}
+
+func (m MockSDKWrapper) GetAPIKeyCredentialsSDK() KongCredentialAPIKeySDK {
+	return m.KongCredentialsAPIKeySDK
 }
 
 func (m MockSDKWrapper) GetTargetsSDK() TargetsSDK {

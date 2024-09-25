@@ -40,6 +40,8 @@ func ReconciliationWatchOptionsForEntity[
 		return KongUpstreamReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.KongCredentialBasicAuth:
 		return kongCredentialBasicAuthReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.KongCredentialAPIKey:
+		return kongCredentialAPIKeyReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.KongCACertificate:
 		return KongCACertificateReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.KongTarget:
