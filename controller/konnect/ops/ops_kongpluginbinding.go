@@ -196,7 +196,8 @@ func getPluginBindingTargets(
 		targetObjects = append(targetObjects, &kongRoute)
 	}
 
-	// TODO(mlavacca): add support for KongConsumer
+	// TODO: https://github.com/Kong/gateway-operator/issues/526 add support for KongConsumer
+	// TODO: https://github.com/Kong/gateway-operator/issues/527 add support for KongConsumerGroup
 
 	return targetObjects, nil
 }
@@ -251,7 +252,7 @@ func kongPluginWithTargetsToKongPluginInput(
 				return nil, fmt.Errorf("KongService %s is not configured in Konnect yet", client.ObjectKeyFromObject(t))
 			}
 			pluginInput.Service = &sdkkonnectcomp.PluginService{
-				ID: lo.ToPtr(t.GetKonnectStatus().ID),
+				ID: lo.ToPtr(id),
 			}
 		case *configurationv1alpha1.KongRoute:
 			id := t.GetKonnectID()
@@ -259,9 +260,10 @@ func kongPluginWithTargetsToKongPluginInput(
 				return nil, fmt.Errorf("KongRoute %s is not configured in Konnect yet", client.ObjectKeyFromObject(t))
 			}
 			pluginInput.Route = &sdkkonnectcomp.PluginRoute{
-				ID: lo.ToPtr(t.GetKonnectStatus().ID),
+				ID: lo.ToPtr(id),
 			}
-		// TODO(mlavacca): add support for KongConsumer
+		// TODO: https://github.com/Kong/gateway-operator/issues/526 add support for KongConsumer
+		// TODO: https://github.com/Kong/gateway-operator/issues/527 add support for KongConsumerGroup
 		default:
 			return nil, fmt.Errorf("unsupported target type %T", t)
 		}
