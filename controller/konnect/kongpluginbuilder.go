@@ -1,0 +1,92 @@
+package konnect
+
+import (
+	"fmt"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+)
+
+// KongPluginBindingBuilder helps to build KongPluginBinding objects.
+type KongPluginBindingBuilder struct {
+	binding *configurationv1alpha1.KongPluginBinding
+}
+
+// NewKongPluginBindingBuilder creates a new KongPluginBindingBuilder.
+func NewKongPluginBindingBuilder() *KongPluginBindingBuilder {
+	return &KongPluginBindingBuilder{
+		binding: &configurationv1alpha1.KongPluginBinding{},
+	}
+}
+
+// WithName sets the name of the KongPluginBinding.
+func (b *KongPluginBindingBuilder) WithName(name string) *KongPluginBindingBuilder {
+	b.binding.Name = name
+	return b
+}
+
+// WithGenerateName sets the generate name of the KongPluginBinding.
+func (b *KongPluginBindingBuilder) WithGenerateName(name string) *KongPluginBindingBuilder {
+	b.binding.GenerateName = name
+	return b
+}
+
+// WithNamespace sets the namespace of the KongPluginBinding.
+func (b *KongPluginBindingBuilder) WithNamespace(namespace string) *KongPluginBindingBuilder {
+	b.binding.Namespace = namespace
+	return b
+}
+
+// WithPluginRef sets the plugin reference of the KongPluginBinding.
+func (b *KongPluginBindingBuilder) WithPluginRef(pluginName string) *KongPluginBindingBuilder {
+	b.binding.Spec.PluginReference.Name = pluginName
+	return b
+}
+
+// WithControlPlaneRef sets the control plane reference of the KongPluginBinding.
+// NOTE: Users have to ensure that the ControlPlaneRef that's set here
+// is the same across all the KongPluginBinding targets.
+func (b *KongPluginBindingBuilder) WithControlPlaneRef(ref *configurationv1alpha1.ControlPlaneRef) *KongPluginBindingBuilder {
+	b.binding.Spec.ControlPlaneRef = ref
+	return b
+}
+
+// WithServiceTarget sets the service target of the KongPluginBinding.
+func (b *KongPluginBindingBuilder) WithServiceTarget(serviceName string) *KongPluginBindingBuilder {
+	b.binding.Spec.Targets.ServiceReference = &configurationv1alpha1.TargetRefWithGroupKind{
+		Group: configurationv1alpha1.GroupVersion.Group,
+		Kind:  "KongService",
+		Name:  serviceName,
+	}
+	return b
+}
+
+// WithRouteTarget sets the route target of the KongPluginBinding.
+func (b *KongPluginBindingBuilder) WithRouteTarget(routeName string) *KongPluginBindingBuilder {
+	b.binding.Spec.Targets.RouteReference = &configurationv1alpha1.TargetRefWithGroupKind{
+		Group: configurationv1alpha1.GroupVersion.Group,
+		Kind:  "KongRoute",
+		Name:  routeName,
+	}
+	return b
+}
+
+// WithOwnerReference sets the owner reference of the KongPluginBinding.
+func (b *KongPluginBindingBuilder) WithOwnerReference(owner client.Object, scheme *runtime.Scheme) (*KongPluginBindingBuilder, error) {
+	opts := []controllerutil.OwnerReferenceOption{
+		controllerutil.WithBlockOwnerDeletion(true),
+	}
+	if err := controllerutil.SetOwnerReference(owner, b.binding, scheme, opts...); err != nil {
+		return nil, fmt.Errorf("failed to set owner reference: %w", err)
+	}
+
+	return b, nil
+}
+
+// Build returns the KongPluginBinding.
+func (b *KongPluginBindingBuilder) Build() *configurationv1alpha1.KongPluginBinding {
+	return b.binding
+}

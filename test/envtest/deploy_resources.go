@@ -126,7 +126,6 @@ func deployKonnectGatewayControlPlaneWithID(
 }
 
 // deployKongService deploys a KongService resource and returns the resource.
-// The caller can also specify the status which will be updated on the resource.
 func deployKongService(
 	t *testing.T,
 	ctx context.Context,
@@ -140,8 +139,6 @@ func deployKongService(
 	kongService.Spec.Name = lo.ToPtr(name)
 	require.NoError(t, cl.Create(ctx, kongService))
 	t.Logf("deployed %s KongService resource", client.ObjectKeyFromObject(kongService))
-
-	require.NoError(t, cl.Status().Update(ctx, kongService))
 
 	return kongService
 }

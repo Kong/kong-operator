@@ -182,9 +182,22 @@ func getPluginBindingTargets(
 		}
 		targetObjects = append(targetObjects, &kongService)
 	}
+	if targets.RouteReference != nil {
+		if targets.RouteReference.Kind != "KongRoute" {
+			return nil, fmt.Errorf("unsupported route target kind %q", targets.RouteReference.Kind)
+		}
 
-	// TODO(mlavacca): add support for KongRoute
-	// TODO(mlavacca): add support for KongConsumer
+		kongRoute := configurationv1alpha1.KongRoute{}
+		kongRoute.SetName(targets.RouteReference.Name)
+		kongRoute.SetNamespace(pluginBinding.GetNamespace())
+		if err := cl.Get(ctx, client.ObjectKeyFromObject(&kongRoute), &kongRoute); err != nil {
+			return nil, err
+		}
+		targetObjects = append(targetObjects, &kongRoute)
+	}
+
+	// TODO: https://github.com/Kong/gateway-operator/issues/526 add support for KongConsumer
+	// TODO: https://github.com/Kong/gateway-operator/issues/527 add support for KongConsumerGroup
 
 	return targetObjects, nil
 }
@@ -239,10 +252,18 @@ func kongPluginWithTargetsToKongPluginInput(
 				return nil, fmt.Errorf("KongService %s is not configured in Konnect yet", client.ObjectKeyFromObject(t))
 			}
 			pluginInput.Service = &sdkkonnectcomp.PluginService{
-				ID: lo.ToPtr(t.GetKonnectStatus().ID),
+				ID: lo.ToPtr(id),
 			}
-		// TODO(mlavacca): add support for KongRoute
-		// TODO(mlavacca): add support for KongConsumer
+		case *configurationv1alpha1.KongRoute:
+			id := t.GetKonnectID()
+			if id == "" {
+				return nil, fmt.Errorf("KongRoute %s is not configured in Konnect yet", client.ObjectKeyFromObject(t))
+			}
+			pluginInput.Route = &sdkkonnectcomp.PluginRoute{
+				ID: lo.ToPtr(id),
+			}
+		// TODO: https://github.com/Kong/gateway-operator/issues/526 add support for KongConsumer
+		// TODO: https://github.com/Kong/gateway-operator/issues/527 add support for KongConsumerGroup
 		default:
 			return nil, fmt.Errorf("unsupported target type %T", t)
 		}
