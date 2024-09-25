@@ -110,7 +110,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		},
 	)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed listing KongServices referencing %s KongPlugin: %w", client.ObjectKeyFromObject(kongPlugin), err)
+		return ctrl.Result{}, fmt.Errorf("failed listing KongServices referencing %s KongPlugin: %w", client.ObjectKeyFromObject(&kongPlugin), err)
 	}
 
 	kongRouteList := configurationv1alpha1.KongRouteList{}
@@ -120,7 +120,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		},
 	)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed listing KongRoutes referencing %s KongPlugin: %w", client.ObjectKeyFromObject(kongPlugin), err)
+		return ctrl.Result{}, fmt.Errorf("failed listing KongRoutes referencing %s KongPlugin: %w", client.ObjectKeyFromObject(&kongPlugin), err)
 	}
 
 	foreignRelations := ForeignRelations{
@@ -141,7 +141,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Delete the KongPluginBindings that are not used anymore.
 	if err := deleteUnusedKongPluginBindings(ctx, logger, clientWithNamespace, &kongPlugin, groupedCombinations, kongPluginBindingList.Items); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed deleting unused KongPluginBindings for %s KongPlugin: %w", client.ObjectKeyFromObject(kongPlugin), err)
+		return ctrl.Result{}, fmt.Errorf("failed deleting unused KongPluginBindings for %s KongPlugin: %w", client.ObjectKeyFromObject(&kongPlugin), err)
 	}
 
 	// pluginReferenceFound represents whether the plugin is referenced by any resource.
@@ -290,28 +290,6 @@ func deleteUnusedKongPluginBindings(
 	groupedCombinations map[types.NamespacedName][]Rel,
 	kongPluginBindings []configurationv1alpha1.KongPluginBinding,
 ) error {
-	kongServiceList := configurationv1alpha1.KongServiceList{}
-	if err := clientWithNamespace.List(ctx, &kongServiceList); err != nil {
-		return err
-	}
-	serviceMap := lo.SliceToMap(
-		kongServiceList.Items,
-		func(obj configurationv1alpha1.KongService) (string, configurationv1alpha1.KongService) {
-			return obj.Name, obj
-		},
-	)
-
-	kongRouteList := configurationv1alpha1.KongRouteList{}
-	if err := clientWithNamespace.List(ctx, &kongRouteList); err != nil {
-		return err
-	}
-	routeMap := lo.SliceToMap(
-		kongRouteList.Items,
-		func(obj configurationv1alpha1.KongRoute) (string, configurationv1alpha1.KongRoute) {
-			return obj.Name, obj
-		},
-	)
-
 	pluginBindingsToDelete := make(map[types.NamespacedName]configurationv1alpha1.KongPluginBinding)
 	for _, pb := range kongPluginBindings {
 		// If the KongPluginBinding has a deletion timestamp, do not delete it.
@@ -365,11 +343,11 @@ func deleteUnusedKongPluginBindings(
 				continue
 			}
 
-			s, serviceExists := serviceMap[serviceRef.Name]
-			r, routeExists := routeMap[routeRef.Name]
+			s, serviceExists := getIfRefNotNil[*configurationv1alpha1.KongService](ctx, clientWithNamespace, serviceRef)
+			r, routeExists := getIfRefNotNil[*configurationv1alpha1.KongRoute](ctx, clientWithNamespace, routeRef)
 			if !serviceExists || !routeExists ||
-				!objHasPluginConfigured(&s, kongPlugin.Name) || !s.DeletionTimestamp.IsZero() ||
-				!objHasPluginConfigured(&r, kongPlugin.Name) || !r.DeletionTimestamp.IsZero() {
+				!objHasPluginConfigured(s, kongPlugin.Name) || !s.DeletionTimestamp.IsZero() ||
+				!objHasPluginConfigured(r, kongPlugin.Name) || !r.DeletionTimestamp.IsZero() {
 				pluginBindingsToDelete[client.ObjectKeyFromObject(&pb)] = pb
 				continue
 			}
@@ -390,9 +368,9 @@ func deleteUnusedKongPluginBindings(
 				continue
 			}
 
-			s, serviceExists := serviceMap[serviceRef.Name]
+			s, serviceExists := getIfRefNotNil[*configurationv1alpha1.KongService](ctx, clientWithNamespace, serviceRef)
 			if !serviceExists ||
-				!objHasPluginConfigured(&s, kongPlugin.Name) || !s.DeletionTimestamp.IsZero() {
+				!objHasPluginConfigured(s, kongPlugin.Name) || !s.DeletionTimestamp.IsZero() {
 				pluginBindingsToDelete[client.ObjectKeyFromObject(&pb)] = pb
 				continue
 			}
@@ -413,9 +391,9 @@ func deleteUnusedKongPluginBindings(
 				continue
 			}
 
-			r, routeExists := routeMap[routeRef.Name]
+			r, routeExists := getIfRefNotNil[*configurationv1alpha1.KongRoute](ctx, clientWithNamespace, routeRef)
 			if !routeExists ||
-				!objHasPluginConfigured(&r, kongPlugin.Name) || !r.DeletionTimestamp.IsZero() {
+				!objHasPluginConfigured(r, kongPlugin.Name) || !r.DeletionTimestamp.IsZero() {
 				pluginBindingsToDelete[client.ObjectKeyFromObject(&pb)] = pb
 				continue
 			}
@@ -436,4 +414,24 @@ func objHasPluginConfigured(obj client.Object, pluginName string) bool {
 		return false
 	}
 	return slices.Contains(strings.Split(plugins, ","), pluginName)
+}
+
+func getIfRefNotNil[
+	TPtr interface {
+		*T
+		client.Object
+	},
+	T any,
+](
+	ctx context.Context,
+	c client.Client,
+	ref *configurationv1alpha1.TargetRefWithGroupKind,
+) (TPtr, bool) {
+	var t T
+	var obj TPtr = &t
+	if ref == nil {
+		return obj, false
+	}
+	err := c.Get(ctx, client.ObjectKey{Name: ref.Name}, obj)
+	return obj, err == nil
 }
