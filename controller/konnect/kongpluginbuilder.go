@@ -41,10 +41,9 @@ func (b *KongPluginBindingBuilder) WithPluginRef(pluginName string) *KongPluginB
 }
 
 // WithControlPlaneRef sets the control plane reference of the KongPluginBinding.
+// NOTE: Users have to ensure that the ControlPlaneRef that's set here
+// is the same across all the KongPluginBinding targets.
 func (b *KongPluginBindingBuilder) WithControlPlaneRef(ref *configurationv1alpha1.ControlPlaneRef) *KongPluginBindingBuilder {
-	// TODO: Cross check this with other types of ControlPlaneRefs
-	// used by Route, Consumer and/or ConsumerGroups that also bind this plugin
-	// in this KongPluginBinding spec.
 	b.binding.Spec.ControlPlaneRef = ref
 	return b
 }
