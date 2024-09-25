@@ -162,17 +162,17 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 					},
 				})
 
-			l := kongPluginBindingList.Items
+			kpbList := kongPluginBindingList.Items
 
 			if rel.Service != "" {
-				l = lo.Filter(l, func(pb configurationv1alpha1.KongPluginBinding, _ int) bool {
+				kpbList = lo.Filter(kpbList, func(pb configurationv1alpha1.KongPluginBinding, _ int) bool {
 					return pb.Spec.Targets.ServiceReference != nil &&
 						pb.Spec.Targets.ServiceReference.Name == rel.Service
 				})
 				builder.WithServiceTarget(rel.Service)
 			}
 			if rel.Route != "" {
-				l = lo.Filter(l, func(pb configurationv1alpha1.KongPluginBinding, _ int) bool {
+				kpbList = lo.Filter(kpbList, func(pb configurationv1alpha1.KongPluginBinding, _ int) bool {
 					return pb.Spec.Targets.RouteReference != nil &&
 						pb.Spec.Targets.RouteReference.Name == rel.Route
 				})
@@ -186,7 +186,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
 			}
 
-			switch len(l) {
+			switch len(kpbList) {
 			case 0:
 				if err = clientWithNamespace.Create(ctx, kongPluginBinding); err != nil {
 					return ctrl.Result{}, fmt.Errorf("failed to create KongPluginBinding: %w", err)
@@ -194,7 +194,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				log.Debug(logger, "Managed KongPluginBinding created", kongPluginBinding)
 
 			case 1:
-				existing := l[0]
+				existing := kpbList[0]
 				if reflect.DeepEqual(existing.Spec.Targets.ServiceReference, kongPluginBinding.Spec.Targets.ServiceReference) &&
 					reflect.DeepEqual(existing.Spec.Targets.RouteReference, kongPluginBinding.Spec.Targets.RouteReference) {
 					// TODO consumers and consumer groups checks
