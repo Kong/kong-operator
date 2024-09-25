@@ -3,10 +3,11 @@ package konnect
 import (
 	"fmt"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 // KongPluginBindingBuilder helps to build KongPluginBinding objects.
@@ -73,6 +74,7 @@ func (b *KongPluginBindingBuilder) WithRouteTarget(routeName string) *KongPlugin
 	return b
 }
 
+// WithOwnerReference sets the owner reference of the KongPluginBinding.
 func (b *KongPluginBindingBuilder) WithOwnerReference(owner client.Object, scheme *runtime.Scheme) (*KongPluginBindingBuilder, error) {
 	opts := []controllerutil.OwnerReferenceOption{
 		controllerutil.WithBlockOwnerDeletion(true),
