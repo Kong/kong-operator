@@ -72,6 +72,8 @@ func Create[
 		return e, createCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
 		return e, createTarget(ctx, sdk.GetTargetsSDK(), ent)
+	case *configurationv1alpha1.KongVault:
+		return e, createVault(ctx, sdk.GetVaultSDK(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -118,6 +120,8 @@ func Delete[
 		return deleteCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
 		return deleteTarget(ctx, sdk.GetTargetsSDK(), ent)
+	case *configurationv1alpha1.KongVault:
+		return deleteVault(ctx, sdk.GetVaultSDK(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -209,6 +213,8 @@ func Update[
 		return ctrl.Result{}, updateCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
 		return ctrl.Result{}, updateTarget(ctx, sdk.GetTargetsSDK(), ent)
+	case *configurationv1alpha1.KongVault:
+		return ctrl.Result{}, updateVault(ctx, sdk.GetVaultSDK(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types

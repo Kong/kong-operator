@@ -9,6 +9,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -321,6 +322,42 @@ func TestKonnectEntities(t *testing.T) {
 	// Should delete KongTarget because it will block deletion of KongUpstream owning it.
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kt))
 
+	t.Logf("Creating KongVault")
+	kvName := "kv-" + testID
+	kv := configurationv1alpha1.KongVault{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: kvName,
+		},
+		Spec: configurationv1alpha1.KongVaultSpec{
+			Config: apiextensionsv1.JSON{
+				Raw: []byte(`{"prefix":"env-vault"}`),
+			},
+			Backend: "env",
+			Prefix:  "env-vault",
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name:      cp.Name,
+					Namespace: ns.Name,
+				},
+			},
+		},
+	}
+	err = GetClients().MgrClient.Create(GetCtx(), &kv)
+	require.NoError(t, err)
+
+	t.Logf("Waiting for KongVault to be updated with Konnect ID")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kv.Name}, &kv)
+		require.NoError(t, err)
+
+		if !assert.NotNil(t, kv.Status.Konnect) {
+			return
+		}
+		assert.NotEmpty(t, kv.Status.Konnect.KonnectEntityStatus.GetKonnectID())
+		assert.NotEmpty(t, kv.Status.Konnect.KonnectEntityStatus.GetOrgID())
+		assert.NotEmpty(t, kv.Status.Konnect.KonnectEntityStatus.GetServerURL())
+	}, testutils.ObjectUpdateTimeout, time.Second)
 }
 
 // deleteObjectAndWaitForDeletionFn returns a function that deletes the given object and waits for it to be gone.

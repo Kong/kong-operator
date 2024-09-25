@@ -19,6 +19,7 @@ packages:
       PluginSDK:
       UpstreamsSDK:
       TargetsSDK:
+      VaultSDK:
       MeSDK:
       KongCredentialBasicAuthSDK:
       CACertificatesSDK:

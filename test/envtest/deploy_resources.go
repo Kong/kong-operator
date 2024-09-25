@@ -8,6 +8,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -313,4 +314,41 @@ func deployKongConsumerGroupAttachedToCP(
 	t.Logf("deployed new KongConsumerGroup %s", client.ObjectKeyFromObject(&cg))
 
 	return cg
+}
+
+func deployKongVaultAttachedToCP(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	backend string,
+	prefix string,
+	rawConfig []byte,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+) *configurationv1alpha1.KongVault {
+	t.Helper()
+
+	vault := &configurationv1alpha1.KongVault{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "vault-",
+		},
+		Spec: configurationv1alpha1.KongVaultSpec{
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name:      cp.Name,
+					Namespace: cp.Namespace,
+				},
+			},
+			Config: apiextensionsv1.JSON{
+				Raw: rawConfig,
+			},
+			Prefix:  prefix,
+			Backend: backend,
+		},
+	}
+
+	require.NoError(t, cl.Create(ctx, vault))
+	t.Logf("deployed new KongVault %s", client.ObjectKeyFromObject(vault))
+
+	return vault
 }

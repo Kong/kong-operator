@@ -563,7 +563,11 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 	// ref from the referenced ControlPlane.
 	cpRef, ok := getControlPlaneRef(ent).Get()
 	if ok {
-		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
+		cpNamespace := ent.GetNamespace()
+		if ent.GetNamespace() == "" && cpRef.KonnectNamespacedRef.Namespace != "" {
+			cpNamespace = cpRef.KonnectNamespacedRef.Namespace
+		}
+		return getCPAuthRefForRef(ctx, cl, cpRef, cpNamespace)
 	}
 
 	// If the entity has a KongServiceRef, get the KonnectAPIAuthConfiguration
@@ -1016,6 +1020,11 @@ func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 			return mo.None[configurationv1alpha1.ControlPlaneRef]()
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
+	case *configurationv1alpha1.KongVault:
+		if e.Spec.ControlPlaneRef == nil {
+			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+		}
+		return mo.Some(*e.Spec.ControlPlaneRef)
 	default:
 		panic(fmt.Sprintf("unsupported entity type %T", e))
 	}
@@ -1041,6 +1050,10 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		nn := types.NamespacedName{
 			Name:      cpRef.KonnectNamespacedRef.Name,
 			Namespace: ent.GetNamespace(),
+		}
+		// Set namespace of control plane when it is non-empty. Only applyies for cluster scoped resources (KongVault).
+		if ent.GetNamespace() == "" && cpRef.KonnectNamespacedRef.Namespace != "" {
+			nn.Namespace = cpRef.KonnectNamespacedRef.Namespace
 		}
 		if err := cl.Get(ctx, nn, &cp); err != nil {
 			if res, errStatus := updateStatusWithCondition(
@@ -1077,9 +1090,15 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		}
 
 		old := ent.DeepCopyObject().(TEnt)
-		if err := controllerutil.SetOwnerReference(&cp, ent, cl.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
+		if ent.GetNamespace() != "" {
+			// A cluster scoped object cannot set a namespaced object as its owner, and also we cannot set cross namespaced owner reference.
+			// So we skip setting owner reference for cluster scoped resources (KongVault).
+			// TODO: handle cross namespace refs
+			if err := controllerutil.SetOwnerReference(&cp, ent, cl.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
+			}
 		}
+
 		if err := cl.Patch(ctx, ent, client.MergeFrom(old)); err != nil {
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
@@ -1103,7 +1122,6 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		); errStatus != nil || res.Requeue {
 			return res, errStatus
 		}
-
 		return ctrl.Result{}, nil
 
 	default:
