@@ -75,14 +75,6 @@ func KongPluginBindingReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&configurationv1.KongClusterPlugin{},
-				handler.EnqueueRequestsFromMapFunc(
-					enqueueKongPluginBindingForKongClusterPlugin(cl),
-				),
-			)
-		},
-		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.Watches(
 				&configurationv1alpha1.KongService{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueKongPluginBindingForKongService(cl),
@@ -290,39 +282,6 @@ func enqueueKongPluginBindingForKongPlugin(cl client.Client) func(
 		if err != nil {
 			ctrllog.FromContext(ctx).Error(err, "failed to list KongPluginBindings referencing KongPlugin")
 			return nil
-		}
-
-		return lo.FilterMap(pluginBindingList.Items, func(pb configurationv1alpha1.KongPluginBinding, _ int) (reconcile.Request, bool) {
-			// Only put KongPluginBindings referencing to a Konnect control plane,
-			if pb.Spec.ControlPlaneRef == nil || pb.Spec.ControlPlaneRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
-				return reconcile.Request{}, false
-			}
-			return reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: pb.Namespace,
-					Name:      pb.Name,
-				},
-			}, true
-		})
-	}
-}
-
-func enqueueKongPluginBindingForKongClusterPlugin(cl client.Client) func(
-	ctx context.Context, obj client.Object) []reconcile.Request {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		plugin, ok := obj.(*configurationv1.KongClusterPlugin)
-		if !ok {
-			return nil
-		}
-
-		pluginBindingList := configurationv1alpha1.KongPluginBindingList{}
-		err := cl.List(ctx, &pluginBindingList,
-			client.MatchingFields{
-				IndexFieldKongPluginBindingKongClusterPluginReference: plugin.Name,
-			},
-		)
-		if err != nil {
-			ctrllog.FromContext(ctx).Error(err, "failed to list KongPluginBindings referencing KongClusterPlugin")
 		}
 
 		return lo.FilterMap(pluginBindingList.Items, func(pb configurationv1alpha1.KongPluginBinding, _ int) (reconcile.Request, bool) {
