@@ -17,13 +17,13 @@ func IndexOptionsForCredentialsAPIKey() []ReconciliationIndexOption {
 		{
 			IndexObject:  &configurationv1alpha1.KongCredentialAPIKey{},
 			IndexField:   IndexFieldKongCredentialAPIKeyReferencesKongConsumer,
-			ExtractValue: kongKongCredentialAPIKeyReferencesConsumer,
+			ExtractValue: kongCredentialAPIKeyReferencesConsumer,
 		},
 	}
 }
 
-// kongKongCredentialAPIKeyReferencesConsumer returns the name of referenced Consumer.
-func kongKongCredentialAPIKeyReferencesConsumer(obj client.Object) []string {
+// kongCredentialAPIKeyReferencesConsumer returns the name of referenced Consumer.
+func kongCredentialAPIKeyReferencesConsumer(obj client.Object) []string {
 	cred, ok := obj.(*configurationv1alpha1.KongCredentialAPIKey)
 	if !ok {
 		return nil
