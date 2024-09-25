@@ -21,6 +21,7 @@ type MockSDKWrapper struct {
 	CACertificatesSDK           *MockCACertificatesSDK
 	CertificatesSDK             *MockCertificatesSDK
 	VaultSDK                    *MockVaultSDK
+	KeysSDK                     *MockKeysSDK
 }
 
 var _ SDKWrapper = MockSDKWrapper{}
@@ -41,6 +42,7 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		CACertificatesSDK:           NewMockCACertificatesSDK(t),
 		CertificatesSDK:             NewMockCertificatesSDK(t),
 		VaultSDK:                    NewMockVaultSDK(t),
+		KeysSDK:                     NewMockKeysSDK(t),
 	}
 }
 
@@ -98,6 +100,10 @@ func (m MockSDKWrapper) GetCACertificatesSDK() CACertificatesSDK {
 
 func (m MockSDKWrapper) GetCertificatesSDK() CertificatesSDK {
 	return m.CertificatesSDK
+}
+
+func (m MockSDKWrapper) GetKeysSDK() KeysSDK {
+	return m.KeysSDK
 }
 
 type MockSDKFactory struct {

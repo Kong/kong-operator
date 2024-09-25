@@ -21,6 +21,7 @@ type SDKWrapper interface {
 	GetAPIKeyCredentialsSDK() KongCredentialAPIKeySDK
 	GetCACertificatesSDK() CACertificatesSDK
 	GetCertificatesSDK() CertificatesSDK
+	GetKeysSDK() KeysSDK
 }
 
 type sdkWrapper struct {
@@ -97,6 +98,11 @@ func (w sdkWrapper) GetBasicAuthCredentialsSDK() KongCredentialBasicAuthSDK {
 // GetAPIKeyCredentialsSDK returns the APIAKeyCredentials SDK to get current organization.
 func (w sdkWrapper) GetAPIKeyCredentialsSDK() KongCredentialAPIKeySDK {
 	return w.sdk.APIKeys
+}
+
+// GetKeysSDK returns the SDK to operate keys.
+func (w sdkWrapper) GetKeysSDK() KeysSDK {
+	return w.sdk.Keys
 }
 
 // SDKToken is a token used to authenticate with the Konnect SDK.
