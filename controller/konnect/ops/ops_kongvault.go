@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"slices"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -69,8 +68,7 @@ func updateVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1
 		var sdkError *sdkkonnecterrs.SDKError
 		if errors.As(errWrapped, &sdkError) {
 			switch sdkError.StatusCode {
-			// REVIEW: should we use constants defined in `net/http` or numerics here?
-			case http.StatusNotFound:
+			case 404:
 				if err := createVault(ctx, sdk, vault); err != nil {
 					return FailedKonnectOpError[configurationv1alpha1.KongVault]{
 						Op:  UpdateOp,
@@ -110,7 +108,7 @@ func deleteVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1
 		var sdkError *sdkkonnecterrs.SDKError
 		if errors.As(errWrapped, &sdkError) {
 			switch sdkError.StatusCode {
-			case http.StatusNotFound:
+			case 404:
 				ctrllog.FromContext(ctx).
 					Info("entity not found in Konnect, skipping delete",
 						"op", DeleteOp, "type", vault.GetTypeName(), "id", id,
