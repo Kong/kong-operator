@@ -35,4 +35,5 @@ spec:
     type: konnectNamespacedRef
     konnectNamespacedRef:
       name: test1
+      # KongVault is cluster scoped currently, so we need to specify namespace of Konnect control plane.
       namespace: default
