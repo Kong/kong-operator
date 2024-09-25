@@ -1,12 +1,9 @@
 package konnect
 
 import (
-	"strings"
-
-	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/gateway-operator/pkg/annotations"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
@@ -32,13 +29,5 @@ func kongRouteUsesPlugins(object client.Object) []string {
 	if !ok {
 		return nil
 	}
-	ann, ok := route.Annotations[consts.PluginsAnnotationKey]
-	if !ok {
-		return nil
-	}
-
-	namespace := route.GetNamespace()
-	return lo.Map(strings.Split(ann, ","), func(p string, _ int) string {
-		return namespace + "/" + p
-	})
+	return annotations.ExtractPlugins(route)
 }

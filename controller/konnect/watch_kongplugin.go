@@ -3,14 +3,13 @@ package konnect
 import (
 	"context"
 	"errors"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/gateway-operator/pkg/annotations"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
@@ -24,21 +23,7 @@ func (r *KongPluginReconciler) mapKongServices(ctx context.Context, obj client.O
 		return []ctrl.Request{}
 	}
 
-	ann, ok := kongService.Annotations[consts.PluginsAnnotationKey]
-	if !ok {
-		return nil
-	}
-	plugins := strings.Split(ann, ",")
-	requests := make([]ctrl.Request, 0, len(plugins))
-	for _, p := range plugins {
-		requests = append(requests, ctrl.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: kongService.Namespace,
-				Name:      p,
-			},
-		})
-	}
-	return requests
+	return mapObjectRequestsForItsPlugins(kongService)
 }
 
 // mapKongRoutes enqueue requests for KongPlugin objects based on KongRoute annotations.
@@ -50,21 +35,7 @@ func (r *KongPluginReconciler) mapKongRoutes(ctx context.Context, obj client.Obj
 		return []ctrl.Request{}
 	}
 
-	ann, ok := kongRoute.Annotations[consts.PluginsAnnotationKey]
-	if !ok {
-		return nil
-	}
-	plugins := strings.Split(ann, ",")
-	requests := make([]ctrl.Request, 0, len(plugins))
-	for _, p := range plugins {
-		requests = append(requests, ctrl.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: kongRoute.Namespace,
-				Name:      p,
-			},
-		})
-	}
-	return requests
+	return mapObjectRequestsForItsPlugins(kongRoute)
 }
 
 // mapKongPluginBindings enqueue requests for KongPlugins referenced by KongPluginBindings in their .spec.pluginRef field.
@@ -84,4 +55,21 @@ func (r *KongPluginReconciler) mapKongPluginBindings(ctx context.Context, obj cl
 			},
 		},
 	}
+}
+
+func mapObjectRequestsForItsPlugins(obj client.Object) []ctrl.Request {
+	var (
+		namespace = obj.GetNamespace()
+		plugins   = annotations.ExtractPlugins(obj)
+		requests  = make([]ctrl.Request, 0, len(plugins))
+	)
+	for _, p := range plugins {
+		requests = append(requests, ctrl.Request{
+			NamespacedName: client.ObjectKey{
+				Namespace: namespace,
+				Name:      p,
+			},
+		})
+	}
+	return requests
 }
