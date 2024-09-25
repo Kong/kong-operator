@@ -141,7 +141,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Delete the KongPluginBindings that are not used anymore.
 	if err := deleteUnusedKongPluginBindings(ctx, logger, clientWithNamespace, &kongPlugin, groupedCombinations, kongPluginBindingList.Items); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed deleting unused KongPluginBindings for %s KongPlugin: %w", client.ObjectKeyFromObject(kongPlugin), err)
 	}
 
 	// pluginReferenceFound represents whether the plugin is referenced by any resource.
