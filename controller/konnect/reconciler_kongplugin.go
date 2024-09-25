@@ -110,7 +110,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		},
 	)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed listing KongServices referencing %s KongPlugin: %w", client.ObjectKeyFromObject(kongPlugin), err)
 	}
 
 	kongRouteList := configurationv1alpha1.KongRouteList{}
@@ -120,7 +120,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		},
 	)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed listing KongRoutes referencing %s KongPlugin: %w", client.ObjectKeyFromObject(kongPlugin), err)
 	}
 
 	foreignRelations := ForeignRelations{
