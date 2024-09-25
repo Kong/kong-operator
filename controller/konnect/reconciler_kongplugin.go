@@ -137,8 +137,6 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	// pluginReferenceFound represents whether the plugin is referenced by any resource.
-	var pluginReferenceFound bool
 	groupedCombinations := grouped.GetCombinations()
 
 	// Delete the KongPluginBindings that are not used anymore.
@@ -146,6 +144,8 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
+	// pluginReferenceFound represents whether the plugin is referenced by any resource.
+	var pluginReferenceFound bool
 	for cpNN, relations := range groupedCombinations {
 		for _, rel := range relations {
 			pluginReferenceFound = true
