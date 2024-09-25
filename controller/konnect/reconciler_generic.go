@@ -1052,7 +1052,6 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			Namespace: ent.GetNamespace(),
 		}
 		// Set namespace of control plane when it is non-empty. Only applyies for cluster scoped resources (KongVault).
-		// REVIEW: add type check here?
 		if ent.GetNamespace() == "" && cpRef.KonnectNamespacedRef.Namespace != "" {
 			nn.Namespace = cpRef.KonnectNamespacedRef.Namespace
 		}

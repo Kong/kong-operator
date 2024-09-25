@@ -12,27 +12,15 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
-// TODO: use vault.GetControlPlaneID() after https://github.com/Kong/kubernetes-configuration/pull/77 merged
-func getKongVaultControlPlaneID(vault *configurationv1alpha1.KongVault) string {
-	if vault.Status.Konnect == nil {
-		return ""
-	}
-	return vault.Status.Konnect.ControlPlaneID
-}
-
 func createVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1.KongVault) error {
-	cpID := getKongVaultControlPlaneID(vault)
+	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
 		return fmt.Errorf(
 			"can't create %T %s without a Konnect ControlPlane ID",
@@ -47,36 +35,17 @@ func createVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1
 	resp, err := sdk.CreateVault(ctx, cpID, vaultInput)
 
 	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, vault); errWrapped != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToCreate",
-				errWrapped.Error(),
-				vault.GetGeneration(),
-			),
-			vault,
-		)
+		SetKonnectEntityProgrammedConditionFalse(vault, "FailedToCreate", errWrapped.Error())
 		return errWrapped
 	}
 
 	vault.SetKonnectID(*resp.Vault.ID)
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			vault.GetGeneration(),
-		),
-		vault,
-	)
-
+	SetKonnectEntityProgrammedCondition(vault)
 	return nil
 }
 
 func updateVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1.KongVault) error {
-	cpID := getKongVaultControlPlaneID(vault)
+	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
 		return fmt.Errorf(
 			"can't update %T %s without a Konnect ControlPlane ID",
@@ -118,35 +87,16 @@ func updateVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1
 			}
 		}
 
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				conditions.KonnectEntityProgrammedConditionType,
-				metav1.ConditionFalse,
-				"FailedToUpdate",
-				errWrapped.Error(),
-				vault.GetGeneration(),
-			),
-			vault,
-		)
+		SetKonnectEntityProgrammedConditionFalse(vault, "FailedToUpdate", errWrapped.Error())
 		return errWrapped
 	}
 
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
-			metav1.ConditionTrue,
-			conditions.KonnectEntityProgrammedReasonProgrammed,
-			"",
-			vault.GetGeneration(),
-		),
-		vault,
-	)
-
+	SetKonnectEntityProgrammedCondition(vault)
 	return nil
 }
 
 func deleteVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1.KongVault) error {
-	cpID := getKongVaultControlPlaneID(vault)
+	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
 		return fmt.Errorf(
 			"can't delete %T %s without a Konnect ControlPlane ID",
