@@ -181,10 +181,12 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 			// TODO consumers and consumer groups
 
-			kongPluginBinding := builder.Build()
-			if err := controllerutil.SetOwnerReference(&kongPlugin, kongPluginBinding, clientWithNamespace.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
+			builder, err = builder.WithOwnerReference(&kongPlugin, clientWithNamespace.Scheme())
+			if err != nil {
 				return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
 			}
+
+			kongPluginBinding := builder.Build()
 
 			switch len(kpbList) {
 			case 0:
