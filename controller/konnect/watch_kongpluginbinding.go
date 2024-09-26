@@ -3,7 +3,6 @@ package konnect
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -45,7 +43,7 @@ func KongPluginBindingReconciliationWatchOptions(
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.For(&configurationv1alpha1.KongPluginBinding{},
 				builder.WithPredicates(
-					predicate.NewPredicateFuncs(kongPluginBindingRefersToKonnectGatewayControlPlane),
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongPluginBinding]),
 				),
 			)
 		},
@@ -106,27 +104,6 @@ func KongPluginBindingReconciliationWatchOptions(
 			)
 		},
 	}
-}
-
-// -----------------------------------------------------------------------------
-// KongPluginBinding reconciler - Watch Predicates
-// -----------------------------------------------------------------------------
-
-// kongPluginBindingRefersToKonnectGatewayControlPlane returns true if the KongPluginBinding
-// refers to a KonnectGatewayControlPlane.
-func kongPluginBindingRefersToKonnectGatewayControlPlane(obj client.Object) bool {
-	kongPB, ok := obj.(*configurationv1alpha1.KongPluginBinding)
-	if !ok {
-		ctrllog.FromContext(context.Background()).Error(
-			operatorerrors.ErrUnexpectedObject,
-			"failed to run predicate function",
-			"expected", "KongPluginBinding", "found", reflect.TypeOf(obj),
-		)
-		return false
-	}
-
-	cpRef := kongPB.Spec.ControlPlaneRef
-	return cpRef != nil && cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
 }
 
 // -----------------------------------------------------------------------------

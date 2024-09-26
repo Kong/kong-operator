@@ -1,12 +1,16 @@
 package konnect
 
 import (
+	"context"
 	"fmt"
+	"reflect"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -55,4 +59,27 @@ func ReconciliationWatchOptionsForEntity[
 	default:
 		panic(fmt.Sprintf("unsupported entity type %T", ent))
 	}
+}
+
+// objRefersToKonnectGatewayControlPlane returns true if the object
+// refers to a KonnectGatewayControlPlane.
+func objRefersToKonnectGatewayControlPlane[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](obj client.Object) bool {
+	ent, ok := obj.(TEnt)
+	if !ok {
+		ctrllog.FromContext(context.Background()).Error(
+			operatorerrors.ErrUnexpectedObject,
+			"failed to run predicate function",
+			"expected", constraints.EntityTypeName[T](), "found", reflect.TypeOf(obj),
+		)
+		return false
+	}
+
+	cpRef, ok := getControlPlaneRef(ent).Get()
+	if !ok {
+		return false
+	}
+	return cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
 }
