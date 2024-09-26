@@ -1,4 +1,4 @@
-package kongtarget
+package kongsni
 
 import (
 	"context"
@@ -11,10 +11,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	configurationv1alpha1client "github.com/kong/kubernetes-configuration/pkg/clientset/typed/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/test/crdsvalidation/kongtarget/testcases"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation/kongsni/testcases"
 )
 
-func TestKongTarget(t *testing.T) {
+func TestKongSNI(t *testing.T) {
 	ctx := context.Background()
 	cfg, err := config.GetConfig()
 	require.NoError(t, err, "error loading Kubernetes config")
@@ -25,8 +25,8 @@ func TestKongTarget(t *testing.T) {
 		t.Run(tcsGroup.Name, func(t *testing.T) {
 			for _, tc := range tcsGroup.TestCases {
 				t.Run(tc.Name, func(t *testing.T) {
-					cl := cl.KongTargets(tc.KongTarget.Namespace)
-					entity, err := cl.Create(ctx, &tc.KongTarget, metav1.CreateOptions{})
+					cl := cl.KongSNIs(tc.KongSNI.Namespace)
+					entity, err := cl.Create(ctx, &tc.KongSNI, metav1.CreateOptions{})
 					if err == nil {
 						t.Cleanup(func() {
 							assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, entity.Name, metav1.DeleteOptions{})))
@@ -37,8 +37,8 @@ func TestKongTarget(t *testing.T) {
 						assert.NoError(t, err)
 
 						// if the status has to be updated, update it.
-						if tc.KongTargetStatus != nil {
-							entity.Status = *tc.KongTargetStatus
+						if tc.KongSNIStatus != nil {
+							entity.Status = *tc.KongSNIStatus
 							entity, err = cl.UpdateStatus(ctx, entity, metav1.UpdateOptions{})
 							assert.NoError(t, err)
 						}

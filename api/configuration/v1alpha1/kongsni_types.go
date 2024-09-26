@@ -22,7 +22,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// KongTarget is the schema for Target API which defines a Kong Target attached to a Kong Upstream.
+// KongSNI is the schema for SNI API which defines a Kong SNI.
 //
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -31,39 +31,40 @@ import (
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
-// +kubebuilder:validation:XValidation:rule="oldSelf.spec.upstreamRef == self.spec.upstreamRef", message="spec.upstreamRef is immutable"
-type KongTarget struct {
+// +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.certificateRef == self.spec.certificateRef", message="spec.certificateRef is immutable when programmed"
+type KongSNI struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec KongTargetSpec `json:"spec"`
+	Spec KongSNISpec `json:"spec"`
+
 	// +kubebuilder:default={conditions: {{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}}
-	Status KongTargetStatus `json:"status,omitempty"`
+	Status KongSNIStatus `json:"status,omitempty"`
 }
 
-type KongTargetSpec struct {
-	// UpstreamRef is a reference to a KongUpstream this KongTarget is attached to.
-	UpstreamRef TargetRef `json:"upstreamRef"`
-	// KongTargetAPISpec are the attributes of the Kong Target itself.
-	KongTargetAPISpec `json:",inline"`
-}
+// KongSNIAPISpec defines specification of an SNI.
+type KongSNIAPISpec struct {
+	// Name is the name of the SNI. Required and must be a host or wildcard host.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
 
-type KongTargetAPISpec struct {
-	// Target is the target address of the upstream.
-	Target string `json:"target"`
-	// Weight is the weight this target gets within the upstream loadbalancer.
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=65535
-	// +kubebuilder:default=100
-	Weight int `json:"weight"`
-	// Tags is an optional set of strings associated with the Target for grouping and filtering.
+	// Tags is an optional set of strings associated with the SNI for grouping and filtering.
 	Tags []string `json:"tags,omitempty"`
 }
 
-type KongTargetStatus struct {
+// KongSNISpec defines specification of a Kong SNI.
+type KongSNISpec struct {
+	// CertificateRef is the reference to the certificate to which the KongSNI is attached.
+	CertificateRef KongObjectRef `json:"certificateRef"`
+	// KongSNIAPISpec are the attributes of the Kong SNI itself.
+	KongSNIAPISpec `json:",inline"`
+}
+
+// KongKeyStatus defines the status for a KongSNI.
+type KongSNIStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
-	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndUpstreamRefs `json:"konnect,omitempty"`
+	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndCertificateRefs `json:"konnect,omitempty"`
 
 	// Conditions describe the status of the Konnect entity.
 	// +listType=map
@@ -75,13 +76,13 @@ type KongTargetStatus struct {
 
 // +kubebuilder:object:root=true
 
-// KongTargetList contains a list of Kong Targets.
-type KongTargetList struct {
+// KongSNIList contains a list of Kong SNIs.
+type KongSNIList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongTarget `json:"items"`
+	Items           []KongSNI `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&KongTarget{}, &KongTargetList{})
+	SchemeBuilder.Register(&KongSNI{}, &KongSNIList{})
 }

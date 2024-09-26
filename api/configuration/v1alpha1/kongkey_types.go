@@ -44,7 +44,6 @@ type KongKey struct {
 }
 
 // KongKeySpec defines the spec for a KongKey.
-//
 type KongKeySpec struct {
 	// ControlPlaneRef is a reference to a Konnect ControlPlane this KongKey is associated with.
 	// +optional
@@ -114,7 +113,7 @@ type KongKeyStatus struct {
 
 // +kubebuilder:object:root=true
 
-// KongKeyList contains a list of Kong Targets.
+// KongKeyList contains a list of Kong Keys.
 type KongKeyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

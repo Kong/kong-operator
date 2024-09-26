@@ -647,3 +647,61 @@ func (obj *KongVault) GetConditions() []metav1.Condition {
 func (obj *KongVault) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+func (obj *KongSNI) initKonnectStatus() {
+	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndCertificateRefs{}
+}
+
+// GetKonnectStatus returns the Konnect status contained in the KongSNI status.
+func (obj *KongSNI) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
+	if obj.Status.Konnect == nil {
+		return nil
+	}
+	return &obj.Status.Konnect.KonnectEntityStatus
+}
+
+// GetKonnectID returns the Konnect ID in the KongSNI status.
+func (obj *KongSNI) GetKonnectID() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.ID
+}
+
+// SetKonnectID sets the Konnect ID in the KongSNI status.
+func (obj *KongSNI) SetKonnectID(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ID = id
+}
+
+// GetControlPlaneID returns the ControlPlane ID in the KongSNI status.
+func (obj *KongSNI) GetControlPlaneID() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.ControlPlaneID
+}
+
+// SetControlPlaneID sets the ControlPlane ID in the KongSNI status.
+func (obj *KongSNI) SetControlPlaneID(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ControlPlaneID = id
+}
+
+// GetTypeName returns the KongSNI Kind name
+func (obj KongSNI) GetTypeName() string {
+	return "KongSNI"
+}
+
+// GetConditions returns the Status Conditions
+func (obj *KongSNI) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions
+func (obj *KongSNI) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
+}

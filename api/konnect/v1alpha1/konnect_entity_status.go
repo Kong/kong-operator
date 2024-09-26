@@ -157,3 +157,13 @@ func (in *KonnectEntityStatusWithControlPlaneAndKeySetRef) SetKeySetID(id string
 func (in *KonnectEntityStatusWithControlPlaneAndKeySetRef) GetKeySetID() string {
 	return in.KeySetID
 }
+
+type KonnectEntityStatusWithControlPlaneAndCertificateRefs struct {
+	KonnectEntityStatus `json:",inline"`
+
+	// ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with.
+	ControlPlaneID string `json:"controlPlaneID,omitempty"`
+
+	// CertificateID is the Konnect ID of the Certificate this entity is associated with.
+	CertificateID string `json:"certificateID,omitempty"`
+}
