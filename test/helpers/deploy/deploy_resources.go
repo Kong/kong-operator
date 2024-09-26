@@ -634,6 +634,7 @@ func KongKeyAttachedToCP(
 	cl client.Client,
 	kid, name string,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	opts ...objOption,
 ) *configurationv1alpha1.KongKey {
 	t.Helper()
 
@@ -654,6 +655,9 @@ func KongKeyAttachedToCP(
 				JWK:  lo.ToPtr("{}"),
 			},
 		},
+	}
+	for _, opt := range opts {
+		opt(key)
 	}
 	require.NoError(t, cl.Create(ctx, key))
 	t.Logf("deployed new KongKey %s", client.ObjectKeyFromObject(key))
@@ -718,7 +722,7 @@ func KongKeySetAttachedToCP(
 
 	keySet := &configurationv1alpha1.KongKeySet{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "key-set-",
+			Name: name,
 		},
 		Spec: configurationv1alpha1.KongKeySetSpec{
 			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{

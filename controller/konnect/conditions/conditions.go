@@ -129,6 +129,20 @@ const (
 )
 
 const (
+	// KeySetRefValidConditionType is the type of the condition that indicates
+	// whether the KeySet reference is valid and points to an existing
+	// KeySet.
+	KeySetRefValidConditionType = "KeySetRefValid"
+
+	// KeySetRefReasonValid is the reason used with the KeySetRefValid
+	// condition type indicating that the KeySet reference is valid.
+	KeySetRefReasonValid = "Valid"
+	// KeySetRefReasonInvalid is the reason used with the KeySetRefValid
+	// condition type indicating that the KeySet reference is invalid.
+	KeySetRefReasonInvalid = "Invalid"
+)
+
+const (
 	// KongCertificateRefValidConditionType is the type of the condition that indicates
 	// whether the KongCertificate reference is valid and points to an existing KongCertificate
 	KongCertificateRefValidConditionType = "KongCertificateRefValid"

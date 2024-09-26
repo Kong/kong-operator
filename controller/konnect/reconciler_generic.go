@@ -288,6 +288,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, nil
 	}
 
+	// If a type has a KongKeySet ref, handle it.
+	res, err = handleKongKeySetRef(ctx, r.Client, ent)
+	if err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to get APIAuth ref for %s: %w", client.ObjectKeyFromObject(ent), err)
@@ -725,6 +731,189 @@ func getConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constraints.E
 	}
 }
 
+func getServiceRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
+	e TEnt,
+) mo.Option[configurationv1alpha1.ServiceRef] {
+	switch e := any(e).(type) {
+	case *configurationv1alpha1.KongRoute:
+		if e.Spec.ServiceRef == nil {
+			return mo.None[configurationv1alpha1.ServiceRef]()
+		}
+		return mo.Some(*e.Spec.ServiceRef)
+	default:
+		return mo.None[configurationv1alpha1.ServiceRef]()
+	}
+}
+
+func getKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
+	e TEnt,
+) mo.Option[configurationv1alpha1.KeySetRef] {
+	switch e := any(e).(type) {
+	case *configurationv1alpha1.KongKey:
+		if e.Spec.KeySetRef == nil {
+			return mo.None[configurationv1alpha1.KeySetRef]()
+		}
+		return mo.Some(*e.Spec.KeySetRef)
+	default:
+		return mo.None[configurationv1alpha1.KeySetRef]()
+	}
+}
+
+// handleKongServiceRef handles the ServiceRef for the given entity.
+// It sets the owner reference to the referenced KongService and updates the
+// status of the entity based on the referenced KongService status.
+func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
+	ctx context.Context,
+	cl client.Client,
+	ent TEnt,
+) (ctrl.Result, error) {
+	kongServiceRef, ok := getServiceRef(ent).Get()
+	if !ok {
+		return ctrl.Result{}, nil
+	}
+	switch kongServiceRef.Type {
+	case configurationv1alpha1.ServiceRefNamespacedRef:
+		svc := configurationv1alpha1.KongService{}
+		nn := types.NamespacedName{
+			Name: kongServiceRef.NamespacedRef.Name,
+			// TODO: handle cross namespace refs
+			Namespace: ent.GetNamespace(),
+		}
+
+		if err := cl.Get(ctx, nn, &svc); err != nil {
+			if res, errStatus := updateStatusWithCondition(
+				ctx, cl, ent,
+				conditions.KongServiceRefValidConditionType,
+				metav1.ConditionFalse,
+				conditions.KongServiceRefReasonInvalid,
+				err.Error(),
+			); errStatus != nil || res.Requeue {
+				return res, errStatus
+			}
+
+			return ctrl.Result{}, fmt.Errorf("can't get the referenced KongService %s: %w", nn, err)
+		}
+
+		// If referenced KongService is being deleted, return an error so that we
+		// can remove the entity from Konnect first.
+		if delTimestamp := svc.GetDeletionTimestamp(); !delTimestamp.IsZero() {
+			return ctrl.Result{}, ReferencedKongServiceIsBeingDeleted{
+				Reference: nn,
+			}
+		}
+
+		cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, &svc)
+		if !ok || cond.Status != metav1.ConditionTrue {
+			ent.SetKonnectID("")
+			if res, err := updateStatusWithCondition(
+				ctx, cl, ent,
+				conditions.KongServiceRefValidConditionType,
+				metav1.ConditionFalse,
+				conditions.KongServiceRefReasonInvalid,
+				fmt.Sprintf("Referenced KongService %s is not programmed yet", nn),
+			); err != nil || res.Requeue {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		old := ent.DeepCopyObject().(TEnt)
+		if err := controllerutil.SetOwnerReference(&svc, ent, cl.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
+		}
+		if err := cl.Patch(ctx, ent, client.MergeFrom(old)); err != nil {
+			if k8serrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
+		}
+
+		// TODO(pmalek): make this generic.
+		// Service ID is not stored in KonnectEntityStatus because not all entities
+		// have a ServiceRef, hence the type constraints in the reconciler can't be used.
+		if route, ok := any(ent).(*configurationv1alpha1.KongRoute); ok {
+			if route.Status.Konnect == nil {
+				route.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs{}
+			}
+			route.Status.Konnect.ServiceID = svc.Status.Konnect.GetKonnectID()
+		}
+
+		if res, errStatus := updateStatusWithCondition(
+			ctx, cl, ent,
+			conditions.KongServiceRefValidConditionType,
+			metav1.ConditionTrue,
+			conditions.KongServiceRefReasonValid,
+			fmt.Sprintf("Referenced KongService %s programmed", nn),
+		); errStatus != nil || res.Requeue {
+			return res, errStatus
+		}
+
+		cpRef, ok := getControlPlaneRef(&svc).Get()
+		if !ok {
+			return ctrl.Result{}, fmt.Errorf(
+				"KongRoute references a KongService %s which does not have a ControlPlane ref",
+				client.ObjectKeyFromObject(&svc),
+			)
+		}
+		cp, err := getCPForRef(ctx, cl, cpRef, ent.GetNamespace())
+		if err != nil {
+			if res, errStatus := updateStatusWithCondition(
+				ctx, cl, ent,
+				conditions.ControlPlaneRefValidConditionType,
+				metav1.ConditionFalse,
+				conditions.ControlPlaneRefReasonInvalid,
+				err.Error(),
+			); errStatus != nil || res.Requeue {
+				return res, errStatus
+			}
+			if k8serrors.IsNotFound(err) {
+				return ctrl.Result{}, ReferencedControlPlaneDoesNotExistError{
+					Reference: nn,
+					Err:       err,
+				}
+			}
+			return ctrl.Result{}, err
+		}
+
+		cond, ok = k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
+		if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
+			if res, errStatus := updateStatusWithCondition(
+				ctx, cl, ent,
+				conditions.ControlPlaneRefValidConditionType,
+				metav1.ConditionFalse,
+				conditions.ControlPlaneRefReasonInvalid,
+				fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
+			); errStatus != nil || res.Requeue {
+				return res, errStatus
+			}
+
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		// TODO(pmalek): make this generic.
+		// CP ID is not stored in KonnectEntityStatus because not all entities
+		// have a ControlPlaneRef, hence the type constraints in the reconciler can't be used.
+		if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
+			resource.SetControlPlaneID(cp.Status.ID)
+		}
+
+		if res, errStatus := updateStatusWithCondition(
+			ctx, cl, ent,
+			conditions.ControlPlaneRefValidConditionType,
+			metav1.ConditionTrue,
+			conditions.ControlPlaneRefReasonValid,
+			fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
+		); errStatus != nil || res.Requeue {
+			return res, errStatus
+		}
+
+	default:
+		return ctrl.Result{}, fmt.Errorf("unimplemented KongService ref type %q", kongServiceRef.Type)
+	}
+
+	return ctrl.Result{}, nil
+}
+
 // handleKongConsumerRef handles the ConsumerRef for the given entity.
 // It sets the owner reference to the referenced KongConsumer and updates the
 // status of the entity based on the referenced KongConsumer status.
@@ -1054,6 +1243,105 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	default:
 		return ctrl.Result{}, fmt.Errorf("unimplemented ControlPlane ref type %q", cpRef.Type)
 	}
+}
+
+// handleKongKeySetRef handles the KeySetRef for the given entity.
+func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
+	ctx context.Context,
+	cl client.Client,
+	ent TEnt,
+) (ctrl.Result, error) {
+	keySetRef, ok := getKeySetRef(ent).Get()
+	if !ok {
+		if key, ok := any(ent).(*configurationv1alpha1.KongKey); ok {
+			// If the entity has a resolved reference, but the spec has changed, we need to adjust the status.
+			if key.Status.Konnect != nil && key.Status.Konnect.GetKeySetID() != "" {
+				key.Status.Konnect.KeySetID = ""
+				if res, err := updateStatusWithCondition(ctx, cl, key,
+					conditions.KeySetRefValidConditionType,
+					metav1.ConditionTrue,
+					conditions.KeySetRefReasonValid,
+					"KeySetRef is nil",
+				); err != nil || !res.IsZero() {
+					return res, err
+				}
+			}
+		}
+		return ctrl.Result{}, nil
+	}
+
+	if keySetRef.Type != configurationv1alpha1.KeySetRefNamespacedRef {
+		return ctrl.Result{}, fmt.Errorf("unsupported KeySet ref type %q", keySetRef.Type)
+	}
+
+	keySet := configurationv1alpha1.KongKeySet{}
+	nn := types.NamespacedName{
+		Name:      keySetRef.NamespacedRef.Name,
+		Namespace: ent.GetNamespace(),
+	}
+
+	if err := cl.Get(ctx, nn, &keySet); err != nil {
+		if res, errStatus := updateStatusWithCondition(
+			ctx, cl, ent,
+			conditions.KeySetRefValidConditionType,
+			metav1.ConditionFalse,
+			conditions.KeySetRefReasonInvalid,
+			err.Error(),
+		); errStatus != nil || res.Requeue {
+			return res, errStatus
+		}
+
+		// If it was not found, let's requeue.
+		if k8serrors.IsNotFound(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		return ctrl.Result{}, fmt.Errorf("failed getting KongKeySet %s: %w", nn, err)
+	}
+
+	// If referenced KongKeySet is being deleted, requeue.
+	if delTimestamp := keySet.GetDeletionTimestamp(); !delTimestamp.IsZero() {
+		return ctrl.Result{
+			RequeueAfter: time.Until(delTimestamp.Time),
+		}, nil
+	}
+
+	// Verify that the KongKeySet is programmed.
+	cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, &keySet)
+	if !ok || cond.Status != metav1.ConditionTrue {
+		if res, err := updateStatusWithCondition(
+			ctx, cl, ent,
+			conditions.KeySetRefValidConditionType,
+			metav1.ConditionFalse,
+			conditions.KeySetRefReasonInvalid,
+			fmt.Sprintf("Referenced KongKeySet %s is not programmed yet", nn),
+		); err != nil || res.Requeue {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// TODO: make this generic.
+	// KongKeySet ID is not stored in KonnectEntityStatus because not all entities
+	// have a KeySetRef, hence the type constraints in the reconciler can't be used.
+	if key, ok := any(ent).(*configurationv1alpha1.KongKey); ok {
+		if key.Status.Konnect == nil {
+			key.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndKeySetRef{}
+		}
+		key.Status.Konnect.KeySetID = keySet.Status.Konnect.GetKonnectID()
+	}
+
+	if res, errStatus := updateStatusWithCondition(
+		ctx, cl, ent,
+		conditions.KeySetRefValidConditionType,
+		metav1.ConditionTrue,
+		conditions.KeySetRefReasonValid,
+		fmt.Sprintf("Referenced KongKeySet %s programmed", nn),
+	); errStatus != nil || res.Requeue {
+		return res, errStatus
+	}
+
+	return ctrl.Result{}, nil
 }
 
 func conditionMessageReferenceKonnectAPIAuthConfigurationInvalid(apiAuthRef types.NamespacedName) string {

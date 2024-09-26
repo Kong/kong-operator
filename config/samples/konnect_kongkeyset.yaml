@@ -37,3 +37,64 @@ spec:
   name: key-set-1
   tags:
     - production
+---
+kind: KongKey
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: key-1
+  namespace: default
+  annotations:
+    konghq.com/tags: "infra"
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: test1
+  keySetRef:
+    type: namespacedRef
+    namespacedRef:
+      name: key-set-1
+  tags:
+    - production
+  kid: kid
+  name: key-1
+  pem:
+    private_key: |
+      -----BEGIN PRIVATE KEY-----
+      MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCdLY9b3Pb/Fsxo
+      cIJAKxZQKEtqTU8k72BOvMBtzcIN9ekGFrUYB8GQgIJsPIUw4+c4XK99YNh0tVBE
+      /9W8OdyXwopzqNn+nRfrhXpxDu+BVvjQ/AENAHKqg8pJKhNTd4W6dAzxelLO/t7y
+      rlXbjGX/Ry/3ednPq6PpDcxvqgc+v7Rcmh+5dEKdIoIrppjUc2X38+LXcy9xOuML
+      FtxNtx+NB+5bNq31eooT9OKk3r7mA0gX4Su2DnIL+SLsdTIb0dnCBIydUpbLdYfd
+      dew1UGy2XtlWsxux3zoXjGe+RBtndUzPBvyb/k6g2QFAaIEwndPbwQ4fi9y4FrB7
+      hqjQa+OLAgMBAAECggEAMkWruCydHarLl04BAwgk+19f+7Cdc0lTCuwJOjWY70Er
+      loR1yKlWamMIFBlpWmFSh67xfE8Y/H8vnNodITZ6jVmuUd78VpklWPHY30dxKHPK
+      YoFvzppJkqtTbIJWKxir/551s1i2GrnfUkybbnzh9Lvuph9loKwb4YNF06NU7OcA
+      tgCk78oA/JpVa01PCJYmVy8zI4UERt/2mBzuummk8kJhPl+A7K9gVkNz6KSeQDGM
+      QUZ6gtiYtyg7nT+kI1H6LfwokxCljQ+MBuB62eehUsie7EmpgmJqbzesqnWfdbFp
+      IjCDn174R45o0FUD1QpcbQWxa39cdo4f6oP4My8szQKBgQDJT8Z7yfYAXeAyVeRD
+      tTrOWhXqKzj3DOO65n+Evwen9O4NlWKtbC6LeaogcrlJSuHhYlAShdgrBy6DLWi8
+      DEwozbK5YvpKbQ8u03rJYnfM6nN57gvm49SgsaoUPO4FlZMt1V3VC6kG2K4YbP8Y
+      OWy5FCdYPRlOtPp4CsFQ4xzbjQKBgQDH4IIMBT667V+7fWC/YyvUqJoIimuZcVzP
+      zmxICWVP9u4VKCHw46sbqukCw56bMYD8X7zu16Sbkkc3YzeOP6n4NGcLUzIFkweq
+      nzKdxZ6wj00x+mHT0/i/B8IZDYSkRFHF7ISV3Z8B9FuJXfsk5xGHVc47jVOTyKPb
+      XuLzcAlpdwKBgAsij37/X80LZEBEgfjAyHzrfLTUKTV5EAuhfkIwctL2eEhmD+w5
+      xKVQWHms/tSwAKh/0KAFqTxQDGGTHGzyXTAQmKcqc1+0gpd7eRo0iR3bhgGjiiL+
+      TR+KVDcEW8IRUO/DEoqbN4E6cP7G4KFNY9ck5zw5PPIejpAfQCwiM9FtAoGAW8Kn
+      EWurA9gMFiAWNWcK7UNGC9u4UCZqDIDg1yVxHIfpf08AXf23RSludbVm8CqG49Xz
+      /9aCHGXIShZDoAt8NZWhJOLZ2RNJ9rvFWgcqtjXjo6kmFkB/NvwR0LyTA3LV876E
+      k+S9pgEPsP2zWZq3QmFTH6XfE76N8x0ZpdbuizsCgYBBDNh8AfKbaEdo90bQi8No
+      sNqbHFAc12H6qxqnRl/pDvoY34wBVeZP3QEfb/XeOO2BVrcx6tGvIosy2lkOJtrh
+      ckY/QO1OLvcDtDgMA6qOr1rAROP/aWhuhJg1Aw50vCuy3z96CfUVSJBG+r0v7HvO
+      ZNgrh9kB0qmomKcjwwJlKQ==
+      -----END PRIVATE KEY-----
+    public_key: |
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnS2PW9z2/xbMaHCCQCsW
+      UChLak1PJO9gTrzAbc3CDfXpBha1GAfBkICCbDyFMOPnOFyvfWDYdLVQRP/VvDnc
+      l8KKc6jZ/p0X64V6cQ7vgVb40PwBDQByqoPKSSoTU3eFunQM8XpSzv7e8q5V24xl
+      /0cv93nZz6uj6Q3Mb6oHPr+0XJofuXRCnSKCK6aY1HNl9/Pi13MvcTrjCxbcTbcf
+      jQfuWzat9XqKE/TipN6+5gNIF+Ertg5yC/ki7HUyG9HZwgSMnVKWy3WH3XXsNVBs
+      tl7ZVrMbsd86F4xnvkQbZ3VMzwb8m/5OoNkBQGiBMJ3T28EOH4vcuBawe4ao0Gvj
+      iwIDAQAB
+      -----END PUBLIC KEY-----
