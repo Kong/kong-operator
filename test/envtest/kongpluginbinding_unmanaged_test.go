@@ -77,9 +77,6 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		defer createCall.Unset()
 
 		kongService := deployKongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
-		t.Cleanup(func() {
-			require.NoError(t, client.IgnoreNotFound(clientNamespaced.Delete(ctx, kongService)))
-		})
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
 
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
@@ -187,14 +184,8 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		defer createCall.Unset()
 
 		kongService := deployKongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
-		t.Cleanup(func() {
-			require.NoError(t, client.IgnoreNotFound(clientNamespaced.Delete(ctx, kongService)))
-		})
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
 		kongRoute := deployKongRouteAttachedToService(t, ctx, clientNamespaced, kongService)
-		t.Cleanup(func() {
-			require.NoError(t, client.IgnoreNotFound(clientNamespaced.Delete(ctx, kongRoute)))
-		})
 		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
 
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
@@ -292,14 +283,8 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		pluginID := uuid.NewString()
 
 		kongService := deployKongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
-		t.Cleanup(func() {
-			require.NoError(t, client.IgnoreNotFound(clientNamespaced.Delete(ctx, kongService)))
-		})
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
 		kongRoute := deployKongRouteAttachedToService(t, ctx, clientNamespaced, kongService)
-		t.Cleanup(func() {
-			require.NoError(t, client.IgnoreNotFound(clientNamespaced.Delete(ctx, kongRoute)))
-		})
 		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
 
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))

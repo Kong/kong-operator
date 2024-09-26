@@ -29,6 +29,12 @@ import (
 )
 
 func TestKongPluginBindingManaged(t *testing.T) {
+	// NOTE: Since this test checks the behavior of creating KongPluginBindings
+	// based on annotations/ on objects that can have plugins bound to them,
+	// need to delete these at the end of each respective subtest to prevent them
+	// from being picked up in other tests and cause reconciler to create/update/delete
+	// KongPluginBindings.
+
 	t.Parallel()
 	ctx, cancel := Context(t, context.Background())
 	defer cancel()
