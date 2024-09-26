@@ -260,7 +260,6 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer removed",
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
-		wKongPlugin = setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		delete(kongRoute.Annotations, consts.PluginsAnnotationKey)
 		require.NoError(t, clientNamespaced.Update(ctx, kongRoute))
 		_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
