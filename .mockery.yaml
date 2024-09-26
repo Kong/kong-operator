@@ -28,3 +28,4 @@ packages:
       CertificatesSDK:
       KeysSDK:
       KeySetsSDK:
+      SNIsSDK:

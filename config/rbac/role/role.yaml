@@ -154,6 +154,7 @@ rules:
   - kongplugins/status
   - kongroutes/status
   - kongservices/status
+  - kongsnis/status
   - kongtargets/status
   - kongupstreampolicies/status
   - kongupstreams/status
@@ -182,6 +183,7 @@ rules:
   resources:
   - kongroutes
   - kongservices
+  - kongsnis
   - kongtargets
   - kongupstreams
   - kongvaults

@@ -100,6 +100,8 @@ const (
 	KongKeyControllerName = "KongKey"
 	// KongKeySetControllerName is the name of KongKeySet controller.
 	KongKeySetControllerName = "KongKeySet"
+	// KongSNIControllerName is the name of KongSNI controller.
+	KongSNIControllerName = "KongSNI"
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
@@ -522,6 +524,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					c.DevelopmentMode,
 					mgr.GetClient(),
 					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongVault](c.KonnectSyncPeriod),
+				),
+			},
+			KongSNIControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongSNI](
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongSNI](c.KonnectSyncPeriod),
 				),
 			},
 		}

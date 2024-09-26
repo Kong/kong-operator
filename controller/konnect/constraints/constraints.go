@@ -28,7 +28,8 @@ type SupportedKonnectEntityType interface {
 		configurationv1alpha1.KongTarget |
 		configurationv1alpha1.KongVault |
 		configurationv1alpha1.KongKey |
-		configurationv1alpha1.KongKeySet
+		configurationv1alpha1.KongKeySet |
+		configurationv1alpha1.KongSNI
 	// TODO: add other types
 
 	GetTypeName() string
