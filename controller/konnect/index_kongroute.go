@@ -29,5 +29,5 @@ func kongRouteUsesPlugins(object client.Object) []string {
 	if !ok {
 		return nil
 	}
-	return annotations.ExtractPlugins(route)
+	return annotations.ExtractPluginsWithNamespaces(route)
 }
