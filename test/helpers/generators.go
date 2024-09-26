@@ -65,9 +65,11 @@ func GenerateGateway(gatewayNSN types.NamespacedName, gatewayClass *gatewayv1.Ga
 	return gateway
 }
 
+type gatewayConfigurationOption func(*operatorv1beta1.GatewayConfiguration)
+
 // GenerateGatewayConfiguration generates a GatewayConfiguration to be used in tests
-func GenerateGatewayConfiguration(namespace string) *operatorv1beta1.GatewayConfiguration {
-	return &operatorv1beta1.GatewayConfiguration{
+func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfigurationOption) *operatorv1beta1.GatewayConfiguration {
+	gwc := &operatorv1beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      uuid.NewString(),
@@ -138,6 +140,20 @@ func GenerateGatewayConfiguration(namespace string) *operatorv1beta1.GatewayConf
 				},
 			},
 		},
+	}
+	for _, opt := range opts {
+		opt(gwc)
+	}
+	return gwc
+}
+
+// WithControlPlaneWebhookDisabled disables the admission webhook for the control plane
+func WithControlPlaneWebhookDisabled() func(*operatorv1beta1.GatewayConfiguration) {
+	return func(gc *operatorv1beta1.GatewayConfiguration) {
+		gc.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env = append(gc.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env, corev1.EnvVar{
+			Name:  "CONTROLLER_ADMISSION_WEBHOOK_LISTEN",
+			Value: "off",
+		})
 	}
 }
 
