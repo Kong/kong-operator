@@ -91,7 +91,7 @@ func TestKongKey(t *testing.T) {
 
 	t.Log("Setting up SDK expectations on KongKey update")
 	sdk.KeysSDK.EXPECT().UpsertKey(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertKeyRequest) bool {
-		return r.KeyID == "12345" &&
+		return r.KeyID == keyID &&
 			lo.Contains(r.Key.Tags, "addedTag")
 	})).Return(&sdkkonnectops.UpsertKeyResponse{}, nil)
 
@@ -106,7 +106,7 @@ func TestKongKey(t *testing.T) {
 	}, waitTime, tickTime)
 
 	t.Log("Setting up SDK expectations on KongKey deletion")
-	sdk.KeysSDK.EXPECT().DeleteKey(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), "12345").
+	sdk.KeysSDK.EXPECT().DeleteKey(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), keyID).
 		Return(&sdkkonnectops.DeleteKeyResponse{}, nil)
 
 	t.Log("Deleting KongKey")

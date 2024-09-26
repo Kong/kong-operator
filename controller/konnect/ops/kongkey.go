@@ -9,7 +9,7 @@ import (
 
 // KeysSDK is the interface for the KeysSDK.
 type KeysSDK interface {
-	CreateKey(ctx context.Context, controlPlaneID string, caCertificate sdkkonnectcomp.KeyInput, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateKeyResponse, error)
+	CreateKey(ctx context.Context, controlPlaneID string, Key sdkkonnectcomp.KeyInput, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateKeyResponse, error)
 	UpsertKey(ctx context.Context, request sdkkonnectops.UpsertKeyRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertKeyResponse, error)
-	DeleteKey(ctx context.Context, controlPlaneID string, caCertificateID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteKeyResponse, error)
+	DeleteKey(ctx context.Context, controlPlaneID string, KeyID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteKeyResponse, error)
 }
