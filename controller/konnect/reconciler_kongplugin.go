@@ -53,14 +53,14 @@ func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Mana
 		).
 		Watches(
 			&configurationv1alpha1.KongService{},
-			handler.EnqueueRequestsFromMapFunc(r.mapKongServices),
+			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1alpha1.KongService](r.developmentMode)),
 			builder.WithPredicates(
 				kongPluginsAnnotationChangedPredicate,
 			),
 		).
 		Watches(
 			&configurationv1alpha1.KongRoute{},
-			handler.EnqueueRequestsFromMapFunc(r.mapKongRoutes),
+			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1alpha1.KongRoute](r.developmentMode)),
 			builder.WithPredicates(
 				kongPluginsAnnotationChangedPredicate,
 			),

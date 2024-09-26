@@ -84,10 +84,10 @@ const (
 	KongServicePluginBindingFinalizerControllerName = "KongServicePluginBindingFinalizer"
 	// KongCredentialsSecretControllerName is the name of the Credentials Secret controller.
 	KongCredentialsSecretControllerName = "KongCredentialSecret"
-	// KongKongCredentialBasicAuthControllerName is the name of the KongCredentialBasicAuth controller.
-	KongKongCredentialBasicAuthControllerName = "KongCredentialBasicAuth" //nolint:gosec
-	// KongKongCredentialAPIKeyControllerName is the name of the KongCredentialAPIKey controller.
-	KongKongCredentialAPIKeyControllerName = "KongCredentialAPIKey" //nolint:gosec
+	// KongCredentialBasicAuthControllerName is the name of the KongCredentialBasicAuth controller.
+	KongCredentialBasicAuthControllerName = "KongCredentialBasicAuth" //nolint:gosec
+	// KongCredentialAPIKeyControllerName is the name of the KongCredentialAPIKey controller.
+	KongCredentialAPIKeyControllerName = "KongCredentialAPIKey" //nolint:gosec
 	// KongCACertificateControllerName is the name of the KongCACertificate controller.
 	KongCACertificateControllerName = "KongCACertificate"
 	// KongCertificateControllerName is the name of the KongCertificate controller.
@@ -436,7 +436,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](c.KonnectSyncPeriod),
 				),
 			},
-			KongKongCredentialBasicAuthControllerName: {
+			KongCredentialBasicAuthControllerName: {
 				Enabled: c.KonnectControllersEnabled,
 				Controller: konnect.NewKonnectEntityReconciler(
 					sdkFactory,
@@ -445,7 +445,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialBasicAuth](c.KonnectSyncPeriod),
 				),
 			},
-			KongKongCredentialAPIKeyControllerName: {
+			KongCredentialAPIKeyControllerName: {
 				Enabled: c.KonnectControllersEnabled,
 				Controller: konnect.NewKonnectEntityReconciler(
 					sdkFactory,
