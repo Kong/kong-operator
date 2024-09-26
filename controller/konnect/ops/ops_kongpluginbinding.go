@@ -18,6 +18,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
@@ -199,7 +200,6 @@ func getPluginBindingTargets(
 		targetObjects = append(targetObjects, &kongRoute)
 	}
 	if ref := targets.ConsumerReference; ref != nil {
-
 		kongConsumer := configurationv1.KongConsumer{}
 		kongConsumer.SetName(ref.Name)
 		kongConsumer.SetNamespace(pluginBinding.GetNamespace())
@@ -208,8 +208,15 @@ func getPluginBindingTargets(
 		}
 		targetObjects = append(targetObjects, &kongConsumer)
 	}
-
-	// TODO: https://github.com/Kong/gateway-operator/issues/527 add support for KongConsumerGroup
+	if ref := targets.ConsumerGroupReference; ref != nil {
+		kongConsumerGroup := configurationv1beta1.KongConsumerGroup{}
+		kongConsumerGroup.SetName(ref.Name)
+		kongConsumerGroup.SetNamespace(pluginBinding.GetNamespace())
+		if err := cl.Get(ctx, client.ObjectKeyFromObject(&kongConsumerGroup), &kongConsumerGroup); err != nil {
+			return nil, err
+		}
+		targetObjects = append(targetObjects, &kongConsumerGroup)
+	}
 
 	return targetObjects, nil
 }
@@ -281,7 +288,10 @@ func kongPluginWithTargetsToKongPluginInput(
 			pluginInput.Consumer = &sdkkonnectcomp.PluginConsumer{
 				ID: lo.ToPtr(id),
 			}
-		// TODO: https://github.com/Kong/gateway-operator/issues/527 add support for KongConsumerGroup
+		case *configurationv1beta1.KongConsumerGroup:
+			pluginInput.ConsumerGroup = &sdkkonnectcomp.PluginConsumerGroup{
+				ID: lo.ToPtr(id),
+			}
 		default:
 			return nil, fmt.Errorf("unsupported target type %T", t)
 		}

@@ -7,7 +7,7 @@ metadata:
 spec:
   type: token
   token: kpat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-  serverURL: eu.api.konghq.tech 
+  serverURL: eu.api.konghq.tech
 ---
 kind: KonnectGatewayControlPlane
 apiVersion: konnect.konghq.com/v1alpha1
@@ -46,14 +46,13 @@ config:
  policy: local
 plugin: rate-limiting
 ---
-kind: KongConsumer
-apiVersion: configuration.konghq.com/v1
+kind: KongConsumerGroup
+apiVersion: configuration.konghq.com/v1beta1
 metadata:
-  name: consumer-for-service-plugin-binding
+  name: consumer-group-for-service-pluginbinding
   namespace: default
-username: consumer-for-service-plugin-binding
-custom_id: 08433C12-2B81-4738-B61D-3AA2136F0102
 spec:
+  name: consumer-group-for-service-pluginbinding
   controlPlaneRef:
     type: konnectNamespacedRef
     konnectNamespacedRef:
@@ -62,7 +61,7 @@ spec:
 apiVersion: configuration.konghq.com/v1alpha1
 kind: KongPluginBinding
 metadata:
-  name: plugin-binding-kongservice-kongroute
+  name: plugin-binding-kongservice-kongconsumergroup
 spec:
   controlPlaneRef:
     type: konnectNamespacedRef
@@ -75,5 +74,5 @@ spec:
       name: service-1
       kind: KongService
       group: configuration.konghq.com
-    consumerRef:
-      name: consumer-for-service-plugin-binding
+    consumerGroupRef:
+      name: consumer-group-for-service-pluginbinding

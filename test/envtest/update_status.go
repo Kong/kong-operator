@@ -13,6 +13,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -21,6 +22,22 @@ func updateKongConsumerStatusWithKonnectID(
 	ctx context.Context,
 	cl client.Client,
 	obj *configurationv1.KongConsumer,
+	id string,
+	cpID string,
+) {
+	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+		ControlPlaneID:      cpID,
+		KonnectEntityStatus: konnectEntityStatus(id),
+	}
+
+	require.NoError(t, cl.Status().Update(ctx, obj))
+}
+
+func updateKongConsumerGroupStatusWithKonnectID(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	obj *configurationv1beta1.KongConsumerGroup,
 	id string,
 	cpID string,
 ) {
