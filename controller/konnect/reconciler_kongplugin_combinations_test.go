@@ -133,7 +133,9 @@ func TestGetCombinations(t *testing.T) {
 			},
 			want: []Rel{
 				{
-					Route:   "r1",
+					Route: "r1",
+				},
+				{
 					Service: "s1",
 				},
 			},
@@ -217,8 +219,39 @@ func TestGetCombinations(t *testing.T) {
 				{
 					Consumer: "c1",
 					Route:    "r1",
+				},
+				{
+					Consumer: "c1",
 					Service:  "s1",
 				},
+			},
+		},
+		{
+			name: "plugins on combination of service and consumers",
+			args: args{
+				relations: ForeignRelations{
+					Service: []configurationv1alpha1.KongService{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "s1",
+							},
+						},
+					},
+					Consumer: []string{"c1", "c2"},
+				},
+			},
+			want: []Rel{
+				{
+					Consumer: "c1",
+					Service:  "s1",
+				},
+				{
+					Consumer: "c2",
+					Service:  "s1",
+				},
+				// {
+				// 	Service: "s1",
+				// },
 			},
 		},
 		{
@@ -254,11 +287,17 @@ func TestGetCombinations(t *testing.T) {
 				{
 					Consumer: "c1",
 					Route:    "r1",
+				},
+				{
+					Consumer: "c1",
 					Service:  "s1",
 				},
 				{
 					Consumer: "c2",
 					Route:    "r1",
+				},
+				{
+					Consumer: "c2",
 					Service:  "s1",
 				},
 			},
