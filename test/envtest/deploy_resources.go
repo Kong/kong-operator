@@ -20,6 +20,20 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
+type objOption func(obj client.Object)
+
+// WithAnnotation returns an objOption that sets the given key-value pair as an annotation on the object.
+func WithAnnotation(key, value string) objOption {
+	return func(obj client.Object) {
+		annotations := obj.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		annotations[key] = value
+		obj.SetAnnotations(annotations)
+	}
+}
+
 // deployKonnectAPIAuthConfiguration deploys a KonnectAPIAuthConfiguration resource
 // and returns the resource.
 func deployKonnectAPIAuthConfiguration(
@@ -40,7 +54,7 @@ func deployKonnectAPIAuthConfiguration(
 		},
 	}
 	require.NoError(t, cl.Create(ctx, apiAuth))
-	t.Logf("deployed %s KonnectAPIAuthConfiguration resource", client.ObjectKeyFromObject(apiAuth))
+	t.Logf("deployed new %s KonnectAPIAuthConfiguration", client.ObjectKeyFromObject(apiAuth))
 
 	return apiAuth
 }
@@ -93,7 +107,7 @@ func deployKonnectGatewayControlPlane(
 		},
 	}
 	require.NoError(t, cl.Create(ctx, cp))
-	t.Logf("deployed %s KonnectGatewayControlPlane resource", client.ObjectKeyFromObject(cp))
+	t.Logf("deployed new %s KonnectGatewayControlPlane", client.ObjectKeyFromObject(cp))
 
 	return cp
 }
@@ -125,22 +139,77 @@ func deployKonnectGatewayControlPlaneWithID(
 	return cp
 }
 
-// deployKongService deploys a KongService resource and returns the resource.
-func deployKongService(
+// deployKongServiceAttachedToCP deploys a KongService resource and returns the resource.
+func deployKongServiceAttachedToCP(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	kongService *configurationv1alpha1.KongService,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	opts ...objOption,
 ) *configurationv1alpha1.KongService {
 	t.Helper()
 
 	name := "kongservice-" + uuid.NewString()[:8]
-	kongService.Name = name
-	kongService.Spec.Name = lo.ToPtr(name)
-	require.NoError(t, cl.Create(ctx, kongService))
-	t.Logf("deployed %s KongService resource", client.ObjectKeyFromObject(kongService))
+	kongService := configurationv1alpha1.KongService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: configurationv1alpha1.KongServiceSpec{
+			KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+				Name: lo.ToPtr(name),
+			},
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: cp.Name,
+				},
+			},
+		},
+	}
 
-	return kongService
+	for _, opt := range opts {
+		opt(&kongService)
+	}
+	require.NoError(t, cl.Create(ctx, &kongService))
+	t.Logf("deployed new %s KongService", client.ObjectKeyFromObject(&kongService))
+
+	return &kongService
+}
+
+// deployKongRouteAttachedToService deploys a KongRoute resource and returns the resource.
+func deployKongRouteAttachedToService(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	kongService *configurationv1alpha1.KongService,
+	opts ...objOption,
+) *configurationv1alpha1.KongRoute {
+	t.Helper()
+
+	name := "kongroute-" + uuid.NewString()[:8]
+	kongRoute := configurationv1alpha1.KongRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: configurationv1alpha1.KongRouteSpec{
+			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+				Name: lo.ToPtr(name),
+			},
+			ServiceRef: &configurationv1alpha1.ServiceRef{
+				Type: configurationv1alpha1.ServiceRefNamespacedRef,
+				NamespacedRef: &configurationv1alpha1.NamespacedServiceRef{
+					Name: kongService.Name,
+				},
+			},
+		},
+	}
+	for _, opt := range opts {
+		opt(&kongRoute)
+	}
+	require.NoError(t, cl.Create(ctx, &kongRoute))
+	t.Logf("deployed new %s KongRoute", client.ObjectKeyFromObject(&kongRoute))
+
+	return &kongRoute
 }
 
 // deployKongConsumerWithProgrammed deploys a KongConsumer resource and returns the resource.
@@ -171,7 +240,6 @@ func deployKongConsumerWithProgrammed(
 }
 
 // deployKongPluginBinding deploys a KongPluginBinding resource and returns the resource.
-// The caller can also specify the status which will be updated on the resource.
 func deployKongPluginBinding(
 	t *testing.T,
 	ctx context.Context,
@@ -184,7 +252,6 @@ func deployKongPluginBinding(
 	require.NoError(t, cl.Create(ctx, kpb))
 	t.Logf("deployed new unmanaged KongPluginBinding %s", client.ObjectKeyFromObject(kpb))
 
-	require.NoError(t, cl.Status().Update(ctx, kpb))
 	return kpb
 }
 
@@ -412,6 +479,28 @@ func deployKongKeyAttachedToCP(
 	}
 	require.NoError(t, cl.Create(ctx, key))
 	t.Logf("deployed new KongKey %s", client.ObjectKeyFromObject(key))
-
 	return key
+}
+
+// deployProxyCachePlugin deploys the proxy-cache KongPlugin resource and returns the resource.
+// The provided client should be namespaced, i.e. created with `client.NewNamespacedClient(client, ns)`
+func deployProxyCachePlugin(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+) *configurationv1.KongPlugin {
+	t.Helper()
+
+	plugin := &configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "proxy-cache-kp-",
+		},
+		PluginName: "proxy-cache",
+		Config: apiextensionsv1.JSON{
+			Raw: []byte(`{"response_code": [200], "request_method": ["GET", "HEAD"], "content_type": ["text/plain; charset=utf-8"], "cache_ttl": 300, "strategy": "memory"}`),
+		},
+	}
+	require.NoError(t, cl.Create(ctx, plugin))
+	t.Logf("deployed new %s KongPlugin (%s)", client.ObjectKeyFromObject(plugin), plugin.PluginName)
+	return plugin
 }

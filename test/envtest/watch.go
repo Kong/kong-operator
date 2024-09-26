@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kr/pretty"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -56,25 +57,33 @@ func watchFor[
 	ctx, cancel := context.WithTimeout(ctx, clientWatchTimeout)
 	defer cancel()
 
-	var ret T
+	var (
+		obj                   T
+		receivedAtLeastOneObj bool
+	)
 	for found := false; !found; {
 		select {
 		case <-ctx.Done():
-			require.Fail(t, failMsg)
+			if receivedAtLeastOneObj {
+				require.Failf(t, failMsg, "Last object received:\n%v", pretty.Sprint(obj))
+			} else {
+				require.Fail(t, failMsg)
+			}
 		case e := <-w.ResultChan():
 			if e.Type != eventType {
 				continue
 			}
-			obj, ok := e.Object.(T)
+			var ok bool
+			obj, ok = e.Object.(T)
 			if !ok {
 				continue
 			}
+			receivedAtLeastOneObj = true
 			if !predicate(obj) {
 				continue
 			}
 			found = true
-			ret = obj
 		}
 	}
-	return ret
+	return obj
 }
