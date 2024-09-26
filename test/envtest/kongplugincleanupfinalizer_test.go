@@ -6,7 +6,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,23 +59,8 @@ func TestKongPluginFinalizer(t *testing.T) {
 	require.NoError(t, clientNamespaced.Create(ctx, rateLimitingkongPlugin))
 	t.Logf("deployed %s KongPlugin (%s) resource", client.ObjectKeyFromObject(rateLimitingkongPlugin), rateLimitingkongPlugin.PluginName)
 
-	kongService := deployKongService(t, ctx, clientNamespaced,
-		&configurationv1alpha1.KongService{
-			Spec: configurationv1alpha1.KongServiceSpec{
-				ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-						Name: cp.Name,
-					},
-				},
-				KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-					URL: lo.ToPtr("http://example.com"),
-				},
-			},
-		},
-	)
-
 	wKongService := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+	kongService := deployKongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
 	kpb := deployKongPluginBinding(t, ctx, clientNamespaced,
 		&configurationv1alpha1.KongPluginBinding{
 			Spec: configurationv1alpha1.KongPluginBindingSpec{
