@@ -30,5 +30,5 @@ func kongServiceUsesPlugins(object client.Object) []string {
 		return nil
 	}
 
-	return annotations.ExtractPlugins(svc)
+	return annotations.ExtractPluginsWithNamespaces(svc)
 }
