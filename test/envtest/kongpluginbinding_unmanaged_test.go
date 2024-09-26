@@ -150,7 +150,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			assert.True(c, k8serrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(proxyCacheKongPlugin), proxyCacheKongPlugin),
 			))
-		}, waitTime, tickTime, "KongPlugin did not got deleted but shouldn't have")
+		}, waitTime, tickTime, "KongPlugin did not get deleted but should have")
 
 		t.Logf(
 			"delete the KongService %s and check it gets collected, as the KongPluginBinding finalizer should have been removed",

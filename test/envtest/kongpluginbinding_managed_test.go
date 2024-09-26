@@ -89,7 +89,6 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-		// wKongService := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 
 		kongService := deployKongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
 			WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
