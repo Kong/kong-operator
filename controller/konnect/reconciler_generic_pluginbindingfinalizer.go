@@ -207,7 +207,7 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) setControllerBu
 		b.
 			For(&configurationv1alpha1.KongService{},
 				builder.WithPredicates(
-					predicate.NewPredicateFuncs(kongServiceRefersToKonnectGatewayControlPlane),
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongService]),
 					kongPluginsAnnotationChangedPredicate,
 				),
 			).

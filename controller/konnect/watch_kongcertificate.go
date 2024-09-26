@@ -3,7 +3,6 @@ package konnect
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -14,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -27,7 +25,7 @@ func KongCertificateReconciliationWatchOptions(cl client.Client) []func(*ctrl.Bu
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.For(&configurationv1alpha1.KongCertificate{},
 				builder.WithPredicates(
-					predicate.NewPredicateFuncs(kongCertificateRefersToKonnectControlPlane),
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongCertificate]),
 				),
 			)
 		},
@@ -48,20 +46,6 @@ func KongCertificateReconciliationWatchOptions(cl client.Client) []func(*ctrl.Bu
 			)
 		},
 	}
-}
-
-func kongCertificateRefersToKonnectControlPlane(obj client.Object) bool {
-	kongCertificate, ok := obj.(*configurationv1alpha1.KongCertificate)
-	if !ok {
-		ctrllog.FromContext(context.Background()).Error(
-			operatorerrors.ErrUnexpectedObject,
-			"failed to run predicate function",
-			"expected", "KongCertificate", "found", reflect.TypeOf(obj),
-		)
-		return false
-	}
-	return kongCertificate.Spec.ControlPlaneRef != nil &&
-		kongCertificate.Spec.ControlPlaneRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
 }
 
 func enqueueKongCertificateForKonnectAPIAuthConfiguration(cl client.Client) handler.MapFunc {

@@ -3,7 +3,6 @@ package konnect
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -41,7 +39,7 @@ func KongConsumerReconciliationWatchOptions(
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.For(&configurationv1.KongConsumer{},
 				builder.WithPredicates(
-					predicate.NewPredicateFuncs(kongConsumerRefersToKonnectGatewayControlPlane),
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1.KongConsumer]),
 				),
 			)
 		},
@@ -70,23 +68,6 @@ func KongConsumerReconciliationWatchOptions(
 			)
 		},
 	}
-}
-
-// kongConsumerRefersToKonnectGatewayControlPlane returns true if the KongConsumer
-// refers to a KonnectGatewayControlPlane.
-func kongConsumerRefersToKonnectGatewayControlPlane(obj client.Object) bool {
-	kongConsumer, ok := obj.(*configurationv1.KongConsumer)
-	if !ok {
-		ctrllog.FromContext(context.Background()).Error(
-			operatorerrors.ErrUnexpectedObject,
-			"failed to run predicate function",
-			"expected", "KongConsumer", "found", reflect.TypeOf(obj),
-		)
-		return false
-	}
-
-	cpRef := kongConsumer.Spec.ControlPlaneRef
-	return cpRef != nil && cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
 }
 
 func enqueueKongConsumerForKonnectAPIAuthConfiguration(
