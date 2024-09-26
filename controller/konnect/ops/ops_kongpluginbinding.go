@@ -198,8 +198,7 @@ func getPluginBindingTargets(
 		}
 		targetObjects = append(targetObjects, &kongRoute)
 	}
-	if targets.ConsumerReference != nil {
-		ref := targets.ConsumerReference
+	if ref := targets.ConsumerReference; ref != nil {
 
 		kongConsumer := configurationv1.KongConsumer{}
 		kongConsumer.SetName(ref.Name)
