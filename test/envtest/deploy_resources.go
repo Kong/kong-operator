@@ -388,7 +388,7 @@ func deployKongConsumerGroupAttachedToCP(
 	cl client.Client,
 	cgName string,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-) configurationv1beta1.KongConsumerGroup {
+) *configurationv1beta1.KongConsumerGroup {
 	t.Helper()
 
 	cg := configurationv1beta1.KongConsumerGroup{
@@ -409,7 +409,7 @@ func deployKongConsumerGroupAttachedToCP(
 	require.NoError(t, cl.Create(ctx, &cg))
 	t.Logf("deployed new KongConsumerGroup %s", client.ObjectKeyFromObject(&cg))
 
-	return cg
+	return &cg
 }
 
 func deployKongVaultAttachedToCP(

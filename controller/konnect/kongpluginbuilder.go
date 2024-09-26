@@ -54,6 +54,36 @@ func (b *KongPluginBindingBuilder) WithControlPlaneRef(ref *configurationv1alpha
 	return b
 }
 
+// WithControlPlaneRefKonnectNamespaced sets the control plane reference of the KongPluginBinding.
+// NOTE: Users have to ensure that the ControlPlaneRef that's set here
+// is the same across all the KongPluginBinding targets.
+func (b *KongPluginBindingBuilder) WithControlPlaneRefKonnectNamespaced(name string) *KongPluginBindingBuilder {
+	b.binding.Spec.ControlPlaneRef = &configurationv1alpha1.ControlPlaneRef{
+		Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+			Name: name,
+		},
+	}
+
+	return b
+}
+
+// WithConsumerTarget sets the consumer target of the KongPluginBinding.
+func (b *KongPluginBindingBuilder) WithConsumerTarget(consumer string) *KongPluginBindingBuilder {
+	b.binding.Spec.Targets.ConsumerReference = &configurationv1alpha1.TargetRef{
+		Name: consumer,
+	}
+	return b
+}
+
+// WithConsumerGroupTarget sets the consumer group target of the KongPluginBinding.
+func (b *KongPluginBindingBuilder) WithConsumerGroupTarget(cg string) *KongPluginBindingBuilder {
+	b.binding.Spec.Targets.ConsumerGroupReference = &configurationv1alpha1.TargetRef{
+		Name: cg,
+	}
+	return b
+}
+
 // WithServiceTarget sets the service target of the KongPluginBinding.
 func (b *KongPluginBindingBuilder) WithServiceTarget(serviceName string) *KongPluginBindingBuilder {
 	b.binding.Spec.Targets.ServiceReference = &configurationv1alpha1.TargetRefWithGroupKind{
