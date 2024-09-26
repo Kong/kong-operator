@@ -20,6 +20,7 @@ type SDKWrapper interface {
 	GetBasicAuthCredentialsSDK() KongCredentialBasicAuthSDK
 	GetAPIKeyCredentialsSDK() KongCredentialAPIKeySDK
 	GetCACertificatesSDK() CACertificatesSDK
+	GetCertificatesSDK() CertificatesSDK
 }
 
 type sdkWrapper struct {
@@ -81,6 +82,11 @@ func (w sdkWrapper) GetMeSDK() MeSDK {
 // GetCACertificatesSDK returns the SDK to operate CA certificates.
 func (w sdkWrapper) GetCACertificatesSDK() CACertificatesSDK {
 	return w.sdk.CACertificates
+}
+
+// GetCertificatesSDK returns the SDK to operate certificates.
+func (w sdkWrapper) GetCertificatesSDK() CertificatesSDK {
+	return w.sdk.Certificates
 }
 
 // GetBasicAuthCredentialsSDK returns the BasicAuthCredentials SDK to get current organization.

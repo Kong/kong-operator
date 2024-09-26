@@ -24,3 +24,4 @@ packages:
       KongCredentialAPIKeySDK:
       KongCredentialBasicAuthSDK:
       CACertificatesSDK:
+      CertificatesSDK:
