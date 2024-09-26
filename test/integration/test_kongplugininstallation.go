@@ -208,8 +208,8 @@ func deployGatewayWithKPI(
 	t *testing.T, cleaner *clusters.Cleaner, namespace string,
 ) (gatewayIPAddress string, gatewayConfigNN, httpRouteNN k8stypes.NamespacedName) {
 	// NOTE: Disable webhook for KIC, because it checks for the plugin in Kong Gateway and rejects,
-	// thus it requires strict order of deployment.
-	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace, helpers.WithWebhookDisabled())
+	// thus it requires strict order of deployment which is not guaranteed.
+	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace, helpers.WithControlPlaneWebhookDisabled())
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
 	gatewayConfig, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)

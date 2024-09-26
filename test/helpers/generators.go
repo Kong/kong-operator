@@ -147,8 +147,8 @@ func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfiguration
 	return gwc
 }
 
-// WithWebhookDisabled disables the admission webhook for the control plane
-func WithWebhookDisabled() func(*operatorv1beta1.GatewayConfiguration) {
+// WithControlPlaneWebhookDisabled disables the admission webhook for the control plane
+func WithControlPlaneWebhookDisabled() func(*operatorv1beta1.GatewayConfiguration) {
 	return func(gc *operatorv1beta1.GatewayConfiguration) {
 		gc.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env = append(gc.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env, corev1.EnvVar{
 			Name:  "CONTROLLER_ADMISSION_WEBHOOK_LISTEN",
