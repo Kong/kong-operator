@@ -17,13 +17,13 @@ func IndexOptionsForCredentialsBasicAuth() []ReconciliationIndexOption {
 		{
 			IndexObject:  &configurationv1alpha1.KongCredentialBasicAuth{},
 			IndexField:   IndexFieldKongCredentialBasicAuthReferencesKongConsumer,
-			ExtractValue: kongKongCredentialBasicAuthReferencesConsumer,
+			ExtractValue: kongCredentialBasicAuthReferencesConsumer,
 		},
 	}
 }
 
-// kongKongCredentialBasicAuthReferencesConsumer returns the name of referenced Consumer.
-func kongKongCredentialBasicAuthReferencesConsumer(obj client.Object) []string {
+// kongCredentialBasicAuthReferencesConsumer returns the name of referenced Consumer.
+func kongCredentialBasicAuthReferencesConsumer(obj client.Object) []string {
 	cred, ok := obj.(*configurationv1alpha1.KongCredentialBasicAuth)
 	if !ok {
 		return nil
