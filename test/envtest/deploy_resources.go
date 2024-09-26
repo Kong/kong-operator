@@ -381,3 +381,37 @@ func deployKongVaultAttachedToCP(
 
 	return vault
 }
+
+// deployKongKeyAttachedToCP deploys a KongKey resource attached to a CP and returns the resource.
+func deployKongKeyAttachedToCP(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	kid, name string,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+) *configurationv1alpha1.KongKey {
+	t.Helper()
+
+	key := &configurationv1alpha1.KongKey{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "key-",
+		},
+		Spec: configurationv1alpha1.KongKeySpec{
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: cp.GetName(),
+				},
+			},
+			KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
+				KID:  kid,
+				Name: lo.ToPtr(name),
+				JWK:  lo.ToPtr("{}"),
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, key))
+	t.Logf("deployed new KongKey %s", client.ObjectKeyFromObject(key))
+
+	return key
+}

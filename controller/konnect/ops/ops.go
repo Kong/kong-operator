@@ -78,6 +78,8 @@ func Create[
 		return e, createTarget(ctx, sdk.GetTargetsSDK(), ent)
 	case *configurationv1alpha1.KongVault:
 		return e, createVault(ctx, sdk.GetVaultSDK(), ent)
+	case *configurationv1alpha1.KongKey:
+		return e, createKey(ctx, sdk.GetKeysSDK(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -130,6 +132,8 @@ func Delete[
 		return deleteTarget(ctx, sdk.GetTargetsSDK(), ent)
 	case *configurationv1alpha1.KongVault:
 		return deleteVault(ctx, sdk.GetVaultSDK(), ent)
+	case *configurationv1alpha1.KongKey:
+		return deleteKey(ctx, sdk.GetKeysSDK(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -227,6 +231,8 @@ func Update[
 		return ctrl.Result{}, updateTarget(ctx, sdk.GetTargetsSDK(), ent)
 	case *configurationv1alpha1.KongVault:
 		return ctrl.Result{}, updateVault(ctx, sdk.GetVaultSDK(), ent)
+	case *configurationv1alpha1.KongKey:
+		return ctrl.Result{}, updateKey(ctx, sdk.GetKeysSDK(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types

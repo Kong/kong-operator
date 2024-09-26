@@ -50,6 +50,8 @@ func ReconciliationWatchOptionsForEntity[
 		return KongTargetReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.KongVault:
 		return KongVaultReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.KongKey:
+		return KongKeyReconciliationWatchOptions(cl)
 	default:
 		panic(fmt.Sprintf("unsupported entity type %T", ent))
 	}

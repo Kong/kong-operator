@@ -64,6 +64,8 @@
   [#627](https://github.com/Kong/gateway-operator/pull/627)
 - Add `KongVault` reconciler for Konnect Vaults.
   [#597](https://github.com/Kong/gateway-operator/pull/597)
+- Add `KongKey` reconciler for Konnect Keys.
+  [#646](https://github.com/Kong/gateway-operator/pull/646)
 - The `DataPlaneKonnectExtension` CRD has been introduced. Such a CRD can be attached
   to a `DataPlane` via the extensions field to have a konnect-flavored `DataPlane`.
   [#453](https://github.com/Kong/gateway-operator/pull/453), [#578](https://github.com/Kong/gateway-operator/pull/578)
