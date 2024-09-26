@@ -73,6 +73,22 @@ func updateKey(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, key); errWrap != nil {
+		var sdkError *sdkkonnecterrs.SDKError
+		if errors.As(errWrap, &sdkError) {
+			if sdkError.StatusCode == 404 {
+				if err := createKey(ctx, sdk, key); err != nil {
+					return FailedKonnectOpError[configurationv1alpha1.KongKey]{
+						Op:  UpdateOp,
+						Err: err,
+					}
+				}
+				return nil // createKey sets the status so we can return here.
+			}
+			return FailedKonnectOpError[configurationv1alpha1.KongKey]{
+				Op:  UpdateOp,
+				Err: sdkError,
+			}
+		}
 		SetKonnectEntityProgrammedConditionFalse(key, "FailedToUpdate", errWrap.Error())
 		return errWrap
 	}
