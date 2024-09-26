@@ -501,7 +501,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			func(kp *configurationv1.KongPlugin) bool {
 				return kp.Name == proxyCacheKongPlugin.Name
 			},
-			"KongPlugin did not got deleted but shouldn't have",
+			"KongPlugin did not get deleted but should have",
 		)
 
 		t.Logf(
