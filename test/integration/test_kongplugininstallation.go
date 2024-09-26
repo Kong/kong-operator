@@ -31,11 +31,6 @@ import (
 )
 
 func TestKongPluginInstallationEssentials(t *testing.T) {
-	if webhookEnabled {
-		// It can't be tested with webhook, because it rejects resources immediately, that would
-		// be accepted by the controller taking into account the eventual consistency nature of K8s.
-		t.Skip("webhook is enabled, skipping the test (due to webhook validation limitations)")
-	}
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	const registryUrl = "northamerica-northeast1-docker.pkg.dev/k8s-team-playground/"
@@ -212,7 +207,9 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 func deployGatewayWithKPI(
 	t *testing.T, cleaner *clusters.Cleaner, namespace string,
 ) (gatewayIPAddress string, gatewayConfigNN, httpRouteNN k8stypes.NamespacedName) {
-	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace)
+	// NOTE: Disable webhook for KIC, because it checks for the plugin in Kong Gateway and rejects,
+	// thus it requires strict order of deployment.
+	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace, helpers.WithWebhookDisabled())
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
 	gatewayConfig, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
