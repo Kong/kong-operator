@@ -660,6 +660,8 @@ func getConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constraints.E
 		return mo.Some(e.Spec.ConsumerRef)
 	case *configurationv1alpha1.KongCredentialAPIKey:
 		return mo.Some(e.Spec.ConsumerRef)
+	case *configurationv1alpha1.KongCredentialACL:
+		return mo.Some(e.Spec.ConsumerRef)
 	default:
 		return mo.None[corev1.LocalObjectReference]()
 	}
@@ -914,6 +916,12 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		cred.Status.Konnect.ConsumerID = consumer.Status.Konnect.GetKonnectID()
 	}
 	if cred, ok := any(ent).(*configurationv1alpha1.KongCredentialAPIKey); ok {
+		if cred.Status.Konnect == nil {
+			cred.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
+		}
+		cred.Status.Konnect.ConsumerID = consumer.Status.Konnect.GetKonnectID()
+	}
+	if cred, ok := any(ent).(*configurationv1alpha1.KongCredentialACL); ok {
 		if cred.Status.Konnect == nil {
 			cred.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
 		}

@@ -92,6 +92,7 @@
 - Add support for `KongConsumer` credentials:
   - basic-auth [#625](https://github.com/Kong/gateway-operator/pull/625)
   - API key [#635](https://github.com/Kong/gateway-operator/pull/635)
+  - ACL [#661](https://github.com/Kong/gateway-operator/pull/661)
 
 ### Fixed
 

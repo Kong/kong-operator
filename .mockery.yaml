@@ -22,6 +22,7 @@ packages:
       VaultSDK:
       MeSDK:
       KongCredentialAPIKeySDK:
+      KongCredentialACLSDK:
       KongCredentialBasicAuthSDK:
       CACertificatesSDK:
       CertificatesSDK:

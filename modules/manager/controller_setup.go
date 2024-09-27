@@ -88,6 +88,8 @@ const (
 	KongCredentialBasicAuthControllerName = "KongCredentialBasicAuth" //nolint:gosec
 	// KongCredentialAPIKeyControllerName is the name of the KongCredentialAPIKey controller.
 	KongCredentialAPIKeyControllerName = "KongCredentialAPIKey" //nolint:gosec
+	// KongCredentialACLControllerName is the name of the KongCredentialACL controller.
+	KongCredentialACLControllerName = "KongCredentialACL" //nolint:gosec
 	// KongCACertificateControllerName is the name of the KongCACertificate controller.
 	KongCACertificateControllerName = "KongCACertificate"
 	// KongCertificateControllerName is the name of the KongCertificate controller.
@@ -456,6 +458,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					c.DevelopmentMode,
 					mgr.GetClient(),
 					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialAPIKey](c.KonnectSyncPeriod),
+				),
+			},
+			KongCredentialACLControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler(
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialACL](c.KonnectSyncPeriod),
 				),
 			},
 			KongKeyControllerName: {
