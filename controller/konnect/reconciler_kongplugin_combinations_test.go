@@ -133,7 +133,9 @@ func TestGetCombinations(t *testing.T) {
 			},
 			want: []Rel{
 				{
-					Route:   "r1",
+					Route: "r1",
+				},
+				{
 					Service: "s1",
 				},
 			},
@@ -157,6 +159,13 @@ func TestGetCombinations(t *testing.T) {
 					Consumer: "c1",
 					Service:  "s1",
 				},
+				// NOTE: https://github.com/Kong/gateway-operator/issues/660
+				// is related to the following combination not being present.
+				// Currently we do not generate combination for Service only
+				// when Service **and** Consumers have the annotation present.
+				// {
+				// 	Service: "s1",
+				// },
 			},
 		},
 		{
@@ -182,6 +191,45 @@ func TestGetCombinations(t *testing.T) {
 					Consumer: "c2",
 					Service:  "s1",
 				},
+				// NOTE: https://github.com/Kong/gateway-operator/issues/660
+				// is related to the following combination not being present.
+				// Currently we do not generate combination for Service only
+				// when Service **and** Consumers have the annotation present.
+				// {
+				// 	Service: "s1",
+				// },
+			},
+		},
+		{
+			name: "plugins on combination of service and consumer groups",
+			args: args{
+				relations: ForeignRelations{
+					Service: []configurationv1alpha1.KongService{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "s1",
+							},
+						},
+					},
+					ConsumerGroup: []string{"cg1", "cg2"},
+				},
+			},
+			want: []Rel{
+				{
+					ConsumerGroup: "cg1",
+					Service:       "s1",
+				},
+				{
+					ConsumerGroup: "cg2",
+					Service:       "s1",
+				},
+				// NOTE: https://github.com/Kong/gateway-operator/issues/660
+				// is related to the following combination not being present.
+				// Currently we do not generate combination for Service only
+				// when Service **and** ConsumerGroups have the annotation present.
+				// {
+				// 	Service: "s1",
+				// },
 			},
 		},
 		{
@@ -217,6 +265,9 @@ func TestGetCombinations(t *testing.T) {
 				{
 					Consumer: "c1",
 					Route:    "r1",
+				},
+				{
+					Consumer: "c1",
 					Service:  "s1",
 				},
 			},
@@ -254,11 +305,17 @@ func TestGetCombinations(t *testing.T) {
 				{
 					Consumer: "c1",
 					Route:    "r1",
+				},
+				{
+					Consumer: "c1",
 					Service:  "s1",
 				},
 				{
 					Consumer: "c2",
 					Route:    "r1",
+				},
+				{
+					Consumer: "c2",
 					Service:  "s1",
 				},
 			},

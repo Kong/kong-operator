@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -96,6 +95,15 @@ type Rel struct {
 }
 
 // GetCombinations returns all possible combinations of relations.
+//
+// NOTE: This is heavily based on the implementation in the Kong Ingress Controller:
+// https://github.com/Kong/kubernetes-ingress-controller/blob/ee797b4e84bd176526af32ab6db54f16ee9c245b/internal/util/relations_test.go
+//
+// TODO: https://github.com/Kong/gateway-operator/pull/659
+// The combinations created here should be reconsidered.
+// Specifically the Service + Route combination which currently creates 2 separate relations targeting
+// Service and Route independently.
+// This most likely should create 2 relations targeting Service and Service+Route.
 func (relations *ForeignRelations) GetCombinations() []Rel {
 	var (
 		lConsumer      = len(relations.Consumer)
@@ -110,46 +118,21 @@ func (relations *ForeignRelations) GetCombinations() []Rel {
 	if lConsumer > 0 { //nolint:gocritic
 		if l > 0 {
 			cartesianProduct = make([]Rel, 0, l*lConsumer)
-			servicesForRoutes := sets.NewString()
 
 			for _, consumer := range relations.Consumer {
 				for _, route := range relations.Route {
-
-					var serviceForRouteFound bool
-					for _, service := range relations.Service {
-						if route.Spec.ServiceRef.NamespacedRef.Name == service.Name {
-							serviceForRouteFound = true
-							servicesForRoutes.Insert(service.Name)
-							cartesianProduct = append(cartesianProduct, Rel{
-								Service:  service.Name,
-								Route:    route.Name,
-								Consumer: consumer,
-							})
-						} else {
-							cartesianProduct = append(cartesianProduct, Rel{
-								Service:  service.Name,
-								Consumer: consumer,
-							})
-						}
-					}
-					if !serviceForRouteFound {
-						cartesianProduct = append(cartesianProduct, Rel{
-							Route:    route.Name,
-							Consumer: consumer,
-						})
-					}
+					cartesianProduct = append(cartesianProduct, Rel{
+						Route:    route.Name,
+						Consumer: consumer,
+					})
 				}
-
 				for _, service := range relations.Service {
-					if !servicesForRoutes.Has(service.Name) {
-						cartesianProduct = append(cartesianProduct, Rel{
-							Service:  service.Name,
-							Consumer: consumer,
-						})
-					}
+					cartesianProduct = append(cartesianProduct, Rel{
+						Service:  service.Name,
+						Consumer: consumer,
+					})
 				}
 			}
-
 		} else {
 			cartesianProduct = make([]Rel, 0, len(relations.Consumer))
 			for _, consumer := range relations.Consumer {
@@ -159,93 +142,41 @@ func (relations *ForeignRelations) GetCombinations() []Rel {
 	} else if lConsumerGroup > 0 {
 		if l > 0 {
 			cartesianProduct = make([]Rel, 0, l*lConsumerGroup)
-			servicesForRoutes := sets.NewString()
 
 			for _, group := range relations.ConsumerGroup {
 				for _, route := range relations.Route {
-
-					var serviceForRouteFound bool
-					for _, service := range relations.Service {
-						serviceRef := route.Spec.ServiceRef
-						if serviceRef.Type != configurationv1alpha1.ServiceRefNamespacedRef {
-							continue
-						}
-
-						if serviceRef.NamespacedRef.Name == service.Name {
-							serviceForRouteFound = true
-							servicesForRoutes.Insert(service.Name)
-							cartesianProduct = append(cartesianProduct, Rel{
-								Service:       service.Name,
-								Route:         route.Name,
-								ConsumerGroup: group,
-							})
-						} else {
-							cartesianProduct = append(cartesianProduct, Rel{
-								Service:       service.Name,
-								ConsumerGroup: group,
-							})
-						}
-					}
-					if !serviceForRouteFound {
-						cartesianProduct = append(cartesianProduct, Rel{
-							Route:         route.Name,
-							ConsumerGroup: group,
-						})
-					}
+					cartesianProduct = append(cartesianProduct, Rel{
+						Route:         route.Name,
+						ConsumerGroup: group,
+					})
 				}
-
 				for _, service := range relations.Service {
-					if !servicesForRoutes.Has(service.Name) {
-						cartesianProduct = append(cartesianProduct, Rel{
-							Service:       service.Name,
-							ConsumerGroup: group,
-						})
-					}
+					cartesianProduct = append(cartesianProduct, Rel{
+						Service:       service.Name,
+						ConsumerGroup: group,
+					})
 				}
 			}
 
 		} else {
 			cartesianProduct = make([]Rel, 0, lConsumerGroup)
 			for _, group := range relations.ConsumerGroup {
-				cartesianProduct = append(cartesianProduct, Rel{ConsumerGroup: group})
+				cartesianProduct = append(cartesianProduct, Rel{
+					ConsumerGroup: group,
+				})
 			}
 		}
 	} else if l > 0 {
 		cartesianProduct = make([]Rel, 0, l)
-		servicesForRoutes := sets.NewString()
 		for _, route := range relations.Route {
-			var serviceForRouteFound bool
-			for _, service := range relations.Service {
-				serviceRef := route.Spec.ServiceRef
-				if serviceRef.Type != configurationv1alpha1.ServiceRefNamespacedRef {
-					continue
-				}
-
-				if serviceRef.NamespacedRef.Name == service.Name {
-					serviceForRouteFound = true
-					servicesForRoutes.Insert(service.Name)
-					cartesianProduct = append(cartesianProduct, Rel{
-						Service: service.Name,
-						Route:   route.Name,
-					})
-				} else {
-					cartesianProduct = append(cartesianProduct, Rel{
-						Service: service.Name,
-					})
-				}
-			}
-			if !serviceForRouteFound {
-				cartesianProduct = append(cartesianProduct, Rel{
-					Route: route.Name,
-				})
-			}
+			cartesianProduct = append(cartesianProduct, Rel{
+				Route: route.Name,
+			})
 		}
 		for _, service := range relations.Service {
-			if !servicesForRoutes.Has(service.Name) {
-				cartesianProduct = append(cartesianProduct, Rel{
-					Service: service.Name,
-				})
-			}
+			cartesianProduct = append(cartesianProduct, Rel{
+				Service: service.Name,
+			})
 		}
 	}
 
