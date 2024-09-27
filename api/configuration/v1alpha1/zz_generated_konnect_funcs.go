@@ -241,6 +241,64 @@ func (obj *KongCredentialAPIKey) GetConditions() []metav1.Condition {
 func (obj *KongCredentialAPIKey) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+func (obj *KongCredentialACL) initKonnectStatus() {
+	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
+}
+
+// GetKonnectStatus returns the Konnect status contained in the KongCredentialACL status.
+func (obj *KongCredentialACL) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
+	if obj.Status.Konnect == nil {
+		return nil
+	}
+	return &obj.Status.Konnect.KonnectEntityStatus
+}
+
+// GetKonnectID returns the Konnect ID in the KongCredentialACL status.
+func (obj *KongCredentialACL) GetKonnectID() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.ID
+}
+
+// SetKonnectID sets the Konnect ID in the KongCredentialACL status.
+func (obj *KongCredentialACL) SetKonnectID(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ID = id
+}
+
+// GetControlPlaneID returns the ControlPlane ID in the KongCredentialACL status.
+func (obj *KongCredentialACL) GetControlPlaneID() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.ControlPlaneID
+}
+
+// SetControlPlaneID sets the ControlPlane ID in the KongCredentialACL status.
+func (obj *KongCredentialACL) SetControlPlaneID(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ControlPlaneID = id
+}
+
+// GetTypeName returns the KongCredentialACL Kind name
+func (obj KongCredentialACL) GetTypeName() string {
+	return "KongCredentialACL"
+}
+
+// GetConditions returns the Status Conditions
+func (obj *KongCredentialACL) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions
+func (obj *KongCredentialACL) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
+}
 func (obj *KongCACertificate) initKonnectStatus() {
 	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
 }

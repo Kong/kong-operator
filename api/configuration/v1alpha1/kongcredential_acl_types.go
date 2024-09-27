@@ -23,7 +23,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// KongCredentialAPIKey is the schema for API key credentials API which defines a API key credential for consumers.
+// KongCredentialACL is the schema for ACL credentials API which defines a ACL credential for consumers.
 //
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -33,42 +33,42 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.consumerRef == self.spec.consumerRef",message="spec.consumerRef is immutable when an entity is already Programmed"
-type KongCredentialAPIKey struct {
+type KongCredentialACL struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec contains the API Key credential specification.
-	Spec KongCredentialAPIKeySpec `json:"spec"`
+	// Spec contains the ACL credential specification.
+	Spec KongCredentialACLSpec `json:"spec"`
 
-	// Status contains the API Key credential status.
+	// Status contains the ACL credential status.
 	//
 	// +kubebuilder:default={conditions: {{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}}
-	Status KongCredentialAPIKeyStatus `json:"status,omitempty"`
+	Status KongCredentialACLStatus `json:"status,omitempty"`
 }
 
-// KongCredentialAPIKeySpec defines specification of a Kong Route.
-type KongCredentialAPIKeySpec struct {
-	// ConsumerRef is a reference to a Consumer this KongCredentialAPIKey is associated with.
+// KongCredentialACLSpec defines specification of Kong ACL.
+type KongCredentialACLSpec struct {
+	// ConsumerRef is a reference to a Consumer this KongCredentialACL is associated with.
 	//
 	// +kubebuilder:validation:Required
 	ConsumerRef corev1.LocalObjectReference `json:"consumerRef"`
 
-	KongCredentialAPIKeyAPISpec `json:",inline"`
+	KongCredentialACLAPISpec `json:",inline"`
 }
 
-// KongCredentialAPIKeyAPISpec defines specification of an API Key credential.
-type KongCredentialAPIKeyAPISpec struct {
-	// Key is the key for the API Key credential.
+// KongCredentialACLAPISpec defines specification of an ACL credential.
+type KongCredentialACLAPISpec struct {
+	// Group is the name for the ACL credential.
 	//
 	// +kubebuilder:validation:Required
-	Key string `json:"key"`
+	Group string `json:"group"`
 
-	// Tags is a list of tags for the API Key credential.
+	// Tags is a list of tags for the ACL credential.
 	Tags []string `json:"tags,omitempty"`
 }
 
-// KongCredentialAPIKeyStatus represents the current status of the API Key credential resource.
-type KongCredentialAPIKeyStatus struct {
+// KongCredentialACLStatus represents the current status of the ACL credential resource.
+type KongCredentialACLStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
 	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs `json:"konnect,omitempty"`
@@ -83,13 +83,13 @@ type KongCredentialAPIKeyStatus struct {
 
 // +kubebuilder:object:root=true
 
-// KongCredentialAPIKeyList contains a list of API Key credentials.
-type KongCredentialAPIKeyList struct {
+// KongCredentialACLList contains a list of ACL credentials.
+type KongCredentialACLList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongCredentialAPIKey `json:"items"`
+	Items           []KongCredentialACL `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&KongCredentialAPIKey{}, &KongCredentialAPIKeyList{})
+	SchemeBuilder.Register(&KongCredentialACL{}, &KongCredentialACLList{})
 }
