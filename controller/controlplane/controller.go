@@ -229,7 +229,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			log.Debug(logger, "unable to update ControlPlane resource", cp, "error", err)
 			return res, err
 		}
-		if res.Requeue {
+		if !res.IsZero() {
 			log.Debug(logger, "unable to update ControlPlane resource", cp)
 			return res, nil
 		}
@@ -383,7 +383,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				log.Debug(logger, "unable to reconcile ControlPlane status", cp, "error", err)
 				return ctrl.Result{}, err
 			}
-			if res.Requeue {
+			if !res.IsZero() {
 				log.Debug(logger, "unable to update ControlPlane resource", cp)
 				return res, nil
 			}
@@ -406,7 +406,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			log.Debug(logger, "unable to patch ControlPlane status", cp, "error", err)
 			return ctrl.Result{}, err
 		}
-		if res.Requeue {
+		if !res.IsZero() {
 			log.Debug(logger, "unable to patch ControlPlane status", cp)
 			return res, nil
 		}
@@ -421,7 +421,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		log.Debug(logger, "unable to patch ControlPlane status", cp, "error", err)
 		return ctrl.Result{}, err
 	}
-	if result.Requeue {
+	if !result.IsZero() {
 		log.Debug(logger, "unable to patch ControlPlane status", cp)
 		return result, nil
 	}

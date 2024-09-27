@@ -222,7 +222,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if res, err := ensureDataPlaneReadyStatus(ctx, r.Client, logger, dataplane, dataplane.Generation); err != nil {
 		return ctrl.Result{}, err
-	} else if res.Requeue {
+	} else if !res.IsZero() {
 		return res, nil
 	}
 

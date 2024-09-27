@@ -113,7 +113,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "managing cleanup for gateway resource", gateway)
-	if shouldReturnEarly, result, err := r.cleanup(ctx, logger, &gateway); err != nil || result.Requeue {
+	if shouldReturnEarly, result, err := r.cleanup(ctx, logger, &gateway); err != nil || !result.IsZero() {
 		return result, err
 	} else if shouldReturnEarly {
 		return ctrl.Result{}, nil
@@ -130,7 +130,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			if err != nil {
 				return res, fmt.Errorf("failed updating Gateway's finalizers: %w", err)
 			}
-			if res.Requeue {
+			if !res.IsZero() {
 				return res, nil
 			}
 		}

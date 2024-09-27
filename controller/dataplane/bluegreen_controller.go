@@ -106,7 +106,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	if res, err := r.ensureDataPlaneLiveReadyStatus(ctx, logger, &dataplane); err != nil {
 		return ctrl.Result{}, err
-	} else if res.Requeue {
+	} else if !res.IsZero() {
 		return res, nil
 	}
 
@@ -120,7 +120,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// can update the Ready status condition of the DataPlane.
 		if res, err := ensureDataPlaneReadyStatus(ctx, r.Client, logger, &dataplane, dataplane.Generation); err != nil {
 			return ctrl.Result{}, err
-		} else if res.Requeue {
+		} else if !res.IsZero() {
 			return res, nil
 		}
 	} else if !ok || c.ObservedGeneration != dataplane.Generation {

@@ -59,7 +59,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			metav1.ConditionFalse,
 			conditions.KongUpstreamRefReasonInvalid,
 			err.Error(),
-		); errStatus != nil || res.Requeue {
+		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 
@@ -88,7 +88,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			metav1.ConditionFalse,
 			conditions.KongUpstreamRefReasonInvalid,
 			fmt.Sprintf("Referenced KongUpstream %s is not programmed yet", nn),
-		); err != nil || res.Requeue {
+		); err != nil || !res.IsZero() {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{Requeue: true}, nil
@@ -120,7 +120,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		metav1.ConditionTrue,
 		conditions.KongUpstreamRefReasonValid,
 		fmt.Sprintf("Referenced KongUpstream %s programmed", nn),
-	); errStatus != nil || res.Requeue {
+	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
 
@@ -142,7 +142,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			metav1.ConditionFalse,
 			conditions.ControlPlaneRefReasonInvalid,
 			err.Error(),
-		); errStatus != nil || res.Requeue {
+		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 		if k8serrors.IsNotFound(err) {
@@ -165,7 +165,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			metav1.ConditionFalse,
 			conditions.ControlPlaneRefReasonInvalid,
 			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
-		); errStatus != nil || res.Requeue {
+		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 
@@ -182,7 +182,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		metav1.ConditionTrue,
 		conditions.ControlPlaneRefReasonValid,
 		fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
-	); errStatus != nil || res.Requeue {
+	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
 
