@@ -67,6 +67,64 @@ func (obj *KongKey) GetConditions() []metav1.Condition {
 func (obj *KongKey) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+func (obj *KongKeySet) initKonnectStatus() {
+	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
+}
+
+// GetKonnectStatus returns the Konnect status contained in the KongKeySet status.
+func (obj *KongKeySet) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
+	if obj.Status.Konnect == nil {
+		return nil
+	}
+	return &obj.Status.Konnect.KonnectEntityStatus
+}
+
+// GetKonnectID returns the Konnect ID in the KongKeySet status.
+func (obj *KongKeySet) GetKonnectID() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.ID
+}
+
+// SetKonnectID sets the Konnect ID in the KongKeySet status.
+func (obj *KongKeySet) SetKonnectID(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ID = id
+}
+
+// GetControlPlaneID returns the ControlPlane ID in the KongKeySet status.
+func (obj *KongKeySet) GetControlPlaneID() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.ControlPlaneID
+}
+
+// SetControlPlaneID sets the ControlPlane ID in the KongKeySet status.
+func (obj *KongKeySet) SetControlPlaneID(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ControlPlaneID = id
+}
+
+// GetTypeName returns the KongKeySet Kind name
+func (obj KongKeySet) GetTypeName() string {
+	return "KongKeySet"
+}
+
+// GetConditions returns the Status Conditions
+func (obj *KongKeySet) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions
+func (obj *KongKeySet) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
+}
 func (obj *KongCredentialBasicAuth) initKonnectStatus() {
 	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
 }

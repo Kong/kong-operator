@@ -6,17 +6,15 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
-var kongSNIAPISpec = testCasesGroup{
-	Name: "kongSNIAPISpec",
+var keySetAPISpec = testCasesGroup{
+	Name: "kongKeySetAPISpec",
 	TestCases: []testCase{
 		{
-			Name: "spec.name must not be empty",
-			KongSNI: configurationv1alpha1.KongSNI{
+			Name: "name must be set",
+			KongKeySet: configurationv1alpha1.KongKeySet{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.KongSNISpec{
-					CertificateRef: configurationv1alpha1.KongObjectRef{
-						Name: "cert1",
-					},
+				Spec: configurationv1alpha1.KongKeySetSpec{
+					KongKeySetAPISpec: configurationv1alpha1.KongKeySetAPISpec{},
 				},
 			},
 			ExpectedErrorMessage: lo.ToPtr("spec.name in body should be at least 1 chars long"),

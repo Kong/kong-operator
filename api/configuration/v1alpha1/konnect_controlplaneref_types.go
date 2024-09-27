@@ -19,7 +19,7 @@ type ControlPlaneRef struct {
 	// - konnectID
 	// - konnectNamespacedRef
 	// +kubebuilder:validation:Enum=konnectID;konnectNamespacedRef
-	Type string `json:"type,omitempty"`
+	Type string `json:"type"`
 
 	// KonnectID is the schema for the KonnectID type.
 	// This field is required when the Type is konnectID.
