@@ -36,8 +36,11 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.serviceRef) || has(self.spec.serviceRef)", message="serviceRef is required once set"
-// +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.serviceRef == self.spec.serviceRef", message="spec.serviceRef is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="has(self.spec.protocols) && self.spec.protocols.exists(p, p == 'http') ? (has(self.spec.hosts) || has(self.spec.methods) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.headers) ) : true", message="If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set"
+// +kubebuilder:validation:XValidation:rule="has(self.spec.controlPlaneRef) && !has(self.spec.serviceRef) || !has(self.spec.controlPlaneRef) && has(self.spec.serviceRef)", message="Only one of controlPlaneRef or serviceRef can be set"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.controlPlaneRef) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)", message="spec.controlPlaneRef cannot specify namespace for namespaced resource"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.serviceRef) ? true : (!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.serviceRef == self.spec.serviceRef", message="spec.serviceRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.controlPlaneRef) ? true :(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
 type KongRoute struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -50,7 +53,14 @@ type KongRoute struct {
 
 // KongRouteSpec defines specification of a Kong Route.
 type KongRouteSpec struct {
-	// ServiceRef is a reference to a Service this Route is associated with.
+	// ControlPlaneRef is a reference to a ControlPlane this KongRoute is associated with.
+	// Route can either specify a ControlPlaneRef and be 'serviceless' route or
+	// specify a ServiceRef and be associated with a Service.
+	// +optional
+	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+	// ServiceRef is a reference to a Service this KongRoute is associated with.
+	// Route can either specify a ControlPlaneRef and be 'serviceless' route or
+	// specify a ServiceRef and be associated with a Service.
 	// +optional
 	ServiceRef *ServiceRef `json:"serviceRef,omitempty"`
 
