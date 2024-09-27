@@ -75,6 +75,27 @@ func updateKongCredentialACL(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, cred); errWrap != nil {
+		// ACL update operation returns an SDKError instead of a NotFoundError.
+		var sdkError *sdkkonnecterrs.SDKError
+		if errors.As(errWrap, &sdkError) {
+			switch sdkError.StatusCode {
+			case 404:
+				if err := createKongCredentialACL(ctx, sdk, cred); err != nil {
+					return FailedKonnectOpError[configurationv1alpha1.KongCredentialACL]{
+						Op:  UpdateOp,
+						Err: err,
+					}
+				}
+				return nil
+			default:
+				return FailedKonnectOpError[configurationv1alpha1.KongCredentialACL]{
+					Op:  UpdateOp,
+					Err: sdkError,
+				}
+
+			}
+		}
+
 		SetKonnectEntityProgrammedConditionFalse(cred, "FailedToUpdate", errWrap.Error())
 		return errWrap
 	}
