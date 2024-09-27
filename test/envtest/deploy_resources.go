@@ -287,6 +287,36 @@ func deployKongCredentialBasicAuth(
 	return c
 }
 
+// deployKongCredentialACL deploys a KongCredentialACL resource and returns the resource.
+func deployKongCredentialACL(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	consumerName string,
+	groupName string,
+) *configurationv1alpha1.KongCredentialACL {
+	t.Helper()
+
+	c := &configurationv1alpha1.KongCredentialACL{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "acl-",
+		},
+		Spec: configurationv1alpha1.KongCredentialACLSpec{
+			ConsumerRef: corev1.LocalObjectReference{
+				Name: consumerName,
+			},
+			KongCredentialACLAPISpec: configurationv1alpha1.KongCredentialACLAPISpec{
+				Group: groupName,
+			},
+		},
+	}
+
+	require.NoError(t, cl.Create(ctx, c))
+	t.Logf("deployed new unmanaged KongCredentialACL %s", client.ObjectKeyFromObject(c))
+
+	return c
+}
+
 // deployKongCACertificateAttachedToCP deploys a KongCACertificate resource attached to a CP and returns the resource.
 func deployKongCACertificateAttachedToCP(
 	t *testing.T,

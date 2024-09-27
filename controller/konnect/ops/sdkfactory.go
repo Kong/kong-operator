@@ -19,6 +19,7 @@ type SDKWrapper interface {
 	GetMeSDK() MeSDK
 	GetBasicAuthCredentialsSDK() KongCredentialBasicAuthSDK
 	GetAPIKeyCredentialsSDK() KongCredentialAPIKeySDK
+	GetACLCredentialsSDK() KongCredentialACLSDK
 	GetCACertificatesSDK() CACertificatesSDK
 	GetCertificatesSDK() CertificatesSDK
 	GetKeysSDK() KeysSDK
@@ -99,6 +100,11 @@ func (w sdkWrapper) GetBasicAuthCredentialsSDK() KongCredentialBasicAuthSDK {
 // GetAPIKeyCredentialsSDK returns the APIAKeyCredentials SDK to get current organization.
 func (w sdkWrapper) GetAPIKeyCredentialsSDK() KongCredentialAPIKeySDK {
 	return w.sdk.APIKeys
+}
+
+// GetACLCredentialsSDK returns the ACLCredentials SDK to get current organization.
+func (w sdkWrapper) GetACLCredentialsSDK() KongCredentialACLSDK {
+	return w.sdk.ACLs
 }
 
 // GetKeysSDK returns the SDK to operate keys.

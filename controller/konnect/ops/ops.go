@@ -70,6 +70,8 @@ func Create[
 		return e, createKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialAPIKey:
 		return e, createKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialACL:
+		return e, createKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return e, createCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCertificate:
@@ -125,6 +127,8 @@ func Delete[
 		return deleteKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialAPIKey:
 		return deleteKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialACL:
+		return deleteKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return deleteCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCertificate:
@@ -225,6 +229,8 @@ func Update[
 		return ctrl.Result{}, updateKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialAPIKey:
 		return ctrl.Result{}, updateKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialACL:
+		return ctrl.Result{}, updateKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return ctrl.Result{}, updateCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCertificate:
