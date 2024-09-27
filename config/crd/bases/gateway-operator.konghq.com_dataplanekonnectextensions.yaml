@@ -88,6 +88,8 @@ spec:
                     - konnectID
                     - konnectNamespacedRef
                     type: string
+                required:
+                - type
                 type: object
                 x-kubernetes-validations:
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef

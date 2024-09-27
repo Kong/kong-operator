@@ -26,3 +26,4 @@ packages:
       CACertificatesSDK:
       CertificatesSDK:
       KeysSDK:
+      KeySetsSDK:

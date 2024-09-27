@@ -504,3 +504,35 @@ func deployProxyCachePlugin(
 	t.Logf("deployed new %s KongPlugin (%s)", client.ObjectKeyFromObject(plugin), plugin.PluginName)
 	return plugin
 }
+
+// deployKongKeySetAttachedToCP deploys a KongKeySet resource attached to a CP and returns the resource.
+func deployKongKeySetAttachedToCP(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	name string,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+) *configurationv1alpha1.KongKeySet {
+	t.Helper()
+
+	keySet := &configurationv1alpha1.KongKeySet{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "key-set-",
+		},
+		Spec: configurationv1alpha1.KongKeySetSpec{
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: cp.GetName(),
+				},
+			},
+			KongKeySetAPISpec: configurationv1alpha1.KongKeySetAPISpec{
+				Name: name,
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, keySet))
+	t.Logf("deployed new KongKeySet %s", client.ObjectKeyFromObject(keySet))
+
+	return keySet
+}
