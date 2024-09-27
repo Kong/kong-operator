@@ -3,11 +3,11 @@ package dataplane
 import (
 	"context"
 
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/consts"
 )
 
@@ -64,30 +65,17 @@ func listDataPlanesReferencingKongPluginInstallation(
 		if kpiToFind == "" {
 			return nil
 		}
-
 		var dataPlaneList operatorv1beta1.DataPlaneList
-		if err := c.List(ctx, &dataPlaneList); client.IgnoreNotFound(err) != nil {
+		if err := c.List(ctx, &dataPlaneList, client.MatchingFields{
+			index.KongPluginInstallationsIndex: kpiToFind,
+		}); err != nil {
 			logger.Error(err, "Failed to list DataPlanes in watch", "KongPluginInstallation", kpiToFind)
 			return nil
 		}
-		var dataPlanesToReconcile []reconcile.Request
-		for _, dp := range dataPlaneList.Items {
-			for _, ptiNN := range dp.Spec.PluginsToInstall {
-				kpiNN := k8stypes.NamespacedName(ptiNN)
-				if kpiNN.Namespace == "" {
-					kpiNN.Namespace = dp.Namespace
-				}
-
-				if kpiNN.String() == kpiToFind {
-					dataPlanesToReconcile = append(
-						dataPlanesToReconcile,
-						reconcile.Request{
-							NamespacedName: client.ObjectKeyFromObject(&dp),
-						},
-					)
-				}
+		return lo.Map(dataPlaneList.Items, func(dp operatorv1beta1.DataPlane, _ int) reconcile.Request {
+			return reconcile.Request{
+				NamespacedName: client.ObjectKeyFromObject(&dp),
 			}
-		}
-		return dataPlanesToReconcile
+		})
 	}
 }

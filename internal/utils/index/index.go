@@ -12,8 +12,12 @@ import (
 )
 
 const (
-	// DataPlaneNameIndex is the key to be used to access the .spec.dataplaneName indexed values
+	// DataPlaneNameIndex is the key to be used to access the .spec.dataplaneName indexed values.
 	DataPlaneNameIndex = "dataplane"
+
+	// KongPluginInstallationsIndex is the key to be used to access the .spec.pluginsToInstall indexed values,
+	// in a form of list of namespace/name strings.
+	KongPluginInstallationsIndex = "KongPluginInstallations"
 )
 
 // DataPlaneNameOnControlPlane indexes the ControlPlane .spec.dataplaneName field
@@ -36,4 +40,34 @@ func DataPlaneNameOnControlPlane(ctx context.Context, c cache.Cache) error {
 		}
 		return []string{}
 	})
+}
+
+// KongPluginInstallationsOnDataPlane indexes the DataPlane .spec.pluginsToInstall field
+// on the "kongPluginInstallations" key.
+func KongPluginInstallationsOnDataPlane(ctx context.Context, c cache.Cache) error {
+	if _, err := c.GetInformer(ctx, &operatorv1beta1.DataPlane{}); err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to get informer for v1beta1 DataPlane: %w, disabling indexing KongPluginInstallations for DataPlanes' .spec.pluginsToInstall", err)
+	}
+	return c.IndexField(
+		ctx,
+		&operatorv1beta1.DataPlane{},
+		KongPluginInstallationsIndex,
+		func(o client.Object) []string {
+			dp, ok := o.(*operatorv1beta1.DataPlane)
+			if !ok {
+				return nil
+			}
+			result := make([]string, 0, len(dp.Spec.PluginsToInstall))
+			for _, kpi := range dp.Spec.PluginsToInstall {
+				if kpi.Namespace == "" {
+					kpi.Namespace = dp.Namespace
+				}
+				result = append(result, kpi.Namespace+"/"+kpi.Name)
+			}
+			return result
+		},
+	)
 }
