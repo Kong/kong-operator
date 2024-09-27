@@ -132,7 +132,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	// If a type has a ControlPlane ref, handle it.
 	res, err := handleControlPlaneRef(ctx, r.Client, ent)
-	if err != nil || res.Requeue {
+	if err != nil || !res.IsZero() {
 		// If the referenced ControlPlane is not found and the object is deleted,
 		// remove the finalizer and update the status.
 		// There's no need to remove the entity on Konnect because the ControlPlane
@@ -167,7 +167,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}
 			return ctrl.Result{}, nil
 		}
-	} else if res.Requeue {
+	} else if !res.IsZero() {
 		return res, nil
 	}
 	// If a type has a KongConsumer ref, handle it.
@@ -207,7 +207,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		return ctrl.Result{}, err
-	} else if res.Requeue {
+	} else if !res.IsZero() {
 		return res, nil
 	}
 
@@ -246,7 +246,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		return ctrl.Result{}, err
-	} else if res.Requeue {
+	} else if !res.IsZero() {
 		return res, nil
 	}
 
@@ -264,7 +264,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				metav1.ConditionFalse,
 				conditions.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound,
 				fmt.Sprintf("Referenced KonnectAPIAuthConfiguration %s not found", apiAuthRef),
-			); err != nil || res.Requeue {
+			); err != nil || !res.IsZero() {
 				return ctrl.Result{}, err
 			}
 
@@ -277,7 +277,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			metav1.ConditionFalse,
 			conditions.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefInvalid,
 			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is invalid: %v", apiAuthRef, err),
-		); err != nil || res.Requeue {
+		); err != nil || !res.IsZero() {
 			return ctrl.Result{}, err
 		}
 
@@ -295,7 +295,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			metav1.ConditionTrue,
 			conditions.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef,
 			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is resolved", apiAuthRef),
-		); err != nil || res.Requeue {
+		); err != nil || !res.IsZero() {
 			return res, err
 		}
 		return ctrl.Result{}, nil
@@ -314,7 +314,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			metav1.ConditionFalse,
 			conditions.KonnectEntityAPIAuthConfigurationReasonInvalid,
 			conditionMessageReferenceKonnectAPIAuthConfigurationInvalid(apiAuthRef),
-		); err != nil || res.Requeue {
+		); err != nil || !res.IsZero() {
 			return res, err
 		}
 
@@ -336,7 +336,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			metav1.ConditionTrue,
 			conditions.KonnectEntityAPIAuthConfigurationReasonValid,
 			conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef),
-		); err != nil || res.Requeue {
+		); err != nil || !res.IsZero() {
 			return res, err
 		}
 		return ctrl.Result{}, nil
@@ -350,7 +350,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			metav1.ConditionFalse,
 			conditions.KonnectEntityAPIAuthConfigurationReasonInvalid,
 			err.Error(),
-		); errStatus != nil || res.Requeue {
+		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 		return ctrl.Result{}, err
@@ -385,7 +385,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 					metav1.ConditionFalse,
 					conditions.KonnectEntityProgrammedReasonKonnectAPIOpFailed,
 					err.Error(),
-				); errStatus != nil || res.Requeue {
+				); errStatus != nil || !res.IsZero() {
 					return res, errStatus
 				}
 				return ctrl.Result{}, err
@@ -451,7 +451,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	if res, err := ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, ent); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update object: %w", err)
-	} else if res.Requeue || res.RequeueAfter > 0 {
+	} else if !res.IsZero() {
 		return res, nil
 	}
 
@@ -707,7 +707,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 				metav1.ConditionFalse,
 				conditions.KongServiceRefReasonInvalid,
 				err.Error(),
-			); errStatus != nil || res.Requeue {
+			); errStatus != nil || !res.IsZero() {
 				return res, errStatus
 			}
 
@@ -731,7 +731,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 				metav1.ConditionFalse,
 				conditions.KongServiceRefReasonInvalid,
 				fmt.Sprintf("Referenced KongService %s is not programmed yet", nn),
-			); err != nil || res.Requeue {
+			); err != nil || !res.IsZero() {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil
@@ -764,7 +764,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 			metav1.ConditionTrue,
 			conditions.KongServiceRefReasonValid,
 			fmt.Sprintf("Referenced KongService %s programmed", nn),
-		); errStatus != nil || res.Requeue {
+		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 
@@ -783,7 +783,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 				metav1.ConditionFalse,
 				conditions.ControlPlaneRefReasonInvalid,
 				err.Error(),
-			); errStatus != nil || res.Requeue {
+			); errStatus != nil || !res.IsZero() {
 				return res, errStatus
 			}
 			if k8serrors.IsNotFound(err) {
@@ -803,7 +803,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 				metav1.ConditionFalse,
 				conditions.ControlPlaneRefReasonInvalid,
 				fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
-			); errStatus != nil || res.Requeue {
+			); errStatus != nil || !res.IsZero() {
 				return res, errStatus
 			}
 
@@ -823,7 +823,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 			metav1.ConditionTrue,
 			conditions.ControlPlaneRefReasonValid,
 			fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
-		); errStatus != nil || res.Requeue {
+		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 
@@ -859,7 +859,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			metav1.ConditionFalse,
 			conditions.KongConsumerRefReasonInvalid,
 			err.Error(),
-		); errStatus != nil || res.Requeue {
+		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 
@@ -887,7 +887,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			metav1.ConditionFalse,
 			conditions.KongConsumerRefReasonInvalid,
 			fmt.Sprintf("Referenced KongConsumer %s is not programmed yet", nn),
-		); err != nil || res.Requeue {
+		); err != nil || !res.IsZero() {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{Requeue: true}, nil
@@ -926,7 +926,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		metav1.ConditionTrue,
 		conditions.KongConsumerRefReasonValid,
 		fmt.Sprintf("Referenced KongConsumer %s programmed", nn),
-	); errStatus != nil || res.Requeue {
+	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
 
@@ -945,7 +945,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			metav1.ConditionFalse,
 			conditions.ControlPlaneRefReasonInvalid,
 			err.Error(),
-		); errStatus != nil || res.Requeue {
+		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 		if k8serrors.IsNotFound(err) {
@@ -965,7 +965,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			metav1.ConditionFalse,
 			conditions.ControlPlaneRefReasonInvalid,
 			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
-		); errStatus != nil || res.Requeue {
+		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 
@@ -982,7 +982,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		metav1.ConditionTrue,
 		conditions.ControlPlaneRefReasonValid,
 		fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
-	); errStatus != nil || res.Requeue {
+	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
 
@@ -1080,7 +1080,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 				metav1.ConditionFalse,
 				conditions.ControlPlaneRefReasonInvalid,
 				err.Error(),
-			); errStatus != nil || res.Requeue {
+			); errStatus != nil || !res.IsZero() {
 				return res, errStatus
 			}
 			if k8serrors.IsNotFound(err) {
@@ -1100,7 +1100,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 				metav1.ConditionFalse,
 				conditions.ControlPlaneRefReasonInvalid,
 				fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
-			); errStatus != nil || res.Requeue {
+			); errStatus != nil || !res.IsZero() {
 				return res, errStatus
 			}
 
@@ -1137,7 +1137,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			metav1.ConditionTrue,
 			conditions.ControlPlaneRefReasonValid,
 			fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
-		); errStatus != nil || res.Requeue {
+		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 		return ctrl.Result{}, nil

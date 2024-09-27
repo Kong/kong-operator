@@ -123,7 +123,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 			metav1.ConditionFalse,
 			conditions.KonnectEntityAPIAuthConfigurationReasonInvalid,
 			err.Error(),
-		); errStatus != nil || res.Requeue {
+		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 		return ctrl.Result{}, err
@@ -167,7 +167,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 				conditions.KonnectEntityAPIAuthConfigurationReasonInvalid,
 				err.Error(),
 			)
-			if errUpdate != nil || res.Requeue {
+			if errUpdate != nil || !res.IsZero() {
 				return res, errUpdate
 			}
 			return ctrl.Result{}, nil
@@ -205,7 +205,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 			conditions.KonnectEntityAPIAuthConfigurationReasonValid,
 			condMessage,
 		)
-		if err != nil || res.Requeue {
+		if err != nil || !res.IsZero() {
 			return res, err
 		}
 		return ctrl.Result{}, nil
