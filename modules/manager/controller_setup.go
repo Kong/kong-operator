@@ -147,8 +147,21 @@ func (c *ControllerDef) MaybeSetupWithManager(ctx context.Context, mgr ctrl.Mana
 
 func setupIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 	if cfg.ControlPlaneControllerEnabled || cfg.GatewayControllerEnabled {
+		log.GetLogger(ctx, "ControlPlane", cfg.DevelopmentMode).Info(
+			"creating index",
+			"indexField", index.DataPlaneNameIndex,
+		)
 		if err := index.DataPlaneNameOnControlPlane(ctx, mgr.GetCache()); err != nil {
 			return fmt.Errorf("failed to setup index for DataPlane names on ControlPlane: %w", err)
+		}
+		if cfg.KongPluginInstallationControllerEnabled {
+			log.GetLogger(ctx, "DataPlane", cfg.DevelopmentMode).Info(
+				"creating index",
+				"indexField", index.KongPluginInstallationsIndex,
+			)
+			if err := index.KongPluginInstallationsOnDataPlane(ctx, mgr.GetCache()); err != nil {
+				return fmt.Errorf("failed to setup index for KongPluginInstallations on DataPlane: %w", err)
+			}
 		}
 	}
 	return nil
@@ -557,9 +570,8 @@ func setupCacheIndicesForKonnectType[
 		logger         = log.GetLogger(ctx, entityTypeName, developmentMode)
 	)
 	for _, ind := range konnect.ReconciliationIndexOptionsForEntity[TEnt]() {
-		logger.Info("creating index",
-			"entityTypeName", entityTypeName,
-			"indexObject", ind.IndexObject,
+		logger.Info(
+			"creating index",
 			"indexField", ind.IndexField,
 		)
 		err := mgr.

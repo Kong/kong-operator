@@ -199,8 +199,7 @@ func Run(
 		secretName:      cfg.ClusterCASecretName,
 		secretNamespace: cfg.ClusterCASecretNamespace,
 	}
-	err = mgr.Add(caMgr)
-	if err != nil {
+	if err = mgr.Add(caMgr); err != nil {
 		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
