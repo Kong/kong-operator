@@ -22,6 +22,7 @@ import (
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -43,8 +44,8 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
-	apiAuth := deployKonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deployKonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	factory := ops.NewMockSDKFactory(t)
 	sdk := factory.SDK
@@ -60,7 +61,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
 	t.Run("binding to KongService", func(t *testing.T) {
-		proxyCacheKongPlugin := deployProxyCachePlugin(t, ctx, clientNamespaced)
+		proxyCacheKongPlugin := deploy.ProxyCachePlugin(t, ctx, clientNamespaced)
 
 		serviceID := uuid.NewString()
 		pluginID := uuid.NewString()
@@ -77,11 +78,11 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			)
 		defer createCall.Unset()
 
-		kongService := deployKongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
 
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-		kpb := deployKongPluginBinding(t, ctx, clientNamespaced,
+		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
 			konnect.NewKongPluginBindingBuilder().
 				WithControlPlaneRefKonnectNamespaced(cp.Name).
 				WithPluginRef(proxyCacheKongPlugin.Name).
@@ -152,7 +153,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		}, waitTime, tickTime)
 	})
 	t.Run("binding to KongRoute", func(t *testing.T) {
-		proxyCacheKongPlugin := deployProxyCachePlugin(t, ctx, clientNamespaced)
+		proxyCacheKongPlugin := deploy.ProxyCachePlugin(t, ctx, clientNamespaced)
 
 		serviceID := uuid.NewString()
 		routeID := uuid.NewString()
@@ -170,13 +171,13 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			)
 		defer createCall.Unset()
 
-		kongService := deployKongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongRoute := deployKongRouteAttachedToService(t, ctx, clientNamespaced, kongService)
+		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService)
 		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
 
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-		kpb := deployKongPluginBinding(t, ctx, clientNamespaced,
+		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
 			konnect.NewKongPluginBindingBuilder().
 				WithControlPlaneRefKonnectNamespaced(cp.Name).
 				WithPluginRef(proxyCacheKongPlugin.Name).
@@ -249,15 +250,15 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 	})
 
 	t.Run("binding to KongService and KongRoute", func(t *testing.T) {
-		proxyCacheKongPlugin := deployProxyCachePlugin(t, ctx, clientNamespaced)
+		proxyCacheKongPlugin := deploy.ProxyCachePlugin(t, ctx, clientNamespaced)
 
 		serviceID := uuid.NewString()
 		routeID := uuid.NewString()
 		pluginID := uuid.NewString()
 
-		kongService := deployKongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongRoute := deployKongRouteAttachedToService(t, ctx, clientNamespaced, kongService)
+		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService)
 		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
 
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
@@ -277,7 +278,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 				},
 				nil,
 			)
-		kpb := deployKongPluginBinding(t, ctx, clientNamespaced,
+		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
 			konnect.NewKongPluginBindingBuilder().
 				WithControlPlaneRefKonnectNamespaced(cp.Name).
 				WithPluginRef(proxyCacheKongPlugin.Name).
@@ -351,19 +352,19 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 	})
 
 	t.Run("binding to KongService and KongConsumer", func(t *testing.T) {
-		proxyCacheKongPlugin := deployProxyCachePlugin(t, ctx, clientNamespaced)
+		proxyCacheKongPlugin := deploy.ProxyCachePlugin(t, ctx, clientNamespaced)
 
 		serviceID := uuid.NewString()
 		consumerID := uuid.NewString()
 		pluginID := uuid.NewString()
 		username := "test-user" + uuid.NewString()
 
-		kongService := deployKongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
 		t.Cleanup(func() {
 			require.NoError(t, client.IgnoreNotFound(clientNamespaced.Delete(ctx, kongService)))
 		})
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongConsumer := deployKongConsumerAttachedToCP(t, ctx, clientNamespaced, username, cp)
+		kongConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username, cp)
 		t.Cleanup(func() {
 			require.NoError(t, client.IgnoreNotFound(clientNamespaced.Delete(ctx, kongConsumer)))
 		})
@@ -386,7 +387,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 				},
 				nil,
 			)
-		kpb := deployKongPluginBinding(t, ctx, clientNamespaced,
+		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
 			konnect.NewKongPluginBindingBuilder().
 				WithControlPlaneRefKonnectNamespaced(cp.Name).
 				WithPluginRef(proxyCacheKongPlugin.Name).
@@ -460,16 +461,15 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 	})
 
 	t.Run("binding to KongService and KongConsumerGroup", func(t *testing.T) {
-		proxyCacheKongPlugin := deployProxyCachePlugin(t, ctx, clientNamespaced)
+		proxyCacheKongPlugin := deploy.ProxyCachePlugin(t, ctx, clientNamespaced)
 
 		serviceID := uuid.NewString()
 		consumerGroupID := uuid.NewString()
 		pluginID := uuid.NewString()
-		cgName := "test-group-" + uuid.NewString()
 
-		kongService := deployKongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongConsumerGroup := deployKongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cgName, cp)
+		kongConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cp)
 		updateKongConsumerGroupStatusWithKonnectID(t, ctx, clientNamespaced, kongConsumerGroup, consumerGroupID, cp.GetKonnectStatus().GetKonnectID())
 
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
@@ -489,7 +489,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 				},
 				nil,
 			)
-		kpb := deployKongPluginBinding(t, ctx, clientNamespaced,
+		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
 			konnect.NewKongPluginBindingBuilder().
 				WithControlPlaneRefKonnectNamespaced(cp.Name).
 				WithPluginRef(proxyCacheKongPlugin.Name).

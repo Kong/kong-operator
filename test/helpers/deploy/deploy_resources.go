@@ -1,9 +1,10 @@
-package envtest
+package deploy
 
 import (
 	"context"
 	"testing"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -20,6 +21,11 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
+const (
+	// TestIDLabel is the label key used to identify resources created by the test suite.
+	TestIDLabel = "konghq.com/test-id"
+)
+
 type objOption func(obj client.Object)
 
 // WithAnnotation returns an objOption that sets the given key-value pair as an annotation on the object.
@@ -34,12 +40,36 @@ func WithAnnotation(key, value string) objOption {
 	}
 }
 
-// deployKonnectAPIAuthConfiguration deploys a KonnectAPIAuthConfiguration resource
+// WithTestIDLabel returns an objOption that sets the test ID label on the object.
+func WithTestIDLabel(testID string) func(obj client.Object) {
+	return func(obj client.Object) {
+		labels := obj.GetLabels()
+		if labels == nil {
+			labels = map[string]string{}
+		}
+		labels[TestIDLabel] = testID
+		obj.SetLabels(labels)
+	}
+}
+
+// WithLabels returns an objOption that sets the given key-value pairs as labels on the object.
+func WithLabels[
+	T client.Object,
+](labels map[string]string) func(obj T) {
+	return func(obj T) {
+		for k, v := range labels {
+			obj.GetLabels()[k] = v
+		}
+	}
+}
+
+// KonnectAPIAuthConfiguration deploys a KonnectAPIAuthConfiguration resource
 // and returns the resource.
-func deployKonnectAPIAuthConfiguration(
+func KonnectAPIAuthConfiguration(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
+	opts ...objOption,
 ) *konnectv1alpha1.KonnectAPIAuthConfiguration {
 	t.Helper()
 
@@ -53,25 +83,28 @@ func deployKonnectAPIAuthConfiguration(
 			ServerURL: "https://api.us.konghq.com",
 		},
 	}
+	for _, opt := range opts {
+		opt(apiAuth)
+	}
 	require.NoError(t, cl.Create(ctx, apiAuth))
 	t.Logf("deployed new %s KonnectAPIAuthConfiguration", client.ObjectKeyFromObject(apiAuth))
 
 	return apiAuth
 }
 
-// deployKonnectAPIAuthConfigurationWithProgrammed deploys a KonnectAPIAuthConfiguration
+// KonnectAPIAuthConfigurationWithProgrammed deploys a KonnectAPIAuthConfiguration
 // resource and returns the resource.
 // The Programmed condition is set on the returned resource using status Update() call.
 // It can be useful where the reconciler for KonnectAPIAuthConfiguration is not started
 // and hence the status has to be filled manually.
-func deployKonnectAPIAuthConfigurationWithProgrammed(
+func KonnectAPIAuthConfigurationWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
 ) *konnectv1alpha1.KonnectAPIAuthConfiguration {
 	t.Helper()
 
-	apiAuth := deployKonnectAPIAuthConfiguration(t, ctx, cl)
+	apiAuth := KonnectAPIAuthConfiguration(t, ctx, cl)
 	apiAuth.Status.Conditions = []metav1.Condition{
 		{
 			Type:               conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
@@ -85,18 +118,20 @@ func deployKonnectAPIAuthConfigurationWithProgrammed(
 	return apiAuth
 }
 
-// deployKonnectGatewayControlPlane deploys a KonnectGatewayControlPlane resource and returns the resource.
-func deployKonnectGatewayControlPlane(
+// KonnectGatewayControlPlane deploys a KonnectGatewayControlPlane resource and returns the resource.
+func KonnectGatewayControlPlane(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
 	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	opts ...objOption,
 ) *konnectv1alpha1.KonnectGatewayControlPlane {
 	t.Helper()
 
+	name := "cp-" + uuid.NewString()[:8]
 	cp := &konnectv1alpha1.KonnectGatewayControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "cp-",
+			Name: name,
 		},
 		Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 			KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
@@ -104,7 +139,13 @@ func deployKonnectGatewayControlPlane(
 					Name: apiAuth.Name,
 				},
 			},
+			CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+				Name: name,
+			},
 		},
+	}
+	for _, opt := range opts {
+		opt(cp)
 	}
 	require.NoError(t, cl.Create(ctx, cp))
 	t.Logf("deployed new %s KonnectGatewayControlPlane", client.ObjectKeyFromObject(cp))
@@ -112,11 +153,11 @@ func deployKonnectGatewayControlPlane(
 	return cp
 }
 
-// deployKonnectGatewayControlPlaneWithID deploys a KonnectGatewayControlPlane resource and returns the resource.
+// deploy.KonnectGatewayControlPlaneWithID deploys a KonnectGatewayControlPlane resource and returns the resource.
 // The Status ID and Programmed condition are set on the CP using status Update() call.
 // It can be useful where the reconciler for KonnectGatewayControlPlane is not started
 // and hence the status has to be filled manually.
-func deployKonnectGatewayControlPlaneWithID(
+func KonnectGatewayControlPlaneWithID(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -124,7 +165,7 @@ func deployKonnectGatewayControlPlaneWithID(
 ) *konnectv1alpha1.KonnectGatewayControlPlane {
 	t.Helper()
 
-	cp := deployKonnectGatewayControlPlane(t, ctx, cl, apiAuth)
+	cp := KonnectGatewayControlPlane(t, ctx, cl, apiAuth)
 	cp.Status.Conditions = []metav1.Condition{
 		{
 			Type:               conditions.KonnectEntityProgrammedConditionType,
@@ -139,8 +180,8 @@ func deployKonnectGatewayControlPlaneWithID(
 	return cp
 }
 
-// deployKongServiceAttachedToCP deploys a KongService resource and returns the resource.
-func deployKongServiceAttachedToCP(
+// KongServiceAttachedToCP deploys a KongService resource and returns the resource.
+func KongServiceAttachedToCP(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -157,6 +198,8 @@ func deployKongServiceAttachedToCP(
 		Spec: configurationv1alpha1.KongServiceSpec{
 			KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 				Name: lo.ToPtr(name),
+				URL:  lo.ToPtr("http://example.com"),
+				Host: "example.com",
 			},
 			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
 				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -176,8 +219,8 @@ func deployKongServiceAttachedToCP(
 	return &kongService
 }
 
-// deployKongRouteAttachedToService deploys a KongRoute resource and returns the resource.
-func deployKongRouteAttachedToService(
+// KongRouteAttachedToService deploys a KongRoute resource and returns the resource.
+func KongRouteAttachedToService(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -212,8 +255,8 @@ func deployKongRouteAttachedToService(
 	return &kongRoute
 }
 
-// deployKongConsumerWithProgrammed deploys a KongConsumer resource and returns the resource.
-func deployKongConsumerWithProgrammed(
+// KongConsumerWithProgrammed deploys a KongConsumer resource and returns the resource.
+func KongConsumerWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -239,24 +282,28 @@ func deployKongConsumerWithProgrammed(
 	return consumer
 }
 
-// deployKongPluginBinding deploys a KongPluginBinding resource and returns the resource.
-func deployKongPluginBinding(
+// KongPluginBinding deploys a KongPluginBinding resource and returns the resource.
+func KongPluginBinding(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
 	kpb *configurationv1alpha1.KongPluginBinding,
+	opts ...objOption,
 ) *configurationv1alpha1.KongPluginBinding {
 	t.Helper()
 
 	kpb.GenerateName = "kongpluginbinding-"
+	for _, opt := range opts {
+		opt(kpb)
+	}
 	require.NoError(t, cl.Create(ctx, kpb))
 	t.Logf("deployed new unmanaged KongPluginBinding %s", client.ObjectKeyFromObject(kpb))
 
 	return kpb
 }
 
-// deployKongCredentialBasicAuth deploys a KongCredentialBasicAuth resource and returns the resource.
-func deployKongCredentialBasicAuth(
+// KongCredentialBasicAuth deploys a KongCredentialBasicAuth resource and returns the resource.
+func KongCredentialBasicAuth(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -287,8 +334,8 @@ func deployKongCredentialBasicAuth(
 	return c
 }
 
-// deployKongCredentialACL deploys a KongCredentialACL resource and returns the resource.
-func deployKongCredentialACL(
+// KongCredentialACL deploys a KongCredentialACL resource and returns the resource.
+func KongCredentialACL(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -317,8 +364,8 @@ func deployKongCredentialACL(
 	return c
 }
 
-// deployKongCACertificateAttachedToCP deploys a KongCACertificate resource attached to a CP and returns the resource.
-func deployKongCACertificateAttachedToCP(
+// KongCACertificateAttachedToCP deploys a KongCACertificate resource attached to a CP and returns the resource.
+func KongCACertificateAttachedToCP(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -338,7 +385,7 @@ func deployKongCACertificateAttachedToCP(
 				},
 			},
 			KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
-				Cert: dummyValidCACertPEM,
+				Cert: TestValidCACertPEM,
 			},
 		},
 	}
@@ -348,8 +395,8 @@ func deployKongCACertificateAttachedToCP(
 	return cert
 }
 
-// deployKongCertificateAttachedToCP deploys a KongCertificate resource attached to a CP and returns the resource.
-func deployKongCertificateAttachedToCP(
+// KongCertificateAttachedToCP deploys a KongCertificate resource attached to a CP and returns the resource.
+func KongCertificateAttachedToCP(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -369,8 +416,8 @@ func deployKongCertificateAttachedToCP(
 				},
 			},
 			KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
-				Cert: dummyValidCertPEM,
-				Key:  dummyValidCertKeyPEM,
+				Cert: TestValidCertPEM,
+				Key:  TestValidCertKeyPEM,
 			},
 		},
 	}
@@ -380,13 +427,77 @@ func deployKongCertificateAttachedToCP(
 	return cert
 }
 
-// deployKongConsumer deploys a KongConsumer resource attached to a Control Plane and returns the resource.
-func deployKongConsumerAttachedToCP(
+// KongUpstreamAttachedToCP deploys a KongUpstream resource attached to a Control Plane and returns the resource.
+func KongUpstreamAttachedToCP(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	opts ...objOption,
+) *configurationv1alpha1.KongUpstream {
+	t.Helper()
+
+	u := &configurationv1alpha1.KongUpstream{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "upstream-",
+		},
+		Spec: configurationv1alpha1.KongUpstreamSpec{
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: cp.Name,
+				},
+			},
+		},
+	}
+	for _, opt := range opts {
+		opt(u)
+	}
+
+	require.NoError(t, cl.Create(ctx, u))
+	t.Logf("deployed new KongUpstream %s", client.ObjectKeyFromObject(u))
+
+	return u
+}
+
+// KongTargetAttachedToUpstream deploys a KongTarget resource attached to a Control Plane and returns the resource.
+func KongTargetAttachedToUpstream(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	upstream *configurationv1alpha1.KongUpstream,
+	opts ...objOption,
+) *configurationv1alpha1.KongTarget {
+	t.Helper()
+
+	u := &configurationv1alpha1.KongTarget{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "upstream-",
+		},
+		Spec: configurationv1alpha1.KongTargetSpec{
+			UpstreamRef: configurationv1alpha1.TargetRef{
+				Name: upstream.Name,
+			},
+		},
+	}
+	for _, opt := range opts {
+		opt(u)
+	}
+
+	require.NoError(t, cl.Create(ctx, u))
+	t.Logf("deployed new KongTarget %s", client.ObjectKeyFromObject(u))
+
+	return u
+}
+
+// KongConsumerAttachedToCP deploys a KongConsumer resource attached to a Control Plane and returns the resource.
+func KongConsumerAttachedToCP(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
 	username string,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	opts ...objOption,
 ) *configurationv1.KongConsumer {
 	t.Helper()
 
@@ -404,6 +515,9 @@ func deployKongConsumerAttachedToCP(
 		},
 		Username: username,
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
 
 	require.NoError(t, cl.Create(ctx, c))
 	t.Logf("deployed new KongConsumer %s", client.ObjectKeyFromObject(c))
@@ -411,19 +525,20 @@ func deployKongConsumerAttachedToCP(
 	return c
 }
 
-// deployKongConsumerGroupAttachedToCP deploys a KongConsumerGroup resource attached to a Control Plane and returns the resource.
-func deployKongConsumerGroupAttachedToCP(
+// KongConsumerGroupAttachedToCP deploys a KongConsumerGroup resource attached to a Control Plane and returns the resource.
+func KongConsumerGroupAttachedToCP(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	cgName string,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	opts ...objOption,
 ) *configurationv1beta1.KongConsumerGroup {
 	t.Helper()
 
+	name := "consumer-group-" + uuid.NewString()[:8]
 	cg := configurationv1beta1.KongConsumerGroup{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "consumer-group-",
+			Name: name,
 		},
 		Spec: configurationv1beta1.KongConsumerGroupSpec{
 			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
@@ -432,8 +547,11 @@ func deployKongConsumerGroupAttachedToCP(
 					Name: cp.Name,
 				},
 			},
-			Name: cgName,
+			Name: name,
 		},
+	}
+	for _, opt := range opts {
+		opt(&cg)
 	}
 
 	require.NoError(t, cl.Create(ctx, &cg))
@@ -442,7 +560,8 @@ func deployKongConsumerGroupAttachedToCP(
 	return &cg
 }
 
-func deployKongVaultAttachedToCP(
+// KongVaultAttachedToCP deploys a KongVault resource attached to a CP and returns the resource.
+func KongVaultAttachedToCP(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -479,8 +598,8 @@ func deployKongVaultAttachedToCP(
 	return vault
 }
 
-// deployKongKeyAttachedToCP deploys a KongKey resource attached to a CP and returns the resource.
-func deployKongKeyAttachedToCP(
+// KongKeyAttachedToCP deploys a KongKey resource attached to a CP and returns the resource.
+func KongKeyAttachedToCP(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -512,9 +631,9 @@ func deployKongKeyAttachedToCP(
 	return key
 }
 
-// deployProxyCachePlugin deploys the proxy-cache KongPlugin resource and returns the resource.
+// ProxyCachePlugin deploys the proxy-cache KongPlugin resource and returns the resource.
 // The provided client should be namespaced, i.e. created with `client.NewNamespacedClient(client, ns)`
-func deployProxyCachePlugin(
+func ProxyCachePlugin(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -535,8 +654,8 @@ func deployProxyCachePlugin(
 	return plugin
 }
 
-// deployKongKeySetAttachedToCP deploys a KongKeySet resource attached to a CP and returns the resource.
-func deployKongKeySetAttachedToCP(
+// KongKeySetAttachedToCP deploys a KongKeySet resource attached to a CP and returns the resource.
+func KongKeySetAttachedToCP(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -567,18 +686,20 @@ func deployKongKeySetAttachedToCP(
 	return keySet
 }
 
-func deploySNIAttachedToCertificate(
+// KongSNIAttachedToCertificate deploys a KongSNI resource attached to a KongCertificate and returns the resource.
+func KongSNIAttachedToCertificate(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	name string, tags []string,
 	cert *configurationv1alpha1.KongCertificate,
+	opts ...objOption,
 ) *configurationv1alpha1.KongSNI {
 	t.Helper()
 
+	name := "sni-" + uuid.NewString()[:8]
 	sni := &configurationv1alpha1.KongSNI{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "sni-",
+			Name: name,
 		},
 		Spec: configurationv1alpha1.KongSNISpec{
 			CertificateRef: configurationv1alpha1.KongObjectRef{
@@ -586,10 +707,14 @@ func deploySNIAttachedToCertificate(
 			},
 			KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{
 				Name: name,
-				Tags: tags,
 			},
 		},
 	}
+
+	for _, opt := range opts {
+		opt(sni)
+	}
+
 	require.NoError(t, cl.Create(ctx, sni))
 	t.Logf("deployed KongSNI %s/%s", sni.Namespace, sni.Name)
 	return sni

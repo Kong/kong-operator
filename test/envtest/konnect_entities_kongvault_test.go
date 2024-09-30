@@ -18,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	konnectops "github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
@@ -47,8 +48,8 @@ func TestKongVault(t *testing.T) {
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
-	apiAuth := deployKonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deployKonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	t.Log("Setting up a watch for KongVault events")
 	vaultWatch := setupWatch[configurationv1alpha1.KongVaultList](t, ctx, cl)
@@ -72,7 +73,7 @@ func TestKongVault(t *testing.T) {
 			},
 		}, nil)
 
-		vault := deployKongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, []byte(vaultRawConfig), cp)
+		vault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, []byte(vaultRawConfig), cp)
 
 		t.Log("Waiting for KongVault to be programmed")
 		watchFor(t, ctx, vaultWatch, watch.Modified, func(v *configurationv1alpha1.KongVault) bool {

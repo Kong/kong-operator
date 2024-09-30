@@ -18,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
@@ -52,8 +53,8 @@ func TestKongKey(t *testing.T) {
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
-	apiAuth := deployKonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deployKonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	t.Log("Setting up SDK expectations on KongKey creation")
 	sdk.KeysSDK.EXPECT().CreateKey(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
@@ -71,7 +72,7 @@ func TestKongKey(t *testing.T) {
 	w := setupWatch[configurationv1alpha1.KongKeyList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Log("Creating KongKey")
-	createdKey := deployKongKeyAttachedToCP(t, ctx, clientNamespaced, keyKid, keyName, cp)
+	createdKey := deploy.KongKeyAttachedToCP(t, ctx, clientNamespaced, keyKid, keyName, cp)
 
 	t.Log("Waiting for KongKey to be programmed")
 	watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongKey) bool {

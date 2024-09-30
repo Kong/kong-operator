@@ -23,6 +23,7 @@ import (
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -50,8 +51,8 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
-	apiAuth := deployKonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deployKonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	factory := ops.NewMockSDKFactory(t)
 	sdk := factory.SDK
@@ -96,8 +97,8 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 
-		kongService := deployKongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
-			WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
+		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
+			deploy.WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
 		)
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongService))
@@ -196,13 +197,13 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-		kongService := deployKongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		})
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongRoute := deployKongRouteAttachedToService(t, ctx, clientNamespaced, kongService,
-			WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
+		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService,
+			deploy.WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
 		)
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))
@@ -300,15 +301,15 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-		kongService := deployKongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
-			WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
+		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
+			deploy.WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
 		)
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		})
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongRoute := deployKongRouteAttachedToService(t, ctx, clientNamespaced, kongService,
-			WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
+		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService,
+			deploy.WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
 		)
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))

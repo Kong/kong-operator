@@ -18,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
@@ -46,13 +47,13 @@ func TestKongCertificate(t *testing.T) {
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
-	apiAuth := deployKonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deployKonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	t.Log("Setting up SDK expectations on KongCertificate creation")
 	sdk.CertificatesSDK.EXPECT().CreateCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
 		mock.MatchedBy(func(input sdkkonnectcomp.CertificateInput) bool {
-			return input.Cert == dummyValidCertPEM && input.Key == dummyValidCertKeyPEM
+			return input.Cert == deploy.TestValidCertPEM && input.Key == deploy.TestValidCertKeyPEM
 		}),
 	).Return(&sdkkonnectops.CreateCertificateResponse{
 		Certificate: &sdkkonnectcomp.Certificate{
@@ -64,7 +65,7 @@ func TestKongCertificate(t *testing.T) {
 	w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Log("Creating KongCertificate")
-	createdCert := deployKongCertificateAttachedToCP(t, ctx, clientNamespaced, cp)
+	createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp)
 
 	t.Log("Waiting for KongCertificate to be programmed")
 	watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongCertificate) bool {

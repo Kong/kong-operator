@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,6 +19,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectalpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -47,12 +49,12 @@ func TestKongSNI(t *testing.T) {
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
-	apiAuth := deployKonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deployKonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	t.Run("adding, patching and deleting KongSNI", func(t *testing.T) {
 		t.Log("Creating KongCertificate and setting it to Programmed")
-		createdCert := deployKongCertificateAttachedToCP(t, ctx, clientNamespaced, cp)
+		createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp)
 		createdCert.Status = configurationv1alpha1.KongCertificateStatus{
 			Konnect: &konnectalpha1.KonnectEntityStatusWithControlPlaneRef{
 				KonnectEntityStatus: konnectEntityStatus("cert-12345"),
@@ -87,11 +89,11 @@ func TestKongSNI(t *testing.T) {
 			},
 		}, nil)
 
-		t.Log("Creating KongSNI")
-		createdSNI := deploySNIAttachedToCertificate(t, ctx,
-			clientNamespaced,
-			"test.kong-sni.example.com", nil,
-			createdCert,
+		createdSNI := deploy.KongSNIAttachedToCertificate(t, ctx, clientNamespaced, createdCert,
+			func(obj client.Object) {
+				sni := obj.(*configurationv1alpha1.KongSNI)
+				sni.Spec.KongSNIAPISpec.Name = "test.kong-sni.example.com"
+			},
 		)
 
 		t.Log("Waiting for SNI to be programmed and get Konnect ID")
@@ -134,6 +136,14 @@ func TestKongSNI(t *testing.T) {
 
 		t.Log("Deleting KongSNI")
 		require.NoError(t, clientNamespaced.Delete(ctx, createdSNI))
+
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, k8serrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(createdSNI), createdSNI),
+			))
+		}, waitTime, tickTime,
+			"KongSNI was not deleted",
+		)
 
 		t.Log("Waiting for SNI to be deleted in SDK")
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {

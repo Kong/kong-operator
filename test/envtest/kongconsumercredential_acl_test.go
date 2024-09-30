@@ -18,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -40,11 +41,11 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
-	apiAuth := deployKonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deployKonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	consumerID := uuid.NewString()
-	consumer := deployKongConsumerWithProgrammed(t, ctx, clientNamespaced, &configurationv1.KongConsumer{
+	consumer := deploy.KongConsumerWithProgrammed(t, ctx, clientNamespaced, &configurationv1.KongConsumer{
 		Username: "username1",
 		Spec: configurationv1.KongConsumerSpec{
 			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
@@ -66,15 +67,15 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 	require.NoError(t, clientNamespaced.Status().Update(ctx, consumer))
 
 	aclGroup := "acl-group1"
-	KongCredentialACL := deployKongCredentialACL(t, ctx, clientNamespaced, consumer.Name, aclGroup)
+	kongCredentialACL := deploy.KongCredentialACL(t, ctx, clientNamespaced, consumer.Name, aclGroup)
 	aclID := uuid.NewString()
 	tags := []string{
 		"k8s-generation:1",
 		"k8s-group:configuration.konghq.com",
 		"k8s-kind:KongCredentialACL",
-		"k8s-name:" + KongCredentialACL.Name,
+		"k8s-name:" + kongCredentialACL.Name,
 		"k8s-namespace:" + ns.Name,
-		"k8s-uid:" + string(KongCredentialACL.GetUID()),
+		"k8s-uid:" + string(kongCredentialACL.GetUID()),
 		"k8s-version:v1alpha1",
 	}
 
@@ -138,7 +139,7 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 			},
 			nil,
 		)
-	require.NoError(t, clientNamespaced.Delete(ctx, KongCredentialACL))
+	require.NoError(t, clientNamespaced.Delete(ctx, kongCredentialACL))
 
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		assert.True(c, factory.SDK.KongCredentialsACLSDK.AssertExpectations(t))
@@ -146,17 +147,17 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 
 	w := setupWatch[configurationv1alpha1.KongCredentialACLList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 
-	KongCredentialACL = deployKongCredentialACL(t, ctx, clientNamespaced, consumer.Name, aclGroup)
-	t.Logf("redeployed %s KongCredentialACL resource", client.ObjectKeyFromObject(KongCredentialACL))
+	kongCredentialACL = deploy.KongCredentialACL(t, ctx, clientNamespaced, consumer.Name, aclGroup)
+	t.Logf("redeployed %s KongCredentialACL resource", client.ObjectKeyFromObject(kongCredentialACL))
 	t.Logf("checking if KongConsumer %s removal will delete the associated credentials %s",
 		client.ObjectKeyFromObject(consumer),
-		client.ObjectKeyFromObject(KongCredentialACL),
+		client.ObjectKeyFromObject(kongCredentialACL),
 	)
 
 	require.NoError(t, clientNamespaced.Delete(ctx, consumer))
 	_ = watchFor(t, ctx, w, watch.Modified,
 		func(c *configurationv1alpha1.KongCredentialACL) bool {
-			return c.Name == KongCredentialACL.Name
+			return c.Name == kongCredentialACL.Name
 		},
 		"KongCredentialACL wasn't deleted but it should have been",
 	)
