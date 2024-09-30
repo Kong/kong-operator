@@ -569,6 +569,9 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.KongRoute](ctx, mgr, developmentMode); err != nil {
 		return err
 	}
+	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.KongSNI](ctx, mgr, developmentMode); err != nil {
+		return err
+	}
 	return nil
 }
 

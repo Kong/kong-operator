@@ -38,7 +38,8 @@ func KongSNIReconciliationWatchOptions(cl client.Client,
 }
 
 func kongSNIRefersToKonnectGatewayControlPlane(
-	cl client.Client) func(client.Object) bool {
+	cl client.Client,
+) func(client.Object) bool {
 	return func(obj client.Object) bool {
 		sni, ok := obj.(*configurationv1alpha1.KongSNI)
 		if !ok {
@@ -59,7 +60,8 @@ func kongSNIRefersToKonnectGatewayControlPlane(
 }
 
 func enqueueKongSNIForKongCertificate(
-	cl client.Client) func(context.Context, client.Object) []reconcile.Request {
+	cl client.Client,
+) func(context.Context, client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		cert, ok := obj.(*configurationv1alpha1.KongCertificate)
 		if !ok {
@@ -72,20 +74,22 @@ func enqueueKongSNIForKongCertificate(
 		}
 
 		sniList := configurationv1alpha1.KongSNIList{}
-		if err := cl.List(ctx, &sniList, client.InNamespace(cert.Namespace)); err != nil {
+		if err := cl.List(ctx, &sniList, client.InNamespace(cert.Namespace),
+			client.MatchingFields{
+				IndexFieldKongPluginBindingKongServiceReference: cert.Name,
+			},
+		); err != nil {
 			return nil
 		}
 
-		var ret []reconcile.Request
+		ret := make([]reconcile.Request, 0, len(sniList.Items))
 		for _, sni := range sniList.Items {
-			if sni.Spec.CertificateRef.Name == cert.Name {
-				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: sni.Namespace,
-						Name:      sni.Name,
-					},
-				})
-			}
+			ret = append(ret, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: sni.Namespace,
+					Name:      sni.Name,
+				},
+			})
 		}
 		return ret
 	}
