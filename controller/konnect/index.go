@@ -33,6 +33,8 @@ func ReconciliationIndexOptionsForEntity[
 		return IndexOptionsForCredentialsBasicAuth()
 	case *configurationv1.KongConsumer:
 		return IndexOptionsForKongConsumer()
+	case *configurationv1alpha1.KongSNI:
+		return IndexOptionsForKongSNI()
 	}
 	return nil
 }

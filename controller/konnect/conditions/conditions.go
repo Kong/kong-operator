@@ -117,8 +117,7 @@ const (
 
 const (
 	// KongUpstreamRefValidConditionType is the type of the condition that indicates
-	// whether the KongUpstream reference is valid and points to an existing
-	// KongUpstreamRefValid.
+	// whether the KongUpstream reference is valid and points to an existing KongUpstream.
 	KongUpstreamRefValidConditionType = "KongUpstreamRefValid"
 
 	// KongUpstreamRefReasonValid is the reason used with the KongUpstreamRefValid
@@ -127,4 +126,17 @@ const (
 	// KongUpstreamRefReasonInvalid is the reason used with the KongUpstreamRefValid
 	// condition type indicating that the KongUpstream reference is invalid.
 	KongUpstreamRefReasonInvalid = "Invalid"
+)
+
+const (
+	// KongCertificateRefValidConditionType is the type of the condition that indicates
+	// whether the KongCertificate reference is valid and points to an existing KongCertificate
+	KongCertificateRefValidConditionType = "KongCertificateRefValid"
+
+	// KongCertificateRefReasonValid is the reason used with the KongCertificateRefValid
+	// condition type indicating that the KongCertificate reference is valid.
+	KongCertificateRefReasonValid = "Valid"
+	// KongCertificateRefReasonInvalid is the reason used with the KongCertificateRefValid
+	// condition type indicating that the KongCertificate reference is invalid.
+	KongCertificateRefReasonInvalid = "Invalid"
 )

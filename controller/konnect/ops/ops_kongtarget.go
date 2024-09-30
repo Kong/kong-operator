@@ -84,10 +84,10 @@ func deleteTarget(
 ) error {
 	cpID := target.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf("can't update %T %s without a Konnect ControlPlane ID", target, client.ObjectKeyFromObject(target))
+		return fmt.Errorf("can't delete %T %s without a Konnect ControlPlane ID", target, client.ObjectKeyFromObject(target))
 	}
 	if target.Status.Konnect == nil || target.Status.Konnect.UpstreamID == "" {
-		return fmt.Errorf("can't update %T %s without a Konnect Upstream ID", target, client.ObjectKeyFromObject(target))
+		return fmt.Errorf("can't delete %T %s without a Konnect Upstream ID", target, client.ObjectKeyFromObject(target))
 	}
 	id := target.GetKonnectID()
 

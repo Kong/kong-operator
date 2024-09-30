@@ -84,6 +84,9 @@ func Create[
 		return e, createKey(ctx, sdk.GetKeysSDK(), ent)
 	case *configurationv1alpha1.KongKeySet:
 		return e, createKeySet(ctx, sdk.GetKeySetsSDK(), ent)
+	case *configurationv1alpha1.KongSNI:
+		return e, createSNI(ctx, sdk.GetSNIsSDK(), ent)
+
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 
@@ -141,6 +144,9 @@ func Delete[
 		return deleteKey(ctx, sdk.GetKeysSDK(), ent)
 	case *configurationv1alpha1.KongKeySet:
 		return deleteKeySet(ctx, sdk.GetKeySetsSDK(), ent)
+	case *configurationv1alpha1.KongSNI:
+		return deleteSNI(ctx, sdk.GetSNIsSDK(), ent)
+
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 
@@ -243,6 +249,8 @@ func Update[
 		return ctrl.Result{}, updateKey(ctx, sdk.GetKeysSDK(), ent)
 	case *configurationv1alpha1.KongKeySet:
 		return ctrl.Result{}, updateKeySet(ctx, sdk.GetKeySetsSDK(), ent)
+	case *configurationv1alpha1.KongSNI:
+		return ctrl.Result{}, updateSNI(ctx, sdk.GetSNIsSDK(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types

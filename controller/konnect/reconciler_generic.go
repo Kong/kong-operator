@@ -250,6 +250,44 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, nil
 	}
 
+	// If a type has a KongCertificateRef (KongCertificate), handle it.
+	res, err = handleKongCertificateRef(ctx, r.Client, ent)
+	if err != nil {
+		// If the referenced KongCertificate is being deleted and the object
+		// is not being deleted yet then requeue until it will
+		// get the deletion timestamp set due to having the owner set to KongCertificate.
+		if errDel := (&ReferencedKongCertificateIsBeingDeleted{}); errors.As(err, errDel) &&
+			ent.GetDeletionTimestamp().IsZero() {
+			return ctrl.Result{
+				RequeueAfter: time.Until(errDel.DeletionTimestamp),
+			}, nil
+		}
+
+		// If the referenced KongCertificate is not found or is being deleted
+		// and the object is being deleted, remove the finalizer and let the
+		// deletion proceed without trying to delete the entity from Konnect
+		// as the KongCertificate deletion will take care of it on the Konnect side.
+		if errors.As(err, &ReferencedKongCertificateIsBeingDeleted{}) ||
+			errors.As(err, &ReferencedKongCertificateDoesNotExist{}) {
+			if !ent.GetDeletionTimestamp().IsZero() {
+				if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+					if err := r.Client.Update(ctx, ent); err != nil {
+						if k8serrors.IsConflict(err) {
+							return ctrl.Result{Requeue: true}, nil
+						}
+						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+					}
+					log.Debug(logger, "finalizer removed as the owning KongCertificate is being deleted or is already gone", ent,
+						"finalizer", KonnectCleanupFinalizer,
+					)
+				}
+			}
+		}
+		return ctrl.Result{}, nil
+	} else if res.Requeue {
+		return res, nil
+	}
+
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to get APIAuth ref for %s: %w", client.ObjectKeyFromObject(ent), err)
@@ -505,10 +543,7 @@ func updateStatusWithCondition[T interface {
 		if k8serrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf(
-			"failed to update status with %s condition: %w",
-			conditions.KonnectEntityAPIAuthConfigurationResolvedRefConditionType, err,
-		)
+		return ctrl.Result{}, fmt.Errorf("failed to update status with %s condition: %w", conditionType, err)
 	}
 
 	return ctrl.Result{}, nil
@@ -619,10 +654,10 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 
 	// If the entity has a KongUpstreamRef, get the KonnectAPIAuthConfiguration
 	// ref from the referenced KongUpstream.
-	upsteramRef, ok := getKongUpstreamRef(ent).Get()
+	upstreamRef, ok := getKongUpstreamRef(ent).Get()
 	if ok {
 		nn := types.NamespacedName{
-			Name:      upsteramRef.Name,
+			Name:      upstreamRef.Name,
 			Namespace: ent.GetNamespace(),
 		}
 
@@ -644,6 +679,27 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 			// TODO: enable if cross namespace refs are allowed
 			Namespace: ent.GetNamespace(),
 		}, nil
+	}
+
+	// If the entity has a KongCertificateRef, get the KonnectAPIAuthConfiguration
+	// ref from the referenced KongUpstream.
+	certificateRef, ok := getKongCertificateRef(ent).Get()
+	if ok {
+		nn := types.NamespacedName{
+			Name:      certificateRef.Name,
+			Namespace: ent.GetNamespace(),
+		}
+
+		var cert configurationv1alpha1.KongCertificate
+		if err := cl.Get(ctx, nn, &cert); err != nil {
+			return types.NamespacedName{}, fmt.Errorf("failed to get KongCertificate %s", nn)
+		}
+
+		cpRef, ok := getControlPlaneRef(&cert).Get()
+		if !ok {
+			return types.NamespacedName{}, fmt.Errorf("KongCertificate %s does not have a ControlPlaneRef", nn)
+		}
+		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
 	}
 
 	return types.NamespacedName{}, fmt.Errorf(

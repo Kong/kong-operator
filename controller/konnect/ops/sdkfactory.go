@@ -24,6 +24,7 @@ type SDKWrapper interface {
 	GetCertificatesSDK() CertificatesSDK
 	GetKeysSDK() KeysSDK
 	GetKeySetsSDK() KeySetsSDK
+	GetSNIsSDK() SNIsSDK
 }
 
 type sdkWrapper struct {
@@ -90,6 +91,11 @@ func (w sdkWrapper) GetCACertificatesSDK() CACertificatesSDK {
 // GetCertificatesSDK returns the SDK to operate certificates.
 func (w sdkWrapper) GetCertificatesSDK() CertificatesSDK {
 	return w.sdk.Certificates
+}
+
+// GetSNIsSDK returns the SDK to operate SNIs.
+func (w sdkWrapper) GetSNIsSDK() SNIsSDK {
+	return w.sdk.SNIs
 }
 
 // GetBasicAuthCredentialsSDK returns the BasicAuthCredentials SDK to get current organization.
