@@ -62,8 +62,7 @@ func kongTargetRefersToKonnectGatewayControlPlane(cl client.Client) func(obj cli
 		if err := cl.Get(context.Background(), nn, &upstream); client.IgnoreNotFound(err) != nil {
 			return true
 		}
-		cpRef := upstream.Spec.ControlPlaneRef
-		return cpRef != nil && cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
+		return objHasControlPlaneRefKonnectNamespacedRef(&upstream)
 	}
 }
 

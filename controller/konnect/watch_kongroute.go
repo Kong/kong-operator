@@ -65,6 +65,12 @@ func kongRouteRefersToKonnectGatewayControlPlane(cl client.Client) func(obj clie
 			return false
 		}
 
+		// If the KongRoute refers to a KonnectGatewayControlPlane directly (it's a serviceless route),
+		// enqueue it.
+		if objHasControlPlaneRefKonnectNamespacedRef(kongRoute) {
+			return true
+		}
+
 		scvRef := kongRoute.Spec.ServiceRef
 		if scvRef == nil || scvRef.Type != configurationv1alpha1.ServiceRefNamespacedRef {
 			return false
@@ -77,9 +83,7 @@ func kongRouteRefersToKonnectGatewayControlPlane(cl client.Client) func(obj clie
 		if err := cl.Get(context.Background(), nn, &kongSvc); client.IgnoreNotFound(err) != nil {
 			return true
 		}
-
-		cpRef := kongSvc.Spec.ControlPlaneRef
-		return cpRef != nil && cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
+		return objHasControlPlaneRefKonnectNamespacedRef(&kongSvc)
 	}
 }
 

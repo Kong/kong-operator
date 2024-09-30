@@ -3,7 +3,6 @@ package konnect
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -14,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -27,7 +25,7 @@ func KongKeySetReconciliationWatchOptions(cl client.Client) []func(*ctrl.Builder
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.For(&configurationv1alpha1.KongKeySet{},
 				builder.WithPredicates(
-					predicate.NewPredicateFuncs(kongKeySetRefersToKonnectControlPlane),
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongKeySet]),
 				),
 			)
 		},
@@ -48,20 +46,6 @@ func KongKeySetReconciliationWatchOptions(cl client.Client) []func(*ctrl.Builder
 			)
 		},
 	}
-}
-
-func kongKeySetRefersToKonnectControlPlane(obj client.Object) bool {
-	kongKeySet, ok := obj.(*configurationv1alpha1.KongKeySet)
-	if !ok {
-		ctrllog.FromContext(context.Background()).Error(
-			operatorerrors.ErrUnexpectedObject,
-			"failed to run predicate function",
-			"expected", "KongKeySet", "found", reflect.TypeOf(obj),
-		)
-		return false
-	}
-	return kongKeySet.Spec.ControlPlaneRef != nil &&
-		kongKeySet.Spec.ControlPlaneRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
 }
 
 func enqueueKongKeySetForKonnectAPIAuthConfiguration(cl client.Client) handler.MapFunc {

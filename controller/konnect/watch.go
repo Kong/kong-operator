@@ -81,9 +81,14 @@ func objRefersToKonnectGatewayControlPlane[
 		return false
 	}
 
+	return objHasControlPlaneRefKonnectNamespacedRef(ent)
+}
+
+func objHasControlPlaneRefKonnectNamespacedRef[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
 	cpRef, ok := getControlPlaneRef(ent).Get()
-	if !ok {
-		return false
-	}
-	return cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
+	return ok &&
+		cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
 }

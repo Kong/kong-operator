@@ -122,7 +122,7 @@ func kongRouteToSDKRouteInput(
 	// Deduplicate tags to avoid rejection by Konnect.
 	tags := lo.Uniq(slices.Concat(specTags, annotationTags, k8sTags))
 
-	return sdkkonnectcomp.RouteInput{
+	r := sdkkonnectcomp.RouteInput{
 		Destinations:            route.Spec.KongRouteAPISpec.Destinations,
 		Headers:                 route.Spec.KongRouteAPISpec.Headers,
 		Hosts:                   route.Spec.KongRouteAPISpec.Hosts,
@@ -140,8 +140,11 @@ func kongRouteToSDKRouteInput(
 		Sources:                 route.Spec.KongRouteAPISpec.Sources,
 		StripPath:               route.Spec.KongRouteAPISpec.StripPath,
 		Tags:                    tags,
-		Service: &sdkkonnectcomp.RouteService{
-			ID: sdkkonnectgo.String(route.Status.Konnect.ServiceID),
-		},
 	}
+	if route.Status.Konnect != nil && route.Status.Konnect.ServiceID != "" {
+		r.Service = &sdkkonnectcomp.RouteService{
+			ID: sdkkonnectgo.String(route.Status.Konnect.ServiceID),
+		}
+	}
+	return r
 }
