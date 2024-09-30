@@ -99,7 +99,7 @@ func TestKongSNI(t *testing.T) {
 			func(c metav1.Condition) bool {
 				return c.Type == "Programmed" && c.Status == metav1.ConditionTrue
 			})
-	}, "")
+	}, "SNI didn't get Programmed status condition or didn't get the correct (sni-12345) Konnect ID assigned")
 
 	t.Log("Set up SDK for SNI update")
 	sdk.SNIsSDK.EXPECT().UpsertSniWithCertificate(
