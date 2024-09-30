@@ -569,8 +569,8 @@ func kongPluginBindingGetKonnectIDAssignedEventually(
 	clientNamespaced client.Client,
 	kpb *configurationv1alpha1.KongPluginBinding,
 	pluginID string,
-	waitTime time.Duration,
-	tickTime time.Duration,
+	waitTime time.Duration, //nolint:unparam
+	tickTime time.Duration, //nolint:unparam
 ) {
 	t.Helper()
 
