@@ -528,7 +528,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			},
 			KongSNIControllerName: {
 				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongSNI](
+				Controller: konnect.NewKonnectEntityReconciler(
 					sdkFactory,
 					c.DevelopmentMode,
 					mgr.GetClient(),
