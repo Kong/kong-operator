@@ -3,6 +3,7 @@ package envtest
 import (
 	"context"
 	"testing"
+	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -100,6 +101,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			},
 			"KongPlugin wasn't updated to get the plugin-in-use finalizer",
 		)
+		kongPluginBindingGetKonnectIDAssignedEventually(t, ctx, clientNamespaced, kpb, pluginID, waitTime, tickTime)
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
@@ -194,6 +196,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			},
 			"KongPlugin wasn't updated to get the plugin-in-use finalizer",
 		)
+		kongPluginBindingGetKonnectIDAssignedEventually(t, ctx, clientNamespaced, kpb, pluginID, waitTime, tickTime)
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
@@ -295,6 +298,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			},
 			"KongPlugin wasn't updated to get the plugin-in-use finalizer",
 		)
+		kongPluginBindingGetKonnectIDAssignedEventually(t, ctx, clientNamespaced, kpb, pluginID, waitTime, tickTime)
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
@@ -403,6 +407,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			},
 			"KongPlugin wasn't updated to get the plugin-in-use finalizer",
 		)
+		kongPluginBindingGetKonnectIDAssignedEventually(t, ctx, clientNamespaced, kpb, pluginID, waitTime, tickTime)
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
@@ -505,6 +510,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			},
 			"KongPlugin wasn't updated to get the plugin-in-use finalizer",
 		)
+		kongPluginBindingGetKonnectIDAssignedEventually(t, ctx, clientNamespaced, kpb, pluginID, waitTime, tickTime)
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
@@ -555,4 +561,24 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
 	})
+}
+
+func kongPluginBindingGetKonnectIDAssignedEventually(
+	t *testing.T,
+	ctx context.Context,
+	clientNamespaced client.Client,
+	kpb *configurationv1alpha1.KongPluginBinding,
+	pluginID string,
+	waitTime time.Duration,
+	tickTime time.Duration,
+) {
+	t.Helper()
+
+	t.Logf("wait for the KongPluginBinding %s to get Konnect ID assigned", client.ObjectKeyFromObject(kpb))
+	assert.EventuallyWithT(t, func(c *assert.CollectT) {
+		if !assert.NoError(c, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb)) {
+			return
+		}
+		assert.True(c, kpb.GetKonnectStatus().GetKonnectID() == pluginID)
+	}, waitTime, tickTime)
 }
