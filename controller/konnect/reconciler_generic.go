@@ -657,10 +657,10 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 
 	// If the entity has a KongUpstreamRef, get the KonnectAPIAuthConfiguration
 	// ref from the referenced KongUpstream.
-	upsteramRef, ok := getKongUpstreamRef(ent).Get()
+	upstreamRef, ok := getKongUpstreamRef(ent).Get()
 	if ok {
 		nn := types.NamespacedName{
-			Name:      upsteramRef.Name,
+			Name:      upstreamRef.Name,
 			Namespace: ent.GetNamespace(),
 		}
 

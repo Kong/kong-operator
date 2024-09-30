@@ -566,3 +566,31 @@ func deployKongKeySetAttachedToCP(
 
 	return keySet
 }
+
+func deploySNIAttachedToCertificate(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	name string, tags []string,
+	cert *configurationv1alpha1.KongCertificate,
+) *configurationv1alpha1.KongSNI {
+	t.Helper()
+
+	sni := &configurationv1alpha1.KongSNI{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "sni-",
+		},
+		Spec: configurationv1alpha1.KongSNISpec{
+			CertificateRef: configurationv1alpha1.KongObjectRef{
+				Name: cert.Name,
+			},
+			KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{
+				Name: name,
+				Tags: tags,
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, sni))
+	t.Logf("deployed KongSNI %s/%s", sni.Namespace, sni.Name)
+	return sni
+}

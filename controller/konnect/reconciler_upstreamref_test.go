@@ -230,7 +230,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
 						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionTrue
-					}), "KongTarget does not have KongUpsteamRefValid condition set to True"
+					}), "KongTarget does not have KongUpstreamRefValid condition set to True"
 				},
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
@@ -263,7 +263,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
 						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionFalse
-					}), "KongTarget does not have KongUpsteamRefValid condition set to False"
+					}), "KongTarget does not have KongUpstreamRefValid condition set to False"
 				},
 			},
 		},
@@ -289,7 +289,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionFalse &&
 							c.Message == fmt.Sprintf("Referenced KongUpstream %s/%s is not programmed yet",
 								testKongUpstreamNotProgrammed.Namespace, testKongUpstreamNotProgrammed.Name)
-					}), "KongTarget does not have KongUpsteamRefValid condition set to False"
+					}), "KongTarget does not have KongUpstreamRefValid condition set to False"
 				},
 			},
 		},
@@ -314,7 +314,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
 						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionTrue
-					}), "KongTarget does not have KongUpsteamRefValid condition set to True"
+					}), "KongTarget does not have KongUpstreamRefValid condition set to True"
 				},
 			},
 		},
@@ -378,7 +378,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
 						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionTrue
-					}), "KongTarget does not have KongUpsteamRefValid condition set to True"
+					}), "KongTarget does not have KongUpstreamRefValid condition set to True"
 				},
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
@@ -418,7 +418,6 @@ func testHandleUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			if tc.expectError {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.expectErrorContains)
-				t.Logf("%#v", err)
 				return
 			}
 

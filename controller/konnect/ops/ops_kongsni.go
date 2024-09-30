@@ -35,7 +35,7 @@ func createSNI(
 	resp, err := sdk.CreateSniWithCertificate(ctx, sdkkonnectops.CreateSniWithCertificateRequest{
 		ControlPlaneID:    cpID,
 		CertificateID:     sni.Status.Konnect.CertificateID,
-		SNIWithoutParents: sdkkonnectcomp.SNIWithoutParents{},
+		SNIWithoutParents: kongSNIToSNIWithoutParents(sni),
 	})
 
 	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, sni); errWrapped != nil {

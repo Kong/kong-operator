@@ -14,6 +14,8 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
+// KongSNIReconciliationWatchOptions returns the watch options for
+// the KongSNI.
 func KongSNIReconciliationWatchOptions(cl client.Client,
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
@@ -52,7 +54,7 @@ func kongSNIRefersToKonnectGatewayControlPlane(
 			return true
 		}
 
-		return cert.Spec.ControlPlaneRef != nil && cert.Spec.ControlPlaneRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
+		return cert.Spec.ControlPlaneRef != nil && cert.Spec.ControlPlaneRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
 	}
 }
 
