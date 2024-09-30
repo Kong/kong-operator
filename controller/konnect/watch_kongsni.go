@@ -51,7 +51,7 @@ func kongSNIRefersToKonnectGatewayControlPlane(
 			Name:      sni.Spec.CertificateRef.Name,
 		}
 		cert := configurationv1alpha1.KongCertificate{}
-		if err := cl.Get(context.Background(), certNN, &cert); client.IgnoreNotFound(err) != nil {
+		if err := cl.Get(context.Background(), certNN, &cert); err != nil {
 			return true
 		}
 

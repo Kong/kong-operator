@@ -283,7 +283,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				}
 			}
 		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, nil
 	} else if res.Requeue {
 		return res, nil
 	}
@@ -543,10 +543,7 @@ func updateStatusWithCondition[T interface {
 		if k8serrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf(
-			"failed to update status with %s condition: %w",
-			conditions.KonnectEntityAPIAuthConfigurationResolvedRefConditionType, err,
-		)
+		return ctrl.Result{}, fmt.Errorf("failed to update status with %s condition: %w", conditionType, err)
 	}
 
 	return ctrl.Result{}, nil
