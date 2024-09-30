@@ -1000,59 +1000,65 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	e TEnt,
 ) mo.Option[configurationv1alpha1.ControlPlaneRef] {
+	none := mo.None[configurationv1alpha1.ControlPlaneRef]()
 	switch e := any(e).(type) {
 	case *configurationv1.KongConsumer:
 		if e.Spec.ControlPlaneRef == nil {
-			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+			return none
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
 	case *configurationv1beta1.KongConsumerGroup:
 		if e.Spec.ControlPlaneRef == nil {
-			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+			return none
+		}
+		return mo.Some(*e.Spec.ControlPlaneRef)
+	case *configurationv1alpha1.KongRoute:
+		if e.Spec.ControlPlaneRef == nil {
+			return none
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
 	case *configurationv1alpha1.KongService:
 		if e.Spec.ControlPlaneRef == nil {
-			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+			return none
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
 	case *configurationv1alpha1.KongPluginBinding:
 		if e.Spec.ControlPlaneRef == nil {
-			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+			return none
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
 	case *configurationv1alpha1.KongUpstream:
 		if e.Spec.ControlPlaneRef == nil {
-			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+			return none
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
 	case *configurationv1alpha1.KongCACertificate:
 		if e.Spec.ControlPlaneRef == nil {
-			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+			return none
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
 	case *configurationv1alpha1.KongCertificate:
 		if e.Spec.ControlPlaneRef == nil {
-			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+			return none
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
 	case *configurationv1alpha1.KongVault:
 		if e.Spec.ControlPlaneRef == nil {
-			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+			return none
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
 	case *configurationv1alpha1.KongKey:
 		if e.Spec.ControlPlaneRef == nil {
-			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+			return none
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
 	case *configurationv1alpha1.KongKeySet:
 		if e.Spec.ControlPlaneRef == nil {
-			return mo.None[configurationv1alpha1.ControlPlaneRef]()
+			return none
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
 	default:
-		return mo.None[configurationv1alpha1.ControlPlaneRef]()
+		return none
 	}
 }
 

@@ -82,8 +82,6 @@
   the creation of a managed `KongPluginBinding` resource:
   - `KongService` [#550](https://github.com/Kong/gateway-operator/pull/550)
   - `KongRoute` [#644](https://github.com/Kong/gateway-operator/pull/644)
-  - `KongConsumer` [#652](https://github.com/Kong/gateway-operator/pull/652)
-  - `KongConsumerGroup` [#654](https://github.com/Kong/gateway-operator/pull/654)
   These `KongPluginBinding`s are taken by the `KongPluginBinding` reconciler
   to create the corresponding plugin objects in Konnect.
 - `KongConsumer` associated with `ConsumerGroups` is now reconciled in Konnect by removing/adding
@@ -93,6 +91,8 @@
   - basic-auth [#625](https://github.com/Kong/gateway-operator/pull/625)
   - API key [#635](https://github.com/Kong/gateway-operator/pull/635)
   - ACL [#661](https://github.com/Kong/gateway-operator/pull/661)
+- Add support for `KongRoute`s bound directly to `KonnectGatewayControlPlane`s (serviceless rotues).
+  [#669](https://github.com/Kong/gateway-operator/pull/669)
 
 ### Fixed
 

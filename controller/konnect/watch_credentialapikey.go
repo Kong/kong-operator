@@ -92,8 +92,7 @@ func kongCredentialAPIKeyRefersToKonnectGatewayControlPlane(cl client.Client) fu
 			return true
 		}
 
-		cpRef := consumer.Spec.ControlPlaneRef
-		return cpRef != nil && cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
+		return objHasControlPlaneRefKonnectNamespacedRef(&consumer)
 	}
 }
 
