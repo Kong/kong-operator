@@ -141,7 +141,7 @@ func kongRouteToSDKRouteInput(
 		StripPath:               route.Spec.KongRouteAPISpec.StripPath,
 		Tags:                    tags,
 	}
-	if route.Status.Konnect.ServiceID != "" {
+	if route.Status.Konnect != nil && route.status.Konnect.ServiceID != "" {
 		r.Service = &sdkkonnectcomp.RouteService{
 			ID: sdkkonnectgo.String(route.Status.Konnect.ServiceID),
 		}
