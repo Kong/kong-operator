@@ -73,6 +73,10 @@ func TestKonnectFuncs(t *testing.T) {
 			typeName: "KongSNI",
 			object:   &configurationv1alpha1.KongSNI{},
 		},
+		{
+			typeName: "KongCredentialJWT",
+			object:   &configurationv1alpha1.KongCredentialJWT{},
+		},
 	}
 
 	for _, tc := range testcases {

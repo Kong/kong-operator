@@ -6,7 +6,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
-// testCase is a test case related to KongConsumer validation.
+// testCase is a test case related to KongCredentialBasicAuth validation.
 type testCase struct {
 	Name                          string
 	KongCredentialBasicAuth       configurationv1alpha1.KongCredentialBasicAuth
