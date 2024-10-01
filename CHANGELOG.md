@@ -92,6 +92,7 @@
   - basic-auth [#625](https://github.com/Kong/gateway-operator/pull/625)
   - API key [#635](https://github.com/Kong/gateway-operator/pull/635)
   - ACL [#661](https://github.com/Kong/gateway-operator/pull/661)
+  - JWT [#678](https://github.com/Kong/gateway-operator/pull/678)
 - Add support for `KongRoute`s bound directly to `KonnectGatewayControlPlane`s (serviceless rotues).
   [#669](https://github.com/Kong/gateway-operator/pull/669)
 

@@ -2,7 +2,6 @@ package konnect
 
 import (
 	"context"
-	"reflect"
 
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -12,8 +11,6 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -37,7 +34,9 @@ func kongCredentialACLReconciliationWatchOptions(
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.For(&configurationv1alpha1.KongCredentialACL{},
 				builder.WithPredicates(
-					predicate.NewPredicateFuncs(kongCredentialACLRefersToKonnectGatewayControlPlane(cl)),
+					predicate.NewPredicateFuncs(
+						kongCredentialRefersToKonnectGatewayControlPlane[*configurationv1alpha1.KongCredentialACL](cl),
+					),
 				),
 			)
 		},
@@ -65,35 +64,6 @@ func kongCredentialACLReconciliationWatchOptions(
 				),
 			)
 		},
-	}
-}
-
-// kongCredentialACLRefersToKonnectGatewayControlPlane returns true if the KongCredentialACL
-// refers to a KonnectGatewayControlPlane.
-func kongCredentialACLRefersToKonnectGatewayControlPlane(cl client.Client) func(obj client.Object) bool {
-	return func(obj client.Object) bool {
-		KongCredentialACL, ok := obj.(*configurationv1alpha1.KongCredentialACL)
-		if !ok {
-			ctrllog.FromContext(context.Background()).Error(
-				operatorerrors.ErrUnexpectedObject,
-				"failed to run predicate function",
-				"expected", "KongCredentialACL", "found", reflect.TypeOf(obj),
-			)
-			return false
-		}
-
-		consumerRef := KongCredentialACL.Spec.ConsumerRef
-		nn := types.NamespacedName{
-			Namespace: KongCredentialACL.Namespace,
-			Name:      consumerRef.Name,
-		}
-		consumer := configurationv1.KongConsumer{}
-		if err := cl.Get(context.Background(), nn, &consumer); client.IgnoreNotFound(err) != nil {
-			return true
-		}
-
-		cpRef := consumer.Spec.ControlPlaneRef
-		return cpRef != nil && cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
 	}
 }
 

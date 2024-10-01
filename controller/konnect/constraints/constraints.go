@@ -22,6 +22,7 @@ type SupportedKonnectEntityType interface {
 		configurationv1alpha1.KongCredentialBasicAuth |
 		configurationv1alpha1.KongCredentialAPIKey |
 		configurationv1alpha1.KongCredentialACL |
+		configurationv1alpha1.KongCredentialJWT |
 		configurationv1alpha1.KongUpstream |
 		configurationv1alpha1.KongCACertificate |
 		configurationv1alpha1.KongCertificate |

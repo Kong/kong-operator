@@ -364,6 +364,35 @@ func KongCredentialACL(
 	return c
 }
 
+// KongCredentialJWT deploys a KongCredentialJWT resource and returns the resource.
+func KongCredentialJWT(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	consumerName string,
+) *configurationv1alpha1.KongCredentialJWT {
+	t.Helper()
+
+	c := &configurationv1alpha1.KongCredentialJWT{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "jwt-",
+		},
+		Spec: configurationv1alpha1.KongCredentialJWTSpec{
+			ConsumerRef: corev1.LocalObjectReference{
+				Name: consumerName,
+			},
+			KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
+				Key: lo.ToPtr("key"),
+			},
+		},
+	}
+
+	require.NoError(t, cl.Create(ctx, c))
+	t.Logf("deployed new unmanaged KongCredentialJWT %s", client.ObjectKeyFromObject(c))
+
+	return c
+}
+
 // KongCACertificateAttachedToCP deploys a KongCACertificate resource attached to a CP and returns the resource.
 func KongCACertificateAttachedToCP(
 	t *testing.T,
