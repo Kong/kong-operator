@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -14,7 +13,6 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func createKongCredentialBasicAuth(
@@ -127,17 +125,9 @@ func deleteKongCredentialBasicAuth(
 func kongCredentialBasicAuthToBasicAuthWithoutParents(
 	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) sdkkonnectcomp.BasicAuthWithoutParents {
-	var (
-		specTags       = cred.Spec.Tags
-		annotationTags = metadata.ExtractTags(cred)
-		k8sTags        = GenerateKubernetesMetadataTags(cred)
-	)
-	// Deduplicate tags to avoid rejection by Konnect.
-	tags := lo.Uniq(slices.Concat(specTags, annotationTags, k8sTags))
-
 	return sdkkonnectcomp.BasicAuthWithoutParents{
 		Password: lo.ToPtr(cred.Spec.Password),
 		Username: lo.ToPtr(cred.Spec.Username),
-		Tags:     tags,
+		Tags:     GenerateTagsForObject(cred, cred.Spec.Tags...),
 	}
 }

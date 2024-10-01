@@ -21,7 +21,6 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func createConsumer(
@@ -329,7 +328,7 @@ func kongConsumerToSDKConsumerInput(
 ) sdkkonnectcomp.ConsumerInput {
 	return sdkkonnectcomp.ConsumerInput{
 		CustomID: &consumer.CustomID,
-		Tags:     append(metadata.ExtractTags(consumer), GenerateKubernetesMetadataTags(consumer)...),
+		Tags:     GenerateTagsForObject(consumer),
 		Username: &consumer.Username,
 	}
 }

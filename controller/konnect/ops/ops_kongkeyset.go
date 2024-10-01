@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -14,7 +13,6 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 // createKeySet creates a KongKeySet in Konnect.
@@ -133,14 +131,8 @@ func deleteKeySet(
 }
 
 func kongKeySetToKeySetInput(keySet *configurationv1alpha1.KongKeySet) sdkkonnectcomp.KeySetInput {
-	var (
-		annotationTags = metadata.ExtractTags(keySet)
-		specTags       = keySet.Spec.Tags
-		k8sMetaTags    = GenerateKubernetesMetadataTags(keySet)
-	)
 	return sdkkonnectcomp.KeySetInput{
 		Name: lo.ToPtr(keySet.Spec.Name),
-		// Deduplicate tags to avoid rejection by Konnect.
-		Tags: lo.Uniq(slices.Concat(annotationTags, specTags, k8sMetaTags)),
+		Tags: GenerateTagsForObject(keySet, keySet.Spec.Tags...),
 	}
 }

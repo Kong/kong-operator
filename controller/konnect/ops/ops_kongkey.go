@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -14,7 +13,6 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 // createKey creates a KongKey in Konnect.
@@ -133,22 +131,23 @@ func deleteKey(
 }
 
 func kongKeyToKeyInput(key *configurationv1alpha1.KongKey) sdkkonnectcomp.KeyInput {
-	var (
-		annotationTags = metadata.ExtractTags(key)
-		specTags       = key.Spec.Tags
-		k8sMetaTags    = GenerateKubernetesMetadataTags(key)
-	)
 	k := sdkkonnectcomp.KeyInput{
 		Jwk:  key.Spec.JWK,
 		Kid:  key.Spec.KID,
 		Name: key.Spec.Name,
-		// Deduplicate tags to avoid rejection by Konnect.
-		Tags: lo.Uniq(slices.Concat(annotationTags, specTags, k8sMetaTags)),
+		Tags: GenerateTagsForObject(key, key.Spec.Tags...),
 	}
 	if key.Spec.PEM != nil {
 		k.Pem = &sdkkonnectcomp.Pem{
 			PrivateKey: lo.ToPtr(key.Spec.PEM.PrivateKey),
 			PublicKey:  lo.ToPtr(key.Spec.PEM.PublicKey),
+		}
+	}
+	if konnectStatus := key.Status.Konnect; konnectStatus != nil {
+		if keySetID := konnectStatus.GetKeySetID(); keySetID != "" {
+			k.Set = &sdkkonnectcomp.Set{
+				ID: lo.ToPtr(konnectStatus.GetKeySetID()),
+			}
 		}
 	}
 	return k

@@ -74,9 +74,9 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 		"k8s-group:configuration.konghq.com",
 		"k8s-kind:KongCredentialBasicAuth",
 		"k8s-name:" + KongCredentialBasicAuth.Name,
+		"k8s-namespace:" + ns.Name,
 		"k8s-uid:" + string(KongCredentialBasicAuth.GetUID()),
 		"k8s-version:v1alpha1",
-		"k8s-namespace:" + ns.Name,
 	}
 
 	factory := ops.NewMockSDKFactory(t)
