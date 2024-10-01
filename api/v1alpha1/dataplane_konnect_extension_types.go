@@ -60,6 +60,7 @@ type DataPlaneKonnectExtensionList struct {
 type DataPlaneKonnectExtensionSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this DataPlaneKonnectExtension is associated with.
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:XValidation:rule="self.type == 'konnectID'", message="Only konnectID type currently supported as controlPlaneRef."
 	ControlPlaneRef configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
 	// ControlPlaneRegion is the region of the Konnect Control Plane.

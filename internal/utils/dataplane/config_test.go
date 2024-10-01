@@ -26,7 +26,7 @@ func TestFillDataPlaneProxyContainerEnvs(t *testing.T) {
 	}
 
 	t.Run("nil doesn't panic", func(t *testing.T) {
-		FillDataPlaneProxyContainerEnvs(nil, nil)
+		FillDataPlaneProxyContainerEnvs(nil, nil, KongDefaults)
 	})
 
 	testcases := []struct {
@@ -151,7 +151,7 @@ func TestFillDataPlaneProxyContainerEnvs(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			FillDataPlaneProxyContainerEnvs(tc.existing, tc.podTemplateSpec)
+			FillDataPlaneProxyContainerEnvs(tc.existing, tc.podTemplateSpec, KongDefaults)
 			container := k8sutils.GetPodContainerByName(&tc.podTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 			require.Equal(t, tc.expected, container.Env)
 		})

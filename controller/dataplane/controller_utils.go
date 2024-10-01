@@ -308,3 +308,11 @@ func isDeploymentReady(deploymentStatus appsv1.DeploymentStatus) (metav1.Conditi
 		return metav1.ConditionFalse, false
 	}
 }
+
+// -----------------------------------------------------------------------------
+// DataPlane - Private Functions - extensions
+// -----------------------------------------------------------------------------
+
+func applyExtensions(ctx context.Context, cl client.Client, dataplane *operatorv1beta1.DataPlane) error {
+	return applyDataPlaneKonnectExtension(ctx, cl, dataplane)
+}

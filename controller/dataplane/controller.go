@@ -90,6 +90,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, markErr
 	}
 
+	log.Trace(logger, "applying extensions", dataplane)
+	if err = applyExtensions(ctx, r.Client, dataplane); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	log.Trace(logger, "exposing DataPlane deployment admin API via headless service", dataplane)
 	res, dataplaneAdminService, err := ensureAdminServiceForDataPlane(ctx, r.Client, dataplane,
 		client.MatchingLabels{

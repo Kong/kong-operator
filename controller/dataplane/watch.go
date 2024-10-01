@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -48,6 +49,13 @@ func DataPlaneWatchBuilder(mgr ctrl.Manager) *builder.Builder {
 				&corev1.ConfigMap{},
 				handler.TypedEnqueueRequestsFromMapFunc(listDataPlanesReferencingKongPluginInstallation(mgr.GetClient())),
 			),
+		).
+		WatchesRawSource(
+			source.Kind(
+				mgr.GetCache(),
+				&operatorv1alpha1.DataPlaneKonnectExtension{},
+				handler.TypedEnqueueRequestsFromMapFunc(listDataPlanesReferencingDataPlaneKonnectExtension(mgr.GetClient())),
+			),
 		)
 }
 
@@ -70,6 +78,31 @@ func listDataPlanesReferencingKongPluginInstallation(
 			index.KongPluginInstallationsIndex: kpiToFind,
 		}); err != nil {
 			logger.Error(err, "Failed to list DataPlanes in watch", "KongPluginInstallation", kpiToFind)
+			return nil
+		}
+		return lo.Map(dataPlaneList.Items, func(dp operatorv1beta1.DataPlane, _ int) reconcile.Request {
+			return reconcile.Request{
+				NamespacedName: client.ObjectKeyFromObject(&dp),
+			}
+		})
+	}
+}
+
+func listDataPlanesReferencingDataPlaneKonnectExtension(
+	c client.Client,
+) handler.TypedMapFunc[*operatorv1alpha1.DataPlaneKonnectExtension, reconcile.Request] {
+	return func(
+		ctx context.Context, ext *operatorv1alpha1.DataPlaneKonnectExtension,
+	) []reconcile.Request {
+		logger := ctrllog.FromContext(ctx)
+
+		// Find all DataPlane resources referencing DataPlaneKonnectExtension
+		// that maps to the DataPlaneKonnectExtension enqueued for reconciliation.
+		var dataPlaneList operatorv1beta1.DataPlaneList
+		if err := c.List(ctx, &dataPlaneList, client.MatchingFields{
+			index.DataPlaneKonnectExtensionIndex: ext.Namespace + "/" + ext.Name,
+		}); err != nil {
+			logger.Error(err, "Failed to list DataPlanes in watch", "DataPlaneKonnectExtension")
 			return nil
 		}
 		return lo.Map(dataPlaneList.Items, func(dp operatorv1beta1.DataPlane, _ int) reconcile.Request {

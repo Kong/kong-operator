@@ -278,7 +278,9 @@ func GenerateNewDeploymentForDataPlane(
 	LabelObjectAsDataPlaneManaged(deployment)
 
 	for _, opt := range opts {
-		opt(deployment)
+		if opt != nil {
+			opt(deployment)
+		}
 	}
 
 	k8sutils.SetOwnerForObject(deployment, dataplane)

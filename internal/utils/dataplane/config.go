@@ -1,7 +1,6 @@
 package dataplane
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
@@ -19,35 +18,6 @@ const (
 	kongLuaPackagePathDefaultValue = "/opt/?.lua;;"
 )
 
-// KongDefaults are the baseline Kong proxy configuration options needed for
-// the proxy to function.
-var KongDefaults = map[string]string{
-	"KONG_ADMIN_ACCESS_LOG":       "/dev/stdout",
-	"KONG_ADMIN_ERROR_LOG":        "/dev/stderr",
-	"KONG_ADMIN_GUI_ACCESS_LOG":   "/dev/stdout",
-	"KONG_ADMIN_GUI_ERROR_LOG":    "/dev/stderr",
-	"KONG_CLUSTER_LISTEN":         "off",
-	"KONG_DATABASE":               "off",
-	"KONG_NGINX_WORKER_PROCESSES": "2",
-	kongPluginsEnvVarName:         kongPluginsDefaultValue,
-	"KONG_PORTAL_API_ACCESS_LOG":  "/dev/stdout",
-	"KONG_PORTAL_API_ERROR_LOG":   "/dev/stderr",
-	"KONG_PORT_MAPS":              "80:8000, 443:8443",
-	"KONG_PROXY_ACCESS_LOG":       "/dev/stdout",
-	"KONG_PROXY_ERROR_LOG":        "/dev/stderr",
-	"KONG_PROXY_LISTEN":           fmt.Sprintf("0.0.0.0:%d reuseport backlog=16384, 0.0.0.0:%d http2 ssl reuseport backlog=16384", consts.DataPlaneProxyPort, consts.DataPlaneProxySSLPort),
-	"KONG_STATUS_LISTEN":          fmt.Sprintf("0.0.0.0:%d", consts.DataPlaneStatusPort),
-
-	"KONG_ADMIN_LISTEN": fmt.Sprintf("0.0.0.0:%d ssl reuseport backlog=16384", consts.DataPlaneAdminAPIPort),
-
-	// MTLS
-	"KONG_ADMIN_SSL_CERT":                     "/var/cluster-certificate/tls.crt",
-	"KONG_ADMIN_SSL_CERT_KEY":                 "/var/cluster-certificate/tls.key",
-	"KONG_NGINX_ADMIN_SSL_CLIENT_CERTIFICATE": "/var/cluster-certificate/ca.crt",
-	"KONG_NGINX_ADMIN_SSL_VERIFY_CLIENT":      "on",
-	"KONG_NGINX_ADMIN_SSL_VERIFY_DEPTH":       "3",
-}
-
 // -----------------------------------------------------------------------------
 // DataPlane Utils - Config
 // -----------------------------------------------------------------------------
@@ -57,7 +27,7 @@ var KongDefaults = map[string]string{
 // PodTemplateSpec.
 // EnvVars are sorted lexographically as a side effect.
 // It also returns the updated EnvVar slice.
-func FillDataPlaneProxyContainerEnvs(existing []corev1.EnvVar, podTemplateSpec *corev1.PodTemplateSpec) {
+func FillDataPlaneProxyContainerEnvs(existing []corev1.EnvVar, podTemplateSpec *corev1.PodTemplateSpec, envSet map[string]string) {
 	if podTemplateSpec == nil {
 		return
 	}
@@ -73,7 +43,7 @@ func FillDataPlaneProxyContainerEnvs(existing []corev1.EnvVar, podTemplateSpec *
 			container.Env = append(container.Env, envVar)
 		}
 	}
-	for k, v := range KongDefaults {
+	for k, v := range envSet {
 		envVar := corev1.EnvVar{
 			Name:  k,
 			Value: v,

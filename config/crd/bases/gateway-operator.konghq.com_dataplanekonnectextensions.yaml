@@ -94,6 +94,8 @@ spec:
                 - type
                 type: object
                 x-kubernetes-validations:
+                - message: Only konnectID type currently supported as controlPlaneRef.
+                  rule: self.type == 'konnectID'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef
                     must be set
                   rule: 'self.type == ''konnectNamespacedRef'' ? has(self.konnectNamespacedRef)
