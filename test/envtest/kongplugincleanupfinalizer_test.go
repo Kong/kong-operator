@@ -16,6 +16,7 @@ import (
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -37,8 +38,8 @@ func TestKongPluginFinalizer(t *testing.T) {
 	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
-	apiAuth := deployKonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deployKonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	require.NoError(t, manager.SetupCacheIndicesForKonnectTypes(ctx, mgr, false))
 	reconcilers := []Reconciler{
@@ -60,8 +61,8 @@ func TestKongPluginFinalizer(t *testing.T) {
 	t.Logf("deployed %s KongPlugin (%s) resource", client.ObjectKeyFromObject(rateLimitingkongPlugin), rateLimitingkongPlugin.PluginName)
 
 	wKongService := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-	kongService := deployKongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
-	kpb := deployKongPluginBinding(t, ctx, clientNamespaced,
+	kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+	kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
 		&configurationv1alpha1.KongPluginBinding{
 			Spec: configurationv1alpha1.KongPluginBindingSpec{
 				ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{

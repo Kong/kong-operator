@@ -18,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	konnectops "github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -51,8 +52,8 @@ func TestKongConsumer(t *testing.T) {
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
-	apiAuth := deployKonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deployKonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	t.Log("Setting up a watch for KongConsumer events")
 	cWatch := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
@@ -90,7 +91,7 @@ func TestKongConsumer(t *testing.T) {
 			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
 
 		t.Log("Creating KongConsumer")
-		createdConsumer := deployKongConsumerAttachedToCP(t, ctx, clientNamespaced, username, cp)
+		createdConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username, cp)
 
 		t.Log("Waiting for KongConsumer to be programmed")
 		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1.KongConsumer) bool {
@@ -202,10 +203,15 @@ func TestKongConsumer(t *testing.T) {
 			}).Return(&sdkkonnectops.AddConsumerToGroupResponse{}, nil)
 
 		t.Log("Creating KongConsumerGroup")
-		createdConsumerGroup := deployKongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, consumerGroupName, cp)
+		createdConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cp,
+			func(obj client.Object) {
+				cg := obj.(*configurationv1beta1.KongConsumerGroup)
+				cg.Spec.Name = consumerGroupName
+			},
+		)
 
 		t.Log("Creating KongConsumer and patching it with ConsumerGroup")
-		createdConsumer := deployKongConsumerAttachedToCP(t, ctx, clientNamespaced, username, cp)
+		createdConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username, cp)
 		consumer := createdConsumer.DeepCopy()
 		consumer.ConsumerGroups = []string{createdConsumerGroup.GetName()}
 		require.NoError(t, clientNamespaced.Patch(ctx, consumer, client.MergeFrom(createdConsumer)))
