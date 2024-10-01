@@ -73,10 +73,10 @@ func enqueueKongTargetForKongUpstream(cl client.Client,
 		if !ok {
 			return nil
 		}
-		cpRef := kongUpstream.Spec.ControlPlaneRef
-		if cpRef == nil || cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
+		if !objHasControlPlaneRefKonnectNamespacedRef(kongUpstream) {
 			return nil
 		}
+
 		var targetList configurationv1alpha1.KongTargetList
 		if err := cl.List(ctx, &targetList, &client.ListOptions{
 			// TODO: change this when cross namespace refs are allowed.

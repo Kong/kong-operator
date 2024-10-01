@@ -92,7 +92,8 @@ func kongCredentialACLRefersToKonnectGatewayControlPlane(cl client.Client) func(
 			return true
 		}
 
-		return objHasControlPlaneRefKonnectNamespacedRef(&consumer)
+		cpRef := consumer.Spec.ControlPlaneRef
+		return cpRef != nil && cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
 	}
 }
 

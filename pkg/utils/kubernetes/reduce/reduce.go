@@ -15,6 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 // PreDeleteHook is a function that can be executed before deleting an object.
@@ -193,6 +195,19 @@ func ReduceDataPlanes(ctx context.Context, k8sClient client.Client, dataplanes [
 	filteredDataPlanes := filterDataPlanes(dataplanes)
 	for _, dataplane := range filteredDataPlanes {
 		if err := k8sClient.Delete(ctx, &dataplane); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongpluginbindings,verbs=delete
+
+// ReduceKongPluginBindings detects the best KongPluginBinding in the set and deletes all the others.
+func ReduceKongPluginBindings(ctx context.Context, k8sClient client.Client, kpbs []configurationv1alpha1.KongPluginBinding) error {
+	filteredKongPluginBindings := filterKongPluginBindings(kpbs)
+	for _, kpb := range filteredKongPluginBindings {
+		if err := k8sClient.Delete(ctx, &kpb); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
