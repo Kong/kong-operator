@@ -85,7 +85,7 @@ func TestGatewayConformance(t *testing.T) {
 	var (
 		config            ConformanceConfig
 		skippedTests      []string
-		supportedFeatures sets.Set[features.SupportedFeature]
+		supportedFeatures sets.Set[features.FeatureName]
 	)
 	switch rf := KongRouterFlavor(t); rf {
 	case RouterFlavorTraditionalCompatible:
