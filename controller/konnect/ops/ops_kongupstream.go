@@ -4,17 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
-	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func createUpstream(
@@ -147,14 +144,6 @@ func deleteUpstream(
 func kongUpstreamToSDKUpstreamInput(
 	upstream *configurationv1alpha1.KongUpstream,
 ) sdkkonnectcomp.UpstreamInput {
-	var (
-		specTags       = upstream.Spec.Tags
-		annotationTags = metadata.ExtractTags(upstream)
-		k8sTags        = GenerateKubernetesMetadataTags(upstream)
-	)
-	// Deduplicate tags to avoid rejection by Konnect.
-	tags := lo.Uniq(slices.Concat(specTags, annotationTags, k8sTags))
-
 	return sdkkonnectcomp.UpstreamInput{
 		Algorithm:              upstream.Spec.Algorithm,
 		ClientCertificate:      upstream.Spec.ClientCertificate,
@@ -172,7 +161,7 @@ func kongUpstreamToSDKUpstreamInput(
 		HostHeader:             upstream.Spec.HostHeader,
 		Name:                   upstream.Spec.Name,
 		Slots:                  upstream.Spec.Slots,
-		Tags:                   tags,
+		Tags:                   GenerateTagsForObject(upstream, upstream.Spec.Tags...),
 		UseSrvName:             upstream.Spec.UseSrvName,
 	}
 }

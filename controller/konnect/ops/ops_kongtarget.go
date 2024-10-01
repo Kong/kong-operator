@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -15,7 +14,6 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func createTarget(
@@ -123,17 +121,9 @@ func deleteTarget(
 }
 
 func kongTargetToTargetWithoutParents(target *configurationv1alpha1.KongTarget) sdkkonnectcomp.TargetWithoutParents {
-	var (
-		specTags       = target.Spec.KongTargetAPISpec.Tags
-		annotationTags = metadata.ExtractTags(target)
-		k8sTags        = GenerateKubernetesMetadataTags(target)
-	)
-	// Deduplicate tags to avoid rejection by Konnect.
-	tags := lo.Uniq(slices.Concat(specTags, annotationTags, k8sTags))
-
 	return sdkkonnectcomp.TargetWithoutParents{
 		Target: lo.ToPtr(target.Spec.Target),
 		Weight: lo.ToPtr(int64(target.Spec.Weight)),
-		Tags:   tags,
+		Tags:   GenerateTagsForObject(target, target.Spec.Tags...),
 	}
 }

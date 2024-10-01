@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -15,7 +14,6 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func createVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1.KongVault) error {
@@ -131,23 +129,16 @@ func deleteVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1
 }
 
 func kongVaultToVaultInput(vault *configurationv1alpha1.KongVault) (sdkkonnectcomp.VaultInput, error) {
-	var (
-		specTags       = vault.Spec.Tags
-		annotationTags = metadata.ExtractTags(vault)
-		k8sTags        = GenerateKubernetesMetadataTags(vault)
-	)
 	vaultConfig := map[string]any{}
 	err := json.Unmarshal(vault.Spec.Config.Raw, &vaultConfig)
 	if err != nil {
 		return sdkkonnectcomp.VaultInput{}, err
 	}
-	// Deduplicate tags to avoid rejection by Konnect.
-	tags := lo.Uniq(slices.Concat(specTags, annotationTags, k8sTags))
 	input := sdkkonnectcomp.VaultInput{
 		Config: vaultConfig,
 		Name:   vault.Spec.Backend,
 		Prefix: vault.Spec.Prefix,
-		Tags:   tags,
+		Tags:   GenerateTagsForObject(vault, vault.Spec.Tags...),
 	}
 	if vault.Spec.Description != "" {
 		input.Description = lo.ToPtr(vault.Spec.Description)

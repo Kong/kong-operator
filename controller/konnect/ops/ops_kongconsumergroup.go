@@ -12,7 +12,6 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func createConsumerGroup(
@@ -116,7 +115,7 @@ func kongConsumerGroupToSDKConsumerGroupInput(
 	group *configurationv1beta1.KongConsumerGroup,
 ) sdkkonnectcomp.ConsumerGroupInput {
 	return sdkkonnectcomp.ConsumerGroupInput{
-		Tags: append(metadata.ExtractTags(group), GenerateKubernetesMetadataTags(group)...),
+		Tags: GenerateTagsForObject(group),
 		Name: group.Spec.Name,
 	}
 }

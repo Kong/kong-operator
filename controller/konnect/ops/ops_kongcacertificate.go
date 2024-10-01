@@ -4,17 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
-	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 // createCACertificate creates a KongCACertificate in Konnect.
@@ -117,14 +114,9 @@ func deleteCACertificate(
 }
 
 func kongCACertificateToCACertificateInput(cert *configurationv1alpha1.KongCACertificate) sdkkonnectcomp.CACertificateInput {
-	var (
-		annotationTags = metadata.ExtractTags(cert)
-		specTags       = cert.Spec.Tags
-		k8sMetaTags    = GenerateKubernetesMetadataTags(cert)
-	)
 	return sdkkonnectcomp.CACertificateInput{
 		Cert: cert.Spec.Cert,
 		// Deduplicate tags to avoid rejection by Konnect.
-		Tags: lo.Uniq(slices.Concat(annotationTags, specTags, k8sMetaTags)),
+		Tags: GenerateTagsForObject(cert, cert.Spec.Tags...),
 	}
 }

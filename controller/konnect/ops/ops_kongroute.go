@@ -4,18 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
-	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func createRoute(
@@ -114,14 +111,6 @@ func deleteRoute(
 func kongRouteToSDKRouteInput(
 	route *configurationv1alpha1.KongRoute,
 ) sdkkonnectcomp.RouteInput {
-	var (
-		specTags       = route.Spec.KongRouteAPISpec.Tags
-		annotationTags = metadata.ExtractTags(route)
-		k8sTags        = GenerateKubernetesMetadataTags(route)
-	)
-	// Deduplicate tags to avoid rejection by Konnect.
-	tags := lo.Uniq(slices.Concat(specTags, annotationTags, k8sTags))
-
 	r := sdkkonnectcomp.RouteInput{
 		Destinations:            route.Spec.KongRouteAPISpec.Destinations,
 		Headers:                 route.Spec.KongRouteAPISpec.Headers,
@@ -139,7 +128,7 @@ func kongRouteToSDKRouteInput(
 		Snis:                    route.Spec.KongRouteAPISpec.Snis,
 		Sources:                 route.Spec.KongRouteAPISpec.Sources,
 		StripPath:               route.Spec.KongRouteAPISpec.StripPath,
-		Tags:                    tags,
+		Tags:                    GenerateTagsForObject(route, route.Spec.KongRouteAPISpec.Tags...),
 	}
 	if route.Status.Konnect != nil && route.Status.Konnect.ServiceID != "" {
 		r.Service = &sdkkonnectcomp.RouteService{

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -152,14 +151,7 @@ func kongPluginBindingToSDKPluginInput(
 		return nil, err
 	}
 
-	var (
-		pluginBindingAnnotationTags = metadata.ExtractTags(pluginBinding)
-		pluginAnnotationTags        = metadata.ExtractTags(plugin)
-		pluginBindingK8sTags        = GenerateKubernetesMetadataTags(pluginBinding)
-	)
-	// Deduplicate tags to avoid rejection by Konnect.
-	tags := lo.Uniq(slices.Concat(pluginBindingAnnotationTags, pluginAnnotationTags, pluginBindingK8sTags))
-
+	tags := GenerateTagsForObject(pluginBinding, metadata.ExtractTags(plugin)...)
 	return kongPluginWithTargetsToKongPluginInput(plugin, targets, tags)
 }
 

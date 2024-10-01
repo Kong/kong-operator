@@ -73,9 +73,9 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 		"k8s-group:configuration.konghq.com",
 		"k8s-kind:KongCredentialACL",
 		"k8s-name:" + KongCredentialACL.Name,
+		"k8s-namespace:" + ns.Name,
 		"k8s-uid:" + string(KongCredentialACL.GetUID()),
 		"k8s-version:v1alpha1",
-		"k8s-namespace:" + ns.Name,
 	}
 
 	factory := ops.NewMockSDKFactory(t)

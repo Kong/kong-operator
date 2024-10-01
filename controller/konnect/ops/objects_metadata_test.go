@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 )
@@ -14,10 +13,6 @@ import (
 type testObjectKind struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
-}
-
-func (b *testObjectKind) DeepCopyObject() runtime.Object {
-	return b
 }
 
 func TestWithKubernetesMetadataLabels(t *testing.T) {
@@ -82,49 +77,57 @@ func TestWithKubernetesMetadataLabels(t *testing.T) {
 	}
 }
 
-func TestGenerateKubernetesMetadataTags(t *testing.T) {
+func TestGenerateTagsForObject(t *testing.T) {
+	namespacedObject := func() testObjectKind {
+		return testObjectKind{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "test-object",
+				Namespace:  "test-namespace",
+				UID:        "test-uid",
+				Generation: 2,
+			},
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "TestObjectKind",
+				APIVersion: "test.objects.io/v1",
+			},
+		}
+	}
+	clusterScopedObject := func() testObjectKind {
+		return testObjectKind{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "test-object",
+				UID:        "test-uid",
+				Generation: 2,
+			},
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "TestObjectKind",
+				APIVersion: "test.objects.io/v1",
+			},
+		}
+	}
+
 	testCases := []struct {
-		name         string
-		obj          testObjectKind
-		expectedTags []string
+		name           string
+		obj            testObjectKind
+		additionalTags []string
+		expectedTags   []string
 	}{
 		{
 			name: "all object's expected fields are set",
-			obj: testObjectKind{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "TestObjectKind",
-					APIVersion: "test.objects.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-object",
-					Namespace:  "test-namespace",
-					UID:        "test-uid",
-					Generation: 2,
-				},
-			},
+			obj:  namespacedObject(),
 			expectedTags: []string{
 				"k8s-generation:2",
 				"k8s-group:test.objects.io",
 				"k8s-kind:TestObjectKind",
 				"k8s-name:test-object",
+				"k8s-namespace:test-namespace",
 				"k8s-uid:test-uid",
 				"k8s-version:v1",
-				"k8s-namespace:test-namespace",
 			},
 		},
 		{
 			name: "namespace is not set (cluster-scoped object)",
-			obj: testObjectKind{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "TestObjectKind",
-					APIVersion: "test.objects.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-object",
-					UID:        "test-uid",
-					Generation: 2,
-				},
-			},
+			obj:  clusterScopedObject(),
 			expectedTags: []string{
 				"k8s-generation:2",
 				"k8s-group:test.objects.io",
@@ -132,13 +135,58 @@ func TestGenerateKubernetesMetadataTags(t *testing.T) {
 				"k8s-name:test-object",
 				"k8s-uid:test-uid",
 				"k8s-version:v1",
+			},
+		},
+		{
+			name: "annotation tags are set",
+			obj: func() testObjectKind {
+				obj := namespacedObject()
+				obj.ObjectMeta.Annotations = map[string]string{
+					"konghq.com/tags": "tag1,tag2",
+				}
+				return obj
+			}(),
+			expectedTags: []string{
+				"k8s-generation:2",
+				"k8s-group:test.objects.io",
+				"k8s-kind:TestObjectKind",
+				"k8s-name:test-object",
+				"k8s-namespace:test-namespace",
+				"k8s-uid:test-uid",
+				"k8s-version:v1",
+				"tag1",
+				"tag2",
+			},
+		},
+		{
+			name: "additional tags are passed with a duplicate",
+			obj: func() testObjectKind {
+				obj := namespacedObject()
+				obj.ObjectMeta.Annotations = map[string]string{
+					"konghq.com/tags": "tag1,tag2,duplicate-tag",
+				}
+				return obj
+			}(),
+			additionalTags: []string{"tag3", "duplicate-tag"},
+			expectedTags: []string{
+				"duplicate-tag",
+				"k8s-generation:2",
+				"k8s-group:test.objects.io",
+				"k8s-kind:TestObjectKind",
+				"k8s-name:test-object",
+				"k8s-namespace:test-namespace",
+				"k8s-uid:test-uid",
+				"k8s-version:v1",
+				"tag1",
+				"tag2",
+				"tag3",
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tags := ops.GenerateKubernetesMetadataTags(&tc.obj)
+			tags := ops.GenerateTagsForObject(&tc.obj, tc.additionalTags...)
 			require.Equal(t, tc.expectedTags, tags)
 		})
 	}

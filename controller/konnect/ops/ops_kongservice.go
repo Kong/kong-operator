@@ -4,17 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
-	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func createService(
@@ -147,14 +144,6 @@ func deleteService(
 func kongServiceToSDKServiceInput(
 	svc *configurationv1alpha1.KongService,
 ) sdkkonnectcomp.ServiceInput {
-	var (
-		specTags       = svc.Spec.Tags
-		annotationTags = metadata.ExtractTags(svc)
-		k8sTags        = GenerateKubernetesMetadataTags(svc)
-	)
-	// Deduplicate tags to avoid rejection by Konnect.
-	tags := lo.Uniq(slices.Concat(specTags, annotationTags, k8sTags))
-
 	return sdkkonnectcomp.ServiceInput{
 		URL:            svc.Spec.KongServiceAPISpec.URL,
 		ConnectTimeout: svc.Spec.KongServiceAPISpec.ConnectTimeout,
@@ -166,7 +155,7 @@ func kongServiceToSDKServiceInput(
 		Protocol:       svc.Spec.KongServiceAPISpec.Protocol,
 		ReadTimeout:    svc.Spec.KongServiceAPISpec.ReadTimeout,
 		Retries:        svc.Spec.KongServiceAPISpec.Retries,
-		Tags:           tags,
+		Tags:           GenerateTagsForObject(svc, svc.Spec.KongServiceAPISpec.Tags...),
 		TLSVerify:      svc.Spec.KongServiceAPISpec.TLSVerify,
 		TLSVerifyDepth: svc.Spec.KongServiceAPISpec.TLSVerifyDepth,
 		WriteTimeout:   svc.Spec.KongServiceAPISpec.WriteTimeout,
