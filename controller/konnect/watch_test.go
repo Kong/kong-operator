@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
@@ -39,5 +40,43 @@ func testReconciliationWatchOptionsForEntity[
 		require.NotNil(t, cl)
 		watchOptions := ReconciliationWatchOptionsForEntity[T, TEnt](cl, ent)
 		_ = watchOptions
+	})
+}
+
+func TestObjectListToReconcileRequests(t *testing.T) {
+	t.Run("KongConsumer", func(t *testing.T) {
+		tests := []struct {
+			name string
+			list []configurationv1.KongConsumer
+		}{
+			{
+				name: "KongConsumer",
+				list: []configurationv1.KongConsumer{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "consumer1",
+							Namespace: "default",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "consumer2",
+							Namespace: "default",
+						},
+					},
+				},
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				requests := objectListToReconcileRequests(tt.list)
+				require.Len(t, requests, len(tt.list))
+				for i, item := range tt.list {
+					require.Equal(t, item.GetName(), requests[i].Name)
+					require.Equal(t, item.GetNamespace(), requests[i].Namespace)
+				}
+			})
+		}
 	})
 }
