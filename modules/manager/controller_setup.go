@@ -597,6 +597,10 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 			IndexOptions: konnect.IndexOptionsForKongConsumer(),
 		},
 		{
+			Object:       &configurationv1beta1.KongConsumerGroup{},
+			IndexOptions: konnect.IndexOptionsForKongConsumerGroup(),
+		},
+		{
 			Object:       &configurationv1alpha1.KongService{},
 			IndexOptions: konnect.IndexOptionsForKongService(),
 		},

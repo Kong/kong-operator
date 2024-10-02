@@ -83,6 +83,7 @@
   - `KongService` [#550](https://github.com/Kong/gateway-operator/pull/550)
   - `KongRoute` [#644](https://github.com/Kong/gateway-operator/pull/644)
   - `KongConsumer` [#676](https://github.com/Kong/gateway-operator/pull/676)
+  - `KongConsumerGroup` [#684](https://github.com/Kong/gateway-operator/pull/684)
   These `KongPluginBinding`s are taken by the `KongPluginBinding` reconciler
   to create the corresponding plugin objects in Konnect.
 - `KongConsumer` associated with `ConsumerGroups` is now reconciled in Konnect by removing/adding
