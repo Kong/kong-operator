@@ -627,6 +627,8 @@ func KongVaultAttachedToCP(
 	return vault
 }
 
+type kongKeyOption func(*configurationv1alpha1.KongKey)
+
 // KongKeyAttachedToCP deploys a KongKey resource attached to a CP and returns the resource.
 func KongKeyAttachedToCP(
 	t *testing.T,
@@ -634,7 +636,7 @@ func KongKeyAttachedToCP(
 	cl client.Client,
 	kid, name string,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-	opts ...objOption,
+	opts ...kongKeyOption,
 ) *configurationv1alpha1.KongKey {
 	t.Helper()
 

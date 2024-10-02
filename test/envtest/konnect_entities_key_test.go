@@ -132,7 +132,7 @@ func TestKongKey(t *testing.T) {
 				}),
 			}
 		}
-		createdKey := deployKongKeyAttachedToCP(t, ctx, clientNamespaced, keyKid, keyName, cp, withKeySetRef)
+		createdKey := deploy.KongKeyAttachedToCP(t, ctx, clientNamespaced, keyKid, keyName, cp, withKeySetRef)
 
 		t.Log("Waiting for KeySetRefValid condition to be false")
 		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongKey) bool {
@@ -159,7 +159,7 @@ func TestKongKey(t *testing.T) {
 		}, nil)
 
 		t.Log("Creating KongKeySet")
-		keySet := deployKongKeySetAttachedToCP(t, ctx, clientNamespaced, keySetName, cp)
+		keySet := deploy.KongKeySetAttachedToCP(t, ctx, clientNamespaced, keySetName, cp)
 		updateKongKeySetStatusWithProgrammed(t, ctx, clientNamespaced, keySet, keySetID, cp.GetKonnectStatus().GetKonnectID())
 
 		t.Log("Waiting for KongKey to be programmed and associated with KongKeySet")
@@ -176,8 +176,10 @@ func TestKongKey(t *testing.T) {
 					condition.Status == metav1.ConditionTrue
 			})
 			keySetIDPopulated := c.Status.Konnect != nil && c.Status.Konnect.KeySetID != ""
+			exactlyOneOwnerReference := len(c.GetOwnerReferences()) == 1
+			hasOwnerRefToKeySet := c.GetOwnerReferences()[0].Name == keySet.GetName()
 
-			return programmed && associated && keySetIDPopulated
+			return programmed && associated && keySetIDPopulated && exactlyOneOwnerReference && hasOwnerRefToKeySet
 		}, "KongKey's Programmed and KeySetRefValid conditions should be true eventually")
 
 		t.Log("Waiting for KongKey to be created in the SDK")
@@ -195,6 +197,17 @@ func TestKongKey(t *testing.T) {
 		keyToPatch := createdKey.DeepCopy()
 		keyToPatch.Spec.KeySetRef = nil
 		require.NoError(t, clientNamespaced.Patch(ctx, keyToPatch, client.MergeFrom(createdKey)))
+
+		t.Log("Waiting for KongKey to be deattached from KongKeySet")
+		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongKey) bool {
+			if c.GetName() != createdKey.GetName() {
+				return false
+			}
+			exactlyOneOwnerReference := len(c.GetOwnerReferences()) == 1
+			hasOwnerReferenceToCP := c.GetOwnerReferences()[0].Name == cp.GetName()
+
+			return exactlyOneOwnerReference && hasOwnerReferenceToCP
+		}, "KongKey should be deattached from KongKeySet eventually")
 
 		t.Log("Waiting for KongKey to be deattached from KongKeySet in the SDK")
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {

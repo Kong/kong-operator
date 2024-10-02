@@ -31,6 +31,14 @@ func KongKeyReconciliationWatchOptions(cl client.Client) []func(*ctrl.Builder) *
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&configurationv1alpha1.KongKeySet{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKongKeyForKongKeySet(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueKongKeyForKonnectAPIAuthConfiguration(cl),
@@ -173,6 +181,46 @@ func enqueueKongKeyForKonnectControlPlane(
 				continue
 			}
 		}
+		return ret
+	}
+}
+
+func enqueueKongKeyForKongKeySet(cl client.Client) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		keySet, ok := obj.(*configurationv1alpha1.KongKeySet)
+		if !ok {
+			return nil
+		}
+		var l configurationv1alpha1.KongKeyList
+		if err := cl.List(ctx, &l, &client.ListOptions{}); err != nil {
+			return nil
+		}
+
+		var ret []reconcile.Request
+		for _, key := range l.Items {
+			keySetRef := getKeySetRef(&key)
+			ref, ok := keySetRef.Get()
+			if !ok {
+				continue
+			}
+			if ref.Type != configurationv1alpha1.KeySetRefNamespacedRef {
+				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
+					"unsupported KongKeySetRef for KongKey",
+					"KongKey", key, "refType", ref.Type,
+				)
+				continue
+			}
+			if ref.NamespacedRef == nil || ref.NamespacedRef.Name != keySet.Name {
+				continue
+			}
+			ret = append(ret, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: key.Namespace,
+					Name:      key.Name,
+				},
+			})
+		}
+
 		return ret
 	}
 }
