@@ -7,16 +7,18 @@ import (
 )
 
 const (
-	// IndexFieldKongPluginBindingKongPluginReference is the index field for KongPlugin -> KongPluginBinding.
-	IndexFieldKongPluginBindingKongPluginReference = "kongPluginRef"
-	// IndexFieldKongPluginBindingKongServiceReference is the index field for KongService -> KongPluginBinding.
-	IndexFieldKongPluginBindingKongServiceReference = "kongServiceRef"
-	// IndexFieldKongPluginBindingKongRouteReference is the index field for KongRoute -> KongPluginBinding.
-	IndexFieldKongPluginBindingKongRouteReference = "kongRouteRef"
-	// IndexFieldKongPluginBindingKongConsumerReference is the index field for KongConsumer -> KongPluginBinding.
-	IndexFieldKongPluginBindingKongConsumerReference = "kongConsumerRef"
-	// IndexFieldKongPluginBindingKongConsumerGroupReference is the index field for KongConsumerGroup -> KongPluginBinding.
-	IndexFieldKongPluginBindingKongConsumerGroupReference = "kongConsumerGroupRef"
+	// IndexFieldKongPluginBindingKongPluginReference is the index field for KongPluginBinding -> KongPlugin.
+	IndexFieldKongPluginBindingKongPluginReference = "kongPluginBindingPluginRef"
+	// IndexFieldKongPluginBindingKongServiceReference is the index field for KongPluginBinding -> KongService.
+	IndexFieldKongPluginBindingKongServiceReference = "kongPluginBindingServiceRef"
+	// IndexFieldKongPluginBindingKongRouteReference is the index field for KongPluginBinding -> KongRoute.
+	IndexFieldKongPluginBindingKongRouteReference = "kongPluginBindingRouteRef"
+	// IndexFieldKongPluginBindingKongConsumerReference is the index field for KongPluginBinding -> KongConsumer.
+	IndexFieldKongPluginBindingKongConsumerReference = "kongPluginBindingConsumerRef"
+	// IndexFieldKongPluginBindingKongConsumerGroupReference is the index field for KongPluginBinding -> KongConsumerGroup.
+	IndexFieldKongPluginBindingKongConsumerGroupReference = "kongPluginBindingConsumerGroupRef"
+	// IndexFieldKongPluginBindingKonnectGatewayControlPlane is the index field for KongPluginBinding -> KonnectGatewayControlPlane.
+	IndexFieldKongPluginBindingKonnectGatewayControlPlane = "kongPluginBindingKonnectGatewayControlPlaneRef"
 )
 
 // IndexOptionsForKongPluginBinding returns required Index options for KongPluginBinding reconclier.
@@ -46,6 +48,11 @@ func IndexOptionsForKongPluginBinding() []ReconciliationIndexOption {
 			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
 			IndexField:   IndexFieldKongPluginBindingKongConsumerGroupReference,
 			ExtractValue: kongConsumerGroupReferencesFromKongPluginBinding,
+		},
+		{
+			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
+			IndexField:   IndexFieldKongPluginBindingKonnectGatewayControlPlane,
+			ExtractValue: kongPluginBindingReferencesKonnectGatewayControlPlane,
 		},
 	}
 }
@@ -112,4 +119,28 @@ func kongConsumerGroupReferencesFromKongPluginBinding(obj client.Object) []strin
 		return nil
 	}
 	return []string{binding.Spec.Targets.ConsumerGroupReference.Name}
+}
+
+// kongPluginBindingReferencesKonnectGatewayControlPlane returns name of referenced KonnectGatewayControlPlane in KongPluginBinding spec.
+func kongPluginBindingReferencesKonnectGatewayControlPlane(obj client.Object) []string {
+	binding, ok := obj.(*configurationv1alpha1.KongPluginBinding)
+	if !ok {
+		return nil
+	}
+	cpRef := binding.Spec.ControlPlaneRef
+	if cpRef == nil ||
+		cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef ||
+		cpRef.KonnectNamespacedRef == nil {
+		return nil
+	}
+
+	// NOTE: This provides support for setting the namespace of the KonnectGatewayControlPlane ref
+	// but CRDs have validation rules in place which will disallow this until
+	// cross namespace refs are allowed.
+	namespace := binding.Namespace
+	if cpRef.KonnectNamespacedRef.Namespace != "" {
+		namespace = cpRef.KonnectNamespacedRef.Namespace
+	}
+
+	return []string{namespace + "/" + cpRef.KonnectNamespacedRef.Name}
 }
