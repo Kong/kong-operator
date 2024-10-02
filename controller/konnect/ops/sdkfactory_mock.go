@@ -19,6 +19,7 @@ type MockSDKWrapper struct {
 	KongCredentialsBasicAuthSDK *MockKongCredentialBasicAuthSDK
 	KongCredentialsAPIKeySDK    *MockKongCredentialAPIKeySDK
 	KongCredentialsACLSDK       *MockKongCredentialACLSDK
+	KongCredentialsJWTSDK       *MockKongCredentialJWTSDK
 	CACertificatesSDK           *MockCACertificatesSDK
 	CertificatesSDK             *MockCertificatesSDK
 	VaultSDK                    *MockVaultSDK
@@ -43,6 +44,7 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		KongCredentialsBasicAuthSDK: NewMockKongCredentialBasicAuthSDK(t),
 		KongCredentialsAPIKeySDK:    NewMockKongCredentialAPIKeySDK(t),
 		KongCredentialsACLSDK:       NewMockKongCredentialACLSDK(t),
+		KongCredentialsJWTSDK:       NewMockKongCredentialJWTSDK(t),
 		CACertificatesSDK:           NewMockCACertificatesSDK(t),
 		CertificatesSDK:             NewMockCertificatesSDK(t),
 		VaultSDK:                    NewMockVaultSDK(t),
@@ -90,6 +92,10 @@ func (m MockSDKWrapper) GetAPIKeyCredentialsSDK() KongCredentialAPIKeySDK {
 
 func (m MockSDKWrapper) GetACLCredentialsSDK() KongCredentialACLSDK {
 	return m.KongCredentialsACLSDK
+}
+
+func (m MockSDKWrapper) GetJWTCredentialsSDK() KongCredentialJWTSDK {
+	return m.KongCredentialsJWTSDK
 }
 
 func (m MockSDKWrapper) GetTargetsSDK() TargetsSDK {

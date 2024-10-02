@@ -90,6 +90,8 @@ const (
 	KongCredentialAPIKeyControllerName = "KongCredentialAPIKey" //nolint:gosec
 	// KongCredentialACLControllerName is the name of the KongCredentialACL controller.
 	KongCredentialACLControllerName = "KongCredentialACL" //nolint:gosec
+	// KongCredentialJWTControllerName is the name of the KongCredentialJWT controller.
+	KongCredentialJWTControllerName = "KongCredentialJWT" //nolint:gosec
 	// KongCACertificateControllerName is the name of the KongCACertificate controller.
 	KongCACertificateControllerName = "KongCACertificate"
 	// KongCertificateControllerName is the name of the KongCertificate controller.
@@ -484,6 +486,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialACL](c.KonnectSyncPeriod),
 				),
 			},
+			KongCredentialJWTControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler(
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialJWT](c.KonnectSyncPeriod),
+				),
+			},
 			KongKeyControllerName: {
 				Enabled: c.KonnectControllersEnabled,
 				Controller: konnect.NewKonnectEntityReconciler(
@@ -554,46 +565,62 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 // This is done only once because 1 manager's cache can only have one index with
 // a predefined key and so that different controllers can share the same indices.
 func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, developmentMode bool) error {
-	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.KongPluginBinding](ctx, mgr, developmentMode); err != nil {
-		return err
+	types := []struct {
+		Object interface {
+			client.Object
+			GetTypeName() string
+		}
+		IndexOptions []konnect.ReconciliationIndexOption
+	}{
+		{
+			Object:       &configurationv1alpha1.KongPluginBinding{},
+			IndexOptions: konnect.IndexOptionsForKongPluginBinding(),
+		},
+		{
+			Object:       &configurationv1alpha1.KongCredentialBasicAuth{},
+			IndexOptions: konnect.IndexOptionsForCredentialsBasicAuth(),
+		},
+		{
+			Object:       &configurationv1alpha1.KongCredentialACL{},
+			IndexOptions: konnect.IndexOptionsForCredentialsACL(),
+		},
+		{
+			Object:       &configurationv1alpha1.KongCredentialJWT{},
+			IndexOptions: konnect.IndexOptionsForCredentialsJWT(),
+		},
+		{
+			Object:       &configurationv1.KongConsumer{},
+			IndexOptions: konnect.IndexOptionsForKongConsumer(),
+		},
+		{
+			Object:       &configurationv1alpha1.KongService{},
+			IndexOptions: konnect.IndexOptionsForKongService(),
+		},
+		{
+			Object:       &configurationv1alpha1.KongRoute{},
+			IndexOptions: konnect.IndexOptionsForKongRoute(),
+		},
+		{
+			Object:       &configurationv1alpha1.KongSNI{},
+			IndexOptions: konnect.IndexOptionsForKongSNI(),
+		},
 	}
-	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.KongCredentialBasicAuth](ctx, mgr, developmentMode); err != nil {
-		return err
-	}
-	if err := setupCacheIndicesForKonnectType[configurationv1.KongConsumer](ctx, mgr, developmentMode); err != nil {
-		return err
-	}
-	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.KongService](ctx, mgr, developmentMode); err != nil {
-		return err
-	}
-	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.KongRoute](ctx, mgr, developmentMode); err != nil {
-		return err
-	}
-	if err := setupCacheIndicesForKonnectType[configurationv1alpha1.KongSNI](ctx, mgr, developmentMode); err != nil {
-		return err
-	}
-	return nil
-}
 
-func setupCacheIndicesForKonnectType[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
-](ctx context.Context, mgr manager.Manager, developmentMode bool) error {
-	var (
-		entityTypeName = constraints.EntityTypeName[T]()
-		logger         = log.GetLogger(ctx, entityTypeName, developmentMode)
-	)
-	for _, ind := range konnect.ReconciliationIndexOptionsForEntity[TEnt]() {
-		logger.Info(
-			"creating index",
-			"indexField", ind.IndexField,
+	for _, t := range types {
+		var (
+			entityTypeName = constraints.EntityTypeNameForObj(t.Object)
+			logger         = log.GetLogger(ctx, entityTypeName, developmentMode)
 		)
-		err := mgr.
-			GetCache().
-			IndexField(ctx, ind.IndexObject, ind.IndexField, ind.ExtractValue)
-		if err != nil {
-			return fmt.Errorf("failed to setup cache indices for %s: %w", constraints.EntityTypeName[T](), err)
+		for _, ind := range t.IndexOptions {
+			logger.Info("creating index", "indexField", ind.IndexField)
+			err := mgr.
+				GetCache().
+				IndexField(ctx, ind.IndexObject, ind.IndexField, ind.ExtractValue)
+			if err != nil {
+				return fmt.Errorf("failed to setup cache indices for %s: %w", entityTypeName, err)
+			}
 		}
 	}
+
 	return nil
 }
