@@ -683,6 +683,29 @@ func ProxyCachePlugin(
 	return plugin
 }
 
+// RateLimitingPlugin deploys the rate-limiting KongPlugin resource and returns the resource.
+// The provided client should be namespaced, i.e. created with `client.NewNamespacedClient(client, ns)`
+func RateLimitingPlugin(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+) *configurationv1.KongPlugin {
+	t.Helper()
+
+	plugin := &configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "rate-limiting-kp-",
+		},
+		PluginName: "rate-limiting",
+		Config: apiextensionsv1.JSON{
+			Raw: []byte(`{"minute": 5, "policy": "local"}`),
+		},
+	}
+	require.NoError(t, cl.Create(ctx, plugin))
+	t.Logf("deployed new %s KongPlugin (%s)", client.ObjectKeyFromObject(plugin), plugin.PluginName)
+	return plugin
+}
+
 // KongKeySetAttachedToCP deploys a KongKeySet resource attached to a CP and returns the resource.
 func KongKeySetAttachedToCP(
 	t *testing.T,

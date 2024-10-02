@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -18,7 +16,6 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
@@ -42,64 +39,74 @@ func TestKongPluginFinalizer(t *testing.T) {
 	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	require.NoError(t, manager.SetupCacheIndicesForKonnectTypes(ctx, mgr, false))
-	reconcilers := []Reconciler{
+
+	StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongService](false, mgr.GetClient()),
-	}
+		konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongRoute](false, mgr.GetClient()),
+	)
 
-	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+	t.Run("KongService", func(t *testing.T) {
+		rateLimitingkongPlugin := deploy.RateLimitingPlugin(t, ctx, clientNamespaced)
 
-	rateLimitingkongPlugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "rate-limiting-kp-",
-		},
-		PluginName: "rate-limiting",
-		Config: apiextensionsv1.JSON{
-			Raw: []byte(`{"minute": 5, "policy": "local"}`),
-		},
-	}
-	require.NoError(t, clientNamespaced.Create(ctx, rateLimitingkongPlugin))
-	t.Logf("deployed %s KongPlugin (%s) resource", client.ObjectKeyFromObject(rateLimitingkongPlugin), rateLimitingkongPlugin.PluginName)
+		wKongService := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
+			konnect.NewKongPluginBindingBuilder().
+				WithControlPlaneRefKonnectNamespaced(cp.Name).
+				WithPluginRef(rateLimitingkongPlugin.Name).
+				WithServiceTarget(kongService.Name).
+				Build(),
+		)
 
-	wKongService := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-	kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
-	kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
-		&configurationv1alpha1.KongPluginBinding{
-			Spec: configurationv1alpha1.KongPluginBindingSpec{
-				ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-						Name: cp.Name,
-					},
-				},
-				PluginReference: configurationv1alpha1.PluginRef{
-					Name: rateLimitingkongPlugin.Name,
-				},
-				Targets: configurationv1alpha1.KongPluginBindingTargets{
-					ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
-						Group: configurationv1alpha1.GroupVersion.Group,
-						Kind:  "KongService",
-						Name:  kongService.Name,
-					},
-				},
+		_ = watchFor(t, ctx, wKongService, watch.Modified,
+			func(svc *configurationv1alpha1.KongService) bool {
+				return svc.Name == kongService.Name &&
+					slices.Contains(svc.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
 			},
-		},
-	)
+			fmt.Sprintf("KongService doesn't have the %s finalizer set", consts.CleanupPluginBindingFinalizer),
+		)
 
-	_ = watchFor(t, ctx, wKongService, watch.Modified,
-		func(svc *configurationv1alpha1.KongService) bool {
-			return svc.Name == kongService.Name &&
-				slices.Contains(svc.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
-		},
-		fmt.Sprintf("KongService doesn't have the %s finalizer set", consts.CleanupPluginBindingFinalizer),
-	)
+		wKongService = setupWatch[configurationv1alpha1.KongServiceList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
+		_ = watchFor(t, ctx, wKongService, watch.Modified,
+			func(svc *configurationv1alpha1.KongService) bool {
+				return svc.Name == kongService.Name &&
+					!slices.Contains(svc.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
+			},
+			fmt.Sprintf("KongService has the %s finalizer set but it shouldn't", consts.CleanupPluginBindingFinalizer),
+		)
+	})
 
-	wKongService = setupWatch[configurationv1alpha1.KongServiceList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-	require.NoError(t, clientNamespaced.Delete(ctx, kpb))
-	_ = watchFor(t, ctx, wKongService, watch.Modified,
-		func(svc *configurationv1alpha1.KongService) bool {
-			return svc.Name == kongService.Name &&
-				!slices.Contains(svc.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
-		},
-		fmt.Sprintf("KongService has the %s finalizer set but it shouldn't", consts.CleanupPluginBindingFinalizer),
-	)
+	t.Run("KongRoute", func(t *testing.T) {
+		rateLimitingkongPlugin := deploy.RateLimitingPlugin(t, ctx, clientNamespaced)
+
+		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		wKongRoute := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService)
+		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
+			konnect.NewKongPluginBindingBuilder().
+				WithControlPlaneRefKonnectNamespaced(cp.Name).
+				WithPluginRef(rateLimitingkongPlugin.Name).
+				WithRouteTarget(kongRoute.Name).
+				Build(),
+		)
+
+		_ = watchFor(t, ctx, wKongRoute, watch.Modified,
+			func(svc *configurationv1alpha1.KongRoute) bool {
+				return svc.Name == kongRoute.Name &&
+					slices.Contains(svc.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
+			},
+			fmt.Sprintf("KongRoute doesn't have the %s finalizer set", consts.CleanupPluginBindingFinalizer),
+		)
+
+		wKongRoute = setupWatch[configurationv1alpha1.KongRouteList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
+		_ = watchFor(t, ctx, wKongRoute, watch.Modified,
+			func(svc *configurationv1alpha1.KongRoute) bool {
+				return svc.Name == kongRoute.Name &&
+					!slices.Contains(svc.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
+			},
+			fmt.Sprintf("KongRoute has the %s finalizer set but it shouldn't", consts.CleanupPluginBindingFinalizer),
+		)
+	})
 }

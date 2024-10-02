@@ -87,6 +87,31 @@ func enqueueKongServiceForKongPluginBinding() func(
 	}
 }
 
+func enqueueKongRouteForKongPluginBinding() func(
+	ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		kpb, ok := obj.(*configurationv1alpha1.KongPluginBinding)
+		if !ok {
+			return nil
+		}
+
+		if kpb.Spec.Targets.RouteReference == nil ||
+			kpb.Spec.Targets.RouteReference.Kind != "KongRoute" ||
+			kpb.Spec.Targets.RouteReference.Group != configurationv1alpha1.GroupVersion.Group {
+			return nil
+		}
+
+		return []ctrl.Request{
+			{
+				NamespacedName: types.NamespacedName{
+					Namespace: kpb.Namespace,
+					Name:      kpb.Spec.Targets.RouteReference.Name,
+				},
+			},
+		}
+	}
+}
+
 // Reconcile reconciles the Konnect entity that can be set as KongPluginBinding target.
 // Its purpose is to:
 //   - check if the entity is marked for deletion and mark KongPluginBindings
@@ -189,6 +214,8 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) getKongPluginBi
 	switch any(ent).(type) {
 	case *configurationv1alpha1.KongService:
 		return IndexFieldKongPluginBindingKongServiceReference
+	case *configurationv1alpha1.KongRoute:
+		return IndexFieldKongPluginBindingKongRouteReference
 	default:
 		panic(fmt.Sprintf("unsupported entity type %s", constraints.EntityTypeName[T]()))
 	}
@@ -215,6 +242,20 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) setControllerBu
 				&configurationv1alpha1.KongPluginBinding{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueKongServiceForKongPluginBinding(),
+				),
+			)
+	case *configurationv1alpha1.KongRoute:
+		b.
+			For(&configurationv1alpha1.KongRoute{},
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongRoute]),
+					kongPluginsAnnotationChangedPredicate,
+				),
+			).
+			Watches(
+				&configurationv1alpha1.KongPluginBinding{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKongRouteForKongPluginBinding(),
 				),
 			)
 	default:
