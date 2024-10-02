@@ -31,6 +31,14 @@ func KongKeyReconciliationWatchOptions(cl client.Client) []func(*ctrl.Builder) *
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&configurationv1alpha1.KongKeySet{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKongKeyForKongKeySet(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueKongKeyForKonnectAPIAuthConfiguration(cl),
@@ -130,49 +138,36 @@ func enqueueKongKeyForKonnectControlPlane(
 			return nil
 		}
 		var l configurationv1alpha1.KongKeyList
-		if err := cl.List(ctx, &l, &client.ListOptions{
+		if err := cl.List(ctx, &l,
 			// TODO: change this when cross namespace refs are allowed.
-			Namespace: cp.GetNamespace(),
-		}); err != nil {
+			client.InNamespace(cp.GetNamespace()),
+			client.MatchingFields{
+				IndexFieldKongKeyOnKonnectGatewayControlPlane: cp.GetNamespace() + "/" + cp.GetName(),
+			},
+		); err != nil {
 			return nil
 		}
 
-		var ret []reconcile.Request
-		for _, key := range l.Items {
-			cpRef, ok := getControlPlaneRef(&key).Get()
-			if !ok {
-				continue
-			}
-			switch cpRef.Type {
-			case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-				// TODO: change this when cross namespace refs are allowed.
-				if cpRef.KonnectNamespacedRef.Name != cp.Name {
-					continue
-				}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
 
-				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: key.Namespace,
-						Name:      key.Name,
-					},
-				})
-
-			case configurationv1alpha1.ControlPlaneRefKonnectID:
-				ctrllog.FromContext(ctx).Error(
-					fmt.Errorf("unimplemented ControlPlaneRef type %q", cpRef.Type),
-					"unimplemented ControlPlaneRef for KongKey",
-					"KongKey", key, "refType", cpRef.Type,
-				)
-				continue
-
-			default:
-				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
-					"unsupported ControlPlaneRef for KongKey",
-					"KongKey", key, "refType", cpRef.Type,
-				)
-				continue
-			}
+func enqueueKongKeyForKongKeySet(cl client.Client) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		keySet, ok := obj.(*configurationv1alpha1.KongKeySet)
+		if !ok {
+			return nil
 		}
-		return ret
+		var l configurationv1alpha1.KongKeyList
+		if err := cl.List(ctx, &l,
+			client.InNamespace(keySet.GetNamespace()),
+			client.MatchingFields{
+				IndexFieldKongKeyOnKongKeySetReference: keySet.GetNamespace() + "/" + keySet.GetName(),
+			},
+		); err != nil {
+			return nil
+		}
+
+		return objectListToReconcileRequests(l.Items)
 	}
 }

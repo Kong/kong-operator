@@ -89,6 +89,24 @@ func updateKongRouteStatusWithProgrammed(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
+func updateKongKeySetStatusWithProgrammed(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	obj *configurationv1alpha1.KongKeySet,
+	id, cpID string,
+) {
+	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+		ControlPlaneID:      cpID,
+		KonnectEntityStatus: konnectEntityStatus(id),
+	}
+	obj.Status.Conditions = []metav1.Condition{
+		programmedCondition(obj.GetGeneration()),
+	}
+
+	require.NoError(t, cl.Status().Update(ctx, obj))
+}
+
 func konnectEntityStatus(id string) konnectv1alpha1.KonnectEntityStatus {
 	return konnectv1alpha1.KonnectEntityStatus{
 		ID:        id,

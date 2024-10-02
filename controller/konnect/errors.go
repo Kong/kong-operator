@@ -111,3 +111,28 @@ type ReferencedKongCertificateDoesNotExist struct {
 func (e ReferencedKongCertificateDoesNotExist) Error() string {
 	return fmt.Sprintf("referenced Kong Certificate %s does not exist: %v", e.Reference, e.Err)
 }
+
+// ReferencedKongKeySetDoesNotExist is an error type that is returned when
+// a Konnect entity references a KongKeySet which does not exist.
+type ReferencedKongKeySetDoesNotExist struct {
+	Reference types.NamespacedName
+	Err       error
+}
+
+// Error implements the error interface.
+func (e ReferencedKongKeySetDoesNotExist) Error() string {
+	return fmt.Sprintf("referenced KongKeySet %s does not exist: %v", e.Reference, e.Err)
+}
+
+// ReferencedKongKeySetIsBeingDeleted is an error type that is returned when
+// a Konnect entity references a KongKeySet which is being deleted.
+type ReferencedKongKeySetIsBeingDeleted struct {
+	Reference         types.NamespacedName
+	DeletionTimestamp time.Time
+}
+
+// Error implements the error interface.
+func (e ReferencedKongKeySetIsBeingDeleted) Error() string {
+	return fmt.Sprintf("referenced KongKeySet %s is being deleted (deletion timestamp: %s)",
+		e.Reference, e.DeletionTimestamp)
+}

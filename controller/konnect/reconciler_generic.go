@@ -288,6 +288,44 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, nil
 	}
 
+	// If a type has a KongKeySet ref, handle it.
+	res, err = handleKongKeySetRef(ctx, r.Client, ent)
+	if err != nil || !res.IsZero() {
+		// If the referenced KongKeySet is being deleted and the object
+		// is not being deleted yet then requeue until it will
+		// get the deletion timestamp set due to having the owner set to KongKeySet.
+		if errDel := (&ReferencedKongKeySetIsBeingDeleted{}); errors.As(err, errDel) &&
+			ent.GetDeletionTimestamp().IsZero() {
+			return ctrl.Result{
+				RequeueAfter: time.Until(errDel.DeletionTimestamp),
+			}, nil
+		}
+
+		// If the referenced KongKeySet is not found or is being deleted
+		// and the object is being deleted, remove the finalizer and let the
+		// deletion proceed without trying to delete the entity from Konnect
+		// as the KongKeySet deletion will take care of it on the Konnect side.
+		if errors.As(err, &ReferencedKongKeySetIsBeingDeleted{}) ||
+			errors.As(err, &ReferencedKongKeySetDoesNotExist{}) {
+			if !ent.GetDeletionTimestamp().IsZero() {
+				if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+					if err := r.Client.Update(ctx, ent); err != nil {
+						if k8serrors.IsConflict(err) {
+							return ctrl.Result{Requeue: true}, nil
+						}
+						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+					}
+					log.Debug(logger, "finalizer removed as the owning KongKeySet is being deleted or is already gone", ent,
+						"finalizer", KonnectCleanupFinalizer,
+					)
+					return ctrl.Result{}, nil
+				}
+			}
+		}
+
+		return res, err
+	}
+
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to get APIAuth ref for %s: %w", client.ObjectKeyFromObject(ent), err)
@@ -1016,11 +1054,18 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			return ctrl.Result{Requeue: true}, nil
 		}
 
-		old := ent.DeepCopyObject().(TEnt)
-		if ent.GetNamespace() != "" {
+		var (
+			old = ent.DeepCopyObject().(TEnt)
+
 			// A cluster scoped object cannot set a namespaced object as its owner, and also we cannot set cross namespaced owner reference.
 			// So we skip setting owner reference for cluster scoped resources (KongVault).
 			// TODO: handle cross namespace refs
+			isNamespaceScoped = ent.GetNamespace() != ""
+
+			// If an entity has another owner, we should not set the owner reference as that would prevent the entity from being deleted.
+			hasNoOwners = len(ent.GetOwnerReferences()) == 0
+		)
+		if isNamespaceScoped && hasNoOwners {
 			if err := controllerutil.SetOwnerReference(&cp, ent, cl.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
 				return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
 			}
