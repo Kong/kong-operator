@@ -93,11 +93,14 @@ func objHasControlPlaneRefKonnectNamespacedRef[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ent TEnt) bool {
-	_, ok := controlPlaneIsRefKonnectNamespacedRef(ent)
+	_, ok := controlPlaneRefIsKonnectNamespacedRef(ent)
 	return ok
 }
 
-func controlPlaneIsRefKonnectNamespacedRef[
+// controlPlaneRefIsKonnectNamespacedRef returns:
+// - the ControlPlane KonnectNamespacedRef of the object if it is a KonnectNamespacedRef.
+// - a boolean indicating if the object has a KonnectNamespacedRef.
+func controlPlaneRefIsKonnectNamespacedRef[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ent TEnt) (configurationv1alpha1.ControlPlaneRef, bool) {

@@ -13,13 +13,13 @@ type ReconciliationIndexOption struct {
 	ExtractValue client.IndexerFunc
 }
 
-// controlPlaneKonnectNamespacedRefRefAsSlice returns a slice of strings representing
+// controlPlaneKonnectNamespacedRefAsSlice returns a slice of strings representing
 // the KonnectNamespacedRef of the object.
-func controlPlaneKonnectNamespacedRefRefAsSlice[
+func controlPlaneKonnectNamespacedRefAsSlice[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ent TEnt) []string {
-	cpRef, ok := controlPlaneIsRefKonnectNamespacedRef(ent)
+	cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(ent)
 	if !ok {
 		return nil
 	}

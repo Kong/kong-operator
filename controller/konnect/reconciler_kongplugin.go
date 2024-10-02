@@ -338,7 +338,7 @@ func deleteUnusedKongPluginBindings(
 			continue
 		}
 
-		cpRef, ok := controlPlaneIsRefKonnectNamespacedRef(&pb)
+		cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&pb)
 		if !ok {
 			continue
 		}

@@ -60,5 +60,5 @@ func kongConsumerReferencesKonnectGatewayControlPlane(object client.Object) []st
 		return nil
 	}
 
-	return controlPlaneKonnectNamespacedRefRefAsSlice(consumer)
+	return controlPlaneKonnectNamespacedRefAsSlice(consumer)
 }
