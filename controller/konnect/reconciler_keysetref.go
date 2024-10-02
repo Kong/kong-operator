@@ -115,6 +115,11 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	// Transfer the ownership of the entity exclusively to the KongKeySet to make sure it will get garbage collected
+	// when the KongKeySet is deleted. This is to follow the behavior on the Konnect API that deletes KongKeys associated
+	// with a KongKeySet once it's deleted.
+	// The ownership needs to be transferred *exclusively* to the KongKeySet because a Kubernetes object gets garbage
+	// collected only when all its owner references are removed.
 	if res, err := passOwnershipExclusivelyTo(ctx, cl, ent, &keySet); err != nil || !res.IsZero() {
 		return res, err
 	}
