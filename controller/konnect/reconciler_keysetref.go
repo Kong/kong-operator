@@ -39,7 +39,7 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 					conditions.KeySetRefValidConditionType,
 					metav1.ConditionTrue,
 					conditions.KeySetRefReasonValid,
-					"KeySetRef is nil",
+					"KeySetRef is unset",
 				); err != nil || !res.IsZero() {
 					return res, fmt.Errorf("failed to update status: %w", err)
 				}

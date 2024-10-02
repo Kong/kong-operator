@@ -88,7 +88,7 @@ func TestKongKey(t *testing.T) {
 			})
 		}, "KongKey's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongKey to be created in the SDK")
+		t.Log("Checking SDK KongKey operations")
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
