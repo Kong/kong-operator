@@ -589,6 +589,10 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 			IndexOptions: konnect.IndexOptionsForCredentialsJWT(),
 		},
 		{
+			Object:       &configurationv1alpha1.KongCredentialAPIKey{},
+			IndexOptions: konnect.IndexOptionsForCredentialsAPIKey(),
+		},
+		{
 			Object:       &configurationv1.KongConsumer{},
 			IndexOptions: konnect.IndexOptionsForKongConsumer(),
 		},
@@ -599,6 +603,14 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 		{
 			Object:       &configurationv1alpha1.KongRoute{},
 			IndexOptions: konnect.IndexOptionsForKongRoute(),
+		},
+		{
+			Object:       &configurationv1alpha1.KongUpstream{},
+			IndexOptions: konnect.IndexOptionsForKongUpstream(),
+		},
+		{
+			Object:       &configurationv1alpha1.KongTarget{},
+			IndexOptions: konnect.IndexOptionsForKongTarget(),
 		},
 		{
 			Object:       &configurationv1alpha1.KongSNI{},

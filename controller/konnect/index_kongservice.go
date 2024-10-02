@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldKongServiceOnReferencedPluginNames is the index field for KongService -> KongPlugin.
 	IndexFieldKongServiceOnReferencedPluginNames = "kongServiceKongPluginRef"
+	// IndexFieldKongServiceOnKonnectGatewayControlPlane is the index field for KongService -> KonnectGatewayControlPlane.
+	IndexFieldKongServiceOnKonnectGatewayControlPlane = "kongServiceKonnectGatewayControlPlaneRef"
 )
 
 // IndexOptionsForKongService returns required Index options for KongService reconciler.
@@ -20,6 +22,11 @@ func IndexOptionsForKongService() []ReconciliationIndexOption {
 			IndexObject:  &configurationv1alpha1.KongService{},
 			IndexField:   IndexFieldKongServiceOnReferencedPluginNames,
 			ExtractValue: kongServiceUsesPlugins,
+		},
+		{
+			IndexObject:  &configurationv1alpha1.KongService{},
+			IndexField:   IndexFieldKongServiceOnKonnectGatewayControlPlane,
+			ExtractValue: kongServiceReferencesKonnectGatewayControlPlane,
 		},
 	}
 }
@@ -31,4 +38,13 @@ func kongServiceUsesPlugins(object client.Object) []string {
 	}
 
 	return annotations.ExtractPluginsWithNamespaces(svc)
+}
+
+func kongServiceReferencesKonnectGatewayControlPlane(object client.Object) []string {
+	svc, ok := object.(*configurationv1alpha1.KongService)
+	if !ok {
+		return nil
+	}
+
+	return controlPlaneKonnectNamespacedRefRefAsSlice(svc)
 }

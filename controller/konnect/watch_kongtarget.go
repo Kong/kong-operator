@@ -77,22 +77,17 @@ func enqueueKongTargetForKongUpstream(cl client.Client,
 			return nil
 		}
 
-		var targetList configurationv1alpha1.KongTargetList
-		if err := cl.List(ctx, &targetList, &client.ListOptions{
+		var l configurationv1alpha1.KongTargetList
+		if err := cl.List(ctx, &l,
 			// TODO: change this when cross namespace refs are allowed.
-			Namespace: kongUpstream.GetNamespace(),
-		}); err != nil {
+			client.InNamespace(kongUpstream.GetNamespace()),
+			client.MatchingFields{
+				IndexFieldKongTargetOnReferencedUpstream: kongUpstream.Name,
+			},
+		); err != nil {
 			return nil
 		}
 
-		var ret []reconcile.Request
-		for _, target := range targetList.Items {
-			if target.Spec.UpstreamRef.Name == kongUpstream.Name {
-				ret = append(ret, reconcile.Request{
-					NamespacedName: client.ObjectKeyFromObject(&target),
-				})
-			}
-		}
-		return ret
+		return objectListToReconcileRequests(l.Items)
 	}
 }
