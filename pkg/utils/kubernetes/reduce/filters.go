@@ -10,9 +10,13 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/pkg/consts"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 // FiltenNone filter nothing, that is it returns the same slice as provided.
@@ -462,4 +466,44 @@ func filterDataPlanes(dataplanes []operatorv1beta1.DataPlane) []operatorv1beta1.
 	}
 
 	return append(dataplanes[:best], dataplanes[best+1:]...)
+}
+
+// -----------------------------------------------------------------------------
+// Filter functions - KongPluginBindings
+// -----------------------------------------------------------------------------
+
+// filterKongPluginBindings filters out the KongPluginBindings to be kept and returns all the KongPluginBindings
+// to be deleted.
+// The KongPluginBinding with Programmed status condition is kept.
+// If no such binding is found the oldest is kept.
+func filterKongPluginBindings(kpbs []configurationv1alpha1.KongPluginBinding) []configurationv1alpha1.KongPluginBinding {
+	if len(kpbs) < 2 {
+		return []configurationv1alpha1.KongPluginBinding{}
+	}
+
+	programmed := -1
+	best := 0
+	for i, kpb := range kpbs {
+		if lo.ContainsBy(kpb.Status.Conditions, func(c metav1.Condition) bool {
+			return c.Type == conditions.KonnectEntityProgrammedConditionType &&
+				c.Status == metav1.ConditionTrue
+		}) {
+
+			if programmed != -1 && kpb.CreationTimestamp.Before(&kpbs[programmed].CreationTimestamp) {
+				best = i
+				programmed = i
+			} else if programmed == -1 {
+				best = i
+				programmed = i
+			}
+
+			continue
+		}
+
+		if kpb.CreationTimestamp.Before(&kpbs[best].CreationTimestamp) && programmed == -1 {
+			best = i
+		}
+	}
+
+	return append(kpbs[:best], kpbs[best+1:]...)
 }

@@ -20,6 +20,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/pkg/consts"
+	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -65,6 +66,13 @@ func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Mana
 				kongPluginsAnnotationChangedPredicate,
 			),
 		).
+		Watches(
+			&configurationv1.KongConsumer{},
+			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1.KongConsumer](r.developmentMode)),
+			builder.WithPredicates(
+				kongPluginsAnnotationChangedPredicate,
+			),
+		).
 		Complete(r)
 }
 
@@ -99,10 +107,6 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	// TODO(mlavacca): So far we are supporting only KongService targets here. We need to implement
-	// the same logic for KongRoute, KongConsumer, and KongConsumerGroup as well.
-	// https://github.com/Kong/gateway-operator/issues/583
-
 	kongServiceList := configurationv1alpha1.KongServiceList{}
 	err = clientWithNamespace.List(ctx, &kongServiceList,
 		client.MatchingFields{
@@ -123,6 +127,19 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, fmt.Errorf("failed listing KongRoutes referencing %s KongPlugin: %w", client.ObjectKeyFromObject(&kongPlugin), err)
 	}
 
+	kongConsumerList := configurationv1.KongConsumerList{}
+	err = clientWithNamespace.List(ctx, &kongConsumerList,
+		client.MatchingFields{
+			IndexFieldKongConsumerOnPlugin: kongPlugin.Namespace + "/" + kongPlugin.Name,
+		},
+	)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed listing KongRoutes referencing %s KongPlugin: %w", client.ObjectKeyFromObject(&kongPlugin), err)
+	}
+
+	// TODO: https://github.com/Kong/gateway-operator/issues/583
+	// add support for consumer groups
+
 	foreignRelations := ForeignRelations{
 		Service: lo.Filter(kongServiceList.Items,
 			func(s configurationv1alpha1.KongService, _ int) bool { return s.DeletionTimestamp.IsZero() },
@@ -130,7 +147,11 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		Route: lo.Filter(kongRouteList.Items,
 			func(s configurationv1alpha1.KongRoute, _ int) bool { return s.DeletionTimestamp.IsZero() },
 		),
-		// TODO consumers and consumer groups
+		Consumer: lo.Filter(kongConsumerList.Items,
+			func(c configurationv1.KongConsumer, _ int) bool { return c.DeletionTimestamp.IsZero() },
+		),
+		// TODO: https://github.com/Kong/gateway-operator/issues/583
+		// add support for consumer groups
 	}
 	grouped, err := foreignRelations.GroupByControlPlane(ctx, r.client)
 	if err != nil {
@@ -178,8 +199,16 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				})
 				builder.WithRouteTarget(rel.Route)
 			}
+			if rel.Consumer != "" {
+				kpbList = lo.Filter(kpbList, func(pb configurationv1alpha1.KongPluginBinding, _ int) bool {
+					return pb.Spec.Targets.ConsumerReference != nil &&
+						pb.Spec.Targets.ConsumerReference.Name == rel.Consumer
+				})
+				builder.WithConsumerTarget(rel.Consumer)
+			}
 
-			// TODO consumers and consumer groups
+			// TODO: https://github.com/Kong/gateway-operator/issues/583
+			// add support for consumer groups
 
 			builder, err = builder.WithOwnerReference(&kongPlugin, clientWithNamespace.Scheme())
 			if err != nil {
@@ -198,8 +227,11 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			case 1:
 				existing := kpbList[0]
 				if reflect.DeepEqual(existing.Spec.Targets.ServiceReference, kongPluginBinding.Spec.Targets.ServiceReference) &&
-					reflect.DeepEqual(existing.Spec.Targets.RouteReference, kongPluginBinding.Spec.Targets.RouteReference) {
+					reflect.DeepEqual(existing.Spec.Targets.RouteReference, kongPluginBinding.Spec.Targets.RouteReference) &&
+					reflect.DeepEqual(existing.Spec.Targets.ConsumerReference, kongPluginBinding.Spec.Targets.ConsumerReference) {
 					// TODO consumers and consumer groups checks
+					// TODO: https://github.com/Kong/gateway-operator/issues/583
+					// add consumer groups checks
 					continue
 				}
 
@@ -214,7 +246,9 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				log.Debug(logger, "Managed KongPluginBinding updated", kongPluginBinding)
 
 			default:
-				// TODO: remove surplus KongPluginBindings
+				if err := k8sreduce.ReduceKongPluginBindings(ctx, clientWithNamespace, kpbList); err != nil {
+					return ctrl.Result{}, fmt.Errorf("failed to reduce KongPluginBindings: %w", err)
+				}
 			}
 
 		}
@@ -304,13 +338,12 @@ func deleteUnusedKongPluginBindings(
 			continue
 		}
 
-		cpRef := pb.Spec.ControlPlaneRef
-		if cpRef == nil ||
-			cpRef.KonnectNamespacedRef == nil ||
-			cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
+		cpRef, ok := controlPlaneIsRefKonnectNamespacedRef(&pb)
+		if !ok {
 			continue
 		}
 
+		// If a ControlPlane this KongPluginBinding references, is not found, delete the it.
 		combinations, ok := groupedCombinations[types.NamespacedName{
 			// TODO: implement cross namespace references
 			Namespace: pb.Namespace,
@@ -327,12 +360,94 @@ func deleteUnusedKongPluginBindings(
 
 		serviceRef := pb.Spec.Targets.ServiceReference
 		routeRef := pb.Spec.Targets.RouteReference
+		consumerRef := pb.Spec.Targets.ConsumerReference
 		switch {
+
+		case consumerRef != nil && serviceRef != nil && routeRef != nil:
+			combinationFound := false
+			for _, rel := range combinations {
+				if rel.Consumer != consumerRef.Name &&
+					rel.Service != serviceRef.Name &&
+					rel.Route != routeRef.Name {
+					continue
+				}
+				combinationFound = true
+				break
+			}
+
+			if !combinationFound {
+				pluginBindingsToDelete[client.ObjectKeyFromObject(&pb)] = pb
+				continue
+			}
+
+			s, serviceExists := getIfRefNotNil[*configurationv1alpha1.KongService](ctx, clientWithNamespace, serviceRef)
+			r, routeExists := getIfRefNotNil[*configurationv1alpha1.KongRoute](ctx, clientWithNamespace, routeRef)
+			c, consumerExists := getIfRefNotNil[*configurationv1.KongConsumer](ctx, clientWithNamespace, consumerRef)
+			if !consumerExists || !serviceExists || !routeExists ||
+				!objHasPluginConfigured(c, kongPlugin.Name) || !c.DeletionTimestamp.IsZero() ||
+				!objHasPluginConfigured(s, kongPlugin.Name) || !s.DeletionTimestamp.IsZero() ||
+				!objHasPluginConfigured(r, kongPlugin.Name) || !r.DeletionTimestamp.IsZero() {
+				pluginBindingsToDelete[client.ObjectKeyFromObject(&pb)] = pb
+				continue
+			}
+
+		case consumerRef != nil && routeRef != nil:
+			combinationFound := false
+			for _, rel := range combinations {
+				if rel.Consumer != consumerRef.Name ||
+					rel.Service != "" ||
+					rel.Route != routeRef.Name {
+					continue
+				}
+				combinationFound = true
+				break
+			}
+
+			if !combinationFound {
+				pluginBindingsToDelete[client.ObjectKeyFromObject(&pb)] = pb
+				continue
+			}
+
+			r, routeExists := getIfRefNotNil[*configurationv1alpha1.KongRoute](ctx, clientWithNamespace, routeRef)
+			c, consumerExists := getIfRefNotNil[*configurationv1.KongConsumer](ctx, clientWithNamespace, consumerRef)
+			if !consumerExists || !routeExists ||
+				!objHasPluginConfigured(c, kongPlugin.Name) || !c.DeletionTimestamp.IsZero() ||
+				!objHasPluginConfigured(r, kongPlugin.Name) || !r.DeletionTimestamp.IsZero() {
+				pluginBindingsToDelete[client.ObjectKeyFromObject(&pb)] = pb
+				continue
+			}
+
+		case consumerRef != nil && serviceRef != nil:
+			combinationFound := false
+			for _, rel := range combinations {
+				if rel.Consumer != consumerRef.Name ||
+					rel.Service != serviceRef.Name ||
+					rel.Route != "" {
+					continue
+				}
+				combinationFound = true
+				break
+			}
+
+			if !combinationFound {
+				pluginBindingsToDelete[client.ObjectKeyFromObject(&pb)] = pb
+				continue
+			}
+
+			s, serviceExists := getIfRefNotNil[*configurationv1alpha1.KongService](ctx, clientWithNamespace, serviceRef)
+			c, consumerExists := getIfRefNotNil[*configurationv1.KongConsumer](ctx, clientWithNamespace, consumerRef)
+			if !consumerExists || !serviceExists ||
+				!objHasPluginConfigured(c, kongPlugin.Name) || !c.DeletionTimestamp.IsZero() ||
+				!objHasPluginConfigured(s, kongPlugin.Name) || !s.DeletionTimestamp.IsZero() {
+				pluginBindingsToDelete[client.ObjectKeyFromObject(&pb)] = pb
+				continue
+			}
 
 		case serviceRef != nil && routeRef != nil:
 			combinationFound := false
 			for _, rel := range combinations {
-				if rel.Service != serviceRef.Name &&
+				if rel.Service != serviceRef.Name ||
+					rel.Consumer != "" ||
 					rel.Route != routeRef.Name {
 					continue
 				}
@@ -358,6 +473,7 @@ func deleteUnusedKongPluginBindings(
 			combinationFound := false
 			for _, rel := range combinations {
 				if rel.Service != serviceRef.Name ||
+					rel.Consumer != "" ||
 					rel.Route != "" {
 					continue
 				}
@@ -381,6 +497,7 @@ func deleteUnusedKongPluginBindings(
 			combinationFound := false
 			for _, rel := range combinations {
 				if rel.Route != routeRef.Name ||
+					rel.Consumer != "" ||
 					rel.Service != "" {
 					continue
 				}
@@ -423,17 +540,29 @@ func getIfRefNotNil[
 		*T
 		client.Object
 	},
+	TRef interface {
+		*configurationv1alpha1.TargetRefWithGroupKind | *configurationv1alpha1.TargetRef
+	},
 	T any,
 ](
 	ctx context.Context,
 	c client.Client,
-	ref *configurationv1alpha1.TargetRefWithGroupKind,
+	ref TRef,
 ) (TPtr, bool) {
+	if ref == nil {
+		return nil, false
+	}
+
 	var t T
 	var obj TPtr = &t
-	if ref == nil {
-		return obj, false
+	var name string
+	switch ref := any(ref).(type) {
+	case *configurationv1alpha1.TargetRefWithGroupKind:
+		name = ref.Name
+	case *configurationv1alpha1.TargetRef:
+		name = ref.Name
 	}
-	err := c.Get(ctx, client.ObjectKey{Name: ref.Name}, obj)
+
+	err := c.Get(ctx, client.ObjectKey{Name: name}, obj)
 	return obj, err == nil
 }

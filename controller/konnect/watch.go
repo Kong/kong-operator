@@ -90,7 +90,17 @@ func objHasControlPlaneRefKonnectNamespacedRef[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ent TEnt) bool {
+	_, ok := controlPlaneIsRefKonnectNamespacedRef(ent)
+	return ok
+}
+
+func controlPlaneIsRefKonnectNamespacedRef[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) (configurationv1alpha1.ControlPlaneRef, bool) {
 	cpRef, ok := getControlPlaneRef(ent).Get()
-	return ok &&
-		cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
+	if !ok {
+		return configurationv1alpha1.ControlPlaneRef{}, false
+	}
+	return cpRef, cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
 }

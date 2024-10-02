@@ -18,6 +18,8 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func TestFilterSecrets(t *testing.T) {
@@ -1071,6 +1073,113 @@ func TestFilterPodDisruptionBudgets(t *testing.T) {
 				return pdb.Name
 			})
 			require.ElementsMatch(t, filteredNames, tc.expectedNames)
+		})
+	}
+}
+
+func TestFilterKongPluginBindings(t *testing.T) {
+	testCases := []struct {
+		name         string
+		kpbs         []configurationv1alpha1.KongPluginBinding
+		filteredKpbs []configurationv1alpha1.KongPluginBinding
+	}{
+		{
+			name: "the Programmed binding must be filtered out regardless of the creation timestamp",
+			kpbs: []configurationv1alpha1.KongPluginBinding{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					},
+					Status: configurationv1alpha1.KongPluginBindingStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   "Programmed",
+								Status: "True",
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "12/31/1995",
+						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			filteredKpbs: []configurationv1alpha1.KongPluginBinding{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "12/31/1995",
+						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+		},
+		{
+			name: "the Programmed binding must be filtered out",
+			kpbs: []configurationv1alpha1.KongPluginBinding{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "12/31/1995",
+						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
+					},
+					Status: configurationv1alpha1.KongPluginBindingStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   "Programmed",
+								Status: "True",
+							},
+						},
+					},
+				},
+			},
+			filteredKpbs: []configurationv1alpha1.KongPluginBinding{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+		},
+		{
+			name: "the oldest binding must be filtered out if it's not Programmed",
+			kpbs: []configurationv1alpha1.KongPluginBinding{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "12/31/1995",
+						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			filteredKpbs: []configurationv1alpha1.KongPluginBinding{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			filteredDeployments := filterKongPluginBindings(tc.kpbs)
+			require.Equal(t, tc.filteredKpbs, filteredDeployments)
 		})
 	}
 }
