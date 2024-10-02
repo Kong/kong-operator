@@ -39,7 +39,7 @@ func (relations *ForeignRelations) GroupByControlPlane(
 ) (ForeignRelationsGroupedByControlPlane, error) {
 	ret := make(map[types.NamespacedName]ForeignRelations)
 	for _, service := range relations.Service {
-		cpRef, ok := controlPlaneIsRefKonnectNamespacedRef(&service)
+		cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&service)
 		if !ok {
 			continue
 		}
@@ -69,7 +69,7 @@ func (relations *ForeignRelations) GroupByControlPlane(
 			return nil, err
 		}
 
-		cpRef, ok := controlPlaneIsRefKonnectNamespacedRef(&svc)
+		cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&svc)
 		if !ok {
 			continue
 		}
@@ -84,7 +84,7 @@ func (relations *ForeignRelations) GroupByControlPlane(
 		ret[nn] = fr
 	}
 	for _, consumer := range relations.Consumer {
-		cpRef, ok := controlPlaneIsRefKonnectNamespacedRef(&consumer)
+		cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&consumer)
 		if !ok {
 			continue
 		}

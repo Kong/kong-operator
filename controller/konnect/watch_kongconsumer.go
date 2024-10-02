@@ -153,50 +153,17 @@ func enqueueKongConsumerForKonnectGatewayControlPlane(
 			return nil
 		}
 		var l configurationv1.KongConsumerList
-		if err := cl.List(ctx, &l, &client.ListOptions{
+		if err := cl.List(ctx, &l,
 			// TODO: change this when cross namespace refs are allowed.
-			Namespace: cp.GetNamespace(),
-		}); err != nil {
+			client.InNamespace(cp.GetNamespace()),
+			client.MatchingFields{
+				IndexFieldKongConsumerOnKonnectGatewayControlPlane: cp.Namespace + "/" + cp.Name,
+			},
+		); err != nil {
 			return nil
 		}
 
-		var ret []reconcile.Request
-		for _, consumer := range l.Items {
-			cpRef, ok := getControlPlaneRef(&consumer).Get()
-			if !ok {
-				continue
-			}
-			switch cpRef.Type {
-			case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-				// TODO: change this when cross namespace refs are allowed.
-				if cpRef.KonnectNamespacedRef.Name != cp.Name {
-					continue
-				}
-
-				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: consumer.Namespace,
-						Name:      consumer.Name,
-					},
-				})
-
-			case configurationv1alpha1.ControlPlaneRefKonnectID:
-				ctrllog.FromContext(ctx).Error(
-					fmt.Errorf("unimplemented ControlPlaneRef type %q", cpRef.Type),
-					"unimplemented ControlPlaneRef for KongConsumer",
-					"KongConsumer", consumer, "refType", cpRef.Type,
-				)
-				continue
-
-			default:
-				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
-					"unsupported ControlPlaneRef for KongConsumer",
-					"KongConsumer", consumer, "refType", cpRef.Type,
-				)
-				continue
-			}
-		}
-		return ret
+		return objectListToReconcileRequests(l.Items)
 	}
 }
 

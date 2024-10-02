@@ -143,48 +143,16 @@ func enqueueKongServiceForKonnectGatewayControlPlane(
 			return nil
 		}
 		var l configurationv1alpha1.KongServiceList
-		if err := cl.List(ctx, &l, &client.ListOptions{
+		if err := cl.List(ctx, &l,
 			// TODO: change this when cross namespace refs are allowed.
-			Namespace: cp.GetNamespace(),
-		}); err != nil {
+			client.InNamespace(cp.GetNamespace()),
+			client.MatchingFields{
+				IndexFieldKongServiceOnKonnectGatewayControlPlane: cp.Namespace + "/" + cp.Name,
+			},
+		); err != nil {
 			return nil
 		}
 
-		var ret []reconcile.Request
-		for _, svc := range l.Items {
-			if svc.Spec.ControlPlaneRef == nil {
-				continue
-			}
-			switch svc.Spec.ControlPlaneRef.Type {
-			case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-				// TODO: change this when cross namespace refs are allowed.
-				if svc.Spec.ControlPlaneRef.KonnectNamespacedRef.Name != cp.Name {
-					continue
-				}
-
-				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: svc.Namespace,
-						Name:      svc.Name,
-					},
-				})
-
-			case configurationv1alpha1.ControlPlaneRefKonnectID:
-				ctrllog.FromContext(ctx).Error(
-					fmt.Errorf("unimplemented ControlPlaneRef type %q", svc.Spec.ControlPlaneRef.Type),
-					"unimplemented ControlPlaneRef for KongService",
-					"KongService", svc, "refType", svc.Spec.ControlPlaneRef.Type,
-				)
-				continue
-
-			default:
-				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
-					"unsupported ControlPlaneRef for KongService",
-					"KongService", svc, "refType", svc.Spec.ControlPlaneRef.Type,
-				)
-				continue
-			}
-		}
-		return ret
+		return objectListToReconcileRequests(l.Items)
 	}
 }

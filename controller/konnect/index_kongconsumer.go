@@ -13,6 +13,8 @@ const (
 	IndexFieldKongConsumerOnKongConsumerGroup = "consumerGroupRef"
 	// IndexFieldKongConsumerOnPlugin is the index field for KongConsumer -> KongPlugin.
 	IndexFieldKongConsumerOnPlugin = "consumerPluginRef"
+	// IndexFieldKongConsumerOnKonnectGatewayControlPlane is the index field for KongConsumer -> KonnectGatewayControlPlane.
+	IndexFieldKongConsumerOnKonnectGatewayControlPlane = "consumerKonnectGatewayControlPlaneRef"
 )
 
 // IndexOptionsForKongConsumer returns required Index options for KongConsumer reconciler.
@@ -27,6 +29,11 @@ func IndexOptionsForKongConsumer() []ReconciliationIndexOption {
 			IndexObject:  &configurationv1.KongConsumer{},
 			IndexField:   IndexFieldKongConsumerOnPlugin,
 			ExtractValue: kongConsumerReferencesKongPluginsViaAnnotation,
+		},
+		{
+			IndexObject:  &configurationv1.KongConsumer{},
+			IndexField:   IndexFieldKongConsumerOnKonnectGatewayControlPlane,
+			ExtractValue: kongConsumerReferencesKonnectGatewayControlPlane,
 		},
 	}
 }
@@ -45,4 +52,13 @@ func kongConsumerReferencesKongPluginsViaAnnotation(object client.Object) []stri
 		return nil
 	}
 	return annotations.ExtractPluginsWithNamespaces(consumer)
+}
+
+func kongConsumerReferencesKonnectGatewayControlPlane(object client.Object) []string {
+	consumer, ok := object.(*configurationv1.KongConsumer)
+	if !ok {
+		return nil
+	}
+
+	return controlPlaneKonnectNamespacedRefAsSlice(consumer)
 }
