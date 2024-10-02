@@ -616,6 +616,10 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 			Object:       &configurationv1alpha1.KongSNI{},
 			IndexOptions: konnect.IndexOptionsForKongSNI(),
 		},
+		{
+			Object:       &configurationv1alpha1.KongKey{},
+			IndexOptions: konnect.IndexOptionsForKongKey(),
+		},
 	}
 
 	for _, t := range types {
