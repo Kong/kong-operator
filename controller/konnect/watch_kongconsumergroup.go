@@ -53,7 +53,9 @@ func KongConsumerGroupReconciliationWatchOptions(
 			return b.Watches(
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueKongConsumerGroupForKonnectGatewayControlPlane(cl),
+					enqueueObjectForKonnectGatewayControlPlane[*configurationv1beta1.KongConsumerGroupList](
+						cl, IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane,
+					),
 				),
 			)
 		},
@@ -132,28 +134,5 @@ func enqueueKongConsumerGroupForKonnectAPIAuthConfiguration(
 			}
 		}
 		return ret
-	}
-}
-
-func enqueueKongConsumerGroupForKonnectGatewayControlPlane(
-	cl client.Client,
-) func(ctx context.Context, obj client.Object) []reconcile.Request {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
-		if !ok {
-			return nil
-		}
-		var l configurationv1beta1.KongConsumerGroupList
-		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(cp.GetNamespace()),
-			client.MatchingFields{
-				IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane: cp.Namespace + "/" + cp.Name,
-			},
-		); err != nil {
-			return nil
-		}
-
-		return objectListToReconcileRequests(l.Items)
 	}
 }

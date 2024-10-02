@@ -9,6 +9,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -118,11 +119,8 @@ func controlPlaneRefIsKonnectNamespacedRef[
 
 // objectListToReconcileRequests converts a list of objects to a list of reconcile requests.
 func objectListToReconcileRequests[
-	T any,
-	TPtr interface {
-		*T
-		client.Object
-	},
+	T constraints.SupportedKonnectEntityType,
+	TPtr constraints.EntityType[T],
 ](
 	items []T,
 	filters ...func(TPtr) bool,
@@ -144,4 +142,40 @@ func objectListToReconcileRequests[
 	}
 
 	return ret
+}
+
+// enqueueObjectForKonnectGatewayControlPlane returns a function that enqueues
+// reconcile requests for objects matching the provided list type, so for example
+// providing KongConsumerList, this function will enqueue reconcile requests for
+// KongConsumers that refer to the KonnectGatewayControlPlane that was provided
+// as the object.
+func enqueueObjectForKonnectGatewayControlPlane[
+	TList interface {
+		client.ObjectList
+		GetItems() []T
+	},
+	T constraints.SupportedKonnectEntityType,
+	TT constraints.EntityType[T],
+](
+	cl client.Client,
+	index string,
+) func(context.Context, client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+		if !ok {
+			return nil
+		}
+		var l TList
+		if err := cl.List(ctx, l,
+			// TODO: change this when cross namespace refs are allowed.
+			client.InNamespace(cp.GetNamespace()),
+			client.MatchingFields{
+				index: cp.GetNamespace() + "/" + cp.GetName(),
+			},
+		); err != nil {
+			return nil
+		}
+
+		return objectListToReconcileRequests[T, TT](l.GetItems())
+	}
 }

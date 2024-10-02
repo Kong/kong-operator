@@ -41,31 +41,12 @@ func KongDataPlaneClientCertificateReconciliationWatchOptions(cl client.Client) 
 			return b.Watches(
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueKongDataPlaneClientCertificateForKonnectControlPlane(cl),
+					enqueueObjectForKonnectGatewayControlPlane[*configurationv1alpha1.KongDataPlaneClientCertificateList](
+						cl, IndexFieldKongDataPlaneClientCertificateOnKonnectGatewayControlPlane,
+					),
 				),
 			)
 		},
-	}
-}
-
-func enqueueKongDataPlaneClientCertificateForKonnectControlPlane(cl client.Client) handler.MapFunc {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		auth, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
-		if !ok {
-			return nil
-		}
-		var l configurationv1alpha1.KongDataPlaneClientCertificateList
-		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(auth.GetNamespace()),
-			client.MatchingFields{
-				IndexFieldKongDataPlaneClientCertificateOnKonnectGatewayControlPlane: client.ObjectKeyFromObject(auth).String(),
-			},
-		); err != nil {
-			return nil
-		}
-
-		return objectListToReconcileRequests(l.Items)
 	}
 }
 
