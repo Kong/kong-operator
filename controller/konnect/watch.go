@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -105,4 +106,28 @@ func controlPlaneIsRefKonnectNamespacedRef[
 		return configurationv1alpha1.ControlPlaneRef{}, false
 	}
 	return cpRef, cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
+}
+
+// objectListToReconcileRequests converts a list of objects to a list of reconcile requests.
+func objectListToReconcileRequests[
+	T any,
+	TPtr interface {
+		*T
+		client.Object
+	},
+](
+	items []T,
+) []ctrl.Request {
+	ret := make([]ctrl.Request, 0, len(items))
+	for _, item := range items {
+		var e TPtr = &item
+		ret = append(ret, ctrl.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: e.GetNamespace(),
+				Name:      e.GetName(),
+			},
+		})
+	}
+
+	return ret
 }

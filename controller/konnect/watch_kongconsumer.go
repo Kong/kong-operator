@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -215,13 +214,7 @@ func enqueueKongConsumerForKongConsumerGroup(
 		}); err != nil {
 			return nil
 		}
-		return lo.Map(l.Items, func(consumer configurationv1.KongConsumer, _ int) reconcile.Request {
-			return reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: consumer.Namespace,
-					Name:      consumer.Name,
-				},
-			}
-		})
+
+		return objectListToReconcileRequests(l.Items)
 	}
 }

@@ -55,7 +55,7 @@ func kongSNIRefersToKonnectGatewayControlPlane(
 			return true
 		}
 
-		return cert.Spec.ControlPlaneRef != nil && cert.Spec.ControlPlaneRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
+		return objHasControlPlaneRefKonnectNamespacedRef(&cert)
 	}
 }
 
@@ -82,15 +82,6 @@ func enqueueKongSNIForKongCertificate(
 			return nil
 		}
 
-		ret := make([]reconcile.Request, 0, len(sniList.Items))
-		for _, sni := range sniList.Items {
-			ret = append(ret, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: sni.Namespace,
-					Name:      sni.Name,
-				},
-			})
-		}
-		return ret
+		return objectListToReconcileRequests(sniList.Items)
 	}
 }

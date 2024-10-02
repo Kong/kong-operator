@@ -205,16 +205,6 @@ func kongCredentialBasicAuthForKongConsumer(
 			return nil
 		}
 
-		var ret []reconcile.Request
-		for _, cred := range l.Items {
-			ret = append(ret, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: cred.Namespace,
-					Name:      cred.Name,
-				},
-			},
-			)
-		}
-		return ret
+		return objectListToReconcileRequests(l.Items)
 	}
 }
