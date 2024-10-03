@@ -57,8 +57,8 @@ func (relations *ForeignRelations) GroupByControlPlane(
 		svcRef := route.Spec.ServiceRef
 		if svcRef == nil || svcRef.NamespacedRef == nil {
 
-			cpRef := route.Spec.ControlPlaneRef
-			if cpRef == nil || cpRef.KonnectNamespacedRef == nil {
+			cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&route)
+			if !ok {
 				continue
 			}
 

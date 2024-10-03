@@ -769,7 +769,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				}
 				assert.Len(t, l.Items, 1)
 			}, waitTime, tickTime,
-			"KongPluginBinding bound to Consumer and Service doesn't exist but it should",
+			"KongPluginBinding bound to ConsumerGroup and Service doesn't exist but it should",
 		)
 
 		assert.EventuallyWithT(t,
