@@ -89,6 +89,10 @@ func TestKonnectFuncs(t *testing.T) {
 			typeName: "KongCredentialHMAC",
 			object:   &configurationv1alpha1.KongCredentialHMAC{},
 		},
+		{
+			typeName: "KongDataPlaneClientCertificate",
+			object:   &configurationv1alpha1.KongDataPlaneClientCertificate{},
+		},
 	}
 
 	for _, tc := range testcases {

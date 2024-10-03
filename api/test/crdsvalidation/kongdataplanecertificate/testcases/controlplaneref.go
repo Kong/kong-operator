@@ -12,16 +12,16 @@ var cpRef = testCasesGroup{
 	TestCases: []testCase{
 		{
 			Name: "konnectNamespacedRef reference is valid",
-			KongDataplaneCertificate: configurationv1alpha1.KongDataplaneCertificate{
+			KongDataPlaneClientCertificate: configurationv1alpha1.KongDataPlaneClientCertificate{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.KongDataplaneCertificateSpec{
+				Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 					ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
 						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 							Name: "test-konnect-control-plane",
 						},
 					},
-					KongDataplaneCertificateAPISpec: configurationv1alpha1.KongDataplaneCertificateAPISpec{
+					KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 						Cert: "cert",
 					},
 				},
@@ -29,13 +29,13 @@ var cpRef = testCasesGroup{
 		},
 		{
 			Name: "not providing konnectNamespacedRef when type is konnectNamespacedRef yields an error",
-			KongDataplaneCertificate: configurationv1alpha1.KongDataplaneCertificate{
+			KongDataPlaneClientCertificate: configurationv1alpha1.KongDataPlaneClientCertificate{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.KongDataplaneCertificateSpec{
+				Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 					ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
 						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 					},
-					KongDataplaneCertificateAPISpec: configurationv1alpha1.KongDataplaneCertificateAPISpec{
+					KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 						Cert: "cert",
 					},
 				},
@@ -44,13 +44,13 @@ var cpRef = testCasesGroup{
 		},
 		{
 			Name: "not providing konnectID when type is konnectID yields an error",
-			KongDataplaneCertificate: configurationv1alpha1.KongDataplaneCertificate{
+			KongDataPlaneClientCertificate: configurationv1alpha1.KongDataPlaneClientCertificate{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.KongDataplaneCertificateSpec{
+				Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 					ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
 						Type: configurationv1alpha1.ControlPlaneRefKonnectID,
 					},
-					KongDataplaneCertificateAPISpec: configurationv1alpha1.KongDataplaneCertificateAPISpec{
+					KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 						Cert: "cert",
 					},
 				},
@@ -59,21 +59,21 @@ var cpRef = testCasesGroup{
 		},
 		{
 			Name: "konnectNamespacedRef reference name cannot be changed when an entity is Programmed",
-			KongDataplaneCertificate: configurationv1alpha1.KongDataplaneCertificate{
+			KongDataPlaneClientCertificate: configurationv1alpha1.KongDataPlaneClientCertificate{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.KongDataplaneCertificateSpec{
+				Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 					ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
 						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 							Name: "test-konnect-control-plane",
 						},
 					},
-					KongDataplaneCertificateAPISpec: configurationv1alpha1.KongDataplaneCertificateAPISpec{
+					KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 						Cert: "cert",
 					},
 				},
 			},
-			KongDataplaneCertificateStatus: &configurationv1alpha1.KongDataplaneCertificateStatus{
+			KongDataPlaneClientCertificateStatus: &configurationv1alpha1.KongDataPlaneClientCertificateStatus{
 				Conditions: []metav1.Condition{
 					{
 						Type:               "Programmed",
@@ -83,28 +83,28 @@ var cpRef = testCasesGroup{
 					},
 				},
 			},
-			Update: func(ks *configurationv1alpha1.KongDataplaneCertificate) {
+			Update: func(ks *configurationv1alpha1.KongDataPlaneClientCertificate) {
 				ks.Spec.ControlPlaneRef.KonnectNamespacedRef.Name = "new-konnect-control-plane"
 			},
 			ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
 		},
 		{
 			Name: "konnectNamespacedRef reference type cannot be changed when an entity is Programmed",
-			KongDataplaneCertificate: configurationv1alpha1.KongDataplaneCertificate{
+			KongDataPlaneClientCertificate: configurationv1alpha1.KongDataPlaneClientCertificate{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.KongDataplaneCertificateSpec{
+				Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 					ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
 						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 							Name: "test-konnect-control-plane",
 						},
 					},
-					KongDataplaneCertificateAPISpec: configurationv1alpha1.KongDataplaneCertificateAPISpec{
+					KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 						Cert: "cert",
 					},
 				},
 			},
-			KongDataplaneCertificateStatus: &configurationv1alpha1.KongDataplaneCertificateStatus{
+			KongDataPlaneClientCertificateStatus: &configurationv1alpha1.KongDataPlaneClientCertificateStatus{
 				Conditions: []metav1.Condition{
 					{
 						Type:               "Programmed",
@@ -114,16 +114,16 @@ var cpRef = testCasesGroup{
 					},
 				},
 			},
-			Update: func(ks *configurationv1alpha1.KongDataplaneCertificate) {
+			Update: func(ks *configurationv1alpha1.KongDataPlaneClientCertificate) {
 				ks.Spec.ControlPlaneRef.Type = configurationv1alpha1.ControlPlaneRefKonnectID
 			},
 			ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
 		},
 		{
 			Name: "konnectNamespaced reference cannot set namespace as it's not supported yet",
-			KongDataplaneCertificate: configurationv1alpha1.KongDataplaneCertificate{
+			KongDataPlaneClientCertificate: configurationv1alpha1.KongDataPlaneClientCertificate{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.KongDataplaneCertificateSpec{
+				Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 					ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
 						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
@@ -131,7 +131,7 @@ var cpRef = testCasesGroup{
 							Namespace: "default",
 						},
 					},
-					KongDataplaneCertificateAPISpec: configurationv1alpha1.KongDataplaneCertificateAPISpec{
+					KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 						Cert: "cert",
 					},
 				},

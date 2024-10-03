@@ -6,14 +6,14 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
-// testCase is a test case related to KongDataplaneCertificate validation.
+// testCase is a test case related to KongDataPlaneClientCertificate validation.
 type testCase struct {
-	Name                           string
-	KongDataplaneCertificate       configurationv1alpha1.KongDataplaneCertificate
-	KongDataplaneCertificateStatus *configurationv1alpha1.KongDataplaneCertificateStatus
-	Update                         func(*configurationv1alpha1.KongDataplaneCertificate)
-	ExpectedErrorMessage           *string
-	ExpectedUpdateErrorMessage     *string
+	Name                                 string
+	KongDataPlaneClientCertificate       configurationv1alpha1.KongDataPlaneClientCertificate
+	KongDataPlaneClientCertificateStatus *configurationv1alpha1.KongDataPlaneClientCertificateStatus
+	Update                               func(*configurationv1alpha1.KongDataPlaneClientCertificate)
+	ExpectedErrorMessage                 *string
+	ExpectedUpdateErrorMessage           *string
 }
 
 type testCasesGroup struct {
@@ -21,7 +21,7 @@ type testCasesGroup struct {
 	TestCases []testCase
 }
 
-// TestCases is a collection of all test cases groups related to KongDataplaneCertificate validation.
+// TestCases is a collection of all test cases groups related to KongDataPlaneClientCertificate validation.
 var TestCases = []testCasesGroup{}
 
 func init() {

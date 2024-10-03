@@ -1022,3 +1022,63 @@ func (obj *KongSNI) SetControlPlaneID(id string) {
 	}
 	obj.Status.Konnect.ControlPlaneID = id
 }
+
+func (obj *KongDataPlaneClientCertificate) initKonnectStatus() {
+	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
+}
+
+// GetKonnectStatus returns the Konnect status contained in the KongDataPlaneClientCertificate status.
+func (obj *KongDataPlaneClientCertificate) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
+	if obj.Status.Konnect == nil {
+		return nil
+	}
+	return &obj.Status.Konnect.KonnectEntityStatus
+}
+
+// GetKonnectID returns the Konnect ID in the KongDataPlaneClientCertificate status.
+func (obj *KongDataPlaneClientCertificate) GetKonnectID() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.ID
+}
+
+// SetKonnectID sets the Konnect ID in the KongDataPlaneClientCertificate status.
+func (obj *KongDataPlaneClientCertificate) SetKonnectID(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ID = id
+}
+
+
+// GetTypeName returns the KongDataPlaneClientCertificate Kind name
+func (obj KongDataPlaneClientCertificate) GetTypeName() string {
+	return "KongDataPlaneClientCertificate"
+}
+
+// GetConditions returns the Status Conditions
+func (obj *KongDataPlaneClientCertificate) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions
+func (obj *KongDataPlaneClientCertificate) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
+}
+
+// GetControlPlaneID returns the ControlPlane ID in the KongDataPlaneClientCertificate status.
+func (obj *KongDataPlaneClientCertificate) GetControlPlaneID() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.ControlPlaneID
+}
+
+// SetControlPlaneID sets the ControlPlane ID in the KongDataPlaneClientCertificate status.
+func (obj *KongDataPlaneClientCertificate) SetControlPlaneID(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ControlPlaneID = id
+}

@@ -14,7 +14,7 @@ import (
 	"github.com/kong/kubernetes-configuration/test/crdsvalidation/kongdataplanecertificate/testcases"
 )
 
-func TestKongDataplaneCertificate(t *testing.T) {
+func TestKongDataPlaneClientCertificate(t *testing.T) {
 	ctx := context.Background()
 	cfg, err := config.GetConfig()
 	require.NoError(t, err, "error loading Kubernetes config")
@@ -25,8 +25,8 @@ func TestKongDataplaneCertificate(t *testing.T) {
 		t.Run(tcsGroup.Name, func(t *testing.T) {
 			for _, tc := range tcsGroup.TestCases {
 				t.Run(tc.Name, func(t *testing.T) {
-					cl := cl.KongDataplaneCertificates(tc.KongDataplaneCertificate.Namespace)
-					entity, err := cl.Create(ctx, &tc.KongDataplaneCertificate, metav1.CreateOptions{})
+					cl := cl.KongDataPlaneClientCertificates(tc.KongDataPlaneClientCertificate.Namespace)
+					entity, err := cl.Create(ctx, &tc.KongDataPlaneClientCertificate, metav1.CreateOptions{})
 					if err == nil {
 						t.Cleanup(func() {
 							assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, entity.Name, metav1.DeleteOptions{})))
@@ -37,8 +37,8 @@ func TestKongDataplaneCertificate(t *testing.T) {
 						assert.NoError(t, err)
 
 						// If the status has to be updated, update it.
-						if tc.KongDataplaneCertificateStatus != nil {
-							entity.Status = *tc.KongDataplaneCertificateStatus
+						if tc.KongDataPlaneClientCertificateStatus != nil {
+							entity.Status = *tc.KongDataPlaneClientCertificateStatus
 							entity, err = cl.UpdateStatus(ctx, entity, metav1.UpdateOptions{})
 							assert.NoError(t, err)
 						}

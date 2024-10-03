@@ -22,7 +22,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// KongDataplaneCertificate is the schema for KongDataplaneCertificate API which defines a KongDataplaneCertificate entity.
+// KongDataPlaneClientCertificate is the schema for KongDataPlaneClientCertificate API which defines a KongDataPlaneClientCertificate entity.
 //
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -36,38 +36,38 @@ import (
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.cert == self.spec.cert", message="spec.cert is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.controlPlaneRef) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)", message="spec.controlPlaneRef cannot specify namespace for namespaced resource - it's not supported yet"
 // +apireference:kgo:include
-type KongDataplaneCertificate struct {
+type KongDataPlaneClientCertificate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec KongDataplaneCertificateSpec `json:"spec"`
+	Spec KongDataPlaneClientCertificateSpec `json:"spec"`
 
 	// +kubebuilder:default={conditions: {{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}}
-	Status KongDataplaneCertificateStatus `json:"status,omitempty"`
+	Status KongDataPlaneClientCertificateStatus `json:"status,omitempty"`
 }
 
-// KongDataplaneCertificateSpec defines the spec for a KongDataplaneCertificate.
+// KongDataPlaneClientCertificateSpec defines the spec for a KongDataPlaneClientCertificate.
 // +apireference:kgo:include
-type KongDataplaneCertificateSpec struct {
-	// ControlPlaneRef is a reference to a Konnect ControlPlane this KongDataplaneCertificate is associated with.
+type KongDataPlaneClientCertificateSpec struct {
+	// ControlPlaneRef is a reference to a Konnect ControlPlane this KongDataPlaneClientCertificate is associated with.
 	// +optional
 	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef,omitempty"`
 
-	// KongDataplaneCertificateAPISpec are the attributes of the KongDataplaneCertificate itself.
-	KongDataplaneCertificateAPISpec `json:",inline"`
+	// KongDataPlaneClientCertificateAPISpec are the attributes of the KongDataPlaneClientCertificate itself.
+	KongDataPlaneClientCertificateAPISpec `json:",inline"`
 }
 
-// KongDataplaneCertificateAPISpec defines the attributes of a Kong DP certificate.
+// KongDataPlaneClientCertificateAPISpec defines the attributes of a Kong DP certificate.
 // +apireference:kgo:include
-type KongDataplaneCertificateAPISpec struct {
+type KongDataPlaneClientCertificateAPISpec struct {
 	// Cert is the certificate in PEM format. Once the certificate gets programmed this field becomes immutable.
 	// +kubebuilder:validation:MinLength=1
 	Cert string `json:"cert"`
 }
 
-// KongDataplaneCertificateStatus defines the status for a KongDataplaneCertificate.
+// KongDataPlaneClientCertificateStatus defines the status for a KongDataPlaneClientCertificate.
 // +apireference:kgo:include
-type KongDataplaneCertificateStatus struct {
+type KongDataPlaneClientCertificateStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
 	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
@@ -80,15 +80,15 @@ type KongDataplaneCertificateStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// KongDataplaneCertificateList contains a list of Kong Keys.
+// KongDataPlaneClientCertificateList contains a list of KongDataPlaneClientCertificate.
 // +kubebuilder:object:root=true
 // +apireference:kgo:include
-type KongDataplaneCertificateList struct {
+type KongDataPlaneClientCertificateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongDataplaneCertificate `json:"items"`
+	Items           []KongDataPlaneClientCertificate `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&KongDataplaneCertificate{}, &KongDataplaneCertificateList{})
+	SchemeBuilder.Register(&KongDataPlaneClientCertificate{}, &KongDataPlaneClientCertificateList{})
 }

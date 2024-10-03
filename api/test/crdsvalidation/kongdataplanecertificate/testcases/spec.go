@@ -11,11 +11,11 @@ var spec = testCasesGroup{
 	Name: "spec",
 	TestCases: []testCase{
 		{
-			Name: "valid KongDataplaneCertificate",
-			KongDataplaneCertificate: configurationv1alpha1.KongDataplaneCertificate{
+			Name: "valid KongDataPlaneClientCertificate",
+			KongDataPlaneClientCertificate: configurationv1alpha1.KongDataPlaneClientCertificate{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.KongDataplaneCertificateSpec{
-					KongDataplaneCertificateAPISpec: configurationv1alpha1.KongDataplaneCertificateAPISpec{
+				Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
+					KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 						Cert: "cert",
 					},
 				},
@@ -23,22 +23,22 @@ var spec = testCasesGroup{
 		},
 		{
 			Name: "cert is required",
-			KongDataplaneCertificate: configurationv1alpha1.KongDataplaneCertificate{
+			KongDataPlaneClientCertificate: configurationv1alpha1.KongDataPlaneClientCertificate{
 				ObjectMeta: commonObjectMeta,
 			},
 			ExpectedErrorMessage: lo.ToPtr("spec.cert in body should be at least 1 chars long"),
 		},
 		{
 			Name: "cert can be altered before programmed",
-			KongDataplaneCertificate: configurationv1alpha1.KongDataplaneCertificate{
+			KongDataPlaneClientCertificate: configurationv1alpha1.KongDataPlaneClientCertificate{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.KongDataplaneCertificateSpec{
-					KongDataplaneCertificateAPISpec: configurationv1alpha1.KongDataplaneCertificateAPISpec{
+				Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
+					KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 						Cert: "cert",
 					},
 				},
 			},
-			KongDataplaneCertificateStatus: &configurationv1alpha1.KongDataplaneCertificateStatus{
+			KongDataPlaneClientCertificateStatus: &configurationv1alpha1.KongDataPlaneClientCertificateStatus{
 				Conditions: []metav1.Condition{
 					{
 						Type:               "Programmed",
@@ -48,21 +48,21 @@ var spec = testCasesGroup{
 					},
 				},
 			},
-			Update: func(k *configurationv1alpha1.KongDataplaneCertificate) {
+			Update: func(k *configurationv1alpha1.KongDataPlaneClientCertificate) {
 				k.Spec.Cert = "cert2"
 			},
 		},
 		{
 			Name: "cert becomes immutable after programmed",
-			KongDataplaneCertificate: configurationv1alpha1.KongDataplaneCertificate{
+			KongDataPlaneClientCertificate: configurationv1alpha1.KongDataPlaneClientCertificate{
 				ObjectMeta: commonObjectMeta,
-				Spec: configurationv1alpha1.KongDataplaneCertificateSpec{
-					KongDataplaneCertificateAPISpec: configurationv1alpha1.KongDataplaneCertificateAPISpec{
+				Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
+					KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 						Cert: "cert",
 					},
 				},
 			},
-			KongDataplaneCertificateStatus: &configurationv1alpha1.KongDataplaneCertificateStatus{
+			KongDataPlaneClientCertificateStatus: &configurationv1alpha1.KongDataPlaneClientCertificateStatus{
 				Conditions: []metav1.Condition{
 					{
 						Type:               "Programmed",
@@ -72,7 +72,7 @@ var spec = testCasesGroup{
 					},
 				},
 			},
-			Update: func(k *configurationv1alpha1.KongDataplaneCertificate) {
+			Update: func(k *configurationv1alpha1.KongDataPlaneClientCertificate) {
 				k.Spec.Cert = "cert2"
 			},
 			ExpectedUpdateErrorMessage: lo.ToPtr("spec.cert is immutable when an entity is already Programmed"),
