@@ -327,8 +327,8 @@ func kongConsumerToSDKConsumerInput(
 	consumer *configurationv1.KongConsumer,
 ) sdkkonnectcomp.ConsumerInput {
 	return sdkkonnectcomp.ConsumerInput{
-		CustomID: &consumer.CustomID,
+		CustomID: lo.ToPtr(consumer.CustomID),
 		Tags:     GenerateTagsForObject(consumer),
-		Username: &consumer.Username,
+		Username: lo.ToPtr(consumer.Username),
 	}
 }
