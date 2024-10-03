@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -19,6 +20,8 @@ func TestKonnectFuncs(t *testing.T) {
 		SetControlPlaneID(string)
 		GetControlPlaneID() string
 		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
+		GetConditions() []metav1.Condition
+		SetConditions([]metav1.Condition)
 	}
 
 	testcases := []struct {
@@ -92,6 +95,114 @@ func TestKonnectFuncs(t *testing.T) {
 			require.Equal(t, "", obj.GetControlPlaneID())
 			obj.SetControlPlaneID("123")
 			require.Equal(t, "123", obj.GetControlPlaneID())
+
+			require.Empty(t, obj.GetConditions())
+			obj.SetConditions([]metav1.Condition{
+				{
+					Type:   "Ready",
+					Status: metav1.ConditionTrue,
+				},
+			})
+			require.Equal(t,
+				[]metav1.Condition{
+					{
+						Type:   "Ready",
+						Status: metav1.ConditionTrue,
+					},
+				},
+				obj.GetConditions(),
+			)
+		})
+	}
+}
+
+func TestKonnectFuncsNoKonnectStatus(t *testing.T) {
+	type KonnectEntity interface {
+		client.Object
+		GetTypeName() string
+		GetConditions() []metav1.Condition
+		SetConditions([]metav1.Condition)
+	}
+
+	testcases := []struct {
+		object   KonnectEntity
+		typeName string
+	}{
+		{
+			typeName: "KonnectAPIAuthConfiguration",
+			object:   &konnectv1alpha1.KonnectAPIAuthConfiguration{},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.object.GetTypeName(), func(t *testing.T) {
+			obj := tc.object
+
+			require.Equal(t, obj.GetTypeName(), tc.typeName)
+			require.Empty(t, obj.GetConditions())
+			obj.SetConditions([]metav1.Condition{
+				{
+					Type:   "Ready",
+					Status: metav1.ConditionTrue,
+				},
+			})
+			require.Equal(t,
+				[]metav1.Condition{
+					{
+						Type:   "Ready",
+						Status: metav1.ConditionTrue,
+					},
+				},
+				obj.GetConditions(),
+			)
+		})
+	}
+}
+
+func TestKonnectFuncsStandAlone(t *testing.T) {
+	type KonnectEntity interface {
+		client.Object
+		GetTypeName() string
+		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
+		GetConditions() []metav1.Condition
+		SetConditions([]metav1.Condition)
+	}
+
+	testcases := []struct {
+		object   KonnectEntity
+		typeName string
+	}{
+		{
+			typeName: "KonnectGatewayControlPlane",
+			object:   &konnectv1alpha1.KonnectGatewayControlPlane{},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.object.GetTypeName(), func(t *testing.T) {
+			obj := tc.object
+
+			require.Equal(t, obj.GetTypeName(), tc.typeName)
+			require.Empty(t, obj.GetKonnectStatus())
+			require.Empty(t, obj.GetKonnectStatus().GetKonnectID())
+			require.Empty(t, obj.GetKonnectStatus().GetOrgID())
+			require.Empty(t, obj.GetKonnectStatus().GetServerURL())
+			require.Empty(t, obj.GetConditions())
+			obj.SetConditions([]metav1.Condition{
+				{
+					Type:   "Ready",
+					Status: metav1.ConditionTrue,
+				},
+			})
+			require.Equal(t,
+				[]metav1.Condition{
+					{
+						Type:   "Ready",
+						Status: metav1.ConditionTrue,
+					},
+				},
+				obj.GetConditions(),
+			)
 		})
 	}
 }

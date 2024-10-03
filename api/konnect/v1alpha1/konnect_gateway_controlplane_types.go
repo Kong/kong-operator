@@ -56,16 +56,6 @@ type KonnectGatewayControlPlaneStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// GetKonnectStatus returns the Konnect Status of the KonnectGatewayControlPlane.
-func (c *KonnectGatewayControlPlane) GetKonnectStatus() *KonnectEntityStatus {
-	return &c.Status.KonnectEntityStatus
-}
-
-// GetTypeName returns the KonnectGatewayControlPlane type name.
-func (c KonnectGatewayControlPlane) GetTypeName() string {
-	return "KonnectGatewayControlPlane"
-}
-
 // GetKonnectLabels gets the Konnect Labels from object's spec.
 func (c *KonnectGatewayControlPlane) GetKonnectLabels() map[string]string {
 	return c.Spec.Labels
@@ -76,23 +66,9 @@ func (c *KonnectGatewayControlPlane) SetKonnectLabels(labels map[string]string) 
 	c.Spec.Labels = labels
 }
 
-func (c *KonnectGatewayControlPlane) SetKonnectID(id string) {
-	c.Status.ID = id
-}
-
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
 func (c *KonnectGatewayControlPlane) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigurationRef {
 	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
-}
-
-// GetConditions returns the Status Conditions
-func (c *KonnectGatewayControlPlane) GetConditions() []metav1.Condition {
-	return c.Status.Conditions
-}
-
-// SetConditions sets the Status Conditions
-func (c *KonnectGatewayControlPlane) SetConditions(conditions []metav1.Condition) {
-	c.Status.Conditions = conditions
 }
 
 // +kubebuilder:object:root=true

@@ -78,16 +78,6 @@ type KonnectAPIAuthConfigurationStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// GetConditions returns the Status Conditions
-func (in *KonnectAPIAuthConfiguration) GetConditions() []metav1.Condition {
-	return in.Status.Conditions
-}
-
-// SetConditions sets the Status Conditions
-func (in *KonnectAPIAuthConfiguration) SetConditions(conditions []metav1.Condition) {
-	in.Status.Conditions = conditions
-}
-
 type KonnectAPIAuthConfigurationRef struct {
 	// Name is the name of the KonnectAPIAuthConfiguration resource.
 	// +kubebuilder:validation:Required
