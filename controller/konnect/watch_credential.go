@@ -23,8 +23,8 @@ func kongCredentialRefersToKonnectGatewayControlPlane[
 		*configurationv1alpha1.KongCredentialACL |
 			*configurationv1alpha1.KongCredentialAPIKey |
 			*configurationv1alpha1.KongCredentialBasicAuth |
-			*configurationv1alpha1.KongCredentialJWT
-		// TODO add support for HMAC Auth https://github.com/Kong/gateway-operator/issues/621
+			*configurationv1alpha1.KongCredentialJWT |
+			*configurationv1alpha1.KongCredentialHMAC
 
 		GetTypeName() string
 		GetNamespace() string
@@ -50,6 +50,8 @@ func kongCredentialRefersToKonnectGatewayControlPlane[
 		case *configurationv1alpha1.KongCredentialBasicAuth:
 			consumerRefName = credential.Spec.ConsumerRef.Name
 		case *configurationv1alpha1.KongCredentialJWT:
+			consumerRefName = credential.Spec.ConsumerRef.Name
+		case *configurationv1alpha1.KongCredentialHMAC:
 			consumerRefName = credential.Spec.ConsumerRef.Name
 		}
 

@@ -25,6 +25,7 @@ packages:
       KongCredentialACLSDK:
       KongCredentialBasicAuthSDK:
       KongCredentialJWTSDK:
+      KongCredentialHMACSDK:
       CACertificatesSDK:
       CertificatesSDK:
       KeysSDK:
