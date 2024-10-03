@@ -26,6 +26,7 @@ type SDKWrapper interface {
 	GetKeysSDK() KeysSDK
 	GetKeySetsSDK() KeySetsSDK
 	GetSNIsSDK() SNIsSDK
+	GetDataPlaneCertificatesSDK() DataPlaneClientCertificatesSDK
 }
 
 type sdkWrapper struct {
@@ -127,6 +128,11 @@ func (w sdkWrapper) GetKeysSDK() KeysSDK {
 // GetKeySetsSDK returns the SDK to operate key sets.
 func (w sdkWrapper) GetKeySetsSDK() KeySetsSDK {
 	return w.sdk.KeySets
+}
+
+// GetDataPlaneCertificatesSDK returns the SDK to operate data plane certificates.
+func (w sdkWrapper) GetDataPlaneCertificatesSDK() DataPlaneClientCertificatesSDK {
+	return w.sdk.DPCertificates
 }
 
 // SDKToken is a token used to authenticate with the Konnect SDK.

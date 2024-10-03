@@ -30,7 +30,8 @@ type SupportedKonnectEntityType interface {
 		configurationv1alpha1.KongVault |
 		configurationv1alpha1.KongKey |
 		configurationv1alpha1.KongKeySet |
-		configurationv1alpha1.KongSNI
+		configurationv1alpha1.KongSNI |
+		configurationv1alpha1.KongDataPlaneClientCertificate
 	// TODO: add other types
 
 	GetTypeName() string

@@ -990,6 +990,11 @@ func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 			return none
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
+	case *configurationv1alpha1.KongDataPlaneClientCertificate:
+		if e.Spec.ControlPlaneRef == nil {
+			return none
+		}
+		return mo.Some(*e.Spec.ControlPlaneRef)
 	default:
 		return none
 	}

@@ -68,6 +68,8 @@
   [#646](https://github.com/Kong/gateway-operator/pull/646)
 - Add `KongKeySet` reconciler for Konnect KeySets.
   [#657](https://github.com/Kong/gateway-operator/pull/657)
+- Add `KongDataPlaneClientCertificate` reconciler for Konnect DataPlaneClientCertificates.
+  [#694](https://github.com/Kong/gateway-operator/pull/694)
 - The `DataPlaneKonnectExtension` CRD has been introduced. Such a CRD can be attached
   to a `DataPlane` via the extensions field to have a konnect-flavored `DataPlane`.
   [#453](https://github.com/Kong/gateway-operator/pull/453), [#578](https://github.com/Kong/gateway-operator/pull/578)
