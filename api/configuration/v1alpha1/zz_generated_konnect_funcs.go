@@ -368,6 +368,66 @@ func (obj *KongCredentialACL) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+func (obj *KongCredentialHMAC) initKonnectStatus() {
+	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
+}
+
+// GetKonnectStatus returns the Konnect status contained in the KongCredentialHMAC status.
+func (obj *KongCredentialHMAC) GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus {
+	if obj.Status.Konnect == nil {
+		return nil
+	}
+	return &obj.Status.Konnect.KonnectEntityStatus
+}
+
+// GetKonnectID returns the Konnect ID in the KongCredentialHMAC status.
+func (obj *KongCredentialHMAC) GetKonnectID() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.ID
+}
+
+// SetKonnectID sets the Konnect ID in the KongCredentialHMAC status.
+func (obj *KongCredentialHMAC) SetKonnectID(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ID = id
+}
+
+
+// GetTypeName returns the KongCredentialHMAC Kind name
+func (obj KongCredentialHMAC) GetTypeName() string {
+	return "KongCredentialHMAC"
+}
+
+// GetConditions returns the Status Conditions
+func (obj *KongCredentialHMAC) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions
+func (obj *KongCredentialHMAC) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
+}
+
+// GetControlPlaneID returns the ControlPlane ID in the KongCredentialHMAC status.
+func (obj *KongCredentialHMAC) GetControlPlaneID() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.ControlPlaneID
+}
+
+// SetControlPlaneID sets the ControlPlane ID in the KongCredentialHMAC status.
+func (obj *KongCredentialHMAC) SetControlPlaneID(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ControlPlaneID = id
+}
+
 func (obj *KongCACertificate) initKonnectStatus() {
 	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
 }
