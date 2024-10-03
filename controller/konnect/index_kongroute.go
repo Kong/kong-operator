@@ -51,10 +51,8 @@ func kongRouteRefersToKongService(object client.Object) []string {
 		return nil
 	}
 
-	namespace := route.Namespace
-	if svcRef.NamespacedRef.Namespace != "" {
-		namespace = svcRef.NamespacedRef.Namespace
-	}
+	// NOTE: We currently do not allow cross namespace references between KongRoute and KongService.
+	// https://github.com/Kong/kubernetes-configuration/issues/106 tracks the implementation.
 
-	return []string{namespace + "/" + svcRef.NamespacedRef.Name}
+	return []string{route.Namespace + "/" + svcRef.NamespacedRef.Name}
 }
