@@ -16,10 +16,13 @@ type ServiceRef struct {
 	NamespacedRef *NamespacedServiceRef `json:"namespacedRef,omitempty"`
 }
 
+// NamespacedServiceRef is a namespaced reference to a KongService.
+//
+// NOTE: currently cross namespace references are not supported.
 type NamespacedServiceRef struct {
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
 
-	// +kubebuilder:validation:Optional
-	Namespace string `json:"namespace,omitempty"`
+	// TODO: handle cross namespace references.
+	// https://github.com/Kong/kubernetes-configuration/issues/106
 }
