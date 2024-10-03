@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
-	"github.com/kong/gateway-operator/modules/manager/logging"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
@@ -98,52 +97,21 @@ func enqueueKongRouteForKongService(
 
 		// If the KongService does not refer to a KonnectGatewayControlPlane,
 		// we do not need to enqueue any KongRoutes bound to this KongService.
-		cpRef := kongSvc.Spec.ControlPlaneRef
-		if cpRef == nil || cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
+		if !objHasControlPlaneRefKonnectNamespacedRef(kongSvc) {
 			return nil
 		}
 
 		var l configurationv1alpha1.KongRouteList
-		if err := cl.List(ctx, &l, &client.ListOptions{
+		if err := cl.List(ctx, &l,
 			// TODO: change this when cross namespace refs are allowed.
-			Namespace: kongSvc.GetNamespace(),
-		}); err != nil {
+			client.InNamespace(kongSvc.GetNamespace()),
+			client.MatchingFields{
+				IndexFieldKongRouteOnReferencedKongService: kongSvc.Namespace + "/" + kongSvc.Name,
+			},
+		); err != nil {
 			return nil
 		}
 
-		var ret []reconcile.Request
-		for _, route := range l.Items {
-			svcRef, ok := getServiceRef(&route).Get()
-			if !ok {
-				continue
-			}
-
-			switch svcRef.Type {
-			case configurationv1alpha1.ServiceRefNamespacedRef:
-				if svcRef.NamespacedRef == nil {
-					continue
-				}
-
-				// TODO: change this when cross namespace refs are allowed.
-				if svcRef.NamespacedRef.Name != kongSvc.GetName() {
-					continue
-				}
-
-				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: route.Namespace,
-						Name:      route.Name,
-					},
-				})
-
-			default:
-				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
-					"unsupported ServiceRef for KongRoute",
-					"KongRoute", route, "refType", svcRef.Type,
-				)
-				continue
-			}
-		}
-		return ret
+		return objectListToReconcileRequests(l.Items)
 	}
 }

@@ -194,49 +194,17 @@ func enqueueKongPluginBindingForKonnectGatewayControlPlane(
 			return nil
 		}
 		var l configurationv1alpha1.KongPluginBindingList
-		if err := cl.List(ctx, &l, &client.ListOptions{
+		if err := cl.List(ctx, &l,
 			// TODO: change this when cross namespace refs are allowed.
-			Namespace: cp.GetNamespace(),
-		}); err != nil {
+			client.InNamespace(cp.GetNamespace()),
+			client.MatchingFields{
+				IndexFieldKongPluginBindingKonnectGatewayControlPlane: cp.Namespace + "/" + cp.Name,
+			},
+		); err != nil {
 			return nil
 		}
 
-		var ret []reconcile.Request
-		for _, pb := range l.Items {
-			if pb.Spec.ControlPlaneRef == nil {
-				continue
-			}
-			switch pb.Spec.ControlPlaneRef.Type {
-			case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-				// TODO: change this when cross namespace refs are allowed.
-				if pb.Spec.ControlPlaneRef.KonnectNamespacedRef.Name != cp.Name {
-					continue
-				}
-
-				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: pb.Namespace,
-						Name:      pb.Name,
-					},
-				})
-
-			case configurationv1alpha1.ControlPlaneRefKonnectID:
-				ctrllog.FromContext(ctx).Error(
-					fmt.Errorf("unimplemented ControlPlaneRef type %q", pb.Spec.ControlPlaneRef.Type),
-					"unimplemented ControlPlaneRef for KongPluginBinding",
-					"KongPluginBinding", pb, "refType", pb.Spec.ControlPlaneRef.Type,
-				)
-				continue
-
-			default:
-				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
-					"unsupported ControlPlaneRef for KongPluginBinding",
-					"KongPluginBinding", pb, "refType", pb.Spec.ControlPlaneRef.Type,
-				)
-				continue
-			}
-		}
-		return ret
+		return objectListToReconcileRequests(l.Items)
 	}
 }
 
