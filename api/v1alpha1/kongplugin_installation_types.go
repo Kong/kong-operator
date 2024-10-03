@@ -25,17 +25,18 @@ func init() {
 	SchemeBuilder.Register(&KongPluginInstallation{}, &KongPluginInstallationList{})
 }
 
-//+genclient
-//+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:resource:shortName=kpi,categories=kong;all
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="Accepted",description="The Resource is accepted",type=string,JSONPath=`.status.conditions[?(@.type=='Accepted')].status`
-
 // KongPluginInstallation allows using a custom Kong Plugin distributed as a container image available in a registry.
 // Such a plugin can be associated with GatewayConfiguration or DataPlane to be available for particular Kong Gateway
 // and configured with KongPlugin CRD.
+//
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=kpi,categories=kong;all
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Accepted",description="The Resource is accepted",type=string,JSONPath=`.status.conditions[?(@.type=='Accepted')].status`
+// +apireference:kgo:include
 type KongPluginInstallation struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -44,9 +45,10 @@ type KongPluginInstallation struct {
 	Status KongPluginInstallationStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // KongPluginInstallationList contains a list of KongPluginInstallation.
+// +apireference:kgo:include
 type KongPluginInstallationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -54,34 +56,36 @@ type KongPluginInstallationList struct {
 }
 
 // KongPluginInstallationSpec provides the information necessary to retrieve and install a Kong custom plugin.
+// +apireference:kgo:include
 type KongPluginInstallationSpec struct {
 
 	// The image is an OCI image URL for a packaged custom Kong plugin.
 	//
-	//+kubebuilder:validation:Required
+	// +kubebuilder:validation:Required
 	Image string `json:"image"`
 
 	// ImagePullSecretRef is a reference to a Kubernetes Secret containing credentials necessary to pull the OCI image
 	// in Image. It must follow the format in https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry.
 	// It is optional. If the image is public, omit this field.
 	//
-	//+optional
+	// +optional
 	ImagePullSecretRef *gatewayv1.SecretObjectReference `json:"imagePullSecretRef,omitempty"`
 }
 
 // KongPluginInstallationStatus defines the observed state of KongPluginInstallation.
+// +apireference:kgo:include
 type KongPluginInstallationStatus struct {
 	// Conditions describe the current conditions of this KongPluginInstallation.
 	//
-	//+listType=map
-	//+listMapKey=type
-	//+kubebuilder:validation:MaxItems=8
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
 	// UnderlyingConfigMapName is the name of the ConfigMap that contains the plugin's content.
 	// It is set when the plugin is successfully fetched and unpacked.
 	//
-	//+optional
+	// +optional
 	UnderlyingConfigMapName string `json:"underlyingConfigMapName,omitempty"`
 }
 
@@ -90,9 +94,11 @@ type KongPluginInstallationStatus struct {
 
 // KongPluginInstallationConditionType is the type for Conditions in a KongPluginInstallation's
 // Status.Conditions array.
+// +apireference:kgo:include
 type KongPluginInstallationConditionType string
 
 // KongPluginInstallationConditionReason is a reason for the KongPluginInstallation condition's last transition.
+// +apireference:kgo:include
 type KongPluginInstallationConditionReason string
 
 const (

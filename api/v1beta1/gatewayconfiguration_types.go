@@ -33,6 +33,7 @@ func init() {
 // +kubebuilder:validation:XValidation:message="Extension not allowed for DataPlane config options",rule="has(self.spec.dataPlaneOptions.extensions) ? self.spec.dataPlaneOptions.extensions.all(e, e.group == 'gateway-operator.konghq.com' && e.kind == 'DataPlaneKonnectExtension') : true"
 
 // GatewayConfiguration is the Schema for the gatewayconfigurations API
+// +apireference:kgo:include
 type GatewayConfiguration struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -42,6 +43,7 @@ type GatewayConfiguration struct {
 }
 
 // GatewayConfigurationSpec defines the desired state of GatewayConfiguration
+// +apireference:kgo:include
 type GatewayConfigurationSpec struct {
 	// DataPlaneOptions is the specification for configuration
 	// overrides for DataPlane resources that will be created for the Gateway.
@@ -58,6 +60,7 @@ type GatewayConfigurationSpec struct {
 
 // GatewayConfigDataPlaneOptions indicates the specific information needed to
 // configure and deploy a DataPlane object.
+// +apireference:kgo:include
 type GatewayConfigDataPlaneOptions struct {
 	// +optional
 	Deployment DataPlaneDeploymentOptions `json:"deployment"`
@@ -81,6 +84,7 @@ type GatewayConfigDataPlaneOptions struct {
 }
 
 // GatewayConfigDataPlaneNetworkOptions defines network related options for a DataPlane.
+// +apireference:kgo:include
 type GatewayConfigDataPlaneNetworkOptions struct {
 	// Services indicates the configuration of Kubernetes Services needed for
 	// the topology of various forms of traffic (including ingress, etc.) to
@@ -89,6 +93,7 @@ type GatewayConfigDataPlaneNetworkOptions struct {
 }
 
 // GatewayConfigDataPlaneServices contains Services related DataPlane configuration.
+// +apireference:kgo:include
 type GatewayConfigDataPlaneServices struct {
 	// Ingress is the Kubernetes Service that will be used to expose ingress
 	// traffic for the DataPlane. Here you can determine whether the DataPlane
@@ -103,11 +108,13 @@ type GatewayConfigDataPlaneServices struct {
 
 // GatewayConfigServiceOptions is used to includes options to customize the ingress service,
 // such as the annotations.
+// +apireference:kgo:include
 type GatewayConfigServiceOptions struct {
 	ServiceOptions `json:",inline"`
 }
 
 // GatewayConfigurationStatus defines the observed state of GatewayConfiguration
+// +apireference:kgo:include
 type GatewayConfigurationStatus struct {
 	// Conditions describe the current conditions of the GatewayConfigurationStatus.
 	//
@@ -118,9 +125,10 @@ type GatewayConfigurationStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // GatewayConfigurationList contains a list of GatewayConfiguration
+// +apireference:kgo:include
 type GatewayConfigurationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
