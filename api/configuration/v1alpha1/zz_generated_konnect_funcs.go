@@ -188,6 +188,17 @@ func (obj *KongCredentialBasicAuth) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+func (obj *KongCredentialBasicAuth) SetKonnectConsumerIDInStatus(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ConsumerID = id
+}
+
+func (obj *KongCredentialBasicAuth) GetConsumerRefName() string {
+	return obj.Spec.ConsumerRef.Name
+}
+
 func (obj *KongCredentialAPIKey) initKonnectStatus() {
 	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
 }
@@ -246,6 +257,17 @@ func (obj *KongCredentialAPIKey) SetControlPlaneID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ControlPlaneID = id
+}
+
+func (obj *KongCredentialAPIKey) SetKonnectConsumerIDInStatus(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ConsumerID = id
+}
+
+func (obj *KongCredentialAPIKey) GetConsumerRefName() string {
+	return obj.Spec.ConsumerRef.Name
 }
 
 func (obj *KongCredentialJWT) initKonnectStatus() {
@@ -308,6 +330,17 @@ func (obj *KongCredentialJWT) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+func (obj *KongCredentialJWT) SetKonnectConsumerIDInStatus(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ConsumerID = id
+}
+
+func (obj *KongCredentialJWT) GetConsumerRefName() string {
+	return obj.Spec.ConsumerRef.Name
+}
+
 func (obj *KongCredentialACL) initKonnectStatus() {
 	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
 }
@@ -368,6 +401,17 @@ func (obj *KongCredentialACL) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+func (obj *KongCredentialACL) SetKonnectConsumerIDInStatus(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ConsumerID = id
+}
+
+func (obj *KongCredentialACL) GetConsumerRefName() string {
+	return obj.Spec.ConsumerRef.Name
+}
+
 func (obj *KongCredentialHMAC) initKonnectStatus() {
 	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
 }
@@ -426,6 +470,17 @@ func (obj *KongCredentialHMAC) SetControlPlaneID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ControlPlaneID = id
+}
+
+func (obj *KongCredentialHMAC) SetKonnectConsumerIDInStatus(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ConsumerID = id
+}
+
+func (obj *KongCredentialHMAC) GetConsumerRefName() string {
+	return obj.Spec.ConsumerRef.Name
 }
 
 func (obj *KongCACertificate) initKonnectStatus() {

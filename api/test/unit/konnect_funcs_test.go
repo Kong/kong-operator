@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -61,20 +62,24 @@ func TestKonnectFuncs(t *testing.T) {
 			object:   &configurationv1alpha1.KongVault{},
 		},
 		{
-			typeName: "KongCredentialBasicAuth",
-			object:   &configurationv1alpha1.KongCredentialBasicAuth{},
-		},
-		{
 			typeName: "KongKey",
 			object:   &configurationv1alpha1.KongKey{},
 		},
 		{
-			typeName: "KongCredentialAPIKey",
-			object:   &configurationv1alpha1.KongCredentialAPIKey{},
-		},
-		{
 			typeName: "KongSNI",
 			object:   &configurationv1alpha1.KongSNI{},
+		},
+		{
+			typeName: "KongCredentialBasicAuth",
+			object:   &configurationv1alpha1.KongCredentialBasicAuth{},
+		},
+		{
+			typeName: "KongCredentialACL",
+			object:   &configurationv1alpha1.KongCredentialACL{},
+		},
+		{
+			typeName: "KongCredentialAPIKey",
+			object:   &configurationv1alpha1.KongCredentialAPIKey{},
 		},
 		{
 			typeName: "KongCredentialJWT",
@@ -207,6 +212,67 @@ func TestKonnectFuncsStandAlone(t *testing.T) {
 				},
 				obj.GetConditions(),
 			)
+		})
+	}
+}
+
+func TestCredentialTypes(t *testing.T) {
+	type KonnectEntity interface {
+		client.Object
+		GetTypeName() string
+		SetKonnectConsumerIDInStatus(id string)
+		GetConsumerRefName() string
+	}
+	consumerRef := corev1.LocalObjectReference{
+		Name: "test-kong-consumer",
+	}
+
+	testcases := []struct {
+		object KonnectEntity
+	}{
+		{
+			object: &configurationv1alpha1.KongCredentialBasicAuth{
+				Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
+					ConsumerRef: consumerRef,
+				},
+			},
+		},
+		{
+			object: &configurationv1alpha1.KongCredentialACL{
+				Spec: configurationv1alpha1.KongCredentialACLSpec{
+					ConsumerRef: consumerRef,
+				},
+			},
+		},
+		{
+			object: &configurationv1alpha1.KongCredentialAPIKey{
+				Spec: configurationv1alpha1.KongCredentialAPIKeySpec{
+					ConsumerRef: consumerRef,
+				},
+			},
+		},
+		{
+			object: &configurationv1alpha1.KongCredentialJWT{
+				Spec: configurationv1alpha1.KongCredentialJWTSpec{
+					ConsumerRef: consumerRef,
+				},
+			},
+		},
+		{
+			object: &configurationv1alpha1.KongCredentialHMAC{
+				Spec: configurationv1alpha1.KongCredentialHMACSpec{
+					ConsumerRef: consumerRef,
+				},
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.object.GetTypeName(), func(t *testing.T) {
+			obj := tc.object
+
+			require.Equal(t, "test-kong-consumer", obj.GetConsumerRefName())
+			obj.SetKonnectConsumerIDInStatus("123456")
 		})
 	}
 }
