@@ -25,9 +25,12 @@ func controlPlaneKonnectNamespacedRefAsSlice[
 	}
 
 	konnectRef := cpRef.KonnectNamespacedRef
-	if konnectRef == nil {
+	// NOTE: cross namespace refs are not supported yet.
+	// TODO: https://github.com/Kong/kubernetes-configuration/issues/36
+	// Specifying the same namespace is optional and is supported.
+	if konnectRef.Namespace != "" && konnectRef.Namespace != ent.GetNamespace() {
 		return nil
 	}
 
-	return []string{konnectRef.Namespace + "/" + konnectRef.Name}
+	return []string{ent.GetNamespace() + "/" + konnectRef.Name}
 }
