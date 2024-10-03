@@ -21,6 +21,7 @@ import (
 )
 
 const (
+	// IngressClassParametersKind is the kind name the IngressClassParameters resource.
 	IngressClassParametersKind = "IngressClassParameters"
 )
 
@@ -50,7 +51,6 @@ type IngressClassParameters struct {
 }
 
 // IngressClassParametersSpec defines the desired state of IngressClassParameters.
-
 type IngressClassParametersSpec struct {
 	// Offload load-balancing to kube-proxy or sidecar.
 	// +kubebuilder:default:=false

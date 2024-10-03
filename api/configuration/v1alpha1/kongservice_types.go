@@ -17,8 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -61,14 +62,14 @@ type KongServiceAPISpec struct {
 	// TODO(pmalek): client certificate implement ref
 	// TODO(pmalek): ca_certificates implement ref
 
-	// TODO(pmalek): field below are basically copy pasted from sdkkonnectgocomp.CreateService
+	// TODO(pmalek): field below are basically copy pasted from sdkkonnectcomp.CreateService
 	// The reason for this is that Service creation request contains a Konnect ID
 	// reference to a client certificate. This is not what we want to expose to the user.
 	// Instead we want to expose a namespaced reference to a client certificate.
 	// Even if the cross namespace reference is not planned, the structured reference
 	// type is preferred because it allows for easier extension in the future.
 	//
-	// sdkkonnectgocomp.CreateService `json:",inline"`
+	// sdkkonnectcomp.CreateService `json:",inline"`
 
 	// Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses.
 	URL *string `json:"url,omitempty"`
@@ -86,7 +87,7 @@ type KongServiceAPISpec struct {
 	// The upstream server port.
 	Port *int64 `json:"port,omitempty"`
 	// The protocol used to communicate with the upstream.
-	Protocol *sdkkonnectgocomp.Protocol `json:"protocol,omitempty"`
+	Protocol *sdkkonnectcomp.Protocol `json:"protocol,omitempty"`
 	// The timeout in milliseconds between two successive read operations for transmitting a request to the upstream server.
 	ReadTimeout *int64 `json:"read_timeout,omitempty"`
 	// The number of retries to execute upon failure to proxy.

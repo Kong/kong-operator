@@ -17,12 +17,14 @@ limitations under the License.
 package v1alpha1
 
 import (
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 const (
+	// KongVaultKind is the kind name of KongVault resource.
 	KongVaultKind = "KongVault"
 )
 

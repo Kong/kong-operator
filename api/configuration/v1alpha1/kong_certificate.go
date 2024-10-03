@@ -1,8 +1,9 @@
 package v1alpha1
 
 import (
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // KongCertificate is the schema for Certificate API which defines a Kong Certificate.
@@ -56,6 +57,7 @@ type KongCertificateAPISpec struct {
 	Tags []string `json:"tags,omitempty"`
 }
 
+// KongCertificateStatus defines the observed state of KongCertificate.
 type KongCertificateStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional

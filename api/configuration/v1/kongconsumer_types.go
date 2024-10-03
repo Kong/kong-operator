@@ -66,6 +66,7 @@ type KongConsumer struct {
 	Status KongConsumerStatus `json:"status,omitempty"`
 }
 
+// KongConsumerSpec defines the specification of the KongConsumer.
 type KongConsumerSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this Consumer is associated with.
 	// +optional

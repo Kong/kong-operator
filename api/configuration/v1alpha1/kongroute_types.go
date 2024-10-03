@@ -17,8 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -73,25 +74,25 @@ type KongRouteSpec struct {
 // to make the code generation required for Kubernetes CRDs work.
 type KongRouteAPISpec struct {
 	// A list of IP destinations of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port".
-	Destinations []sdkkonnectgocomp.Destinations `json:"destinations,omitempty"`
+	Destinations []sdkkonnectcomp.Destinations `json:"destinations,omitempty"`
 	// One or more lists of values indexed by header name that will cause this Route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression.
 	Headers map[string]string `json:"headers,omitempty"`
 	// A list of domain names that match this Route. Note that the hosts value is case sensitive.
 	Hosts []string `json:"hosts,omitempty"`
 	// The status code Kong responds with when all properties of a Route match except the protocol i.e. if the protocol of the request is `HTTP` instead of `HTTPS`. `Location` header is injected by Kong if the field is set to 301, 302, 307 or 308. Note: This config applies only if the Route is configured to only accept the `https` protocol.
-	HTTPSRedirectStatusCode *sdkkonnectgocomp.HTTPSRedirectStatusCode `json:"https_redirect_status_code,omitempty"`
+	HTTPSRedirectStatusCode *sdkkonnectcomp.HTTPSRedirectStatusCode `json:"https_redirect_status_code,omitempty"`
 	// A list of HTTP methods that match this Route.
 	Methods []string `json:"methods,omitempty"`
 	// The name of the Route. Route names must be unique, and they are case sensitive. For example, there can be two different Routes named "test" and "Test".
 	Name *string `json:"name,omitempty"`
 	// Controls how the Service path, Route path and requested path are combined when sending a request to the upstream. See above for a detailed description of each behavior.
-	PathHandling *sdkkonnectgocomp.PathHandling `json:"path_handling,omitempty"`
+	PathHandling *sdkkonnectcomp.PathHandling `json:"path_handling,omitempty"`
 	// A list of paths that match this Route.
 	Paths []string `json:"paths,omitempty"`
 	// When matching a Route via one of the `hosts` domain names, use the request `Host` header in the upstream request headers. If set to `false`, the upstream `Host` header will be that of the Service's `host`.
 	PreserveHost *bool `json:"preserve_host,omitempty"`
 	// An array of the protocols this Route should allow. See the [Route Object](#route-object) section for a list of accepted protocols. When set to only `"https"`, HTTP requests are answered with an upgrade error. When set to only `"http"`, HTTPS requests are answered with an error.
-	Protocols []sdkkonnectgocomp.RouteProtocols `json:"protocols,omitempty"`
+	Protocols []sdkkonnectcomp.RouteProtocols `json:"protocols,omitempty"`
 	// A number used to choose which route resolves a given request when several routes match it using regexes simultaneously. When two routes match the path and have the same `regex_priority`, the older one (lowest `created_at`) is used. Note that the priority for non-regex routes is different (longer non-regex routes are matched before shorter ones).
 	RegexPriority *int64 `json:"regex_priority,omitempty"`
 	// Whether to enable request body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that receive data with chunked transfer encoding.
@@ -101,7 +102,7 @@ type KongRouteAPISpec struct {
 	// A list of SNIs that match this Route when using stream routing.
 	Snis []string `json:"snis,omitempty"`
 	// A list of IP sources of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port".
-	Sources []sdkkonnectgocomp.Sources `json:"sources,omitempty"`
+	Sources []sdkkonnectcomp.Sources `json:"sources,omitempty"`
 	// When matching a Route via one of the `paths`, strip the matching prefix from the upstream request URL.
 	StripPath *bool `json:"strip_path,omitempty"`
 	// An optional set of strings associated with the Route for grouping and filtering.

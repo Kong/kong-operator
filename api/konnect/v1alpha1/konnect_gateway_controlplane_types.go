@@ -1,8 +1,9 @@
 package v1alpha1
 
 import (
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
 
 func init() {
@@ -34,7 +35,7 @@ type KonnectGatewayControlPlane struct {
 
 // KonnectGatewayControlPlaneSpec defines the desired state of KonnectGatewayControlPlane.
 type KonnectGatewayControlPlaneSpec struct {
-	sdkkonnectgocomp.CreateControlPlaneRequest `json:",inline"`
+	sdkkonnectcomp.CreateControlPlaneRequest `json:",inline"`
 
 	KonnectConfiguration KonnectConfiguration `json:"konnect,omitempty"`
 }
@@ -71,6 +72,7 @@ func (c *KonnectGatewayControlPlane) GetKonnectAPIAuthConfigurationRef() Konnect
 	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
 }
 
+// KonnectGatewayControlPlaneList contains a list of KonnectGatewayControlPlane.
 // +kubebuilder:object:root=true
 type KonnectGatewayControlPlaneList struct {
 	metav1.TypeMeta `json:",inline"`

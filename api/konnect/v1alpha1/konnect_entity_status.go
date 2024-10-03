@@ -1,5 +1,6 @@
 package v1alpha1
 
+// KonnectEntityStatus represents the status of a Konnect entity.
 type KonnectEntityStatus struct {
 	// ID is the unique identifier of the Konnect entity as assigned by Konnect API.
 	// If it's unset (empty string), it means the Konnect entity hasn't been created yet.
@@ -51,6 +52,7 @@ func (in *KonnectEntityStatus) SetServerURL(s string) {
 	in.ServerURL = s
 }
 
+// KonnectEntityStatusWithControlPlaneRef represents the status of a Konnect entity with a reference to a ControlPlane.
 type KonnectEntityStatusWithControlPlaneRef struct {
 	KonnectEntityStatus `json:",inline"`
 
@@ -68,6 +70,7 @@ func (in *KonnectEntityStatusWithControlPlaneRef) GetControlPlaneID() string {
 	return in.ControlPlaneID
 }
 
+// KonnectEntityStatusWithControlPlaneAndConsumerRefs represents the status of a Konnect entity with references to a ControlPlane and a Consumer.
 type KonnectEntityStatusWithControlPlaneAndConsumerRefs struct {
 	KonnectEntityStatus `json:",inline"`
 
@@ -98,6 +101,7 @@ func (in *KonnectEntityStatusWithControlPlaneAndConsumerRefs) GetConsumerID() st
 	return in.ConsumerID
 }
 
+// KonnectEntityStatusWithControlPlaneAndServiceRefs represents the status of a Konnect entity with references to a ControlPlane and a Service.
 type KonnectEntityStatusWithControlPlaneAndServiceRefs struct {
 	KonnectEntityStatus `json:",inline"`
 
@@ -108,16 +112,17 @@ type KonnectEntityStatusWithControlPlaneAndServiceRefs struct {
 	ServiceID string `json:"serviceID,omitempty"`
 }
 
-// SetServerURL sets the server URL of the KonnectEntityStatus struct.
+// SetControlPlaneID sets the server URL of the KonnectEntityStatus struct.
 func (in *KonnectEntityStatusWithControlPlaneAndServiceRefs) SetControlPlaneID(id string) {
 	in.ControlPlaneID = id
 }
 
-// GetServerURL sets the server URL of the KonnectEntityStatus struct.
+// GetControlPlaneID sets the server URL of the KonnectEntityStatus struct.
 func (in *KonnectEntityStatusWithControlPlaneAndServiceRefs) GetControlPlaneID() string {
 	return in.ControlPlaneID
 }
 
+// KonnectEntityStatusWithControlPlaneAndUpstreamRefs represents the status of a Konnect entity with references to a ControlPlane and an Upstream.
 type KonnectEntityStatusWithControlPlaneAndUpstreamRefs struct {
 	KonnectEntityStatus `json:",inline"`
 
@@ -128,6 +133,7 @@ type KonnectEntityStatusWithControlPlaneAndUpstreamRefs struct {
 	UpstreamID string `json:"upstreamID,omitempty"`
 }
 
+// KonnectEntityStatusWithControlPlaneAndKeySetRef represents the status of a Konnect entity with references to a ControlPlane and a KeySet.
 type KonnectEntityStatusWithControlPlaneAndKeySetRef struct {
 	KonnectEntityStatus `json:",inline"`
 
@@ -158,6 +164,7 @@ func (in *KonnectEntityStatusWithControlPlaneAndKeySetRef) GetKeySetID() string 
 	return in.KeySetID
 }
 
+// KonnectEntityStatusWithControlPlaneAndCertificateRefs represents the status of a Konnect entity with references to a ControlPlane and a Certificate.
 type KonnectEntityStatusWithControlPlaneAndCertificateRefs struct {
 	KonnectEntityStatus `json:",inline"`
 

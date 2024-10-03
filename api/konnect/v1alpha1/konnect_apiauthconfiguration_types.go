@@ -34,10 +34,14 @@ type KonnectAPIAuthConfiguration struct {
 	Status KonnectAPIAuthConfigurationStatus `json:"status,omitempty"`
 }
 
+// KonnectAPIAuthType is the type of authentication used to authenticate with the Konnect API.
 type KonnectAPIAuthType string
 
 const (
-	KonnectAPIAuthTypeToken     KonnectAPIAuthType = "token"
+	// KonnectAPIAuthTypeToken is the token authentication type.
+	KonnectAPIAuthTypeToken KonnectAPIAuthType = "token"
+
+	// KonnectAPIAuthTypeSecretRef is the secret reference authentication type.
 	KonnectAPIAuthTypeSecretRef KonnectAPIAuthType = "secretRef"
 )
 
@@ -62,6 +66,7 @@ type KonnectAPIAuthConfigurationSpec struct {
 	ServerURL string `json:"serverURL"`
 }
 
+// KonnectAPIAuthConfigurationStatus is the status of the KonnectAPIAuthConfiguration resource.
 type KonnectAPIAuthConfigurationStatus struct {
 	// OrganizationID is the unique identifier of the organization in Konnect.
 	OrganizationID string `json:"organizationID,omitempty"`
@@ -78,6 +83,7 @@ type KonnectAPIAuthConfigurationStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
+// KonnectAPIAuthConfigurationRef is a reference to a KonnectAPIAuthConfiguration resource.
 type KonnectAPIAuthConfigurationRef struct {
 	// Name is the name of the KonnectAPIAuthConfiguration resource.
 	// +kubebuilder:validation:Required
@@ -87,6 +93,7 @@ type KonnectAPIAuthConfigurationRef struct {
 	// Namespace string `json:"namespace,omitempty"`
 }
 
+// KonnectAPIAuthConfigurationList contains a list of KonnectAPIAuthConfiguration resources.
 // +kubebuilder:object:root=true
 type KonnectAPIAuthConfigurationList struct {
 	metav1.TypeMeta `json:",inline"`

@@ -60,7 +60,7 @@ type KongSNISpec struct {
 	KongSNIAPISpec `json:",inline"`
 }
 
-// KongKeyStatus defines the status for a KongSNI.
+// KongSNIStatus defines the status for a KongSNI.
 type KongSNIStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional

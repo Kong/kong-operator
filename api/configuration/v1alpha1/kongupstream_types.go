@@ -17,8 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	sdkkonnectgocomp "github.com/Kong/sdk-konnect-go/models/components"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -68,11 +69,11 @@ type KongUpstreamSpec struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'uri_capture' || has(self.hash_on_uri_capture))", message="hash_on_uri_capture is required when `hash_on` is set to `uri_capture`."
 type KongUpstreamAPISpec struct {
 	// Which load balancing algorithm to use.
-	Algorithm *sdkkonnectgocomp.UpstreamAlgorithm `default:"round-robin" json:"algorithm,omitempty"`
+	Algorithm *sdkkonnectcomp.UpstreamAlgorithm `default:"round-robin" json:"algorithm,omitempty"`
 	// If set, the certificate to be used as client certificate while TLS handshaking to the upstream server.
-	ClientCertificate *sdkkonnectgocomp.UpstreamClientCertificate `json:"client_certificate,omitempty"`
+	ClientCertificate *sdkkonnectcomp.UpstreamClientCertificate `json:"client_certificate,omitempty"`
 	// What to use as hashing input if the primary `hash_on` does not return a hash (eg. header is missing, or no Consumer identified). Not available if `hash_on` is set to `cookie`.
-	HashFallback *sdkkonnectgocomp.HashFallback `default:"none" json:"hash_fallback,omitempty"`
+	HashFallback *sdkkonnectcomp.HashFallback `default:"none" json:"hash_fallback,omitempty"`
 	// The header name to take the value from as hash input. Only required when `hash_fallback` is set to `header`.
 	HashFallbackHeader *string `json:"hash_fallback_header,omitempty"`
 	// The name of the query string argument to take the value from as hash input. Only required when `hash_fallback` is set to `query_arg`.
@@ -80,7 +81,7 @@ type KongUpstreamAPISpec struct {
 	// The name of the route URI capture to take the value from as hash input. Only required when `hash_fallback` is set to `uri_capture`.
 	HashFallbackURICapture *string `json:"hash_fallback_uri_capture,omitempty"`
 	// What to use as hashing input. Using `none` results in a weighted-round-robin scheme with no hashing.
-	HashOn *sdkkonnectgocomp.HashOn `default:"none" json:"hash_on,omitempty"`
+	HashOn *sdkkonnectcomp.HashOn `default:"none" json:"hash_on,omitempty"`
 	// The cookie name to take the value from as hash input. Only required when `hash_on` or `hash_fallback` is set to `cookie`. If the specified cookie is not in the request, Kong will generate a value and set the cookie in the response.
 	HashOnCookie *string `json:"hash_on_cookie,omitempty"`
 	// The cookie path to set in the response headers. Only required when `hash_on` or `hash_fallback` is set to `cookie`.
@@ -90,8 +91,8 @@ type KongUpstreamAPISpec struct {
 	// The name of the query string argument to take the value from as hash input. Only required when `hash_on` is set to `query_arg`.
 	HashOnQueryArg *string `json:"hash_on_query_arg,omitempty"`
 	// The name of the route URI capture to take the value from as hash input. Only required when `hash_on` is set to `uri_capture`.
-	HashOnURICapture *string                        `json:"hash_on_uri_capture,omitempty"`
-	Healthchecks     *sdkkonnectgocomp.Healthchecks `json:"healthchecks,omitempty"`
+	HashOnURICapture *string                      `json:"hash_on_uri_capture,omitempty"`
+	Healthchecks     *sdkkonnectcomp.Healthchecks `json:"healthchecks,omitempty"`
 	// The hostname to be used as `Host` header when proxying requests through Kong.
 	HostHeader *string `json:"host_header,omitempty"`
 	// This is a hostname, which must be equal to the `host` of a Service.

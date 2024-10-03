@@ -6,9 +6,11 @@ import (
 )
 
 const (
+	// KongCustomEntityKind is the kind name for the KongCustomEntity resource.
 	KongCustomEntityKind = "KongCustomEntity"
 )
 
+// KongEntityScope defines the scope of the Kong entity.
 type KongEntityScope string
 
 // +genclient
@@ -34,6 +36,7 @@ type KongCustomEntity struct {
 	Status KongCustomEntityStatus `json:"status,omitempty"`
 }
 
+// KongCustomEntitySpec defines the specification of the KongCustomEntity.
 type KongCustomEntitySpec struct {
 	// EntityType is the type of the Kong entity. The type is used in generating declarative configuration.
 	EntityType string `json:"type"`
@@ -57,6 +60,7 @@ type ObjectReference struct {
 	Name      string  `json:"name"`
 }
 
+// KongCustomEntityStatus defines the status of the KongCustomEntity.
 type KongCustomEntityStatus struct {
 	// Conditions describe the current conditions of the KongCustomEntityStatus.
 	//

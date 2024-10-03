@@ -78,6 +78,7 @@ type Namespace string
 // +kubebuilder:validation:MaxLength=253
 type ObjectName string
 
+// ControllerReference is a reference to a controller that reconciles the KongLicense.
 type ControllerReference struct {
 	// Group is the group of referent.
 	// It should be empty if the referent is in "core" group (like pod).
@@ -92,6 +93,7 @@ type ControllerReference struct {
 	Name ObjectName `json:"name"`
 }
 
+// KongLicensePhase is a string that represents the phase of the KongLicense.
 type KongLicensePhase string
 
 // +kubebuilder:object:root=true

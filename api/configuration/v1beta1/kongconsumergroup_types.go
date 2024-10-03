@@ -47,6 +47,7 @@ type KongConsumerGroup struct {
 	Status KongConsumerGroupStatus `json:"status,omitempty"`
 }
 
+// KongConsumerGroupSpec defines the desired state of KongConsumerGroup.
 type KongConsumerGroupSpec struct {
 	// Name is the name of the ConsumerGroup in Kong.
 	Name string `json:"name,omitempty"`

@@ -41,6 +41,7 @@ type KongTarget struct {
 	Status KongTargetStatus `json:"status,omitempty"`
 }
 
+// KongTargetSpec defines the desired state of KongTarget.
 type KongTargetSpec struct {
 	// UpstreamRef is a reference to a KongUpstream this KongTarget is attached to.
 	UpstreamRef TargetRef `json:"upstreamRef"`
@@ -48,6 +49,7 @@ type KongTargetSpec struct {
 	KongTargetAPISpec `json:",inline"`
 }
 
+// KongTargetAPISpec are the attributes of the Kong Target itself.
 type KongTargetAPISpec struct {
 	// Target is the target address of the upstream.
 	Target string `json:"target"`
@@ -60,6 +62,7 @@ type KongTargetAPISpec struct {
 	Tags []string `json:"tags,omitempty"`
 }
 
+// KongTargetStatus defines the observed state of KongTarget.
 type KongTargetStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
