@@ -636,4 +636,209 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
 	})
+
+	t.Run("binding to KongConsumerGroup, KongService and KongRoute", func(t *testing.T) {
+		serviceID := uuid.NewString()
+		routeID := uuid.NewString()
+		consumerGroupID := uuid.NewString()
+
+		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
+			deploy.WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
+		)
+		t.Cleanup(func() {
+			require.NoError(t, clientNamespaced.Delete(ctx, kongService))
+		})
+		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
+		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService,
+			deploy.WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
+		)
+		t.Cleanup(func() {
+			require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))
+		})
+		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
+		kongConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cp,
+			deploy.WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
+		)
+		t.Cleanup(func() {
+			require.NoError(t, clientNamespaced.Delete(ctx, kongConsumerGroup))
+		})
+		updateKongConsumerGroupStatusWithKonnectID(t, ctx, clientNamespaced, kongConsumerGroup, consumerGroupID, cp.GetKonnectStatus().GetKonnectID())
+
+		t.Logf("waiting for 2 KongPluginBindings to be created")
+		kpbRouteFound := false
+		kpbServiceFound := false
+		watchFor(t, ctx, wKongPluginBinding, watch.Added,
+			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
+					return false
+				}
+
+				targets := kpb.Spec.Targets
+				if targets.RouteReference != nil &&
+					targets.RouteReference.Name == kongRoute.Name &&
+					targets.ConsumerGroupReference != nil &&
+					targets.ConsumerGroupReference.Name == kongConsumerGroup.Name &&
+					targets.ServiceReference == nil {
+					kpbRouteFound = true
+				} else if targets.RouteReference == nil &&
+					targets.ServiceReference != nil &&
+					targets.ServiceReference.Name == kongService.Name &&
+					targets.ConsumerGroupReference != nil &&
+					targets.ConsumerGroupReference.Name == kongConsumerGroup.Name {
+					kpbServiceFound = true
+				}
+				return kpbRouteFound && kpbServiceFound
+			},
+			"2 KongPluginBindings were not created",
+		)
+		t.Logf(
+			"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
+			client.ObjectKeyFromObject(rateLimitingkongPlugin),
+		)
+		_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
+			func(kp *configurationv1.KongPlugin) bool {
+				return kp.Name == rateLimitingkongPlugin.Name &&
+					controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
+			},
+			"KongPlugin wasn't updated to get plugin-in-use finalizer added",
+		)
+
+		var l configurationv1alpha1.KongPluginBindingList
+		require.NoError(t, clientNamespaced.List(ctx, &l))
+		for _, kpb := range l.Items {
+			t.Logf("delete managed kongPluginBinding %s, then check it gets recreated", client.ObjectKeyFromObject(&kpb))
+			require.NoError(t, client.IgnoreNotFound(clientNamespaced.Delete(ctx, &kpb)))
+		}
+
+		var kpbRoute, kpbService *configurationv1alpha1.KongPluginBinding
+		watchFor(t, ctx, wKongPluginBinding, watch.Added,
+			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
+					return false
+				}
+
+				targets := kpb.Spec.Targets
+				if targets.RouteReference != nil &&
+					targets.RouteReference.Name == kongRoute.Name &&
+					targets.ConsumerGroupReference != nil &&
+					targets.ConsumerGroupReference.Name == kongConsumerGroup.Name &&
+					targets.ServiceReference == nil {
+					kpbRoute = kpb
+				} else if targets.RouteReference == nil &&
+					targets.ServiceReference != nil &&
+					targets.ServiceReference.Name == kongService.Name &&
+					targets.ConsumerGroupReference != nil &&
+					targets.ConsumerGroupReference.Name == kongConsumerGroup.Name {
+					kpbService = kpb
+				}
+				return kpbRoute != nil && kpbService != nil
+			},
+			"2 KongPluginBindings were not recreated",
+		)
+
+		t.Logf(
+			"remove annotation from KongRoute %s and check that there exists "+
+				"a managed KongPluginBinding with KongService and KongConsumerGroup in its targets",
+			client.ObjectKeyFromObject(kongRoute),
+		)
+		sdk.PluginSDK.EXPECT().
+			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			Return(
+				&sdkkonnectops.DeletePluginResponse{
+					StatusCode: 200,
+				},
+				nil,
+			)
+
+		delete(kongRoute.Annotations, consts.PluginsAnnotationKey)
+		require.NoError(t, clientNamespaced.Update(ctx, kongRoute))
+
+		assert.EventuallyWithT(t,
+			func(t *assert.CollectT) {
+				var l configurationv1alpha1.KongPluginBindingList
+				if !assert.NoError(t, clientNamespaced.List(ctx, &l,
+					client.MatchingFields{
+						konnect.IndexFieldKongPluginBindingKongPluginReference:        rateLimitingkongPlugin.Namespace + "/" + rateLimitingkongPlugin.Name,
+						konnect.IndexFieldKongPluginBindingKongServiceReference:       kongService.Name,
+						konnect.IndexFieldKongPluginBindingKongConsumerGroupReference: kongConsumerGroup.Name,
+					},
+				)) {
+					return
+				}
+				assert.Len(t, l.Items, 1)
+			}, waitTime, tickTime,
+			"KongPluginBinding bound to ConsumerGroup and Service doesn't exist but it should",
+		)
+
+		assert.EventuallyWithT(t,
+			func(c *assert.CollectT) {
+				assert.True(c, k8serrors.IsNotFound(
+					clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpbRoute), kpbRoute),
+				))
+			}, waitTime, tickTime,
+			"KongPluginBinding bound to Route wasn't deleted after removing annotation from KongRoute",
+		)
+
+		t.Logf(
+			"remove annotation from KongService %s and check that there exists (is created)"+
+				"a managed KongPluginBinding with only KongConsumerGroup in its targets",
+			client.ObjectKeyFromObject(kongService),
+		)
+
+		delete(kongService.Annotations, consts.PluginsAnnotationKey)
+		require.NoError(t, clientNamespaced.Update(ctx, kongService))
+
+		watchFor(t, ctx, wKongPluginBinding, watch.Added,
+			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
+					return false
+				}
+
+				targets := kpb.Spec.Targets
+				return targets.RouteReference == nil &&
+					targets.ServiceReference == nil &&
+					targets.ConsumerGroupReference != nil &&
+					targets.ConsumerGroupReference.Name == kongConsumerGroup.Name
+			},
+			"KongConsumerGroup bound KongPluginBinding wasn't created",
+		)
+
+		t.Logf(
+			"remove annotation from KongConsumerGroup %s and check that no KongPluginBinding exists that binds to it",
+			client.ObjectKeyFromObject(kongConsumerGroup),
+		)
+
+		sdk.PluginSDK.EXPECT().
+			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			Return(
+				&sdkkonnectops.DeletePluginResponse{
+					StatusCode: 200,
+				},
+				nil,
+			)
+
+		delete(kongConsumerGroup.Annotations, consts.PluginsAnnotationKey)
+		require.NoError(t, clientNamespaced.Update(ctx, kongConsumerGroup))
+
+		watchFor(t, ctx, wKongPluginBinding, watch.Deleted,
+			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
+					return false
+				}
+
+				targets := kpb.Spec.Targets
+				return targets.RouteReference == nil &&
+					targets.ServiceReference == nil &&
+					targets.ConsumerGroupReference != nil &&
+					targets.ConsumerGroupReference.Name == kongConsumerGroup.Name
+			},
+			"KongConsumerGroup bound KongPluginBinding wasn't deleted",
+		)
+
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
 }

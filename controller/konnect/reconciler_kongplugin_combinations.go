@@ -8,12 +8,13 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 // ForeignRelations contains all the relations between Kong entities and KongPlugin.
 type ForeignRelations struct {
 	Consumer      []configurationv1.KongConsumer
-	ConsumerGroup []string
+	ConsumerGroup []configurationv1beta1.KongConsumerGroup
 	Route         []configurationv1alpha1.KongRoute
 	Service       []configurationv1alpha1.KongService
 }
@@ -55,6 +56,20 @@ func (relations *ForeignRelations) GroupByControlPlane(
 	for _, route := range relations.Route {
 		svcRef := route.Spec.ServiceRef
 		if svcRef == nil || svcRef.NamespacedRef == nil {
+
+			cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&route)
+			if !ok {
+				continue
+			}
+
+			nn := types.NamespacedName{
+				Namespace: route.Namespace,
+				Name:      cpRef.KonnectNamespacedRef.Name,
+			}
+			fr := ret[nn]
+			fr.Route = append(fr.Route, route)
+			ret[nn] = fr
+
 			continue
 		}
 
@@ -97,8 +112,20 @@ func (relations *ForeignRelations) GroupByControlPlane(
 		fr.Consumer = append(fr.Consumer, consumer)
 		ret[nn] = fr
 	}
-
-	// TODO consumers and consumer groups
+	for _, group := range relations.ConsumerGroup {
+		cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&group)
+		if !ok {
+			continue
+		}
+		nn := types.NamespacedName{
+			// TODO: implement cross namespace references
+			Namespace: group.Namespace,
+			Name:      cpRef.KonnectNamespacedRef.Name,
+		}
+		fr := ret[nn]
+		fr.ConsumerGroup = append(fr.ConsumerGroup, group)
+		ret[nn] = fr
+	}
 
 	return ret, nil
 }
@@ -161,13 +188,13 @@ func (relations *ForeignRelations) GetCombinations() []Rel {
 				for _, route := range relations.Route {
 					cartesianProduct = append(cartesianProduct, Rel{
 						Route:         route.Name,
-						ConsumerGroup: group,
+						ConsumerGroup: group.Name,
 					})
 				}
 				for _, service := range relations.Service {
 					cartesianProduct = append(cartesianProduct, Rel{
 						Service:       service.Name,
-						ConsumerGroup: group,
+						ConsumerGroup: group.Name,
 					})
 				}
 			}
@@ -176,7 +203,7 @@ func (relations *ForeignRelations) GetCombinations() []Rel {
 			cartesianProduct = make([]Rel, 0, lConsumerGroup)
 			for _, group := range relations.ConsumerGroup {
 				cartesianProduct = append(cartesianProduct, Rel{
-					ConsumerGroup: group,
+					ConsumerGroup: group.Name,
 				})
 			}
 		}
