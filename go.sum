@@ -224,12 +224,8 @@ github.com/klauspost/compress v1.17.9 h1:6KIumPrER1LHsvBVuDa0r5xaG0Es51mhhB9BQB2
 github.com/klauspost/compress v1.17.9/go.mod h1:Di0epgTjJY877eYKx5yC51cX2A2Vl2ibi7bDH9ttBbw=
 github.com/kong/go-kong v0.59.1 h1:AJZtyCD+Zyqe/mF/m+x3/qN/GPVxAH7jq9zGJTHRfjc=
 github.com/kong/go-kong v0.59.1/go.mod h1:8Vt6HmtgLNgL/7bSwAlz3DIWqBtzG7qEt9+OnMiQOa0=
-github.com/kong/kubernetes-configuration v0.0.24-0.20241001115459-c352e5229f8c h1:LLU0dCeln9PLdMkt6yTnx2Q9AZ62f7aas7LjyneIfrc=
-github.com/kong/kubernetes-configuration v0.0.24-0.20241001115459-c352e5229f8c/go.mod h1:DXrWtdZzewUyPZBR4zvDoY/B8rHxeqcqCBDbyHA+B0Q=
-github.com/kong/kubernetes-configuration v0.0.24-0.20241001135007-d03056a341ef h1:xrpbHFxoaHjeXmCS/9XnTzXZBN9nfuc9jLpOFEZB1nQ=
-github.com/kong/kubernetes-configuration v0.0.24-0.20241001135007-d03056a341ef/go.mod h1:DXrWtdZzewUyPZBR4zvDoY/B8rHxeqcqCBDbyHA+B0Q=
-github.com/kong/kubernetes-configuration v0.0.24 h1:XoZcJRgdPnzCDtmQ0y0PWVOkJoLAqkB0ODLEdhuc9og=
-github.com/kong/kubernetes-configuration v0.0.24/go.mod h1:DXrWtdZzewUyPZBR4zvDoY/B8rHxeqcqCBDbyHA+B0Q=
+github.com/kong/kubernetes-configuration v0.0.25 h1:x5Ybxe3sfD0DKkDjc1IL/FjDlnrsTQE+z9nnw5w6dNE=
+github.com/kong/kubernetes-configuration v0.0.25/go.mod h1:DXrWtdZzewUyPZBR4zvDoY/B8rHxeqcqCBDbyHA+B0Q=
 github.com/kong/kubernetes-telemetry v0.1.5 h1:xHwU1q0IvfEYqpj03po73ZKbVarnFPUwzkoFkdVnr9w=
 github.com/kong/kubernetes-telemetry v0.1.5/go.mod h1:1UXyZ6N3e8Fl6YguToQ6tKNveonkhjSqxzY7HVW+Ba4=
 github.com/kong/kubernetes-testing-framework v0.47.2 h1:+2Z9anTpbV/hwNeN+NFQz53BMU+g3QJydkweBp3tULo=
