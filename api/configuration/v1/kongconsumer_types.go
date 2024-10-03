@@ -23,6 +23,8 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
+// KongConsumer is the Schema for the kongconsumers API.
+//
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
@@ -36,8 +38,7 @@ import (
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.controlPlaneRef.konnectNamespacedRef) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)", message="spec.controlPlaneRef cannot specify namespace for namespaced resource"
 // +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
-
-// KongConsumer is the Schema for the kongconsumers API.
+// +apireference:kgo:include
 type KongConsumer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -67,15 +68,16 @@ type KongConsumer struct {
 }
 
 // KongConsumerSpec defines the specification of the KongConsumer.
+// +apireference:kgo:include
 type KongConsumerSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this Consumer is associated with.
 	// +optional
 	ControlPlaneRef *configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // KongConsumerList contains a list of KongConsumer.
+// +kubebuilder:object:root=true
+// +apireference:kgo:include
 type KongConsumerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

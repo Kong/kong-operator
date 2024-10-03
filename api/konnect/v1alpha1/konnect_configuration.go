@@ -2,6 +2,7 @@ package v1alpha1
 
 // KonnectConfiguration is the Schema for the KonnectConfiguration API.
 // +kubebuilder:object:generate=false
+// +apireference:kgo:include
 type KonnectConfiguration struct {
 	// APIAuthConfigurationRef is the reference to the API Auth Configuration
 	// that should be used for this Konnect Configuration.

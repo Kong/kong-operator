@@ -42,6 +42,7 @@ import (
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.controlPlaneRef) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)", message="spec.controlPlaneRef cannot specify namespace for namespaced resource"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.serviceRef) ? true : (!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.serviceRef == self.spec.serviceRef", message="spec.serviceRef is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.controlPlaneRef) ? true :(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
+// +apireference:kgo:include
 type KongRoute struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -53,6 +54,7 @@ type KongRoute struct {
 }
 
 // KongRouteSpec defines specification of a Kong Route.
+// +apireference:kgo:include
 type KongRouteSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this KongRoute is associated with.
 	// Route can either specify a ControlPlaneRef and be 'serviceless' route or
@@ -72,6 +74,7 @@ type KongRouteSpec struct {
 //
 // These fields are mostly copied from sdk-konnect-go but some modifications have been made
 // to make the code generation required for Kubernetes CRDs work.
+// +apireference:kgo:include
 type KongRouteAPISpec struct {
 	// A list of IP destinations of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port".
 	Destinations []sdkkonnectcomp.Destinations `json:"destinations,omitempty"`
@@ -110,6 +113,7 @@ type KongRouteAPISpec struct {
 }
 
 // KongRouteStatus represents the current status of the Kong Route resource.
+// +apireference:kgo:include
 type KongRouteStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -123,9 +127,9 @@ type KongRouteStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // KongRouteList contains a list of Kong Routes.
+// +kubebuilder:object:root=true
+// +apireference:kgo:include
 type KongRouteList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

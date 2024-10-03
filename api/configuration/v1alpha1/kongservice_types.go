@@ -38,6 +38,7 @@ import (
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.controlPlaneRef.konnectNamespacedRef) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)", message="spec.controlPlaneRef cannot specify namespace for namespaced resource"
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
+// +apireference:kgo:include
 type KongService struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -49,6 +50,7 @@ type KongService struct {
 }
 
 // KongServiceSpec defines specification of a Kong Route.
+// +apireference:kgo:include
 type KongServiceSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this KongService is associated with.
 	// +optional
@@ -58,6 +60,7 @@ type KongServiceSpec struct {
 }
 
 // KongServiceAPISpec defines specification of a Kong Service.
+// +apireference:kgo:include
 type KongServiceAPISpec struct {
 	// TODO(pmalek): client certificate implement ref
 	// TODO(pmalek): ca_certificates implement ref
@@ -103,6 +106,7 @@ type KongServiceAPISpec struct {
 }
 
 // KongServiceStatus represents the current status of the Kong Service resource.
+// +apireference:kgo:include
 type KongServiceStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -116,9 +120,9 @@ type KongServiceStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // KongServiceList contains a list of Kong Services.
+// +kubebuilder:object:root=true
+// +apireference:kgo:include
 type KongServiceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

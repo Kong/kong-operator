@@ -2,10 +2,12 @@ package v1
 
 // ConditionType is a type of condition associated with an object.
 // This type should be used with the object's Status.Conditions field.
+// +apireference:kgo:include
 type ConditionType string
 
 // ConditionReason defines the set of reasons that explain why a particular
 // condition type has been raised.
+// +apireference:kgo:include
 type ConditionReason string
 
 const (

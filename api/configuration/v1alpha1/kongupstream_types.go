@@ -36,6 +36,7 @@ import (
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.controlPlaneRef.konnectNamespacedRef) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)", message="spec.controlPlaneRef cannot specify namespace for namespaced resource"
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
+// +apireference:kgo:include
 type KongUpstream struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -47,6 +48,7 @@ type KongUpstream struct {
 }
 
 // KongUpstreamSpec defines specification of a Kong Upstream.
+// +apireference:kgo:include
 type KongUpstreamSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this KongUpstream is associated with.
 	// +optional
@@ -67,6 +69,7 @@ type KongUpstreamSpec struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'header' || has(self.hash_on_header))", message="hash_on_header is required when hash_on is set to `header`."
 // +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'query_arg' || has(self.hash_on_query_arg))", message="hash_on_query_arg is required when `hash_on` is set to `query_arg`."
 // +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'uri_capture' || has(self.hash_on_uri_capture))", message="hash_on_uri_capture is required when `hash_on` is set to `uri_capture`."
+// +apireference:kgo:include
 type KongUpstreamAPISpec struct {
 	// Which load balancing algorithm to use.
 	Algorithm *sdkkonnectcomp.UpstreamAlgorithm `default:"round-robin" json:"algorithm,omitempty"`
@@ -108,6 +111,7 @@ type KongUpstreamAPISpec struct {
 }
 
 // KongUpstreamStatus represents the current status of the Kong Upstream resource.
+// +apireference:kgo:include
 type KongUpstreamStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -121,9 +125,9 @@ type KongUpstreamStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // KongUpstreamList contains a list of Kong Upstreams.
+// +kubebuilder:object:root=true
+// +apireference:kgo:include
 type KongUpstreamList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

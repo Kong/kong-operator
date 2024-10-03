@@ -33,6 +33,7 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.consumerRef == self.spec.consumerRef",message="spec.consumerRef is immutable when an entity is already Programmed"
+// +apireference:kgo:include
 type KongCredentialBasicAuth struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -47,6 +48,7 @@ type KongCredentialBasicAuth struct {
 }
 
 // KongCredentialBasicAuthSpec defines specification of a Kong Route.
+// +apireference:kgo:include
 type KongCredentialBasicAuthSpec struct {
 	// ConsumerRef is a reference to a Consumer this CredentialBasicAuth is associated with.
 	//
@@ -57,6 +59,7 @@ type KongCredentialBasicAuthSpec struct {
 }
 
 // KongCredentialBasicAuthAPISpec defines specification of a BasicAuth credential.
+// +apireference:kgo:include
 type KongCredentialBasicAuthAPISpec struct {
 	// Password is the password for the BasicAuth credential.
 	//
@@ -73,6 +76,7 @@ type KongCredentialBasicAuthAPISpec struct {
 }
 
 // KongCredentialBasicAuthStatus represents the current status of the BasicAuth credential resource.
+// +apireference:kgo:include
 type KongCredentialBasicAuthStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -86,9 +90,9 @@ type KongCredentialBasicAuthStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // KongCredentialBasicAuthList contains a list of BasicAuth credentials.
+// +kubebuilder:object:root=true
+// +apireference:kgo:include
 type KongCredentialBasicAuthList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

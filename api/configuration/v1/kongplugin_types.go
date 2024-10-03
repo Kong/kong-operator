@@ -22,6 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// KongPlugin is the Schema for the kongplugins API.
+//
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
@@ -36,8 +38,7 @@ import (
 // +kubebuilder:validation:XValidation:rule="!(has(self.config) && has(self.configFrom))", message="Using both config and configFrom fields is not allowed."
 // +kubebuilder:validation:XValidation:rule="!(has(self.configFrom) && has(self.configPatches))", message="Using both configFrom and configPatches fields is not allowed."
 // +kubebuilder:validation:XValidation:rule="self.plugin == oldSelf.plugin", message="The plugin field is immutable"
-
-// KongPlugin is the Schema for the kongplugins API.
+// +apireference:kgo:include
 type KongPlugin struct {
 	metav1.TypeMeta `json:",inline"`
 	// Setting a `global` label to `true` will apply the plugin to every request proxied by the Kong.
@@ -62,6 +63,8 @@ type KongPlugin struct {
 	// This should be used when the plugin configuration contains sensitive information,
 	// such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin.
 	// Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once.
+	//
+	// +apireference:kgo:exclude
 	ConfigFrom *ConfigSource `json:"configFrom,omitempty"`
 
 	// ConfigPatches represents JSON patches to the configuration of the plugin.
@@ -70,6 +73,8 @@ type KongPlugin struct {
 	// a key in a secret.
 	// When Config is specified, patches will be applied to the configuration in Config.
 	// Otherwise, patches will be applied to an empty object.
+	//
+	// +apireference:kgo:exclude
 	ConfigPatches []ConfigPatch `json:"configPatches,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config.
@@ -100,9 +105,9 @@ type KongPlugin struct {
 	Status KongPluginStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // KongPluginList contains a list of KongPlugin.
+// +kubebuilder:object:root=true
+// +apireference:kgo:include
 type KongPluginList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -110,6 +115,7 @@ type KongPluginList struct {
 }
 
 // KongPluginStatus represents the current status of the KongPlugin resource.
+// +apireference:kgo:include
 type KongPluginStatus struct {
 	// Conditions describe the current conditions of the KongPluginStatus.
 	//

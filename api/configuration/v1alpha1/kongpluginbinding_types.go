@@ -35,6 +35,7 @@ import (
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
+// +apireference:kgo:include
 type KongPluginBinding struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -46,6 +47,7 @@ type KongPluginBinding struct {
 }
 
 // KongPluginBindingSpec defines specification of a KongPluginBinding.
+// +apireference:kgo:include
 type KongPluginBindingSpec struct {
 	// PluginReference is a reference to the KongPlugin or KongClusterPlugin resource.
 	// +kubebuilder:validation:XValidation:message="pluginRef name must be set",rule="self.name != ''"
@@ -80,6 +82,7 @@ type KongPluginBindingSpec struct {
 }
 
 // KongPluginBindingTargets contains the targets references.
+// +apireference:kgo:include
 type KongPluginBindingTargets struct {
 	// RouteReference can be used to reference one of the following resouces:
 	// - networking.k8s.io/Ingress
@@ -109,6 +112,7 @@ type KongPluginBindingTargets struct {
 }
 
 // PluginRef is a reference to a KongPlugin or KongClusterPlugin resource.
+// +apireference:kgo:include
 type PluginRef struct {
 	// TODO(mattia): cross-namespace references are not supported yet.
 	// https://github.com/Kong/kubernetes-configuration/issues/9
@@ -124,6 +128,7 @@ type PluginRef struct {
 }
 
 // TargetRef is a reference based on the object's name.
+// +apireference:kgo:include
 type TargetRef struct {
 	// Name is the name of the entity.
 	// +kubebuilder:validation:Required
@@ -131,6 +136,7 @@ type TargetRef struct {
 }
 
 // TargetRefWithGroupKind is a reference based on the object's group, kind, and name.
+// +apireference:kgo:include
 type TargetRefWithGroupKind struct {
 	// Name is the name of the entity.
 	// +kubebuilder:validation:Required
@@ -144,6 +150,7 @@ type TargetRefWithGroupKind struct {
 }
 
 // KongPluginBindingStatus represents the current status of the KongBinding resource.
+// +apireference:kgo:include
 type KongPluginBindingStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -157,9 +164,9 @@ type KongPluginBindingStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // KongPluginBindingList contains a list of KongPluginBindings.
+// +kubebuilder:object:root=true
+// +apireference:kgo:include
 type KongPluginBindingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

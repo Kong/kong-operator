@@ -2,6 +2,7 @@ package v1alpha1
 
 // KeySetRefType is the enum type for the KeySetRef.
 // +kubebuilder:validation:Enum=konnectID;namespacedRef
+// +apireference:kgo:include
 type KeySetRefType string
 
 const (
@@ -19,6 +20,7 @@ const (
 // It is used to reference a KeySet entity.
 // +kubebuilder:validation:XValidation:rule="self.type == 'namespacedRef' ? has(self.namespacedRef) : true", message="when type is namespacedRef, namespacedRef must be set"
 // +kubebuilder:validation:XValidation:rule="self.type == 'konnectID' ? has(self.konnectID) : true", message="when type is konnectID, konnectID must be set"
+// +apireference:kgo:include
 type KeySetRef struct {
 	// Type defines type of the KeySet object reference. It can be one of:
 	// - konnectID
@@ -37,6 +39,7 @@ type KeySetRef struct {
 }
 
 // KeySetNamespacedRef is the schema for the KeySetNamespacedRef type.
+// +apireference:kgo:include
 type KeySetNamespacedRef struct {
 	// Name is the name of the KeySet object.
 	// +kubebuilder:validation:MinLength=1

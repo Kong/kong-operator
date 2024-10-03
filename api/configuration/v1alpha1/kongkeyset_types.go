@@ -33,6 +33,7 @@ import (
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.controlPlaneRef.konnectNamespacedRef) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)", message="spec.controlPlaneRef cannot specify namespace for namespaced resource - it's not supported yet"
+// +apireference:kgo:include
 type KongKeySet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -44,6 +45,7 @@ type KongKeySet struct {
 }
 
 // KongKeySetSpec defines the spec for a KongKeySet.
+// +apireference:kgo:include
 type KongKeySetSpec struct {
 	// ControlPlaneRef is a reference to a Konnect ControlPlane with which KongKeySet is associated.
 	// +optional
@@ -54,6 +56,7 @@ type KongKeySetSpec struct {
 }
 
 // KongKeySetAPISpec defines the attributes of a Kong KeySet.
+// +apireference:kgo:include
 type KongKeySetAPISpec struct {
 	// Name is a name of the KeySet.
 	// +kubebuilder:validation:MinLength=1
@@ -65,6 +68,7 @@ type KongKeySetAPISpec struct {
 }
 
 // KongKeySetStatus defines the status for a KongKeySet.
+// +apireference:kgo:include
 type KongKeySetStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -78,9 +82,9 @@ type KongKeySetStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // KongKeySetList contains a list of Kong Keys.
+// +kubebuilder:object:root=true
+// +apireference:kgo:include
 type KongKeySetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

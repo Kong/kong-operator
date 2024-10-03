@@ -32,6 +32,7 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.certificateRef == self.spec.certificateRef", message="spec.certificateRef is immutable when programmed"
+// +apireference:kgo:include
 type KongSNI struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -43,6 +44,7 @@ type KongSNI struct {
 }
 
 // KongSNIAPISpec defines specification of an SNI.
+// +apireference:kgo:include
 type KongSNIAPISpec struct {
 	// Name is the name of the SNI. Required and must be a host or wildcard host.
 	// +kubebuilder:validation:MinLength=1
@@ -53,6 +55,7 @@ type KongSNIAPISpec struct {
 }
 
 // KongSNISpec defines specification of a Kong SNI.
+// +apireference:kgo:include
 type KongSNISpec struct {
 	// CertificateRef is the reference to the certificate to which the KongSNI is attached.
 	CertificateRef KongObjectRef `json:"certificateRef"`
@@ -61,6 +64,7 @@ type KongSNISpec struct {
 }
 
 // KongSNIStatus defines the status for a KongSNI.
+// +apireference:kgo:include
 type KongSNIStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -74,9 +78,9 @@ type KongSNIStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // KongSNIList contains a list of Kong SNIs.
+// +kubebuilder:object:root=true
+// +apireference:kgo:include
 type KongSNIList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

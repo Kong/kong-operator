@@ -34,6 +34,7 @@ import (
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.controlPlaneRef) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)", message="spec.controlPlaneRef cannot specify namespace for namespaced resource - it's not supported yet"
+// +apireference:kgo:include
 type KongKey struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -45,6 +46,7 @@ type KongKey struct {
 }
 
 // KongKeySpec defines the spec for a KongKey.
+// +apireference:kgo:include
 type KongKeySpec struct {
 	// ControlPlaneRef is a reference to a Konnect ControlPlane this KongKey is associated with.
 	// +optional
@@ -61,6 +63,7 @@ type KongKeySpec struct {
 
 // KongKeyAPISpec defines the attributes of a Kong Key.
 // +kubebuilder:validation:XValidation:rule="has(self.jwk) || has(self.pem)", message="Either 'jwk' or 'pem' must be set"
+// +apireference:kgo:include
 type KongKeyAPISpec struct {
 	// KID is a unique identifier for a key.
 	// When JWK is provided, KID has to match the KID in the JWK.
@@ -88,6 +91,7 @@ type KongKeyAPISpec struct {
 }
 
 // PEMKeyPair defines a keypair in PEM format.
+// +apireference:kgo:include
 type PEMKeyPair struct {
 	// The private key in PEM format.
 	// +kubebuilder:validation:MinLength=1
@@ -99,6 +103,7 @@ type PEMKeyPair struct {
 }
 
 // KongKeyStatus defines the status for a KongKey.
+// +apireference:kgo:include
 type KongKeyStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -112,9 +117,9 @@ type KongKeyStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // KongKeyList contains a list of Kong Keys.
+// +kubebuilder:object:root=true
+// +apireference:kgo:include
 type KongKeyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
