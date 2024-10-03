@@ -76,7 +76,7 @@ func enqueueKongSNIForKongCertificate(
 		sniList := configurationv1alpha1.KongSNIList{}
 		if err := cl.List(ctx, &sniList, client.InNamespace(cert.Namespace),
 			client.MatchingFields{
-				IndexFieldKongPluginBindingKongServiceReference: cert.Name,
+				IndexFieldKongSNIOnCertificateRefNmae: cert.Name,
 			},
 		); err != nil {
 			return nil
