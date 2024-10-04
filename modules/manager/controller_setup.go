@@ -104,6 +104,8 @@ const (
 	KongKeySetControllerName = "KongKeySet"
 	// KongSNIControllerName is the name of KongSNI controller.
 	KongSNIControllerName = "KongSNI"
+	// KongDataPlaneClientCertificateControllerName is the name of KongDataPlaneClientCertificate controller.
+	KongDataPlaneClientCertificateControllerName = "KongDataPlaneClientCertificate"
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
@@ -513,6 +515,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongKeySet](c.KonnectSyncPeriod),
 				),
 			},
+			KongDataPlaneClientCertificateControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongDataPlaneClientCertificate](
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongDataPlaneClientCertificate](c.KonnectSyncPeriod),
+				),
+			},
 			KongPluginControllerName: {
 				Enabled: c.KonnectControllersEnabled,
 				Controller: konnect.NewKongPluginReconciler(
@@ -623,6 +634,10 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 		{
 			Object:       &configurationv1alpha1.KongKey{},
 			IndexOptions: konnect.IndexOptionsForKongKey(),
+		},
+		{
+			Object:       &configurationv1alpha1.KongDataPlaneClientCertificate{},
+			IndexOptions: konnect.IndexOptionsForKongDataPlaneCertificate(),
 		},
 	}
 

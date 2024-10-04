@@ -151,3 +151,7 @@ issues:
       linters:
         - revive
       text: "exported: exported"
+    # Methods imported from the SDK do not use the camel case naming convention for DP and we have no control over it.
+    - linters:
+        - forbidigo
+      text: 'use of `.*(Create|Delete)Dataplane.+` forbidden because "Please use camel case'

@@ -777,3 +777,34 @@ func KongSNIAttachedToCertificate(
 	t.Logf("deployed KongSNI %s/%s", sni.Namespace, sni.Name)
 	return sni
 }
+
+// KongDataPlaneClientCertificateAttachedToCP deploys a KongDataPlaneClientCertificate resource attached to a CP and returns the resource.
+func KongDataPlaneClientCertificateAttachedToCP(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+) *configurationv1alpha1.KongDataPlaneClientCertificate {
+	t.Helper()
+
+	cert := &configurationv1alpha1.KongDataPlaneClientCertificate{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "dp-cert-",
+		},
+		Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
+			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: cp.GetName(),
+				},
+			},
+			KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
+				Cert: TestValidCACertPEM,
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, cert))
+	t.Logf("deployed new KongDataPlaneClientCertificate %s", client.ObjectKeyFromObject(cert))
+
+	return cert
+}

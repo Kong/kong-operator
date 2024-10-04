@@ -88,10 +88,10 @@ func Create[
 		return e, createKeySet(ctx, sdk.GetKeySetsSDK(), ent)
 	case *configurationv1alpha1.KongSNI:
 		return e, createSNI(ctx, sdk.GetSNIsSDK(), ent)
-
+	case *configurationv1alpha1.KongDataPlaneClientCertificate:
+		return e, createKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
-
 	default:
 		return nil, fmt.Errorf("unsupported entity type %T", ent)
 	}
@@ -150,10 +150,10 @@ func Delete[
 		return deleteKeySet(ctx, sdk.GetKeySetsSDK(), ent)
 	case *configurationv1alpha1.KongSNI:
 		return deleteSNI(ctx, sdk.GetSNIsSDK(), ent)
-
+	case *configurationv1alpha1.KongDataPlaneClientCertificate:
+		return deleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
-
 	default:
 		return fmt.Errorf("unsupported entity type %T", ent)
 	}
@@ -257,7 +257,8 @@ func Update[
 		return ctrl.Result{}, updateKeySet(ctx, sdk.GetKeySetsSDK(), ent)
 	case *configurationv1alpha1.KongSNI:
 		return ctrl.Result{}, updateSNI(ctx, sdk.GetSNIsSDK(), ent)
-
+	case *configurationv1alpha1.KongDataPlaneClientCertificate:
+		return ctrl.Result{}, nil // DataPlaneCertificates are immutable.
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 
