@@ -123,11 +123,12 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	}), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("attaching dataplane to controlplane")
-	controlplane, err = controlplaneClient.Get(GetCtx(), controlplane.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	controlplane.Spec.DataPlane = &dataplane.Name
-	controlplane, err = controlplaneClient.Update(GetCtx(), controlplane, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	require.Eventually(t,
+		testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
+			cp.Spec.DataPlane = &dataplane.Name
+		}),
+		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+	)
 
 	t.Log("verifying controlplane is now provisioned")
 	require.Eventually(t, testutils.ControlPlaneIsProvisioned(t, GetCtx(), controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
@@ -136,11 +137,12 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t, GetCtx(), controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("removing dataplane from controlplane")
-	controlplane, err = controlplaneClient.Get(GetCtx(), controlplane.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	controlplane.Spec.DataPlane = nil
-	_, err = controlplaneClient.Update(GetCtx(), controlplane, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	require.Eventually(t,
+		testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
+			cp.Spec.DataPlane = nil
+		}),
+		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+	)
 
 	t.Log("verifying controlplane deployment has no active replicas")
 	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasActiveDeployment(t, GetCtx(), controlplaneName, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
@@ -605,18 +607,18 @@ func TestControlPlaneUpdate(t *testing.T) {
 	testEnv := GetEnvValueByName(container.Env, "TEST_ENV")
 	require.Equal(t, "before_update", testEnv)
 
-	t.Logf("updating controlplane resource")
-	controlplane, err = controlplaneClient.Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	container = k8sutils.GetPodContainerByName(&controlplane.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-	require.NotNil(t, container)
-	container.Env = []corev1.EnvVar{
-		{
-			Name: "TEST_ENV", Value: "after_update",
-		},
-	}
-	_, err = controlplaneClient.Update(GetCtx(), controlplane, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	t.Logf("updating controlplane resource with new ControlPlane environment variable value")
+
+	require.Eventually(t,
+		testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
+			cp.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Env = []corev1.EnvVar{
+				{
+					Name: "TEST_ENV", Value: "after_update",
+				},
+			}
+		}),
+		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+	)
 
 	t.Logf("verifying environment variable TEST_ENV in deployment after update")
 	require.Eventually(t, func() bool {
