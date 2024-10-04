@@ -113,6 +113,8 @@
 
 - Default version of `ControlPlane` is bumped to 3.3.1
   [#580](https://github.com/Kong/gateway-operator/pull/580)
+- Gateway API has been bumped to v1.2.0
+  [#674](https://github.com/Kong/gateway-operator/pull/674)
 
 ## [v1.3.0]
 

@@ -31,7 +31,7 @@ require (
 	k8s.io/client-go v0.31.1
 	oras.land/oras-go/v2 v2.5.0
 	sigs.k8s.io/controller-runtime v0.19.0
-	sigs.k8s.io/gateway-api v1.1.0
+	sigs.k8s.io/gateway-api v1.2.0
 )
 
 require (
@@ -101,7 +101,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
-	golang.org/x/tools v0.22.0 // indirect
+	golang.org/x/tools v0.24.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240814211410-ddb44dafa142 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
@@ -132,7 +132,7 @@ require (
 	golang.org/x/crypto v0.26.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	google.golang.org/api v0.194.0 // indirect
-	google.golang.org/grpc v1.66.0 // indirect
+	google.golang.org/grpc v1.66.2 // indirect
 	sigs.k8s.io/kind v0.24.0 // indirect
 	sigs.k8s.io/kustomize/api v0.17.3
 	sigs.k8s.io/kustomize/kyaml v0.17.2 // indirect
