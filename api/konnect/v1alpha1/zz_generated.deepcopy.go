@@ -316,6 +316,11 @@ func (in *KonnectGatewayControlPlaneList) DeepCopyObject() runtime.Object {
 func (in *KonnectGatewayControlPlaneSpec) DeepCopyInto(out *KonnectGatewayControlPlaneSpec) {
 	*out = *in
 	in.CreateControlPlaneRequest.DeepCopyInto(&out.CreateControlPlaneRequest)
+	if in.Members != nil {
+		in, out := &in.Members, &out.Members
+		*out = make([]v1.LocalObjectReference, len(*in))
+		copy(*out, *in)
+	}
 	out.KonnectConfiguration = in.KonnectConfiguration
 }
 

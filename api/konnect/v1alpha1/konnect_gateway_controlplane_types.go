@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -22,6 +23,7 @@ func init() {
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
 // +kubebuilder:validation:XValidation:rule="!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef", message="spec.konnect.authRef is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="!self.status.conditions.exists(c, c.type == 'APIAuthValid' && c.status == 'True') ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef", message="spec.konnect.authRef is immutable when an entity refers to a Valid API Auth Configuration"
+// +kubebuilder:validation:XValidation:rule="(has(self.spec.cluster_type) && self.spec.cluster_type != 'CLUSTER_TYPE_CONTROL_PLANE_GROUP') ? !has(self.spec.members) : true", message="spec.members is only applicable for ControlPlanes that are created as groups"
 // +apireference:kgo:include
 type KonnectGatewayControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -38,6 +40,10 @@ type KonnectGatewayControlPlane struct {
 // +apireference:kgo:include
 type KonnectGatewayControlPlaneSpec struct {
 	sdkkonnectcomp.CreateControlPlaneRequest `json:",inline"`
+
+	// Members is a list of references to the KonnectGatewayControlPlaneMembers that are part of this control plane group.
+	// Only applicable for ControlPlanes that are created as groups.
+	Members []corev1.LocalObjectReference `json:"members,omitempty"`
 
 	KonnectConfiguration KonnectConfiguration `json:"konnect,omitempty"`
 }

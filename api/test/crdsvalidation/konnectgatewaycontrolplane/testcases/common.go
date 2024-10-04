@@ -28,6 +28,7 @@ var TestCases = []testCasesGroup{}
 func init() {
 	TestCases = append(TestCases,
 		updatesNotAllowedForStatus,
+		membersCanOnlyBeSetForControlPlaneGroups,
 	)
 }
 
