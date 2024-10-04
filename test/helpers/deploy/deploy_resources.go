@@ -162,10 +162,11 @@ func KonnectGatewayControlPlaneWithID(
 	ctx context.Context,
 	cl client.Client,
 	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	opts ...objOption,
 ) *konnectv1alpha1.KonnectGatewayControlPlane {
 	t.Helper()
 
-	cp := KonnectGatewayControlPlane(t, ctx, cl, apiAuth)
+	cp := KonnectGatewayControlPlane(t, ctx, cl, apiAuth, opts...)
 	cp.Status.Conditions = []metav1.Condition{
 		{
 			Type:               conditions.KonnectEntityProgrammedConditionType,

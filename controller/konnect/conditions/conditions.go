@@ -20,6 +20,11 @@ const (
 	// KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect is the reason for the Programmed condition.
 	// It is set when one or more KongConsumerGroup references could not be reconciled with Konnect.
 	KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect = "FailedToReconcileConsumerGroupsWithKonnect"
+
+	// KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers
+	// is the reason for the Programmed condition. It is set when the control plane
+	// group members could not be set.
+	KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers = "FailedToSetControlPlaneGroupMembers"
 )
 
 const (

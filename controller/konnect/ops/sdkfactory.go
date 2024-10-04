@@ -8,6 +8,7 @@ import (
 // SDKWrapper is a wrapper of Konnect SDK to allow using mock SDKs in tests.
 type SDKWrapper interface {
 	GetControlPlaneSDK() ControlPlaneSDK
+	GetControlPlaneGroupSDK() ControlPlaneGroupSDK
 	GetServicesSDK() ServicesSDK
 	GetRoutesSDK() RoutesSDK
 	GetConsumersSDK() ConsumersSDK
@@ -36,9 +37,14 @@ type sdkWrapper struct {
 
 var _ SDKWrapper = sdkWrapper{}
 
-// GetControlPlaneSDK returns the SDK to operate Konenct control planes.
+// GetControlPlaneSDK returns the SDK to operate Konnect control planes.
 func (w sdkWrapper) GetControlPlaneSDK() ControlPlaneSDK {
 	return w.sdk.ControlPlanes
+}
+
+// GetControlPlaneGroupSDK returns the SDK to operate Konnect control plane groups.
+func (w sdkWrapper) GetControlPlaneGroupSDK() ControlPlaneGroupSDK {
+	return w.sdk.ControlPlaneGroups
 }
 
 // GetServicesSDK returns the SDK to operate Kong services.
