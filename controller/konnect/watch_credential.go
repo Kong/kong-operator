@@ -26,6 +26,7 @@ func kongCredentialRefersToKonnectGatewayControlPlane[
 			*configurationv1alpha1.KongCredentialJWT |
 			*configurationv1alpha1.KongCredentialHMAC
 
+		GetConsumerRefName() string
 		GetTypeName() string
 		GetNamespace() string
 	},
@@ -41,27 +42,13 @@ func kongCredentialRefersToKonnectGatewayControlPlane[
 			return false
 		}
 
-		var consumerRefName string
-		switch credential := any(credential).(type) {
-		case *configurationv1alpha1.KongCredentialACL:
-			consumerRefName = credential.Spec.ConsumerRef.Name
-		case *configurationv1alpha1.KongCredentialAPIKey:
-			consumerRefName = credential.Spec.ConsumerRef.Name
-		case *configurationv1alpha1.KongCredentialBasicAuth:
-			consumerRefName = credential.Spec.ConsumerRef.Name
-		case *configurationv1alpha1.KongCredentialJWT:
-			consumerRefName = credential.Spec.ConsumerRef.Name
-		case *configurationv1alpha1.KongCredentialHMAC:
-			consumerRefName = credential.Spec.ConsumerRef.Name
-		}
-
 		nn := types.NamespacedName{
 			Namespace: credential.GetNamespace(),
-			Name:      consumerRefName,
+			Name:      credential.GetConsumerRefName(),
 		}
 		var consumer configurationv1.KongConsumer
-		if err := cl.Get(context.Background(), nn, &consumer); client.IgnoreNotFound(err) != nil {
-			return true
+		if err := cl.Get(context.Background(), nn, &consumer); err != nil {
+			return false
 		}
 
 		return objHasControlPlaneRefKonnectNamespacedRef(&consumer)
