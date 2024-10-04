@@ -306,6 +306,8 @@ func attachKPI(t *testing.T, gatewayConfigNN k8stypes.NamespacedName, kpiNN k8st
 }
 
 func attachKongPluginBasedOnKPIToRoute(t *testing.T, cleaner *clusters.Cleaner, httpRouteNN, kpiNN k8stypes.NamespacedName) {
+	t.Helper()
+
 	kongPluginName := kpiNN.Name + "-plugin"
 	// To have it in the same namespace as the HTTPRoute to which it is attached.
 	kongPluginNamespace := httpRouteNN.Namespace
@@ -320,16 +322,16 @@ func attachKongPluginBasedOnKPIToRoute(t *testing.T, cleaner *clusters.Cleaner, 
 	require.NoError(t, err)
 	cleaner.Add(&kongPlugin)
 
-	t.Logf("attaching KongPlugin to GatewayConfiguration")
-	// Update httpRoute with KongPlugin
-	httpRoute, err := GetClients().GatewayClient.GatewayV1().HTTPRoutes(httpRouteNN.Namespace).Get(GetCtx(), httpRouteNN.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	const kpAnnotation = "konghq.com/plugins"
-	httpRoute.Annotations[kpAnnotation] = strings.Join(
-		append(strings.Split(httpRoute.Annotations[kpAnnotation], ","), kongPluginName), ",",
+	t.Logf("attaching KongPlugin %s to HTTPRoute %s", kongPluginName, httpRouteNN)
+	require.Eventually(t,
+		testutils.HTTPRouteUpdateEventually(t, GetCtx(), httpRouteNN, clients, func(h *gatewayv1.HTTPRoute) {
+			const kpAnnotation = "konghq.com/plugins"
+			h.Annotations[kpAnnotation] = strings.Join(
+				append(strings.Split(h.Annotations[kpAnnotation], ","), kongPluginName), ",",
+			)
+		}),
+		time.Minute, 250*time.Millisecond,
 	)
-	_, err = GetClients().GatewayClient.GatewayV1().HTTPRoutes(httpRouteNN.Namespace).Update(GetCtx(), httpRoute, metav1.UpdateOptions{})
-	require.NoError(t, err)
 }
 
 func checkDataPlaneStatus(

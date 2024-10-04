@@ -551,6 +551,29 @@ func DataPlaneUpdateEventually(t *testing.T, ctx context.Context, dataplaneNN ty
 	}
 }
 
+// HTTPRouteUpdateEventually is a helper function for tests that returns a function
+// that can be used to update the HTTPRoute.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func HTTPRouteUpdateEventually(t *testing.T, ctx context.Context, httpRouteNN types.NamespacedName, clients K8sClients, updateFunc func(*gatewayv1.HTTPRoute)) func() bool {
+	return func() bool {
+		cl := clients.GatewayClient.GatewayV1().HTTPRoutes(httpRouteNN.Namespace)
+		dp, err := cl.Get(ctx, httpRouteNN.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting HTTPRoute: %v", err)
+			return false
+		}
+
+		updateFunc(dp)
+
+		_, err = cl.Update(ctx, dp, metav1.UpdateOptions{})
+		if err != nil {
+			t.Logf("error updating HTTPRoute: %v", err)
+			return false
+		}
+		return true
+	}
+}
+
 // ControlPlaneUpdateEventually is a helper function for tests that returns a function
 // that can be used to update the ControlPlane.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
