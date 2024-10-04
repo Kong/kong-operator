@@ -90,6 +90,8 @@ const (
 	KongCredentialAPIKeyControllerName = "KongCredentialAPIKey" //nolint:gosec
 	// KongCredentialACLControllerName is the name of the KongCredentialACL controller.
 	KongCredentialACLControllerName = "KongCredentialACL" //nolint:gosec
+	// KongCredentialHMACControllerName is the name of the KongCredentialHMAC controller.
+	KongCredentialHMACControllerName = "KongCredentialHMAC" //nolint:gosec
 	// KongCredentialJWTControllerName is the name of the KongCredentialJWT controller.
 	KongCredentialJWTControllerName = "KongCredentialJWT" //nolint:gosec
 	// KongCACertificateControllerName is the name of the KongCACertificate controller.
@@ -488,6 +490,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialACL](c.KonnectSyncPeriod),
 				),
 			},
+			KongCredentialHMACControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityReconciler(
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
+					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](c.KonnectSyncPeriod),
+				),
+			},
 			KongCredentialJWTControllerName: {
 				Enabled: c.KonnectControllersEnabled,
 				Controller: konnect.NewKonnectEntityReconciler(
@@ -602,6 +613,10 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 		{
 			Object:       &configurationv1alpha1.KongCredentialAPIKey{},
 			IndexOptions: konnect.IndexOptionsForCredentialsAPIKey(),
+		},
+		{
+			Object:       &configurationv1alpha1.KongCredentialHMAC{},
+			IndexOptions: konnect.IndexOptionsForCredentialsHMAC(),
 		},
 		{
 			Object:       &configurationv1.KongConsumer{},

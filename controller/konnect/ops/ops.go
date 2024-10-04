@@ -74,6 +74,8 @@ func Create[
 		return e, createKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialJWT:
 		return e, createKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialHMAC:
+		return e, createKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return e, createCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCertificate:
@@ -136,6 +138,8 @@ func Delete[
 		return deleteKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialJWT:
 		return deleteKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialHMAC:
+		return deleteKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return deleteCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCertificate:
@@ -243,6 +247,8 @@ func Update[
 		return ctrl.Result{}, updateKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialJWT:
 		return ctrl.Result{}, updateKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialHMAC:
+		return ctrl.Result{}, updateKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return ctrl.Result{}, updateCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCertificate:

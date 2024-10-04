@@ -364,6 +364,35 @@ func KongCredentialACL(
 	return c
 }
 
+// KongCredentialHMAC deploys a KongCredentialHMAC resource and returns the resource.
+func KongCredentialHMAC(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	consumerName string,
+) *configurationv1alpha1.KongCredentialHMAC {
+	t.Helper()
+
+	c := &configurationv1alpha1.KongCredentialHMAC{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "hmac-",
+		},
+		Spec: configurationv1alpha1.KongCredentialHMACSpec{
+			ConsumerRef: corev1.LocalObjectReference{
+				Name: consumerName,
+			},
+			KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
+				Username: lo.ToPtr("username"),
+			},
+		},
+	}
+
+	require.NoError(t, cl.Create(ctx, c))
+	t.Logf("deployed new unmanaged KongCredentialHMAC %s", client.ObjectKeyFromObject(c))
+
+	return c
+}
+
 // KongCredentialJWT deploys a KongCredentialJWT resource and returns the resource.
 func KongCredentialJWT(
 	t *testing.T,
