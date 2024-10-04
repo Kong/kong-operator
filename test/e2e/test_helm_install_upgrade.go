@@ -9,6 +9,7 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -58,6 +59,7 @@ func TestHelmUpgrade(t *testing.T) {
 		toVersion              string
 		objectsToDeploy        []client.Object
 		upgradeToCurrent       bool
+		assertionsAfterInstall []assertion
 		assertionsAfterUpgrade []assertion
 	}{
 		// NOTE: We do not support versions earlier than 1.2 with the helm chart.
@@ -103,6 +105,14 @@ func TestHelmUpgrade(t *testing.T) {
 							Protocol: gatewayv1.HTTPProtocolType,
 							Port:     gatewayv1.PortNumber(80),
 						}},
+					},
+				},
+			},
+			assertionsAfterInstall: []assertion{
+				{
+					Name: "Gateway is programmed",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-120-123=true")(ctx, c, cl.MgrClient)
 					},
 				},
 			},
@@ -165,6 +175,14 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 			},
+			assertionsAfterInstall: []assertion{
+				{
+					Name: "Gateway is programmed",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-123-130=true")(ctx, c, cl.MgrClient)
+					},
+				},
+			},
 			assertionsAfterUpgrade: []assertion{
 				{
 					Name: "Gateway is programmed",
@@ -173,17 +191,15 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 				{
-					Name: "DataPlane deployment is not patched after operator upgrade",
+					Name: "DataPlane deployment is patched after operator upgrade (due to change in default Kong image version to 3.7)",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-123-130=true")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-123-130=true")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentHasImageSetTo("gw-upgrade-123-130=true", "kong:3.7")(ctx, c, cl.MgrClient)
 					},
 				},
-				{
-					Name: "Cluster wide resources owned by the ControlPlane get the proper set of labels",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						clusterWideResourcesAreProperlyManaged("gw-upgrade-123-130=true")(ctx, c, cl.MgrClient)
-					},
-				},
+				// NOTE: We do not check managed cluster wide resource labels because the fix for migrating
+				// labels from older versions to new has been merged after 1.3.0 release:
+				// https://github.com/Kong/gateway-operator/pull/369
 			},
 		},
 		{
@@ -228,6 +244,14 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 			},
+			assertionsAfterInstall: []assertion{
+				{
+					Name: "Gateway is programmed",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-130-current=true")(ctx, c, cl.MgrClient)
+					},
+				},
+			},
 			assertionsAfterUpgrade: []assertion{
 				{
 					Name: "Gateway is programmed",
@@ -236,9 +260,10 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 				{
-					Name: "DataPlane deployment is not patched after operator upgrade",
+					Name: "DataPlane deployment is patched after operator upgrade (due to change in default Kong image version to 3.8)",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-130-current=true")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-130-current=true")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentHasImageSetTo("gw-upgrade-130-current=true", "kong:3.8")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
@@ -288,6 +313,14 @@ func TestHelmUpgrade(t *testing.T) {
 							Protocol: gatewayv1.HTTPProtocolType,
 							Port:     gatewayv1.PortNumber(80),
 						}},
+					},
+				},
+			},
+			assertionsAfterInstall: []assertion{
+				{
+					Name: "Gateway is programmed",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 			},
@@ -377,6 +410,10 @@ func TestHelmUpgrade(t *testing.T) {
 				}
 			})
 
+			require.NoError(t, waitForOperatorDeployment(t, ctx, e.Namespace.Name, e.Clients.K8sClient, waitTime,
+				deploymentAssertConditions(t, deploymentReadyConditions()...),
+			))
+
 			// Deploy the objects that should be present before the upgrade.
 			cl := client.NewNamespacedClient(e.Clients.MgrClient, e.Namespace.Name)
 			for _, obj := range tc.objectsToDeploy {
@@ -386,10 +423,16 @@ func TestHelmUpgrade(t *testing.T) {
 				})
 			}
 
-			require.NoError(t, waitForOperatorDeployment(t, ctx, e.Namespace.Name, e.Clients.K8sClient, waitTime,
-				deploymentAssertConditions(t, deploymentReadyConditions()...),
-			))
+			t.Logf("Checking assertions after install...")
+			for _, assertion := range tc.assertionsAfterInstall {
+				t.Run("after_install/"+assertion.Name, func(t *testing.T) {
+					require.EventuallyWithT(t, func(c *assert.CollectT) {
+						assertion.Func(c, e.Clients)
+					}, waitTime, 500*time.Millisecond)
+				})
+			}
 
+			t.Logf("Upgrading from %s to %s", tc.fromVersion, tag)
 			opts.SetValues["image.tag"] = tag
 			opts.SetValues["image.repository"] = targetRepository
 
@@ -399,8 +442,9 @@ func TestHelmUpgrade(t *testing.T) {
 			),
 			)
 
+			t.Logf("Checking assertions after upgrade...")
 			for _, assertion := range tc.assertionsAfterUpgrade {
-				t.Run(assertion.Name, func(t *testing.T) {
+				t.Run("after_upgrade/"+assertion.Name, func(t *testing.T) {
 					require.EventuallyWithT(t, func(c *assert.CollectT) {
 						assertion.Func(c, e.Clients)
 					}, waitTime, 500*time.Millisecond)
@@ -516,29 +560,103 @@ func gatewayAndItsListenersAreProgrammedAssertion(gatewayLabelSelector string) f
 	}
 }
 
-// gatewayDataPlaneDeploymentIsNotPatched returns a predicate that checks if the
-// DataPlane deployment is not patched.
-func gatewayDataPlaneDeploymentIsNotPatched(gatewayLabelSelector string) func(context.Context, *assert.CollectT, client.Client) {
+func gatewayDataPlaneDeploymentHasImageSetTo(
+	gatewayLabelSelector string,
+	image string,
+) func(context.Context, *assert.CollectT, client.Client) {
+	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {
+		container := d.Spec.Template.Spec.Containers
+		if len(container) != 1 {
+			return fmt.Errorf("expected 1 container in Deployment %q, got %d",
+				client.ObjectKeyFromObject(d), len(d.Spec.Template.Spec.Containers),
+			)
+		}
+
+		if container[0].Image != image {
+			return fmt.Errorf("Gateway's DataPlane Deployment %q expected image %s but got %s",
+				client.ObjectKeyFromObject(d), container[0].Image, image,
+			)
+		}
+		return nil
+	})
+}
+
+func gatewayDataPlaneDeploymentIsNotPatched(
+	gatewayLabelSelector string,
+) func(context.Context, *assert.CollectT, client.Client) {
+	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {
+		if d.Generation != 1 {
+			return fmt.Errorf("Gateway's DataPlane Deployment %q got patched but it shouldn't:\n%# v",
+				client.ObjectKeyFromObject(d), pretty.Formatter(d),
+			)
+		}
+		return nil
+	})
+}
+
+func gatewayDataPlaneDeploymentIsPatched(
+	gatewayLabelSelector string,
+) func(context.Context, *assert.CollectT, client.Client) {
+	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {
+		if d.Generation == 1 {
+			return fmt.Errorf("Gateway's DataPlane Deployment %q did not get patched but it should:\n%# v",
+				client.ObjectKeyFromObject(d), pretty.Formatter(d),
+			)
+		}
+		return nil
+	})
+}
+
+func gatewayDataPlaneDeploymentCheck(
+	gatewayLabelSelector string,
+	predicates ...func(d *appsv1.Deployment) error,
+) func(context.Context, *assert.CollectT, client.Client) {
 	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
 		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, c, cl)
 		if !assert.NotNil(c, gw) {
 			return
 		}
-
-		dataplanes, err := gateway.ListDataPlanesForGateway(ctx, cl, gw)
+		deployments, err := listDataPlaneDeploymentsForGateway(c, ctx, cl, gw)
 		if err != nil {
-			c.Errorf("failed to list DataPlanes for Gateway %q: %v", client.ObjectKeyFromObject(gw), err)
 			return
 		}
-		if !assert.Len(c, dataplanes, 1) {
+
+		if !assert.Len(c, deployments, 1) {
+			c.Errorf("expected 1 DataPlane Deployment for Gateway %q, got %d", client.ObjectKeyFromObject(gw), len(deployments))
 			return
 		}
-		dp := &dataplanes[0]
-		if dp.Generation != 1 {
-			c.Errorf("DataPlane %q got patched but it shouldn't: %v", client.ObjectKeyFromObject(dp), err)
-			return
+
+		deployment := &deployments[0]
+		for _, predicate := range predicates {
+			assert.NoError(c, predicate(deployment))
 		}
 	}
+}
+
+func listDataPlaneDeploymentsForGateway(
+	c *assert.CollectT,
+	ctx context.Context,
+	cl client.Client,
+	gw *gatewayv1.Gateway,
+) ([]appsv1.Deployment, error) {
+	dataplanes, err := gateway.ListDataPlanesForGateway(ctx, cl, gw)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list DataPlanes for Gateway %q: %w", client.ObjectKeyFromObject(gw), err)
+	}
+	if !assert.Len(c, dataplanes, 1) {
+		return nil, fmt.Errorf("expected 1 DataPlane for Gateway %q, got %d", client.ObjectKeyFromObject(gw), len(dataplanes))
+	}
+
+	dataplane := &dataplanes[0]
+	return k8sutils.ListDeploymentsForOwner(
+		ctx,
+		cl,
+		dataplane.Namespace,
+		dataplane.UID,
+		client.MatchingLabels{
+			"app": dataplane.Name,
+		},
+	)
 }
 
 func clusterWideResourcesAreProperlyManaged(gatewayLabelSelector string) func(ctx context.Context, c *assert.CollectT, cl client.Client) {
