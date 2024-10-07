@@ -113,6 +113,8 @@
   [#612](https://github.com/Kong/gateway-operator/pull/612)
 - Guard object counters with checks whether CRDs for them exist
   [#710](https://github.com/Kong/gateway-operator/pull/710)
+- Do not reconcile Gateways nor assign any finalizers when the referred GatewayClass is not supported.
+  [#711](https://github.com/Kong/gateway-operator/pull/711)
 
 ### Changes
 

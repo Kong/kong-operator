@@ -2,6 +2,7 @@ package errors
 
 import (
 	"errors"
+	"fmt"
 )
 
 // -----------------------------------------------------------------------------
@@ -16,14 +17,19 @@ var ErrUnexpectedObject = errors.New("unexpected object type provided")
 // Gateway - Errors
 // -----------------------------------------------------------------------------
 
-// ErrUnsupportedGateway is an error which indicates that a provided Gateway
-// is not supported because it's GatewayClass was not associated with this
-// controller.
-var ErrUnsupportedGateway = errors.New("gateway not supported")
+// ErrUnsupportedGatewayClass is an error which indicates that a provided GatewayClass
+// is not supported.
+type ErrUnsupportedGatewayClass struct {
+	reason string
+}
 
-// ErrTooManyDataPlaneNetworkPolicies is an error which indicates that a DataPlane
-// has too many NetworkPolicies configured.
-var ErrTooManyDataPlaneNetworkPolicies = errors.New("too many data plane network policies")
+func NewErrUnsupportedGateway(reason string) ErrUnsupportedGatewayClass {
+	return ErrUnsupportedGatewayClass{reason: reason}
+}
+
+func (e ErrUnsupportedGatewayClass) Error() string {
+	return fmt.Errorf("unsupported gateway class: %s", e.reason).Error()
+}
 
 // -----------------------------------------------------------------------------
 // GatewayClass - Errors

@@ -27,13 +27,11 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
-	"github.com/kong/gateway-operator/pkg/vars"
 )
 
 // -----------------------------------------------------------------------------
@@ -191,23 +189,6 @@ func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAdd
 	}
 
 	return addresses, nil
-}
-
-func (r *Reconciler) verifyGatewayClassSupport(ctx context.Context, gateway *gwtypes.Gateway) (*gatewayclass.Decorator, error) {
-	if gateway.Spec.GatewayClassName == "" {
-		return nil, operatorerrors.ErrUnsupportedGateway
-	}
-
-	gwc := gatewayclass.NewDecorator()
-	if err := r.Client.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gwc.GatewayClass); err != nil {
-		return nil, err
-	}
-
-	if string(gwc.Spec.ControllerName) != vars.ControllerName() {
-		return nil, operatorerrors.ErrUnsupportedGateway
-	}
-
-	return gwc, nil
 }
 
 func (r *Reconciler) getOrCreateGatewayConfiguration(ctx context.Context, gatewayClass *gatewayv1.GatewayClass) (*operatorv1beta1.GatewayConfiguration, error) {

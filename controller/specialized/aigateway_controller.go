@@ -17,6 +17,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/watch"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -66,9 +67,9 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// and this check must be done here to ensure consistency.
 	//
 	// See: https://github.com/kubernetes-sigs/controller-runtime/issues/1996
-	gwc, err := r.verifyGatewayClassSupport(ctx, &aigateway)
+	gwc, err := gatewayclass.Get(ctx, r.Client, aigateway.Spec.GatewayClassName)
 	if err != nil {
-		if errors.Is(err, operatorerrors.ErrUnsupportedGateway) {
+		if errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{}) {
 			log.Debug(logger, "resource not supported, ignoring", aigateway, "ExpectedGatewayClass", vars.ControllerName())
 			return ctrl.Result{}, nil
 		}

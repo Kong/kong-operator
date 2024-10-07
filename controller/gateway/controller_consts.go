@@ -12,6 +12,6 @@ const (
 	GatewayFinalizerCleanupDataPlanes GatewayFinalizer = "gateway-operator.konghq.com/cleanup-dataplanes"
 	// GatewayFinalizerCleanupControlPlanes is the finalizer to cleanup owned controlplane resources.
 	GatewayFinalizerCleanupControlPlanes GatewayFinalizer = "gateway-operator.konghq.com/cleanup-controlplanes"
-	// GatewayFinalizerCleanupNetworkpolicies is the finalizer to cleanup owned network policies.
-	GatewayFinalizerCleanupNetworkpolicies GatewayFinalizer = "gateway-operator.konghq.com/cleanup-network-policies"
+	// GatewayFinalizerCleanupNetworkPolicies is the finalizer to cleanup owned network policies.
+	GatewayFinalizerCleanupNetworkPolicies GatewayFinalizer = "gateway-operator.konghq.com/cleanup-network-policies"
 )
