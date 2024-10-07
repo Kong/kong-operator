@@ -161,10 +161,6 @@ func setGroupMembers(
 			var memberCP konnectv1alpha1.KonnectGatewayControlPlane
 			err := cl.Get(ctx, client.ObjectKey{Namespace: cp.Namespace, Name: member.Name}, &memberCP)
 			if err != nil {
-				if k8serrors.IsNotFound(err) {
-					chErr <- err
-					return
-				}
 				chErr <- fmt.Errorf("failed to get control plane group member %s: %w", member.Name, err)
 				return
 			}
