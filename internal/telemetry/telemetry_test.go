@@ -29,6 +29,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/modules/manager/metadata"
 )
 
 func prepareScheme(t *testing.T) *runtime.Scheme {
@@ -91,10 +92,6 @@ func versionInfo() *version.Info {
 }
 
 func TestCreateManager(t *testing.T) {
-	payload := types.ProviderReport{
-		"v": "0.6.2",
-	}
-
 	testcases := []struct {
 		name                string
 		objects             []runtime.Object
@@ -116,6 +113,12 @@ func TestCreateManager(t *testing.T) {
 				"k8s_nodes_count=1",
 				"k8s_pods_count=0",
 				"k8s_dataplanes_count=0",
+				"controller_dataplane_enabled=true",
+				"controller_dataplane_bg_enabled=false",
+				"controller_controlplane_enabled=false",
+				"controller_gateway_enabled=false",
+				"controller_konnect_enabled=false",
+				"controller_kongplugininstallation_enabled=false",
 			},
 		},
 		{
@@ -146,6 +149,12 @@ func TestCreateManager(t *testing.T) {
 				"k8s_nodes_count=1",
 				"k8s_pods_count=1",
 				"k8s_dataplanes_count=1",
+				"controller_dataplane_enabled=true",
+				"controller_dataplane_bg_enabled=false",
+				"controller_controlplane_enabled=false",
+				"controller_gateway_enabled=false",
+				"controller_konnect_enabled=false",
+				"controller_kongplugininstallation_enabled=false",
 			},
 		},
 		{
@@ -222,6 +231,12 @@ func TestCreateManager(t *testing.T) {
 				"k8s_controlplanes_count=3",
 				"k8s_standalone_dataplanes_count=3",
 				"k8s_standalone_controlplanes_count=2",
+				"controller_dataplane_enabled=true",
+				"controller_dataplane_bg_enabled=false",
+				"controller_controlplane_enabled=false",
+				"controller_gateway_enabled=false",
+				"controller_konnect_enabled=false",
+				"controller_kongplugininstallation_enabled=false",
 			},
 		},
 		{
@@ -271,6 +286,12 @@ func TestCreateManager(t *testing.T) {
 			expectedReportParts: []string{
 				"signal=test-signal",
 				"k8s_dataplanes_requested_replicas_count=16",
+				"controller_dataplane_enabled=true",
+				"controller_dataplane_bg_enabled=false",
+				"controller_controlplane_enabled=false",
+				"controller_gateway_enabled=false",
+				"controller_konnect_enabled=false",
+				"controller_kongplugininstallation_enabled=false",
 			},
 		},
 		{
@@ -299,6 +320,12 @@ func TestCreateManager(t *testing.T) {
 			expectedReportParts: []string{
 				"signal=test-signal",
 				"k8s_controlplanes_requested_replicas_count=11",
+				"controller_dataplane_enabled=true",
+				"controller_dataplane_bg_enabled=false",
+				"controller_controlplane_enabled=false",
+				"controller_gateway_enabled=false",
+				"controller_konnect_enabled=false",
+				"controller_kongplugininstallation_enabled=false",
 			},
 		},
 		{
@@ -328,6 +355,12 @@ func TestCreateManager(t *testing.T) {
 				"k8s_aigateways_count=0", // NOTE: This does work when run against the cluster.
 				"k8s_dataplanes_count=1",
 				"k8s_controlplanes_count=1",
+				"controller_dataplane_enabled=true",
+				"controller_dataplane_bg_enabled=false",
+				"controller_controlplane_enabled=false",
+				"controller_gateway_enabled=false",
+				"controller_konnect_enabled=false",
+				"controller_kongplugininstallation_enabled=false",
 			},
 		},
 	}
@@ -355,8 +388,16 @@ func TestCreateManager(t *testing.T) {
 				},
 				tc.objects...,
 			)
+			meta := metadata.Info{
+				Release: "0.6.2",
+				Flavor:  metadata.OSSFlavor,
+			}
+			cfg := Config{
+				DataPlaneControllerEnabled: true,
+			}
+
 			m, err := createManager(
-				types.Signal(SignalPing), k8sclient, ctrlClient, dyn, payload,
+				types.Signal(SignalPing), k8sclient, ctrlClient, dyn, meta, cfg,
 				logr.Discard(),
 				telemetry.OptManagerPeriod(time.Hour),
 			)
@@ -381,10 +422,6 @@ func TestCreateManager(t *testing.T) {
 }
 
 func TestTelemetryUpdates(t *testing.T) {
-	payload := types.ProviderReport{
-		"v": "0.6.2",
-	}
-
 	testcases := []struct {
 		name                           string
 		objects                        []runtime.Object
@@ -504,8 +541,16 @@ func TestTelemetryUpdates(t *testing.T) {
 			require.True(t, ok)
 			d.FakedServerVersion = versionInfo()
 
+			meta := metadata.Info{
+				Release: "0.6.2",
+				Flavor:  metadata.OSSFlavor,
+			}
+			cfg := Config{
+				DataPlaneControllerEnabled: true,
+			}
+
 			m, err := createManager(
-				types.Signal(SignalPing), k8sclient, ctrlClient, dyn, payload,
+				types.Signal(SignalPing), k8sclient, ctrlClient, dyn, meta, cfg,
 				testr.New(t),
 				telemetry.OptManagerPeriod(time.Hour),
 			)

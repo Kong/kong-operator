@@ -262,7 +262,7 @@ func Run(
 	// Enable anonnymous reporting when configured but not for development builds
 	// to reduce the noise.
 	if cfg.AnonymousReports && !cfg.DevelopmentMode {
-		stopAnonymousReports, err := setupAnonymousReports(ctx, restCfg, setupLog, metadata)
+		stopAnonymousReports, err := setupAnonymousReports(ctx, restCfg, setupLog, metadata, cfg)
 		if err != nil {
 			setupLog.Error(err, "failed setting up anonymous reports")
 		} else {
@@ -375,15 +375,20 @@ func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
 // a cleanup function and an error.
 // The caller is responsible to call the returned function - when the returned
 // error is not nil - to stop the reports sending.
-func setupAnonymousReports(ctx context.Context, restCfg *rest.Config, logger logr.Logger, metadata metadata.Info) (func(), error) {
+func setupAnonymousReports(ctx context.Context, restCfg *rest.Config, logger logr.Logger, metadata metadata.Info, cfg Config) (func(), error) {
 	logger.Info("starting anonymous reports")
 
-	payload := telemetry.Payload{
-		"v":      metadata.Release,
-		"flavor": metadata.Flavor,
+	// NOTE: this is needed to break the import cycle between telemetry and manager packages.
+	tCfg := telemetry.Config{
+		DataPlaneControllerEnabled:          cfg.DataPlaneControllerEnabled,
+		DataPlaneBlueGreenControllerEnabled: cfg.DataPlaneBlueGreenControllerEnabled,
+		ControlPlaneControllerEnabled:       cfg.ControlPlaneControllerEnabled,
+		GatewayControllerEnabled:            cfg.GatewayControllerEnabled,
+		KonnectControllerEnabled:            cfg.KonnectControllersEnabled,
+		AIGatewayControllerEnabled:          cfg.AIGatewayControllerEnabled,
 	}
 
-	tMgr, err := telemetry.CreateManager(telemetry.SignalPing, restCfg, logger, payload)
+	tMgr, err := telemetry.CreateManager(telemetry.SignalPing, restCfg, logger, metadata, tCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create anonymous reports manager: %w", err)
 	}

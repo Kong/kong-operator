@@ -16,6 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
@@ -30,8 +32,19 @@ const (
 
 type Payload = types.ProviderReport
 
+// Config holds the configuration that is sent to telemetry manager.
+type Config struct {
+	DataPlaneControllerEnabled          bool
+	DataPlaneBlueGreenControllerEnabled bool
+	ControlPlaneControllerEnabled       bool
+	GatewayControllerEnabled            bool
+	KonnectControllerEnabled            bool
+	AIGatewayControllerEnabled          bool
+	KongPluginInstallationEnabled       bool
+}
+
 // CreateManager creates telemetry manager using the provided rest.Config.
-func CreateManager(signal string, restConfig *rest.Config, log logr.Logger, payload Payload) (telemetry.Manager, error) {
+func CreateManager(signal string, restConfig *rest.Config, log logr.Logger, meta metadata.Info, cfg Config) (telemetry.Manager, error) {
 	k, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client-go kubernetes client: %w", err)
@@ -55,7 +68,8 @@ func CreateManager(signal string, restConfig *rest.Config, log logr.Logger, payl
 		k,
 		cl,
 		dyn,
-		payload,
+		meta,
+		cfg,
 		log,
 		telemetry.OptManagerPeriod(telemetryPeriod),
 	)
@@ -85,7 +99,8 @@ func createManager(
 	k kubernetes.Interface,
 	cl client.Client,
 	dyn dynamic.Interface,
-	fixedPayload Payload,
+	meta metadata.Info,
+	cfg Config,
 	log logr.Logger,
 	opts ...telemetry.OptManager,
 ) (telemetry.Manager, error) {
@@ -105,34 +120,50 @@ func createManager(
 	}
 	// Add cluster state workflow
 	{
+		checker := k8sutils.CRDChecker{Client: cl}
+
+		cpExists, err := checker.CRDExists(operatorv1beta1.ControlPlaneGVR())
+		if err != nil {
+			log.Info("failed to check if controlplane CRD exists", "error", err)
+		}
+		aiGatewayExists, err := checker.CRDExists(operatorv1alpha1.AIGatewayGVR())
+		if err != nil {
+			log.Info("failed to check if aigateway CRD exists", "error", err)
+		}
+		dpExists, err := checker.CRDExists(operatorv1beta1.DataPlaneGVR())
+		if err != nil {
+			log.Info("failed to check if dataplane CRD exists", "error", err)
+		}
+
 		w, err := telemetry.NewClusterStateWorkflow(dyn, cl.RESTMapper())
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cluster state workflow: %w", err)
 		}
 
-		// Add dataplane count provider to monitor number of dataplanes in the cluster.
-		p, err := NewDataPlaneCountProvider(dyn, cl.RESTMapper())
-		if err != nil {
-			log.Info("failed to create dataplane count provider", "error", err)
-		} else {
-			w.AddProvider(p)
+		if dpExists {
+			// Add dataplane count provider to monitor number of dataplanes in the cluster.
+			p, err := NewDataPlaneCountProvider(dyn, cl.RESTMapper())
+			if err != nil {
+				log.Info("failed to create dataplane count provider", "error", err)
+			} else {
+				w.AddProvider(p)
+			}
 		}
 
-		// Add controlplane count provider to monitor number of controlplanes in the cluster.
-		p, err = NewControlPlaneCountProvider(dyn, cl.RESTMapper())
-		if err != nil {
-			log.Info("failed to create controlplane count provider", "error", err)
-		} else {
-			w.AddProvider(p)
+		if cpExists {
+			// Add controlplane count provider to monitor number of controlplanes in the cluster.
+			p, err := NewControlPlaneCountProvider(dyn, cl.RESTMapper())
+			if err != nil {
+				log.Info("failed to create controlplane count provider", "error", err)
+			} else {
+				w.AddProvider(p)
+			}
 		}
 
-		checker := k8sutils.CRDChecker{Client: cl}
 		// AIGateway is optional so check if it exists before enabling the count provider.
-		if exists, err := checker.CRDExists(operatorv1alpha1.AIGatewayGVR()); err != nil {
-			log.Info("failed to check if aigateway CRD exists ", "error", err)
-		} else if exists {
+		if aiGatewayExists {
 			// Add aigateway count provider to monitor number of aigateways in the cluster.
-			p, err = NewAIgatewayCountProvider(dyn, cl.RESTMapper())
+			p, err := NewAIgatewayCountProvider(dyn, cl.RESTMapper())
 			if err != nil {
 				log.Info("failed to create aigateway count provider", "error", err)
 			} else {
@@ -140,36 +171,44 @@ func createManager(
 			}
 		}
 
-		// Add dataplane count not from gateway.
-		p, err = NewStandaloneDataPlaneCountProvider(cl)
-		if err != nil {
-			log.Info("failed to create standalone dataplane count provider", "error", err)
-		} else {
-			w.AddProvider(p)
+		if dpExists {
+			// Add dataplane count not from gateway.
+			p, err := NewStandaloneDataPlaneCountProvider(cl)
+			if err != nil {
+				log.Info("failed to create standalone dataplane count provider", "error", err)
+			} else {
+				w.AddProvider(p)
+			}
 		}
 
-		// Add controlplane count not from gateway.
-		p, err = NewStandaloneControlPlaneCountProvider(cl)
-		if err != nil {
-			log.Info("failed to create standalone controlplane count provider", "error", err)
-		} else {
-			w.AddProvider(p)
+		if cpExists {
+			// Add controlplane count not from gateway.
+			p, err := NewStandaloneControlPlaneCountProvider(cl)
+			if err != nil {
+				log.Info("failed to create standalone controlplane count provider", "error", err)
+			} else {
+				w.AddProvider(p)
+			}
 		}
 
-		// Add dataplane requested replicas count provider to monitor number of requested replicas for dataplanes.
-		p, err = NewDataPlaneRequestedReplicasCountProvider(cl)
-		if err != nil {
-			log.Info("failed to create dataplane requested replicas count provider", "error", err)
-		} else {
-			w.AddProvider(p)
+		if dpExists {
+			// Add dataplane requested replicas count provider to monitor number of requested replicas for dataplanes.
+			p, err := NewDataPlaneRequestedReplicasCountProvider(cl)
+			if err != nil {
+				log.Info("failed to create dataplane requested replicas count provider", "error", err)
+			} else {
+				w.AddProvider(p)
+			}
 		}
 
-		// Add controlplane requested replicas count provider to monitor number of requested replicas for controlplanes.
-		p, err = NewControlPlaneRequestedReplicasCountProvider(cl)
-		if err != nil {
-			log.Info("failed to create controlplane requested replicas count provider", "error", err)
-		} else {
-			w.AddProvider(p)
+		if cpExists {
+			// Add controlplane requested replicas count provider to monitor number of requested replicas for controlplanes.
+			p, err := NewControlPlaneRequestedReplicasCountProvider(cl)
+			if err != nil {
+				log.Info("failed to create controlplane requested replicas count provider", "error", err)
+			} else {
+				w.AddProvider(p)
+			}
 		}
 
 		m.AddWorkflow(w)
@@ -180,7 +219,19 @@ func createManager(
 		if err != nil {
 			return nil, fmt.Errorf("failed to create state workflow: %w", err)
 		} else {
-			p, err := provider.NewFixedValueProvider("payload", fixedPayload)
+			payload := Payload{
+				"v":                                         meta.Release,
+				"flavor":                                    meta.Flavor,
+				"controller_dataplane_enabled":              cfg.DataPlaneControllerEnabled,
+				"controller_dataplane_bg_enabled":           cfg.DataPlaneBlueGreenControllerEnabled,
+				"controller_controlplane_enabled":           cfg.ControlPlaneControllerEnabled,
+				"controller_gateway_enabled":                cfg.GatewayControllerEnabled,
+				"controller_konnect_enabled":                cfg.KonnectControllerEnabled,
+				"controller_aigateway_enabled":              cfg.AIGatewayControllerEnabled,
+				"controller_kongplugininstallation_enabled": cfg.KongPluginInstallationEnabled,
+			}
+
+			p, err := provider.NewFixedValueProvider("payload", payload)
 			if err != nil {
 				log.Info("failed to create fixed payload provider", "error", err)
 			} else {
