@@ -85,11 +85,14 @@ machine against the cluster that you have configured via your `KUBECONFIG`.
 
 ### Adding new CRDs
 
-Whenever you add a new CRD ensure that it is included in project's [`PROJECT`](./PROJECT) file.
-
-This is necessary for creation of a bundle for external hubs like [Operator Hub's community operators][community-operators].
+Whenever you add a new CRD:
+- Ensure that it is included in project's [`PROJECT`](./PROJECT) file. This is necessary for creation of
+  a bundle for external hubs like [Operator Hub's community operators][community-operators].
+- Annotate the CRD and any new type it depends on with the right markers to make sure it will be included
+  in the generated documentation. See [available markers][available-markers].
 
 [community-operators]: https://github.com/k8s-operatorhub/community-operators/
+[available-markers]: https://github.com/Kong/kubernetes-configuration/blob/main/README.md#available-custom-markers
 
 ## Seeking Help
 

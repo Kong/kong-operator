@@ -34,6 +34,7 @@ func init() {
 // If a DataPlane successfully refers a DataPlaneKonnectExtension, the DataPlane
 // deployment spec gets customized to include the konnect-related configuration.
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable."
+// +apireference:kgo:include
 type DataPlaneKonnectExtension struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -47,6 +48,7 @@ type DataPlaneKonnectExtension struct {
 // +kubebuilder:object:root=true
 
 // DataPlaneKonnectExtensionList contains a list of DataPlaneKonnectExtension.
+// +apireference:kgo:include
 type DataPlaneKonnectExtensionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -54,6 +56,7 @@ type DataPlaneKonnectExtensionList struct {
 }
 
 // DataPlaneKonnectExtensionSpec defines the desired state of DataPlaneKonnectExtension.
+// +apireference:kgo:include
 type DataPlaneKonnectExtensionSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this DataPlaneKonnectExtension is associated with.
 	// +kubebuilder:validation:Required
@@ -89,6 +92,7 @@ type DataPlaneKonnectExtensionSpec struct {
 }
 
 // KonnectControlPlaneAPIAuthConfiguration contains the configuration to authenticate with Konnect API ControlPlane.
+// +apireference:kgo:include
 type KonnectControlPlaneAPIAuthConfiguration struct {
 	// ClusterCertificateSecretName is a name of the Secret containing the Konnect Control Plane's cluster certificate.
 	// +kubebuilder:validation:Required
@@ -96,6 +100,7 @@ type KonnectControlPlaneAPIAuthConfiguration struct {
 }
 
 // ClusterCertificateSecretRef contains the reference to the Secret containing the Konnect Control Plane's cluster certificate.
+// +apireference:kgo:include
 type ClusterCertificateSecretRef struct {
 	// Name is the name of the Secret containing the Konnect Control Plane's cluster certificate.
 	// +kubebuilder:validation:Required
@@ -103,6 +108,7 @@ type ClusterCertificateSecretRef struct {
 }
 
 // DataPlaneKonnectExtensionStatus defines the observed state of DataPlaneKonnectExtension.
+// +apireference:kgo:include
 type DataPlaneKonnectExtensionStatus struct {
 	// DataPlaneRefs is the array  of DataPlane references this is associated with.
 	// A new reference is set by the operator when this extension is associated with

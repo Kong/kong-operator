@@ -12,6 +12,7 @@ import (
 // version, as well as Env variable overrides.
 //
 // +kubebuilder:validation:XValidation:message="Using both replicas and scaling fields is not allowed.",rule="!(has(self.scaling) && has(self.replicas))"
+// +apireference:kgo:include
 type DeploymentOptions struct {
 	// Replicas describes the number of desired pods.
 	// This is a pointer to distinguish between explicit zero and not specified.
@@ -36,6 +37,7 @@ type DeploymentOptions struct {
 }
 
 // Scaling defines the scaling options for the deployment.
+// +apireference:kgo:include
 type Scaling struct {
 	// HorizontalScaling defines horizontal scaling options for the deployment.
 	// +optional
@@ -45,6 +47,7 @@ type Scaling struct {
 // HorizontalScaling defines horizontal scaling options for the deployment.
 // It holds all the options from the HorizontalPodAutoscalerSpec besides the
 // ScaleTargetRef which is being controlled by the Operator.
+// +apireference:kgo:include
 type HorizontalScaling struct {
 	// minReplicas is the lower limit for the number of replicas to which the autoscaler
 	// can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the
@@ -78,12 +81,14 @@ type HorizontalScaling struct {
 }
 
 // Rollout defines options for rollouts.
+// +apireference:kgo:include
 type Rollout struct {
 	// Strategy contains the deployment strategy for rollout.
 	Strategy RolloutStrategy `json:"strategy"`
 }
 
 // RolloutStrategy holds the rollout strategy options.
+// +apireference:kgo:include
 type RolloutStrategy struct {
 	// BlueGreen holds the options specific for Blue Green Deployments.
 	//
@@ -92,6 +97,7 @@ type RolloutStrategy struct {
 }
 
 // BlueGreenStrategy defines the Blue Green deployment strategy.
+// +apireference:kgo:include
 type BlueGreenStrategy struct {
 	// Promotion defines how the operator handles promotion of resources.
 	Promotion Promotion `json:"promotion"`
@@ -106,6 +112,7 @@ type BlueGreenStrategy struct {
 
 // Promotion is a type that contains fields that define how the operator handles
 // promotion of resources during a blue/green rollout.
+// +apireference:kgo:include
 type Promotion struct {
 	// Strategy indicates how you want the operator to handle the promotion of
 	// the preview (green) resources (Deployments and Services) after all workflows
@@ -126,6 +133,8 @@ type Promotion struct {
 //     The user must indicate manually when they want the promotion to continue.
 //     That can be done by annotating the `DataPlane` object with
 //     `"gateway-operator.konghq.com/promote-when-ready": "true"`.
+//
+// +apireference:kgo:include
 type PromotionStrategy string
 
 const (
@@ -143,6 +152,7 @@ const (
 
 // RolloutResources is the type which contains the fields which control how the operator
 // manages the resources it manages during or after the rollout concludes.
+// +apireference:kgo:include
 type RolloutResources struct {
 	// Plan defines the resource plan for managing resources during and after a rollout.
 	//
@@ -153,6 +163,7 @@ type RolloutResources struct {
 
 // RolloutResourcePlan is a type that holds rollout resource plan related fields
 // which control how the operator handles resources during and after a rollout.
+// +apireference:kgo:include
 type RolloutResourcePlan struct {
 	// Deployment describes how the operator manages Deployments during and after a rollout.
 	//
@@ -171,6 +182,8 @@ type RolloutResourcePlan struct {
 //     the Deployment to 0 when the rollout is not initiated by a spec change
 //     and then to scale it up when the rollout is initiated (the owner resource
 //     like a DataPlane is patched or updated).
+//
+// +apireference:kgo:include
 type RolloutResourcePlanDeployment string
 
 const (
@@ -189,6 +202,7 @@ const (
 
 // GatewayConfigurationTargetKind is an object kind that can be targeted for
 // GatewayConfiguration attachment.
+// +apireference:kgo:include
 type GatewayConfigurationTargetKind string
 
 const (
@@ -217,6 +231,7 @@ const (
 
 // KonnectCertificateOptions indicates how the operator should manage the certificates that managed entities will use
 // to interact with Konnect.
+// +apireference:kgo:include
 type KonnectCertificateOptions struct {
 	// Issuer is the cert-manager Issuer or ClusterIssuer the operator will use to request certificates. When Namespace
 	// is set, the operator will retrieve the Issuer with that Name in that Namespace. When Namespace is omitted, the
@@ -225,6 +240,7 @@ type KonnectCertificateOptions struct {
 }
 
 // NamespacedName is a resource identified by name and optional namespace.
+// +apireference:kgo:include
 type NamespacedName struct {
 	// +optional
 	Namespace string `json:"namespace"`
