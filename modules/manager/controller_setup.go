@@ -82,6 +82,12 @@ const (
 	KongTargetControllerName = "KongTarget"
 	// KongServicePluginBindingFinalizerControllerName is the name of the KongService PluginBinding finalizer controller.
 	KongServicePluginBindingFinalizerControllerName = "KongServicePluginBindingFinalizer"
+	// KongRoutePluginBindingFinalizerControllerName is the name of the KongRoute PluginBinding finalizer controller.
+	KongRoutePluginBindingFinalizerControllerName = "KongRoutePluginBindingFinalizer"
+	// KongConsumerPluginBindingFinalizerControllerName is the name of the KongConsumer PluginBinding finalizer controller.
+	KongConsumerPluginBindingFinalizerControllerName = "KongConsumerPluginBindingFinalizer"
+	// KongConsumerGroupPluginBindingFinalizerControllerName is the name of the KongConsumerGroup PluginBinding finalizer controller.
+	KongConsumerGroupPluginBindingFinalizerControllerName = "KongConsumerGroupPluginBindingFinalizer"
 	// KongCredentialsSecretControllerName is the name of the Credentials Secret controller.
 	KongCredentialsSecretControllerName = "KongCredentialSecret"
 	// KongCredentialBasicAuthControllerName is the name of the KongCredentialBasicAuth controller.
@@ -542,14 +548,6 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					mgr.GetClient(),
 				),
 			},
-			// Controllers responsible for cleaning up KongPluginBinding cleanup finalizers.
-			KongServicePluginBindingFinalizerControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongService](
-					c.DevelopmentMode,
-					mgr.GetClient(),
-				),
-			},
 			KongVaultControllerName: {
 				Enabled: c.KonnectControllersEnabled,
 				Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongVault](
@@ -566,6 +564,36 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					c.DevelopmentMode,
 					mgr.GetClient(),
 					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongSNI](c.KonnectSyncPeriod),
+				),
+			},
+
+			// Controllers responsible for cleaning up KongPluginBinding cleanup finalizers.
+			KongServicePluginBindingFinalizerControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongService](
+					c.DevelopmentMode,
+					mgr.GetClient(),
+				),
+			},
+			KongRoutePluginBindingFinalizerControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongRoute](
+					c.DevelopmentMode,
+					mgr.GetClient(),
+				),
+			},
+			KongConsumerPluginBindingFinalizerControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityPluginReconciler[configurationv1.KongConsumer](
+					c.DevelopmentMode,
+					mgr.GetClient(),
+				),
+			},
+			KongConsumerGroupPluginBindingFinalizerControllerName: {
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectEntityPluginReconciler[configurationv1beta1.KongConsumerGroup](
+					c.DevelopmentMode,
+					mgr.GetClient(),
 				),
 			},
 		}
