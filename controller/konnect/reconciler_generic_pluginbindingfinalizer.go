@@ -19,7 +19,9 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/pkg/consts"
 
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 // KonnectEntityPluginBindingFinalizerReconciler reconciles Konnect entities that may be referenced by KongPluginBinding.
@@ -62,17 +64,52 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) SetupWithManage
 	return b.Complete(r)
 }
 
-func enqueueKongServiceForKongPluginBinding() func(
-	ctx context.Context, obj client.Object) []reconcile.Request {
+// enqueueObjectReferencedByKongPluginBinding watches for KongPluginBinding objects
+// that reference the given Konnect entity.
+// It returns the reconcile.Request slice containing the entity that the KongPluginBinding references.
+func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) enqueueObjectReferencedByKongPluginBinding() func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		kpb, ok := obj.(*configurationv1alpha1.KongPluginBinding)
 		if !ok {
 			return nil
 		}
 
-		if kpb.Spec.Targets.ServiceReference == nil ||
-			kpb.Spec.Targets.ServiceReference.Kind != "KongService" ||
-			kpb.Spec.Targets.ServiceReference.Group != configurationv1alpha1.GroupVersion.Group {
+		var (
+			name string
+			e    T
+			ent  = TEnt(&e)
+		)
+
+		switch any(ent).(type) {
+		case *configurationv1alpha1.KongService:
+			if kpb.Spec.Targets.ServiceReference == nil ||
+				kpb.Spec.Targets.ServiceReference.Kind != "KongService" ||
+				kpb.Spec.Targets.ServiceReference.Group != configurationv1alpha1.GroupVersion.Group {
+				return nil
+			}
+			name = kpb.Spec.Targets.ServiceReference.Name
+
+		case *configurationv1alpha1.KongRoute:
+			if kpb.Spec.Targets.RouteReference == nil ||
+				kpb.Spec.Targets.RouteReference.Kind != "KongRoute" ||
+				kpb.Spec.Targets.RouteReference.Group != configurationv1alpha1.GroupVersion.Group {
+				return nil
+			}
+			name = kpb.Spec.Targets.RouteReference.Name
+
+		case *configurationv1.KongConsumer:
+			if kpb.Spec.Targets.ConsumerReference == nil {
+				return nil
+			}
+			name = kpb.Spec.Targets.ConsumerReference.Name
+
+		case *configurationv1beta1.KongConsumerGroup:
+			if kpb.Spec.Targets.ConsumerGroupReference == nil {
+				return nil
+			}
+			name = kpb.Spec.Targets.ConsumerGroupReference.Name
+
+		default:
 			return nil
 		}
 
@@ -80,32 +117,7 @@ func enqueueKongServiceForKongPluginBinding() func(
 			{
 				NamespacedName: types.NamespacedName{
 					Namespace: kpb.Namespace,
-					Name:      kpb.Spec.Targets.ServiceReference.Name,
-				},
-			},
-		}
-	}
-}
-
-func enqueueKongRouteForKongPluginBinding() func(
-	ctx context.Context, obj client.Object) []reconcile.Request {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		kpb, ok := obj.(*configurationv1alpha1.KongPluginBinding)
-		if !ok {
-			return nil
-		}
-
-		if kpb.Spec.Targets.RouteReference == nil ||
-			kpb.Spec.Targets.RouteReference.Kind != "KongRoute" ||
-			kpb.Spec.Targets.RouteReference.Group != configurationv1alpha1.GroupVersion.Group {
-			return nil
-		}
-
-		return []ctrl.Request{
-			{
-				NamespacedName: types.NamespacedName{
-					Namespace: kpb.Namespace,
-					Name:      kpb.Spec.Targets.RouteReference.Name,
+					Name:      name,
 				},
 			},
 		}
@@ -216,6 +228,10 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) getKongPluginBi
 		return IndexFieldKongPluginBindingKongServiceReference
 	case *configurationv1alpha1.KongRoute:
 		return IndexFieldKongPluginBindingKongRouteReference
+	case *configurationv1.KongConsumer:
+		return IndexFieldKongPluginBindingKongConsumerReference
+	case *configurationv1beta1.KongConsumerGroup:
+		return IndexFieldKongPluginBindingKongConsumerGroupReference
 	default:
 		panic(fmt.Sprintf("unsupported entity type %s", constraints.EntityTypeName[T]()))
 	}
@@ -229,36 +245,32 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) setControllerBu
 		ent = TEnt(&e)
 	)
 
+	var pred func(obj client.Object) bool
+
 	switch any(ent).(type) {
 	case *configurationv1alpha1.KongService:
-		b.
-			For(&configurationv1alpha1.KongService{},
-				builder.WithPredicates(
-					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongService]),
-					kongPluginsAnnotationChangedPredicate,
-				),
-			).
-			Watches(
-				&configurationv1alpha1.KongPluginBinding{},
-				handler.EnqueueRequestsFromMapFunc(
-					enqueueKongServiceForKongPluginBinding(),
-				),
-			)
+		pred = objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongService]
 	case *configurationv1alpha1.KongRoute:
-		b.
-			For(&configurationv1alpha1.KongRoute{},
-				builder.WithPredicates(
-					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongRoute]),
-					kongPluginsAnnotationChangedPredicate,
-				),
-			).
-			Watches(
-				&configurationv1alpha1.KongPluginBinding{},
-				handler.EnqueueRequestsFromMapFunc(
-					enqueueKongRouteForKongPluginBinding(),
-				),
-			)
+		pred = kongRouteRefersToKonnectGatewayControlPlane(r.Client)
+	case *configurationv1.KongConsumer:
+		pred = objRefersToKonnectGatewayControlPlane[configurationv1.KongConsumer]
+	case *configurationv1beta1.KongConsumerGroup:
+		pred = objRefersToKonnectGatewayControlPlane[configurationv1beta1.KongConsumerGroup]
 	default:
 		panic(fmt.Sprintf("unsupported entity type %s", constraints.EntityTypeName[T]()))
 	}
+
+	b.
+		For(ent,
+			builder.WithPredicates(
+				predicate.NewPredicateFuncs(pred),
+				kongPluginsAnnotationChangedPredicate,
+			),
+		).
+		Watches(
+			&configurationv1alpha1.KongPluginBinding{},
+			handler.EnqueueRequestsFromMapFunc(
+				r.enqueueObjectReferencedByKongPluginBinding(),
+			),
+		)
 }
