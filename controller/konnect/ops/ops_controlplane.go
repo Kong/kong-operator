@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"sync"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"github.com/sourcegraph/conc/iter"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -154,66 +154,36 @@ func setGroupMembers(
 		return nil
 	}
 
-	ch := make(chan string)
-	chErr := make(chan error)
-	for _, member := range cp.Spec.Members {
-		go func() {
-			var memberCP konnectv1alpha1.KonnectGatewayControlPlane
-			err := cl.Get(ctx, client.ObjectKey{Namespace: cp.Namespace, Name: member.Name}, &memberCP)
-			if err != nil {
-				chErr <- fmt.Errorf("failed to get control plane group member %s: %w", member.Name, err)
-				return
+	members, err := iter.MapErr(cp.Spec.Members,
+		func(member *corev1.LocalObjectReference) (sdkkonnectcomp.Members, error) {
+			var (
+				memberCP konnectv1alpha1.KonnectGatewayControlPlane
+				nn       = client.ObjectKey{
+					Namespace: cp.Namespace,
+					Name:      member.Name,
+				}
+			)
+			if err := cl.Get(ctx, nn, &memberCP); err != nil {
+				return sdkkonnectcomp.Members{},
+					fmt.Errorf("failed to get control plane group member %s: %w", member.Name, err)
 			}
-
 			if memberCP.GetKonnectID() == "" {
-				chErr <- fmt.Errorf("control plane group %s member %s has no Konnect ID", cp.Name, member.Name)
-				return
+				return sdkkonnectcomp.Members{},
+					fmt.Errorf("control plane group %s member %s has no Konnect ID", cp.Name, member.Name)
 			}
-			ch <- memberCP.GetKonnectID()
-		}()
-	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(len(cp.Spec.Members))
-	members := make([]sdkkonnectcomp.Members, 0, len(cp.Spec.Members))
-	errs := make([]error, 0)
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case err, ok := <-chErr:
-				if !ok {
-					return
-				}
-				errs = append(errs, err)
-				wg.Done()
-
-			case memberID, ok := <-ch:
-				if !ok {
-					return
-				}
-				members = append(members, sdkkonnectcomp.Members{
-					ID: lo.ToPtr(memberID),
-				})
-				wg.Done()
-			}
-		}
-	}()
-
-	wg.Wait()
-	close(ch)
-	close(chErr)
-
-	if len(errs) > 0 {
-		return fmt.Errorf("failed to set group members, some members couldn't be found: %v", errs)
+			return sdkkonnectcomp.Members{
+				ID: lo.ToPtr(memberCP.GetKonnectID()),
+			}, nil
+		})
+	if err != nil {
+		return fmt.Errorf("failed to set group members, some members couldn't be found: %w", err)
 	}
 
 	sort.Sort(membersByID(members))
 	gm := sdkkonnectcomp.GroupMembership{
 		Members: members,
 	}
-	_, err := sdkGroups.PutControlPlanesIDGroupMemberships(ctx, cp.GetKonnectID(), &gm)
+	_, err = sdkGroups.PutControlPlanesIDGroupMemberships(ctx, cp.GetKonnectID(), &gm)
 	if err != nil {
 		return fmt.Errorf("failed to set members on control plane group %s: %w",
 			client.ObjectKeyFromObject(cp), err,
