@@ -68,18 +68,18 @@ func testNewKonnectEntityReconciler[
 		})
 		require.NoError(t, err)
 
-		cl := mgr.GetClient()
-		factory := ops.NewMockSDKFactory(t)
-		sdk := factory.SDK
-		reconciler := konnect.NewKonnectEntityReconciler[T, TEnt](factory, false, cl)
-		require.NoError(t, reconciler.SetupWithManager(ctx, mgr))
-
 		ns := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: nsName,
 			},
 		}
-		require.NoError(t, cl.Create(ctx, ns))
+		require.NoError(t, mgr.GetClient().Create(ctx, ns))
+
+		cl := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
+		factory := ops.NewMockSDKFactory(t)
+		sdk := factory.SDK
+		reconciler := konnect.NewKonnectEntityReconciler[T, TEnt](factory, false, cl)
+		require.NoError(t, reconciler.SetupWithManager(ctx, mgr))
 
 		t.Logf("Starting manager for test case %s", t.Name())
 		go func() {

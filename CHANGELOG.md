@@ -99,6 +99,8 @@
   - HMAC Auth [#687](https://github.com/Kong/gateway-operator/pull/687)
 - Add support for `KongRoute`s bound directly to `KonnectGatewayControlPlane`s (serviceless rotues).
   [#669](https://github.com/Kong/gateway-operator/pull/669)
+- Allow setting `KonnectGatewayControlPlane`s group membership
+  [#697](https://github.com/Kong/gateway-operator/pull/697)
 
 ### Fixed
 

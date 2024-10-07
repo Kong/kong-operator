@@ -7,7 +7,7 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 )
 
-// ControlPlaneSDK is the interface for the Konnect ControlPlaneSDK SDK.
+// ControlPlaneSDK is the interface for the Konnect ControlPlane SDK.
 type ControlPlaneSDK interface {
 	CreateControlPlane(ctx context.Context, req sdkkonnectcomp.CreateControlPlaneRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateControlPlaneResponse, error)
 	DeleteControlPlane(ctx context.Context, id string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteControlPlaneResponse, error)

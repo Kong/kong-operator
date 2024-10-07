@@ -53,7 +53,7 @@ func Create[
 
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		return e, createControlPlane(ctx, sdk.GetControlPlaneSDK(), ent)
+		return e, createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *configurationv1alpha1.KongService:
 		return e, createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -226,7 +226,7 @@ func Update[
 
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		return ctrl.Result{}, updateControlPlane(ctx, sdk.GetControlPlaneSDK(), ent)
+		return ctrl.Result{}, updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *configurationv1alpha1.KongService:
 		return ctrl.Result{}, updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:

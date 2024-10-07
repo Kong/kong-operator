@@ -18,12 +18,13 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-containerregistry v0.20.2
 	github.com/google/uuid v1.6.0
-	github.com/kong/kubernetes-configuration v0.0.27
+	github.com/kong/kubernetes-configuration v0.0.28
 	github.com/kong/kubernetes-telemetry v0.1.5
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
 	github.com/samber/lo v1.47.0
+	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/mod v0.21.0
 	k8s.io/api v0.31.1

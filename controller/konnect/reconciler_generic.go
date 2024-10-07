@@ -497,8 +497,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}
 
 			return ctrl.Result{}, ops.FailedKonnectOpError[T]{
-				Op: ops.CreateOp,
-
+				Op:  ops.CreateOp,
 				Err: err,
 			}
 		}
@@ -526,6 +525,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 
 	if res, err := ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, ent); err != nil {
+		ent.GetKonnectStatus().ServerURL = apiAuth.Spec.ServerURL
+		ent.GetKonnectStatus().OrgID = apiAuth.Status.OrganizationID
+		if errUpd := r.Client.Status().Update(ctx, ent); errUpd != nil {
+			if k8serrors.IsConflict(errUpd) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("failed to update in cluster resource after Konnect update: %w %w", errUpd, err)
+		}
+
 		return ctrl.Result{}, fmt.Errorf("failed to update object: %w", err)
 	} else if !res.IsZero() {
 		return res, nil

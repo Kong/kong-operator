@@ -224,8 +224,8 @@ github.com/klauspost/compress v1.17.9 h1:6KIumPrER1LHsvBVuDa0r5xaG0Es51mhhB9BQB2
 github.com/klauspost/compress v1.17.9/go.mod h1:Di0epgTjJY877eYKx5yC51cX2A2Vl2ibi7bDH9ttBbw=
 github.com/kong/go-kong v0.59.1 h1:AJZtyCD+Zyqe/mF/m+x3/qN/GPVxAH7jq9zGJTHRfjc=
 github.com/kong/go-kong v0.59.1/go.mod h1:8Vt6HmtgLNgL/7bSwAlz3DIWqBtzG7qEt9+OnMiQOa0=
-github.com/kong/kubernetes-configuration v0.0.27 h1:4h1spllBnfF0P4+cr0J4xp+P5oGxAstgV8waCNkl5XI=
-github.com/kong/kubernetes-configuration v0.0.27/go.mod h1:DXrWtdZzewUyPZBR4zvDoY/B8rHxeqcqCBDbyHA+B0Q=
+github.com/kong/kubernetes-configuration v0.0.28 h1:3W1YcKtpRS6wrtvvvJdVzp5UT14+HpEBqAPC3rOPHTo=
+github.com/kong/kubernetes-configuration v0.0.28/go.mod h1:oAdPMWiWJ6qbMPPExUSj3c3YrI675JUIfsDcKWnGW0M=
 github.com/kong/kubernetes-telemetry v0.1.5 h1:xHwU1q0IvfEYqpj03po73ZKbVarnFPUwzkoFkdVnr9w=
 github.com/kong/kubernetes-telemetry v0.1.5/go.mod h1:1UXyZ6N3e8Fl6YguToQ6tKNveonkhjSqxzY7HVW+Ba4=
 github.com/kong/kubernetes-testing-framework v0.47.2 h1:+2Z9anTpbV/hwNeN+NFQz53BMU+g3QJydkweBp3tULo=
@@ -343,6 +343,8 @@ github.com/sirupsen/logrus v1.7.0/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
+github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
+github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
 github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
 github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

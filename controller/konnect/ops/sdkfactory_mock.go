@@ -8,6 +8,7 @@ import (
 
 type MockSDKWrapper struct {
 	ControlPlaneSDK             *MockControlPlaneSDK
+	ControlPlaneGroupSDK        *MockControlPlaneGroupSDK
 	ServicesSDK                 *MockServicesSDK
 	RoutesSDK                   *MockRoutesSDK
 	ConsumersSDK                *MockConsumersSDK
@@ -35,6 +36,7 @@ var _ SDKWrapper = MockSDKWrapper{}
 func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 	return &MockSDKWrapper{
 		ControlPlaneSDK:             NewMockControlPlaneSDK(t),
+		ControlPlaneGroupSDK:        NewMockControlPlaneGroupSDK(t),
 		ServicesSDK:                 NewMockServicesSDK(t),
 		RoutesSDK:                   NewMockRoutesSDK(t),
 		ConsumersSDK:                NewMockConsumersSDK(t),
@@ -60,6 +62,10 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 
 func (m MockSDKWrapper) GetControlPlaneSDK() ControlPlaneSDK {
 	return m.ControlPlaneSDK
+}
+
+func (m MockSDKWrapper) GetControlPlaneGroupSDK() ControlPlaneGroupSDK {
+	return m.ControlPlaneGroupSDK
 }
 
 func (m MockSDKWrapper) GetServicesSDK() ServicesSDK {
