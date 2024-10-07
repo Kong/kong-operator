@@ -154,11 +154,8 @@ func setGroupMembers(
 		return nil
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(len(cp.Spec.Members))
 	ch := make(chan string)
 	chErr := make(chan error)
-	errs := make([]error, 0)
 	for _, member := range cp.Spec.Members {
 		go func() {
 			var memberCP konnectv1alpha1.KonnectGatewayControlPlane
@@ -180,7 +177,10 @@ func setGroupMembers(
 		}()
 	}
 
+	wg := sync.WaitGroup{}
+	wg.Add(len(cp.Spec.Members))
 	members := make([]sdkkonnectcomp.Members, 0, len(cp.Spec.Members))
+	errs := make([]error, 0)
 	go func() {
 		for {
 			select {
