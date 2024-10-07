@@ -134,49 +134,17 @@ func enqueueKongVaultForKonnectGatewayControlPlane(
 			return nil
 		}
 
-		l := configurationv1alpha1.KongVaultList{}
-
-		if err := cl.List(ctx, &l); err != nil {
+		var l configurationv1alpha1.KongVaultList
+		if err := cl.List(ctx, &l,
+			// TODO: change this when cross namespace refs are allowed.
+			client.InNamespace(cp.GetNamespace()),
+			client.MatchingFields{
+				IndexFieldKongVaultOnKonnectGatewayControlPlane: cp.Namespace + "/" + cp.Name,
+			},
+		); err != nil {
 			return nil
 		}
-		var ret []reconcile.Request
-		for _, vault := range l.Items {
-			cpRef, ok := getControlPlaneRef(&vault).Get()
-			if !ok {
-				continue
-			}
-			switch cpRef.Type {
-			case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-				// Need to check namespace in controlPlaneRef because KongVault is cluster scoped.
-				if cp.Namespace != vault.Spec.ControlPlaneRef.KonnectNamespacedRef.Namespace ||
-					cp.Name != vault.Spec.ControlPlaneRef.KonnectNamespacedRef.Name {
-					continue
-				}
 
-				// Append the KongVault to reconcile request list when the controlPlaneRef of the KongVault is pointing to the control plane.
-				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name: vault.Name,
-					},
-				})
-
-			case configurationv1alpha1.ControlPlaneRefKonnectID:
-				ctrllog.FromContext(ctx).Error(
-					fmt.Errorf("unimplemented ControlPlaneRef type %q", cpRef.Type),
-					"unimplemented ControlPlaneRef for KongVault",
-					"KongVault", vault, "refType", cpRef.Type,
-				)
-				continue
-
-			default:
-				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
-					"unsupported ControlPlaneRef for KongVault",
-					"KongVault", vault, "refType", cpRef.Type,
-				)
-				continue
-			}
-
-		}
-		return ret
+		return objectListToReconcileRequests(l.Items)
 	}
 }

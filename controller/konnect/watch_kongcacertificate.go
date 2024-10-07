@@ -130,49 +130,16 @@ func enqueueKongCACertificateForKonnectControlPlane(
 			return nil
 		}
 		var l configurationv1alpha1.KongCACertificateList
-		if err := cl.List(ctx, &l, &client.ListOptions{
+		if err := cl.List(ctx, &l,
 			// TODO: change this when cross namespace refs are allowed.
-			Namespace: cp.GetNamespace(),
-		}); err != nil {
+			client.InNamespace(cp.GetNamespace()),
+			client.MatchingFields{
+				IndexFieldKongCACertificateOnKonnectGatewayControlPlane: cp.Namespace + "/" + cp.Name,
+			},
+		); err != nil {
 			return nil
 		}
 
-		var ret []reconcile.Request
-		for _, cert := range l.Items {
-			cpRef, ok := getControlPlaneRef(&cert).Get()
-			if !ok {
-				continue
-			}
-			switch cpRef.Type {
-			case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-				// TODO: change this when cross namespace refs are allowed.
-				if cpRef.KonnectNamespacedRef.Name != cp.Name {
-					continue
-				}
-
-				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: cert.Namespace,
-						Name:      cert.Name,
-					},
-				})
-
-			case configurationv1alpha1.ControlPlaneRefKonnectID:
-				ctrllog.FromContext(ctx).Error(
-					fmt.Errorf("unimplemented ControlPlaneRef type %q", cpRef.Type),
-					"unimplemented ControlPlaneRef for KongCACertificate",
-					"KongCACertificate", cert, "refType", cpRef.Type,
-				)
-				continue
-
-			default:
-				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
-					"unsupported ControlPlaneRef for KongCACertificate",
-					"KongCACertificate", cert, "refType", cpRef.Type,
-				)
-				continue
-			}
-		}
-		return ret
+		return objectListToReconcileRequests(l.Items)
 	}
 }

@@ -86,11 +86,8 @@ func kongCredentialBasicAuthForKonnectAPIAuthConfiguration(
 
 		var ret []reconcile.Request
 		for _, consumer := range l.Items {
-			cpRef := consumer.Spec.ControlPlaneRef
-			if cpRef == nil ||
-				cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef ||
-				cpRef.KonnectNamespacedRef == nil ||
-				cpRef.KonnectNamespacedRef.Name != auth.GetName() {
+			cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&consumer)
+			if !ok {
 				continue
 			}
 
@@ -149,19 +146,15 @@ func kongCredentialBasicAuthForKonnectGatewayControlPlane(
 		if err := cl.List(ctx, &l,
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(cp.GetNamespace()),
+			client.MatchingFields{
+				IndexFieldKongConsumerOnKonnectGatewayControlPlane: cp.Namespace + "/" + cp.Name,
+			},
 		); err != nil {
 			return nil
 		}
 
 		var ret []reconcile.Request
 		for _, consumer := range l.Items {
-			cpRef := consumer.Spec.ControlPlaneRef
-			if cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef ||
-				cpRef.KonnectNamespacedRef == nil ||
-				cpRef.KonnectNamespacedRef.Name != cp.GetName() {
-				continue
-			}
-
 			var credList configurationv1alpha1.KongCredentialBasicAuthList
 			if err := cl.List(ctx, &credList,
 				client.MatchingFields{

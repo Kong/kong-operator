@@ -68,8 +68,7 @@ func enqueueKongSNIForKongCertificate(
 			return nil
 		}
 
-		cpRef := cert.Spec.ControlPlaneRef
-		if cpRef == nil || cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
+		if !objHasControlPlaneRefKonnectNamespacedRef(cert) {
 			return nil
 		}
 

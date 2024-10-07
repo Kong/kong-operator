@@ -130,49 +130,16 @@ func enqueueKongKeySetForKonnectControlPlane(
 			return nil
 		}
 		var l configurationv1alpha1.KongKeySetList
-		if err := cl.List(ctx, &l, &client.ListOptions{
+		if err := cl.List(ctx, &l,
 			// TODO: change this when cross namespace refs are allowed.
-			Namespace: cp.GetNamespace(),
-		}); err != nil {
+			client.InNamespace(cp.GetNamespace()),
+			client.MatchingFields{
+				IndexFieldKongKeySetOnKonnectGatewayControlPlane: cp.Namespace + "/" + cp.Name,
+			},
+		); err != nil {
 			return nil
 		}
 
-		var ret []reconcile.Request
-		for _, keySet := range l.Items {
-			cpRef, ok := getControlPlaneRef(&keySet).Get()
-			if !ok {
-				continue
-			}
-			switch cpRef.Type {
-			case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-				// TODO: change this when cross namespace refs are allowed.
-				if cpRef.KonnectNamespacedRef.Name != cp.Name {
-					continue
-				}
-
-				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: keySet.Namespace,
-						Name:      keySet.Name,
-					},
-				})
-
-			case configurationv1alpha1.ControlPlaneRefKonnectID:
-				ctrllog.FromContext(ctx).Error(
-					fmt.Errorf("unimplemented ControlPlaneRef type %q", cpRef.Type),
-					"unimplemented ControlPlaneRef for KongKeySet",
-					"KongKeySet", keySet, "refType", cpRef.Type,
-				)
-				continue
-
-			default:
-				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
-					"unsupported ControlPlaneRef for KongKeySet",
-					"KongKeySet", keySet, "refType", cpRef.Type,
-				)
-				continue
-			}
-		}
-		return ret
+		return objectListToReconcileRequests(l.Items)
 	}
 }
