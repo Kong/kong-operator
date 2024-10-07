@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/watch"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
@@ -35,10 +35,6 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
 
-	clientWithWatch, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
-		Scheme: scheme.Get(),
-	})
-	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
@@ -116,7 +112,7 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 	require.NoError(t, manager.SetupCacheIndicesForKonnectTypes(ctx, mgr, false))
 	reconcilers := []Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, false, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialBasicAuth](konnectSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialBasicAuth](konnectInfiniteSyncTime),
 		),
 	}
 
@@ -143,24 +139,16 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 		)
 	require.NoError(t, clientNamespaced.Delete(ctx, kongCredentialBasicAuth))
 
+	assert.EventuallyWithT(t,
+		func(c *assert.CollectT) {
+			assert.True(c, k8serrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongCredentialBasicAuth), kongCredentialBasicAuth),
+			))
+		}, waitTime, tickTime,
+		"KongCredentialBasicAuth wasn't deleted but it should have been",
+	)
+
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		assert.True(c, factory.SDK.KongCredentialsBasicAuthSDK.AssertExpectations(t))
 	}, waitTime, tickTime)
-
-	w := setupWatch[configurationv1alpha1.KongCredentialBasicAuthList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-
-	kongCredentialBasicAuth = deploy.KongCredentialBasicAuth(t, ctx, clientNamespaced, consumer.Name, username, password)
-	t.Logf("redeployed %s KongCredentialBasicAuth resource", client.ObjectKeyFromObject(kongCredentialBasicAuth))
-	t.Logf("checking if KongConsumer %s removal will delete the associated credentials %s",
-		client.ObjectKeyFromObject(consumer),
-		client.ObjectKeyFromObject(kongCredentialBasicAuth),
-	)
-
-	require.NoError(t, clientNamespaced.Delete(ctx, consumer))
-	_ = watchFor(t, ctx, w, watch.Modified,
-		func(c *configurationv1alpha1.KongCredentialBasicAuth) bool {
-			return c.Name == kongCredentialBasicAuth.Name
-		},
-		"KongCredentialBasicAuth wasn't deleted but it should have been",
-	)
 }

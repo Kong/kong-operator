@@ -854,12 +854,6 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			client.ObjectKeyFromObject(&consumer), constraints.EntityTypeName[T](), client.ObjectKeyFromObject(ent),
 		)
 	}
-	if cred, ok := any(ent).(*configurationv1alpha1.KongCredentialHMAC); ok {
-		if cred.Status.Konnect == nil {
-			cred.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
-		}
-		cred.Status.Konnect.ConsumerID = consumer.Status.Konnect.GetKonnectID()
-	}
 
 	if res, errStatus := updateStatusWithCondition(
 		ctx, cl, ent,

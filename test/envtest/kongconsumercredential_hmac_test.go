@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/watch"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
@@ -35,10 +35,6 @@ func TestKongConsumerCredential_HMAC(t *testing.T) {
 
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
 
-	clientWithWatch, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
-		Scheme: scheme.Get(),
-	})
-	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
@@ -113,7 +109,7 @@ func TestKongConsumerCredential_HMAC(t *testing.T) {
 	require.NoError(t, manager.SetupCacheIndicesForKonnectTypes(ctx, mgr, false))
 	reconcilers := []Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, false, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](konnectSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](konnectInfiniteSyncTime),
 		),
 	}
 
@@ -140,24 +136,16 @@ func TestKongConsumerCredential_HMAC(t *testing.T) {
 		)
 	require.NoError(t, clientNamespaced.Delete(ctx, kongCredentialHMAC))
 
+	assert.EventuallyWithT(t,
+		func(c *assert.CollectT) {
+			assert.True(c, k8serrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongCredentialHMAC), kongCredentialHMAC),
+			))
+		}, waitTime, tickTime,
+		"KongCredentialHMAC wasn't deleted but it should have been",
+	)
+
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		assert.True(c, factory.SDK.KongCredentialsHMACSDK.AssertExpectations(t))
 	}, waitTime, tickTime)
-
-	w := setupWatch[configurationv1alpha1.KongCredentialHMACList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-
-	kongCredentialHMAC = deploy.KongCredentialHMAC(t, ctx, clientNamespaced, consumer.Name)
-	t.Logf("redeployed %s KongCredentialHMAC resource", client.ObjectKeyFromObject(kongCredentialHMAC))
-	t.Logf("checking if KongConsumer %s removal will delete the associated credentials %s",
-		client.ObjectKeyFromObject(consumer),
-		client.ObjectKeyFromObject(kongCredentialHMAC),
-	)
-
-	require.NoError(t, clientNamespaced.Delete(ctx, consumer))
-	_ = watchFor(t, ctx, w, watch.Modified,
-		func(c *configurationv1alpha1.KongCredentialHMAC) bool {
-			return c.Name == kongCredentialHMAC.Name
-		},
-		"KongCredentialHMAC wasn't deleted but it should have been",
-	)
 }

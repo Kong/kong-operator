@@ -25,7 +25,7 @@ import (
 	"github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-func TestKongConsumerCredential_JWT(t *testing.T) {
+func TestKongConsumerCredential_APIKey(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := Context(t, context.Background())
 	defer cancel()
@@ -62,46 +62,45 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 	}
 	require.NoError(t, clientNamespaced.Status().Update(ctx, consumer))
 
-	kongCredentialJWT := deploy.KongCredentialJWT(t, ctx, clientNamespaced, consumer.Name)
-	jwtID := uuid.NewString()
+	kongCredentialAPIKey := deploy.KongCredentialAPIKey(t, ctx, clientNamespaced, consumer.Name)
+	keyID := uuid.NewString()
 	tags := []string{
 		"k8s-generation:1",
 		"k8s-group:configuration.konghq.com",
-		"k8s-kind:KongCredentialJWT",
-		"k8s-name:" + kongCredentialJWT.Name,
+		"k8s-kind:KongCredentialAPIKey",
+		"k8s-name:" + kongCredentialAPIKey.Name,
 		"k8s-namespace:" + ns.Name,
-		"k8s-uid:" + string(kongCredentialJWT.GetUID()),
+		"k8s-uid:" + string(kongCredentialAPIKey.GetUID()),
 		"k8s-version:v1alpha1",
 	}
 
 	factory := ops.NewMockSDKFactory(t)
-	factory.SDK.KongCredentialsJWTSDK.EXPECT().
-		CreateJwtWithConsumer(
+	factory.SDK.KongCredentialsAPIKeySDK.EXPECT().
+		CreateKeyAuthWithConsumer(
 			mock.Anything,
-			sdkkonnectops.CreateJwtWithConsumerRequest{
+			sdkkonnectops.CreateKeyAuthWithConsumerRequest{
 				ControlPlaneID:              cp.GetKonnectStatus().GetKonnectID(),
 				ConsumerIDForNestedEntities: consumerID,
-				JWTWithoutParents: sdkkonnectcomp.JWTWithoutParents{
-					Key:       lo.ToPtr("key"),
-					Algorithm: lo.ToPtr(sdkkonnectcomp.JWTWithoutParentsAlgorithmHs256),
-					Tags:      tags,
+				KeyAuthWithoutParents: sdkkonnectcomp.KeyAuthWithoutParents{
+					Key:  lo.ToPtr("key"),
+					Tags: tags,
 				},
 			},
 		).
 		Return(
-			&sdkkonnectops.CreateJwtWithConsumerResponse{
-				Jwt: &sdkkonnectcomp.Jwt{
-					ID: lo.ToPtr(jwtID),
+			&sdkkonnectops.CreateKeyAuthWithConsumerResponse{
+				KeyAuth: &sdkkonnectcomp.KeyAuth{
+					ID: lo.ToPtr(keyID),
 				},
 			},
 			nil,
 		)
-	factory.SDK.KongCredentialsJWTSDK.EXPECT().
-		UpsertJwtWithConsumer(mock.Anything, mock.Anything, mock.Anything).Maybe().
+	factory.SDK.KongCredentialsAPIKeySDK.EXPECT().
+		UpsertKeyAuthWithConsumer(mock.Anything, mock.Anything, mock.Anything).Maybe().
 		Return(
-			&sdkkonnectops.UpsertJwtWithConsumerResponse{
-				Jwt: &sdkkonnectcomp.Jwt{
-					ID: lo.ToPtr(jwtID),
+			&sdkkonnectops.UpsertKeyAuthWithConsumerResponse{
+				KeyAuth: &sdkkonnectcomp.KeyAuth{
+					ID: lo.ToPtr(keyID),
 				},
 			},
 			nil,
@@ -110,44 +109,44 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 	require.NoError(t, manager.SetupCacheIndicesForKonnectTypes(ctx, mgr, false))
 	reconcilers := []Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, false, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialJWT](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialAPIKey](konnectInfiniteSyncTime),
 		),
 	}
 
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, factory.SDK.KongCredentialsJWTSDK.AssertExpectations(t))
+		assert.True(c, factory.SDK.KongCredentialsAPIKeySDK.AssertExpectations(t))
 	}, waitTime, tickTime)
 
-	factory.SDK.KongCredentialsJWTSDK.EXPECT().
-		DeleteJwtWithConsumer(
+	factory.SDK.KongCredentialsAPIKeySDK.EXPECT().
+		DeleteKeyAuthWithConsumer(
 			mock.Anything,
-			sdkkonnectops.DeleteJwtWithConsumerRequest{
+			sdkkonnectops.DeleteKeyAuthWithConsumerRequest{
 				ControlPlaneID:              cp.GetKonnectStatus().GetKonnectID(),
 				ConsumerIDForNestedEntities: consumerID,
-				JWTID:                       jwtID,
+				KeyAuthID:                   keyID,
 			},
 		).
 		Return(
-			&sdkkonnectops.DeleteJwtWithConsumerResponse{
+			&sdkkonnectops.DeleteKeyAuthWithConsumerResponse{
 				StatusCode: 200,
 			},
 			nil,
 		)
 
-	require.NoError(t, clientNamespaced.Delete(ctx, kongCredentialJWT))
+	require.NoError(t, clientNamespaced.Delete(ctx, kongCredentialAPIKey))
 
 	assert.EventuallyWithT(t,
 		func(c *assert.CollectT) {
 			assert.True(c, k8serrors.IsNotFound(
-				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongCredentialJWT), kongCredentialJWT),
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongCredentialAPIKey), kongCredentialAPIKey),
 			))
 		}, waitTime, tickTime,
-		"KongCredentialJWT wasn't deleted but it should have been",
+		"KongCredentialAPIKey wasn't deleted but it should have been",
 	)
 
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, factory.SDK.KongCredentialsJWTSDK.AssertExpectations(t))
+		assert.True(c, factory.SDK.KongCredentialsAPIKeySDK.AssertExpectations(t))
 	}, waitTime, tickTime)
 }
