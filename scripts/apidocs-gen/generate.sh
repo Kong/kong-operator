@@ -23,11 +23,23 @@ KUBERNETES_CONFIGURATION_CRDS_PACKAGE="github.com/kong/kubernetes-configuration"
 KUBERNETES_CONFIGURATION_CRDS_VERSION=$(go list -m -f '{{ .Version }}' ${KUBERNETES_CONFIGURATION_CRDS_PACKAGE})
 KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH="$(go env GOPATH)/pkg/mod/${KUBERNETES_CONFIGURATION_CRDS_PACKAGE}@${KUBERNETES_CONFIGURATION_CRDS_VERSION}"
 
+# Darwin's cp doesn't support --no-preserve flag so we need to resort to cp from GNU utils / coreutils.
+# NOTE: https://apple.stackexchange.com/questions/69223/how-to-replace-mac-os-x-utilities-with-gnu-core-utilities
+CP=cp
+if [[ $(uname -s) == "Darwin" ]]; then
+  if gcp --version 2>&1 >/dev/null ; then
+    CP=${HOMEBREW_PREFIX}/bin/gcp
+  else
+    echo "GNU cp is required on macOS. You can install it via Homebrew with 'brew install coreutils'."
+    exit 1
+  fi
+fi
+
 # Copy the CRDs' definitions to the working directory.
 # We're copying from the local ./api directory and the one in the kubernetes-configuration module.
-cp -r "${SCRIPT_ROOT}/api" "${WORK_DIR}/kgo"
+${CP} -r "${SCRIPT_ROOT}/api" "${WORK_DIR}/kgo"
 # Using --no-preserve=mode,ownership to avoid permission issues when deleting files copied from the modules' cache.
-cp --no-preserve=mode,ownership -r "${KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH}/api" "${WORK_DIR}/kong"
+${CP} --no-preserve=mode,ownership -r "${KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH}/api" "${WORK_DIR}/kong"
 
 # Ensure the output directory exists.
 mkdir -p docs
