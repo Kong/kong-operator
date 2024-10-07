@@ -539,6 +539,8 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, nil
 	}
 
+	ent.GetKonnectStatus().ServerURL = apiAuth.Spec.ServerURL
+	ent.GetKonnectStatus().OrgID = apiAuth.Status.OrganizationID
 	if err := r.Client.Status().Update(ctx, ent); err != nil {
 		if k8serrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
