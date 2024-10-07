@@ -28,7 +28,7 @@ KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH="$(go env GOPATH)/pkg/mod/${KUBERN
 CP=cp
 if [[ $(uname -s) == "Darwin" ]]; then
   if gcp --version 2>&1 >/dev/null ; then
-    CP=gcp
+    CP=${HOMEBREW_PREFIX}/bin/gcp
   else
     echo "GNU cp is required on macOS. You can install it via Homebrew with 'brew install coreutils'."
     exit 1
