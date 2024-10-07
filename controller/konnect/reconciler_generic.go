@@ -843,32 +843,16 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
 	}
 
-	// TODO(pmalek): make this generic.
-	// Consumer ID is not stored in KonnectEntityStatus because not all entities
-	// have a ConsumerRef, hence the type constraints in the reconciler can't be used.
-	if cred, ok := any(ent).(*configurationv1alpha1.KongCredentialBasicAuth); ok {
-		if cred.Status.Konnect == nil {
-			cred.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
-		}
-		cred.Status.Konnect.ConsumerID = consumer.Status.Konnect.GetKonnectID()
+	type EntityWithConsumerRef interface {
+		SetKonnectConsumerIDInStatus(string)
 	}
-	if cred, ok := any(ent).(*configurationv1alpha1.KongCredentialAPIKey); ok {
-		if cred.Status.Konnect == nil {
-			cred.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
-		}
-		cred.Status.Konnect.ConsumerID = consumer.Status.Konnect.GetKonnectID()
-	}
-	if cred, ok := any(ent).(*configurationv1alpha1.KongCredentialACL); ok {
-		if cred.Status.Konnect == nil {
-			cred.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
-		}
-		cred.Status.Konnect.ConsumerID = consumer.Status.Konnect.GetKonnectID()
-	}
-	if cred, ok := any(ent).(*configurationv1alpha1.KongCredentialJWT); ok {
-		if cred.Status.Konnect == nil {
-			cred.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{}
-		}
-		cred.Status.Konnect.ConsumerID = consumer.Status.Konnect.GetKonnectID()
+	if cred, ok := any(ent).(EntityWithConsumerRef); ok {
+		cred.SetKonnectConsumerIDInStatus(consumer.Status.Konnect.GetKonnectID())
+	} else {
+		return ctrl.Result{}, fmt.Errorf(
+			"cannot set referenced Consumer %s KonnectID in %s %sstatus",
+			client.ObjectKeyFromObject(&consumer), constraints.EntityTypeName[T](), client.ObjectKeyFromObject(ent),
+		)
 	}
 	if cred, ok := any(ent).(*configurationv1alpha1.KongCredentialHMAC); ok {
 		if cred.Status.Konnect == nil {
