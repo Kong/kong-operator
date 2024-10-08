@@ -13,6 +13,7 @@ import (
 	"github.com/kong/gateway-operator/api/v1beta1"
 	dputils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
@@ -40,15 +41,24 @@ func applyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, datap
 			return err
 		}
 
+		if dataplane.Spec.Deployment.PodTemplateSpec == nil {
+			dataplane.Spec.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
+		}
+
 		d := k8sresources.Deployment(appsv1.Deployment{
 			Spec: appsv1.DeploymentSpec{
 				Template: *dataplane.Spec.Deployment.PodTemplateSpec,
 			},
 		})
+		if container := k8sutils.GetPodContainerByName(&d.Spec.Template.Spec, consts.DataPlaneProxyContainerName); container == nil {
+			d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, corev1.Container{
+				Name: consts.DataPlaneProxyContainerName,
+			})
+		}
 
 		d.WithVolume(kongInKonnectClusterCertificateVolume())
 		d.WithVolumeMount(kongInKonnectClusterCertificateVolumeMount(), consts.DataPlaneProxyContainerName)
-		d.WithVolume(kongInKonnectClusterCertVolume(konnectExt.Spec.AuthConfiguration.ClusterCertificateSecretName.Name))
+		d.WithVolume(kongInKonnectClusterCertVolume(konnectExt.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name))
 		d.WithVolumeMount(kongInKonnectClusterVolumeMount(), consts.DataPlaneProxyContainerName)
 
 		envSet := customizeKongInKonnectDefaults(

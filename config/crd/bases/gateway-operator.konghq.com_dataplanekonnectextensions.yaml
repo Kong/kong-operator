@@ -125,8 +125,8 @@ spec:
                   API authentication.
                 properties:
                   clusterCertificateSecretRef:
-                    description: ClusterCertificateSecretName is a name of the Secret
-                      containing the Konnect Control Plane's cluster certificate.
+                    description: ClusterCertificateSecretRef is the reference to the
+                      Secret containing the Konnect Control Plane's cluster certificate.
                     properties:
                       name:
                         description: Name is the name of the Secret containing the

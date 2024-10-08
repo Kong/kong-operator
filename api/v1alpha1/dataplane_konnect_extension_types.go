@@ -95,9 +95,9 @@ type DataPlaneKonnectExtensionSpec struct {
 // KonnectControlPlaneAPIAuthConfiguration contains the configuration to authenticate with Konnect API ControlPlane.
 // +apireference:kgo:include
 type KonnectControlPlaneAPIAuthConfiguration struct {
-	// ClusterCertificateSecretName is a name of the Secret containing the Konnect Control Plane's cluster certificate.
+	// ClusterCertificateSecretRef is the reference to the Secret containing the Konnect Control Plane's cluster certificate.
 	// +kubebuilder:validation:Required
-	ClusterCertificateSecretName ClusterCertificateSecretRef `json:"clusterCertificateSecretRef"`
+	ClusterCertificateSecretRef ClusterCertificateSecretRef `json:"clusterCertificateSecretRef"`
 }
 
 // ClusterCertificateSecretRef contains the reference to the Secret containing the Konnect Control Plane's cluster certificate.

@@ -2141,7 +2141,7 @@ KonnectControlPlaneAPIAuthConfiguration contains the configuration to authentica
 
 | Field | Description |
 | --- | --- |
-| `clusterCertificateSecretRef` _[ClusterCertificateSecretRef](#clustercertificatesecretref)_ | ClusterCertificateSecretName is a name of the Secret containing the Konnect Control Plane's cluster certificate. |
+| `clusterCertificateSecretRef` _[ClusterCertificateSecretRef](#clustercertificatesecretref)_ | ClusterCertificateSecretRef is the reference to the Secret containing the Konnect Control Plane's cluster certificate. |
 
 
 _Appears in:_
