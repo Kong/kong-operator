@@ -11,7 +11,7 @@ import (
 const (
 	// IndexFieldKongConsumerGroupOnPlugin is the index field for KongConsumerGroup -> KongPlugin.
 	IndexFieldKongConsumerGroupOnPlugin = "consumerGroupPluginRef"
-	// IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane is the index field for KongConsumerGropu -> KonnectGatewayControlPlane.
+	// IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane is the index field for KongConsumerGroup -> KonnectGatewayControlPlane.
 	IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane = "consumerGroupKonnectGatewayControlPlaneRef"
 )
 
