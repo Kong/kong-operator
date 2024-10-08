@@ -28,7 +28,7 @@ func NewErrUnsupportedGateway(reason string) ErrUnsupportedGatewayClass {
 }
 
 func (e ErrUnsupportedGatewayClass) Error() string {
-	return fmt.Errorf("unsupported gateway class: %s", e.reason).Error()
+	return fmt.Sprintf("unsupported gateway class: %s", e.reason)
 }
 
 // -----------------------------------------------------------------------------
