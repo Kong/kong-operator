@@ -115,6 +115,12 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
+	assert.EventuallyWithT(t,
+		assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kongCredentialAPIKey, keyID),
+		waitTime, tickTime,
+		"KongCredentialAPIKey wasn't created",
+	)
+
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		assert.True(c, factory.SDK.KongCredentialsAPIKeySDK.AssertExpectations(t))
 	}, waitTime, tickTime)

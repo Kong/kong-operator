@@ -118,6 +118,12 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
+	assert.EventuallyWithT(t,
+		assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kongCredentialBasicAuth, basicAuthID),
+		waitTime, tickTime,
+		"KongCredentialBasicAuth wasn't created",
+	)
+
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		assert.True(c, factory.SDK.KongCredentialsBasicAuthSDK.AssertExpectations(t))
 	}, waitTime, tickTime)
