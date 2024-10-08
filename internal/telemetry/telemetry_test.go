@@ -30,6 +30,11 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
+
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 func prepareScheme(t *testing.T) *runtime.Scheme {
@@ -37,6 +42,11 @@ func prepareScheme(t *testing.T) *runtime.Scheme {
 	require.NoError(t, testk8sclient.AddToScheme(scheme))
 	require.NoError(t, operatorv1beta1.AddToScheme(scheme))
 	require.NoError(t, operatorv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1beta1.AddToScheme(scheme))
+	require.NoError(t, configurationv1.AddToScheme(scheme))
+	require.NoError(t, konnectv1alpha1.AddToScheme(scheme))
+
 	return scheme
 }
 
@@ -71,6 +81,38 @@ func createRESTMapper() meta.RESTMapper {
 		},
 		meta.RESTScopeNamespace,
 	)
+
+	restMapper.Add(schema.GroupVersionKind{
+		Group:   configurationv1alpha1.SchemeGroupVersion.Group,
+		Version: configurationv1alpha1.SchemeGroupVersion.Version,
+		Kind:    configurationv1alpha1.KongRoute{}.GetTypeName(),
+	}, meta.RESTScopeNamespace)
+	restMapper.Add(schema.GroupVersionKind{
+		Group:   configurationv1alpha1.SchemeGroupVersion.Group,
+		Version: configurationv1alpha1.SchemeGroupVersion.Version,
+		Kind:    configurationv1alpha1.KongService{}.GetTypeName(),
+	}, meta.RESTScopeNamespace)
+	restMapper.Add(schema.GroupVersionKind{
+		Group:   configurationv1alpha1.SchemeGroupVersion.Group,
+		Version: configurationv1alpha1.SchemeGroupVersion.Version,
+		Kind:    configurationv1alpha1.KongSNI{}.GetTypeName(),
+	}, meta.RESTScopeNamespace)
+	restMapper.Add(schema.GroupVersionKind{
+		Group:   configurationv1.SchemeGroupVersion.Group,
+		Version: configurationv1.SchemeGroupVersion.Version,
+		Kind:    configurationv1.KongConsumer{}.GetTypeName(),
+	}, meta.RESTScopeNamespace)
+	restMapper.Add(schema.GroupVersionKind{
+		Group:   configurationv1beta1.SchemeGroupVersion.Group,
+		Version: configurationv1beta1.SchemeGroupVersion.Version,
+		Kind:    configurationv1beta1.KongConsumerGroup{}.GetTypeName(),
+	}, meta.RESTScopeNamespace)
+	restMapper.Add(schema.GroupVersionKind{
+		Group:   konnectv1alpha1.SchemeGroupVersion.Group,
+		Version: konnectv1alpha1.SchemeGroupVersion.Version,
+		Kind:    konnectv1alpha1.KonnectGatewayControlPlane{}.GetTypeName(),
+	}, meta.RESTScopeNamespace)
+
 	return restMapper
 }
 
@@ -117,7 +159,7 @@ func TestCreateManager(t *testing.T) {
 				"controller_dataplane_bg_enabled=false",
 				"controller_controlplane_enabled=false",
 				"controller_gateway_enabled=false",
-				"controller_konnect_enabled=false",
+				"controller_konnect_enabled=true",
 				"controller_kongplugininstallation_enabled=false",
 			},
 		},
@@ -153,7 +195,7 @@ func TestCreateManager(t *testing.T) {
 				"controller_dataplane_bg_enabled=false",
 				"controller_controlplane_enabled=false",
 				"controller_gateway_enabled=false",
-				"controller_konnect_enabled=false",
+				"controller_konnect_enabled=true",
 				"controller_kongplugininstallation_enabled=false",
 			},
 		},
@@ -235,7 +277,7 @@ func TestCreateManager(t *testing.T) {
 				"controller_dataplane_bg_enabled=false",
 				"controller_controlplane_enabled=false",
 				"controller_gateway_enabled=false",
-				"controller_konnect_enabled=false",
+				"controller_konnect_enabled=true",
 				"controller_kongplugininstallation_enabled=false",
 			},
 		},
@@ -290,7 +332,7 @@ func TestCreateManager(t *testing.T) {
 				"controller_dataplane_bg_enabled=false",
 				"controller_controlplane_enabled=false",
 				"controller_gateway_enabled=false",
-				"controller_konnect_enabled=false",
+				"controller_konnect_enabled=true",
 				"controller_kongplugininstallation_enabled=false",
 			},
 		},
@@ -324,7 +366,7 @@ func TestCreateManager(t *testing.T) {
 				"controller_dataplane_bg_enabled=false",
 				"controller_controlplane_enabled=false",
 				"controller_gateway_enabled=false",
-				"controller_konnect_enabled=false",
+				"controller_konnect_enabled=true",
 				"controller_kongplugininstallation_enabled=false",
 			},
 		},
@@ -359,7 +401,62 @@ func TestCreateManager(t *testing.T) {
 				"controller_dataplane_bg_enabled=false",
 				"controller_controlplane_enabled=false",
 				"controller_gateway_enabled=false",
-				"controller_konnect_enabled=false",
+				"controller_konnect_enabled=true",
+				"controller_kongplugininstallation_enabled=false",
+			},
+		},
+		{
+			name: "Konnect entities",
+			objects: []runtime.Object{
+				&configurationv1alpha1.KongService{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "kongservice-1",
+					},
+				},
+				&configurationv1alpha1.KongService{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "kongservice-2",
+					},
+				},
+				&configurationv1alpha1.KongRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "kongroute-1",
+					},
+				},
+				&configurationv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "kongconsumer-1",
+					},
+				},
+				&configurationv1beta1.KongConsumerGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "kongconsumergroup-1",
+					},
+				},
+				&configurationv1alpha1.KongSNI{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "kongroute-1",
+					},
+				},
+			},
+			expectedReportParts: []string{
+				"signal=test-signal",
+				"k8s_kongroutes_count=1",
+				"k8s_kongservices_count=2",
+				"k8s_kongsnis_count=1",
+				"k8s_kongconsumers_count=1",
+				"k8s_kongconsumergroups_count=1",
+				"controller_dataplane_enabled=true",
+				"controller_dataplane_bg_enabled=false",
+				"controller_controlplane_enabled=false",
+				"controller_gateway_enabled=false",
+				"controller_konnect_enabled=true",
 				"controller_kongplugininstallation_enabled=false",
 			},
 		},
@@ -367,6 +464,7 @@ func TestCreateManager(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			// scheme := scheme.Get() // prepareScheme(t)
 			scheme := prepareScheme(t)
 			k8sclient := testk8sclient.NewSimpleClientset()
 
@@ -394,6 +492,7 @@ func TestCreateManager(t *testing.T) {
 			}
 			cfg := Config{
 				DataPlaneControllerEnabled: true,
+				KonnectControllerEnabled:   true,
 			}
 
 			m, err := createManager(
