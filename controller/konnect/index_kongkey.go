@@ -46,7 +46,7 @@ func kongKeySetRefFromKongKey(obj client.Object) []string {
 	return []string{key.GetNamespace() + "/" + key.Spec.KeySetRef.NamespacedRef.Name}
 }
 
-// kongPluginReferencesFromKongKey returns namespace/name of referenced KonnectGatewayControlPlane in KongKey spec.
+// konnectGatewayControlPlaneRefFromKongKey returns namespace/name of referenced KonnectGatewayControlPlane in KongKey spec.
 func konnectGatewayControlPlaneRefFromKongKey(obj client.Object) []string {
 	key, ok := obj.(*configurationv1alpha1.KongKey)
 	if !ok {

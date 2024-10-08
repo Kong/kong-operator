@@ -534,7 +534,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			},
 			KongDataPlaneClientCertificateControllerName: {
 				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongDataPlaneClientCertificate](
+				Controller: konnect.NewKonnectEntityReconciler(
 					sdkFactory,
 					c.DevelopmentMode,
 					mgr.GetClient(),
@@ -550,7 +550,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			},
 			KongVaultControllerName: {
 				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler[configurationv1alpha1.KongVault](
+				Controller: konnect.NewKonnectEntityReconciler(
 					sdkFactory,
 					c.DevelopmentMode,
 					mgr.GetClient(),
@@ -679,8 +679,20 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 			IndexOptions: konnect.IndexOptionsForKongKey(),
 		},
 		{
+			Object:       &configurationv1alpha1.KongKeySet{},
+			IndexOptions: konnect.IndexOptionsForKongKeySet(),
+		},
+		{
 			Object:       &configurationv1alpha1.KongDataPlaneClientCertificate{},
 			IndexOptions: konnect.IndexOptionsForKongDataPlaneCertificate(),
+		},
+		{
+			Object:       &configurationv1alpha1.KongVault{},
+			IndexOptions: konnect.IndexOptionsForKongVault(),
+		},
+		{
+			Object:       &konnectv1alpha1.KonnectGatewayControlPlane{},
+			IndexOptions: konnect.IndexOptionsForKonnectGatewayControlPlane(),
 		},
 	}
 
