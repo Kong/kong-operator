@@ -96,7 +96,7 @@ func deleteKongCredentialAPIKey(
 		sdkkonnectops.DeleteKeyAuthWithConsumerRequest{
 			ControlPlaneID:              cpID,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
-			// BasicAuthID:                 id,
+			KeyAuthID:                   id,
 		})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, cred); errWrap != nil {
 		// Service delete operation returns an SDKError instead of a NotFoundError.

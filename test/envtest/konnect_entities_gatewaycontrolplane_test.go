@@ -121,7 +121,8 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				CreateControlPlane(
 					mock.Anything,
 					mock.MatchedBy(func(req sdkkonnectcomp.CreateControlPlaneRequest) bool {
-						return req.Name == "cp-2"
+						return req.Name == "cp-2" &&
+							req.ClusterType != nil && *req.ClusterType == sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup
 					}),
 				).
 				Return(

@@ -87,7 +87,7 @@ func KonnectAPIAuthConfiguration(
 		opt(apiAuth)
 	}
 	require.NoError(t, cl.Create(ctx, apiAuth))
-	t.Logf("deployed new %s KonnectAPIAuthConfiguration", client.ObjectKeyFromObject(apiAuth))
+	logObjectCreate(t, apiAuth)
 
 	return apiAuth
 }
@@ -148,7 +148,7 @@ func KonnectGatewayControlPlane(
 		opt(cp)
 	}
 	require.NoError(t, cl.Create(ctx, cp))
-	t.Logf("deployed new %s KonnectGatewayControlPlane", client.ObjectKeyFromObject(cp))
+	logObjectCreate(t, cp)
 
 	return cp
 }
@@ -215,7 +215,7 @@ func KongServiceAttachedToCP(
 		opt(&kongService)
 	}
 	require.NoError(t, cl.Create(ctx, &kongService))
-	t.Logf("deployed new %s KongService", client.ObjectKeyFromObject(&kongService))
+	logObjectCreate(t, &kongService)
 
 	return &kongService
 }
@@ -251,7 +251,7 @@ func KongRouteAttachedToService(
 		opt(&kongRoute)
 	}
 	require.NoError(t, cl.Create(ctx, &kongRoute))
-	t.Logf("deployed new %s KongRoute", client.ObjectKeyFromObject(&kongRoute))
+	logObjectCreate(t, &kongRoute)
 
 	return &kongRoute
 }
@@ -298,9 +298,38 @@ func KongPluginBinding(
 		opt(kpb)
 	}
 	require.NoError(t, cl.Create(ctx, kpb))
-	t.Logf("deployed new unmanaged KongPluginBinding %s", client.ObjectKeyFromObject(kpb))
+	logObjectCreate(t, kpb)
 
 	return kpb
+}
+
+// KongCredentialAPIKey deploys a KongCredentialAPIKey resource and returns the resource.
+func KongCredentialAPIKey(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	consumerName string,
+) *configurationv1alpha1.KongCredentialAPIKey {
+	t.Helper()
+
+	c := &configurationv1alpha1.KongCredentialAPIKey{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "api-key-",
+		},
+		Spec: configurationv1alpha1.KongCredentialAPIKeySpec{
+			ConsumerRef: corev1.LocalObjectReference{
+				Name: consumerName,
+			},
+			KongCredentialAPIKeyAPISpec: configurationv1alpha1.KongCredentialAPIKeyAPISpec{
+				Key: "key",
+			},
+		},
+	}
+
+	require.NoError(t, cl.Create(ctx, c))
+	logObjectCreate(t, c)
+
+	return c
 }
 
 // KongCredentialBasicAuth deploys a KongCredentialBasicAuth resource and returns the resource.
@@ -330,7 +359,7 @@ func KongCredentialBasicAuth(
 	}
 
 	require.NoError(t, cl.Create(ctx, c))
-	t.Logf("deployed new unmanaged KongCredentialBasicAuth %s", client.ObjectKeyFromObject(c))
+	logObjectCreate(t, c)
 
 	return c
 }
@@ -360,7 +389,7 @@ func KongCredentialACL(
 	}
 
 	require.NoError(t, cl.Create(ctx, c))
-	t.Logf("deployed new unmanaged KongCredentialACL %s", client.ObjectKeyFromObject(c))
+	logObjectCreate(t, c)
 
 	return c
 }
@@ -389,7 +418,7 @@ func KongCredentialHMAC(
 	}
 
 	require.NoError(t, cl.Create(ctx, c))
-	t.Logf("deployed new unmanaged KongCredentialHMAC %s", client.ObjectKeyFromObject(c))
+	logObjectCreate(t, c)
 
 	return c
 }
@@ -418,7 +447,7 @@ func KongCredentialJWT(
 	}
 
 	require.NoError(t, cl.Create(ctx, c))
-	t.Logf("deployed new unmanaged KongCredentialJWT %s", client.ObjectKeyFromObject(c))
+	logObjectCreate(t, c)
 
 	return c
 }
@@ -449,7 +478,7 @@ func KongCACertificateAttachedToCP(
 		},
 	}
 	require.NoError(t, cl.Create(ctx, cert))
-	t.Logf("deployed new KongCACertificate %s", client.ObjectKeyFromObject(cert))
+	logObjectCreate(t, cert)
 
 	return cert
 }
@@ -481,7 +510,7 @@ func KongCertificateAttachedToCP(
 		},
 	}
 	require.NoError(t, cl.Create(ctx, cert))
-	t.Logf("deployed new KongCertificate %s", client.ObjectKeyFromObject(cert))
+	logObjectCreate(t, cert)
 
 	return cert
 }
@@ -514,7 +543,7 @@ func KongUpstreamAttachedToCP(
 	}
 
 	require.NoError(t, cl.Create(ctx, u))
-	t.Logf("deployed new KongUpstream %s", client.ObjectKeyFromObject(u))
+	logObjectCreate(t, u)
 
 	return u
 }
@@ -544,7 +573,7 @@ func KongTargetAttachedToUpstream(
 	}
 
 	require.NoError(t, cl.Create(ctx, u))
-	t.Logf("deployed new KongTarget %s", client.ObjectKeyFromObject(u))
+	logObjectCreate(t, u)
 
 	return u
 }
@@ -579,7 +608,7 @@ func KongConsumerAttachedToCP(
 	}
 
 	require.NoError(t, cl.Create(ctx, c))
-	t.Logf("deployed new KongConsumer %s", client.ObjectKeyFromObject(c))
+	logObjectCreate(t, c)
 
 	return c
 }
@@ -614,7 +643,7 @@ func KongConsumerGroupAttachedToCP(
 	}
 
 	require.NoError(t, cl.Create(ctx, &cg))
-	t.Logf("deployed new KongConsumerGroup %s", client.ObjectKeyFromObject(&cg))
+	logObjectCreate(t, &cg)
 
 	return &cg
 }
@@ -652,7 +681,7 @@ func KongVaultAttachedToCP(
 	}
 
 	require.NoError(t, cl.Create(ctx, vault))
-	t.Logf("deployed new KongVault %s", client.ObjectKeyFromObject(vault))
+	logObjectCreate(t, vault)
 
 	return vault
 }
@@ -692,7 +721,7 @@ func KongKeyAttachedToCP(
 		opt(key)
 	}
 	require.NoError(t, cl.Create(ctx, key))
-	t.Logf("deployed new KongKey %s", client.ObjectKeyFromObject(key))
+	logObjectCreate(t, key)
 	return key
 }
 
@@ -769,7 +798,7 @@ func KongKeySetAttachedToCP(
 		},
 	}
 	require.NoError(t, cl.Create(ctx, keySet))
-	t.Logf("deployed new KongKeySet %s", client.ObjectKeyFromObject(keySet))
+	logObjectCreate(t, keySet)
 
 	return keySet
 }
@@ -834,7 +863,18 @@ func KongDataPlaneClientCertificateAttachedToCP(
 		},
 	}
 	require.NoError(t, cl.Create(ctx, cert))
-	t.Logf("deployed new KongDataPlaneClientCertificate %s", client.ObjectKeyFromObject(cert))
+	logObjectCreate(t, cert)
 
 	return cert
+}
+
+func logObjectCreate[
+	T interface {
+		client.Object
+		GetTypeName() string
+	},
+](t *testing.T, obj T) {
+	t.Helper()
+
+	t.Logf("deployed new %s %s resource", obj.GetTypeName(), client.ObjectKeyFromObject(obj))
 }
