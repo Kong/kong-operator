@@ -20,7 +20,6 @@ func NewObjectCountProvider[
 			Group: group,
 			Kind:  kind,
 		},
-
 		version,
 	)
 	if err != nil {

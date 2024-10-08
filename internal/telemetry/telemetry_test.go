@@ -464,7 +464,6 @@ func TestCreateManager(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			// scheme := scheme.Get() // prepareScheme(t)
 			scheme := prepareScheme(t)
 			k8sclient := testk8sclient.NewSimpleClientset()
 
