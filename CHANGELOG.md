@@ -111,11 +111,15 @@
   [#454](https://github.com/Kong/gateway-operator/pull/454)
 - Requeue instead of reporting an error when a GatewayClass status update yields a conflict.
   [#612](https://github.com/Kong/gateway-operator/pull/612)
+- Guard object counters with checks whether CRDs for them exist
+  [#710](https://github.com/Kong/gateway-operator/pull/710)
 
 ### Changes
 
 - Default version of `ControlPlane` is bumped to 3.3.1
   [#580](https://github.com/Kong/gateway-operator/pull/580)
+- Default version of `DataPlane` is bumped to 3.8.0
+  [#572](https://github.com/Kong/gateway-operator/pull/572)
 - Gateway API has been bumped to v1.2.0
   [#674](https://github.com/Kong/gateway-operator/pull/674)
 
