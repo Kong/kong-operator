@@ -3,6 +3,7 @@
 ## Packages
 - [configuration.konghq.com/v1](#configurationkonghqcomv1)
 - [configuration.konghq.com/v1alpha1](#configurationkonghqcomv1alpha1)
+- [configuration.konghq.com/v1beta1](#configurationkonghqcomv1beta1)
 - [gateway-operator.konghq.com/v1alpha1](#gateway-operatorkonghqcomv1alpha1)
 - [gateway-operator.konghq.com/v1beta1](#gateway-operatorkonghqcomv1beta1)
 - [konnect.konghq.com/v1alpha1](#konnectkonghqcomv1alpha1)
@@ -78,6 +79,22 @@ KongConsumerSpec defines the specification of the KongConsumer.
 | Field | Description |
 | --- | --- |
 | `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this Consumer is associated with. |
+
+
+_Appears in:_
+- [KongConsumer](#kongconsumer)
+
+#### KongConsumerStatus
+
+
+KongConsumerStatus represents the current status of the KongConsumer resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongConsumer.<br /><br /> Known condition types are:<br /><br /> * "Programmed" |
 
 
 _Appears in:_
@@ -1695,6 +1712,34 @@ _Appears in:_
 - [KongPluginBindingTargets](#kongpluginbindingtargets)
 
 
+## configuration.konghq.com/v1beta1
+
+Package v1beta1 contains API Schema definitions for the configuration.konghq.com v1beta1 API group.
+
+- [KongConsumerGroup](#kongconsumergroup)
+### KongConsumerGroup
+
+
+KongConsumerGroup is the Schema for the kongconsumergroups API.
+
+<!-- kong_consumer_group description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
+| `kind` _string_ | `KongConsumerGroup`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongConsumerGroupSpec](#kongconsumergroupspec)_ |  |
+| `status` _[KongConsumerGroupStatus](#kongconsumergroupstatus)_ | Status represents the current status of the KongConsumerGroup resource. |
+
+
+
+
+
+
+### Types
+
+In this section you will find types that the CRDs rely on.
 
 ## gateway-operator.konghq.com/v1alpha1
 

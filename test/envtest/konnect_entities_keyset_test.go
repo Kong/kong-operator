@@ -15,12 +15,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 func TestKongKeySet(t *testing.T) {
@@ -78,7 +78,7 @@ func TestKongKeySet(t *testing.T) {
 			return false
 		}
 		return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-			return condition.Type == conditions.KonnectEntityProgrammedConditionType &&
+			return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
 				condition.Status == metav1.ConditionTrue
 		})
 	}, "KongKeySet's Programmed condition should be true eventually")

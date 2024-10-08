@@ -10,7 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -173,7 +172,7 @@ func shouldUpdate[
 	now time.Time,
 ) (bool, ctrl.Result) {
 	var (
-		condProgrammed, ok = k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, ent)
+		condProgrammed, ok = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
 		timeFromLastUpdate = time.Since(condProgrammed.LastTransitionTime.Time)
 	)
 
@@ -181,7 +180,7 @@ func shouldUpdate[
 	// the configured sync period, requeue after the remaining time.
 	if ok &&
 		condProgrammed.Status == metav1.ConditionTrue &&
-		condProgrammed.Reason == conditions.KonnectEntityProgrammedReasonProgrammed &&
+		condProgrammed.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed &&
 		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration() &&
 		timeFromLastUpdate <= syncPeriod {
 		requeueAfter := syncPeriod - timeFromLastUpdate

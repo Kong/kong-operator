@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/controller/pkg/log"
@@ -336,9 +335,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		if k8serrors.IsNotFound(err) {
 			if res, err := updateStatusWithCondition(
 				ctx, r.Client, ent,
-				conditions.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
+				konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
 				metav1.ConditionFalse,
-				conditions.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound,
+				konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound,
 				fmt.Sprintf("Referenced KonnectAPIAuthConfiguration %s not found", apiAuthRef),
 			); err != nil || !res.IsZero() {
 				return ctrl.Result{}, err
@@ -349,9 +348,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		if res, err := updateStatusWithCondition(
 			ctx, r.Client, ent,
-			conditions.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
 			metav1.ConditionFalse,
-			conditions.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefInvalid,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefInvalid,
 			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is invalid: %v", apiAuthRef, err),
 		); err != nil || !res.IsZero() {
 			return ctrl.Result{}, err
@@ -361,15 +360,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 
 	// Update the status if the reference is resolved and it's not as expected.
-	if cond, present := k8sutils.GetCondition(conditions.KonnectEntityAPIAuthConfigurationResolvedRefConditionType, ent); !present ||
+	if cond, present := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType, ent); !present ||
 		cond.Status != metav1.ConditionTrue ||
 		cond.ObservedGeneration != ent.GetGeneration() ||
-		cond.Reason != conditions.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef {
+		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef {
 		if res, err := updateStatusWithCondition(
 			ctx, r.Client, ent,
-			conditions.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
 			metav1.ConditionTrue,
-			conditions.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef,
 			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is resolved", apiAuthRef),
 		); err != nil || !res.IsZero() {
 			return res, err
@@ -378,17 +377,17 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 
 	// Check if the referenced APIAuthConfiguration is valid.
-	if cond, present := k8sutils.GetCondition(conditions.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !present ||
+	if cond, present := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !present ||
 		cond.Status != metav1.ConditionTrue ||
-		cond.Reason != conditions.KonnectEntityAPIAuthConfigurationReasonValid {
+		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid {
 
 		// If it's invalid then set the "APIAuthValid" status condition on
 		// the entity to False with "Invalid" reason.
 		if res, err := updateStatusWithCondition(
 			ctx, r.Client, ent,
-			conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionFalse,
-			conditions.KonnectEntityAPIAuthConfigurationReasonInvalid,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
 			conditionMessageReferenceKonnectAPIAuthConfigurationInvalid(apiAuthRef),
 		); err != nil || !res.IsZero() {
 			return res, err
@@ -400,17 +399,17 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// If the referenced APIAuthConfiguration is valid, set the "APIAuthValid"
 	// condition to True with "Valid" reason.
 	// Only perform the update if the condition is not as expected.
-	if cond, present := k8sutils.GetCondition(conditions.KonnectEntityAPIAuthConfigurationValidConditionType, ent); !present ||
+	if cond, present := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, ent); !present ||
 		cond.Status != metav1.ConditionTrue ||
-		cond.Reason != conditions.KonnectEntityAPIAuthConfigurationReasonValid ||
+		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid ||
 		cond.ObservedGeneration != ent.GetGeneration() ||
 		cond.Message != conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef) {
 
 		if res, err := updateStatusWithCondition(
 			ctx, r.Client, ent,
-			conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionTrue,
-			conditions.KonnectEntityAPIAuthConfigurationReasonValid,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
 			conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef),
 		); err != nil || !res.IsZero() {
 			return res, err
@@ -422,9 +421,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	if err != nil {
 		if res, errStatus := updateStatusWithCondition(
 			ctx, r.Client, &apiAuth,
-			conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionFalse,
-			conditions.KonnectEntityAPIAuthConfigurationReasonInvalid,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
 			err.Error(),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
@@ -457,9 +456,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			if err := ops.Delete[T, TEnt](ctx, sdk, r.Client, ent); err != nil {
 				if res, errStatus := updateStatusWithCondition(
 					ctx, r.Client, ent,
-					conditions.KonnectEntityProgrammedConditionType,
+					konnectv1alpha1.KonnectEntityProgrammedConditionType,
 					metav1.ConditionFalse,
-					conditions.KonnectEntityProgrammedReasonKonnectAPIOpFailed,
+					konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed,
 					err.Error(),
 				); errStatus != nil || !res.IsZero() {
 					return res, errStatus
@@ -794,9 +793,9 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	if err := cl.Get(ctx, nn, &consumer); err != nil {
 		if res, errStatus := updateStatusWithCondition(
 			ctx, cl, ent,
-			conditions.KongConsumerRefValidConditionType,
+			konnectv1alpha1.KongConsumerRefValidConditionType,
 			metav1.ConditionFalse,
-			conditions.KongConsumerRefReasonInvalid,
+			konnectv1alpha1.KongConsumerRefReasonInvalid,
 			err.Error(),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
@@ -817,14 +816,14 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		}
 	}
 
-	cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, &consumer)
+	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &consumer)
 	if !ok || cond.Status != metav1.ConditionTrue {
 		ent.SetKonnectID("")
 		if res, err := updateStatusWithCondition(
 			ctx, cl, ent,
-			conditions.KongConsumerRefValidConditionType,
+			konnectv1alpha1.KongConsumerRefValidConditionType,
 			metav1.ConditionFalse,
-			conditions.KongConsumerRefReasonInvalid,
+			konnectv1alpha1.KongConsumerRefReasonInvalid,
 			fmt.Sprintf("Referenced KongConsumer %s is not programmed yet", nn),
 		); err != nil || !res.IsZero() {
 			return ctrl.Result{}, err
@@ -857,9 +856,9 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 
 	if res, errStatus := updateStatusWithCondition(
 		ctx, cl, ent,
-		conditions.KongConsumerRefValidConditionType,
+		konnectv1alpha1.KongConsumerRefValidConditionType,
 		metav1.ConditionTrue,
-		conditions.KongConsumerRefReasonValid,
+		konnectv1alpha1.KongConsumerRefReasonValid,
 		fmt.Sprintf("Referenced KongConsumer %s programmed", nn),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
@@ -876,9 +875,9 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	if err != nil {
 		if res, errStatus := updateStatusWithCondition(
 			ctx, cl, ent,
-			conditions.ControlPlaneRefValidConditionType,
+			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
-			conditions.ControlPlaneRefReasonInvalid,
+			konnectv1alpha1.ControlPlaneRefReasonInvalid,
 			err.Error(),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
@@ -892,13 +891,13 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return ctrl.Result{}, err
 	}
 
-	cond, ok = k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
+	cond, ok = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 	if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
 		if res, errStatus := updateStatusWithCondition(
 			ctx, cl, ent,
-			conditions.ControlPlaneRefValidConditionType,
+			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
-			conditions.ControlPlaneRefReasonInvalid,
+			konnectv1alpha1.ControlPlaneRefReasonInvalid,
 			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
@@ -913,9 +912,9 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 
 	if res, errStatus := updateStatusWithCondition(
 		ctx, cl, ent,
-		conditions.ControlPlaneRefValidConditionType,
+		konnectv1alpha1.ControlPlaneRefValidConditionType,
 		metav1.ConditionTrue,
-		conditions.ControlPlaneRefReasonValid,
+		konnectv1alpha1.ControlPlaneRefReasonValid,
 		fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
@@ -1022,9 +1021,9 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		if err := cl.Get(ctx, nn, &cp); err != nil {
 			if res, errStatus := updateStatusWithCondition(
 				ctx, cl, ent,
-				conditions.ControlPlaneRefValidConditionType,
+				konnectv1alpha1.ControlPlaneRefValidConditionType,
 				metav1.ConditionFalse,
-				conditions.ControlPlaneRefReasonInvalid,
+				konnectv1alpha1.ControlPlaneRefReasonInvalid,
 				err.Error(),
 			); errStatus != nil || !res.IsZero() {
 				return res, errStatus
@@ -1038,13 +1037,13 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			return ctrl.Result{}, err
 		}
 
-		cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, &cp)
+		cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &cp)
 		if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
 			if res, errStatus := updateStatusWithCondition(
 				ctx, cl, ent,
-				conditions.ControlPlaneRefValidConditionType,
+				konnectv1alpha1.ControlPlaneRefValidConditionType,
 				metav1.ConditionFalse,
-				conditions.ControlPlaneRefReasonInvalid,
+				konnectv1alpha1.ControlPlaneRefReasonInvalid,
 				fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
 			); errStatus != nil || !res.IsZero() {
 				return res, errStatus
@@ -1086,9 +1085,9 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 
 		if res, errStatus := updateStatusWithCondition(
 			ctx, cl, ent,
-			conditions.ControlPlaneRefValidConditionType,
+			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionTrue,
-			conditions.ControlPlaneRefReasonValid,
+			konnectv1alpha1.ControlPlaneRefReasonValid,
 			fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus

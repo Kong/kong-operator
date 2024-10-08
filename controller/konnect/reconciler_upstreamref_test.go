@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -58,7 +57,7 @@ var testKongUpstreamOK = &configurationv1alpha1.KongUpstream{
 		},
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -73,7 +72,7 @@ var testKongUpstreamNotProgrammed = &configurationv1alpha1.KongUpstream{
 	Status: configurationv1alpha1.KongUpstreamStatus{
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionFalse,
 			},
 		},
@@ -88,7 +87,7 @@ var testKongUpstreamNoControlPlaneRef = &configurationv1alpha1.KongUpstream{
 	Status: configurationv1alpha1.KongUpstreamStatus{
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -129,7 +128,7 @@ var testKongUpstreamControlPlaneRefNotFound = &configurationv1alpha1.KongUpstrea
 		},
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -161,7 +160,7 @@ var testKongUpstreamControlPlaneRefNotProgrammed = &configurationv1alpha1.KongUp
 		},
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -180,7 +179,7 @@ var testControlPlaneOK = &konnectv1alpha1.KonnectGatewayControlPlane{
 		},
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -196,7 +195,7 @@ var testControlPlaneNotProgrammed = &konnectv1alpha1.KonnectGatewayControlPlane{
 	Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionFalse,
 			},
 		},
@@ -229,12 +228,12 @@ func TestHandleUpstreamRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongTarget) (bool, string){
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionTrue
+						return c.Type == konnectv1alpha1.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionTrue
 					}), "KongTarget does not have KongUpstreamRefValid condition set to True"
 				},
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionTrue
+						return c.Type == konnectv1alpha1.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionTrue
 					}), "KongTarget does not have ControlPlaneRefValid condition set to True"
 				},
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
@@ -262,7 +261,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongTarget) (bool, string){
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionFalse
+						return c.Type == konnectv1alpha1.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionFalse
 					}), "KongTarget does not have KongUpstreamRefValid condition set to False"
 				},
 			},
@@ -286,7 +285,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongTarget) (bool, string){
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionFalse &&
+						return c.Type == konnectv1alpha1.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionFalse &&
 							c.Message == fmt.Sprintf("Referenced KongUpstream %s/%s is not programmed yet",
 								testKongUpstreamNotProgrammed.Namespace, testKongUpstreamNotProgrammed.Name)
 					}), "KongTarget does not have KongUpstreamRefValid condition set to False"
@@ -313,7 +312,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongTarget) (bool, string){
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionTrue
+						return c.Type == konnectv1alpha1.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionTrue
 					}), "KongTarget does not have KongUpstreamRefValid condition set to True"
 				},
 			},
@@ -377,12 +376,12 @@ func TestHandleUpstreamRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongTarget) (bool, string){
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionTrue
+						return c.Type == konnectv1alpha1.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionTrue
 					}), "KongTarget does not have KongUpstreamRefValid condition set to True"
 				},
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionFalse
+						return c.Type == konnectv1alpha1.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionFalse
 					}), "KongTarget does not have ControlPlaneRefValid condition set to False"
 				},
 			},

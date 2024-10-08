@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	konnectconsts "github.com/kong/gateway-operator/controller/konnect/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -68,10 +67,10 @@ func TestCreateKongUpstream(t *testing.T) {
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
 				assert.Equal(t, "12345", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, svc)
+				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
 				require.True(t, ok, "Programmed condition not set on KongUpstream")
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, conditions.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
+				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
 				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
 			},
 		},
@@ -135,7 +134,7 @@ func TestCreateKongUpstream(t *testing.T) {
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
 				assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, svc)
+				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
 				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				assert.Equal(t, "FailedToCreate", cond.Reason)
@@ -344,10 +343,10 @@ func TestUpdateKongUpstream(t *testing.T) {
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
 				assert.Equal(t, "123456789", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, svc)
+				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
 				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, conditions.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
+				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
 				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
 				assert.Equal(t, "", cond.Message)
 			},
@@ -398,7 +397,7 @@ func TestUpdateKongUpstream(t *testing.T) {
 				// TODO: When we fail to update a KongUpstream, do we want to clear
 				// the Konnect ID from the status? Probably not.
 				// assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, svc)
+				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
 				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				assert.Equal(t, "FailedToUpdate", cond.Reason)
@@ -464,10 +463,10 @@ func TestUpdateKongUpstream(t *testing.T) {
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
 				assert.Equal(t, "123456789", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, svc)
+				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
 				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, conditions.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
+				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
 				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
 				assert.Equal(t, "", cond.Message)
 			},

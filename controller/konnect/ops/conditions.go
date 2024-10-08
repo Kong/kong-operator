@@ -3,9 +3,10 @@ package ops
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 type entityType interface {
@@ -22,7 +23,7 @@ func SetKonnectEntityProgrammedCondition(
 	_setKonnectEntityProgrammedConditon(
 		obj,
 		metav1.ConditionTrue,
-		conditions.KonnectEntityProgrammedReasonProgrammed,
+		konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
 		"",
 	)
 }
@@ -50,7 +51,7 @@ func _setKonnectEntityProgrammedConditon(
 ) {
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			conditions.KonnectEntityProgrammedConditionType,
+			konnectv1alpha1.KonnectEntityProgrammedConditionType,
 			status,
 			reason,
 			msg,

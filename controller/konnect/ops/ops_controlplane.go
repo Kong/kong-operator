@@ -15,8 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
-
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -42,7 +40,7 @@ func createControlPlane(
 	cp.Status.SetKonnectID(*resp.ControlPlane.ID)
 
 	if err := setGroupMembers(ctx, cl, cp, sdkGroups); err != nil {
-		SetKonnectEntityProgrammedConditionFalse(cp, conditions.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers, err.Error())
+		SetKonnectEntityProgrammedConditionFalse(cp, konnectv1alpha1.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers, err.Error())
 		return err
 	}
 
@@ -133,7 +131,7 @@ func updateControlPlane(
 	cp.Status.SetKonnectID(*resp.ControlPlane.ID)
 
 	if err := setGroupMembers(ctx, cl, cp, sdkGroups); err != nil {
-		SetKonnectEntityProgrammedConditionFalse(cp, conditions.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers, err.Error())
+		SetKonnectEntityProgrammedConditionFalse(cp, konnectv1alpha1.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers, err.Error())
 		return err
 	}
 

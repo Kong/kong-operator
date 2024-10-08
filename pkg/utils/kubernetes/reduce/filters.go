@@ -13,10 +13,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/pkg/consts"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // FiltenNone filter nothing, that is it returns the same slice as provided.
@@ -485,7 +485,7 @@ func filterKongPluginBindings(kpbs []configurationv1alpha1.KongPluginBinding) []
 	best := 0
 	for i, kpb := range kpbs {
 		if lo.ContainsBy(kpb.Status.Conditions, func(c metav1.Condition) bool {
-			return c.Type == conditions.KonnectEntityProgrammedConditionType &&
+			return c.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
 				c.Status == metav1.ConditionTrue
 		}) {
 
