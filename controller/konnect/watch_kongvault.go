@@ -59,8 +59,7 @@ func enqueueKongVaultForKonnectAPIAuthConfiguration(
 			return nil
 		}
 
-		l := configurationv1alpha1.KongVaultList{}
-
+		var l configurationv1alpha1.KongVaultList
 		if err := cl.List(ctx, &l); err != nil {
 			return nil
 		}

@@ -3,7 +3,6 @@ package konnect
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -49,27 +48,15 @@ func enqueueKonnectGatewayControlPlaneForKonnectAPIAuthConfiguration(
 			return nil
 		}
 		var l konnectv1alpha1.KonnectGatewayControlPlaneList
-		if err := cl.List(ctx, &l, &client.ListOptions{
+		if err := cl.List(ctx, &l,
 			// TODO: change this when cross namespace refs are allowed.
-			Namespace: auth.GetNamespace(),
-		}); err != nil {
+			client.InNamespace(auth.GetNamespace()),
+			client.MatchingFields{
+				IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration: auth.Name,
+			},
+		); err != nil {
 			return nil
 		}
-		var ret []reconcile.Request
-		for _, cp := range l.Items {
-			authRef := cp.GetKonnectAPIAuthConfigurationRef()
-			if authRef.Name != auth.Name {
-				// TODO: change this when cross namespace refs are allowed.
-				// authRef.Namespace != auth.Namespace {
-				continue
-			}
-			ret = append(ret, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: cp.Namespace,
-					Name:      cp.Name,
-				},
-			})
-		}
-		return ret
+		return objectListToReconcileRequests(l.Items)
 	}
 }
