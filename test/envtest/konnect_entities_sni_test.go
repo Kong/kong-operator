@@ -16,13 +16,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	konnectalpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 func TestKongSNI(t *testing.T) {
@@ -56,15 +55,15 @@ func TestKongSNI(t *testing.T) {
 		t.Log("Creating KongCertificate and setting it to Programmed")
 		createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp)
 		createdCert.Status = configurationv1alpha1.KongCertificateStatus{
-			Konnect: &konnectalpha1.KonnectEntityStatusWithControlPlaneRef{
+			Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
 				KonnectEntityStatus: konnectEntityStatus("cert-12345"),
 				ControlPlaneID:      cp.Status.GetKonnectID(),
 			},
 			Conditions: []metav1.Condition{
 				{
-					Type:               conditions.KonnectEntityProgrammedConditionType,
+					Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
 					Status:             metav1.ConditionTrue,
-					Reason:             conditions.KonnectEntityProgrammedReasonProgrammed,
+					Reason:             konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
 					ObservedGeneration: createdCert.GetGeneration(),
 					LastTransitionTime: metav1.Now(),
 				},

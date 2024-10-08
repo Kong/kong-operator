@@ -8,7 +8,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -135,9 +134,9 @@ func konnectEntityStatus(id string) konnectv1alpha1.KonnectEntityStatus {
 
 func programmedCondition(generation int64) metav1.Condition {
 	return k8sutils.NewConditionWithGeneration(
-		conditions.KonnectEntityProgrammedConditionType,
+		konnectv1alpha1.KonnectEntityProgrammedConditionType,
 		metav1.ConditionTrue,
-		conditions.KonnectEntityProgrammedReasonProgrammed,
+		konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
 		"",
 		generation,
 	)

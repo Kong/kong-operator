@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -85,7 +84,7 @@ func TestHandleKeySetRef(t *testing.T) {
 				},
 				Conditions: []metav1.Condition{
 					{
-						Type:               conditions.KonnectEntityProgrammedConditionType,
+						Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
 						Status:             metav1.ConditionTrue,
 						ObservedGeneration: 1,
 						LastTransitionTime: metav1.Now(),
@@ -124,7 +123,7 @@ func TestHandleKeySetRef(t *testing.T) {
 		keySetRefConditionIs = func(expectedStatus metav1.ConditionStatus) func(key *configurationv1alpha1.KongKey) (ok bool, message string) {
 			return func(key *configurationv1alpha1.KongKey) (ok bool, message string) {
 				containsCondition := lo.ContainsBy(key.Status.Conditions, func(condition metav1.Condition) bool {
-					return condition.Type == conditions.KeySetRefValidConditionType &&
+					return condition.Type == konnectv1alpha1.KeySetRefValidConditionType &&
 						condition.Status == expectedStatus
 				})
 				if !containsCondition {

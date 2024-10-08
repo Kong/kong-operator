@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -36,9 +35,9 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 				// Reset the KeySetID in the status and set the condition to True.
 				key.Status.Konnect.KeySetID = ""
 				if res, err := updateStatusWithCondition(ctx, cl, key,
-					conditions.KeySetRefValidConditionType,
+					konnectv1alpha1.KeySetRefValidConditionType,
 					metav1.ConditionTrue,
-					conditions.KeySetRefReasonValid,
+					konnectv1alpha1.KeySetRefReasonValid,
 					"KeySetRef is unset",
 				); err != nil || !res.IsZero() {
 					return res, fmt.Errorf("failed to update status: %w", err)
@@ -73,9 +72,9 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 	if err := cl.Get(ctx, nn, &keySet); err != nil {
 		if res, errStatus := updateStatusWithCondition(
 			ctx, cl, ent,
-			conditions.KeySetRefValidConditionType,
+			konnectv1alpha1.KeySetRefValidConditionType,
 			metav1.ConditionFalse,
-			conditions.KeySetRefReasonInvalid,
+			konnectv1alpha1.KeySetRefReasonInvalid,
 			err.Error(),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
@@ -101,13 +100,13 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 	}
 
 	// Verify that the KongKeySet is programmed.
-	cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, &keySet)
+	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &keySet)
 	if !ok || cond.Status != metav1.ConditionTrue {
 		if res, err := updateStatusWithCondition(
 			ctx, cl, ent,
-			conditions.KeySetRefValidConditionType,
+			konnectv1alpha1.KeySetRefValidConditionType,
 			metav1.ConditionFalse,
-			conditions.KeySetRefReasonInvalid,
+			konnectv1alpha1.KeySetRefReasonInvalid,
 			fmt.Sprintf("Referenced KongKeySet %s is not programmed yet", nn),
 		); err != nil || !res.IsZero() {
 			return ctrl.Result{}, err
@@ -136,9 +135,9 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 
 	if res, errStatus := updateStatusWithCondition(
 		ctx, cl, ent,
-		conditions.KeySetRefValidConditionType,
+		konnectv1alpha1.KeySetRefValidConditionType,
 		metav1.ConditionTrue,
-		conditions.KeySetRefReasonValid,
+		konnectv1alpha1.KeySetRefReasonValid,
 		fmt.Sprintf("Referenced KongKeySet %s programmed", nn),
 	); errStatus != nil || res.Requeue {
 		return res, errStatus

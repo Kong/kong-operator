@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -258,7 +257,7 @@ func assertKonnectEntityProgrammed(
 	assert.NotEmpty(t, konnectStatus.GetServerURL())
 
 	assert.True(t, lo.ContainsBy(obj.GetConditions(), func(condition metav1.Condition) bool {
-		return condition.Type == conditions.KonnectEntityProgrammedConditionType &&
+		return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
 			condition.Status == metav1.ConditionTrue
 	}))
 }

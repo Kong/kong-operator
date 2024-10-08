@@ -27,6 +27,7 @@ KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH="$(go env GOPATH)/pkg/mod/${KUBERN
 # NOTE: https://apple.stackexchange.com/questions/69223/how-to-replace-mac-os-x-utilities-with-gnu-core-utilities
 CP=cp
 if [[ $(uname -s) == "Darwin" ]]; then
+  HOMEBREW_PREFIX=$(brew --prefix)
   if gcp --version 2>&1 >/dev/null ; then
     CP=${HOMEBREW_PREFIX}/bin/gcp
   else

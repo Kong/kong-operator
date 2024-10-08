@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -65,10 +64,10 @@ func TestCreateControlPlane(t *testing.T) {
 			},
 			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				assert.Equal(t, "12345", cp.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
+				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, conditions.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
+				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
 				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
 			},
 		},
@@ -106,7 +105,7 @@ func TestCreateControlPlane(t *testing.T) {
 			},
 			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				assert.Equal(t, "", cp.Status.GetKonnectID())
-				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
+				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				assert.Equal(t, "FailedToCreate", cond.Reason)
@@ -312,10 +311,10 @@ func TestUpdateControlPlane(t *testing.T) {
 			},
 			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				assert.Equal(t, "12345", cp.Status.GetKonnectID())
-				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
+				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, conditions.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
+				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
 				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
 				assert.Equal(t, "", cond.Message)
 			},
@@ -365,7 +364,7 @@ func TestUpdateControlPlane(t *testing.T) {
 			},
 			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				assert.Equal(t, "12345", cp.Status.GetKonnectID())
-				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
+				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				assert.Equal(t, "FailedToUpdate", cond.Reason)
@@ -433,10 +432,10 @@ func TestUpdateControlPlane(t *testing.T) {
 			},
 			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
 				assert.Equal(t, "12345", cp.Status.GetKonnectID())
-				cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
+				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, conditions.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
+				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
 				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
 				assert.Equal(t, "", cond.Message)
 			},

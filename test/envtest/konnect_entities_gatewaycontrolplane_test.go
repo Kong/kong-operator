@@ -15,7 +15,6 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
@@ -214,7 +213,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 func conditionsContainProgrammedTrue(conds []metav1.Condition) bool {
 	return lo.ContainsBy(conds,
 		func(condition metav1.Condition) bool {
-			return condition.Type == conditions.KonnectEntityProgrammedConditionType &&
+			return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
 				condition.Status == metav1.ConditionTrue
 		},
 	)

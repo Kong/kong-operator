@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -59,7 +58,7 @@ var testKongCertOK = &configurationv1alpha1.KongCertificate{
 		},
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -74,7 +73,7 @@ var testKongCertNotProgrammed = &configurationv1alpha1.KongCertificate{
 	Status: configurationv1alpha1.KongCertificateStatus{
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionFalse,
 			},
 		},
@@ -95,7 +94,7 @@ var testKongCertNoControlPlaneRef = &configurationv1alpha1.KongCertificate{
 	Status: configurationv1alpha1.KongCertificateStatus{
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -133,7 +132,7 @@ var testKongCertificateControlPlaneRefNotFound = &configurationv1alpha1.KongCert
 		},
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -162,7 +161,7 @@ var testKongCertControlPlaneRefNotProgrammed = &configurationv1alpha1.KongCertif
 		},
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -193,12 +192,12 @@ func TestHandleCertificateRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongSNI) (bool, string){
 				func(ks *configurationv1alpha1.KongSNI) (bool, string) {
 					return lo.ContainsBy(ks.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.KongCertificateRefValidConditionType && c.Status == metav1.ConditionTrue
+						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionTrue
 					}), "KongSNI does not have KongCertificateRefValid condition set to True"
 				},
 				func(ks *configurationv1alpha1.KongSNI) (bool, string) {
 					return lo.ContainsBy(ks.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionTrue
+						return c.Type == konnectv1alpha1.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionTrue
 					}), "KongSNI does not have ControlPlaneRefValid condition set to True"
 				},
 				func(ks *configurationv1alpha1.KongSNI) (bool, string) {
@@ -226,7 +225,7 @@ func TestHandleCertificateRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongSNI) (bool, string){
 				func(ks *configurationv1alpha1.KongSNI) (bool, string) {
 					return lo.ContainsBy(ks.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.KongCertificateRefValidConditionType && c.Status == metav1.ConditionFalse
+						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionFalse
 					}), "KongSNI does not have KongCertificateRefValid condition set to False"
 				},
 			},
@@ -252,7 +251,7 @@ func TestHandleCertificateRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongSNI) (bool, string){
 				func(ks *configurationv1alpha1.KongSNI) (bool, string) {
 					return lo.ContainsBy(ks.GetConditions(), func(c metav1.Condition) bool {
-						return c.Type == conditions.KongCertificateRefValidConditionType && c.Status == metav1.ConditionFalse &&
+						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionFalse &&
 							c.Message == fmt.Sprintf("Referenced KongCertificate %s/%s is not programmed yet",
 								testKongCertNotProgrammed.Namespace, testKongCertNotProgrammed.Name)
 					}), "KongSNI does not have KongCertificateRefValid condition set to False"
@@ -281,7 +280,7 @@ func TestHandleCertificateRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongSNI) (bool, string){
 				func(ks *configurationv1alpha1.KongSNI) (bool, string) {
 					return lo.ContainsBy(ks.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.KongCertificateRefValidConditionType && c.Status == metav1.ConditionTrue
+						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionTrue
 					}), "KongSNI does not have KongCertificateRefValid condition set to True"
 				},
 			},
@@ -349,12 +348,12 @@ func TestHandleCertificateRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongSNI) (bool, string){
 				func(ks *configurationv1alpha1.KongSNI) (bool, string) {
 					return lo.ContainsBy(ks.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.KongCertificateRefValidConditionType && c.Status == metav1.ConditionTrue
+						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionTrue
 					}), "KongSNI does not have KongCertificateRefValid condition set to True"
 				},
 				func(ks *configurationv1alpha1.KongSNI) (bool, string) {
 					return lo.ContainsBy(ks.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionFalse
+						return c.Type == konnectv1alpha1.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionFalse
 					}), "KongSNI does not have ControlPlaneRefValid condition set to False"
 				},
 			},

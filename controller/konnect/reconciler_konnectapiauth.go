@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -119,9 +118,9 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 	if err != nil {
 		if res, errStatus := updateStatusWithCondition(
 			ctx, r.client, &apiAuth,
-			conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionFalse,
-			conditions.KonnectEntityAPIAuthConfigurationReasonInvalid,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
 			err.Error(),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
@@ -150,9 +149,9 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 	respOrg, err := sdk.GetMeSDK().GetOrganizationsMe(ctx, sdkkonnectops.WithServerURL("https://"+apiAuth.Spec.ServerURL))
 	if err != nil {
 		logger.Error(err, "failed to get organization info from Konnect")
-		if cond, ok := k8sutils.GetCondition(conditions.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
+		if cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
 			cond.Status != metav1.ConditionFalse ||
-			cond.Reason != conditions.KonnectEntityAPIAuthConfigurationReasonInvalid ||
+			cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid ||
 			cond.ObservedGeneration != apiAuth.GetGeneration() ||
 			apiAuth.Status.OrganizationID != "" ||
 			apiAuth.Status.ServerURL != apiAuth.Spec.ServerURL {
@@ -162,9 +161,9 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 			res, errUpdate := updateStatusWithCondition(
 				ctx, r.client, &apiAuth,
-				conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
+				konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 				metav1.ConditionFalse,
-				conditions.KonnectEntityAPIAuthConfigurationReasonInvalid,
+				konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
 				err.Error(),
 			)
 			if errUpdate != nil || !res.IsZero() {
@@ -187,10 +186,10 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		}
 		condMessage = fmt.Sprintf("Token from Secret %s is valid", nn)
 	}
-	if cond, ok := k8sutils.GetCondition(conditions.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
+	if cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
 		cond.Status != metav1.ConditionTrue ||
 		cond.Message != condMessage ||
-		cond.Reason != conditions.KonnectEntityAPIAuthConfigurationReasonValid ||
+		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid ||
 		cond.ObservedGeneration != apiAuth.GetGeneration() ||
 		apiAuth.Status.OrganizationID != *respOrg.MeOrganization.ID ||
 		apiAuth.Status.ServerURL != apiAuth.Spec.ServerURL {
@@ -200,9 +199,9 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 		res, err := updateStatusWithCondition(
 			ctx, r.client, &apiAuth,
-			conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionTrue,
-			conditions.KonnectEntityAPIAuthConfigurationReasonValid,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
 			condMessage,
 		)
 		if err != nil || !res.IsZero() {

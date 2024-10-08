@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -54,7 +53,7 @@ var testKongServiceOK = &configurationv1alpha1.KongService{
 		},
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -83,7 +82,7 @@ var testKongServiceWithCPRefUnprogrammed = &configurationv1alpha1.KongService{
 		},
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -98,7 +97,7 @@ var testKongServiceNotProgrammed = &configurationv1alpha1.KongService{
 	Status: configurationv1alpha1.KongServiceStatus{
 		Conditions: []metav1.Condition{
 			{
-				Type:   conditions.KonnectEntityProgrammedConditionType,
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
 				Status: metav1.ConditionFalse,
 			},
 		},
@@ -141,12 +140,12 @@ func TestHandleServiceRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongRoute) (bool, string){
 				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
 					return lo.ContainsBy(ks.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionTrue
+						return c.Type == konnectv1alpha1.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionTrue
 					}), "KongRoute does not have ControlPlaneRefValid condition set to True"
 				},
 				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
 					return lo.ContainsBy(ks.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.KongServiceRefValidConditionType && c.Status == metav1.ConditionTrue
+						return c.Type == konnectv1alpha1.KongServiceRefValidConditionType && c.Status == metav1.ConditionTrue
 					}), "KongRoute does not have KongServiceRefValid condition set to True"
 				},
 				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
@@ -214,9 +213,9 @@ func TestHandleServiceRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongRoute) (bool, string){
 				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
 					return lo.ContainsBy(ks.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.KongServiceRefValidConditionType &&
+						return c.Type == konnectv1alpha1.KongServiceRefValidConditionType &&
 							c.Status == metav1.ConditionFalse &&
-							c.Reason == conditions.KongServiceRefReasonInvalid
+							c.Reason == konnectv1alpha1.KongServiceRefReasonInvalid
 					}), "KongRoute does not have KongServiceRefValid condition set to False"
 				},
 				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
@@ -253,16 +252,16 @@ func TestHandleServiceRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongRoute) (bool, string){
 				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
 					return lo.ContainsBy(ks.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.ControlPlaneRefValidConditionType &&
+						return c.Type == konnectv1alpha1.ControlPlaneRefValidConditionType &&
 							c.Status == metav1.ConditionFalse &&
-							c.Reason == conditions.ControlPlaneRefReasonInvalid
+							c.Reason == konnectv1alpha1.ControlPlaneRefReasonInvalid
 					}), "KongRoute does not have ControlPlaneRef condition set to False"
 				},
 				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
 					return lo.ContainsBy(ks.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == conditions.KongServiceRefValidConditionType &&
+						return c.Type == konnectv1alpha1.KongServiceRefValidConditionType &&
 							c.Status == metav1.ConditionTrue &&
-							c.Reason == conditions.KongServiceRefReasonValid
+							c.Reason == konnectv1alpha1.KongServiceRefReasonValid
 					}), "KongRoute does not have KongServiceRefValid condition set to True"
 				},
 				func(ks *configurationv1alpha1.KongRoute) (bool, string) {

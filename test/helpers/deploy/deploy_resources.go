@@ -13,8 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
-
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -107,9 +105,9 @@ func KonnectAPIAuthConfigurationWithProgrammed(
 	apiAuth := KonnectAPIAuthConfiguration(t, ctx, cl)
 	apiAuth.Status.Conditions = []metav1.Condition{
 		{
-			Type:               conditions.KonnectEntityAPIAuthConfigurationValidConditionType,
+			Type:               konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			Status:             metav1.ConditionTrue,
-			Reason:             conditions.KonnectEntityAPIAuthConfigurationReasonValid,
+			Reason:             konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
 			ObservedGeneration: apiAuth.GetGeneration(),
 			LastTransitionTime: metav1.Now(),
 		},
@@ -169,9 +167,9 @@ func KonnectGatewayControlPlaneWithID(
 	cp := KonnectGatewayControlPlane(t, ctx, cl, apiAuth, opts...)
 	cp.Status.Conditions = []metav1.Condition{
 		{
-			Type:               conditions.KonnectEntityProgrammedConditionType,
+			Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
 			Status:             metav1.ConditionTrue,
-			Reason:             conditions.KonnectEntityProgrammedReasonProgrammed,
+			Reason:             konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
 			ObservedGeneration: cp.GetGeneration(),
 			LastTransitionTime: metav1.Now(),
 		},
@@ -271,9 +269,9 @@ func KongConsumerWithProgrammed(
 
 	consumer.Status.Conditions = []metav1.Condition{
 		{
-			Type:               conditions.KonnectEntityProgrammedConditionType,
+			Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
 			Status:             metav1.ConditionTrue,
-			Reason:             conditions.KonnectEntityProgrammedReasonProgrammed,
+			Reason:             konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
 			ObservedGeneration: consumer.GetGeneration(),
 			LastTransitionTime: metav1.Now(),
 		},

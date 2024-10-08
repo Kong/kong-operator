@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -53,9 +52,9 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	if err != nil {
 		if res, errStatus := updateStatusWithCondition(
 			ctx, cl, ent,
-			conditions.KongCertificateRefValidConditionType,
+			konnectv1alpha1.KongCertificateRefValidConditionType,
 			metav1.ConditionFalse,
-			conditions.KongCertificateRefReasonInvalid,
+			konnectv1alpha1.KongCertificateRefReasonInvalid,
 			err.Error(),
 		); errStatus != nil || res.Requeue {
 			return res, errStatus
@@ -77,14 +76,14 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	}
 
 	// requeue it if referenced KongCertificate is not programmed yet so we cannot do the following work.
-	cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cert)
+	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cert)
 	if !ok || cond.Status != metav1.ConditionTrue {
 		ent.SetKonnectID("")
 		if res, err := updateStatusWithCondition(
 			ctx, cl, ent,
-			conditions.KongCertificateRefValidConditionType,
+			konnectv1alpha1.KongCertificateRefValidConditionType,
 			metav1.ConditionFalse,
-			conditions.KongCertificateRefReasonInvalid,
+			konnectv1alpha1.KongCertificateRefReasonInvalid,
 			fmt.Sprintf("Referenced KongCertificate %s is not programmed yet", nn),
 		); err != nil || res.Requeue {
 			return ctrl.Result{}, err
@@ -114,9 +113,9 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 
 	if res, errStatus := updateStatusWithCondition(
 		ctx, cl, ent,
-		conditions.KongCertificateRefValidConditionType,
+		konnectv1alpha1.KongCertificateRefValidConditionType,
 		metav1.ConditionTrue,
-		conditions.KongCertificateRefReasonValid,
+		konnectv1alpha1.KongCertificateRefReasonValid,
 		fmt.Sprintf("Referenced KongCertificate %s programmed", nn),
 	); errStatus != nil || res.Requeue {
 		return res, errStatus
@@ -136,9 +135,9 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	if err != nil {
 		if res, errStatus := updateStatusWithCondition(
 			ctx, cl, ent,
-			conditions.ControlPlaneRefValidConditionType,
+			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
-			conditions.ControlPlaneRefReasonInvalid,
+			konnectv1alpha1.ControlPlaneRefReasonInvalid,
 			err.Error(),
 		); errStatus != nil || res.Requeue {
 			return res, errStatus
@@ -155,13 +154,13 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		return ctrl.Result{}, err
 	}
 
-	cond, ok = k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
+	cond, ok = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 	if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
 		if res, errStatus := updateStatusWithCondition(
 			ctx, cl, ent,
-			conditions.ControlPlaneRefValidConditionType,
+			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
-			conditions.ControlPlaneRefReasonInvalid,
+			konnectv1alpha1.ControlPlaneRefReasonInvalid,
 			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
 		); errStatus != nil || res.Requeue {
 			return res, errStatus
@@ -176,9 +175,9 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 
 	if res, errStatus := updateStatusWithCondition(
 		ctx, cl, ent,
-		conditions.ControlPlaneRefValidConditionType,
+		konnectv1alpha1.ControlPlaneRefValidConditionType,
 		metav1.ConditionTrue,
-		conditions.ControlPlaneRefReasonValid,
+		konnectv1alpha1.ControlPlaneRefReasonValid,
 		fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
 	); errStatus != nil || res.Requeue {
 		return res, errStatus

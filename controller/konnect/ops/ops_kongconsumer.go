@@ -15,12 +15,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 func createConsumer(
@@ -44,7 +44,7 @@ func createConsumer(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, consumer); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(consumer, conditions.KonnectEntityProgrammedReasonKonnectAPIOpFailed, errWrap.Error())
+		SetKonnectEntityProgrammedConditionFalse(consumer, konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed, errWrap.Error())
 		return errWrap
 	}
 
@@ -89,7 +89,7 @@ func updateConsumer(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, consumer); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(consumer, conditions.KonnectEntityProgrammedReasonKonnectAPIOpFailed, errWrap.Error())
+		SetKonnectEntityProgrammedConditionFalse(consumer, konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed, errWrap.Error())
 		return errWrap
 	}
 
@@ -126,14 +126,14 @@ func handleConsumerGroupAssignments(
 	populateConsumerGroupRefsValidCondition(invalidConsumerGroups, consumer)
 
 	if err != nil {
-		SetKonnectEntityProgrammedConditionFalse(consumer, conditions.KonnectEntityProgrammedReasonFailedToResolveConsumerGroupRefs, err.Error())
+		SetKonnectEntityProgrammedConditionFalse(consumer, konnectv1alpha1.KonnectEntityProgrammedReasonFailedToResolveConsumerGroupRefs, err.Error())
 		return err
 	}
 
 	// Reconcile the ConsumerGroups assigned to the KongConsumer in Konnect (list the actual ConsumerGroups, calculate the
 	// difference, and add/remove the Consumer from the ConsumerGroups accordingly).
 	if err := reconcileConsumerGroupsWithKonnect(ctx, desiredConsumerGroupsIDs, cgSDK, cpID, consumer); err != nil {
-		SetKonnectEntityProgrammedConditionFalse(consumer, conditions.KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect, err.Error())
+		SetKonnectEntityProgrammedConditionFalse(consumer, konnectv1alpha1.KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect, err.Error())
 		return err
 	}
 	return nil
@@ -221,9 +221,9 @@ func populateConsumerGroupRefsValidCondition(invalidConsumerGroups []invalidCons
 		}
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				conditions.KongConsumerGroupRefsValidConditionType,
+				konnectv1alpha1.KongConsumerGroupRefsValidConditionType,
 				metav1.ConditionFalse,
-				conditions.KongConsumerGroupRefsReasonInvalid,
+				konnectv1alpha1.KongConsumerGroupRefsReasonInvalid,
 				fmt.Sprintf("Invalid ConsumerGroup references: %s", strings.Join(reasons, ", ")),
 				consumer.GetGeneration(),
 			),
@@ -232,9 +232,9 @@ func populateConsumerGroupRefsValidCondition(invalidConsumerGroups []invalidCons
 	} else {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				conditions.KongConsumerGroupRefsValidConditionType,
+				konnectv1alpha1.KongConsumerGroupRefsValidConditionType,
 				metav1.ConditionTrue,
-				conditions.KongConsumerGroupRefsReasonValid,
+				konnectv1alpha1.KongConsumerGroupRefsReasonValid,
 				"",
 				consumer.GetGeneration(),
 			),

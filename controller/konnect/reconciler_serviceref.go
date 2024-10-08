@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/kong/gateway-operator/controller/konnect/conditions"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -58,9 +57,9 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 		if err := cl.Get(ctx, nn, &svc); err != nil {
 			if res, errStatus := updateStatusWithCondition(
 				ctx, cl, ent,
-				conditions.KongServiceRefValidConditionType,
+				konnectv1alpha1.KongServiceRefValidConditionType,
 				metav1.ConditionFalse,
-				conditions.KongServiceRefReasonInvalid,
+				konnectv1alpha1.KongServiceRefReasonInvalid,
 				err.Error(),
 			); errStatus != nil || !res.IsZero() {
 				return res, errStatus
@@ -77,14 +76,14 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 			}
 		}
 
-		cond, ok := k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, &svc)
+		cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &svc)
 		if !ok || cond.Status != metav1.ConditionTrue {
 			ent.SetKonnectID("")
 			if res, err := updateStatusWithCondition(
 				ctx, cl, ent,
-				conditions.KongServiceRefValidConditionType,
+				konnectv1alpha1.KongServiceRefValidConditionType,
 				metav1.ConditionFalse,
-				conditions.KongServiceRefReasonInvalid,
+				konnectv1alpha1.KongServiceRefReasonInvalid,
 				fmt.Sprintf("Referenced KongService %s is not programmed yet", nn),
 			); err != nil || !res.IsZero() {
 				return ctrl.Result{}, err
@@ -115,9 +114,9 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 
 		if res, errStatus := updateStatusWithCondition(
 			ctx, cl, ent,
-			conditions.KongServiceRefValidConditionType,
+			konnectv1alpha1.KongServiceRefValidConditionType,
 			metav1.ConditionTrue,
-			conditions.KongServiceRefReasonValid,
+			konnectv1alpha1.KongServiceRefReasonValid,
 			fmt.Sprintf("Referenced KongService %s programmed", nn),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
@@ -134,9 +133,9 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 		if err != nil {
 			if res, errStatus := updateStatusWithCondition(
 				ctx, cl, ent,
-				conditions.ControlPlaneRefValidConditionType,
+				konnectv1alpha1.ControlPlaneRefValidConditionType,
 				metav1.ConditionFalse,
-				conditions.ControlPlaneRefReasonInvalid,
+				konnectv1alpha1.ControlPlaneRefReasonInvalid,
 				err.Error(),
 			); errStatus != nil || !res.IsZero() {
 				return res, errStatus
@@ -150,13 +149,13 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 			return ctrl.Result{}, err
 		}
 
-		cond, ok = k8sutils.GetCondition(conditions.KonnectEntityProgrammedConditionType, cp)
+		cond, ok = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 		if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
 			if res, errStatus := updateStatusWithCondition(
 				ctx, cl, ent,
-				conditions.ControlPlaneRefValidConditionType,
+				konnectv1alpha1.ControlPlaneRefValidConditionType,
 				metav1.ConditionFalse,
-				conditions.ControlPlaneRefReasonInvalid,
+				konnectv1alpha1.ControlPlaneRefReasonInvalid,
 				fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
 			); errStatus != nil || !res.IsZero() {
 				return res, errStatus
@@ -174,9 +173,9 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 
 		if res, errStatus := updateStatusWithCondition(
 			ctx, cl, ent,
-			conditions.ControlPlaneRefValidConditionType,
+			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionTrue,
-			conditions.ControlPlaneRefReasonValid,
+			konnectv1alpha1.ControlPlaneRefReasonValid,
 			fmt.Sprintf("Referenced ControlPlane %s is programmed", client.ObjectKeyFromObject(cp)),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
