@@ -13,6 +13,7 @@ import (
 
 	"github.com/kong/gateway-operator/api/v1alpha1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 )
 
 // -----------------------------------------------------------------------------
@@ -30,13 +31,13 @@ func (r *AIGatewayReconciler) aiGatewayHasMatchingGatewayClass(obj client.Object
 		return false
 	}
 
-	_, err := r.verifyGatewayClassSupport(context.Background(), aigateway)
+	_, err := gatewayclass.Get(context.Background(), r.Client, aigateway.Spec.GatewayClassName)
 	if err != nil {
 		// filtering here is just an optimization, the reconciler will check the
 		// class as well. If we fail here it's most likely because of some failure
 		// of the Kubernetes API and it's technically better to enqueue the object
 		// than to drop it for eventual consistency during cluster outages.
-		return !errors.Is(err, operatorerrors.ErrUnsupportedGateway)
+		return !errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{})
 	}
 
 	return true

@@ -17,9 +17,11 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
+	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
+	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
@@ -41,13 +43,13 @@ func (r *Reconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
 		return false
 	}
 
-	_, err := r.verifyGatewayClassSupport(context.Background(), gateway)
+	_, err := gatewayclass.Get(context.Background(), r.Client, string(gateway.Spec.GatewayClassName))
 	if err != nil {
 		// filtering here is just an optimization, the reconciler will check the
 		// class as well. If we fail here it's most likely because of some failure
 		// of the Kubernetes API and it's technically better to enqueue the object
 		// than to drop it for eventual consistency during cluster outages.
-		return !errors.Is(err, operatorerrors.ErrUnsupportedGateway)
+		return !errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{})
 	}
 
 	return true
@@ -226,23 +228,24 @@ func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj cli
 	for _, gateway := range gateways.Items {
 		objKey := client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}
 
-		var gatewaClass gatewayv1.GatewayClass
-		if err := r.Client.Get(ctx, objKey, &gatewaClass); err != nil {
-			logger.Error(
-				fmt.Errorf("failed to get GatewayClass"),
-				"failed to Get Gateway's GatewayClass",
-				"gatewayClass", objKey.Name, "gateway", gateway.Name, "namespace", gateway.Namespace,
-			)
+		if _, err := gatewayclass.Get(ctx, r.Client, string(gateway.Spec.GatewayClassName)); err != nil {
+			if errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{}) {
+				log.Debug(logger, "gateway class not supported, ignoring", gateway)
+			} else {
+				log.Error(logger, err, "failed to get Gateway's GatewayClass", gateway,
+					"gatewayClass", objKey.Name,
+					"gateway", gateway.Name,
+					"namespace", gateway.Namespace,
+				)
+			}
 			continue
 		}
-		if string(gatewaClass.Spec.ControllerName) == vars.ControllerName() {
-			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: gateway.Namespace,
-					Name:      gateway.Name,
-				},
-			})
-		}
+		recs = append(recs, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: gateway.Namespace,
+				Name:      gateway.Name,
+			},
+		})
 	}
 	return recs
 }

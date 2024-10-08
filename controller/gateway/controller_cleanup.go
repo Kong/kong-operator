@@ -136,7 +136,7 @@ func (r *Reconciler) cleanup(
 		}
 	} else {
 		oldGateway := gateway.DeepCopy()
-		if controllerutil.RemoveFinalizer(gateway, string(GatewayFinalizerCleanupNetworkpolicies)) {
+		if controllerutil.RemoveFinalizer(gateway, string(GatewayFinalizerCleanupNetworkPolicies)) {
 			if err := r.Client.Patch(ctx, gateway, client.MergeFrom(oldGateway)); err != nil {
 				res, err := handleGatewayFinalizerPatchOrUpdateError(err, gateway, logger)
 				return true, res, err

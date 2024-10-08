@@ -32,6 +32,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/watch"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
+	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -119,10 +120,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
+	log.Trace(logger, "checking gatewayclass", gateway)
+	gwc, err := gatewayclass.Get(ctx, r.Client, string(gateway.Spec.GatewayClassName))
+	if err != nil {
+		if errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{}) {
+			log.Debug(logger, "resource not supported, ignoring", gateway,
+				"expectedGatewayClass", vars.ControllerName(),
+				"gatewayClass", gateway.Spec.GatewayClassName,
+				"reason", err.Error(),
+			)
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
+	}
+
 	log.Trace(logger, "managing the gateway resource finalizers", gateway)
 	cpFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupControlPlanes))
 	dpFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupDataPlanes))
-	npFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupNetworkpolicies))
+	npFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupNetworkPolicies))
 	if cpFinalizerSet || dpFinalizerSet || npFinalizerSet {
 		log.Trace(logger, "Setting finalizers", gateway)
 		if err := r.Client.Update(ctx, &gateway); err != nil {
@@ -135,16 +150,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			}
 		}
 		return ctrl.Result{}, nil
-	}
-
-	log.Trace(logger, "checking gatewayclass", gateway)
-	gwc, err := r.verifyGatewayClassSupport(ctx, &gateway)
-	if err != nil {
-		if errors.Is(err, operatorerrors.ErrUnsupportedGateway) {
-			log.Debug(logger, "resource not supported, ignoring", gateway, "ExpectedGatewayClass", vars.ControllerName())
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
 	}
 
 	if !gwc.IsAccepted() {

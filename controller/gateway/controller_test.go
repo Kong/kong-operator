@@ -52,6 +52,88 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 		testBody                 func(t *testing.T, reconciler Reconciler, gatewayReq reconcile.Request)
 	}{
 		{
+			name: "gateway class not found - reconciliation should fail",
+			gatewayReq: reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "test-namespace",
+					Name:      "test-gateway",
+				},
+			},
+			gateway: &gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway.networking.k8s.io/v1beta1",
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
+				},
+				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "not-existing-gatewayclass",
+				},
+			},
+			testBody: func(t *testing.T, r Reconciler, gatewayReq reconcile.Request) {
+				ctx := context.Background()
+				_, err := r.Reconcile(ctx, gatewayReq)
+				require.Error(t, err)
+			},
+		},
+		{
+			name: "gateway class found, but controller name is not matching - gateway is ignored",
+			gatewayReq: reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "test-namespace",
+					Name:      "test-gateway",
+				},
+			},
+			gateway: &gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway.networking.k8s.io/v1beta1",
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
+				},
+				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "test-gatewayclass",
+				},
+			},
+			gatewayClass: &gatewayv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gatewayclass",
+				},
+				Spec: gatewayv1.GatewayClassSpec{
+					ControllerName: gatewayv1.GatewayController("not-existing-controller"),
+				},
+				Status: gatewayv1.GatewayClassStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
+							Status:             metav1.ConditionTrue,
+							ObservedGeneration: 0,
+							LastTransitionTime: metav1.Now(),
+							Reason:             string(gatewayv1.GatewayClassReasonAccepted),
+							Message:            "the gatewayclass has been accepted by the controller",
+						},
+					},
+				},
+			},
+			testBody: func(t *testing.T, r Reconciler, gatewayReq reconcile.Request) {
+				ctx := context.Background()
+				res, err := r.Reconcile(ctx, gatewayReq)
+				require.NoError(t, err, "reconciliation should not return an error")
+				require.Equal(t, res, reconcile.Result{}, "reconciliation should not return a requeue")
+
+				var gw gwtypes.Gateway
+				require.NoError(t, r.Client.Get(ctx, gatewayReq.NamespacedName, &gw))
+
+				require.Empty(t, gw.GetFinalizers(), "gateway should not have any finalizers as it's ignored")
+			},
+		},
+		{
 			name: "service connectivity",
 			gatewayReq: reconcile.Request{
 				NamespacedName: types.NamespacedName{
@@ -169,6 +251,16 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				// the dataplane service starts with no IP assigned, the gateway must be not ready
 				_, err := reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
+
+				t.Log("verifying the gateway gets finalizers assigned")
+				var gateway gwtypes.Gateway
+				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &gateway))
+				require.ElementsMatch(t, gateway.GetFinalizers(), []string{
+					string(GatewayFinalizerCleanupControlPlanes),
+					string(GatewayFinalizerCleanupDataPlanes),
+					string(GatewayFinalizerCleanupNetworkPolicies),
+				})
+
 				// need to trigger the Reconcile again because the first one only updated the finalizers
 				_, err = reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
@@ -301,9 +393,11 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ObjectsToAdd := []controllerruntimeclient.Object{
+			objectsToAdd := []controllerruntimeclient.Object{
 				tc.gateway,
-				tc.gatewayClass,
+			}
+			if tc.gatewayClass != nil {
+				objectsToAdd = append(objectsToAdd, tc.gatewayClass)
 			}
 			for _, gatewaySubResource := range tc.gatewaySubResources {
 				k8sutils.SetOwnerForObject(gatewaySubResource, tc.gateway)
@@ -311,7 +405,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				if gatewaySubResource.GetName() == "test-dataplane" {
 					for _, dataplaneSubresource := range tc.dataplaneSubResources {
 						k8sutils.SetOwnerForObject(dataplaneSubresource, gatewaySubResource)
-						ObjectsToAdd = append(ObjectsToAdd, dataplaneSubresource)
+						objectsToAdd = append(objectsToAdd, dataplaneSubresource)
 					}
 				}
 				if gatewaySubResource.GetName() == "test-controlplane" {
@@ -324,17 +418,17 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 						})
 					for _, controlplaneSubResource := range tc.controlplaneSubResources {
 						k8sutils.SetOwnerForObject(controlplaneSubResource, gatewaySubResource)
-						ObjectsToAdd = append(ObjectsToAdd, controlplaneSubResource)
+						objectsToAdd = append(objectsToAdd, controlplaneSubResource)
 					}
 				}
-				ObjectsToAdd = append(ObjectsToAdd, gatewaySubResource)
+				objectsToAdd = append(objectsToAdd, gatewaySubResource)
 			}
 
 			fakeClient := fakectrlruntimeclient.
 				NewClientBuilder().
 				WithScheme(scheme.Scheme).
-				WithObjects(ObjectsToAdd...).
-				WithStatusSubresource(ObjectsToAdd...).
+				WithObjects(objectsToAdd...).
+				WithStatusSubresource(objectsToAdd...).
 				Build()
 
 			reconciler := Reconciler{
