@@ -186,10 +186,10 @@ func shouldUpdate[
 		requeueAfter := syncPeriod - timeFromLastUpdate
 		log.Debug(ctrllog.FromContext(ctx),
 			"no need for update, requeueing after configured sync period", ent,
-			"last_update", condProgrammed.LastTransitionTime.Time,
-			"time_from_last_update", timeFromLastUpdate,
-			"requeue_after", requeueAfter,
-			"requeue_at", now.Add(requeueAfter),
+			"last_update", condProgrammed.LastTransitionTime.Time.String(),
+			"time_from_last_update", timeFromLastUpdate.String(),
+			"requeue_after", requeueAfter.String(),
+			"requeue_at", now.Add(requeueAfter).String(),
 		)
 		return false, ctrl.Result{
 			RequeueAfter: requeueAfter,
