@@ -48,6 +48,7 @@ const (
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
 // +apireference:kgo:include
+// +apireference:kic:include
 type KongVault struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -57,6 +58,7 @@ type KongVault struct {
 
 // KongVaultSpec defines specification of a custom Kong vault.
 // +apireference:kgo:include
+// +apireference:kic:include
 type KongVaultSpec struct {
 	// Backend is the type of the backend storing the secrets in the vault.
 	// The supported backends of Kong is listed here:
@@ -80,9 +82,11 @@ type KongVaultSpec struct {
 
 // KongVaultStatus represents the current status of the KongVault resource.
 // +apireference:kgo:include
+// +apireference:kic:include
 type KongVaultStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
+	// +apireference:kic:exclude
 	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
 
 	// Conditions describe the current conditions of the KongVaultStatus.
@@ -101,6 +105,7 @@ type KongVaultStatus struct {
 // KongVaultList contains a list of KongVault.
 // +kubebuilder:object:root=true
 // +apireference:kgo:include
+// +apireference:kic:include
 type KongVaultList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

@@ -28,6 +28,7 @@ const (
 // +kubebuilder:object:root=true
 
 // IngressClassParametersList contains a list of IngressClassParameters.
+// +apireference:kic:include
 type IngressClassParametersList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -42,6 +43,7 @@ type IngressClassParametersList struct {
 // +kubebuilder:resource:path=ingressclassparameterses
 
 // IngressClassParameters is the Schema for the IngressClassParameters API.
+// +apireference:kic:include
 type IngressClassParameters struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -51,6 +53,7 @@ type IngressClassParameters struct {
 }
 
 // IngressClassParametersSpec defines the desired state of IngressClassParameters.
+// +apireference:kic:include
 type IngressClassParametersSpec struct {
 	// Offload load-balancing to kube-proxy or sidecar.
 	// +kubebuilder:default:=false

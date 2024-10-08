@@ -21,6 +21,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// TCPIngress is the Schema for the tcpingresses API.
+//
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
@@ -29,8 +31,7 @@ import (
 // +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.loadBalancer.ingress[*].ip`,description="Address of the load balancer"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
-
-// TCPIngress is the Schema for the tcpingresses API.
+// +apireference:kic:include
 type TCPIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -40,9 +41,9 @@ type TCPIngress struct {
 	Status TCPIngressStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // TCPIngressList contains a list of TCPIngress.
+// +kubebuilder:object:root=true
+// +apireference:kic:include
 type TCPIngressList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -50,6 +51,7 @@ type TCPIngressList struct {
 }
 
 // TCPIngressSpec defines the desired state of TCPIngress.
+// +apireference:kic:include
 type TCPIngressSpec struct {
 	// A list of rules used to configure the Ingress.
 	Rules []IngressRule `json:"rules,omitempty"`
@@ -63,6 +65,7 @@ type TCPIngressSpec struct {
 }
 
 // IngressTLS describes the transport layer security.
+// +apireference:kic:include
 type IngressTLS struct {
 	// Hosts are a list of hosts included in the TLS certificate. The values in
 	// this list must match the name/s used in the tlsSecret. Defaults to the
@@ -74,6 +77,7 @@ type IngressTLS struct {
 }
 
 // TCPIngressStatus defines the observed state of TCPIngress.
+// +apireference:kic:include
 type TCPIngressStatus struct {
 	// LoadBalancer contains the current status of the load-balancer.
 	LoadBalancer corev1.LoadBalancerStatus `json:"loadBalancer,omitempty"`

@@ -39,6 +39,7 @@ import (
 // +kubebuilder:validation:XValidation:rule="self.plugin == oldSelf.plugin", message="The plugin field is immutable"
 
 // KongClusterPlugin is the Schema for the kongclusterplugins API.
+// +apireference:kic:include
 type KongClusterPlugin struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -110,6 +111,7 @@ type KongClusterPluginList struct {
 }
 
 // KongClusterPluginStatus represents the current status of the KongClusterPlugin resource.
+// +apireference:kic:include
 type KongClusterPluginStatus struct {
 	// Conditions describe the current conditions of the KongClusterPluginStatus.
 	//

@@ -83,10 +83,12 @@ type Namespace string
 // +kubebuilder:validation:MinLength=1
 // +kubebuilder:validation:MaxLength=253
 // +apireference:kgo:include
+// +apireference:kic:include
 type ObjectName string
 
 // ControllerReference is a reference to a controller that reconciles the KongLicense.
 // +apireference:kgo:include
+// +apireference:kic:include
 type ControllerReference struct {
 	// Group is the group of referent.
 	// It should be empty if the referent is in "core" group (like pod).
@@ -104,6 +106,7 @@ type ControllerReference struct {
 // KongLicenseList contains a list of KongLicense.
 // +kubebuilder:object:root=true
 // +apireference:kgo:include
+// +apireference:kic:include
 type KongLicenseList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

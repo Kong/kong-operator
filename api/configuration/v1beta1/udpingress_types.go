@@ -25,15 +25,18 @@ func init() {
 	SchemeBuilder.Register(&UDPIngress{}, &UDPIngressList{})
 }
 
-// +kubebuilder:object:root=true
-
 // UDPIngressList contains a list of UDPIngress.
+//
+// +kubebuilder:object:root=true
+// +apireference:kic:include
 type UDPIngressList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []UDPIngress `json:"items"`
 }
 
+// UDPIngress is the Schema for the udpingresses API.
+//
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
@@ -42,8 +45,7 @@ type UDPIngressList struct {
 // +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.loadBalancer.ingress[*].ip`,description="Address of the load balancer"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
-
-// UDPIngress is the Schema for the udpingresses API.
+// +apireference:kic:include
 type UDPIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -54,12 +56,14 @@ type UDPIngress struct {
 }
 
 // UDPIngressSpec defines the desired state of UDPIngress.
+// +apireference:kic:include
 type UDPIngressSpec struct {
 	// A list of rules used to configure the Ingress.
 	Rules []UDPIngressRule `json:"rules,omitempty"`
 }
 
 // UDPIngressStatus defines the observed state of UDPIngress.
+// +apireference:kic:include
 type UDPIngressStatus struct {
 	// LoadBalancer contains the current status of the load-balancer.
 	LoadBalancer corev1.LoadBalancerStatus `json:"loadBalancer,omitempty"`

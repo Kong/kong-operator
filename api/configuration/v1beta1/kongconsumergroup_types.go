@@ -23,6 +23,8 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
+// KongConsumerGroup is the Schema for the kongconsumergroups API.
+//
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
@@ -34,8 +36,8 @@ import (
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.controlPlaneRef.konnectNamespacedRef) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)", message="spec.controlPlaneRef cannot specify namespace for namespaced resource"
 // +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
-
-// KongConsumerGroup is the Schema for the kongconsumergroups API.
+// +apireference:kgo:include
+// +apireference:kic:include
 type KongConsumerGroup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -48,6 +50,7 @@ type KongConsumerGroup struct {
 }
 
 // KongConsumerGroupSpec defines the desired state of KongConsumerGroup.
+// +apireference:kic:include
 type KongConsumerGroupSpec struct {
 	// Name is the name of the ConsumerGroup in Kong.
 	Name string `json:"name,omitempty"`
@@ -57,9 +60,9 @@ type KongConsumerGroupSpec struct {
 	ControlPlaneRef *configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // KongConsumerGroupList contains a list of KongConsumerGroups.
+// +kubebuilder:object:root=true
+// +apireference:kic:include
 type KongConsumerGroupList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -67,9 +70,11 @@ type KongConsumerGroupList struct {
 }
 
 // KongConsumerGroupStatus represents the current status of the KongConsumerGroup resource.
+// +apireference:kic:include
 type KongConsumerGroupStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
+	// +apireference:kic:exclude
 	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
 
 	// Conditions describe the current conditions of the KongConsumerGroup.

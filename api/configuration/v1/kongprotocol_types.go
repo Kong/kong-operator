@@ -5,6 +5,7 @@ package v1
 // +kubebuilder:validation:Enum=http;https;grpc;grpcs;tcp;tls;udp
 // +kubebuilder:object:generate=true
 // +apireference:kgo:include
+// +apireference:kic:include
 type KongProtocol string
 
 // KongProtocolsToStrings converts a slice of KongProtocol to plain strings.

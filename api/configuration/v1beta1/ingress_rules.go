@@ -3,6 +3,7 @@ package v1beta1
 // UDPIngressRule represents a rule to apply against incoming requests
 // wherein no Host matching is available for request routing, only the port
 // is used to match requests.
+// +apireference:kic:include
 type UDPIngressRule struct {
 	// Port indicates the port for the Kong proxy to accept incoming traffic
 	// on, which will then be routed to the service Backend.
@@ -18,6 +19,7 @@ type UDPIngressRule struct {
 
 // IngressRule represents a rule to apply against incoming requests.
 // Matching is performed based on an (optional) SNI and port.
+// +apireference:kic:include
 type IngressRule struct {
 	// Host is the fully qualified domain name of a network host, as defined
 	// by RFC 3986.
@@ -45,6 +47,7 @@ type IngressRule struct {
 }
 
 // IngressBackend describes all endpoints for a given service and port.
+// +apireference:kic:include
 type IngressBackend struct {
 	// Specifies the name of the referenced service.
 	// +kubebuilder:validation:Required

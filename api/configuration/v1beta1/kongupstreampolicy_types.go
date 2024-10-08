@@ -52,6 +52,7 @@ func init() {
 // +kubebuilder:validation:XValidation:rule="has(self.spec.healthchecks) && has(self.spec.healthchecks.passive) && has(self.spec.healthchecks.passive.healthy) ? !has(self.spec.healthchecks.passive.healthy.interval) : true", message="spec.healthchecks.passive.healthy.interval must not be set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.healthchecks) && has(self.spec.healthchecks.passive) && has(self.spec.healthchecks.passive.unhealthy) ? !has(self.spec.healthchecks.passive.unhealthy.interval) : true", message="spec.healthchecks.passive.unhealthy.interval must not be set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) && has(self.spec.hashOn.cookie) ? !has(self.spec.hashOnFallback) : true", message="spec.hashOnFallback must not be set when spec.hashOn.cookie is set."
+// +apireference:kic:include
 type KongUpstreamPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -65,6 +66,7 @@ type KongUpstreamPolicy struct {
 
 // KongUpstreamPolicyList contains a list of KongUpstreamPolicy.
 // +kubebuilder:object:root=true
+// +apireference:kic:include
 type KongUpstreamPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -72,6 +74,7 @@ type KongUpstreamPolicyList struct {
 }
 
 // KongUpstreamPolicySpec contains the specification for KongUpstreamPolicy.
+// +apireference:kic:include
 type KongUpstreamPolicySpec struct {
 	// Algorithm is the load balancing algorithm to use.
 	// Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency".
@@ -100,10 +103,12 @@ type KongUpstreamPolicySpec struct {
 // HashInput is the input for consistent-hashing load balancing algorithm.
 // Can be one of: "ip", "consumer", "path".
 // +kubebuilder:validation:Enum=ip;consumer;path
+// +apireference:kic:include
 type HashInput string
 
 // KongUpstreamHash defines how to calculate hash for consistent-hashing load balancing algorithm.
 // Only one of the fields must be set.
+// +apireference:kic:include
 type KongUpstreamHash struct {
 	// Input allows using one of the predefined inputs (ip, consumer, path).
 	// For other parametrized inputs, use one of the fields below.
@@ -126,6 +131,7 @@ type KongUpstreamHash struct {
 }
 
 // KongUpstreamHealthcheck represents a health-check config of an Upstream in Kong.
+// +apireference:kic:include
 type KongUpstreamHealthcheck struct {
 	// Active configures active health check probing.
 	Active *KongUpstreamActiveHealthcheck `json:"active,omitempty"`
@@ -139,6 +145,7 @@ type KongUpstreamHealthcheck struct {
 }
 
 // KongUpstreamActiveHealthcheck configures active health check probing.
+// +apireference:kic:include
 type KongUpstreamActiveHealthcheck struct {
 	// Type determines whether to perform active health checks using HTTP or HTTPS, or just attempt a TCP connection.
 	// Accepted values are "http", "https", "tcp", "grpc", "grpcs".
@@ -175,6 +182,7 @@ type KongUpstreamActiveHealthcheck struct {
 
 // KongUpstreamPassiveHealthcheck configures passive checks around
 // passive health checks.
+// +apireference:kic:include
 type KongUpstreamPassiveHealthcheck struct {
 	// Type determines whether to perform passive health checks interpreting HTTP/HTTPS statuses,
 	// or just check for TCP connection success.
@@ -192,9 +200,11 @@ type KongUpstreamPassiveHealthcheck struct {
 // HTTPStatus is an HTTP status code.
 // +kubebuilder:validation:Minimum=100
 // +kubebuilder:validation:Maximum=599
+// +apireference:kic:include
 type HTTPStatus int
 
 // KongUpstreamHealthcheckHealthy configures thresholds and HTTP status codes to mark targets healthy for an upstream.
+// +apireference:kic:include
 type KongUpstreamHealthcheckHealthy struct {
 	// HTTPStatuses is a list of HTTP status codes that Kong considers a success.
 	HTTPStatuses []HTTPStatus `json:"httpStatuses,omitempty"`
@@ -209,6 +219,7 @@ type KongUpstreamHealthcheckHealthy struct {
 }
 
 // KongUpstreamHealthcheckUnhealthy configures thresholds and HTTP status codes to mark targets unhealthy.
+// +apireference:kic:include
 type KongUpstreamHealthcheckUnhealthy struct {
 	// HTTPFailures is the number of failures to consider a target unhealthy.
 	// +kubebuilder:validation:Minimum=0

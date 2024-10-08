@@ -31,6 +31,7 @@ import (
 // +kubebuilder:validation:XValidation:rule="!has(self.route)", message="'route' field is no longer supported, use Ingress' annotations instead"
 
 // KongIngress is the Schema for the kongingresses API.
+// +apireference:kic:include
 type KongIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -53,6 +54,7 @@ type KongIngress struct {
 // +kubebuilder:object:root=true
 
 // KongIngressList contains a list of KongIngress.
+// +apireference:kic:include
 type KongIngressList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -62,6 +64,7 @@ type KongIngressList struct {
 // KongIngressService contains KongIngress service configuration.
 // It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress.
 // Deprecated: use Service's annotations instead.
+// +apireference:kic:include
 type KongIngressService struct {
 	// The protocol used to communicate with the upstream.
 	// Deprecated: use Service's "konghq.com/protocol" annotation instead.
@@ -99,6 +102,7 @@ type KongIngressService struct {
 // KongIngressRoute contains KongIngress route configuration.
 // It contains the subset of `go-kong.kong.Route` fields supported by `kongstate.Route.overrideByKongIngress`.
 // Deprecated: use Ingress' annotations instead.
+// +apireference:kic:include
 type KongIngressRoute struct {
 	// Methods is a list of HTTP methods that match this Route.
 	// Deprecated: use Ingress' "konghq.com/methods" annotation instead.
@@ -157,6 +161,7 @@ type KongIngressRoute struct {
 
 // KongIngressUpstream contains KongIngress upstream configuration.
 // It contains the subset of `go-kong.kong.Upstream` fields supported by `kongstate.Upstream.overrideByKongIngress`.
+// +apireference:kic:include
 type KongIngressUpstream struct {
 	// HostHeader is The hostname to be used as Host header
 	// when proxying requests through Kong.
