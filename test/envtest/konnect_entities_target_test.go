@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -125,6 +126,12 @@ func TestKongTarget(t *testing.T) {
 
 		t.Log("Deleting KongTarget")
 		require.NoError(t, clientNamespaced.Delete(ctx, createdTarget))
+
+		t.Log("Waiting for KongTarget to disappear")
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			err := clientNamespaced.Get(ctx, client.ObjectKeyFromObject(createdTarget), createdTarget)
+			assert.True(c, err != nil && k8serrors.IsNotFound(err))
+		}, waitTime, tickTime)
 
 		t.Log("Waiting for Target to be deleted in the SDK")
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
