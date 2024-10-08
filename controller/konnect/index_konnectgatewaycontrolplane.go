@@ -22,7 +22,6 @@ func IndexOptionsForKonnectGatewayControlPlane() []ReconciliationIndexOption {
 	}
 }
 
-
 func konnectGatewayControlPlaneAPIAuthConfigurationRef(object client.Object) []string {
 	cp, ok := object.(*konnectv1alpha1.KonnectGatewayControlPlane)
 	if !ok {
