@@ -127,9 +127,6 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 	}
 
 	serverURL := ops.NewServerURL(apiAuth.Spec.ServerURL)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
 	sdk := r.sdkFactory.NewKonnectSDK(
 		serverURL.String(),
 		ops.SDKToken(token),
