@@ -84,9 +84,11 @@ spec:
                       Type can be one of:
                       - konnectID
                       - konnectNamespacedRef
+                      - kic
                     enum:
                     - konnectID
                     - konnectNamespacedRef
+                    - kic
                     type: string
                 required:
                 - type
@@ -96,8 +98,21 @@ spec:
                     must be set
                   rule: 'self.type == ''konnectNamespacedRef'' ? has(self.konnectNamespacedRef)
                     : true'
+                - message: when type is konnectNamespacedRef, konnectID must not be
+                    set
+                  rule: 'self.type == ''konnectNamespacedRef'' ? !has(self.konnectID)
+                    : true'
                 - message: when type is konnectID, konnectID must be set
                   rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                - message: when type is konnectID, konnectNamespacedRef must not be
+                    set
+                  rule: 'self.type == ''konnectID'' ? !has(self.konnectNamespacedRef)
+                    : true'
+                - message: when type is kic, konnectID must not be set
+                  rule: 'self.type == ''kic'' ? !has(self.konnectID) : true'
+                - message: when type is kic, konnectNamespacedRef must not be set
+                  rule: 'self.type == ''kic'' ? !has(self.konnectNamespacedRef) :
+                    true'
               controlPlaneRegion:
                 description: ControlPlaneRegion is the region of the Konnect Control
                   Plane.

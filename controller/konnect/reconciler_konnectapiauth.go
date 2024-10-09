@@ -3,8 +3,6 @@ package konnect
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"strings"
 	"time"
 
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -128,12 +126,12 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		return ctrl.Result{}, err
 	}
 
-	serverURL, err := getKonnectServerURL(apiAuth.Spec.ServerURL)
+	serverURL := ops.NewServerURL(apiAuth.Spec.ServerURL)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	sdk := r.sdkFactory.NewKonnectSDK(
-		serverURL,
+		serverURL.String(),
 		ops.SDKToken(token),
 	)
 
@@ -146,7 +144,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 	// NOTE: This is needed because currently the SDK only lists the prod global API as supported:
 	// https://github.com/Kong/sdk-konnect-go/blob/999d9a987e1aa7d2e09ac11b1450f4563adf21ea/models/operations/getorganizationsme.go#L10-L12
-	respOrg, err := sdk.GetMeSDK().GetOrganizationsMe(ctx, sdkkonnectops.WithServerURL("https://"+apiAuth.Spec.ServerURL))
+	respOrg, err := sdk.GetMeSDK().GetOrganizationsMe(ctx, sdkkonnectops.WithServerURL(serverURL.String()))
 	if err != nil {
 		logger.Error(err, "failed to get organization info from Konnect")
 		if cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
@@ -154,10 +152,10 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 			cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid ||
 			cond.ObservedGeneration != apiAuth.GetGeneration() ||
 			apiAuth.Status.OrganizationID != "" ||
-			apiAuth.Status.ServerURL != apiAuth.Spec.ServerURL {
+			apiAuth.Status.ServerURL != serverURL.String() {
 
 			apiAuth.Status.OrganizationID = ""
-			apiAuth.Status.ServerURL = apiAuth.Spec.ServerURL
+			apiAuth.Status.ServerURL = serverURL.String()
 
 			res, errUpdate := updateStatusWithCondition(
 				ctx, r.client, &apiAuth,
@@ -192,10 +190,10 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid ||
 		cond.ObservedGeneration != apiAuth.GetGeneration() ||
 		apiAuth.Status.OrganizationID != *respOrg.MeOrganization.ID ||
-		apiAuth.Status.ServerURL != apiAuth.Spec.ServerURL {
+		apiAuth.Status.ServerURL != serverURL.String() {
 
 		apiAuth.Status.OrganizationID = *respOrg.MeOrganization.ID
-		apiAuth.Status.ServerURL = apiAuth.Spec.ServerURL
+		apiAuth.Status.ServerURL = serverURL.String()
 
 		res, err := updateStatusWithCondition(
 			ctx, r.client, &apiAuth,
@@ -246,15 +244,4 @@ func getTokenFromKonnectAPIAuthConfiguration(
 	}
 
 	return "", fmt.Errorf("unknown KonnectAPIAuthType: %s", apiAuth.Spec.Type)
-}
-
-var serverURLRegexp = regexp.MustCompile(".*://")
-
-func getKonnectServerURL(serverURL string) (string, error) {
-	if !serverURLRegexp.MatchString(serverURL) {
-		serverURL = "https://" + serverURL
-	} else if !strings.HasPrefix(serverURL, "https://") {
-		return "", fmt.Errorf("in case scheme is specified in the ServerURL, it must be https://: %s", serverURL)
-	}
-	return serverURL, nil
 }

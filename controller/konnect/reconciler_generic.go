@@ -47,8 +47,8 @@ type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt cons
 
 // KonnectEntityReconcilerOption is a functional option for the KonnectEntityReconciler.
 type KonnectEntityReconcilerOption[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
+T constraints.SupportedKonnectEntityType,
+TEnt constraints.EntityType[T],
 ] func(*KonnectEntityReconciler[T, TEnt])
 
 // WithKonnectEntitySyncPeriod sets the sync period for the reconciler.
@@ -63,8 +63,8 @@ func WithKonnectEntitySyncPeriod[T constraints.SupportedKonnectEntityType, TEnt 
 // NewKonnectEntityReconciler returns a new KonnectEntityReconciler for the given
 // Konnect entity type.
 func NewKonnectEntityReconciler[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
+T constraints.SupportedKonnectEntityType,
+TEnt constraints.EntityType[T],
 ](
 	sdkFactory ops.SDKFactory,
 	developmentMode bool,
@@ -96,8 +96,8 @@ func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(ctx context.Context,
 		ent            = TEnt(&e)
 		entityTypeName = constraints.EntityTypeName[T]()
 		b              = ctrl.NewControllerManagedBy(mgr).
-				Named(entityTypeName).
-				WithOptions(
+			Named(entityTypeName).
+			WithOptions(
 				controller.Options{
 					MaxConcurrentReconciles: MaxConcurrentReconciles,
 				})
@@ -433,8 +433,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	// NOTE: We need to create a new SDK instance for each reconciliation
 	// because the token is retrieved in runtime through KonnectAPIAuthConfiguration.
+	serverURL := ops.NewServerURL(apiAuth.Spec.ServerURL)
 	sdk := r.sdkFactory.NewKonnectSDK(
-		"https://"+apiAuth.Spec.ServerURL,
+		serverURL.String(),
 		ops.SDKToken(token),
 	)
 
@@ -570,11 +571,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 func setServerURLAndOrgIDFromAPIAuthConfiguration(
 	ent interface {
-		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
-	},
+	GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
+},
 	apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration,
 ) {
-	ent.GetKonnectStatus().ServerURL = apiAuth.Spec.ServerURL
+	ent.GetKonnectStatus().ServerURL = ops.NewServerURL(apiAuth.Spec.ServerURL).String()
 	ent.GetKonnectStatus().OrgID = apiAuth.Status.OrganizationID
 }
 
