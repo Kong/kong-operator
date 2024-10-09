@@ -116,6 +116,12 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
+	assert.EventuallyWithT(t,
+		assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kongCredentialJWT, jwtID),
+		waitTime, tickTime,
+		"KongCredentialJWT wasn't created",
+	)
+
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		assert.True(c, factory.SDK.KongCredentialsJWTSDK.AssertExpectations(t))
 	}, waitTime, tickTime)

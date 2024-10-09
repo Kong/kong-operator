@@ -116,6 +116,12 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
+	assert.EventuallyWithT(t,
+		assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kongCredentialACL, aclID),
+		waitTime, tickTime,
+		"KongCredentialACL wasn't created",
+	)
+
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		assert.True(c, factory.SDK.KongCredentialsACLSDK.AssertExpectations(t))
 	}, waitTime, tickTime)

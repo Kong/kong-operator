@@ -115,6 +115,12 @@ func TestKongConsumerCredential_HMAC(t *testing.T) {
 
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
+	assert.EventuallyWithT(t,
+		assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kongCredentialHMAC, hmacID),
+		waitTime, tickTime,
+		"KongCredentialHMAC wasn't created",
+	)
+
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		assert.True(c, factory.SDK.KongCredentialsHMACSDK.AssertExpectations(t))
 	}, waitTime, tickTime)
