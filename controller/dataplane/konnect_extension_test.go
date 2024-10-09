@@ -258,8 +258,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 
 func getKongInKonnectEnvVars(konnectExt operatorv1alpha1.DataPlaneKonnectExtension) []corev1.EnvVar {
 	envSet := []corev1.EnvVar{}
-	envMap := customizeKongInKonnectDefaults(
-		dputils.KongInKonnectDefaults,
+	envMap := dputils.KongInKonnectDefaults(
 		*konnectExt.Spec.ControlPlaneRef.KonnectID,
 		konnectExt.Spec.ControlPlaneRegion,
 		konnectExt.Spec.ServerHostname,

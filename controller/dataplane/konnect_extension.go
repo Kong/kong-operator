@@ -3,7 +3,6 @@ package dataplane
 import (
 	"context"
 	"errors"
-	"strings"
 
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
@@ -58,8 +57,8 @@ func applyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, datap
 		d.WithVolume(kongInKonnectClusterCertVolume(konnectExt.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name))
 		d.WithVolumeMount(kongInKonnectClusterVolumeMount(), consts.DataPlaneProxyContainerName)
 
-		envSet := customizeKongInKonnectDefaults(
-			dputils.KongInKonnectDefaults,
+		// Only KonnectID currently supported. It's existence is enforced via CEL.
+		envSet := dputils.KongInKonnectDefaults(
 			*konnectExt.Spec.ControlPlaneRef.KonnectID,
 			konnectExt.Spec.ControlPlaneRegion,
 			konnectExt.Spec.ServerHostname)
@@ -68,22 +67,6 @@ func applyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, datap
 		dataplane.Spec.Deployment.PodTemplateSpec = &d.Spec.Template
 	}
 	return nil
-}
-
-// customizeKongInKonnectDefaults replaces placeholders in the KongInKonnect env list with the actual values.
-func customizeKongInKonnectDefaults(envSet map[string]string,
-	controlPlane,
-	region,
-	server string,
-) map[string]string {
-	newEnvSet := make(map[string]string, len(envSet))
-	for k, v := range envSet {
-		v = strings.ReplaceAll(v, "<CP-ID>", controlPlane)
-		v = strings.ReplaceAll(v, "<REGION>", region)
-		v = strings.ReplaceAll(v, "<SERVER>", server)
-		newEnvSet[k] = v
-	}
-	return newEnvSet
 }
 
 func kongInKonnectClusterCertVolume(secretName string) corev1.Volume {

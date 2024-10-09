@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/kong/gateway-operator/pkg/consts"
 )
@@ -37,7 +38,7 @@ var KongDefaults = map[string]string{
 
 // KongInKonnectDefaults are the baseline Kong proxy configuration options needed for
 // the proxy to function when configured in Konnect.
-var KongInKonnectDefaults = map[string]string{
+var kongInKonnectDefaultsTemplate = map[string]string{
 	"KONG_ROLE":                          "data_plane",
 	"KONG_CLUSTER_MTLS":                  "pki",
 	"KONG_CLUSTER_CONTROL_PLANE":         "<CP-ID>.<REGION>.cp0.<SERVER>:443",
@@ -49,4 +50,20 @@ var KongInKonnectDefaults = map[string]string{
 	"KONG_LUA_SSL_TRUSTED_CERTIFICATE":   "system",
 	"KONG_KONNECT_MODE":                  "on",
 	"KONG_VITALS":                        "off",
+}
+
+// KongInKonnectDefaults returnes the map of Konnect-related env vars properly configured.
+func KongInKonnectDefaults(
+	controlPlane,
+	region,
+	server string,
+) map[string]string {
+	newEnvSet := make(map[string]string, len(kongInKonnectDefaultsTemplate))
+	for k, v := range kongInKonnectDefaultsTemplate {
+		v = strings.ReplaceAll(v, "<CP-ID>", controlPlane)
+		v = strings.ReplaceAll(v, "<REGION>", region)
+		v = strings.ReplaceAll(v, "<SERVER>", server)
+		newEnvSet[k] = v
+	}
+	return newEnvSet
 }
