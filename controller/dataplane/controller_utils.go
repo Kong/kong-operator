@@ -313,6 +313,33 @@ func isDeploymentReady(deploymentStatus appsv1.DeploymentStatus) (metav1.Conditi
 // DataPlane - Private Functions - extensions
 // -----------------------------------------------------------------------------
 
-func applyExtensions(ctx context.Context, cl client.Client, dataplane *operatorv1beta1.DataPlane) error {
-	return applyDataPlaneKonnectExtension(ctx, cl, dataplane)
+func applyExtensions(ctx context.Context, cl client.Client, logger logr.Logger, dataplane *operatorv1beta1.DataPlane) (patched bool, requeue bool, err error) {
+	condition := k8sutils.NewConditionWithGeneration(consts.ResolvedRefsType, metav1.ConditionTrue, consts.ResolvedRefsReason, "", dataplane.GetGeneration())
+	err = applyDataPlaneKonnectExtension(ctx, cl, dataplane)
+	if err != nil {
+		switch err {
+		case ErrCrossNamespaceReference:
+			condition.Status = metav1.ConditionFalse
+			condition.Reason = string(consts.RefNotPermittedReason)
+			condition.Message = consts.RefNotPermittedMessage
+		case ErrKonnectExtensionNotFound:
+			condition.Status = metav1.ConditionFalse
+			condition.Reason = string(consts.InvalidExtensionRefReason)
+			condition.Message = consts.InvalidExtensionRefMessage
+		case ErrClusterCertificateNotFound:
+			condition.Status = metav1.ConditionFalse
+			condition.Reason = string(consts.InvalidSecretRefReason)
+			condition.Message = consts.InvalidSecretRefMessage
+		default:
+			requeue = false
+			return
+		}
+	}
+	newDataPlane := dataplane.DeepCopy()
+	k8sutils.SetCondition(condition, newDataPlane)
+	patched, patchErr := patchDataPlaneStatus(ctx, cl, logger, newDataPlane)
+	if patchErr != nil {
+		return false, true, fmt.Errorf("failed patching status for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, patchErr)
+	}
+	return
 }

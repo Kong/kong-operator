@@ -91,8 +91,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "applying extensions", dataplane)
-	if err = applyExtensions(ctx, r.Client, dataplane); err != nil {
+	patched, requeue, err := applyExtensions(ctx, r.Client, logger, dataplane)
+	if err != nil {
+		if !requeue {
+			log.Debug(logger, "failed to apply extensions", dataplane, "error:", err)
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{}, err
+	}
+	if patched {
+		return ctrl.Result{}, nil
 	}
 
 	log.Trace(logger, "exposing DataPlane deployment admin API via headless service", dataplane)

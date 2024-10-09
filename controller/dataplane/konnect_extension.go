@@ -7,6 +7,7 @@ import (
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
@@ -15,6 +16,12 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+)
+
+var (
+	ErrCrossNamespaceReference    = errors.New("cross-namespace reference is not currently supported for Konnect extensions")
+	ErrKonnectExtensionNotFound   = errors.New("konnect extension not found")
+	ErrClusterCertificateNotFound = errors.New("cluster certificate not found")
 )
 
 // applyDataPlaneKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it
@@ -26,7 +33,7 @@ func applyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, datap
 		}
 		namespace := dataplane.Namespace
 		if extensionRef.Namespace != nil && *extensionRef.Namespace != namespace {
-			return errors.New("cross-namespace reference is not currently supported for Konnect extensions")
+			return ErrCrossNamespaceReference
 		}
 
 		konnectExt := operatorv1alpha1.DataPlaneKonnectExtension{}
@@ -34,7 +41,23 @@ func applyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, datap
 			Namespace: namespace,
 			Name:      extensionRef.Name,
 		}, &konnectExt); err != nil {
-			return err
+			if k8serrors.IsNotFound(err) {
+				return ErrKonnectExtensionNotFound
+			} else {
+				return err
+			}
+		}
+
+		secret := corev1.Secret{}
+		if err := cl.Get(ctx, client.ObjectKey{
+			Namespace: namespace,
+			Name:      konnectExt.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name,
+		}, &secret); err != nil {
+			if k8serrors.IsNotFound(err) {
+				return ErrClusterCertificateNotFound
+			} else {
+				return err
+			}
 		}
 
 		if dataplane.Spec.Deployment.PodTemplateSpec == nil {
