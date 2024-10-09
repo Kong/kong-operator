@@ -18,12 +18,8 @@ import (
 )
 
 // applyDataPlaneKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it
-// fetch the referenced extension and applies the necessary changes to the DataPlane spec.
+// fetches the referenced extension and applies the necessary changes to the DataPlane spec.
 func applyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, dataplane *v1beta1.DataPlane) error {
-	if len(dataplane.Spec.Extensions) == 0 {
-		return nil
-	}
-
 	for _, extensionRef := range dataplane.Spec.Extensions {
 		if extensionRef.Group != v1alpha1.SchemeGroupVersion.Group || extensionRef.Kind != "DataPlaneKonnectExtension" {
 			continue

@@ -101,7 +101,7 @@
   [#669](https://github.com/Kong/gateway-operator/pull/669)
 - Allow setting `KonnectGatewayControlPlane`s group membership
   [#697](https://github.com/Kong/gateway-operator/pull/697)
-- Apply konnect-related customization to `DataPlane`s that properly reference `DataPlaneKonnectExtension`
+- Apply Konnect-related customizations to `DataPlane`s that properly reference `DataPlaneKonnectExtension`
   resources.
   [#714](https://github.com/Kong/gateway-operator/pull/714)
 
