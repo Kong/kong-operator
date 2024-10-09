@@ -3,6 +3,7 @@ package dataplane
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
@@ -313,26 +314,35 @@ func isDeploymentReady(deploymentStatus appsv1.DeploymentStatus) (metav1.Conditi
 // DataPlane - Private Functions - extensions
 // -----------------------------------------------------------------------------
 
+// applyExtensions patches the dataplane spec by taking into account customizations from the referenced extensions.
+// In case any extension is referenced, it adds a resolvedRefs condition to the dataplane, indicating the status of the
+// extension reference. it returns 3 values:
+//   - patched: a boolean indicating if the dataplane was patched. If the dataplane was patched, a reconciliation loop will be automatically re-triggered.
+//   - requeue: a boolean indicating if the dataplane should be requeued. If the error was unexpected (e.g., because of API server error), the dataplane should be requeued.
+//     In case the error is related to a misconfiguration, the dataplane does not need to be requeued, and feedback is provided into the dataplane status.
+//   - err: an error in case of failure.
 func applyExtensions(ctx context.Context, cl client.Client, logger logr.Logger, dataplane *operatorv1beta1.DataPlane) (patched bool, requeue bool, err error) {
+	if len(dataplane.Spec.Extensions) == 0 {
+		return false, false, nil
+	}
 	condition := k8sutils.NewConditionWithGeneration(consts.ResolvedRefsType, metav1.ConditionTrue, consts.ResolvedRefsReason, "", dataplane.GetGeneration())
 	err = applyDataPlaneKonnectExtension(ctx, cl, dataplane)
 	if err != nil {
-		switch err {
-		case ErrCrossNamespaceReference:
+		switch {
+		case errors.Is(err, ErrCrossNamespaceReference):
 			condition.Status = metav1.ConditionFalse
 			condition.Reason = string(consts.RefNotPermittedReason)
 			condition.Message = consts.RefNotPermittedMessage
-		case ErrKonnectExtensionNotFound:
+		case errors.Is(err, ErrKonnectExtensionNotFound):
 			condition.Status = metav1.ConditionFalse
 			condition.Reason = string(consts.InvalidExtensionRefReason)
 			condition.Message = consts.InvalidExtensionRefMessage
-		case ErrClusterCertificateNotFound:
+		case errors.Is(err, ErrClusterCertificateNotFound):
 			condition.Status = metav1.ConditionFalse
 			condition.Reason = string(consts.InvalidSecretRefReason)
 			condition.Message = consts.InvalidSecretRefMessage
 		default:
-			requeue = false
-			return
+			return patched, true, err
 		}
 	}
 	newDataPlane := dataplane.DeepCopy()
@@ -341,5 +351,5 @@ func applyExtensions(ctx context.Context, cl client.Client, logger logr.Logger, 
 	if patchErr != nil {
 		return false, true, fmt.Errorf("failed patching status for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, patchErr)
 	}
-	return
+	return patched, false, nil
 }

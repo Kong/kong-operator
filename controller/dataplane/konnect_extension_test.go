@@ -32,7 +32,8 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 		name          string
 		dataplane     *operatorv1beta1.DataPlane
 		konnectExt    *operatorv1alpha1.DataPlaneKonnectExtension
-		expectedError bool
+		secret        *corev1.Secret
+		expectedError error
 	}{
 		{
 			name: "no extensions",
@@ -43,7 +44,6 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					},
 				},
 			},
-			expectedError: false,
 		},
 		{
 			name: "cross-namespace reference",
@@ -89,7 +89,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					ServerHostname:     "konnect.example.com",
 				},
 			},
-			expectedError: true,
+			expectedError: ErrCrossNamespaceReference,
 		},
 		{
 			name: "Extension not found",
@@ -116,7 +116,52 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					},
 				},
 			},
-			expectedError: true,
+			expectedError: ErrKonnectExtensionNotFound,
+		},
+		{
+			name: "Extension properly referenced, secret not found",
+			dataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Extensions: []operatorv1alpha1.ExtensionRef{
+							{
+								Group: operatorv1alpha1.SchemeGroupVersion.Group,
+								Kind:  operatorv1alpha1.DataPlaneKonnectExtensionKind,
+								NamespacedRef: operatorv1alpha1.NamespacedRef{
+									Name: "konnect-ext",
+								},
+							},
+						},
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{},
+							},
+						},
+					},
+				},
+			},
+			konnectExt: &operatorv1alpha1.DataPlaneKonnectExtension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "konnect-ext",
+					Namespace: "default",
+				},
+				Spec: operatorv1alpha1.DataPlaneKonnectExtensionSpec{
+					AuthConfiguration: operatorv1alpha1.KonnectControlPlaneAPIAuthConfiguration{
+						ClusterCertificateSecretRef: operatorv1alpha1.ClusterCertificateSecretRef{
+							Name: "cluster-cert-secret",
+						},
+					},
+					ControlPlaneRef: configurationv1alpha1.ControlPlaneRef{
+						KonnectID: lo.ToPtr("konnect-id"),
+					},
+					ControlPlaneRegion: "us-west",
+					ServerHostname:     "konnect.example.com",
+				},
+			},
+			expectedError: ErrClusterCertificateNotFound,
 		},
 		{
 			name: "Extension properly referenced, no deployment Options set.",
@@ -161,7 +206,12 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					ServerHostname:     "konnect.example.com",
 				},
 			},
-			expectedError: false,
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cluster-cert-secret",
+					Namespace: "default",
+				},
+			},
 		},
 		{
 			name: "Extension properly referenced, with deployment Options set.",
@@ -220,7 +270,12 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					ServerHostname:     "konnect.example.com",
 				},
 			},
-			expectedError: false,
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cluster-cert-secret",
+					Namespace: "default",
+				},
+			},
 		},
 	}
 
@@ -230,12 +285,15 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 			if tt.konnectExt != nil {
 				objs = append(objs, tt.konnectExt)
 			}
+			if tt.secret != nil {
+				objs = append(objs, tt.secret)
+			}
 			cl := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 
 			dataplane := tt.dataplane.DeepCopy()
 			err := applyDataPlaneKonnectExtension(context.Background(), cl, dataplane)
-			if tt.expectedError {
-				require.Error(t, err)
+			if tt.expectedError != nil {
+				require.ErrorIs(t, err, tt.expectedError)
 			} else {
 				require.NoError(t, err)
 				requiredEnv := []corev1.EnvVar{}
