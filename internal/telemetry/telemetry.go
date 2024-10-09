@@ -10,6 +10,7 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/serializers"
 	"github.com/kong/kubernetes-telemetry/pkg/telemetry"
 	"github.com/kong/kubernetes-telemetry/pkg/types"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -17,9 +18,15 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 const (
@@ -211,6 +218,41 @@ func createManager(
 			}
 		}
 
+		if cfg.KonnectControllerEnabled {
+			{
+				group, version := configurationv1.GroupVersion.Group, configurationv1.GroupVersion.Version
+				AddObjectCountProviderOrLog[configurationv1.KongConsumer](w, dyn, cl.RESTMapper(), log, group, version)
+			}
+			{
+				group, version := configurationv1beta1.GroupVersion.Group, configurationv1beta1.GroupVersion.Version
+				AddObjectCountProviderOrLog[configurationv1beta1.KongConsumerGroup](w, dyn, cl.RESTMapper(), log, group, version)
+			}
+			{
+				group, version := configurationv1alpha1.GroupVersion.Group, configurationv1alpha1.GroupVersion.Version
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongRoute](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongService](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialACL](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialJWT](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialHMAC](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialAPIKey](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialBasicAuth](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongSNI](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongVault](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongCertificate](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongCACertificate](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongDataPlaneClientCertificate](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongKey](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongKeySet](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongPluginBinding](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongTarget](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongUpstream](w, dyn, cl.RESTMapper(), log, group, version)
+			}
+			{
+				group, version := konnectv1alpha1.GroupVersion.Group, konnectv1alpha1.GroupVersion.Version
+				AddObjectCountProviderOrLog[konnectv1alpha1.KonnectGatewayControlPlane](w, dyn, cl.RESTMapper(), log, group, version)
+			}
+		}
+
 		m.AddWorkflow(w)
 	}
 	// Add state workflow
@@ -242,4 +284,28 @@ func createManager(
 	}
 
 	return m, nil
+}
+
+// AddObjectCountProviderOrLog adds a provider for counting objects of the specified
+// type to the workflow.
+// If this fails to create the provider, it logs the error on Info level (as this
+// is not a critical operation).
+func AddObjectCountProviderOrLog[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	w telemetry.Workflow,
+	dyn dynamic.Interface,
+	restMapper meta.RESTMapper,
+	log logr.Logger,
+	group string,
+	version string,
+) {
+	p, err := NewObjectCountProvider[T, TEnt](dyn, restMapper, group, version)
+	if err != nil {
+		log.Info("failed to create object provider", "error", err, "kind", constraints.EntityTypeName[T]())
+		return
+	}
+
+	w.AddProvider(p)
 }

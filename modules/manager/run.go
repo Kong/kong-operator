@@ -375,7 +375,13 @@ func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
 // a cleanup function and an error.
 // The caller is responsible to call the returned function - when the returned
 // error is not nil - to stop the reports sending.
-func setupAnonymousReports(ctx context.Context, restCfg *rest.Config, logger logr.Logger, metadata metadata.Info, cfg Config) (func(), error) {
+func setupAnonymousReports(
+	ctx context.Context,
+	restCfg *rest.Config,
+	logger logr.Logger,
+	metadata metadata.Info,
+	cfg Config,
+) (func(), error) {
 	logger.Info("starting anonymous reports")
 
 	// NOTE: this is needed to break the import cycle between telemetry and manager packages.

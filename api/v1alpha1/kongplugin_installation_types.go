@@ -58,7 +58,6 @@ type KongPluginInstallationList struct {
 // KongPluginInstallationSpec provides the information necessary to retrieve and install a Kong custom plugin.
 // +apireference:kgo:include
 type KongPluginInstallationSpec struct {
-
 	// The image is an OCI image URL for a packaged custom Kong plugin.
 	//
 	// +kubebuilder:validation:Required
