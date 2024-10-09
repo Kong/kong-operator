@@ -52,17 +52,21 @@ var kongInKonnectDefaultsTemplate = map[string]string{
 	"KONG_VITALS":                        "off",
 }
 
+// KongInKonnectParams is a struct that holds the parameters needed to customize
+// the KongInKonnectDefaultsTemplate map.
+type KongInKonnectParams struct {
+	ControlPlane string
+	Region       string
+	Server       string
+}
+
 // KongInKonnectDefaults returnes the map of Konnect-related env vars properly configured.
-func KongInKonnectDefaults(
-	controlPlane,
-	region,
-	server string,
-) map[string]string {
+func KongInKonnectDefaults(params KongInKonnectParams) map[string]string {
 	newEnvSet := make(map[string]string, len(kongInKonnectDefaultsTemplate))
 	for k, v := range kongInKonnectDefaultsTemplate {
-		v = strings.ReplaceAll(v, "<CP-ID>", controlPlane)
-		v = strings.ReplaceAll(v, "<REGION>", region)
-		v = strings.ReplaceAll(v, "<SERVER>", server)
+		v = strings.ReplaceAll(v, "<CP-ID>", params.ControlPlane)
+		v = strings.ReplaceAll(v, "<REGION>", params.Region)
+		v = strings.ReplaceAll(v, "<SERVER>", params.Server)
 		newEnvSet[k] = v
 	}
 	return newEnvSet

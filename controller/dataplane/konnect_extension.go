@@ -57,11 +57,12 @@ func applyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, datap
 		d.WithVolume(kongInKonnectClusterCertVolume(konnectExt.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name))
 		d.WithVolumeMount(kongInKonnectClusterVolumeMount(), consts.DataPlaneProxyContainerName)
 
-		// Only KonnectID currently supported. It's existence is enforced via CEL.
-		envSet := dputils.KongInKonnectDefaults(
-			*konnectExt.Spec.ControlPlaneRef.KonnectID,
-			konnectExt.Spec.ControlPlaneRegion,
-			konnectExt.Spec.ServerHostname)
+		// KonnectID is the only supported type for now, and its presence is guaranteed by a proper CEL rule.
+		envSet := dputils.KongInKonnectDefaults(dputils.KongInKonnectParams{
+			ControlPlane: *konnectExt.Spec.ControlPlaneRef.KonnectID,
+			Region:       konnectExt.Spec.ControlPlaneRegion,
+			Server:       konnectExt.Spec.ServerHostname,
+		})
 
 		dputils.FillDataPlaneProxyContainerEnvs(nil, &d.Spec.Template, envSet)
 		dataplane.Spec.Deployment.PodTemplateSpec = &d.Spec.Template
