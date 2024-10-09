@@ -46,6 +46,52 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 			expectedError: false,
 		},
 		{
+			name: "cross-namespace reference",
+			dataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Extensions: []operatorv1alpha1.ExtensionRef{
+							{
+								Group: operatorv1alpha1.SchemeGroupVersion.Group,
+								Kind:  "DataPlaneKonnectExtension",
+								NamespacedRef: operatorv1alpha1.NamespacedRef{
+									Name:      "konnect-ext",
+									Namespace: lo.ToPtr("other"),
+								},
+							},
+						},
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{},
+							},
+						},
+					},
+				},
+			},
+			konnectExt: &operatorv1alpha1.DataPlaneKonnectExtension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "konnect-ext",
+					Namespace: "other",
+				},
+				Spec: operatorv1alpha1.DataPlaneKonnectExtensionSpec{
+					AuthConfiguration: operatorv1alpha1.KonnectControlPlaneAPIAuthConfiguration{
+						ClusterCertificateSecretRef: operatorv1alpha1.ClusterCertificateSecretRef{
+							Name: "cluster-cert-secret",
+						},
+					},
+					ControlPlaneRef: configurationv1alpha1.ControlPlaneRef{
+						KonnectID: lo.ToPtr("konnect-id"),
+					},
+					ControlPlaneRegion: "us-west",
+					ServerHostname:     "konnect.example.com",
+				},
+			},
+			expectedError: true,
+		},
+		{
 			name: "Extension not found",
 			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
@@ -192,20 +238,19 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-			}
-
-			requiredEnv := []corev1.EnvVar{}
-			if tt.dataplane.Spec.Deployment.PodTemplateSpec != nil {
-				if container := k8sutils.GetPodContainerByName(&tt.dataplane.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName); container != nil {
-					requiredEnv = container.Env
+				requiredEnv := []corev1.EnvVar{}
+				if tt.dataplane.Spec.Deployment.PodTemplateSpec != nil {
+					if container := k8sutils.GetPodContainerByName(&tt.dataplane.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName); container != nil {
+						requiredEnv = container.Env
+					}
 				}
-			}
 
-			if tt.konnectExt != nil {
-				requiredEnv = append(requiredEnv, getKongInKonnectEnvVars(*tt.konnectExt)...)
-				sort.Sort(k8sutils.SortableEnvVars(requiredEnv))
-				assert.NotNil(t, dataplane.Spec.Deployment.PodTemplateSpec)
-				assert.Equal(t, requiredEnv, dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Env)
+				if tt.konnectExt != nil {
+					requiredEnv = append(requiredEnv, getKongInKonnectEnvVars(*tt.konnectExt)...)
+					sort.Sort(k8sutils.SortableEnvVars(requiredEnv))
+					assert.NotNil(t, dataplane.Spec.Deployment.PodTemplateSpec)
+					assert.Equal(t, requiredEnv, dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Env)
+				}
 			}
 		})
 	}

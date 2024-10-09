@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/samber/lo"
@@ -25,8 +26,8 @@ func applyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, datap
 			continue
 		}
 		namespace := dataplane.Namespace
-		if extensionRef.Namespace != nil {
-			namespace = *extensionRef.Namespace
+		if extensionRef.Namespace != nil && *extensionRef.Namespace != namespace {
+			return errors.New("cross-namespace reference is not currently supported for Konnect extensions")
 		}
 
 		konnectExt := v1alpha1.DataPlaneKonnectExtension{}
