@@ -8,18 +8,26 @@ const (
 	// It is used to reference a Konnect Control Plane entity inside the cluster
 	// using a namespaced reference.
 	ControlPlaneRefKonnectNamespacedRef = "konnectNamespacedRef"
+	// ControlPlaneRefKIC is the type for KIC ControlPlaneRef.
+	// It is used to reference a KIC as Control Plane.
+	ControlPlaneRefKIC = "kic"
 )
 
 // ControlPlaneRef is the schema for the ControlPlaneRef type.
 // It is used to reference a Control Plane entity.
 // +kubebuilder:validation:XValidation:rule="self.type == 'konnectNamespacedRef' ? has(self.konnectNamespacedRef) : true", message="when type is konnectNamespacedRef, konnectNamespacedRef must be set"
+// +kubebuilder:validation:XValidation:rule="self.type == 'konnectNamespacedRef' ? !has(self.konnectID) : true", message="when type is konnectNamespacedRef, konnectID must not be set"
 // +kubebuilder:validation:XValidation:rule="self.type == 'konnectID' ? has(self.konnectID) : true", message="when type is konnectID, konnectID must be set"
+// +kubebuilder:validation:XValidation:rule="self.type == 'konnectID' ? !has(self.konnectNamespacedRef) : true", message="when type is konnectID, konnectNamespacedRef must not be set"
+// +kubebuilder:validation:XValidation:rule="self.type == 'kic' ? !has(self.konnectID) : true", message="when type is kic, konnectID must not be set"
+// +kubebuilder:validation:XValidation:rule="self.type == 'kic' ? !has(self.konnectNamespacedRef) : true", message="when type is kic, konnectNamespacedRef must not be set"
 // +apireference:kgo:include
 type ControlPlaneRef struct {
 	// Type can be one of:
 	// - konnectID
 	// - konnectNamespacedRef
-	// +kubebuilder:validation:Enum=konnectID;konnectNamespacedRef
+	// - kic
+	// +kubebuilder:validation:Enum=konnectID;konnectNamespacedRef;kic
 	Type string `json:"type"`
 
 	// KonnectID is the schema for the KonnectID type.
