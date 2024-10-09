@@ -71,5 +71,27 @@ var updatesNotAllowedForStatus = testCasesGroup{
 				c.Spec.ControlPlaneRef.KonnectNamespacedRef.Name = "new-konnect-control-plane"
 			},
 		},
+		{
+			Name: "updates with Programmed = True when no cpRef is allowed",
+			KongConsumerGroup: configurationv1beta1.KongConsumerGroup{
+				ObjectMeta: commonObjectMeta,
+				Spec: configurationv1beta1.KongConsumerGroupSpec{
+					Name: "group1",
+				},
+			},
+			KongConsumerGroupStatus: &configurationv1beta1.KongConsumerGroupStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:               "Programmed",
+						Status:             metav1.ConditionFalse,
+						Reason:             "NotProgrammed",
+						LastTransitionTime: metav1.Now(),
+					},
+				},
+			},
+			Update: func(c *configurationv1beta1.KongConsumerGroup) {
+				c.Spec.Name = "group2"
+			},
+		},
 	},
 }
