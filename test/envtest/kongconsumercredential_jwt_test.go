@@ -116,7 +116,6 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
-	kongCredentialJWT.GetKonnectID()
 	assert.EventuallyWithT(t,
 		assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kongCredentialJWT, jwtID),
 		waitTime, tickTime,
