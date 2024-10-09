@@ -61,20 +61,22 @@ func (r *DataPlaneKonnectExtensionReconciler) listDataPlaneExtensionsReferenced(
 	}
 
 	recs := []reconcile.Request{}
-	for _, extension := range dataPlane.Spec.Extensions {
+
+	for _, ext := range dataPlane.Spec.Extensions {
 		namespace := dataPlane.Namespace
-		if extension.Group == operatorv1alpha1.SchemeGroupVersion.Group &&
-			extension.Kind == operatorv1alpha1.DataPlaneKonnectExtensionKind {
-			if extension.Namespace != nil {
-				namespace = *extension.Namespace
-			}
-			recs = append(recs, reconcile.Request{
-				NamespacedName: client.ObjectKey{
-					Namespace: namespace,
-					Name:      extension.Name,
-				},
-			})
+		if ext.Group != operatorv1alpha1.SchemeGroupVersion.Group ||
+			ext.Kind != operatorv1alpha1.DataPlaneKonnectExtensionKind {
+			continue
 		}
+		if ext.Namespace != nil && *ext.Namespace != namespace {
+			continue
+		}
+		recs = append(recs, reconcile.Request{
+			NamespacedName: client.ObjectKey{
+				Namespace: namespace,
+				Name:      ext.Name,
+			},
+		})
 	}
 	return recs
 }
