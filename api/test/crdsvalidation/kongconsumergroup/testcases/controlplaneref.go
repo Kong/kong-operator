@@ -11,6 +11,16 @@ var controlPlaneRef = testCasesGroup{
 	Name: "fields of controlPlaneRef",
 	TestCases: []testCase{
 		{
+			// Since KongConsumerGroups managed by KIC do not require spec.controlPlane, KongConsumerGroups without spec.controlPlaneRef should be allowed.
+			Name: "no CPRef is valid",
+			KongConsumerGroup: configurationv1beta1.KongConsumerGroup{
+				ObjectMeta: commonObjectMeta,
+				Spec: configurationv1beta1.KongConsumerGroupSpec{
+					Name: "test",
+				},
+			},
+		},
+		{
 			Name: "cpRef cannot have namespace",
 			KongConsumerGroup: configurationv1beta1.KongConsumerGroup{
 				ObjectMeta: commonObjectMeta,
