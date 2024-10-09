@@ -56,7 +56,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []operatorv1alpha1.ExtensionRef{
 							{
 								Group: operatorv1alpha1.SchemeGroupVersion.Group,
-								Kind:  "DataPlaneKonnectExtension",
+								Kind:  operatorv1alpha1.DataPlaneKonnectExtensionKind,
 								NamespacedRef: operatorv1alpha1.NamespacedRef{
 									Name:      "konnect-ext",
 									Namespace: lo.ToPtr("other"),
@@ -102,7 +102,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []operatorv1alpha1.ExtensionRef{
 							{
 								Group: operatorv1alpha1.SchemeGroupVersion.Group,
-								Kind:  "DataPlaneKonnectExtension",
+								Kind:  operatorv1alpha1.DataPlaneKonnectExtensionKind,
 								NamespacedRef: operatorv1alpha1.NamespacedRef{
 									Name: "konnect-ext",
 								},
@@ -129,7 +129,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []operatorv1alpha1.ExtensionRef{
 							{
 								Group: operatorv1alpha1.SchemeGroupVersion.Group,
-								Kind:  "DataPlaneKonnectExtension",
+								Kind:  operatorv1alpha1.DataPlaneKonnectExtensionKind,
 								NamespacedRef: operatorv1alpha1.NamespacedRef{
 									Name: "konnect-ext",
 								},
@@ -174,7 +174,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []operatorv1alpha1.ExtensionRef{
 							{
 								Group: operatorv1alpha1.SchemeGroupVersion.Group,
-								Kind:  "DataPlaneKonnectExtension",
+								Kind:  operatorv1alpha1.DataPlaneKonnectExtensionKind,
 								NamespacedRef: operatorv1alpha1.NamespacedRef{
 									Name: "konnect-ext",
 								},

@@ -64,7 +64,7 @@ func (r *DataPlaneKonnectExtensionReconciler) listDataPlaneExtensionsReferenced(
 	for _, extension := range dataPlane.Spec.Extensions {
 		namespace := dataPlane.Namespace
 		if extension.Group == operatorv1alpha1.SchemeGroupVersion.Group &&
-			extension.Kind == "DataPlaneKonnectExtension" {
+			extension.Kind == operatorv1alpha1.DataPlaneKonnectExtensionKind {
 			if extension.Namespace != nil {
 				namespace = *extension.Namespace
 			}
@@ -87,7 +87,7 @@ func (r *DataPlaneKonnectExtensionReconciler) Reconcile(ctx context.Context, req
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	logger := log.GetLogger(ctx, "dataplaneKonnectExtension", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, operatorv1alpha1.DataPlaneKonnectExtensionKind, r.DevelopmentMode)
 	var dataPlaneList operatorv1beta1.DataPlaneList
 	if err := r.List(ctx, &dataPlaneList, client.MatchingFields{
 		index.DataPlaneKonnectExtensionIndex: konnectExtension.Namespace + "/" + konnectExtension.Name,

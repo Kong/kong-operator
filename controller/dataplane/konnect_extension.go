@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/api/v1beta1"
 	dputils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -21,7 +22,7 @@ import (
 // fetches the referenced extension and applies the necessary changes to the DataPlane spec.
 func applyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, dataplane *v1beta1.DataPlane) error {
 	for _, extensionRef := range dataplane.Spec.Extensions {
-		if extensionRef.Group != v1alpha1.SchemeGroupVersion.Group || extensionRef.Kind != "DataPlaneKonnectExtension" {
+		if extensionRef.Group != v1alpha1.SchemeGroupVersion.Group || extensionRef.Kind != operatorv1alpha1.DataPlaneKonnectExtensionKind {
 			continue
 		}
 		namespace := dataplane.Namespace

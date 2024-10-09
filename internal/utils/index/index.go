@@ -99,13 +99,14 @@ func DataPlaneOnDataPlaneKonnecExtension(ctx context.Context, c cache.Cache) err
 			if len(dp.Spec.Extensions) > 0 {
 				for _, ext := range dp.Spec.Extensions {
 					namespace := dp.Namespace
-					if ext.Group == operatorv1alpha1.SchemeGroupVersion.Group &&
-						ext.Kind == "DataPlaneKonnectExtension" {
-						if ext.Namespace != nil {
-							namespace = *ext.Namespace
-						}
-						result = append(result, namespace+"/"+ext.NamespacedRef.Name)
+					if ext.Group != operatorv1alpha1.SchemeGroupVersion.Group ||
+						ext.Kind != operatorv1alpha1.DataPlaneKonnectExtensionKind {
+						continue
 					}
+					if ext.Namespace != nil && *ext.Namespace != namespace {
+						continue
+					}
+					result = append(result, namespace+"/"+ext.NamespacedRef.Name)
 				}
 			}
 			return result
