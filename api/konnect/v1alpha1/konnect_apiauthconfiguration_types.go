@@ -22,7 +22,6 @@ func init() {
 // +kubebuilder:printcolumn:name="ServerURL",description="Configured server URL.",type=string,JSONPath=`.status.serverURL`
 // +kubebuilder:validation:XValidation:rule="self.spec.type != 'token' || (self.spec.token.startsWith('spat_') || self.spec.token.startsWith('kpat_'))", message="Konnect tokens have to start with spat_ or kpat_"
 // +kubebuilder:validation:XValidation:rule="self.spec.type != 'token' || (!has(oldSelf.spec.token) || has(self.spec.token))", message="Token is required once set"
-// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.serverURL) || has(self.spec.serverURL)", message="Server URL is required once set"
 // +apireference:kgo:include
 type KonnectAPIAuthConfiguration struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -49,7 +48,9 @@ const (
 
 // KonnectAPIAuthConfigurationSpec is the specification of the KonnectAPIAuthConfiguration resource.
 //
-// +kubebuilder:validation:XValidation:rule="(self.type == 'token' && has(self.token)) || (self.type == 'secretRef' && has(self.secretRef))", message="Token is required if auth type is set to token or secretRef is required if auth type is set to secretRef"
+// +kubebuilder:validation:XValidation:rule="self.type == 'token' ? size(self.token) > 0 : true", message="spec.token is required if auth type is set to token"
+// +kubebuilder:validation:XValidation:rule="self.type == 'secretRef' ? has(self.secretRef) : true", message="spec.secretRef is required if auth type is set to secretRef"
+// +kubebuilder:validation:XValidation:rule="!(has(self.token) && has(self.secretRef))", message="spec.token and spec.secretRef cannot be set at the same time"
 // +apireference:kgo:include
 type KonnectAPIAuthConfigurationSpec struct {
 	// +kubebuilder:validation:Required
@@ -57,15 +58,21 @@ type KonnectAPIAuthConfigurationSpec struct {
 	Type KonnectAPIAuthType `json:"type"`
 
 	// Token is the Konnect token used to authenticate with the Konnect API.
+	// +optional
 	Token string `json:"token,omitempty"`
 
 	// SecretRef is a reference to a Kubernetes Secret containing the Konnect token.
-	// This secret is required to has the konghq.com/credential label set to "konnect".
+	// This secret is required to have the konghq.com/credential label set to "konnect".
+	// +optional
 	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
 
 	// ServerURL is the URL of the Konnect server.
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Server URL is immutable"
+	// It can be either a full URL with an HTTPs scheme or just a hostname.
+	// Please refer to https://docs.konghq.com/konnect/network/ for the list of supported hostnames.
+	// +kubebuilder:validation:XValidation:rule="size(self) > 0", message="Server URL is required"
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="Server URL is immutable"
+	// +kubebuilder:validation:XValidation:rule="isURL(self) ? url(self).getScheme() == 'https' : true", message="Server URL must use HTTPs if specifying scheme"
+	// +kubebuilder:validation:XValidation:rule="size(self) > 0 && !isURL(self) ? self.matches('^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]).)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])$') : true", message="Server URL must satisfy hostname (RFC 1123) regex if not a valid absolute URL"
 	ServerURL string `json:"serverURL"`
 }
 
