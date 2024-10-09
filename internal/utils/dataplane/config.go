@@ -24,7 +24,7 @@ const (
 
 // FillDataPlaneProxyContainerEnvs sets any unset default configuration
 // options on the DataPlane. It allows overriding the defaults via the provided
-// PodTemplateSpec.
+// PodTemplateSpec. The default configuration is passed as the last argument.
 // EnvVars are sorted lexographically as a side effect.
 // It also returns the updated EnvVar slice.
 func FillDataPlaneProxyContainerEnvs(existing []corev1.EnvVar, podTemplateSpec *corev1.PodTemplateSpec, envSet map[string]string) {
