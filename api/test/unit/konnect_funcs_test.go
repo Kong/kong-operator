@@ -1,6 +1,7 @@
 package test
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -279,4 +280,49 @@ func TestCredentialTypes(t *testing.T) {
 			obj.SetKonnectConsumerIDInStatus("123456")
 		})
 	}
+}
+
+func TestLists(t *testing.T) {
+	testKonnectEntityList(t, &configurationv1.KongConsumerList{}, 0)
+	testKonnectEntityList(t, &configurationv1.KongConsumerList{
+		Items: []configurationv1.KongConsumer{
+			{},
+		},
+	}, 1)
+	testKonnectEntityList(t, &configurationv1beta1.KongConsumerGroupList{}, 0)
+	testKonnectEntityList(t, &configurationv1beta1.KongConsumerGroupList{
+		Items: []configurationv1beta1.KongConsumerGroup{
+			{},
+		},
+	}, 1)
+	testKonnectEntityList(t, &configurationv1alpha1.KongCredentialACLList{}, 0)
+	testKonnectEntityList(t, &configurationv1alpha1.KongCredentialAPIKeyList{}, 0)
+	testKonnectEntityList(t, &configurationv1alpha1.KongCredentialBasicAuthList{}, 0)
+	testKonnectEntityList(t, &configurationv1alpha1.KongCredentialJWTList{}, 0)
+	testKonnectEntityList(t, &configurationv1alpha1.KongCredentialHMACList{}, 0)
+}
+
+type ClientObject[T any] interface {
+	GetTypeName() string
+	GetName() string
+	GetNamespace() string
+	*T
+}
+
+func testKonnectEntityList[
+	TList interface {
+		client.ObjectList
+		GetItems() []T
+	},
+	T any,
+	TT ClientObject[T],
+](t *testing.T, list TList, count int) {
+	t.Helper()
+	var obj TT = new(T)
+	t.Run(
+		obj.GetTypeName()+"/"+strconv.Itoa(count),
+		func(t *testing.T) {
+			require.Len(t, list.GetItems(), count)
+		},
+	)
 }
