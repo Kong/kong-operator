@@ -126,6 +126,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	if id := ent.GetKonnectStatus().GetKonnectID(); id != "" {
+		logger = logger.WithValues("konnect_id", id)
+	}
 	ctx = ctrllog.IntoContext(ctx, logger)
 	log.Debug(logger, "reconciling", ent)
 
