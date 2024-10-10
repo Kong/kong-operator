@@ -13,7 +13,7 @@ retract v1.2.2
 require (
 	github.com/Kong/sdk-konnect-go v0.0.15
 	github.com/Masterminds/semver v1.5.0
-	github.com/cert-manager/cert-manager v1.16.0
+	github.com/cert-manager/cert-manager v1.16.1
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-containerregistry v0.20.2
