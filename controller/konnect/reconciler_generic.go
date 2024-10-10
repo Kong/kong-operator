@@ -433,8 +433,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	// NOTE: We need to create a new SDK instance for each reconciliation
 	// because the token is retrieved in runtime through KonnectAPIAuthConfiguration.
+	serverURL := ops.NewServerURL(apiAuth.Spec.ServerURL)
 	sdk := r.sdkFactory.NewKonnectSDK(
-		"https://"+apiAuth.Spec.ServerURL,
+		serverURL.String(),
 		ops.SDKToken(token),
 	)
 
@@ -514,7 +515,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		if err == nil {
-			setServerURLAndOrgIDFromAPIAuthConfiguration(ent, apiAuth)
+			setServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
 		}
 
 		// Regardless of the error, set the status as it can contain the Konnect ID
@@ -539,7 +540,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 
 	if res, err := ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, ent); err != nil {
-		setServerURLAndOrgIDFromAPIAuthConfiguration(ent, apiAuth)
+		setServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
 		if errUpd := r.Client.Status().Update(ctx, ent); errUpd != nil {
 			if k8serrors.IsConflict(errUpd) {
 				return ctrl.Result{Requeue: true}, nil
@@ -552,7 +553,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, nil
 	}
 
-	setServerURLAndOrgIDFromAPIAuthConfiguration(ent, apiAuth)
+	setServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
 	if err := r.Client.Status().Update(ctx, ent); err != nil {
 		if k8serrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
@@ -568,14 +569,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}, nil
 }
 
-func setServerURLAndOrgIDFromAPIAuthConfiguration(
+func setServerURLAndOrgID(
 	ent interface {
 		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
 	},
-	apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration,
+	serverURL ops.ServerURL,
+	orgID string,
 ) {
-	ent.GetKonnectStatus().ServerURL = apiAuth.Spec.ServerURL
-	ent.GetKonnectStatus().OrgID = apiAuth.Status.OrganizationID
+	ent.GetKonnectStatus().ServerURL = serverURL.String()
+	ent.GetKonnectStatus().OrgID = orgID
 }
 
 // EntityWithControlPlaneRef is an interface for entities that have a ControlPlaneRef.
