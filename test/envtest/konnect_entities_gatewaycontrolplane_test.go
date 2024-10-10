@@ -310,7 +310,13 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							ID: lo.ToPtr("123467"),
 						},
 					},
-					nil)
+					nil,
+				).
+				// NOTE: UpdateControlPlane can be called depending on the order
+				// of the events in the queue: either the group itself or the member
+				// control plane can be created first.
+				Maybe()
+
 			// verify that mock SDK is called as expected.
 			t.Cleanup(func() {
 				require.True(t, sdk.ControlPlaneSDK.AssertExpectations(t))
@@ -330,6 +336,9 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			) {
 				return
 			}
+			assert.True(t, conditionsContainProgrammedTrue(cp.Status.Conditions),
+				"Programmed condition should be set and its status should be true",
+			)
 			assert.True(t, controllerutil.ContainsFinalizer(cp, konnect.KonnectCleanupFinalizer),
 				"Finalizer should be set on control plane",
 			)
