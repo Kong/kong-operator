@@ -1,8 +1,7 @@
 module github.com/kong/gateway-operator
 
 go 1.22.4
-
-toolchain go1.22.5
+toolchain go1.22.8
 
 // 1.2.2 was released on main branch with a breaking change that was not
 // intended to be released in 1.2.x:
@@ -129,14 +128,13 @@ require (
 	github.com/zmap/zcrypto v0.0.0-20230310154051-c8b263fd8300 // indirect
 	github.com/zmap/zlint/v3 v3.5.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	golang.org/x/crypto v0.27.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	google.golang.org/api v0.198.0 // indirect
 	google.golang.org/grpc v1.66.2 // indirect
 	sigs.k8s.io/kind v0.24.0 // indirect
-	sigs.k8s.io/kustomize/api v0.17.3
-	sigs.k8s.io/kustomize/kyaml v0.17.2 // indirect
+	sigs.k8s.io/kustomize/api v0.18.0
+	sigs.k8s.io/kustomize/kyaml v0.18.1 // indirect
 )
 
 require (
