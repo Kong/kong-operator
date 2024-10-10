@@ -1,7 +1,8 @@
 module github.com/kong/gateway-operator
 
-go 1.22.4
-toolchain go1.22.8
+go 1.22.7
+
+toolchain go1.23.2
 
 // 1.2.2 was released on main branch with a breaking change that was not
 // intended to be released in 1.2.x:
