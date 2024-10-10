@@ -25,6 +25,6 @@ func assertCollectObjectExistsAndHasKonnectID(
 		if !assert.NoError(c, clientNamespaced.Get(ctx, nn, obj)) {
 			return
 		}
-		assert.Equal(t, konnectID, obj.GetKonnectID())
+		assert.Equal(c, konnectID, obj.GetKonnectID())
 	}
 }
