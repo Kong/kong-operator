@@ -483,39 +483,54 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// We should look at the "expectations" for this:
 	// https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go
 	if status := ent.GetKonnectStatus(); status == nil || status.GetKonnectID() == "" {
+		obj := ent.DeepCopyObject().(client.Object)
 		_, err := ops.Create[T, TEnt](ctx, sdk, r.Client, ent)
-		if err != nil {
-			// TODO(pmalek): this is actually not 100% error prone because when status
-			// update fails we don't store the Konnect ID and hence the reconciler
-			// will try to create the resource again on next reconciliation.
-			if err := r.Client.Status().Update(ctx, ent); err != nil {
-				if k8serrors.IsConflict(err) {
-					return ctrl.Result{Requeue: true}, nil
-				}
-				return ctrl.Result{}, fmt.Errorf("failed to update status after creating object: %w", err)
-			}
 
-			return ctrl.Result{}, ops.FailedKonnectOpError[T]{
-				Op:  ops.CreateOp,
-				Err: err,
+		// TODO: this is actually not 100% error prone because when status
+		// update fails we don't store the Konnect ID and hence the reconciler
+		// will try to create the resource again on next reconciliation.
+
+		// Regardless of the error reported from Create(), if the Konnect ID has been
+		// set then add the finalizer so that the resource can be cleaned up from Konnect on deletion.
+		if ent.GetKonnectStatus().ID != "" {
+			objWithFinalizer := ent.DeepCopyObject().(client.Object)
+			if controllerutil.AddFinalizer(objWithFinalizer, KonnectCleanupFinalizer) {
+				if errUpd := r.Client.Patch(ctx, objWithFinalizer, client.MergeFrom(ent)); errUpd != nil {
+					if k8serrors.IsConflict(errUpd) {
+						return ctrl.Result{Requeue: true}, nil
+					}
+					if err != nil {
+						return ctrl.Result{}, fmt.Errorf(
+							"failed to update finalizer %s: %w, object create operation failed against Konnect API: %w",
+							KonnectCleanupFinalizer, errUpd, err,
+						)
+					}
+					return ctrl.Result{}, fmt.Errorf(
+						"failed to update finalizer %s: %w",
+						KonnectCleanupFinalizer, errUpd,
+					)
+				}
 			}
 		}
 
-		ent.GetKonnectStatus().ServerURL = apiAuth.Spec.ServerURL
-		ent.GetKonnectStatus().OrgID = apiAuth.Status.OrganizationID
-		if err := r.Client.Status().Update(ctx, ent); err != nil {
+		if err == nil {
+			setServerURLAndOrgIDFromAPIAuthConfiguration(ent, apiAuth)
+		}
+
+		// Regardless of the error, set the status as it can contain the Konnect ID
+		// and/or status conditions set in Create() and that ID will be needed to
+		// update/delete the object in Konnect.
+		if err := r.Client.Status().Patch(ctx, ent, client.MergeFrom(obj)); err != nil {
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
-			return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
+			return ctrl.Result{}, fmt.Errorf("failed to update status after creating object: %w", err)
 		}
 
-		if controllerutil.AddFinalizer(ent, KonnectCleanupFinalizer) {
-			if err := r.Client.Update(ctx, ent); err != nil {
-				if k8serrors.IsConflict(err) {
-					return ctrl.Result{Requeue: true}, nil
-				}
-				return ctrl.Result{}, fmt.Errorf("failed to update finalizer: %w", err)
+		if err != nil {
+			return ctrl.Result{}, ops.FailedKonnectOpError[T]{
+				Op:  ops.CreateOp,
+				Err: err,
 			}
 		}
 
@@ -524,8 +539,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 
 	if res, err := ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, ent); err != nil {
-		ent.GetKonnectStatus().ServerURL = apiAuth.Spec.ServerURL
-		ent.GetKonnectStatus().OrgID = apiAuth.Status.OrganizationID
+		setServerURLAndOrgIDFromAPIAuthConfiguration(ent, apiAuth)
 		if errUpd := r.Client.Status().Update(ctx, ent); errUpd != nil {
 			if k8serrors.IsConflict(errUpd) {
 				return ctrl.Result{Requeue: true}, nil
@@ -538,8 +552,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, nil
 	}
 
-	ent.GetKonnectStatus().ServerURL = apiAuth.Spec.ServerURL
-	ent.GetKonnectStatus().OrgID = apiAuth.Status.OrganizationID
+	setServerURLAndOrgIDFromAPIAuthConfiguration(ent, apiAuth)
 	if err := r.Client.Status().Update(ctx, ent); err != nil {
 		if k8serrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
@@ -553,6 +566,16 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	return ctrl.Result{
 		RequeueAfter: r.SyncPeriod,
 	}, nil
+}
+
+func setServerURLAndOrgIDFromAPIAuthConfiguration(
+	ent interface {
+		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
+	},
+	apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration,
+) {
+	ent.GetKonnectStatus().ServerURL = apiAuth.Spec.ServerURL
+	ent.GetKonnectStatus().OrgID = apiAuth.Status.OrganizationID
 }
 
 // EntityWithControlPlaneRef is an interface for entities that have a ControlPlaneRef.

@@ -36,6 +36,38 @@ func KonnectGatewayControlPlaneReconciliationWatchOptions(
 				),
 			)
 		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&konnectv1alpha1.KonnectGatewayControlPlane{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKonnectGatewayControlPlaneGroupForMembers(cl),
+				),
+			)
+		},
+	}
+}
+
+func enqueueKonnectGatewayControlPlaneGroupForMembers(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+		if !ok {
+			return nil
+		}
+		var l konnectv1alpha1.KonnectGatewayControlPlaneList
+		if err := cl.List(ctx, &l,
+			// TODO: change this when cross namespace refs are allowed.
+			client.InNamespace(cp.GetNamespace()),
+			client.MatchingFields{
+				// List groups that this control plane is a member of.
+				IndexFieldKonnectGatewayControlPlaneGroupOnMembers: cp.Name,
+			},
+		); err != nil {
+			return nil
+		}
+
+		return objectListToReconcileRequests(l.Items)
 	}
 }
 
