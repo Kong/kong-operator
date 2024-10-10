@@ -28,11 +28,11 @@ var (
 	ErrClusterCertificateNotFound = errors.New("cluster certificate not found")
 )
 
-// applyDataPlaneKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it
+// applyKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it
 // fetches the referenced extension and applies the necessary changes to the DataPlane spec.
-func applyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, dataplane *v1beta1.DataPlane) error {
+func applyKonnectExtension(ctx context.Context, cl client.Client, dataplane *v1beta1.DataPlane) error {
 	for _, extensionRef := range dataplane.Spec.Extensions {
-		if extensionRef.Group != operatorv1alpha1.SchemeGroupVersion.Group || extensionRef.Kind != operatorv1alpha1.DataPlaneKonnectExtensionKind {
+		if extensionRef.Group != operatorv1alpha1.SchemeGroupVersion.Group || extensionRef.Kind != operatorv1alpha1.KonnectExtensionKind {
 			continue
 		}
 		namespace := dataplane.Namespace
@@ -40,7 +40,7 @@ func applyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, datap
 			return errors.Join(ErrCrossNamespaceReference, fmt.Errorf("the cross-namespace reference to the extension %s/%s is not permitted", *extensionRef.Namespace, extensionRef.Name))
 		}
 
-		konnectExt := operatorv1alpha1.DataPlaneKonnectExtension{}
+		konnectExt := operatorv1alpha1.KonnectExtension{}
 		if err := cl.Get(ctx, client.ObjectKey{
 			Namespace: namespace,
 			Name:      extensionRef.Name,

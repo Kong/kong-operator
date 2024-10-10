@@ -20,12 +20,12 @@ import (
 )
 
 func init() {
-	SchemeBuilder.Register(&DataPlaneKonnectExtension{}, &DataPlaneKonnectExtensionList{})
+	SchemeBuilder.Register(&KonnectExtension{}, &KonnectExtensionList{})
 }
 
 const (
-	// DataPlaneKonnectExtensionKind holds the kind for the DataPlaneKonnectExtension.
-	DataPlaneKonnectExtensionKind = "DataPlaneKonnectExtension"
+	// KonnectExtensionKind holds the kind for the KonnectExtension.
+	KonnectExtensionKind = "KonnectExtension"
 )
 
 // +genclient
@@ -34,36 +34,36 @@ const (
 // +kubebuilder:resource:categories=kong;all
 // +kubebuilder:subresource:status
 
-// DataPlaneKonnectExtension is the Schema for the dataplanekonnectextension API,
+// KonnectExtension is the Schema for the KonnectExtension API,
 // and is intended to be referenced as extension by the dataplane API.
-// If a DataPlane successfully refers a DataPlaneKonnectExtension, the DataPlane
+// If a DataPlane successfully refers a KonnectExtension, the DataPlane
 // deployment spec gets customized to include the konnect-related configuration.
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable."
 // +apireference:kgo:include
-type DataPlaneKonnectExtension struct {
+type KonnectExtension struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec is the specification of the DataPlaneKonnectExtension resource.
-	Spec DataPlaneKonnectExtensionSpec `json:"spec,omitempty"`
-	// Status is the status of the DataPlaneKonnectExtension resource.
-	Status DataPlaneKonnectExtensionStatus `json:"status,omitempty"`
+	// Spec is the specification of the KonnectExtension resource.
+	Spec KonnectExtensionSpec `json:"spec,omitempty"`
+	// Status is the status of the KonnectExtension resource.
+	Status KonnectExtensionStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// DataPlaneKonnectExtensionList contains a list of DataPlaneKonnectExtension.
+// KonnectExtensionList contains a list of KonnectExtension.
 // +apireference:kgo:include
-type DataPlaneKonnectExtensionList struct {
+type KonnectExtensionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DataPlaneKonnectExtension `json:"items"`
+	Items           []KonnectExtension `json:"items"`
 }
 
-// DataPlaneKonnectExtensionSpec defines the desired state of DataPlaneKonnectExtension.
+// KonnectExtensionSpec defines the desired state of KonnectExtension.
 // +apireference:kgo:include
-type DataPlaneKonnectExtensionSpec struct {
-	// ControlPlaneRef is a reference to a ControlPlane this DataPlaneKonnectExtension is associated with.
+type KonnectExtensionSpec struct {
+	// ControlPlaneRef is a reference to a ControlPlane this KonnectExtension is associated with.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self.type == 'konnectID'", message="Only konnectID type currently supported as controlPlaneRef."
 	ControlPlaneRef configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
@@ -113,9 +113,9 @@ type ClusterCertificateSecretRef struct {
 	Name string `json:"name"`
 }
 
-// DataPlaneKonnectExtensionStatus defines the observed state of DataPlaneKonnectExtension.
+// KonnectExtensionStatus defines the observed state of KonnectExtension.
 // +apireference:kgo:include
-type DataPlaneKonnectExtensionStatus struct {
+type KonnectExtensionStatus struct {
 	// DataPlaneRefs is the array  of DataPlane references this is associated with.
 	// A new reference is set by the operator when this extension is associated with
 	// a DataPlane through its extensions spec.

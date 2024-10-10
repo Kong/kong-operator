@@ -8773,7 +8773,7 @@ spec:
                 description: |-
                   Extensions provide additional or replacement features for the DataPlane
                   resources to influence or enhance functionality.
-                  NOTE: since we have one extension only (DataPlaneKonnectExtension), we limit the amount of extensions to 1.
+                  NOTE: since we have one extension only (KonnectExtension), we limit the amount of extensions to 1.
                 items:
                   description: |-
                     ExtensionRef corresponds to another resource in the Kubernetes cluster which
@@ -9329,8 +9329,7 @@ spec:
         x-kubernetes-validations:
         - message: Extension not allowed for DataPlane
           rule: 'has(self.spec.extensions) ? self.spec.extensions.all(e, e.group ==
-            ''gateway-operator.konghq.com'' && e.kind == ''DataPlaneKonnectExtension'')
-            : true'
+            ''gateway-operator.konghq.com'' && e.kind == ''KonnectExtension'') : true'
     served: true
     storage: true
     subresources:

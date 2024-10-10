@@ -25,8 +25,8 @@ import (
 // DataKonnectExtensionReconciler
 // -----------------------------------------------------------------------------
 
-// DataPlaneKonnectExtensionReconciler reconciles a DataPlaneKonnectExtension object.
-type DataPlaneKonnectExtensionReconciler struct {
+// KonnectExtensionReconciler reconciles a KonnectExtension object.
+type KonnectExtensionReconciler struct {
 	client.Client
 	ContextInjector ctxinjector.CtxInjector
 	// DevelopmentMode indicates if the controller should run in development mode,
@@ -35,16 +35,16 @@ type DataPlaneKonnectExtensionReconciler struct {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *DataPlaneKonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&operatorv1alpha1.DataPlaneKonnectExtension{}).
+		For(&operatorv1alpha1.KonnectExtension{}).
 		Watches(&operatorv1beta1.DataPlane{}, handler.EnqueueRequestsFromMapFunc(r.listDataPlaneExtensionsReferenced)).
 		Complete(r)
 }
 
-// listDataPlaneExtensionsReferenced returns a list of all the DataPlaneKonnectExtensions referenced by the DataPlane object.
+// listDataPlaneExtensionsReferenced returns a list of all the KonnectExtensions referenced by the DataPlane object.
 // Maximum one reference is expected.
-func (r *DataPlaneKonnectExtensionReconciler) listDataPlaneExtensionsReferenced(ctx context.Context, obj client.Object) []reconcile.Request {
+func (r *KonnectExtensionReconciler) listDataPlaneExtensionsReferenced(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := ctrllog.FromContext(ctx)
 	dataPlane, ok := obj.(*operatorv1beta1.DataPlane)
 	if !ok {
@@ -65,7 +65,7 @@ func (r *DataPlaneKonnectExtensionReconciler) listDataPlaneExtensionsReferenced(
 	for _, ext := range dataPlane.Spec.Extensions {
 		namespace := dataPlane.Namespace
 		if ext.Group != operatorv1alpha1.SchemeGroupVersion.Group ||
-			ext.Kind != operatorv1alpha1.DataPlaneKonnectExtensionKind {
+			ext.Kind != operatorv1alpha1.KonnectExtensionKind {
 			continue
 		}
 		if ext.Namespace != nil && *ext.Namespace != namespace {
@@ -81,18 +81,18 @@ func (r *DataPlaneKonnectExtensionReconciler) listDataPlaneExtensionsReferenced(
 	return recs
 }
 
-// Reconcile reconciles a DataPlaneKonnectExtension object.
-func (r *DataPlaneKonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+// Reconcile reconciles a KonnectExtension object.
+func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ctx = r.ContextInjector.InjectKeyValues(ctx)
-	var konnectExtension operatorv1alpha1.DataPlaneKonnectExtension
+	var konnectExtension operatorv1alpha1.KonnectExtension
 	if err := r.Client.Get(ctx, req.NamespacedName, &konnectExtension); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	logger := log.GetLogger(ctx, operatorv1alpha1.DataPlaneKonnectExtensionKind, r.DevelopmentMode)
+	logger := log.GetLogger(ctx, operatorv1alpha1.KonnectExtensionKind, r.DevelopmentMode)
 	var dataPlaneList operatorv1beta1.DataPlaneList
 	if err := r.List(ctx, &dataPlaneList, client.MatchingFields{
-		index.DataPlaneKonnectExtensionIndex: konnectExtension.Namespace + "/" + konnectExtension.Name,
+		index.KonnectExtensionIndex: konnectExtension.Namespace + "/" + konnectExtension.Name,
 	}); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -112,7 +112,7 @@ func (r *DataPlaneKonnectExtensionReconciler) Reconcile(ctx context.Context, req
 			return ctrl.Result{}, err
 		}
 
-		log.Info(logger, "DataPlaneKonnectExtension finalizer updated", konnectExtension)
+		log.Info(logger, "KonnectExtension finalizer updated", konnectExtension)
 	}
 
 	return ctrl.Result{}, nil

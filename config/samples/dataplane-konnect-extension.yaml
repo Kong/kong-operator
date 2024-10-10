@@ -19,7 +19,7 @@
 #     -----END PRIVATE KEY-----
 # ---
 apiVersion: gateway-operator.konghq.com/v1alpha1
-kind: DataPlaneKonnectExtension
+kind: KonnectExtension
 metadata:
   name: my-konnect-config
 spec:
@@ -38,7 +38,7 @@ metadata:
   name: konnect-extension-example
 spec:
   extensions:
-  - kind: DataPlaneKonnectExtension
+  - kind: KonnectExtension
     name: my-konnect-config
     group: gateway-operator.konghq.com
   deployment:
