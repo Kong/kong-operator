@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -332,15 +333,15 @@ func applyExtensions(ctx context.Context, cl client.Client, logger logr.Logger, 
 		case errors.Is(err, ErrCrossNamespaceReference):
 			condition.Status = metav1.ConditionFalse
 			condition.Reason = string(consts.RefNotPermittedReason)
-			condition.Message = consts.RefNotPermittedMessage
+			condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
 		case errors.Is(err, ErrKonnectExtensionNotFound):
 			condition.Status = metav1.ConditionFalse
 			condition.Reason = string(consts.InvalidExtensionRefReason)
-			condition.Message = consts.InvalidExtensionRefMessage
+			condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
 		case errors.Is(err, ErrClusterCertificateNotFound):
 			condition.Status = metav1.ConditionFalse
 			condition.Reason = string(consts.InvalidSecretRefReason)
-			condition.Message = consts.InvalidSecretRefMessage
+			condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
 		default:
 			return patched, true, err
 		}
@@ -351,5 +352,5 @@ func applyExtensions(ctx context.Context, cl client.Client, logger logr.Logger, 
 	if patchErr != nil {
 		return false, true, fmt.Errorf("failed patching status for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, patchErr)
 	}
-	return patched, false, nil
+	return patched, false, err
 }

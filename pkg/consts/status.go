@@ -51,11 +51,4 @@ const (
 	InvalidExtensionRefReason ConditionReason = "InvalidExtension"
 	// InvalidSecretRefReason is a generic reason describing that the secret reference is invalid. It must be used when the ResolvedRefs condition is set to False.
 	InvalidSecretRefReason ConditionReason = "InvalidSecret"
-
-	// RefNotPermittedMessage indicates the reference is not permitted. It must be used when the ResolvedRefs condition is set to False.
-	RefNotPermittedMessage = "The extension cross-namespace reference is not permitted"
-	// InvalidExtensionRefMessage indicates the extension reference is invalid. It must be used when the ResolvedRefs condition is set to False.
-	InvalidExtensionRefMessage = "The referenced extension is invalid"
-	// InvalidSecretRefMessage indicates the secret reference is invalid. It must be used when the ResolvedRefs condition is set to False.
-	InvalidSecretRefMessage = "The secret referenced by the konnectExtension is invalid"
 )
