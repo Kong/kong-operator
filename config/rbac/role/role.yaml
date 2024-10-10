@@ -127,9 +127,6 @@ rules:
   resources:
   - ingressclassparameterses
   - kongclusterplugins
-  - kongconsumergroups
-  - kongconsumers
-  - kongcredentialbasicauths
   - kongcustomentities
   - kongingresses
   - konglicenses
@@ -143,14 +140,73 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - kongcacertificates
+  - kongcertificates
+  - kongconsumergroups
+  - kongconsumers
+  - kongcredentialacls
+  - kongcredentialapikeys
+  - kongcredentialbasicauths
+  - kongcredentialhmacs
+  - kongcredentialjwts
+  - kongdataplaneclientcertificates
+  - kongkeys
+  - kongkeysets
+  - kongroutes
+  - kongservices
+  - kongsnis
+  - kongtargets
+  - kongupstreams
+  - kongvaults
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongcacertificates/finalizers
+  - kongcertificates/finalizers
+  - kongconsumergroups/finalizers
+  - kongconsumers/finalizers
+  - kongcredentialacls/finalizers
+  - kongcredentialapikeys/finalizers
+  - kongcredentialbasicauths/finalizers
+  - kongcredentialhmacs/finalizers
+  - kongcredentialjwts/finalizers
+  - kongdataplaneclientcertificates/finalizers
+  - kongkeys/finalizers
+  - kongkeysets/finalizers
+  - kongroutes/finalizers
+  - kongservices/finalizers
+  - kongsnis/finalizers
+  - kongtargets/finalizers
+  - kongupstreams/finalizers
+  - kongvaults/finalizers
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongcacertificates/status
+  - kongcertificates/status
   - kongclusterplugins/status
   - kongconsumergroups/status
   - kongconsumers/status
+  - kongcredentialacls/status
+  - kongcredentialapikeys/status
   - kongcredentialbasicauths/status
+  - kongcredentialhmacs/status
+  - kongcredentialjwts/status
   - kongcustomentities/status
+  - kongdataplaneclientcertificates/status
   - kongingresses/status
+  - kongkeys/status
+  - kongkeysets/status
   - konglicenses/status
-  - kongpluginbindings/status
   - kongplugins/status
   - kongroutes/status
   - kongservices/status
@@ -173,21 +229,6 @@ rules:
   verbs:
   - create
   - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
-  - kongroutes
-  - kongservices
-  - kongsnis
-  - kongtargets
-  - kongupstreams
-  - kongvaults
-  verbs:
   - get
   - list
   - patch
@@ -358,6 +399,14 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - konnect.konghq.com
+  resources:
+  - konnectapiauthconfigurations/finalizers
+  - konnectgatewaycontrolplanes/finalizers
+  verbs:
+  - patch
+  - update
 - apiGroups:
   - konnect.konghq.com
   resources:
