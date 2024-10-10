@@ -63,7 +63,7 @@ These versions should be updated to match the new release. The example consts to
 
 ## GitHub PAT
 
-**Next expiration date**: 2024-10-02
+**Next expiration date**: 2025-09-25
 
 The release workflow uses @team-k8s-bot's GitHub PAT to create a GitHub release and PRs related to it.
 It's named `Kong Gateway operator release pipeline` and is stored in `PAT_GITHUB`

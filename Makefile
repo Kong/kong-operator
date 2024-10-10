@@ -242,8 +242,16 @@ generate.rbacs: kic-role-generator
 	$(KIC_ROLE_GENERATOR) --force
 
 .PHONY: generate.docs
-generate.docs: crd-ref-docs
+generate.docs: generate.crd-ref-docs generate.cli-arguments-docs
+
+.PHONY: generate.crd-ref-docs
+generate.crd-ref-docs: crd-ref-docs
 	./scripts/apidocs-gen/generate.sh $(CRD_REF_DOCS)
+
+.PHONY: generate.cli-arguments-docs
+generate.cli-arguments-docs:
+# Use ./scripts/cli-arguments-docs-gen/post-process-for-konghq.sh to postprocess the output for docs.konghq.com
+	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments.md
 
 .PHONY: generate.k8sio-gomod-replace
 generate.k8sio-gomod-replace:
