@@ -515,7 +515,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		if err == nil {
-			setServerURLAndOrgIDFromAPIAuthConfiguration(ent, apiAuth)
+			setServerURLAndOrgIDFromAPIAuthConfiguration(ent, serverURL, apiAuth)
 		}
 
 		// Regardless of the error, set the status as it can contain the Konnect ID
@@ -540,7 +540,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 
 	if res, err := ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, ent); err != nil {
-		setServerURLAndOrgIDFromAPIAuthConfiguration(ent, apiAuth)
+		setServerURLAndOrgIDFromAPIAuthConfiguration(ent, serverURL, apiAuth)
 		if errUpd := r.Client.Status().Update(ctx, ent); errUpd != nil {
 			if k8serrors.IsConflict(errUpd) {
 				return ctrl.Result{Requeue: true}, nil
@@ -553,7 +553,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, nil
 	}
 
-	setServerURLAndOrgIDFromAPIAuthConfiguration(ent, apiAuth)
+	setServerURLAndOrgIDFromAPIAuthConfiguration(ent, serverURL, apiAuth)
 	if err := r.Client.Status().Update(ctx, ent); err != nil {
 		if k8serrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
@@ -573,9 +573,10 @@ func setServerURLAndOrgIDFromAPIAuthConfiguration(
 	ent interface {
 		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
 	},
+	serverURL ops.ServerURL,
 	apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration,
 ) {
-	ent.GetKonnectStatus().ServerURL = ops.NewServerURL(apiAuth.Spec.ServerURL).String()
+	ent.GetKonnectStatus().ServerURL = serverURL.String()
 	ent.GetKonnectStatus().OrgID = apiAuth.Status.OrganizationID
 }
 
