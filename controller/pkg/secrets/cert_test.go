@@ -178,26 +178,23 @@ func TestLog(t *testing.T) {
 		t.Cleanup(func() { buf.Reset() })
 		log.Trace(logger, "message about gw", gw)
 		require.NotContains(t, buf.String(), "unexpected type processed for")
+		t.Logf("log: %s", buf.String())
 		buf.Reset()
 		log.Trace(logger, "message about gw", &gw)
 		require.NotContains(t, buf.String(), "unexpected type processed for")
-		buf.Reset()
+		t.Logf("log: %s", buf.String())
 	})
 
 	t.Run("logging works and prints correct fields", func(t *testing.T) {
 		t.Cleanup(func() { buf.Reset() })
 		log.Info(logger, "message about gw", gw)
 		entry := struct {
-			Level     string `json:"level,omitempty"`
-			Msg       string `json:"msg,omitempty"`
-			Name      string `json:"name,omitempty"`
-			Namespace string `json:"namespace,omitempty"`
+			Level string `json:"level,omitempty"`
+			Msg   string `json:"msg,omitempty"`
 		}{}
 		require.NoError(t, json.Unmarshal(buf.Bytes(), &entry))
 		assert.Equal(t, entry.Msg, "message about gw")
 		assert.Equal(t, entry.Level, "info")
-		assert.Equal(t, entry.Name, "gw")
-		assert.Equal(t, entry.Namespace, "ns")
 	})
 }
 

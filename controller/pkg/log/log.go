@@ -2,12 +2,9 @@ package log
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/types"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/gateway-operator/modules/manager/logging"
 )
@@ -29,53 +26,11 @@ func Trace[T any](log logr.Logger, msg string, rawObj T, keysAndValues ...interf
 
 // Error logs a message at the error level.
 func Error[T any](log logr.Logger, err error, msg string, rawObj T, keysAndValues ...interface{}) {
-	kvs := keyValuesFromObj(rawObj)
-	log.Error(err, msg, append(kvs, keysAndValues...)...)
+	log.Error(err, msg, keysAndValues...)
 }
 
-type nameNamespacer interface {
-	GetName() string
-	GetNamespace() string
-}
-
-func keyValuesFromObj[T any](rawObj T) []interface{} {
-	if obj, ok := any(rawObj).(nameNamespacer); ok {
-		return []interface{}{
-			"namespace", obj.GetNamespace(),
-			"name", obj.GetName(),
-		}
-	} else if obj, ok := any((&rawObj)).(nameNamespacer); ok {
-		return []interface{}{
-			"namespace", obj.GetNamespace(),
-			"name", obj.GetName(),
-		}
-	} else if req, ok := any(rawObj).(reconcile.Request); ok {
-		return []interface{}{
-			"namespace", req.Namespace,
-			"name", req.Name,
-		}
-	} else if nn, ok := any(rawObj).(types.NamespacedName); ok {
-		return []interface{}{
-			"namespace", nn.Namespace,
-			"name", nn.Name,
-		}
-	}
-
-	return nil
-}
-
-func _log[T any](log logr.Logger, level logging.Level, msg string, rawObj T, keysAndValues ...interface{}) {
-	kvs := keyValuesFromObj(rawObj)
-	if kvs == nil {
-		log.V(level.Value()).Info(
-			fmt.Sprintf("unexpected type processed for %s logging: %T, this is a bug!",
-				level.String(), rawObj,
-			),
-		)
-		return
-	}
-
-	log.V(level.Value()).Info(msg, append(kvs, keysAndValues...)...)
+func _log[T any](log logr.Logger, level logging.Level, msg string, rawObj T, keysAndValues ...interface{}) { //nolint:unparam
+	log.V(level.Value()).Info(msg, keysAndValues...)
 }
 
 // GetLogger returns a configured instance of logger.
@@ -85,5 +40,5 @@ func GetLogger(ctx context.Context, controllerName string, developmentMode bool)
 	if developmentMode {
 		return ctrllog.Log.WithName(controllerName)
 	}
-	return ctrllog.FromContext(ctx).WithName("controlplane")
+	return ctrllog.FromContext(ctx).WithName(controllerName)
 }
