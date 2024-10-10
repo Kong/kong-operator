@@ -23,6 +23,11 @@ func init() {
 	SchemeBuilder.Register(&DataPlaneKonnectExtension{}, &DataPlaneKonnectExtensionList{})
 }
 
+const (
+	// DataPlaneKonnectExtensionKind holds the kind for the DataPlaneKonnectExtension.
+	DataPlaneKonnectExtensionKind = "DataPlaneKonnectExtension"
+)
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
@@ -60,6 +65,7 @@ type DataPlaneKonnectExtensionList struct {
 type DataPlaneKonnectExtensionSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this DataPlaneKonnectExtension is associated with.
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:XValidation:rule="self.type == 'konnectID'", message="Only konnectID type currently supported as controlPlaneRef."
 	ControlPlaneRef configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
 	// ControlPlaneRegion is the region of the Konnect Control Plane.
@@ -94,9 +100,9 @@ type DataPlaneKonnectExtensionSpec struct {
 // KonnectControlPlaneAPIAuthConfiguration contains the configuration to authenticate with Konnect API ControlPlane.
 // +apireference:kgo:include
 type KonnectControlPlaneAPIAuthConfiguration struct {
-	// ClusterCertificateSecretName is a name of the Secret containing the Konnect Control Plane's cluster certificate.
+	// ClusterCertificateSecretRef is the reference to the Secret containing the Konnect Control Plane's cluster certificate.
 	// +kubebuilder:validation:Required
-	ClusterCertificateSecretName ClusterCertificateSecretRef `json:"clusterCertificateSecretRef"`
+	ClusterCertificateSecretRef ClusterCertificateSecretRef `json:"clusterCertificateSecretRef"`
 }
 
 // ClusterCertificateSecretRef contains the reference to the Secret containing the Konnect Control Plane's cluster certificate.

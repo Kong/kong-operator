@@ -40,26 +40,26 @@ import (
 const (
 	// GatewayClassControllerName is the name of the GatewayClass controller.
 	GatewayClassControllerName = "GatewayClass"
-	// GatewayControllerName is the name of the GatewayClass controller.
+	// GatewayControllerName is the name of the Gateway controller.
 	GatewayControllerName = "Gateway"
-	// ControlPlaneControllerName is the name of the GatewayClass controller.
+	// ControlPlaneControllerName is the name of ControlPlane controller.
 	ControlPlaneControllerName = "ControlPlane"
-	// DataPlaneControllerName is the name of the GatewayClass controller.
+	// DataPlaneControllerName is the name of the DataPlane controller.
 	DataPlaneControllerName = "DataPlane"
-	// DataPlaneBlueGreenControllerName is the name of the GatewayClass controller.
+	// DataPlaneBlueGreenControllerName is the name of the DataPlaneBlueGreen controller.
 	DataPlaneBlueGreenControllerName = "DataPlaneBlueGreen"
-	// DataPlaneOwnedServiceFinalizerControllerName is the name of the GatewayClass controller.
+	// DataPlaneOwnedServiceFinalizerControllerName is the name of the DataPlaneOwnedServiceFinalizer controller.
 	DataPlaneOwnedServiceFinalizerControllerName = "DataPlaneOwnedServiceFinalizer"
-	// DataPlaneOwnedSecretFinalizerControllerName is the name of the GatewayClass controller.
+	// DataPlaneOwnedSecretFinalizerControllerName is the name of the DataPlaneOwnedSecretFinalizer controller.
 	DataPlaneOwnedSecretFinalizerControllerName = "DataPlaneOwnedSecretFinalizer"
-	// DataPlaneOwnedDeploymentFinalizerControllerName is the name of the GatewayClass controller.
+	// DataPlaneOwnedDeploymentFinalizerControllerName is the name of the DataPlaneOwnedDeploymentFinalizer controller.
 	DataPlaneOwnedDeploymentFinalizerControllerName = "DataPlaneOwnedDeploymentFinalizer"
-	// AIGatewayControllerName is the name of the GatewayClass controller.
+	// DataPlaneKonnectExtensionControllerName is the name of the DataPlaneKonnectExtension controller.
+	DataPlaneKonnectExtensionControllerName = "DataPlaneKonnectExtension"
+	// AIGatewayControllerName is the name of the AIGateway controller.
 	AIGatewayControllerName = "AIGateway"
-
 	// KongPluginInstallationControllerName is the name of the KongPluginInstallation controller.
 	KongPluginInstallationControllerName = "KongPluginInstallation"
-
 	// KonnectAPIAuthConfigurationControllerName is the name of the KonnectAPIAuthConfiguration controller.
 	KonnectAPIAuthConfigurationControllerName = "KonnectAPIAuthConfiguration"
 	// KonnectGatewayControlPlaneControllerName is the name of the KonnectGatewayControlPlane controller.
@@ -176,6 +176,9 @@ func setupIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 			if err := index.KongPluginInstallationsOnDataPlane(ctx, mgr.GetCache()); err != nil {
 				return fmt.Errorf("failed to setup index for KongPluginInstallations on DataPlane: %w", err)
 			}
+		}
+		if err := index.DataPlaneOnDataPlaneKonnecExtension(ctx, mgr.GetCache()); err != nil {
+			return fmt.Errorf("failed to setup index for DataPlanes on DataPlaneKonnectExtensions: %w", err)
 		}
 	}
 	return nil
@@ -342,6 +345,13 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				mgr.GetClient(),
 				c.DevelopmentMode,
 			),
+		},
+		DataPlaneKonnectExtensionControllerName: {
+			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled,
+			Controller: &dataplane.DataPlaneKonnectExtensionReconciler{
+				Client:          mgr.GetClient(),
+				DevelopmentMode: c.DevelopmentMode,
+			},
 		},
 		// AIGateway Controller
 		AIGatewayControllerName: {

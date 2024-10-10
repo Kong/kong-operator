@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 )
 
@@ -18,6 +19,10 @@ const (
 	// KongPluginInstallationsIndex is the key to be used to access the .spec.pluginsToInstall indexed values,
 	// in a form of list of namespace/name strings.
 	KongPluginInstallationsIndex = "KongPluginInstallations"
+
+	// DataPlaneKonnectExtensionIndex is the key to be used to access the .spec.extensions indexed values,
+	// in a form of list of namespace/name strings.
+	DataPlaneKonnectExtensionIndex = "DataPlaneKonnectExtension"
 )
 
 // DataPlaneNameOnControlPlane indexes the ControlPlane .spec.dataplaneName field
@@ -66,6 +71,43 @@ func KongPluginInstallationsOnDataPlane(ctx context.Context, c cache.Cache) erro
 					kpi.Namespace = dp.Namespace
 				}
 				result = append(result, kpi.Namespace+"/"+kpi.Name)
+			}
+			return result
+		},
+	)
+}
+
+// DataPlaneOnDataPlaneKonnecExtension indexes the DataPlane .spec.extensions field
+// on the "DataPlaneKonnectExtension" key.
+func DataPlaneOnDataPlaneKonnecExtension(ctx context.Context, c cache.Cache) error {
+	if _, err := c.GetInformer(ctx, &operatorv1beta1.DataPlane{}); err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to get informer for v1alpha1 DataPlaneKonnectExtension: %w, disabling indexing DataPlaneKonnectExtensions for DataPlanes' .spec.extensions", err)
+	}
+	return c.IndexField(
+		ctx,
+		&operatorv1beta1.DataPlane{},
+		DataPlaneKonnectExtensionIndex,
+		func(o client.Object) []string {
+			dp, ok := o.(*operatorv1beta1.DataPlane)
+			if !ok {
+				return nil
+			}
+			result := []string{}
+			if len(dp.Spec.Extensions) > 0 {
+				for _, ext := range dp.Spec.Extensions {
+					namespace := dp.Namespace
+					if ext.Group != operatorv1alpha1.SchemeGroupVersion.Group ||
+						ext.Kind != operatorv1alpha1.DataPlaneKonnectExtensionKind {
+						continue
+					}
+					if ext.Namespace != nil && *ext.Namespace != namespace {
+						continue
+					}
+					result = append(result, namespace+"/"+ext.NamespacedRef.Name)
+				}
 			}
 			return result
 		},

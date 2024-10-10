@@ -94,6 +94,8 @@ spec:
                 - type
                 type: object
                 x-kubernetes-validations:
+                - message: Only konnectID type currently supported as controlPlaneRef.
+                  rule: self.type == 'konnectID'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef
                     must be set
                   rule: 'self.type == ''konnectNamespacedRef'' ? has(self.konnectNamespacedRef)
@@ -123,8 +125,8 @@ spec:
                   API authentication.
                 properties:
                   clusterCertificateSecretRef:
-                    description: ClusterCertificateSecretName is a name of the Secret
-                      containing the Konnect Control Plane's cluster certificate.
+                    description: ClusterCertificateSecretRef is the reference to the
+                      Secret containing the Konnect Control Plane's cluster certificate.
                     properties:
                       name:
                         description: Name is the name of the Secret containing the

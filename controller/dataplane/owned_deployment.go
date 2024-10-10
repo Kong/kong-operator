@@ -141,7 +141,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 		return nil, op.Noop, err
 	}
 	// apply default envvars and restore the hacked-out ones
-	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment)
+	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, dputils.KongDefaults)
 
 	// push the complete Deployment to Kubernetes
 	res, deployment, err := reconcileDataPlaneDeployment(ctx, d.client, d.logger,
@@ -200,8 +200,9 @@ func applyDeploymentUserPatchesForDataPlane(
 func applyEnvForDataPlane(
 	existing []corev1.EnvVar,
 	deployment *k8sresources.Deployment,
+	envSet map[string]string,
 ) *k8sresources.Deployment {
-	dputils.FillDataPlaneProxyContainerEnvs(existing, &deployment.Spec.Template)
+	dputils.FillDataPlaneProxyContainerEnvs(existing, &deployment.Spec.Template, envSet)
 	return deployment
 }
 

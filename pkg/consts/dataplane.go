@@ -178,3 +178,13 @@ const (
 	// to ensure that the resources are not deleted before the DataPlane is deleted.
 	DataPlaneOwnedWaitForOwnerFinalizer = "gateway-operator.konghq.com/wait-for-owner"
 )
+
+// -----------------------------------------------------------------------------
+// Consts - DataPlaneKonnectExtension Finalizers
+// -----------------------------------------------------------------------------
+
+const (
+	// DataPlaneExtensionFinalizer is the finalizer added to DataPlaneKonnectExtension
+	// to ensure that the resources are not deleted when in use by a dataplane.
+	DataPlaneExtensionFinalizer = "gateway-operator.konghq.com/extension-in-use"
+)
