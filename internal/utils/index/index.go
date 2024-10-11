@@ -20,9 +20,9 @@ const (
 	// in a form of list of namespace/name strings.
 	KongPluginInstallationsIndex = "KongPluginInstallations"
 
-	// DataPlaneKonnectExtensionIndex is the key to be used to access the .spec.extensions indexed values,
+	// KonnectExtensionIndex is the key to be used to access the .spec.extensions indexed values,
 	// in a form of list of namespace/name strings.
-	DataPlaneKonnectExtensionIndex = "DataPlaneKonnectExtension"
+	KonnectExtensionIndex = "KonnectExtension"
 )
 
 // DataPlaneNameOnControlPlane indexes the ControlPlane .spec.dataplaneName field
@@ -78,18 +78,18 @@ func KongPluginInstallationsOnDataPlane(ctx context.Context, c cache.Cache) erro
 }
 
 // DataPlaneOnDataPlaneKonnecExtension indexes the DataPlane .spec.extensions field
-// on the "DataPlaneKonnectExtension" key.
+// on the "KonnectExtension" key.
 func DataPlaneOnDataPlaneKonnecExtension(ctx context.Context, c cache.Cache) error {
 	if _, err := c.GetInformer(ctx, &operatorv1beta1.DataPlane{}); err != nil {
 		if meta.IsNoMatchError(err) {
 			return nil
 		}
-		return fmt.Errorf("failed to get informer for v1alpha1 DataPlaneKonnectExtension: %w, disabling indexing DataPlaneKonnectExtensions for DataPlanes' .spec.extensions", err)
+		return fmt.Errorf("failed to get informer for v1alpha1 KonnectExtension: %w, disabling indexing KonnectExtensions for DataPlanes' .spec.extensions", err)
 	}
 	return c.IndexField(
 		ctx,
 		&operatorv1beta1.DataPlane{},
-		DataPlaneKonnectExtensionIndex,
+		KonnectExtensionIndex,
 		func(o client.Object) []string {
 			dp, ok := o.(*operatorv1beta1.DataPlane)
 			if !ok {
@@ -100,7 +100,7 @@ func DataPlaneOnDataPlaneKonnecExtension(ctx context.Context, c cache.Cache) err
 				for _, ext := range dp.Spec.Extensions {
 					namespace := dp.Namespace
 					if ext.Group != operatorv1alpha1.SchemeGroupVersion.Group ||
-						ext.Kind != operatorv1alpha1.DataPlaneKonnectExtensionKind {
+						ext.Kind != operatorv1alpha1.KonnectExtensionKind {
 						continue
 					}
 					if ext.Namespace != nil && *ext.Namespace != namespace {

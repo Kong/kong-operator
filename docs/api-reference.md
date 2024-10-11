@@ -1746,9 +1746,9 @@ In this section you will find types that the CRDs rely on.
 Package v1alpha1 contains API Schema definitions for the operator v1alpha1 API group
 
 - [AIGateway](#aigateway)
-- [DataPlaneKonnectExtension](#dataplanekonnectextension)
 - [DataPlaneMetricsExtension](#dataplanemetricsextension)
 - [KongPluginInstallation](#kongplugininstallation)
+- [KonnectExtension](#konnectextension)
 ### AIGateway
 
 
@@ -1794,26 +1794,6 @@ See: https://kubernetes.io/docs/reference/using-api/cel/
 
 
 
-### DataPlaneKonnectExtension
-
-
-DataPlaneKonnectExtension is the Schema for the dataplanekonnectextension API,
-and is intended to be referenced as extension by the dataplane API.
-If a DataPlane successfully refers a DataPlaneKonnectExtension, the DataPlane
-deployment spec gets customized to include the konnect-related configuration.
-
-<!-- data_plane_konnect_extension description placeholder -->
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `gateway-operator.konghq.com/v1alpha1`
-| `kind` _string_ | `DataPlaneKonnectExtension`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[DataPlaneKonnectExtensionSpec](#dataplanekonnectextensionspec)_ | Spec is the specification of the DataPlaneKonnectExtension resource. |
-| `status` _[DataPlaneKonnectExtensionStatus](#dataplanekonnectextensionstatus)_ | Status is the status of the DataPlaneKonnectExtension resource. |
-
-
-
 ### DataPlaneMetricsExtension
 
 
@@ -1854,6 +1834,26 @@ and configured with KongPlugin CRD.
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongPluginInstallationSpec](#kongplugininstallationspec)_ |  |
 | `status` _[KongPluginInstallationStatus](#kongplugininstallationstatus)_ |  |
+
+
+
+### KonnectExtension
+
+
+KonnectExtension is the Schema for the KonnectExtension API,
+and is intended to be referenced as extension by the dataplane API.
+If a DataPlane successfully refers a KonnectExtension, the DataPlane
+deployment spec gets customized to include the konnect-related configuration.
+
+<!-- konnect_extension description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway-operator.konghq.com/v1alpha1`
+| `kind` _string_ | `KonnectExtension`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectExtensionSpec](#konnectextensionspec)_ | Spec is the specification of the KonnectExtension resource. |
+| `status` _[KonnectExtensionStatus](#konnectextensionstatus)_ | Status is the status of the KonnectExtension resource. |
 
 
 
@@ -2013,40 +2013,6 @@ ClusterCertificateSecretRef contains the reference to the Secret containing the 
 _Appears in:_
 - [KonnectControlPlaneAPIAuthConfiguration](#konnectcontrolplaneapiauthconfiguration)
 
-#### DataPlaneKonnectExtensionSpec
-
-
-DataPlaneKonnectExtensionSpec defines the desired state of DataPlaneKonnectExtension.
-
-
-
-| Field | Description |
-| --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this DataPlaneKonnectExtension is associated with. |
-| `controlPlaneRegion` _string_ | ControlPlaneRegion is the region of the Konnect Control Plane. |
-| `serverHostname` _string_ | ServerHostname is the fully qualified domain name of the konnect server. This matches the RFC 1123 definition of a hostname with 1 notable exception that numeric IP addresses are not allowed.<br /><br /> Note that as per RFC1035 and RFC1123, a *label* must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character. No other punctuation is allowed. |
-| `konnectControlPlaneAPIAuthConfiguration` _[KonnectControlPlaneAPIAuthConfiguration](#konnectcontrolplaneapiauthconfiguration)_ | AuthConfiguration must be used to configure the Konnect API authentication. |
-| `clusterDataPlaneLabels` _object (keys:string, values:string)_ | ClusterDataPlaneLabels is a set of labels that will be applied to the Konnect DataPlane. |
-
-
-_Appears in:_
-- [DataPlaneKonnectExtension](#dataplanekonnectextension)
-
-#### DataPlaneKonnectExtensionStatus
-
-
-DataPlaneKonnectExtensionStatus defines the observed state of DataPlaneKonnectExtension.
-
-
-
-| Field | Description |
-| --- | --- |
-| `dataPlaneRefs` _[NamespacedRef](#namespacedref) array_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
-
-
-_Appears in:_
-- [DataPlaneKonnectExtension](#dataplanekonnectextension)
-
 #### DataPlaneMetricsExtensionSpec
 
 
@@ -2145,7 +2111,41 @@ KonnectControlPlaneAPIAuthConfiguration contains the configuration to authentica
 
 
 _Appears in:_
-- [DataPlaneKonnectExtensionSpec](#dataplanekonnectextensionspec)
+- [KonnectExtensionSpec](#konnectextensionspec)
+
+#### KonnectExtensionSpec
+
+
+KonnectExtensionSpec defines the desired state of KonnectExtension.
+
+
+
+| Field | Description |
+| --- | --- |
+| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KonnectExtension is associated with. |
+| `controlPlaneRegion` _string_ | ControlPlaneRegion is the region of the Konnect Control Plane. |
+| `serverHostname` _string_ | ServerHostname is the fully qualified domain name of the konnect server. This matches the RFC 1123 definition of a hostname with 1 notable exception that numeric IP addresses are not allowed.<br /><br /> Note that as per RFC1035 and RFC1123, a *label* must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character. No other punctuation is allowed. |
+| `konnectControlPlaneAPIAuthConfiguration` _[KonnectControlPlaneAPIAuthConfiguration](#konnectcontrolplaneapiauthconfiguration)_ | AuthConfiguration must be used to configure the Konnect API authentication. |
+| `clusterDataPlaneLabels` _object (keys:string, values:string)_ | ClusterDataPlaneLabels is a set of labels that will be applied to the Konnect DataPlane. |
+
+
+_Appears in:_
+- [KonnectExtension](#konnectextension)
+
+#### KonnectExtensionStatus
+
+
+KonnectExtensionStatus defines the observed state of KonnectExtension.
+
+
+
+| Field | Description |
+| --- | --- |
+| `dataPlaneRefs` _[NamespacedRef](#namespacedref) array_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
+
+
+_Appears in:_
+- [KonnectExtension](#konnectextension)
 
 #### LLMPrompt
 
@@ -2261,9 +2261,9 @@ NamespacedRef is a reference to a namespaced resource.
 
 
 _Appears in:_
-- [DataPlaneKonnectExtensionStatus](#dataplanekonnectextensionstatus)
 - [DataPlaneMetricsExtensionStatus](#dataplanemetricsextensionstatus)
 - [ExtensionRef](#extensionref)
+- [KonnectExtensionStatus](#konnectextensionstatus)
 
 #### ServiceSelector
 
@@ -2548,7 +2548,7 @@ deploy the DataPlane.
 | `deployment` _[DataPlaneDeploymentOptions](#dataplanedeploymentoptions)_ |  |
 | `network` _[DataPlaneNetworkOptions](#dataplanenetworkoptions)_ |  |
 | `resources` _[DataPlaneResources](#dataplaneresources)_ |  |
-| `extensions` _ExtensionRef array_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (DataPlaneKonnectExtension), we limit the amount of extensions to 1. |
+| `extensions` _ExtensionRef array_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (KonnectExtension), we limit the amount of extensions to 1. |
 | `pluginsToInstall` _[NamespacedName](#namespacedname) array_ | PluginsToInstall is a list of KongPluginInstallation resources that will be installed and available in the DataPlane. |
 
 
@@ -2684,7 +2684,7 @@ DataPlaneSpec defines the desired state of DataPlane
 | `deployment` _[DataPlaneDeploymentOptions](#dataplanedeploymentoptions)_ |  |
 | `network` _[DataPlaneNetworkOptions](#dataplanenetworkoptions)_ |  |
 | `resources` _[DataPlaneResources](#dataplaneresources)_ |  |
-| `extensions` _ExtensionRef array_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (DataPlaneKonnectExtension), we limit the amount of extensions to 1. |
+| `extensions` _ExtensionRef array_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (KonnectExtension), we limit the amount of extensions to 1. |
 | `pluginsToInstall` _[NamespacedName](#namespacedname) array_ | PluginsToInstall is a list of KongPluginInstallation resources that will be installed and available in the DataPlane. |
 
 
@@ -2760,7 +2760,7 @@ configure and deploy a DataPlane object.
 | --- | --- |
 | `deployment` _[DataPlaneDeploymentOptions](#dataplanedeploymentoptions)_ |  |
 | `network` _[GatewayConfigDataPlaneNetworkOptions](#gatewayconfigdataplanenetworkoptions)_ |  |
-| `extensions` _ExtensionRef array_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (DataPlaneKonnectExtension), we limit the amount of extensions to 1. |
+| `extensions` _ExtensionRef array_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (KonnectExtension), we limit the amount of extensions to 1. |
 | `pluginsToInstall` _[NamespacedName](#namespacedname) array_ | PluginsToInstall is a list of KongPluginInstallation resources that will be installed and available in the Gateways (DataPlanes) that use this GatewayConfig. |
 
 

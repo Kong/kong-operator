@@ -29,9 +29,9 @@ import (
 type ApisV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	AIGatewaysGetter
-	DataPlaneKonnectExtensionsGetter
 	DataPlaneMetricsExtensionsGetter
 	KongPluginInstallationsGetter
+	KonnectExtensionsGetter
 }
 
 // ApisV1alpha1Client is used to interact with features provided by the apis group.
@@ -43,16 +43,16 @@ func (c *ApisV1alpha1Client) AIGateways(namespace string) AIGatewayInterface {
 	return newAIGateways(c, namespace)
 }
 
-func (c *ApisV1alpha1Client) DataPlaneKonnectExtensions(namespace string) DataPlaneKonnectExtensionInterface {
-	return newDataPlaneKonnectExtensions(c, namespace)
-}
-
 func (c *ApisV1alpha1Client) DataPlaneMetricsExtensions(namespace string) DataPlaneMetricsExtensionInterface {
 	return newDataPlaneMetricsExtensions(c, namespace)
 }
 
 func (c *ApisV1alpha1Client) KongPluginInstallations(namespace string) KongPluginInstallationInterface {
 	return newKongPluginInstallations(c, namespace)
+}
+
+func (c *ApisV1alpha1Client) KonnectExtensions(namespace string) KonnectExtensionInterface {
+	return newKonnectExtensions(c, namespace)
 }
 
 // NewForConfig creates a new ApisV1alpha1Client for the given config.

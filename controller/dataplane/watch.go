@@ -53,8 +53,8 @@ func DataPlaneWatchBuilder(mgr ctrl.Manager) *builder.Builder {
 		WatchesRawSource(
 			source.Kind(
 				mgr.GetCache(),
-				&operatorv1alpha1.DataPlaneKonnectExtension{},
-				handler.TypedEnqueueRequestsFromMapFunc(listDataPlanesReferencingDataPlaneKonnectExtension(mgr.GetClient())),
+				&operatorv1alpha1.KonnectExtension{},
+				handler.TypedEnqueueRequestsFromMapFunc(listDataPlanesReferencingKonnectExtension(mgr.GetClient())),
 			),
 		)
 }
@@ -88,21 +88,21 @@ func listDataPlanesReferencingKongPluginInstallation(
 	}
 }
 
-func listDataPlanesReferencingDataPlaneKonnectExtension(
+func listDataPlanesReferencingKonnectExtension(
 	c client.Client,
-) handler.TypedMapFunc[*operatorv1alpha1.DataPlaneKonnectExtension, reconcile.Request] {
+) handler.TypedMapFunc[*operatorv1alpha1.KonnectExtension, reconcile.Request] {
 	return func(
-		ctx context.Context, ext *operatorv1alpha1.DataPlaneKonnectExtension,
+		ctx context.Context, ext *operatorv1alpha1.KonnectExtension,
 	) []reconcile.Request {
 		logger := ctrllog.FromContext(ctx)
 
-		// Find all DataPlane resources referencing DataPlaneKonnectExtension
-		// that maps to the DataPlaneKonnectExtension enqueued for reconciliation.
+		// Find all DataPlane resources referencing KonnectExtension
+		// that maps to the KonnectExtension enqueued for reconciliation.
 		var dataPlaneList operatorv1beta1.DataPlaneList
 		if err := c.List(ctx, &dataPlaneList, client.MatchingFields{
-			index.DataPlaneKonnectExtensionIndex: ext.Namespace + "/" + ext.Name,
+			index.KonnectExtensionIndex: ext.Namespace + "/" + ext.Name,
 		}); err != nil {
-			logger.Error(err, "Failed to list DataPlanes in watch", operatorv1alpha1.DataPlaneKonnectExtensionKind)
+			logger.Error(err, "Failed to list DataPlanes in watch", operatorv1alpha1.KonnectExtensionKind)
 			return nil
 		}
 		return lo.Map(dataPlaneList.Items, func(dp operatorv1beta1.DataPlane, _ int) reconcile.Request {

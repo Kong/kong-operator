@@ -4,26 +4,26 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.3
-  name: dataplanekonnectextensions.gateway-operator.konghq.com
+  name: konnectextensions.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
   names:
     categories:
     - kong
     - all
-    kind: DataPlaneKonnectExtension
-    listKind: DataPlaneKonnectExtensionList
-    plural: dataplanekonnectextensions
-    singular: dataplanekonnectextension
+    kind: KonnectExtension
+    listKind: KonnectExtensionList
+    plural: konnectextensions
+    singular: konnectextension
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
         description: |-
-          DataPlaneKonnectExtension is the Schema for the dataplanekonnectextension API,
+          KonnectExtension is the Schema for the KonnectExtension API,
           and is intended to be referenced as extension by the dataplane API.
-          If a DataPlane successfully refers a DataPlaneKonnectExtension, the DataPlane
+          If a DataPlane successfully refers a KonnectExtension, the DataPlane
           deployment spec gets customized to include the konnect-related configuration.
         properties:
           apiVersion:
@@ -44,8 +44,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec is the specification of the DataPlaneKonnectExtension
-              resource.
+            description: Spec is the specification of the KonnectExtension resource.
             properties:
               clusterDataPlaneLabels:
                 additionalProperties:
@@ -55,7 +54,7 @@ spec:
                 type: object
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a ControlPlane this
-                  DataPlaneKonnectExtension is associated with.
+                  KonnectExtension is associated with.
                 properties:
                   konnectID:
                     description: |-
@@ -159,7 +158,7 @@ spec:
             - serverHostname
             type: object
           status:
-            description: Status is the status of the DataPlaneKonnectExtension resource.
+            description: Status is the status of the KonnectExtension resource.
             properties:
               dataPlaneRefs:
                 description: |-

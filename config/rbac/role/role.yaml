@@ -281,29 +281,11 @@ rules:
   resources:
   - aigateways/status
   - controlplanes/status
-  - dataplanekonnectextensions/status
   - dataplanes/status
   - kongplugininstallations/status
+  - konnectextensions/status
   verbs:
   - get
-  - patch
-  - update
-- apiGroups:
-  - gateway-operator.konghq.com
-  resources:
-  - dataplanekonnectextensions
-  - kongplugininstallations
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - gateway-operator.konghq.com
-  resources:
-  - dataplanekonnectextensions/finalizers
-  verbs:
   - patch
   - update
 - apiGroups:
@@ -314,6 +296,24 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - gateway-operator.konghq.com
+  resources:
+  - kongplugininstallations
+  - konnectextensions
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - gateway-operator.konghq.com
+  resources:
+  - konnectextensions/finalizers
+  verbs:
+  - patch
+  - update
 - apiGroups:
   - gateway.networking.k8s.io
   resources:

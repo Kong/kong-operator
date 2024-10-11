@@ -23,7 +23,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
-func TestApplyDataPlaneKonnectExtension(t *testing.T) {
+func TestApplyKonnectExtension(t *testing.T) {
 	s := scheme.Scheme
 	require.NoError(t, operatorv1alpha1.AddToScheme(s))
 	require.NoError(t, operatorv1beta1.AddToScheme(s))
@@ -31,7 +31,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 	tests := []struct {
 		name          string
 		dataplane     *operatorv1beta1.DataPlane
-		konnectExt    *operatorv1alpha1.DataPlaneKonnectExtension
+		konnectExt    *operatorv1alpha1.KonnectExtension
 		secret        *corev1.Secret
 		expectedError error
 	}{
@@ -56,7 +56,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []operatorv1alpha1.ExtensionRef{
 							{
 								Group: operatorv1alpha1.SchemeGroupVersion.Group,
-								Kind:  operatorv1alpha1.DataPlaneKonnectExtensionKind,
+								Kind:  operatorv1alpha1.KonnectExtensionKind,
 								NamespacedRef: operatorv1alpha1.NamespacedRef{
 									Name:      "konnect-ext",
 									Namespace: lo.ToPtr("other"),
@@ -71,12 +71,12 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					},
 				},
 			},
-			konnectExt: &operatorv1alpha1.DataPlaneKonnectExtension{
+			konnectExt: &operatorv1alpha1.KonnectExtension{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "konnect-ext",
 					Namespace: "other",
 				},
-				Spec: operatorv1alpha1.DataPlaneKonnectExtensionSpec{
+				Spec: operatorv1alpha1.KonnectExtensionSpec{
 					AuthConfiguration: operatorv1alpha1.KonnectControlPlaneAPIAuthConfiguration{
 						ClusterCertificateSecretRef: operatorv1alpha1.ClusterCertificateSecretRef{
 							Name: "cluster-cert-secret",
@@ -102,7 +102,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []operatorv1alpha1.ExtensionRef{
 							{
 								Group: operatorv1alpha1.SchemeGroupVersion.Group,
-								Kind:  operatorv1alpha1.DataPlaneKonnectExtensionKind,
+								Kind:  operatorv1alpha1.KonnectExtensionKind,
 								NamespacedRef: operatorv1alpha1.NamespacedRef{
 									Name: "konnect-ext",
 								},
@@ -129,7 +129,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []operatorv1alpha1.ExtensionRef{
 							{
 								Group: operatorv1alpha1.SchemeGroupVersion.Group,
-								Kind:  operatorv1alpha1.DataPlaneKonnectExtensionKind,
+								Kind:  operatorv1alpha1.KonnectExtensionKind,
 								NamespacedRef: operatorv1alpha1.NamespacedRef{
 									Name: "konnect-ext",
 								},
@@ -143,12 +143,12 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					},
 				},
 			},
-			konnectExt: &operatorv1alpha1.DataPlaneKonnectExtension{
+			konnectExt: &operatorv1alpha1.KonnectExtension{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "konnect-ext",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneKonnectExtensionSpec{
+				Spec: operatorv1alpha1.KonnectExtensionSpec{
 					AuthConfiguration: operatorv1alpha1.KonnectControlPlaneAPIAuthConfiguration{
 						ClusterCertificateSecretRef: operatorv1alpha1.ClusterCertificateSecretRef{
 							Name: "cluster-cert-secret",
@@ -174,7 +174,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []operatorv1alpha1.ExtensionRef{
 							{
 								Group: operatorv1alpha1.SchemeGroupVersion.Group,
-								Kind:  operatorv1alpha1.DataPlaneKonnectExtensionKind,
+								Kind:  operatorv1alpha1.KonnectExtensionKind,
 								NamespacedRef: operatorv1alpha1.NamespacedRef{
 									Name: "konnect-ext",
 								},
@@ -188,12 +188,12 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					},
 				},
 			},
-			konnectExt: &operatorv1alpha1.DataPlaneKonnectExtension{
+			konnectExt: &operatorv1alpha1.KonnectExtension{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "konnect-ext",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneKonnectExtensionSpec{
+				Spec: operatorv1alpha1.KonnectExtensionSpec{
 					AuthConfiguration: operatorv1alpha1.KonnectControlPlaneAPIAuthConfiguration{
 						ClusterCertificateSecretRef: operatorv1alpha1.ClusterCertificateSecretRef{
 							Name: "cluster-cert-secret",
@@ -224,7 +224,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []operatorv1alpha1.ExtensionRef{
 							{
 								Group: operatorv1alpha1.SchemeGroupVersion.Group,
-								Kind:  operatorv1alpha1.DataPlaneKonnectExtensionKind,
+								Kind:  operatorv1alpha1.KonnectExtensionKind,
 								NamespacedRef: operatorv1alpha1.NamespacedRef{
 									Name: "konnect-ext",
 								},
@@ -252,12 +252,12 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					},
 				},
 			},
-			konnectExt: &operatorv1alpha1.DataPlaneKonnectExtension{
+			konnectExt: &operatorv1alpha1.KonnectExtension{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "konnect-ext",
 					Namespace: "default",
 				},
-				Spec: operatorv1alpha1.DataPlaneKonnectExtensionSpec{
+				Spec: operatorv1alpha1.KonnectExtensionSpec{
 					AuthConfiguration: operatorv1alpha1.KonnectControlPlaneAPIAuthConfiguration{
 						ClusterCertificateSecretRef: operatorv1alpha1.ClusterCertificateSecretRef{
 							Name: "cluster-cert-secret",
@@ -291,7 +291,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 
 			dataplane := tt.dataplane.DeepCopy()
-			err := applyDataPlaneKonnectExtension(context.Background(), cl, dataplane)
+			err := applyKonnectExtension(context.Background(), cl, dataplane)
 			if tt.expectedError != nil {
 				require.ErrorIs(t, err, tt.expectedError)
 			} else {
@@ -314,7 +314,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 	}
 }
 
-func getKongInKonnectEnvVars(konnectExt operatorv1alpha1.DataPlaneKonnectExtension) []corev1.EnvVar {
+func getKongInKonnectEnvVars(konnectExt operatorv1alpha1.KonnectExtension) []corev1.EnvVar {
 	envSet := []corev1.EnvVar{}
 	for k, v := range dputils.KongInKonnectDefaults(dputils.KongInKonnectParams{
 		ControlPlane: *konnectExt.Spec.ControlPlaneRef.KonnectID,

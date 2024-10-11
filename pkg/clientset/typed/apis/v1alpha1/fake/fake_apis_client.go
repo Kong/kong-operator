@@ -32,16 +32,16 @@ func (c *FakeApisV1alpha1) AIGateways(namespace string) v1alpha1.AIGatewayInterf
 	return &FakeAIGateways{c, namespace}
 }
 
-func (c *FakeApisV1alpha1) DataPlaneKonnectExtensions(namespace string) v1alpha1.DataPlaneKonnectExtensionInterface {
-	return &FakeDataPlaneKonnectExtensions{c, namespace}
-}
-
 func (c *FakeApisV1alpha1) DataPlaneMetricsExtensions(namespace string) v1alpha1.DataPlaneMetricsExtensionInterface {
 	return &FakeDataPlaneMetricsExtensions{c, namespace}
 }
 
 func (c *FakeApisV1alpha1) KongPluginInstallations(namespace string) v1alpha1.KongPluginInstallationInterface {
 	return &FakeKongPluginInstallations{c, namespace}
+}
+
+func (c *FakeApisV1alpha1) KonnectExtensions(namespace string) v1alpha1.KonnectExtensionInterface {
+	return &FakeKonnectExtensions{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

@@ -70,9 +70,11 @@
   [#657](https://github.com/Kong/gateway-operator/pull/657)
 - Add `KongDataPlaneClientCertificate` reconciler for Konnect DataPlaneClientCertificates.
   [#694](https://github.com/Kong/gateway-operator/pull/694)
-- The `DataPlaneKonnectExtension` CRD has been introduced. Such a CRD can be attached
+- The `KonnectExtension` CRD has been introduced. Such a CRD can be attached
   to a `DataPlane` via the extensions field to have a konnect-flavored `DataPlane`.
-  [#453](https://github.com/Kong/gateway-operator/pull/453), [#578](https://github.com/Kong/gateway-operator/pull/578)
+  [#453](https://github.com/Kong/gateway-operator/pull/453),
+  [#578](https://github.com/Kong/gateway-operator/pull/578),
+  [#736](https://github.com/Kong/gateway-operator/pull/736)
 - Entities created in Konnect are now labeled (or tagged for those that does not
   support labels) with origin Kubernetes object's metadata: `k8s-name`, `k8s-namespace`,
   `k8s-uid`, `k8s-generation`, `k8s-kind`, `k8s-group`, `k8s-version`.
@@ -101,7 +103,7 @@
   [#669](https://github.com/Kong/gateway-operator/pull/669)
 - Allow setting `KonnectGatewayControlPlane`s group membership
   [#697](https://github.com/Kong/gateway-operator/pull/697)
-- Apply Konnect-related customizations to `DataPlane`s that properly reference `DataPlaneKonnectExtension`
+- Apply Konnect-related customizations to `DataPlane`s that properly reference `KonnectExtension`
   resources.
   [#714](https://github.com/Kong/gateway-operator/pull/714)
 

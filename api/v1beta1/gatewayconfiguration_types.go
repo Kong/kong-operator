@@ -30,7 +30,7 @@ func init() {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=kogc,categories=kong;all
-// +kubebuilder:validation:XValidation:message="Extension not allowed for DataPlane config options",rule="has(self.spec.dataPlaneOptions.extensions) ? self.spec.dataPlaneOptions.extensions.all(e, e.group == 'gateway-operator.konghq.com' && e.kind == 'DataPlaneKonnectExtension') : true"
+// +kubebuilder:validation:XValidation:message="Extension not allowed for DataPlane config options",rule="has(self.spec.dataPlaneOptions.extensions) ? self.spec.dataPlaneOptions.extensions.all(e, e.group == 'gateway-operator.konghq.com' && e.kind == 'KonnectExtension') : true"
 
 // GatewayConfiguration is the Schema for the gatewayconfigurations API
 // +apireference:kgo:include
@@ -70,7 +70,7 @@ type GatewayConfigDataPlaneOptions struct {
 
 	// Extensions provide additional or replacement features for the DataPlane
 	// resources to influence or enhance functionality.
-	// NOTE: since we have one extension only (DataPlaneKonnectExtension), we limit the amount of extensions to 1.
+	// NOTE: since we have one extension only (KonnectExtension), we limit the amount of extensions to 1.
 	//
 	// +optional
 	// +kubebuilder:validation:MinItems=0
