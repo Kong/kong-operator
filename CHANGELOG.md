@@ -107,7 +107,7 @@
   resources.
   [#714](https://github.com/Kong/gateway-operator/pull/714)
 - The KonnectExtension functionality is enabled only when the `--enable-controller-konnect`
-  flag is set.
+  flag or the `GATEWAY_OPERATOR_ENABLE_CONTROLLER_KONNECT` env var is set.
   [#738](https://github.com/Kong/gateway-operator/pull/738)
 
 ### Fixed
