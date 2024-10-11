@@ -42,6 +42,7 @@ type Reconciler struct {
 	Callbacks                DataPlaneCallbacks
 	ContextInjector          ctxinjector.CtxInjector
 	DefaultImage             string
+	KonnectEnabled           bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -91,7 +92,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "applying extensions", dataplane)
-	patched, requeue, err := applyExtensions(ctx, r.Client, logger, dataplane)
+	patched, requeue, err := applyExtensions(ctx, r.Client, logger, dataplane, r.KonnectEnabled)
 	if err != nil {
 		if !requeue {
 			log.Debug(logger, "failed to apply extensions", dataplane, "error:", err)
