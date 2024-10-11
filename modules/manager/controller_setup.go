@@ -204,6 +204,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			Condition: c.GatewayControllerEnabled || c.DataPlaneBlueGreenControllerEnabled || c.DataPlaneControllerEnabled,
 			GVRs: []schema.GroupVersionResource{
 				operatorv1beta1.DataPlaneGVR(),
+				operatorv1alpha1.KongPluginInstallationGVR(),
 			},
 		},
 		{
@@ -225,6 +226,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					Version:  gatewayv1.SchemeGroupVersion.Version,
 					Resource: "gateways",
 				},
+				operatorv1alpha1.KongPluginInstallationGVR(),
 			},
 		},
 		{
@@ -233,7 +235,130 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				operatorv1alpha1.AIGatewayGVR(),
 			},
 		},
+		{
+			Condition: c.KongPluginInstallationControllerEnabled,
+			GVRs: []schema.GroupVersionResource{
+				operatorv1alpha1.KongPluginInstallationGVR(),
+			},
+		},
+		{
+			Condition: c.KonnectControllersEnabled,
+			GVRs: []schema.GroupVersionResource{
+				operatorv1alpha1.KonnectExtensionGVR(),
+				{
+					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
+					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
+					Resource: "konnectgatewaycontrolplanes",
+				},
+				{
+					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
+					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
+					Resource: "konnectapiauthconfigurations",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongcacertificates",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongcertificates",
+				},
+				{
+					Group:    configurationv1beta1.SchemeGroupVersion.Group,
+					Version:  configurationv1beta1.SchemeGroupVersion.Version,
+					Resource: "kongconsumergroups",
+				},
+				{
+					Group:    configurationv1.SchemeGroupVersion.Group,
+					Version:  configurationv1.SchemeGroupVersion.Version,
+					Resource: "kongconsumers",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongcredentialacls",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongcredentialapikeys",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongcredentialbasicauths",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongcredentialhmacs",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongcredentialjwts",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongdataplaneclientcertificates",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongkeys",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongkeysets",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongpluginbindings",
+				},
+				{
+					Group:    configurationv1.SchemeGroupVersion.Group,
+					Version:  configurationv1.SchemeGroupVersion.Version,
+					Resource: "kongplugins",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongroutes",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongservices",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongsnis",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongtargets",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongupstreams",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongvaults",
+				},
+			},
+		},
 	}
+
 	checker := k8sutils.CRDChecker{Client: mgr.GetClient()}
 	for _, check := range crdChecks {
 		if !check.Condition {
