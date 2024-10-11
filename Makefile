@@ -497,20 +497,31 @@ webhook-certs-dir:
 _ensure-kong-system-namespace:
 	@kubectl create ns kong-system 2>/dev/null || true
 
+TMP_DIR := $(shell mktemp -d)
+KUBECONFIG ?= $(HOME)/.kube/config
+TMP_KUBECONFIG := $(TMP_DIR)/kubeconfig
+
+.PHONY: impersonate-kgo
+impersonate-kgo:
+	cp $(KUBECONFIG) $(TMP_KUBECONFIG)
+	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-credentials kgo --token=$(shell kubectl create token --namespace=kong-system controller-manager)
+	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-context kgo --cluster=$(shell kubectl config get-contexts | grep '^\*' | tr -s ' ' | cut -d ' ' -f 3) --user=kgo --namespace=kong-system
+	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config use-context kgo
+
+
+
 # Run a controller from your host.
-# TODO: In order not to rely on 'main' version of Gateway API CRDs address but
-# on the tag that is used in code (defined in go.mod) address this by solving
-# https://github.com/Kong/gateway-operator/pull/480.
 .PHONY: run
-run: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace
-	@$(MAKE) _run
+run: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace install.rbacs
+	$(MAKE) _run
 
 # Run the operator without checking any preconditions, installing CRDs etc.
 # This is mostly useful when 'run' was run at least once on a server and CRDs, RBACs
 # etc didn't change in between the runs.
+# The operator will use a temporary kubeconfig file and impersonate the real RBACs.
 .PHONY: _run
-_run:
-	GATEWAY_OPERATOR_DEVELOPMENT_MODE=true go run ./cmd/main.go \
+_run: impersonate-kgo
+	KUBECONFIG=$(TMP_KUBECONFIG) GATEWAY_OPERATOR_DEVELOPMENT_MODE=true go run ./cmd/main.go \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		-enable-controller-kongplugininstallation \
@@ -568,6 +579,11 @@ KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$
 .PHONY: install.kubernetes-configuration-crds
 install.kubernetes-configuration-crds: kustomize
 	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH) | kubectl apply -f -
+
+# Install RBACs from config/rbac into the K8s cluster specified in ~/.kube/config.
+.PHONY: install.rbacs
+install.rbacs: kustomize
+	$(KUSTOMIZE) build config/rbac | kubectl apply -f -
 
 # Install standard and experimental CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.all
