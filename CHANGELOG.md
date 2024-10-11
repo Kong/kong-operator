@@ -106,6 +106,9 @@
 - Apply Konnect-related customizations to `DataPlane`s that properly reference `KonnectExtension`
   resources.
   [#714](https://github.com/Kong/gateway-operator/pull/714)
+- The KonnectExtension functionality is enabled only when the `--enable-controller-konnect`
+  flag or the `GATEWAY_OPERATOR_ENABLE_CONTROLLER_KONNECT` env var is set.
+  [#738](https://github.com/Kong/gateway-operator/pull/738)
 
 ### Fixed
 

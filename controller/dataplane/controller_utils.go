@@ -322,10 +322,16 @@ func isDeploymentReady(deploymentStatus appsv1.DeploymentStatus) (metav1.Conditi
 //   - requeue: a boolean indicating if the dataplane should be requeued. If the error was unexpected (e.g., because of API server error), the dataplane should be requeued.
 //     In case the error is related to a misconfiguration, the dataplane does not need to be requeued, and feedback is provided into the dataplane status.
 //   - err: an error in case of failure.
-func applyExtensions(ctx context.Context, cl client.Client, logger logr.Logger, dataplane *operatorv1beta1.DataPlane) (patched bool, requeue bool, err error) {
+func applyExtensions(ctx context.Context, cl client.Client, logger logr.Logger, dataplane *operatorv1beta1.DataPlane, konnectEnabled bool) (patched bool, requeue bool, err error) {
 	if len(dataplane.Spec.Extensions) == 0 {
 		return false, false, nil
 	}
+
+	// the konnect extension is the only one implemented at the moment. In case konnect is not enabled, we return early.
+	if !konnectEnabled {
+		return false, false, nil
+	}
+
 	condition := k8sutils.NewConditionWithGeneration(consts.ResolvedRefsType, metav1.ConditionTrue, consts.ResolvedRefsReason, "", dataplane.GetGeneration())
 	err = applyKonnectExtension(ctx, cl, dataplane)
 	if err != nil {
