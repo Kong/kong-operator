@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/gateway-operator/modules/manager/scheme"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	"github.com/kong/gateway-operator/pkg/consts"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -28,10 +28,11 @@ import (
 func TestCreateControlPlane(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
-		name        string
-		mockCPTuple func(*testing.T) (*MockControlPlaneSDK, *MockControlPlaneGroupSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
-		expectedErr bool
-		assertions  func(*testing.T, *konnectv1alpha1.KonnectGatewayControlPlane)
+		name           string
+		mockCPTuple    func(*testing.T) (*MockControlPlaneSDK, *MockControlPlaneGroupSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
+		expectedErr    bool
+		expectedID     string
+		expectedReason consts.ConditionReason
 	}{
 		{
 			name: "success",
@@ -62,14 +63,7 @@ func TestCreateControlPlane(t *testing.T) {
 
 				return sdk, sdkGroups, cp
 			},
-			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
-				assert.Equal(t, "12345", cp.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
-				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
-				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
-			},
+			expectedID: "12345",
 		},
 		{
 			name: "fail",
@@ -103,16 +97,8 @@ func TestCreateControlPlane(t *testing.T) {
 
 				return sdk, sdkGroups, cp
 			},
-			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
-				assert.Equal(t, "", cp.Status.GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
-				assert.Equal(t, metav1.ConditionFalse, cond.Status)
-				assert.Equal(t, "FailedToCreate", cond.Reason)
-				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, `failed to create KonnectGatewayControlPlane default/cp-1: {"status":400,"title":"","instance":"","detail":"bad request","invalid_parameters":null}`, cond.Message)
-			},
-			expectedErr: true,
+			expectedErr:    true,
+			expectedReason: consts.KonnectEntitiesFailedToCreateReason,
 		},
 	}
 
@@ -121,15 +107,15 @@ func TestCreateControlPlane(t *testing.T) {
 			sdk, sdkGroups, cp := tc.mockCPTuple(t)
 			fakeClient := fake.NewClientBuilder().Build()
 
-			err := createControlPlane(ctx, sdk, sdkGroups, fakeClient, cp)
-			tc.assertions(t, cp)
-
+			id, reason, err := createControlPlane(ctx, sdk, sdkGroups, fakeClient, cp)
 			if tc.expectedErr {
 				assert.Error(t, err)
 				return
 			}
 
 			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedID, id)
+			assert.Equal(t, tc.expectedReason, reason)
 		})
 	}
 }
@@ -265,10 +251,11 @@ func TestDeleteControlPlane(t *testing.T) {
 func TestUpdateControlPlane(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
-		name        string
-		mockCPTuple func(*testing.T) (*MockControlPlaneSDK, *MockControlPlaneGroupSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
-		expectedErr bool
-		assertions  func(*testing.T, *konnectv1alpha1.KonnectGatewayControlPlane)
+		name           string
+		mockCPTuple    func(*testing.T) (*MockControlPlaneSDK, *MockControlPlaneGroupSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
+		expectedErr    bool
+		expectedID     string
+		expectedReason consts.ConditionReason
 	}{
 		{
 			name: "success",
@@ -309,15 +296,7 @@ func TestUpdateControlPlane(t *testing.T) {
 
 				return sdk, sdkGroups, cp
 			},
-			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
-				assert.Equal(t, "12345", cp.Status.GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
-				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
-				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, "", cond.Message)
-			},
+			expectedID: "12345",
 		},
 		{
 			name: "fail",
@@ -362,16 +341,8 @@ func TestUpdateControlPlane(t *testing.T) {
 
 				return sdk, sdkGroups, cp
 			},
-			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
-				assert.Equal(t, "12345", cp.Status.GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
-				assert.Equal(t, metav1.ConditionFalse, cond.Status)
-				assert.Equal(t, "FailedToUpdate", cond.Reason)
-				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, `failed to update KonnectGatewayControlPlane default/cp-1: {"status":400,"title":"","instance":"","detail":"bad request","invalid_parameters":null}`, cond.Message)
-			},
-			expectedErr: true,
+			expectedReason: consts.KonnectEntitiesFailedToUpdateReason,
+			expectedErr:    true,
 		},
 		{
 			name: "when not found then try to create",
@@ -430,15 +401,6 @@ func TestUpdateControlPlane(t *testing.T) {
 
 				return sdk, sdkGroups, cp
 			},
-			assertions: func(t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
-				assert.Equal(t, "12345", cp.Status.GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
-				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
-				assert.Equal(t, cp.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, "", cond.Message)
-			},
 		},
 	}
 
@@ -447,18 +409,15 @@ func TestUpdateControlPlane(t *testing.T) {
 			sdk, sdkGroups, cp := tc.mockCPTuple(t)
 			fakeClient := fake.NewClientBuilder().Build()
 
-			err := updateControlPlane(ctx, sdk, sdkGroups, fakeClient, cp)
-
-			if tc.assertions != nil {
-				tc.assertions(t, cp)
-			}
-
+			id, reason, err := updateControlPlane(ctx, sdk, sdkGroups, fakeClient, cp)
 			if tc.expectedErr {
 				assert.Error(t, err)
 				return
 			}
 
 			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedID, id)
+			assert.Equal(t, tc.expectedReason, reason)
 		})
 	}
 }
@@ -483,9 +442,9 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 				},
 			},
 		}
-		sdk        = NewMockControlPlaneSDK(t)
-		sdkGroups  = NewMockControlPlaneGroupSDK(t)
-		fakeClient = fake.NewClientBuilder().Build()
+		sdk              = NewMockSDKFactory(t)
+		sdkControlPlanes = sdk.SDK.ControlPlaneSDK
+		fakeClient       = fake.NewClientBuilder().Build()
 	)
 
 	t.Log("Triggering CreateControlPlane with expected labels")
@@ -498,7 +457,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 		"k8s-version":    "v1alpha1",
 		"k8s-generation": "2",
 	}
-	sdk.EXPECT().
+	sdkControlPlanes.EXPECT().
 		CreateControlPlane(ctx, sdkkonnectcomp.CreateControlPlaneRequest{
 			Name:   "cp-1",
 			Labels: expectedLabels,
@@ -508,10 +467,11 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 				ID: lo.ToPtr("12345"),
 			},
 		}, nil)
-	require.NoError(t, createControlPlane(ctx, sdk, sdkGroups, fakeClient, cp))
+	_, err := Create(ctx, sdk.SDK, fakeClient, cp)
+	require.NoError(t, err)
 
 	t.Log("Triggering UpdateControlPlane with expected labels")
-	sdk.EXPECT().
+	sdkControlPlanes.EXPECT().
 		UpdateControlPlane(ctx, "12345", sdkkonnectcomp.UpdateControlPlaneRequest{
 			Name:   lo.ToPtr("cp-1"),
 			Labels: expectedLabels,
@@ -521,7 +481,8 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 				ID: lo.ToPtr("12345"),
 			},
 		}, nil)
-	require.NoError(t, updateControlPlane(ctx, sdk, sdkGroups, fakeClient, cp))
+	_, err = Update(ctx, sdk.SDK, 0, fakeClient, cp)
+	require.NoError(t, err)
 }
 
 func TestSetGroupMembers(t *testing.T) {
@@ -567,11 +528,6 @@ func TestSetGroupMembers(t *testing.T) {
 						{
 							Name: "cp-1",
 						},
-					},
-				},
-				Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
-					KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
-						ID: "cpg-12345",
 					},
 				},
 			},
@@ -627,11 +583,6 @@ func TestSetGroupMembers(t *testing.T) {
 						},
 					},
 				},
-				Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
-					KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
-						ID: "cpg-12345",
-					},
-				},
 			},
 			cps: []client.Object{
 				&konnectv1alpha1.KonnectGatewayControlPlane{
@@ -667,11 +618,6 @@ func TestSetGroupMembers(t *testing.T) {
 						{
 							Name: "cp-2",
 						},
-					},
-				},
-				Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
-					KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
-						ID: "cpg-12345",
 					},
 				},
 			},
@@ -744,11 +690,6 @@ func TestSetGroupMembers(t *testing.T) {
 						},
 					},
 				},
-				Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
-					KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
-						ID: "cpg-12345",
-					},
-				},
 			},
 			cps: []client.Object{
 				&konnectv1alpha1.KonnectGatewayControlPlane{
@@ -786,7 +727,7 @@ func TestSetGroupMembers(t *testing.T) {
 				Build()
 
 			sdk := tc.sdk(t)
-			err := setGroupMembers(context.Background(), fakeClient, tc.group, sdk)
+			err := setGroupMembers(context.Background(), fakeClient, tc.group, "cpg-12345", sdk)
 			if tc.expectedErr {
 				assert.Error(t, err)
 				return

@@ -52,3 +52,16 @@ const (
 	// InvalidSecretRefReason is a generic reason describing that the secret reference is invalid. It must be used when the ResolvedRefs condition is set to False.
 	InvalidSecretRefReason ConditionReason = "InvalidSecret"
 )
+
+// -----------------------------------------------------------------------------
+// Konnect entities - Programmed Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// KonnectEntitiesFailedToCreateReason is the reason assigned to Konnect entities that failed to get created.
+	// It must be used when Programmed condition is set to False.
+	KonnectEntitiesFailedToCreateReason ConditionReason = "FailedToCreate"
+	// KonnectEntitiesFailedToUpdateReason is the reason assigned to Konnect entities that failed to get updated.
+	// It must be used when Programmed condition is set to False.
+	KonnectEntitiesFailedToUpdateReason ConditionReason = "FailedToUpdate"
+)

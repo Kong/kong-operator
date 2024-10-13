@@ -2,9 +2,11 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -46,15 +49,17 @@ func Create[
 	ctx context.Context,
 	sdk SDKWrapper,
 	cl client.Client,
-	e *T,
+	e TEnt,
 ) (*T, error) {
 	var (
-		err   error
-		start = time.Now()
+		err    error
+		id     string
+		reason consts.ConditionReason
+		start  = time.Now()
 	)
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		err = createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+		id, reason, err = createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -97,6 +102,35 @@ func Create[
 		// TODO: add other Konnect types
 	default:
 		return nil, fmt.Errorf("unsupported entity type %T", ent)
+	}
+
+	var errConflict *sdkkonnecterrs.ConflictError
+	switch {
+	case errors.As(err, &errConflict):
+		switch ent := any(e).(type) {
+		case *konnectv1alpha1.KonnectGatewayControlPlane:
+			id, err = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), ent)
+			// ---------------------------------------------------------------------
+			// TODO: add other Konnect types
+		default:
+
+		}
+
+		if err == nil && id != "" {
+			e.SetKonnectID(id)
+			SetKonnectEntityProgrammedCondition(e)
+		} else {
+			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
+		}
+	case err != nil:
+		e.SetKonnectID(id)
+		if reason == "" {
+			reason = consts.KonnectEntitiesFailedToCreateReason
+		}
+		SetKonnectEntityProgrammedConditionFalse(e, reason, err.Error())
+	default:
+		e.SetKonnectID(id)
+		SetKonnectEntityProgrammedCondition(e)
 	}
 
 	logOpComplete[T, TEnt](ctx, start, CreateOp, e, err)
@@ -216,7 +250,13 @@ func shouldUpdate[
 func Update[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
-](ctx context.Context, sdk SDKWrapper, syncPeriod time.Duration, cl client.Client, e *T) (ctrl.Result, error) {
+](
+	ctx context.Context,
+	sdk SDKWrapper,
+	syncPeriod time.Duration,
+	cl client.Client,
+	e TEnt,
+) (ctrl.Result, error) {
 	var (
 		ent = TEnt(e)
 		now = time.Now()
@@ -233,10 +273,14 @@ func Update[
 		)
 	}
 
-	var err error
+	var (
+		err    error
+		id     string
+		reason consts.ConditionReason
+	)
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+		id, reason, err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *configurationv1alpha1.KongService:
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -280,6 +324,19 @@ func Update[
 
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
+	}
+
+	if err != nil {
+		if id != "" {
+			e.SetKonnectID(id)
+		}
+		if reason == "" {
+			reason = consts.KonnectEntitiesFailedToUpdateReason
+		}
+		SetKonnectEntityProgrammedConditionFalse(e, reason, err.Error())
+	} else {
+		e.SetKonnectID(id)
+		SetKonnectEntityProgrammedCondition(e)
 	}
 
 	logOpComplete[T, TEnt](ctx, now, UpdateOp, e, err)
