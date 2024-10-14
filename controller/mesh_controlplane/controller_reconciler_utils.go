@@ -180,7 +180,7 @@ func (r *Reconciler) ensureDeployment(
 	if err != nil {
 		return op.Noop, nil, err
 	}
-	generatedDeployment, err := k8sresources.GenerateNewDeploymentForControlPlane(k8sresources.GenerateNewDeploymentForControlPlaneParams{
+	generatedDeployment, err := k8sresources.GenerateNewDeploymentForControlPlaneMesh(k8sresources.GenerateNewDeploymentForControlPlaneParams{
 		ControlPlane:                   params.ControlPlane,
 		ControlPlaneImage:              controlplaneImage,
 		ServiceAccountName:             params.ServiceAccountName,

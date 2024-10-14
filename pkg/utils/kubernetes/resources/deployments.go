@@ -2,6 +2,7 @@ package resources
 
 import (
 	"fmt"
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	"sync"
 
 	"github.com/samber/lo"
@@ -125,6 +126,213 @@ func GenerateNewDeploymentForControlPlane(params GenerateNewDeploymentForControl
 	// Set defaults for the deployment so that we don't get a diff when we compare
 	// it with what's in the cluster.
 	pkgapisappsv1.SetDefaults_Deployment(deployment)
+
+	return deployment, nil
+}
+
+func GenerateNewDeploymentForControlPlaneMesh(params GenerateNewDeploymentForControlPlaneParams) (*appsv1.Deployment, error) {
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"app":                        "kuma-control-plane",
+				"app.kubernetes.io/instance": "kuma",
+				"app.kubernetes.io/name":     "kuma",
+			},
+			Name:      "kuma-control-plane",
+			Namespace: "kuma-system",
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: sdkkonnectgo.Pointer(int32(1)),
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+				"app":                        "kuma-control-plane",
+				"app.kubernetes.io/instance": "kuma",
+				"app.kubernetes.io/name":     "kuma",
+			}},
+			Strategy: appsv1.DeploymentStrategy{RollingUpdate: &appsv1.RollingUpdateDeployment{MaxSurge: &intstr.IntOrString{IntVal: int32(1)}}},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"checksum/config":      "fd9d1d8386f97f2bd49e50f476520816168a1c9f60bbc43dec1347a64d239155",
+						"checksum/tls-secrets": "cd5650b43d26157935d13a561eed2f7c85b6d0cf988a024a52e005527240a49d",
+					},
+					Labels: map[string]string{
+						"app":                        "kuma-control-plane",
+						"app.kubernetes.io/instance": "kuma",
+						"app.kubernetes.io/name":     "kuma",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Affinity: &corev1.Affinity{PodAntiAffinity: &corev1.PodAntiAffinity{PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{corev1.WeightedPodAffinityTerm{
+						PodAffinityTerm: corev1.PodAffinityTerm{
+							LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{metav1.LabelSelectorRequirement{
+								Key:      "app.kubernetes.io/name",
+								Operator: metav1.LabelSelectorOperator("In"),
+								Values:   []string{"kuma"},
+							}, metav1.LabelSelectorRequirement{
+								Key:      "app.kubernetes.io/instance",
+								Operator: metav1.LabelSelectorOperator("In"),
+								Values:   []string{"kuma"},
+							}, metav1.LabelSelectorRequirement{
+								Key:      "app",
+								Operator: metav1.LabelSelectorOperator("In"),
+								Values:   []string{"kuma-control-plane"},
+							}}},
+							TopologyKey: "kubernetes.io/hostname",
+						},
+						Weight: int32(100),
+					}}}},
+					AutomountServiceAccountToken: sdkkonnectgo.Pointer(true),
+					Containers: []corev1.Container{corev1.Container{
+						Args: []string{"run", "--log-level=info", "--log-output-path=", "--config-file=/etc/kuma.io/kuma-control-plane/config.yaml"},
+						Env: []corev1.EnvVar{corev1.EnvVar{
+							Name:  "KUMA_API_SERVER_AUTHN_LOCALHOST_IS_ADMIN",
+							Value: "false",
+						}, corev1.EnvVar{
+							Name:  "KUMA_API_SERVER_READ_ONLY",
+							Value: "true",
+						}, corev1.EnvVar{
+							Name:  "KUMA_DEFAULTS_SKIP_MESH_CREATION",
+							Value: "false",
+						}, corev1.EnvVar{
+							Name:  "KUMA_DP_SERVER_HDS_ENABLED",
+							Value: "false",
+						}, corev1.EnvVar{
+							Name:  "KUMA_ENVIRONMENT",
+							Value: "kubernetes",
+						}, corev1.EnvVar{
+							Name:  "KUMA_GENERAL_TLS_CERT_FILE",
+							Value: "/var/run/secrets/kuma.io/tls-cert/tls.crt",
+						}, corev1.EnvVar{
+							Name:  "KUMA_GENERAL_TLS_KEY_FILE",
+							Value: "/var/run/secrets/kuma.io/tls-cert/tls.key",
+						}, corev1.EnvVar{
+							Name:  "KUMA_INJECTOR_INIT_CONTAINER_IMAGE",
+							Value: "docker.io/kumahq/kuma-init:0.0.1",
+						}, corev1.EnvVar{
+							Name:  "KUMA_MODE",
+							Value: "zone",
+						}, corev1.EnvVar{
+							Name:  "KUMA_PLUGIN_POLICIES_ENABLED",
+							Value: "meshaccesslogs,meshcircuitbreakers,meshfaultinjections,meshhealthchecks,meshhttproutes,meshloadbalancingstrategies,meshmetrics,meshpassthroughs,meshproxypatches,meshratelimits,meshretries,meshtcproutes,meshtimeouts,meshtlses,meshtraces,meshtrafficpermissions",
+						}, corev1.EnvVar{
+							Name:  "KUMA_RUNTIME_KUBERNETES_ADMISSION_SERVER_CERT_DIR",
+							Value: "/var/run/secrets/kuma.io/tls-cert",
+						}, corev1.EnvVar{
+							Name:  "KUMA_RUNTIME_KUBERNETES_ADMISSION_SERVER_PORT",
+							Value: "5443",
+						}, corev1.EnvVar{
+							Name:  "KUMA_RUNTIME_KUBERNETES_ALLOWED_USERS",
+							Value: "system:serviceaccount:kuma-system:kuma-control-plane",
+						}, corev1.EnvVar{
+							Name:  "KUMA_RUNTIME_KUBERNETES_CONTROL_PLANE_SERVICE_NAME",
+							Value: "kuma-control-plane",
+						}, corev1.EnvVar{
+							Name:  "KUMA_RUNTIME_KUBERNETES_INJECTOR_CA_CERT_FILE",
+							Value: "/var/run/secrets/kuma.io/tls-cert/ca.crt",
+						}, corev1.EnvVar{
+							Name:  "KUMA_RUNTIME_KUBERNETES_INJECTOR_CNI_ENABLED",
+							Value: "false",
+						}, corev1.EnvVar{
+							Name:  "KUMA_RUNTIME_KUBERNETES_INJECTOR_SIDECAR_CONTAINER_IMAGE",
+							Value: "docker.io/kumahq/kuma-dp:0.0.1",
+						}, corev1.EnvVar{
+							Name:  "KUMA_STORE_KUBERNETES_SYSTEM_NAMESPACE",
+							Value: "kuma-system",
+						}, corev1.EnvVar{
+							Name:  "KUMA_STORE_TYPE",
+							Value: "kubernetes",
+						}, corev1.EnvVar{
+							Name:      "KUMA_INTER_CP_CATALOG_INSTANCE_ADDRESS",
+							ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}},
+						}, corev1.EnvVar{
+							Name: "GOMEMLIMIT",
+							ValueFrom: &corev1.EnvVarSource{ResourceFieldRef: &corev1.ResourceFieldSelector{
+								ContainerName: "control-plane",
+								Resource:      "limits.memory",
+							}},
+						}, corev1.EnvVar{
+							Name: "GOMAXPROCS",
+							ValueFrom: &corev1.EnvVarSource{ResourceFieldRef: &corev1.ResourceFieldSelector{
+								ContainerName: "control-plane",
+								Resource:      "limits.cpu",
+							}},
+						}},
+						Image:           "docker.io/kumahq/kuma-cp:0.0.1",
+						ImagePullPolicy: corev1.PullPolicy("IfNotPresent"),
+						LivenessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{
+								Path: "/healthy",
+								Port: intstr.IntOrString{IntVal: int32(5680)},
+							}},
+							TimeoutSeconds: int32(10),
+						},
+						Name: "control-plane",
+						Ports: []corev1.ContainerPort{corev1.ContainerPort{
+							ContainerPort: int32(5680),
+							Name:          "diagnostics",
+							Protocol:      corev1.Protocol("TCP"),
+						}, corev1.ContainerPort{ContainerPort: int32(5681)}, corev1.ContainerPort{ContainerPort: int32(5682)}, corev1.ContainerPort{ContainerPort: int32(5443)}, corev1.ContainerPort{ContainerPort: int32(5678)}},
+						ReadinessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{
+								Path: "/ready",
+								Port: intstr.IntOrString{IntVal: int32(5680)},
+							}},
+							TimeoutSeconds: int32(10),
+						},
+						Resources: corev1.ResourceRequirements{
+							Limits: map[corev1.ResourceName]resource.Quantity{corev1.ResourceName("memory"): resource.MustParse("256Mi")},
+							Requests: map[corev1.ResourceName]resource.Quantity{
+								corev1.ResourceName("cpu"):    resource.MustParse("500m"),
+								corev1.ResourceName("memory"): resource.MustParse("256Mi"),
+							},
+						},
+						SecurityContext: &corev1.SecurityContext{ReadOnlyRootFilesystem: sdkkonnectgo.Pointer(true)},
+						VolumeMounts: []corev1.VolumeMount{corev1.VolumeMount{
+							MountPath: "/var/run/secrets/kuma.io/tls-cert/tls.crt",
+							Name:      "general-tls-cert",
+							ReadOnly:  true,
+							SubPath:   "tls.crt",
+						}, corev1.VolumeMount{
+							MountPath: "/var/run/secrets/kuma.io/tls-cert/tls.key",
+							Name:      "general-tls-cert",
+							ReadOnly:  true,
+							SubPath:   "tls.key",
+						}, corev1.VolumeMount{
+							MountPath: "/var/run/secrets/kuma.io/tls-cert/ca.crt",
+							Name:      "general-tls-cert",
+							ReadOnly:  true,
+							SubPath:   "ca.crt",
+						}, corev1.VolumeMount{
+							MountPath: "/etc/kuma.io/kuma-control-plane",
+							Name:      "kuma-control-plane-config",
+							ReadOnly:  true,
+						}, corev1.VolumeMount{
+							MountPath: "/tmp",
+							Name:      "tmp",
+						}},
+					}},
+					NodeSelector:                  map[string]string{"kubernetes.io/os": "linux"},
+					SecurityContext:               &corev1.PodSecurityContext{RunAsNonRoot: sdkkonnectgo.Pointer(true)},
+					ServiceAccountName:            "kuma-control-plane",
+					TerminationGracePeriodSeconds: sdkkonnectgo.Pointer(int64(30)),
+					Volumes: []corev1.Volume{corev1.Volume{
+						Name:         "general-tls-cert",
+						VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: "general-tls-secret"}},
+					}, corev1.Volume{
+						Name:         "kuma-control-plane-config",
+						VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: "kuma-control-plane-config"}}},
+					}, corev1.Volume{
+						Name:         "tmp",
+						VolumeSource: corev1.VolumeSource{},
+					}},
+				},
+			},
+		},
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+		},
+	}
 
 	return deployment, nil
 }

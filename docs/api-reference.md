@@ -2275,7 +2275,6 @@ version, as well as Env variable overrides.
 
 | Field | Description |
 | --- | --- |
-| `replicas` _integer_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This only affects the DataPlane deployments for now, for more details on ControlPlane scaling please see https://github.com/Kong/gateway-operator/issues/736. |
 | `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. |
 
 
