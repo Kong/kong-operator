@@ -15,8 +15,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/toml v1.3.2/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/Kong/sdk-konnect-go v0.0.15 h1:FzRn/VJbsKLF+Ye1/xv1kIVH+RAFh+x3l5y8RpHhyDQ=
-github.com/Kong/sdk-konnect-go v0.0.15/go.mod h1:ipu67aQNnwDzu/LXKePG46cVqkkZnAHKWpsbhTEI8xE=
+github.com/Kong/sdk-konnect-go v0.0.16 h1:xQMvwhMpypFUlPZiAbNpT/epeL1az2/RGa8/qlzKpmw=
+github.com/Kong/sdk-konnect-go v0.0.16/go.mod h1:ipu67aQNnwDzu/LXKePG46cVqkkZnAHKWpsbhTEI8xE=
 github.com/Masterminds/semver v1.5.0 h1:H65muMkzWKEuNDnfl9d70GUjFniHKHRbFPGBuZ3QEww=
 github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
