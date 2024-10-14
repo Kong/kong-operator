@@ -207,6 +207,7 @@ rules:
   - kongkeys/status
   - kongkeysets/status
   - konglicenses/status
+  - kongpluginbindings/status
   - kongplugins/status
   - kongroutes/status
   - kongservices/status
