@@ -44,6 +44,10 @@ func (c *FakeApisV1alpha1) KonnectExtensions(namespace string) v1alpha1.KonnectE
 	return &FakeKonnectExtensions{c, namespace}
 }
 
+func (c *FakeApisV1alpha1) MeshControlPlanes(namespace string) v1alpha1.MeshControlPlaneInterface {
+	return &FakeMeshControlPlanes{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeApisV1alpha1) RESTClient() rest.Interface {

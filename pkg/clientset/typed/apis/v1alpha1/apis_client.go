@@ -32,6 +32,7 @@ type ApisV1alpha1Interface interface {
 	DataPlaneMetricsExtensionsGetter
 	KongPluginInstallationsGetter
 	KonnectExtensionsGetter
+	MeshControlPlanesGetter
 }
 
 // ApisV1alpha1Client is used to interact with features provided by the apis group.
@@ -53,6 +54,10 @@ func (c *ApisV1alpha1Client) KongPluginInstallations(namespace string) KongPlugi
 
 func (c *ApisV1alpha1Client) KonnectExtensions(namespace string) KonnectExtensionInterface {
 	return newKonnectExtensions(c, namespace)
+}
+
+func (c *ApisV1alpha1Client) MeshControlPlanes(namespace string) MeshControlPlaneInterface {
+	return newMeshControlPlanes(c, namespace)
 }
 
 // NewForConfig creates a new ApisV1alpha1Client for the given config.

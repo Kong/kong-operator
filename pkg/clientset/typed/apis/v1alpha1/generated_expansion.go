@@ -25,3 +25,5 @@ type DataPlaneMetricsExtensionExpansion interface{}
 type KongPluginInstallationExpansion interface{}
 
 type KonnectExtensionExpansion interface{}
+
+type MeshControlPlaneExpansion interface{}

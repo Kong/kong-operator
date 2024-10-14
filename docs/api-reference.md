@@ -1749,6 +1749,7 @@ Package v1alpha1 contains API Schema definitions for the operator v1alpha1 API g
 - [DataPlaneMetricsExtension](#dataplanemetricsextension)
 - [KongPluginInstallation](#kongplugininstallation)
 - [KonnectExtension](#konnectextension)
+- [MeshControlPlane](#meshcontrolplane)
 ### AIGateway
 
 
@@ -1854,6 +1855,23 @@ deployment spec gets customized to include the konnect-related configuration.
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectExtensionSpec](#konnectextensionspec)_ | Spec is the specification of the KonnectExtension resource. |
 | `status` _[KonnectExtensionStatus](#konnectextensionstatus)_ | Status is the status of the KonnectExtension resource. |
+
+
+
+### MeshControlPlane
+
+
+MeshControlPlane is the Schema for the controlplanes API
+
+<!-- mesh_control_plane description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway-operator.konghq.com/v1alpha1`
+| `kind` _string_ | `MeshControlPlane`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[MeshControlPlaneSpec](#meshcontrolplanespec)_ |  |
+| `status` _[ControlPlaneStatus](#controlplanestatus)_ |  |
 
 
 
@@ -2012,6 +2030,21 @@ ClusterCertificateSecretRef contains the reference to the Secret containing the 
 
 _Appears in:_
 - [KonnectControlPlaneAPIAuthConfiguration](#konnectcontrolplaneapiauthconfiguration)
+
+#### ControlPlaneStatus
+
+
+ControlPlaneStatus defines the observed state of ControlPlane
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions describe the current conditions of the Gateway. |
+
+
+_Appears in:_
+- [MeshControlPlane](#meshcontrolplane)
 
 #### DataPlaneMetricsExtensionSpec
 
@@ -2228,6 +2261,58 @@ serve and manage traffic for.
 
 _Appears in:_
 - [AIGatewaySpec](#aigatewayspec)
+
+#### MeshControlPlaneDeploymentOptions
+
+
+MeshControlPlaneDeploymentOptions is a shared type used on objects to indicate that their
+configuration results in a Deployment which is managed by the Operator and
+includes options for managing Deployments such as the the number of replicas
+or pod options like container image and resource requirements.
+version, as well as Env variable overrides.
+
+
+
+| Field | Description |
+| --- | --- |
+| `replicas` _integer_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This only affects the DataPlane deployments for now, for more details on ControlPlane scaling please see https://github.com/Kong/gateway-operator/issues/736. |
+| `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. |
+
+
+_Appears in:_
+- [MeshControlPlaneOptions](#meshcontrolplaneoptions)
+- [MeshControlPlaneSpec](#meshcontrolplanespec)
+
+#### MeshControlPlaneOptions
+
+
+MeshControlPlaneOptions indicates the specific information needed to
+deploy and connect a ControlPlane to a DataPlane object.
+
+
+
+| Field | Description |
+| --- | --- |
+| `deployment` _[MeshControlPlaneDeploymentOptions](#meshcontrolplanedeploymentoptions)_ |  |
+
+
+_Appears in:_
+- [MeshControlPlaneSpec](#meshcontrolplanespec)
+
+#### MeshControlPlaneSpec
+
+
+MeshControlPlaneSpec defines the desired state of ControlPlane
+
+
+
+| Field | Description |
+| --- | --- |
+| `deployment` _[MeshControlPlaneDeploymentOptions](#meshcontrolplanedeploymentoptions)_ |  |
+
+
+_Appears in:_
+- [MeshControlPlane](#meshcontrolplane)
 
 #### MetricsConfig
 

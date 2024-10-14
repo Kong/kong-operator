@@ -28,3 +28,11 @@ func KonnectExtensionGVR() schema.GroupVersionResource {
 		Resource: "konnectextensions",
 	}
 }
+
+func MeshControlPlaneGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{
+		Group:    SchemeGroupVersion.Group,
+		Version:  SchemeGroupVersion.Version,
+		Resource: "meshcontrolplanes",
+	}
+}
