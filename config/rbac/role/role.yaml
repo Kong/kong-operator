@@ -179,6 +179,7 @@ rules:
   - kongdataplaneclientcertificates/finalizers
   - kongkeys/finalizers
   - kongkeysets/finalizers
+  - kongpluginbindings/status
   - kongroutes/finalizers
   - kongservices/finalizers
   - kongsnis/finalizers
@@ -207,7 +208,6 @@ rules:
   - kongkeys/status
   - kongkeysets/status
   - konglicenses/status
-  - kongpluginbindings/status
   - kongplugins/status
   - kongroutes/status
   - kongservices/status
