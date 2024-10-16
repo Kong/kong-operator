@@ -59,7 +59,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.GetLogger(ctx, "controlplane", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, "meshcontrolplane", r.DevelopmentMode)
 
 	log.Trace(logger, "reconciling ControlPlane resource", req)
 	cp := new(operatorv1beta1.ControlPlane)
