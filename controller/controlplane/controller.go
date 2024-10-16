@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller"
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
@@ -362,14 +363,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		AdminMTLSCertSecretName: adminCertificate.Name,
 	}
 
-	admissionWebhookCertificateSecretName, res, err := r.ensureWebhookResources(ctx, logger, cp)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to ensure webhook resources: %w", err)
-	} else if res != op.Noop {
-		return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
-	}
-	deploymentParams.AdmissionWebhookCertSecretName = admissionWebhookCertificateSecretName
-
 	log.Trace(logger, "looking for existing Deployments for ControlPlane resource", cp)
 	res, controlplaneDeployment, err := r.ensureDeployment(ctx, logger, deploymentParams)
 	if err != nil {
@@ -465,78 +458,19 @@ func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, update
 }
 
 func (r *Reconciler) ensureWebhookResources(
-	ctx context.Context, logger logr.Logger, cp *operatorv1beta1.ControlPlane,
+	ctx context.Context, logger logr.Logger, cp *operatorv1alpha1.MeshControlPlane,
 ) (string, op.Result, error) {
-	webhookEnabled := isAdmissionWebhookEnabled(ctx, r.Client, logger, cp)
-	if !webhookEnabled {
-		log.Debug(logger, "admission webhook disabled, ensuring admission webhook resources are not present", cp)
-	} else {
-		log.Debug(logger, "admission webhook enabled, enforcing admission webhook resources", cp)
-	}
-
 	log.Trace(logger, "ensuring admission webhook service", cp)
 	res, admissionWebhookService, err := r.ensureAdmissionWebhookService(ctx, logger, r.Client, cp)
 	if err != nil {
 		return "", res, fmt.Errorf("failed to ensure admission webhook service: %w", err)
 	}
-	if res != op.Noop {
-		if !webhookEnabled {
-			log.Debug(logger, "admission webhook service has been removed", cp)
-		} else {
-			log.Debug(logger, "admission webhook service has been created/updated", cp)
-		}
-		return "", res, nil // requeue will be triggered by the creation or update of the owned object
-	}
-
-	log.Trace(logger, "ensuring admission webhook certificate", cp)
-	res, admissionWebhookCertificateSecret, err := r.ensureAdmissionWebhookCertificateSecret(ctx, logger, cp, admissionWebhookService)
-	if err != nil {
-		return "", res, err
-	}
-	if res != op.Noop {
-		if !webhookEnabled {
-			log.Debug(logger, "admission webhook service certificate has been removed", cp)
-		} else {
-			log.Debug(logger, "admission webhook service certificate has been created/updated", cp)
-		}
-		return "", res, nil // requeue will be triggered by the creation or update of the owned object
-	}
 
 	log.Trace(logger, "ensuring admission webhook configuration", cp)
-	res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, admissionWebhookCertificateSecret, admissionWebhookService)
+	res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, admissionWebhookService)
 	if err != nil {
 		return "", res, err
 	}
-	if res != op.Noop {
-		if !webhookEnabled {
-			log.Debug(logger, "ValidatingWebhookConfiguration has been removed", cp)
-		} else {
-			log.Debug(logger, "ValidatingWebhookConfiguration has been created/updated", cp)
-		}
-	}
-	if webhookEnabled {
-		return admissionWebhookCertificateSecret.Name, res, nil
-	}
+
 	return "", res, nil
-}
-
-func isAdmissionWebhookEnabled(ctx context.Context, cl client.Client, logger logr.Logger, cp *operatorv1beta1.ControlPlane) bool {
-	if cp.Spec.Deployment.PodTemplateSpec == nil {
-		return false
-	}
-
-	container := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-	if container == nil {
-		return false
-	}
-	admissionWebhookListen, ok, err := k8sutils.GetEnvValueFromContainer(ctx, container, cp.Namespace, "CONTROLLER_ADMISSION_WEBHOOK_LISTEN", cl)
-	if err != nil {
-		log.Debug(logger, "unable to get CONTROLLER_ADMISSION_WEBHOOK_LISTEN env var", cp, "error", err)
-		return false
-	}
-	if !ok {
-		return false
-	}
-	// We don't validate the value of the env var here, just that it is set.
-	return len(admissionWebhookListen) > 0 && admissionWebhookListen != "off"
 }
