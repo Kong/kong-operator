@@ -12,6 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/kong/gateway-operator/pkg/consts"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
@@ -19,9 +21,9 @@ func createRoute(
 	ctx context.Context,
 	sdk RoutesSDK,
 	route *configurationv1alpha1.KongRoute,
-) error {
+) (string, consts.ConditionReason, error) { //nolint:unparam
 	if route.GetControlPlaneID() == "" {
-		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", route, client.ObjectKeyFromObject(route))
+		return "", "", fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", route, client.ObjectKeyFromObject(route))
 	}
 
 	resp, err := sdk.CreateRoute(ctx, route.Status.Konnect.ControlPlaneID, kongRouteToSDKRouteInput(route))
@@ -30,14 +32,11 @@ func createRoute(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, route); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(route, "FailedToCreate", errWrap.Error())
-		return errWrap
+
+		return "", "", errWrap
 	}
 
-	route.Status.Konnect.SetKonnectID(*resp.Route.ID)
-	SetKonnectEntityProgrammedCondition(route)
-
-	return nil
+	return *resp.Route.ID, "", nil
 }
 
 // updateRoute updates the Konnect Route entity.

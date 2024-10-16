@@ -397,9 +397,8 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
 						var cp konnectv1alpha1.KonnectGatewayControlPlane
 						require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: "cp-4"}, &cp))
-
-						return r.FilterNameEq != nil && *r.FilterNameEq == "cp-4" &&
-							r.Labels != nil && *r.Labels == ops.KubernetesUIDLabelKey+":"+string(cp.UID)
+						// On conflict, we list cps by UID and check if there is already one created.
+						return r.Labels != nil && *r.Labels == ops.KubernetesUIDLabelKey+":"+string(cp.UID)
 					}),
 				).
 				Return(

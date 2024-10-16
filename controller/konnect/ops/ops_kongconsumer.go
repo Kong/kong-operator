@@ -16,6 +16,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -29,10 +30,10 @@ func createConsumer(
 	cgSDK ConsumerGroupSDK,
 	cl client.Client,
 	consumer *configurationv1.KongConsumer,
-) error {
+) (string, consts.ConditionReason, error) { //nolint:unparam
 	cpID := consumer.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", consumer, client.ObjectKeyFromObject(consumer))
+		return "", "", fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", consumer, client.ObjectKeyFromObject(consumer))
 	}
 
 	resp, err := sdk.CreateConsumer(ctx,
@@ -44,22 +45,18 @@ func createConsumer(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, consumer); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(consumer, konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed, errWrap.Error())
-		return errWrap
+		return "", "", errWrap
 	}
 
 	// Set the Konnect ID in the status to keep it even if ConsumerGroup assignments fail.
-	consumer.Status.Konnect.SetKonnectID(*resp.Consumer.ID)
+	id := *resp.Consumer.ID
+	consumer.SetKonnectID(id)
 
 	if err = handleConsumerGroupAssignments(ctx, consumer, cl, cgSDK, cpID); err != nil {
-		return fmt.Errorf("failed to handle ConsumerGroup assignments: %w", err)
+		return id, "", fmt.Errorf("failed to handle ConsumerGroup assignments: %w", err)
 	}
 
-	// The Consumer is considered Programmed if it was successfully created and all its _valid_ ConsumerGroup references
-	// are in sync.
-	SetKonnectEntityProgrammedCondition(consumer)
-
-	return nil
+	return id, "", nil
 }
 
 // updateConsumer updates a KongConsumer in Konnect.

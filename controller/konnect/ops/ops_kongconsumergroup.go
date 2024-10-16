@@ -11,6 +11,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/kong/gateway-operator/pkg/consts"
+
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
@@ -18,9 +20,9 @@ func createConsumerGroup(
 	ctx context.Context,
 	sdk ConsumerGroupSDK,
 	group *configurationv1beta1.KongConsumerGroup,
-) error {
+) (string, consts.ConditionReason, error) { //nolint:unparam
 	if group.GetControlPlaneID() == "" {
-		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", group, client.ObjectKeyFromObject(group))
+		return "", "", fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", group, client.ObjectKeyFromObject(group))
 	}
 
 	resp, err := sdk.CreateConsumerGroup(ctx,
@@ -32,14 +34,10 @@ func createConsumerGroup(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, group); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(group, "FailedToCreate", errWrap.Error())
-		return errWrap
+		return "", "", errWrap
 	}
 
-	group.Status.Konnect.SetKonnectID(*resp.ConsumerGroup.ID)
-	SetKonnectEntityProgrammedCondition(group)
-
-	return nil
+	return *resp.ConsumerGroup.ID, "", nil
 }
 
 // updateConsumerGroup updates a KongConsumerGroup in Konnect.

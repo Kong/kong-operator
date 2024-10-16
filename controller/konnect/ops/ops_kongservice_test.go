@@ -153,7 +153,7 @@ func TestCreateKongService(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			sdk, svc := tc.mockServicePair(t)
 
-			err := createService(ctx, sdk, svc)
+			_, _, err := createService(ctx, sdk, svc)
 
 			tc.assertions(t, svc)
 

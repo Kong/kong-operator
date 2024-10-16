@@ -60,14 +60,15 @@ func Create[
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		id, reason, err = createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+		// TODO: modify the create* operation wrappers to return Konnect ID and error reason.
 	case *configurationv1alpha1.KongService:
-		err = createService(ctx, sdk.GetServicesSDK(), ent)
+		id, reason, err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
-		err = createRoute(ctx, sdk.GetRoutesSDK(), ent)
+		id, reason, err = createRoute(ctx, sdk.GetRoutesSDK(), ent)
 	case *configurationv1.KongConsumer:
-		err = createConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent)
+		id, reason, err = createConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		err = createConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
+		id, reason, err = createConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.KongPluginBinding:
 		err = createPlugin(ctx, cl, sdk.GetPluginSDK(), ent)
 	case *configurationv1alpha1.KongUpstream:
@@ -123,13 +124,18 @@ func Create[
 			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
 		}
 	case err != nil:
-		e.SetKonnectID(id)
+		if id != "" {
+			e.SetKonnectID(id)
+		}
 		if reason == "" {
 			reason = consts.KonnectEntitiesFailedToCreateReason
 		}
 		SetKonnectEntityProgrammedConditionFalse(e, reason, err.Error())
 	default:
-		e.SetKonnectID(id)
+		// TODO: remove the check after all create* returns Konnect ID.
+		if id != "" {
+			e.SetKonnectID(id)
+		}
 		SetKonnectEntityProgrammedCondition(e)
 	}
 
@@ -279,6 +285,7 @@ func Update[
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		id, reason, err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *configurationv1alpha1.KongService:
+		// TODO: modify the update* operation wrappers to return Konnect ID and error reason.
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
 		err = updateRoute(ctx, sdk.GetRoutesSDK(), ent)
@@ -332,7 +339,10 @@ func Update[
 		}
 		SetKonnectEntityProgrammedConditionFalse(e, reason, err.Error())
 	} else {
-		e.SetKonnectID(id)
+		// TODO: remove the check after all update* returns Konnect ID.
+		if id != "" {
+			e.SetKonnectID(id)
+		}
 		SetKonnectEntityProgrammedCondition(e)
 	}
 
