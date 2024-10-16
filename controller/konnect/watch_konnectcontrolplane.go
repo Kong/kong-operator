@@ -4,11 +4,8 @@ import (
 	"context"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -29,22 +26,7 @@ func KonnectGatewayControlPlaneReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(
-				&konnectv1alpha1.KonnectGatewayControlPlane{},
-				builder.WithPredicates(
-					predicate.Or(
-						predicate.GenerationChangedPredicate{},
-						predicate.TypedFuncs[client.Object]{
-							CreateFunc: func(e event.TypedCreateEvent[client.Object]) bool {
-								return true
-							},
-							DeleteFunc: func(e event.TypedDeleteEvent[client.Object]) bool {
-								return true
-							},
-						},
-					),
-				),
-			)
+			return b.For(&konnectv1alpha1.KonnectGatewayControlPlane{})
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(

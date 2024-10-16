@@ -257,19 +257,16 @@ func Update[
 	cl client.Client,
 	e TEnt,
 ) (ctrl.Result, error) {
-	var (
-		ent = TEnt(e)
-		now = time.Now()
-	)
+	var now = time.Now()
 
-	if ok, res := shouldUpdate(ctx, ent, syncPeriod, now); !ok {
+	if ok, res := shouldUpdate(ctx, e, syncPeriod, now); !ok {
 		return res, nil
 	}
 
-	if ent.GetKonnectStatus().GetKonnectID() == "" {
+	if e.GetKonnectStatus().GetKonnectID() == "" {
 		return ctrl.Result{}, fmt.Errorf(
 			"can't update %T %s when it does not have the Konnect ID",
-			ent, client.ObjectKeyFromObject(ent),
+			e, client.ObjectKeyFromObject(e),
 		)
 	}
 
