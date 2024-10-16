@@ -17,6 +17,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
@@ -684,7 +685,7 @@ func (r *Reconciler) ensureAdmissionWebhookService(
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
-	cp *operatorv1beta1.ControlPlane,
+	cp *operatorv1alpha1.MeshControlPlane,
 ) (op.Result, *corev1.Service, error) {
 	matchingLabels := k8sresources.GetManagedLabelForOwner(cp)
 	matchingLabels[consts.ControlPlaneServiceLabel] = consts.ControlPlaneServiceKindWebhook
@@ -698,18 +699,6 @@ func (r *Reconciler) ensureAdmissionWebhookService(
 	)
 	if err != nil {
 		return op.Noop, nil, fmt.Errorf("failed listing admission webhook Services for ControlPlane %s/%s: %w", cp.Namespace, cp.Name, err)
-	}
-
-	if !isAdmissionWebhookEnabled(ctx, cl, logger, cp) {
-		for _, svc := range services {
-			if err := cl.Delete(ctx, &svc); client.IgnoreNotFound(err) != nil {
-				return op.Noop, nil, fmt.Errorf("failed deleting ControlPlane admission webhook Service %s: %w", svc.Name, err)
-			}
-		}
-		if len(services) == 0 {
-			return op.Noop, nil, nil
-		}
-		return op.Deleted, nil, nil
 	}
 
 	count := len(services)
@@ -757,120 +746,25 @@ func (r *Reconciler) ensureAdmissionWebhookService(
 
 func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	ctx context.Context,
-	cp *operatorv1beta1.ControlPlane,
-	certSecret *corev1.Secret,
+	cp *operatorv1alpha1.MeshControlPlane,
 	webhookService *corev1.Service,
 ) (op.Result, error) {
-	logger := log.GetLogger(ctx, "controlplane.ensureValidatingWebhookConfiguration", r.DevelopmentMode)
-
-	// NOTE: Code below performs a migration from the old managedBy label to the new one.
-	// It lists both resources labeled with the old and the new label set and merges them,
-	// then it reduces the number of resources to 1 and eventually updates the resource.
-	// After several versions of soak time we can remove handling the legacy label set.
-	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
-	// PR that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
-	// TODO: https://github.com/Kong/gateway-operator/issues/401.
-	validatingWebhookConfigurationsLegacy, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(
-		ctx,
-		r.Client,
-		cp.GetUID(),
-		// NOTE: this uses only the 1 label to find the legacy webhook configurations not the label set
-		// because app:<name> is not set on ValidatingWebhookConfiguration.
-		client.MatchingLabels(k8sutils.GetLegacyManagedByLabel(cp)),
-	)
-	if err != nil {
-		return op.Noop, fmt.Errorf("failed listing webhook configurations for owner: %w", err)
-	}
-
-	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
-		ctx,
-		r.Client,
-		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
-	)
-	if err != nil {
-		return op.Noop, fmt.Errorf("failed listing webhook configurations for owner: %w", err)
-	}
-
-	// NOTE: This is a temporary workaround to handle the migration from the old managedBy label to the new one.
-	// The reason for this is because those label sets overlap.
-	for i, vwc := range validatingWebhookConfigurationsLegacy {
-		nn := client.ObjectKeyFromObject(&vwc)
-		if lo.ContainsBy(validatingWebhookConfigurations, func(iterator admregv1.ValidatingWebhookConfiguration) bool {
-			return client.ObjectKeyFromObject(&iterator) == nn
-		}) {
-			continue
-		}
-
-		validatingWebhookConfigurations = append(validatingWebhookConfigurations, validatingWebhookConfigurationsLegacy[i])
-	}
-
-	count := len(validatingWebhookConfigurations)
-	if count > 1 {
-		if err := k8sreduce.ReduceValidatingWebhookConfigurations(ctx, r.Client, validatingWebhookConfigurations); err != nil {
-			return op.Noop, err
-		}
-		return op.Noop, errors.New("number of validatingWebhookConfigurations reduced")
-	}
-
-	if !isAdmissionWebhookEnabled(ctx, r.Client, logger, cp) {
-		for _, webhookConfiguration := range validatingWebhookConfigurations {
-			if err := r.Client.Delete(ctx, &webhookConfiguration); client.IgnoreNotFound(err) != nil {
-				return op.Noop, fmt.Errorf("failed deleting ControlPlane admission webhook ValidatingWebhookConfiguration %s: %w", webhookConfiguration.Name, err)
-			}
-		}
-		if len(validatingWebhookConfigurations) == 0 {
-			return op.Noop, nil
-		}
-		return op.Deleted, nil
-	}
 
 	cpContainer := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
 	if cpContainer == nil {
 		return op.Noop, errors.New("controller container not found")
 	}
 
-	caBundle, ok := certSecret.Data["ca.crt"]
-	if !ok {
-		return op.Noop, errors.New("ca.crt not found in secret")
-	}
-	generatedWebhookConfiguration, err := k8sresources.GenerateValidatingWebhookConfigurationForControlPlane(
+	generatedWebhookConfiguration := k8sresources.GenerateMutatingWebhookConfigurationMeshForControlPlane(
 		cp.Name,
-		cpContainer.Image,
-		r.DevelopmentMode,
 		admregv1.WebhookClientConfig{
 			Service: &admregv1.ServiceReference{
 				Namespace: cp.Namespace,
 				Name:      webhookService.GetName(),
 				Port:      lo.ToPtr(int32(consts.ControlPlaneAdmissionWebhookListenPort)),
 			},
-			CABundle: caBundle,
 		},
 	)
-	if err != nil {
-		return op.Noop, fmt.Errorf("failed generating ControlPlane's ValidatingWebhookConfiguration: %w", err)
-	}
-	k8sutils.SetOwnerForObjectThroughLabels(generatedWebhookConfiguration, cp)
-
-	if count == 1 {
-		var updated bool
-		webhookConfiguration := validatingWebhookConfigurations[0]
-		old := webhookConfiguration.DeepCopy()
-
-		updated, webhookConfiguration.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(webhookConfiguration.ObjectMeta, generatedWebhookConfiguration.ObjectMeta)
-
-		if !cmp.Equal(webhookConfiguration.Webhooks, generatedWebhookConfiguration.Webhooks) ||
-			!cmp.Equal(webhookConfiguration.Labels, generatedWebhookConfiguration.Labels) {
-			webhookConfiguration.Webhooks = generatedWebhookConfiguration.Webhooks
-			updated = true
-		}
-
-		if updated {
-			log.Debug(logger, "patching existing ValidatingWebhookConfiguration", webhookConfiguration)
-			return op.Updated, r.Client.Patch(ctx, &webhookConfiguration, client.MergeFrom(old))
-		}
-
-		return op.Noop, nil
-	}
 
 	return op.Created, r.Client.Create(ctx, generatedWebhookConfiguration)
 }
