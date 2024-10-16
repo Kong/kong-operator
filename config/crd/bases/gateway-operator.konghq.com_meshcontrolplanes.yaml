@@ -8,14 +8,9 @@ metadata:
 spec:
   group: gateway-operator.konghq.com
   names:
-    categories:
-    - kong
-    - all
     kind: MeshControlPlane
     listKind: MeshControlPlaneList
     plural: meshcontrolplanes
-    shortNames:
-    - kocp
     singular: meshcontrolplane
   scope: Namespaced
   versions:

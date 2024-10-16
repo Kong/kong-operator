@@ -1,0 +1,5 @@
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: MeshControlPlane
+metadata:
+  name: controlplane-example
+spec:
