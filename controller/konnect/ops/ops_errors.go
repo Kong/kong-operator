@@ -5,20 +5,21 @@ import (
 	"errors"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ErrNilResponse is an error indicating that a Konnect operation returned an empty response.
 // This can sometimes happen regardless of the err being nil.
 var ErrNilResponse = errors.New("nil response received")
 
+type entity interface {
+	client.Object
+	GetTypeName() string
+}
+
 // EntityWithMatchingUIDNotFoundError is an error indicating that an entity with a matching UID was not found on Konnect.
 type EntityWithMatchingUIDNotFoundError struct {
-	Entity interface {
-		GetTypeName() string
-		GetName() string
-		GetUID() types.UID
-	}
+	Entity entity
 }
 
 // Error implements the error interface.

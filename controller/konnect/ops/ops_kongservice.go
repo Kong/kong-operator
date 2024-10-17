@@ -15,47 +15,6 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
-// getKongServiceForUID returns the Konnect ID of the KongService
-// that matches the UID of the provided KongService.
-func getKongServiceForUID(
-	ctx context.Context,
-	sdk ServicesSDK,
-	svc *configurationv1alpha1.KongService,
-) (string, error) {
-	reqList := sdkkonnectops.ListServiceRequest{
-		// NOTE: only filter on object's UID.
-		// Other fields like name might have changed in the meantime but that's OK.
-		// Those will be enforced via subsequent updates.
-		Tags:           lo.ToPtr(UIDLabelForObject(svc)),
-		ControlPlaneID: svc.GetControlPlaneID(),
-	}
-
-	respList, err := sdk.ListService(ctx, reqList)
-	if err != nil {
-		return "", err
-	}
-
-	if respList == nil || respList.Object == nil {
-		return "", fmt.Errorf("failed listing KongServices: %w", ErrNilResponse)
-	}
-
-	var id string
-	for _, entry := range respList.Object.Data {
-		if entry.ID != nil && *entry.ID != "" {
-			id = *entry.ID
-			break
-		}
-	}
-
-	if id == "" {
-		return "", EntityWithMatchingUIDNotFoundError{
-			Entity: svc,
-		}
-	}
-
-	return id, nil
-}
-
 func createService(
 	ctx context.Context,
 	sdk ServicesSDK,
@@ -84,9 +43,8 @@ func createService(
 		return fmt.Errorf("failed creating %s: %w", svc.GetTypeName(), ErrNilResponse)
 	}
 
-	// At this point, the ControlPlane has been created in Konnect.
-	id := *resp.Service.ID
-	svc.SetKonnectID(id)
+	// At this point, the Service has been created in Konnect.
+	svc.SetKonnectID(*resp.Service.ID)
 
 	return nil
 }
@@ -115,9 +73,9 @@ func updateService(
 		},
 	)
 
-	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it, hm
+	// that created that entity and already manages it.
+	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, svc); errWrap != nil {
 		// Service update operation returns an SDKError instead of a NotFoundError.
 		var sdkError *sdkkonnecterrs.SDKError
@@ -203,4 +161,31 @@ func kongServiceToSDKServiceInput(
 		TLSVerifyDepth: svc.Spec.KongServiceAPISpec.TLSVerifyDepth,
 		WriteTimeout:   svc.Spec.KongServiceAPISpec.WriteTimeout,
 	}
+}
+
+// getKongServiceForUID returns the Konnect ID of the KongService
+// that matches the UID of the provided KongService.
+func getKongServiceForUID(
+	ctx context.Context,
+	sdk ServicesSDK,
+	svc *configurationv1alpha1.KongService,
+) (string, error) {
+	reqList := sdkkonnectops.ListServiceRequest{
+		// NOTE: only filter on object's UID.
+		// Other fields like name might have changed in the meantime but that's OK.
+		// Those will be enforced via subsequent updates.
+		Tags:           lo.ToPtr(UIDLabelForObject(svc)),
+		ControlPlaneID: svc.GetControlPlaneID(),
+	}
+
+	respList, err := sdk.ListService(ctx, reqList)
+	if err != nil {
+		return "", err
+	}
+
+	if respList == nil || respList.Object == nil {
+		return "", fmt.Errorf("failed listing %s: %w", svc.GetTypeName(), ErrNilResponse)
+	}
+
+	return getMatchingEntryFromListResponseData(fromSliceToSlice(respList.Object.Data), svc)
 }

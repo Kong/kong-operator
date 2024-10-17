@@ -19,46 +19,6 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// getControlPlaneForUID returns the Konnect ID of the Konnect ControlPlane
-// that matches the UID of the provided KonnectGatewayControlPlane.
-func getControlPlaneForUID(
-	ctx context.Context,
-	sdk ControlPlaneSDK,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-) (string, error) {
-	reqList := sdkkonnectops.ListControlPlanesRequest{
-		// NOTE: only filter on object's UID.
-		// Other fields like name might have changed in the meantime but that's OK.
-		// Those will be enforced via subsequent updates.
-		Labels: lo.ToPtr(UIDLabelForObject(cp)),
-	}
-
-	respList, err := sdk.ListControlPlanes(ctx, reqList)
-	if err != nil {
-		return "", err
-	}
-
-	if respList == nil || respList.ListControlPlanesResponse == nil {
-		return "", fmt.Errorf("failed listing ControlPlanes: %w", ErrNilResponse)
-	}
-
-	var id string
-	for _, entry := range respList.ListControlPlanesResponse.Data {
-		if entry.ID != nil && *entry.ID != "" {
-			id = *entry.ID
-			break
-		}
-	}
-
-	if id == "" {
-		return "", EntityWithMatchingUIDNotFoundError{
-			Entity: cp,
-		}
-	}
-
-	return id, nil
-}
-
 // createControlPlane creates the ControlPlane as specified in provided ControlPlane's
 // spec. Besides creating the ControlPlane, it also creates the group membership if the
 // ControlPlane is a group. If the group membership creation fails, KonnectEntityCreatedButRelationsFailedError
@@ -254,3 +214,29 @@ type membersByID []sdkkonnectcomp.Members
 func (m membersByID) Len() int           { return len(m) }
 func (m membersByID) Less(i, j int) bool { return *m[i].ID < *m[j].ID }
 func (m membersByID) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+
+// getControlPlaneForUID returns the Konnect ID of the Konnect ControlPlane
+// that matches the UID of the provided KonnectGatewayControlPlane.
+func getControlPlaneForUID(
+	ctx context.Context,
+	sdk ControlPlaneSDK,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+) (string, error) {
+	reqList := sdkkonnectops.ListControlPlanesRequest{
+		// NOTE: only filter on object's UID.
+		// Other fields like name might have changed in the meantime but that's OK.
+		// Those will be enforced via subsequent updates.
+		Labels: lo.ToPtr(UIDLabelForObject(cp)),
+	}
+
+	respList, err := sdk.ListControlPlanes(ctx, reqList)
+	if err != nil {
+		return "", err
+	}
+
+	if respList == nil || respList.ListControlPlanesResponse == nil {
+		return "", fmt.Errorf("failed listing %s: %w", cp.GetTypeName(), ErrNilResponse)
+	}
+
+	return getMatchingEntryFromListResponseData(fromSliceToSlice(respList.ListControlPlanesResponse.Data), cp)
+}

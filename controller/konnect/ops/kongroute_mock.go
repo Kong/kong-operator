@@ -175,6 +175,80 @@ func (_c *MockRoutesSDK_DeleteRoute_Call) RunAndReturn(run func(context.Context,
 	return _c
 }
 
+// ListRoute provides a mock function with given fields: ctx, request, opts
+func (_m *MockRoutesSDK) ListRoute(ctx context.Context, request operations.ListRouteRequest, opts ...operations.Option) (*operations.ListRouteResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, request)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListRoute")
+	}
+
+	var r0 *operations.ListRouteResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, operations.ListRouteRequest, ...operations.Option) (*operations.ListRouteResponse, error)); ok {
+		return rf(ctx, request, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, operations.ListRouteRequest, ...operations.Option) *operations.ListRouteResponse); ok {
+		r0 = rf(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.ListRouteResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, operations.ListRouteRequest, ...operations.Option) error); ok {
+		r1 = rf(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRoutesSDK_ListRoute_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListRoute'
+type MockRoutesSDK_ListRoute_Call struct {
+	*mock.Call
+}
+
+// ListRoute is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request operations.ListRouteRequest
+//   - opts ...operations.Option
+func (_e *MockRoutesSDK_Expecter) ListRoute(ctx interface{}, request interface{}, opts ...interface{}) *MockRoutesSDK_ListRoute_Call {
+	return &MockRoutesSDK_ListRoute_Call{Call: _e.mock.On("ListRoute",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockRoutesSDK_ListRoute_Call) Run(run func(ctx context.Context, request operations.ListRouteRequest, opts ...operations.Option)) *MockRoutesSDK_ListRoute_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(operations.ListRouteRequest), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockRoutesSDK_ListRoute_Call) Return(_a0 *operations.ListRouteResponse, _a1 error) *MockRoutesSDK_ListRoute_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRoutesSDK_ListRoute_Call) RunAndReturn(run func(context.Context, operations.ListRouteRequest, ...operations.Option) (*operations.ListRouteResponse, error)) *MockRoutesSDK_ListRoute_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpsertRoute provides a mock function with given fields: ctx, req, opts
 func (_m *MockRoutesSDK) UpsertRoute(ctx context.Context, req operations.UpsertRouteRequest, opts ...operations.Option) (*operations.UpsertRouteResponse, error) {
 	_va := make([]interface{}, len(opts))
