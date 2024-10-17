@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -60,8 +61,9 @@ func TestKongConsumer(t *testing.T) {
 
 	t.Run("should create, update and delete Consumer without ConsumerGroups successfully", func(t *testing.T) {
 		const (
-			consumerID = "consumer-id"
-			username   = "user-1"
+			consumerID      = "consumer-id"
+			username        = "user-1"
+			updatedUsername = "user-1-updated"
 		)
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
@@ -112,14 +114,15 @@ func TestKongConsumer(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongConsumer update")
 		sdk.ConsumersSDK.EXPECT().
 			UpsertConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertConsumerRequest) bool {
-				return r.ConsumerID == consumerID &&
-					r.Consumer.Username != nil && *r.Consumer.Username == "user-1-updated"
+				match := r.ConsumerID == consumerID &&
+					r.Consumer.Username != nil && *r.Consumer.Username == updatedUsername
+				return match
 			})).
 			Return(&sdkkonnectops.UpsertConsumerResponse{}, nil)
 
 		t.Log("Patching KongConsumer")
 		consumerToPatch := createdConsumer.DeepCopy()
-		consumerToPatch.Username = "user-1-updated"
+		consumerToPatch.Username = updatedUsername
 		require.NoError(t, clientNamespaced.Patch(ctx, consumerToPatch, client.MergeFrom(createdConsumer)))
 
 		t.Log("Waiting for KongConsumer to be updated in the SDK")
@@ -134,6 +137,14 @@ func TestKongConsumer(t *testing.T) {
 
 		t.Log("Deleting KongConsumer")
 		require.NoError(t, cl.Delete(ctx, createdConsumer))
+
+		require.EventuallyWithT(t,
+			func(c *assert.CollectT) {
+				assert.True(c, k8serrors.IsNotFound(
+					clientNamespaced.Get(ctx, client.ObjectKeyFromObject(createdConsumer), createdConsumer),
+				))
+			}, waitTime, tickTime,
+		)
 
 		t.Log("Waiting for KongConsumer to be deleted in the SDK")
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {

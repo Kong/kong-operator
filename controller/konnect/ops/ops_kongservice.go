@@ -78,14 +78,14 @@ func updateService(
 		if errors.As(errWrap, &sdkError) {
 			switch sdkError.StatusCode {
 			case 404:
-				if err := createService(ctx, sdk, svc); err != nil {
+				err := createService(ctx, sdk, svc)
+				if err != nil {
 					return FailedKonnectOpError[configurationv1alpha1.KongService]{
 						Op:  UpdateOp,
 						Err: err,
 					}
 				}
 				// Create succeeded, createService sets the status so no need to do this here.
-
 				return nil
 			default:
 				return FailedKonnectOpError[configurationv1alpha1.KongService]{

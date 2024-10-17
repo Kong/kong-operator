@@ -7,6 +7,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -38,7 +39,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				},
 			)
 		},
-		mockExpectations: func(t *testing.T, sdk *ops.MockSDKWrapper, ns *corev1.Namespace) {
+		mockExpectations: func(t *testing.T, sdk *ops.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
 			sdk.ControlPlaneSDK.EXPECT().
 				CreateControlPlane(
 					mock.Anything,
@@ -107,7 +108,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				},
 			)
 		},
-		mockExpectations: func(t *testing.T, sdk *ops.MockSDKWrapper, ns *corev1.Namespace) {
+		mockExpectations: func(t *testing.T, sdk *ops.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
 			sdk.ControlPlaneSDK.EXPECT().
 				CreateControlPlane(
 					mock.Anything,
@@ -245,7 +246,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				},
 			)
 		},
-		mockExpectations: func(t *testing.T, sdk *ops.MockSDKWrapper, ns *corev1.Namespace) {
+		mockExpectations: func(t *testing.T, sdk *ops.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
 			sdk.ControlPlaneSDK.EXPECT().
 				CreateControlPlane(
 					mock.Anything,
@@ -362,6 +363,82 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 			assert.True(t, controllerutil.ContainsFinalizer(cpGroup, konnect.KonnectCleanupFinalizer),
 				"Finalizer should be set on control plane group",
+			)
+		},
+	},
+	{
+		name: "receiving HTTP Conflict 409 on creation results in lookup by UID and setting Konnect ID",
+		objectOps: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) {
+			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
+			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
+				func(obj client.Object) {
+					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+					cp.Name = "cp-4"
+					cp.Spec.Name = "cp-4"
+				},
+			)
+		},
+		mockExpectations: func(t *testing.T, sdk *ops.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
+			sdk.ControlPlaneSDK.EXPECT().
+				CreateControlPlane(
+					mock.Anything,
+					mock.MatchedBy(func(req sdkkonnectcomp.CreateControlPlaneRequest) bool {
+						return req.Name == "cp-4"
+					}),
+				).
+				Return(
+					nil,
+					&sdkkonnecterrs.ConflictError{},
+				)
+
+			sdk.ControlPlaneSDK.EXPECT().
+				ListControlPlanes(
+					mock.Anything,
+					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
+						var cp konnectv1alpha1.KonnectGatewayControlPlane
+						require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: "cp-4"}, &cp))
+						// On conflict, we list cps by UID and check if there is already one created.
+						return r.Labels != nil && *r.Labels == ops.KubernetesUIDLabelKey+":"+string(cp.UID)
+					}),
+				).
+				Return(
+					&sdkkonnectops.ListControlPlanesResponse{
+						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
+							Data: []sdkkonnectcomp.ControlPlane{
+								{
+									ID: lo.ToPtr("123456"),
+								},
+							},
+						},
+					},
+					nil,
+				)
+
+			// verify that mock SDK is called as expected.
+			t.Cleanup(func() {
+				require.True(t, sdk.ControlPlaneSDK.AssertExpectations(t))
+			})
+		},
+		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
+			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
+			if !assert.NoError(t,
+				cl.Get(ctx,
+					k8stypes.NamespacedName{
+						Namespace: ns.Name,
+						Name:      "cp-4",
+					},
+					cp,
+				),
+			) {
+				return
+			}
+
+			assert.Equal(t, "123456", cp.Status.ID, "ID should be set")
+			assert.True(t, conditionsContainProgrammedTrue(cp.Status.Conditions),
+				"Programmed condition should be set and its status should be true",
+			)
+			assert.True(t, controllerutil.ContainsFinalizer(cp, konnect.KonnectCleanupFinalizer),
+				"Finalizer should be set on control plane",
 			)
 		},
 	},

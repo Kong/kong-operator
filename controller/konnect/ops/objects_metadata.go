@@ -8,6 +8,7 @@ import (
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
@@ -95,4 +96,10 @@ func WithKubernetesMetadataLabels(obj ObjectWithMetadata, userSetLabels map[stri
 		labels[k] = v
 	}
 	return labels
+}
+
+// UIDLabelForObject returns the Kubernetes UID label and provided object's UID
+// separated by a semicolon.
+func UIDLabelForObject(obj client.Object) string {
+	return fmt.Sprintf("%s:%s", KubernetesUIDLabelKey, obj.GetUID())
 }

@@ -2,9 +2,11 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -46,7 +49,7 @@ func Create[
 	ctx context.Context,
 	sdk SDKWrapper,
 	cl client.Client,
-	e *T,
+	e TEnt,
 ) (*T, error) {
 	var (
 		err   error
@@ -55,6 +58,8 @@ func Create[
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		err = createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+		// TODO: modify the create* operation wrappers to not set Programmed conditions and return
+		// a KonnectEntityCreatedButRelationsFailedError if the entity was created but its relations assignment failed.
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -97,6 +102,42 @@ func Create[
 		// TODO: add other Konnect types
 	default:
 		return nil, fmt.Errorf("unsupported entity type %T", ent)
+	}
+
+	var (
+		errConflict        *sdkkonnecterrs.ConflictError
+		errRelationsFailed KonnectEntityCreatedButRelationsFailedError
+	)
+
+	switch {
+	case errors.As(err, &errConflict):
+		// If there was a conflict on the create request, we can assume the entity already exists.
+		// We'll get its Konnect ID by listing all entities of its type filtered by the Kubernetes object UID.
+		var id string
+		switch ent := any(e).(type) {
+		case *konnectv1alpha1.KonnectGatewayControlPlane:
+			id, err = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), ent)
+			// ---------------------------------------------------------------------
+			// TODO: add other Konnect types
+		default:
+			return e, fmt.Errorf("conflict on create request for %T %s, but no conflict handling implemented: %w",
+				e, client.ObjectKeyFromObject(e), err,
+			)
+		}
+
+		if err == nil && id != "" {
+			e.SetKonnectID(id)
+			SetKonnectEntityProgrammedCondition(e)
+		} else {
+			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
+		}
+	case errors.As(err, &errRelationsFailed):
+		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, err.Error())
+		e.SetKonnectID(errRelationsFailed.KonnectID)
+	case err != nil:
+		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
+	default:
+		SetKonnectEntityProgrammedCondition(e)
 	}
 
 	logOpComplete[T, TEnt](ctx, start, CreateOp, e, err)
@@ -216,20 +257,23 @@ func shouldUpdate[
 func Update[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
-](ctx context.Context, sdk SDKWrapper, syncPeriod time.Duration, cl client.Client, e *T) (ctrl.Result, error) {
-	var (
-		ent = TEnt(e)
-		now = time.Now()
-	)
+](
+	ctx context.Context,
+	sdk SDKWrapper,
+	syncPeriod time.Duration,
+	cl client.Client,
+	e TEnt,
+) (ctrl.Result, error) {
+	now := time.Now()
 
-	if ok, res := shouldUpdate(ctx, ent, syncPeriod, now); !ok {
+	if ok, res := shouldUpdate(ctx, e, syncPeriod, now); !ok {
 		return res, nil
 	}
 
-	if ent.GetKonnectStatus().GetKonnectID() == "" {
+	if e.GetKonnectStatus().GetKonnectID() == "" {
 		return ctrl.Result{}, fmt.Errorf(
 			"can't update %T %s when it does not have the Konnect ID",
-			ent, client.ObjectKeyFromObject(ent),
+			e, client.ObjectKeyFromObject(e),
 		)
 	}
 
@@ -238,6 +282,8 @@ func Update[
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *configurationv1alpha1.KongService:
+		// TODO: modify the create* operation wrappers to not set Programmed conditions and return
+		// a KonnectEntityCreatedButRelationsFailedError if the entity was created but its relations assignment failed.
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
 		err = updateRoute(ctx, sdk.GetRoutesSDK(), ent)
@@ -280,6 +326,17 @@ func Update[
 
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
+	}
+
+	var errRelationsFailed KonnectEntityCreatedButRelationsFailedError
+	switch {
+	case errors.As(err, &errRelationsFailed):
+		e.SetKonnectID(errRelationsFailed.KonnectID)
+		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, err.Error())
+	case err != nil:
+		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToUpdateReason, err.Error())
+	default:
+		SetKonnectEntityProgrammedCondition(e)
 	}
 
 	logOpComplete[T, TEnt](ctx, now, UpdateOp, e, err)

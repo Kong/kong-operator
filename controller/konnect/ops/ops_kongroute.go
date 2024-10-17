@@ -25,7 +25,6 @@ func createRoute(
 	}
 
 	resp, err := sdk.CreateRoute(ctx, route.Status.Konnect.ControlPlaneID, kongRouteToSDKRouteInput(route))
-
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
