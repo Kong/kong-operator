@@ -58,8 +58,9 @@ func getControlPlaneForUID(
 }
 
 // createControlPlane creates the ControlPlane as specified in provided ControlPlane's
-// spec. It returns the ID of created entity, a reason and an error.
-// The reason is provided if the err is not nil to indicate the failure reason.
+// spec. Besides creating the ControlPlane, it also creates the group membership if the
+// ControlPlane is a group. If the group membership creation fails, KonnectEntityCreatedButRelationsFailedError
+// is returned so it can be handled properly downstream.
 func createControlPlane(
 	ctx context.Context,
 	sdk ControlPlaneSDK,
@@ -136,8 +137,9 @@ func deleteControlPlane(
 
 // updateControlPlane updates a Konnect ControlPlane.
 // It is assumed that the Konnect ControlPlane has a Konnect ID.
-// When it succeeds it returns the ID of the updated entity.
-// It returns an error if the operation fails and a reason why the operation failed.
+// Besides updating the ControlPlane, it also updates the group membership if the ControlPlane is a group.
+// If the group membership update fails, KonnectEntityCreatedButRelationsFailedError is returned so it can
+// be handled properly downstream.
 func updateControlPlane(
 	ctx context.Context,
 	sdk ControlPlaneSDK,
@@ -184,6 +186,8 @@ func updateControlPlane(
 	id = *resp.ControlPlane.ID
 
 	if err := setGroupMembers(ctx, cl, cp, id, sdkGroups); err != nil {
+		// If we failed to set group membership, we should return a specific error with a reason
+		// so the downstream can handle it properly.
 		return KonnectEntityCreatedButRelationsFailedError{
 			KonnectID: id,
 			Err:       err,

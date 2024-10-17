@@ -277,14 +277,13 @@ func Update[
 		)
 	}
 
-	var (
-		err error
-	)
+	var err error
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *configurationv1alpha1.KongService:
-		// TODO: modify the update* operation wrappers to return Konnect ID and error reason.
+		// TODO: modify the create* operation wrappers to not set Programmed conditions and return
+		// a KonnectEntityCreatedButRelationsFailedError if the entity was created but its relations assignment failed.
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
 		err = updateRoute(ctx, sdk.GetRoutesSDK(), ent)
