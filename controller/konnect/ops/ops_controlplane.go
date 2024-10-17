@@ -16,8 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/gateway-operator/pkg/consts"
-
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -68,7 +66,7 @@ func createControlPlane(
 	sdkGroups ControlPlaneGroupSDK,
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-) (string, consts.ConditionReason, error) {
+) error {
 	req := cp.Spec.CreateControlPlaneRequest
 	req.Labels = WithKubernetesMetadataLabels(cp, req.Labels)
 
@@ -78,20 +76,28 @@ func createControlPlane(
 	// that created that entity and already manages it, hm
 	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cp); errWrap != nil {
-		return "", consts.KonnectEntitiesFailedToCreateReason, errWrap
+		return errWrap
 	}
 
 	if resp == nil || resp.ControlPlane == nil {
-		return "", "", fmt.Errorf("failed creating ControlPlane: %w", ErrNilResponse)
+		return fmt.Errorf("failed creating ControlPlane: %w", ErrNilResponse)
 	}
 
+	// At this point, the ControlPlane has been created in Konnect.
 	id := *resp.ControlPlane.ID
+	cp.SetKonnectID(id)
 
 	if err := setGroupMembers(ctx, cl, cp, id, sdkGroups); err != nil {
-		return id, konnectv1alpha1.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers, err
+		// If we failed to set group membership, we should return a specific error with a reason
+		// so the downstream can handle it properly.
+		return KonnectEntityCreatedButRelationsFailedError{
+			KonnectID: id,
+			Err:       err,
+			Reason:    konnectv1alpha1.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
+		}
 	}
 
-	return id, "", nil
+	return nil
 }
 
 // deleteControlPlane deletes a Konnect ControlPlane.
@@ -138,7 +144,7 @@ func updateControlPlane(
 	sdkGroups ControlPlaneGroupSDK,
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-) (string, consts.ConditionReason, error) {
+) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
 	req := sdkkonnectcomp.UpdateControlPlaneRequest{
 		Name:        sdkkonnectgo.String(cp.Spec.Name),
@@ -155,33 +161,37 @@ func updateControlPlane(
 			Info("entity not found in Konnect, trying to recreate",
 				"type", cp.GetTypeName(), "id", id,
 			)
-		if _, _, err := createControlPlane(ctx, sdk, sdkGroups, cl, cp); err != nil {
-			return "", consts.KonnectEntitiesFailedToCreateReason, FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
+		if err := createControlPlane(ctx, sdk, sdkGroups, cl, cp); err != nil {
+			return FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
 				Op:  UpdateOp,
 				Err: err,
 			}
 		}
 
-		return "", "", nil
+		return nil
 	}
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, cp); errWrap != nil {
-		return "", consts.KonnectEntitiesFailedToUpdateReason, FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
+		return FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
 			Op:  UpdateOp,
 			Err: errWrap,
 		}
 	}
 
 	if resp == nil || resp.ControlPlane == nil {
-		return "", "", fmt.Errorf("failed updating ControlPlane: %w", ErrNilResponse)
+		return fmt.Errorf("failed updating ControlPlane: %w", ErrNilResponse)
 	}
 	id = *resp.ControlPlane.ID
 
 	if err := setGroupMembers(ctx, cl, cp, id, sdkGroups); err != nil {
-		return id, konnectv1alpha1.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers, err
+		return KonnectEntityCreatedButRelationsFailedError{
+			KonnectID: id,
+			Err:       err,
+			Reason:    konnectv1alpha1.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
+		}
 	}
 
-	return id, "", nil
+	return nil
 }
 
 func setGroupMembers(

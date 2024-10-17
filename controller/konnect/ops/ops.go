@@ -43,8 +43,8 @@ const (
 
 // Create creates a Konnect entity.
 func Create[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
+T constraints.SupportedKonnectEntityType,
+TEnt constraints.EntityType[T],
 ](
 	ctx context.Context,
 	sdk SDKWrapper,
@@ -52,15 +52,14 @@ func Create[
 	e TEnt,
 ) (*T, error) {
 	var (
-		err    error
-		id     string
-		reason consts.ConditionReason
-		start  = time.Now()
+		err   error
+		start = time.Now()
 	)
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		id, reason, err = createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
-		// TODO: modify the create* operation wrappers to return Konnect ID and error reason.
+		err = createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+		// TODO: modify the create* operation wrappers to not set Programmed conditions and return
+		// a KonnectEntityCreatedButRelationsFailedError if the entity was created but its relations assignment failed.
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -105,18 +104,25 @@ func Create[
 		return nil, fmt.Errorf("unsupported entity type %T", ent)
 	}
 
-	var errConflict *sdkkonnecterrs.ConflictError
+	var (
+		errConflict        *sdkkonnecterrs.ConflictError
+		errRelationsFailed KonnectEntityCreatedButRelationsFailedError
+	)
+
 	switch {
 	case errors.As(err, &errConflict):
 		// If there was a conflict on the create request, we can assume the entity already exists.
 		// We'll get its Konnect ID by listing all entities of its type filtered by the Kubernetes object UID.
+		var id string
 		switch ent := any(e).(type) {
 		case *konnectv1alpha1.KonnectGatewayControlPlane:
 			id, err = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), ent)
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:
-
+			return e, fmt.Errorf("conflict on create request for %T %s, but no conflict handling implemented: %w",
+				e, client.ObjectKeyFromObject(e), err,
+			)
 		}
 
 		if err == nil && id != "" {
@@ -125,19 +131,13 @@ func Create[
 		} else {
 			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
 		}
+	case errors.As(err, &errRelationsFailed):
+		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, err.Error())
+		e.SetKonnectID(errRelationsFailed.KonnectID)
 	case err != nil:
-		if id != "" {
-			e.SetKonnectID(id)
-		}
-		if reason == "" {
-			reason = consts.KonnectEntitiesFailedToCreateReason
-		}
-		SetKonnectEntityProgrammedConditionFalse(e, reason, err.Error())
-	case id != "":
-		// TODO: remove the check after all create* returns Konnect ID.
-		e.SetKonnectID(id)
-		SetKonnectEntityProgrammedCondition(e)
+		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
 	default:
+		SetKonnectEntityProgrammedCondition(e)
 	}
 
 	logOpComplete[T, TEnt](ctx, start, CreateOp, e, err)
@@ -148,8 +148,8 @@ func Create[
 // Delete deletes a Konnect entity.
 // It returns an error if the entity does not have a Konnect ID or if the operation fails.
 func Delete[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
+T constraints.SupportedKonnectEntityType,
+TEnt constraints.EntityType[T],
 ](ctx context.Context, sdk SDKWrapper, cl client.Client, e *T) error {
 	ent := TEnt(e)
 	if ent.GetKonnectStatus().GetKonnectID() == "" {
@@ -216,8 +216,8 @@ func Delete[
 }
 
 func shouldUpdate[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
+T constraints.SupportedKonnectEntityType,
+TEnt constraints.EntityType[T],
 ](
 	ctx context.Context,
 	ent TEnt,
@@ -255,8 +255,8 @@ func shouldUpdate[
 // Update updates a Konnect entity.
 // It returns an error if the entity does not have a Konnect ID or if the operation fails.
 func Update[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
+T constraints.SupportedKonnectEntityType,
+TEnt constraints.EntityType[T],
 ](
 	ctx context.Context,
 	sdk SDKWrapper,
@@ -278,13 +278,11 @@ func Update[
 	}
 
 	var (
-		err    error
-		id     string
-		reason consts.ConditionReason
+		err error
 	)
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		id, reason, err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+		err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *configurationv1alpha1.KongService:
 		// TODO: modify the update* operation wrappers to return Konnect ID and error reason.
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
@@ -331,21 +329,15 @@ func Update[
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
 	}
 
+	var errRelationsFailed KonnectEntityCreatedButRelationsFailedError
 	switch {
+	case errors.As(err, &errRelationsFailed):
+		e.SetKonnectID(errRelationsFailed.KonnectID)
+		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, err.Error())
 	case err != nil:
-		if id != "" {
-			e.SetKonnectID(id)
-		}
-		if reason == "" {
-			reason = consts.KonnectEntitiesFailedToUpdateReason
-		}
-		SetKonnectEntityProgrammedConditionFalse(e, reason, err.Error())
-
-	case id != "":
-		// TODO: remove the check after all update* returns Konnect ID.
-		e.SetKonnectID(id)
-		SetKonnectEntityProgrammedCondition(e)
+		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToUpdateReason, err.Error())
 	default:
+		SetKonnectEntityProgrammedCondition(e)
 	}
 
 	logOpComplete[T, TEnt](ctx, now, UpdateOp, e, err)
@@ -354,8 +346,8 @@ func Update[
 }
 
 func logOpComplete[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
+T constraints.SupportedKonnectEntityType,
+TEnt constraints.EntityType[T],
 ](ctx context.Context, start time.Time, op Op, e TEnt, err error) {
 	keysAndValues := []interface{}{
 		"op", op,
@@ -381,8 +373,8 @@ func logOpComplete[
 // wrapErrIfKonnectOpFailed checks the response from the Konnect API and returns a uniform
 // error for all Konnect entities if the operation failed.
 func wrapErrIfKonnectOpFailed[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
+T constraints.SupportedKonnectEntityType,
+TEnt constraints.EntityType[T],
 ](err error, op Op, e TEnt) error {
 	if err != nil {
 		entityTypeName := constraints.EntityTypeName[T]()

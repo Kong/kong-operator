@@ -2,6 +2,7 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
@@ -26,13 +27,18 @@ import (
 )
 
 func TestCreateControlPlane(t *testing.T) {
+	const (
+		cpID  = "cp-id"
+		cpgID = "cpg-id"
+	)
 	ctx := context.Background()
 	testCases := []struct {
-		name           string
-		mockCPTuple    func(*testing.T) (*MockControlPlaneSDK, *MockControlPlaneGroupSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
-		expectedErr    bool
-		expectedID     string
-		expectedReason consts.ConditionReason
+		name                string
+		mockCPTuple         func(*testing.T) (*MockControlPlaneSDK, *MockControlPlaneGroupSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
+		objects             []client.Object
+		expectedErrContains string
+		expectedErrType     error
+		expectedID          string
 	}{
 		{
 			name: "success",
@@ -55,7 +61,7 @@ func TestCreateControlPlane(t *testing.T) {
 					Return(
 						&sdkkonnectops.CreateControlPlaneResponse{
 							ControlPlane: &sdkkonnectcomp.ControlPlane{
-								ID: lo.ToPtr("12345"),
+								ID: lo.ToPtr(cpID),
 							},
 						},
 						nil,
@@ -63,7 +69,7 @@ func TestCreateControlPlane(t *testing.T) {
 
 				return sdk, sdkGroups, cp
 			},
-			expectedID: "12345",
+			expectedID: cpID,
 		},
 		{
 			name: "fail",
@@ -97,25 +103,171 @@ func TestCreateControlPlane(t *testing.T) {
 
 				return sdk, sdkGroups, cp
 			},
-			expectedErr:    true,
-			expectedReason: consts.KonnectEntitiesFailedToCreateReason,
+			expectedErrContains: "failed to create KonnectGatewayControlPlane default/cp-1",
+		},
+		{
+			name: "cp membership creation success",
+			objects: []client.Object{
+				&konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cp-1",
+						Namespace: "default",
+					},
+					Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
+						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+							ID: cpID,
+						},
+						Conditions: []metav1.Condition{
+							{
+								Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+								Status: metav1.ConditionTrue,
+							},
+						},
+					},
+				},
+			},
+			mockCPTuple: func(t *testing.T) (*MockControlPlaneSDK, *MockControlPlaneGroupSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
+				sdk := NewMockControlPlaneSDK(t)
+				sdkGroups := NewMockControlPlaneGroupSDK(t)
+				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cpg-1",
+						Namespace: "default",
+					},
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup),
+							Name:        "cpg-1",
+						},
+						Members: []corev1.LocalObjectReference{
+							{
+								Name: "cp-1",
+							},
+						},
+					},
+				}
+				expectedRequest := cp.Spec.CreateControlPlaneRequest
+				expectedRequest.Labels = WithKubernetesMetadataLabels(cp, expectedRequest.Labels)
+				sdk.
+					EXPECT().
+					CreateControlPlane(ctx, expectedRequest).
+					Return(
+						&sdkkonnectops.CreateControlPlaneResponse{
+							ControlPlane: &sdkkonnectcomp.ControlPlane{
+								ID: lo.ToPtr(cpgID),
+							},
+						},
+						nil,
+					)
+
+				sdkGroups.
+					EXPECT().
+					PutControlPlanesIDGroupMemberships(ctx, cpgID, &sdkkonnectcomp.GroupMembership{
+						Members: []sdkkonnectcomp.Members{
+							{
+								ID: lo.ToPtr(cpID),
+							},
+						},
+					}).
+					Return(&sdkkonnectops.PutControlPlanesIDGroupMembershipsResponse{}, nil)
+
+				return sdk, sdkGroups, cp
+			},
+		},
+		{
+			name: "cp membership creation failure",
+			objects: []client.Object{
+				&konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cp-1",
+						Namespace: "default",
+					},
+					Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
+						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+							ID: cpID,
+						},
+						Conditions: []metav1.Condition{
+							{
+								Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+								Status: metav1.ConditionTrue,
+							},
+						},
+					},
+				},
+			},
+			mockCPTuple: func(t *testing.T) (*MockControlPlaneSDK, *MockControlPlaneGroupSDK, *konnectv1alpha1.KonnectGatewayControlPlane) {
+				sdk := NewMockControlPlaneSDK(t)
+				sdkGroups := NewMockControlPlaneGroupSDK(t)
+				cp := &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cpg-1",
+						Namespace: "default",
+					},
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup),
+							Name:        "cpg-1",
+						},
+						Members: []corev1.LocalObjectReference{
+							{
+								Name: "cp-1",
+							},
+						},
+					},
+				}
+				expectedRequest := cp.Spec.CreateControlPlaneRequest
+				expectedRequest.Labels = WithKubernetesMetadataLabels(cp, expectedRequest.Labels)
+				sdk.
+					EXPECT().
+					CreateControlPlane(ctx, expectedRequest).
+					Return(
+						&sdkkonnectops.CreateControlPlaneResponse{
+							ControlPlane: &sdkkonnectcomp.ControlPlane{
+								ID: lo.ToPtr(cpgID),
+							},
+						},
+						nil,
+					)
+
+				sdkGroups.
+					EXPECT().
+					PutControlPlanesIDGroupMemberships(ctx, cpgID, &sdkkonnectcomp.GroupMembership{
+						Members: []sdkkonnectcomp.Members{
+							{
+								ID: lo.ToPtr(cpID),
+							},
+						},
+					}).
+					Return(&sdkkonnectops.PutControlPlanesIDGroupMembershipsResponse{}, errors.New("failed to set group members"))
+
+				return sdk, sdkGroups, cp
+			},
+			expectedErrContains: "failed to set members on control plane group default/cpg-1",
+			expectedErrType:     KonnectEntityCreatedButRelationsFailedError{},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			sdk, sdkGroups, cp := tc.mockCPTuple(t)
-			fakeClient := fake.NewClientBuilder().Build()
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(tc.objects...).
+				Build()
 
-			id, reason, err := createControlPlane(ctx, sdk, sdkGroups, fakeClient, cp)
-			if tc.expectedErr {
-				assert.Error(t, err)
+			err := createControlPlane(ctx, sdk, sdkGroups, fakeClient, cp)
+			if tc.expectedErrContains != "" {
+				if tc.expectedErrType != nil {
+					assert.IsType(t, err, tc.expectedErrType)
+				}
+				assert.ErrorContains(t, err, tc.expectedErrContains)
 				return
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, tc.expectedID, id)
-			assert.Equal(t, tc.expectedReason, reason)
+			if tc.expectedID != "" {
+				assert.Equal(t, tc.expectedID, cp.Status.ID)
+			}
 		})
 	}
 }
