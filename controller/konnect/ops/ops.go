@@ -108,6 +108,8 @@ func Create[
 	var errConflict *sdkkonnecterrs.ConflictError
 	switch {
 	case errors.As(err, &errConflict):
+                // If there was a conflict on the create request, we can assume the entity already exists.
+                // We'll get its Konnect ID by listing all entities of its type filtered by the Kubernetes object UID.
 		switch ent := any(e).(type) {
 		case *konnectv1alpha1.KonnectGatewayControlPlane:
 			id, err = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), ent)

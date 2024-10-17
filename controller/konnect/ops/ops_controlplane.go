@@ -46,8 +46,10 @@ func getControlPlaneForUID(
 
 	var id string
 	for _, listCP := range respList.ListControlPlanesResponse.Data {
-		id = *listCP.ID
-		break
+		if listCP.ID != nil && *listCP.ID != "" {
+			id = *listCP.ID
+			break
+		}
 	}
 
 	if id == "" {
