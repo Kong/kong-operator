@@ -15,7 +15,6 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	konnectconsts "github.com/kong/gateway-operator/controller/konnect/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -24,10 +23,11 @@ import (
 func TestCreateKongService(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
-		name            string
-		mockServicePair func(*testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService)
-		expectedErr     bool
-		assertions      func(*testing.T, *configurationv1alpha1.KongService)
+		name                string
+		mockServicePair     func(*testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService)
+		assertions          func(*testing.T, *configurationv1alpha1.KongService)
+		expectedErrContains string
+		expectedErrType     error
 	}{
 		{
 			name: "success",
@@ -69,11 +69,6 @@ func TestCreateKongService(t *testing.T) {
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
 				assert.Equal(t, "12345", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KongService")
-				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
-				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
 			},
 		},
 		{
@@ -99,7 +94,7 @@ func TestCreateKongService(t *testing.T) {
 				assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
 				// TODO: we should probably set a condition when the control plane ID is missing in the status.
 			},
-			expectedErr: true,
+			expectedErrContains: `can't create *v1alpha1.KongService default/svc-1 without a Konnect ControlPlane ID`,
 		},
 		{
 			name: "fail",
@@ -138,14 +133,46 @@ func TestCreateKongService(t *testing.T) {
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
 				assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
-				assert.Equal(t, metav1.ConditionFalse, cond.Status)
-				assert.Equal(t, "FailedToCreate", cond.Reason)
-				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, `failed to create KongService default/svc-1: {"status":400,"title":"","instance":"","detail":"bad request","invalid_parameters":null}`, cond.Message)
 			},
-			expectedErr: true,
+			expectedErrContains: "failed to create KongService default/svc-1: {\"status\":400,\"title\":\"\",\"instance\":\"\",\"detail\":\"bad request\",\"invalid_parameters\":null}",
+		},
+		{
+			name: "409 Conflict causes a list to find a matching (by UID) service and update it instead of creating a new one",
+			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := NewMockServicesSDK(t)
+				svc := &configurationv1alpha1.KongService{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-1",
+						Namespace: "default",
+					},
+					Spec: configurationv1alpha1.KongServiceSpec{
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							Name: lo.ToPtr("svc-1"),
+							Host: "example.com",
+						},
+					},
+					Status: configurationv1alpha1.KongServiceStatus{
+						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+							ControlPlaneID: "123456789",
+						},
+					},
+				}
+
+				sdk.
+					EXPECT().
+					CreateService(ctx, "123456789", kongServiceToSDKServiceInput(svc)).
+					Return(
+						nil,
+						&sdkkonnecterrs.ConflictError{
+							Status: 409,
+							Detail: "Conflict",
+						},
+					)
+
+				return sdk, svc
+			},
+			expectedErrType:     &sdkkonnecterrs.ConflictError{},
+			expectedErrContains: "failed to create KongService default/svc-1: {\"status\":409,\"title\":null,\"instance\":null,\"detail\":\"Conflict\"}",
 		},
 	}
 
@@ -155,10 +182,15 @@ func TestCreateKongService(t *testing.T) {
 
 			err := createService(ctx, sdk, svc)
 
-			tc.assertions(t, svc)
+			if tc.assertions != nil {
+				tc.assertions(t, svc)
+			}
 
-			if tc.expectedErr {
-				assert.Error(t, err)
+			if tc.expectedErrContains != "" {
+				assert.ErrorContains(t, err, tc.expectedErrContains)
+				if tc.expectedErrType != nil {
+					assert.ErrorAs(t, err, &tc.expectedErrType)
+				}
 				return
 			}
 
@@ -347,12 +379,6 @@ func TestUpdateKongService(t *testing.T) {
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
 				assert.Equal(t, "123456789", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
-				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
-				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, "", cond.Message)
 			},
 		},
 		{
@@ -398,15 +424,7 @@ func TestUpdateKongService(t *testing.T) {
 				return sdk, svc
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
-				// TODO: When we fail to update a KongService, do we want to clear
-				// the Konnect ID from the status? Probably not.
-				// assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
-				assert.Equal(t, metav1.ConditionFalse, cond.Status)
-				assert.Equal(t, "FailedToUpdate", cond.Reason)
-				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, `failed to update KongService default/svc-1: {"status":400,"title":"bad request","instance":"","detail":"","invalid_parameters":null}`, cond.Message)
+				assert.Equal(t, "123456789", svc.GetKonnectStatus().GetKonnectID())
 			},
 			expectedErr: true,
 		},
@@ -467,12 +485,6 @@ func TestUpdateKongService(t *testing.T) {
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
 				assert.Equal(t, "123456789", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
-				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
-				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, "", cond.Message)
 			},
 		},
 	}

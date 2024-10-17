@@ -257,7 +257,7 @@ func TestCreateControlPlane(t *testing.T) {
 			err := createControlPlane(ctx, sdk, sdkGroups, fakeClient, cp)
 			if tc.expectedErrContains != "" {
 				if tc.expectedErrType != nil {
-					assert.IsType(t, err, tc.expectedErrType)
+					assert.ErrorAs(t, err, &tc.expectedErrType)
 				}
 				assert.ErrorContains(t, err, tc.expectedErrContains)
 				return

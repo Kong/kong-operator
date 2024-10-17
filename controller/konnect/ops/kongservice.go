@@ -12,4 +12,5 @@ type ServicesSDK interface {
 	CreateService(ctx context.Context, controlPlaneID string, service sdkkonnectcomp.ServiceInput, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateServiceResponse, error)
 	UpsertService(ctx context.Context, req sdkkonnectops.UpsertServiceRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertServiceResponse, error)
 	DeleteService(ctx context.Context, controlPlaneID, serviceID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteServiceResponse, error)
+	ListService(ctx context.Context, request sdkkonnectops.ListServiceRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListServiceResponse, error)
 }
