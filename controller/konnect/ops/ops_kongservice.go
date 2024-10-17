@@ -8,11 +8,53 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
+
+// getKongServiceForUID returns the Konnect ID of the KongService
+// that matches the UID of the provided KongService.
+func getKongServiceForUID(
+	ctx context.Context,
+	sdk ServicesSDK,
+	svc *configurationv1alpha1.KongService,
+) (string, error) {
+	reqList := sdkkonnectops.ListServiceRequest{
+		// NOTE: only filter on object's UID.
+		// Other fields like name might have changed in the meantime but that's OK.
+		// Those will be enforced via subsequent updates.
+		Tags:           lo.ToPtr(UIDLabelForObject(svc)),
+		ControlPlaneID: svc.GetControlPlaneID(),
+	}
+
+	respList, err := sdk.ListService(ctx, reqList)
+	if err != nil {
+		return "", err
+	}
+
+	if respList == nil || respList.Object == nil {
+		return "", fmt.Errorf("failed listing KongServices: %w", ErrNilResponse)
+	}
+
+	var id string
+	for _, entry := range respList.Object.Data {
+		if entry.ID != nil && *entry.ID != "" {
+			id = *entry.ID
+			break
+		}
+	}
+
+	if id == "" {
+		return "", EntityWithMatchingUIDNotFoundError{
+			Entity: svc,
+		}
+	}
+
+	return id, nil
+}
 
 func createService(
 	ctx context.Context,
@@ -31,16 +73,20 @@ func createService(
 		kongServiceToSDKServiceInput(svc),
 	)
 
-	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it, hm
+	// that created that entity and already manages it.
+	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, svc); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(svc, "FailedToCreate", errWrap.Error())
 		return errWrap
 	}
 
-	svc.Status.Konnect.SetKonnectID(*resp.Service.ID)
-	SetKonnectEntityProgrammedCondition(svc)
+	if resp == nil || resp.Service == nil || resp.Service.ID == nil {
+		return fmt.Errorf("failed creating %s: %w", svc.GetTypeName(), ErrNilResponse)
+	}
+
+	// At this point, the ControlPlane has been created in Konnect.
+	id := *resp.Service.ID
+	svc.SetKonnectID(id)
 
 	return nil
 }
@@ -55,7 +101,7 @@ func updateService(
 	svc *configurationv1alpha1.KongService,
 ) error {
 	if svc.GetControlPlaneID() == "" {
-		return fmt.Errorf("can't update  %T %s without a Konnect ControlPlane ID",
+		return fmt.Errorf("can't update %T %s without a Konnect ControlPlane ID",
 			svc, client.ObjectKeyFromObject(svc),
 		)
 	}
@@ -78,8 +124,8 @@ func updateService(
 		if errors.As(errWrap, &sdkError) {
 			switch sdkError.StatusCode {
 			case 404:
-				err := createService(ctx, sdk, svc)
-				if err != nil {
+				logEntityNotFoundRecreating(ctx, svc, id)
+				if err := createService(ctx, sdk, svc); err != nil {
 					return FailedKonnectOpError[configurationv1alpha1.KongService]{
 						Op:  UpdateOp,
 						Err: err,
@@ -95,11 +141,8 @@ func updateService(
 			}
 		}
 
-		SetKonnectEntityProgrammedConditionFalse(svc, "FailedToUpdate", errWrap.Error())
 		return errWrap
 	}
-
-	SetKonnectEntityProgrammedCondition(svc)
 
 	return nil
 }

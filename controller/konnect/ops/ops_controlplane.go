@@ -43,15 +43,17 @@ func getControlPlaneForUID(
 	}
 
 	var id string
-	for _, listCP := range respList.ListControlPlanesResponse.Data {
-		if listCP.ID != nil && *listCP.ID != "" {
-			id = *listCP.ID
+	for _, entry := range respList.ListControlPlanesResponse.Data {
+		if entry.ID != nil && *entry.ID != "" {
+			id = *entry.ID
 			break
 		}
 	}
 
 	if id == "" {
-		return "", fmt.Errorf("control plane %s (matching UID %s) not found", cp.Name, cp.UID)
+		return "", EntityWithMatchingUIDNotFoundError{
+			Entity: cp,
+		}
 	}
 
 	return id, nil
@@ -72,16 +74,16 @@ func createControlPlane(
 	req.Labels = WithKubernetesMetadataLabels(cp, req.Labels)
 
 	resp, err := sdk.CreateControlPlane(ctx, req)
-	// TODO: handle already exists
+
 	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it, hm
+	// that created that entity and already manages it.
 	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cp); errWrap != nil {
 		return errWrap
 	}
 
-	if resp == nil || resp.ControlPlane == nil {
-		return fmt.Errorf("failed creating ControlPlane: %w", ErrNilResponse)
+	if resp == nil || resp.ControlPlane == nil || resp.ControlPlane.ID == nil {
+		return fmt.Errorf("failed creating %s: %w", cp.GetTypeName(), ErrNilResponse)
 	}
 
 	// At this point, the ControlPlane has been created in Konnect.
@@ -159,10 +161,7 @@ func updateControlPlane(
 	resp, err := sdk.UpdateControlPlane(ctx, id, req)
 	var sdkError *sdkkonnecterrs.NotFoundError
 	if errors.As(err, &sdkError) {
-		ctrllog.FromContext(ctx).
-			Info("entity not found in Konnect, trying to recreate",
-				"type", cp.GetTypeName(), "id", id,
-			)
+		logEntityNotFoundRecreating(ctx, cp, id)
 		if err := createControlPlane(ctx, sdk, sdkGroups, cl, cp); err != nil {
 			return FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
 				Op:  UpdateOp,

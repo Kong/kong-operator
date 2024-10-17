@@ -175,6 +175,80 @@ func (_c *MockServicesSDK_DeleteService_Call) RunAndReturn(run func(context.Cont
 	return _c
 }
 
+// ListService provides a mock function with given fields: ctx, request, opts
+func (_m *MockServicesSDK) ListService(ctx context.Context, request operations.ListServiceRequest, opts ...operations.Option) (*operations.ListServiceResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, request)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListService")
+	}
+
+	var r0 *operations.ListServiceResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, operations.ListServiceRequest, ...operations.Option) (*operations.ListServiceResponse, error)); ok {
+		return rf(ctx, request, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, operations.ListServiceRequest, ...operations.Option) *operations.ListServiceResponse); ok {
+		r0 = rf(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.ListServiceResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, operations.ListServiceRequest, ...operations.Option) error); ok {
+		r1 = rf(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockServicesSDK_ListService_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListService'
+type MockServicesSDK_ListService_Call struct {
+	*mock.Call
+}
+
+// ListService is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request operations.ListServiceRequest
+//   - opts ...operations.Option
+func (_e *MockServicesSDK_Expecter) ListService(ctx interface{}, request interface{}, opts ...interface{}) *MockServicesSDK_ListService_Call {
+	return &MockServicesSDK_ListService_Call{Call: _e.mock.On("ListService",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockServicesSDK_ListService_Call) Run(run func(ctx context.Context, request operations.ListServiceRequest, opts ...operations.Option)) *MockServicesSDK_ListService_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(operations.ListServiceRequest), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockServicesSDK_ListService_Call) Return(_a0 *operations.ListServiceResponse, _a1 error) *MockServicesSDK_ListService_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockServicesSDK_ListService_Call) RunAndReturn(run func(context.Context, operations.ListServiceRequest, ...operations.Option) (*operations.ListServiceResponse, error)) *MockServicesSDK_ListService_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpsertService provides a mock function with given fields: ctx, req, opts
 func (_m *MockServicesSDK) UpsertService(ctx context.Context, req operations.UpsertServiceRequest, opts ...operations.Option) (*operations.UpsertServiceResponse, error) {
 	_va := make([]interface{}, len(opts))

@@ -137,6 +137,5 @@ func TestKongTarget(t *testing.T) {
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.TargetsSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
-
 	})
 }

@@ -58,10 +58,12 @@ func Create[
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		err = createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
-		// TODO: modify the create* operation wrappers to not set Programmed conditions and return
-		// a KonnectEntityCreatedButRelationsFailedError if the entity was created but its relations assignment failed.
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
+
+		// TODO: modify the create* operation wrappers to not set Programmed conditions and return
+		// a KonnectEntityCreatedButRelationsFailedError if the entity was created but its relations assignment failed.
+
 	case *configurationv1alpha1.KongRoute:
 		err = createRoute(ctx, sdk.GetRoutesSDK(), ent)
 	case *configurationv1.KongConsumer:
@@ -104,19 +106,32 @@ func Create[
 		return nil, fmt.Errorf("unsupported entity type %T", ent)
 	}
 
+	// NOTE: Konnect APIs specific for Konnect only APIs like Gateway Control Planes
+	// return 409 conflict for already existing entities. APIs that are shared with
+	// Kong Admin API return 400 for conflicts.
 	var (
 		errConflict        *sdkkonnecterrs.ConflictError
 		errRelationsFailed KonnectEntityCreatedButRelationsFailedError
+		errSdk             *sdkkonnecterrs.SDKError
+		errSdkBody         sdkErrorBody
 	)
 
+	if err != nil && (errors.As(err, &errSdk)) {
+		errSdkBody, _ = ParseSDKErrorBody(errSdk.Body)
+	}
+
 	switch {
-	case errors.As(err, &errConflict):
+	case errors.As(err, &errConflict) ||
+		// Service API returns 400 for conflicts
+		errSdkBody.Code == 3 && errSdkBody.Message == "data constraint error":
 		// If there was a conflict on the create request, we can assume the entity already exists.
 		// We'll get its Konnect ID by listing all entities of its type filtered by the Kubernetes object UID.
 		var id string
 		switch ent := any(e).(type) {
 		case *konnectv1alpha1.KonnectGatewayControlPlane:
 			id, err = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), ent)
+		case *configurationv1alpha1.KongService:
+			id, err = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:
@@ -387,4 +402,15 @@ func wrapErrIfKonnectOpFailed[
 		)
 	}
 	return nil
+}
+
+func logEntityNotFoundRecreating[
+	T constraints.SupportedKonnectEntityType,
+](ctx context.Context, _ *T, id string) {
+	ctrllog.FromContext(ctx).
+		Info(
+			"entity not found in Konnect, trying to recreate",
+			"type", constraints.EntityTypeName[T](),
+			"id", id,
+		)
 }
