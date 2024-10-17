@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -113,7 +114,6 @@ func TestKongConsumer(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongConsumer update")
 		sdk.ConsumersSDK.EXPECT().
 			UpsertConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertConsumerRequest) bool {
-
 				match := r.ConsumerID == consumerID &&
 					r.Consumer.Username != nil && *r.Consumer.Username == updatedUsername
 				return match
