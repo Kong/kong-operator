@@ -43,8 +43,8 @@ const (
 
 // Create creates a Konnect entity.
 func Create[
-T constraints.SupportedKonnectEntityType,
-TEnt constraints.EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](
 	ctx context.Context,
 	sdk SDKWrapper,
@@ -148,8 +148,8 @@ TEnt constraints.EntityType[T],
 // Delete deletes a Konnect entity.
 // It returns an error if the entity does not have a Konnect ID or if the operation fails.
 func Delete[
-T constraints.SupportedKonnectEntityType,
-TEnt constraints.EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](ctx context.Context, sdk SDKWrapper, cl client.Client, e *T) error {
 	ent := TEnt(e)
 	if ent.GetKonnectStatus().GetKonnectID() == "" {
@@ -216,8 +216,8 @@ TEnt constraints.EntityType[T],
 }
 
 func shouldUpdate[
-T constraints.SupportedKonnectEntityType,
-TEnt constraints.EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](
 	ctx context.Context,
 	ent TEnt,
@@ -255,8 +255,8 @@ TEnt constraints.EntityType[T],
 // Update updates a Konnect entity.
 // It returns an error if the entity does not have a Konnect ID or if the operation fails.
 func Update[
-T constraints.SupportedKonnectEntityType,
-TEnt constraints.EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](
 	ctx context.Context,
 	sdk SDKWrapper,
@@ -346,8 +346,8 @@ TEnt constraints.EntityType[T],
 }
 
 func logOpComplete[
-T constraints.SupportedKonnectEntityType,
-TEnt constraints.EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](ctx context.Context, start time.Time, op Op, e TEnt, err error) {
 	keysAndValues := []interface{}{
 		"op", op,
@@ -373,8 +373,8 @@ TEnt constraints.EntityType[T],
 // wrapErrIfKonnectOpFailed checks the response from the Konnect API and returns a uniform
 // error for all Konnect entities if the operation failed.
 func wrapErrIfKonnectOpFailed[
-T constraints.SupportedKonnectEntityType,
-TEnt constraints.EntityType[T],
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
 ](err error, op Op, e TEnt) error {
 	if err != nil {
 		entityTypeName := constraints.EntityTypeName[T]()

@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/gateway-operator/modules/manager/scheme"
-	"github.com/kong/gateway-operator/pkg/consts"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -403,11 +402,10 @@ func TestDeleteControlPlane(t *testing.T) {
 func TestUpdateControlPlane(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
-		name           string
-		mockCPTuple    func(*testing.T) (*MockControlPlaneSDK, *MockControlPlaneGroupSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
-		expectedErr    bool
-		expectedID     string
-		expectedReason consts.ConditionReason
+		name        string
+		mockCPTuple func(*testing.T) (*MockControlPlaneSDK, *MockControlPlaneGroupSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
+		expectedErr bool
+		expectedID  string
 	}{
 		{
 			name: "success",
@@ -493,8 +491,7 @@ func TestUpdateControlPlane(t *testing.T) {
 
 				return sdk, sdkGroups, cp
 			},
-			expectedReason: consts.KonnectEntitiesFailedToUpdateReason,
-			expectedErr:    true,
+			expectedErr: true,
 		},
 		{
 			name: "when not found then try to create",
@@ -553,7 +550,9 @@ func TestUpdateControlPlane(t *testing.T) {
 
 				return sdk, sdkGroups, cp
 			},
+			expectedID: "12345",
 		},
+		// TODO: add test case for group membership success/failure scenarios
 	}
 
 	for _, tc := range testCases {
@@ -561,15 +560,14 @@ func TestUpdateControlPlane(t *testing.T) {
 			sdk, sdkGroups, cp := tc.mockCPTuple(t)
 			fakeClient := fake.NewClientBuilder().Build()
 
-			id, reason, err := updateControlPlane(ctx, sdk, sdkGroups, fakeClient, cp)
+			err := updateControlPlane(ctx, sdk, sdkGroups, fakeClient, cp)
 			if tc.expectedErr {
 				assert.Error(t, err)
 				return
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, tc.expectedID, id)
-			assert.Equal(t, tc.expectedReason, reason)
+			assert.Equal(t, tc.expectedID, cp.Status.ID)
 		})
 	}
 }
