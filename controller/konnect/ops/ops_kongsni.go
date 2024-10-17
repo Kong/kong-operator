@@ -9,6 +9,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -33,14 +34,16 @@ func createSNI(
 		CertificateID:     sni.Status.Konnect.CertificateID,
 		SNIWithoutParents: kongSNIToSNIWithoutParents(sni),
 	})
-
 	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, sni); errWrapped != nil {
-		SetKonnectEntityProgrammedConditionFalse(sni, "FailedToCreate", errWrapped.Error())
 		return errWrapped
 	}
 
+	if resp == nil || resp.Sni == nil || resp.Sni.ID == nil || *resp.Sni.ID == "" {
+		return fmt.Errorf("failed creating %s: %w", sni.GetTypeName(), ErrNilResponse)
+	}
+
+	// At this point, the SNI has been created successfully.
 	sni.Status.Konnect.SetKonnectID(*resp.Sni.ID)
-	SetKonnectEntityProgrammedCondition(sni)
 
 	return nil
 }
@@ -75,6 +78,7 @@ func updateSNI(
 		if errors.As(errWrap, &sdkError) {
 			switch sdkError.StatusCode {
 			case 404:
+				logEntityNotFoundRecreating(ctx, sni, id)
 				if err := createSNI(ctx, sdk, sni); err != nil {
 					return FailedKonnectOpError[configurationv1alpha1.KongSNI]{
 						Op:  UpdateOp,
@@ -92,11 +96,9 @@ func updateSNI(
 			}
 		}
 
-		SetKonnectEntityProgrammedConditionFalse(sni, "FailedToUpdate", errWrap.Error())
 		return errWrap
 	}
 
-	SetKonnectEntityProgrammedCondition(sni)
 	return nil
 }
 
@@ -149,5 +151,28 @@ func kongSNIToSNIWithoutParents(sni *configurationv1alpha1.KongSNI) sdkkonnectco
 	return sdkkonnectcomp.SNIWithoutParents{
 		Name: sni.Spec.Name,
 		Tags: GenerateTagsForObject(sni, sni.Spec.Tags...),
+	}
+}
+
+func getSNIForUID(ctx context.Context, sdk SNIsSDK, sni *configurationv1alpha1.KongSNI) (string, error) {
+	resp, err := sdk.ListSni(ctx, sdkkonnectops.ListSniRequest{
+		ControlPlaneID: sni.GetControlPlaneID(),
+		Tags:           lo.ToPtr(UIDLabelForObject(sni)),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to list SNI entities: %w", err)
+	}
+	if resp == nil || resp.Object == nil {
+		return "", fmt.Errorf("failed listing SNIs: %w", ErrNilResponse)
+	}
+
+	for _, item := range resp.Object.Data {
+		if item.Name == sni.Spec.Name {
+			return *item.ID, nil
+		}
+	}
+
+	return "", EntityWithMatchingUIDNotFoundError{
+		Entity: sni,
 	}
 }

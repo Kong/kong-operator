@@ -136,6 +136,8 @@ func Create[
 			id, err = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), ent)
 		case *configurationv1alpha1.KongService:
 			id, err = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
+		case *configurationv1alpha1.KongSNI:
+			id, err = getSNIForUID(ctx, sdk.GetSNIsSDK(), ent)
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:
@@ -152,7 +154,6 @@ func Create[
 		}
 	case errors.As(err, &errRelationsFailed):
 		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, err.Error())
-		e.SetKonnectID(errRelationsFailed.KonnectID)
 	case err != nil:
 		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
 	default:
