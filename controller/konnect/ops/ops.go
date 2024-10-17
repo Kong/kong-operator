@@ -133,12 +133,11 @@ func Create[
 			reason = consts.KonnectEntitiesFailedToCreateReason
 		}
 		SetKonnectEntityProgrammedConditionFalse(e, reason, err.Error())
-	default:
+	case id != "":
 		// TODO: remove the check after all create* returns Konnect ID.
-		if id != "" {
-			e.SetKonnectID(id)
-		}
+		e.SetKonnectID(id)
 		SetKonnectEntityProgrammedCondition(e)
+	default:
 	}
 
 	logOpComplete[T, TEnt](ctx, start, CreateOp, e, err)
@@ -265,7 +264,7 @@ func Update[
 	cl client.Client,
 	e TEnt,
 ) (ctrl.Result, error) {
-	var now = time.Now()
+	now := time.Now()
 
 	if ok, res := shouldUpdate(ctx, e, syncPeriod, now); !ok {
 		return res, nil
@@ -332,7 +331,8 @@ func Update[
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
 	}
 
-	if err != nil {
+	switch {
+	case err != nil:
 		if id != "" {
 			e.SetKonnectID(id)
 		}
@@ -340,12 +340,12 @@ func Update[
 			reason = consts.KonnectEntitiesFailedToUpdateReason
 		}
 		SetKonnectEntityProgrammedConditionFalse(e, reason, err.Error())
-	} else {
+
+	case id != "":
 		// TODO: remove the check after all update* returns Konnect ID.
-		if id != "" {
-			e.SetKonnectID(id)
-		}
+		e.SetKonnectID(id)
 		SetKonnectEntityProgrammedCondition(e)
+	default:
 	}
 
 	logOpComplete[T, TEnt](ctx, now, UpdateOp, e, err)

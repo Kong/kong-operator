@@ -68,8 +68,7 @@ func TestKongConsumer(t *testing.T) {
 		sdk.ConsumersSDK.EXPECT().
 			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
 				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
-					match := input.Username != nil && *input.Username == username
-					return match
+					return input.Username != nil && *input.Username == username
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
@@ -138,6 +137,14 @@ func TestKongConsumer(t *testing.T) {
 
 		t.Log("Deleting KongConsumer")
 		require.NoError(t, cl.Delete(ctx, createdConsumer))
+
+		require.EventuallyWithT(t,
+			func(c *assert.CollectT) {
+				assert.True(c, k8serrors.IsNotFound(
+					clientNamespaced.Get(ctx, client.ObjectKeyFromObject(createdConsumer), createdConsumer),
+				))
+			}, waitTime, tickTime,
+		)
 
 		t.Log("Waiting for KongConsumer to be deleted in the SDK")
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
