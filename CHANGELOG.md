@@ -123,6 +123,8 @@
   [#710](https://github.com/Kong/gateway-operator/pull/710)
 - Do not reconcile Gateways nor assign any finalizers when the referred GatewayClass is not supported.
   [#711](https://github.com/Kong/gateway-operator/pull/711)
+- Fixed setting `ExternalTrafficPolicy` on `DataPlane`'s ingress `Service` during update and patch operations.
+  [#750](https://github.com/Kong/gateway-operator/pull/750)
 
 ### Changes
 

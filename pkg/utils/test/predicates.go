@@ -431,10 +431,26 @@ func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName typ
 // DataPlaneHasService is a helper function for tests that returns a function
 // that can be used to check if a DataPlane has a service created.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func DataPlaneHasService(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, matchingLabels client.MatchingLabels) func() bool {
+func DataPlaneHasService(
+	t *testing.T,
+	ctx context.Context,
+	dataplaneName types.NamespacedName,
+	clients K8sClients,
+	matchingLabels client.MatchingLabels,
+	asserts ...func(corev1.Service) bool,
+) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, matchingLabels)
-		return len(services) == 1
+		if len(services) != 1 {
+			return false
+		}
+		for _, a := range asserts {
+			if !a(services[0]) {
+				return false
+			}
+		}
+
+		return true
 	}, clients.OperatorClient)
 }
 

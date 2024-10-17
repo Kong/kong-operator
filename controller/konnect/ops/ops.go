@@ -66,6 +66,10 @@ func Create[
 
 	case *configurationv1alpha1.KongRoute:
 		err = createRoute(ctx, sdk.GetRoutesSDK(), ent)
+
+		// TODO: modify the create* operation wrappers to not set Programmed conditions and return
+		// a KonnectEntityCreatedButRelationsFailedError if the entity was created but its relations assignment failed.
+
 	case *configurationv1.KongConsumer:
 		err = createConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent)
 	case *configurationv1beta1.KongConsumerGroup:
