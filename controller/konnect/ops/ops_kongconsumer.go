@@ -16,7 +16,6 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -30,33 +29,36 @@ func createConsumer(
 	cgSDK ConsumerGroupSDK,
 	cl client.Client,
 	consumer *configurationv1.KongConsumer,
-) (string, consts.ConditionReason, error) { //nolint:unparam
+) error {
 	cpID := consumer.GetControlPlaneID()
 	if cpID == "" {
-		return "", "", fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", consumer, client.ObjectKeyFromObject(consumer))
+		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", consumer, client.ObjectKeyFromObject(consumer))
 	}
 
 	resp, err := sdk.CreateConsumer(ctx,
 		cpID,
 		kongConsumerToSDKConsumerInput(consumer),
 	)
-
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, consumer); errWrap != nil {
-		return "", "", errWrap
+		SetKonnectEntityProgrammedConditionFalse(consumer, konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed, errWrap.Error())
+		return errWrap
 	}
 
 	// Set the Konnect ID in the status to keep it even if ConsumerGroup assignments fail.
-	id := *resp.Consumer.ID
-	consumer.SetKonnectID(id)
+	consumer.Status.Konnect.SetKonnectID(*resp.Consumer.ID)
 
 	if err = handleConsumerGroupAssignments(ctx, consumer, cl, cgSDK, cpID); err != nil {
-		return id, "", fmt.Errorf("failed to handle ConsumerGroup assignments: %w", err)
+		return fmt.Errorf("failed to handle ConsumerGroup assignments: %w", err)
 	}
 
-	return id, "", nil
+	// The Consumer is considered Programmed if it was successfully created and all its _valid_ ConsumerGroup references
+	// are in sync.
+	SetKonnectEntityProgrammedCondition(consumer)
+
+	return nil
 }
 
 // updateConsumer updates a KongConsumer in Konnect.

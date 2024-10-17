@@ -62,13 +62,13 @@ func Create[
 		id, reason, err = createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 		// TODO: modify the create* operation wrappers to return Konnect ID and error reason.
 	case *configurationv1alpha1.KongService:
-		id, reason, err = createService(ctx, sdk.GetServicesSDK(), ent)
+		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
-		id, reason, err = createRoute(ctx, sdk.GetRoutesSDK(), ent)
+		err = createRoute(ctx, sdk.GetRoutesSDK(), ent)
 	case *configurationv1.KongConsumer:
-		id, reason, err = createConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent)
+		err = createConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		id, reason, err = createConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
+		err = createConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.KongPluginBinding:
 		err = createPlugin(ctx, cl, sdk.GetPluginSDK(), ent)
 	case *configurationv1alpha1.KongUpstream:
