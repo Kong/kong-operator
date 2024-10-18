@@ -229,14 +229,14 @@ func getControlPlaneForUID(
 		Labels: lo.ToPtr(UIDLabelForObject(cp)),
 	}
 
-	respList, err := sdk.ListControlPlanes(ctx, reqList)
+	resp, err := sdk.ListControlPlanes(ctx, reqList)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed listing %s: %w", cp.GetTypeName(), err)
 	}
 
-	if respList == nil || respList.ListControlPlanesResponse == nil {
+	if resp == nil || resp.ListControlPlanesResponse == nil {
 		return "", fmt.Errorf("failed listing %s: %w", cp.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(respList.ListControlPlanesResponse.Data), cp)
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.ListControlPlanesResponse.Data), cp)
 }

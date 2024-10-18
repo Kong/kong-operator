@@ -161,7 +161,7 @@ func getSNIForUID(ctx context.Context, sdk SNIsSDK, sni *configurationv1alpha1.K
 		Tags:           lo.ToPtr(UIDLabelForObject(sni)),
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to list SNI entities: %w", err)
+		return "", fmt.Errorf("failed listing %s: %w", sni.GetTypeName(), err)
 	}
 	if resp == nil || resp.Object == nil {
 		return "", fmt.Errorf("failed listing %s: %w", sni.GetTypeName(), ErrNilResponse)

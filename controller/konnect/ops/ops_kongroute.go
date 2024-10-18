@@ -175,14 +175,14 @@ func getKongRouteForUID(
 		ControlPlaneID: r.GetControlPlaneID(),
 	}
 
-	respList, err := sdk.ListRoute(ctx, reqList)
+	resp, err := sdk.ListRoute(ctx, reqList)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed listing %s: %w", r.GetTypeName(), err)
 	}
 
-	if respList == nil || respList.Object == nil {
+	if resp == nil || resp.Object == nil {
 		return "", fmt.Errorf("failed listing %s: %w", r.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(respList.Object.Data), r)
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), r)
 }
