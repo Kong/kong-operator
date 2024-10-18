@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
-	konnectops "github.com/kong/gateway-operator/controller/konnect/ops"
+	"github.com/kong/gateway-operator/controller/konnect/ops"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
@@ -31,7 +31,7 @@ func TestKongVault(t *testing.T) {
 
 	t.Log("Setting up the manager with reconcilers")
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
-	factory := konnectops.NewMockSDKFactory(t)
+	factory := ops.NewMockSDKFactory(t)
 	sdk := factory.SDK
 	reconcilers := []Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, false, mgr.GetClient(),

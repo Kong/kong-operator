@@ -79,7 +79,6 @@ func updateRoute(
 						Err: err,
 					}
 				}
-				// Create succeeded, createService sets the status so no need to do this here.
 				return nil
 			default:
 				return FailedKonnectOpError[configurationv1alpha1.KongRoute]{

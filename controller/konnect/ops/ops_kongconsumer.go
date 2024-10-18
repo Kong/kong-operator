@@ -40,17 +40,17 @@ func createConsumer(
 		cpID,
 		kongConsumerToSDKConsumerInput(consumer),
 	)
-	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it, hm
+	// that created that entity and already manages it.
+	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, consumer); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(consumer, konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed, errWrap.Error())
 		return errWrap
 	}
 
 	if resp == nil || resp.Consumer == nil || resp.Consumer.ID == nil || *resp.Consumer.ID == "" {
 		return fmt.Errorf("failed creating %s: %w", consumer.GetTypeName(), ErrNilResponse)
 	}
+
 	// Set the Konnect ID in the status to keep it even if ConsumerGroup assignments fail.
 	id := *resp.Consumer.ID
 	consumer.SetKonnectID(id)
@@ -62,10 +62,6 @@ func createConsumer(
 			Err:       err,
 		}
 	}
-
-	// The Consumer is considered Programmed if it was successfully created and all its _valid_ ConsumerGroup references
-	// are in sync.
-	SetKonnectEntityProgrammedCondition(consumer)
 
 	return nil
 }
@@ -84,35 +80,30 @@ func updateConsumer(
 	if cpID == "" {
 		return fmt.Errorf("can't update %T without a ControlPlaneID", consumer)
 	}
-	consumerID := consumer.GetKonnectStatus().GetKonnectID()
+	id := consumer.GetKonnectStatus().GetKonnectID()
 
 	_, err := sdk.UpsertConsumer(ctx,
 		sdkkonnectops.UpsertConsumerRequest{
 			ControlPlaneID: cpID,
-			ConsumerID:     consumerID,
+			ConsumerID:     id,
 			Consumer:       kongConsumerToSDKConsumerInput(consumer),
 		},
 	)
 
-	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it, hm
+	// that created that entity and already manages it.
+	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, consumer); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(consumer, konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed, errWrap.Error())
 		return errWrap
 	}
 
 	if err = handleConsumerGroupAssignments(ctx, consumer, cl, cgSDK, cpID); err != nil {
 		return KonnectEntityCreatedButRelationsFailedError{
-			KonnectID: consumerID,
+			KonnectID: id,
 			Reason:    consts.FailedToAttachConsumerToConsumerGroupReason,
 			Err:       err,
 		}
 	}
-
-	// The Consumer is considered Programmed if it was successfully updated and all its _valid_ ConsumerGroup references
-	// are in sync.
-	SetKonnectEntityProgrammedCondition(consumer)
 
 	return nil
 }
@@ -362,10 +353,6 @@ func getConsumerForUID(
 	}
 
 	resp, err := sdk.ListConsumer(ctx, reqList)
-	if err != nil {
-		return "", err
-	}
-
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", consumer.GetTypeName(), err)
 	}
