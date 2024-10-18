@@ -23,8 +23,9 @@ func createTarget(
 ) error {
 	cpID := target.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", target, client.ObjectKeyFromObject(target))
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: target, Op: CreateOp}
 	}
+
 	if target.Status.Konnect == nil || target.Status.Konnect.UpstreamID == "" {
 		return fmt.Errorf("can't create %T %s without a Konnect Upstream ID", target, client.ObjectKeyFromObject(target))
 	}
@@ -53,7 +54,7 @@ func updateTarget(
 ) error {
 	cpID := target.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf("can't update %T %s without a Konnect ControlPlane ID", target, client.ObjectKeyFromObject(target))
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: target, Op: UpdateOp}
 	}
 	if target.Status.Konnect == nil || target.Status.Konnect.UpstreamID == "" {
 		return fmt.Errorf("can't update %T %s without a Konnect Upstream ID", target, client.ObjectKeyFromObject(target))

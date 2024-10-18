@@ -9,7 +9,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -24,7 +23,7 @@ func createKey(
 ) error {
 	cpID := key.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", key, client.ObjectKeyFromObject(key))
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: key, Op: CreateOp}
 	}
 
 	resp, err := sdk.CreateKey(ctx,
@@ -58,7 +57,7 @@ func updateKey(
 ) error {
 	cpID := key.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf("can't update %T without a ControlPlaneID", key)
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: key, Op: UpdateOp}
 	}
 
 	_, err := sdk.UpsertKey(ctx,

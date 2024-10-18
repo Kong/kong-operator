@@ -15,7 +15,6 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	konnectconsts "github.com/kong/gateway-operator/controller/konnect/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -67,11 +66,6 @@ func TestCreateKongUpstream(t *testing.T) {
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
 				assert.Equal(t, "12345", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KongUpstream")
-				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
-				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
 			},
 		},
 		{
@@ -134,12 +128,6 @@ func TestCreateKongUpstream(t *testing.T) {
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
 				assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
-				assert.Equal(t, metav1.ConditionFalse, cond.Status)
-				assert.Equal(t, "FailedToCreate", cond.Reason)
-				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, `failed to create KongUpstream default/svc-1: {"status":400,"title":"","instance":"","detail":"bad request","invalid_parameters":null}`, cond.Message)
 			},
 			expectedErr: true,
 		},
@@ -343,12 +331,6 @@ func TestUpdateKongUpstream(t *testing.T) {
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
 				assert.Equal(t, "123456789", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
-				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
-				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, "", cond.Message)
 			},
 		},
 		{
@@ -394,15 +376,9 @@ func TestUpdateKongUpstream(t *testing.T) {
 				return sdk, svc
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
-				// TODO: When we fail to update a KongUpstream, do we want to clear
-				// the Konnect ID from the status? Probably not.
-				// assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
-				assert.Equal(t, metav1.ConditionFalse, cond.Status)
-				assert.Equal(t, "FailedToUpdate", cond.Reason)
-				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, `failed to update KongUpstream default/svc-1: {"status":400,"title":"bad request","instance":"","detail":"","invalid_parameters":null}`, cond.Message)
+				assert.Equal(t, "123456789", svc.GetKonnectStatus().GetKonnectID(),
+					"Konnect ID should be retained after a failed update",
+				)
 			},
 			expectedErr: true,
 		},
@@ -463,12 +439,6 @@ func TestUpdateKongUpstream(t *testing.T) {
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
 				assert.Equal(t, "123456789", svc.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, svc)
-				require.True(t, ok, "Programmed condition not set on KonnectGatewayControlPlane")
-				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
-				assert.Equal(t, svc.GetGeneration(), cond.ObservedGeneration)
-				assert.Equal(t, "", cond.Message)
 			},
 		},
 	}

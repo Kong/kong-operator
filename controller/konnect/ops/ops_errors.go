@@ -31,6 +31,21 @@ func (e EntityWithMatchingUIDNotFoundError) Error() string {
 	)
 }
 
+// CantPerformOperationWithoutControlPlaneIDError is an error indicating that an
+// operation cannot be performed without a ControlPlane ID.
+type CantPerformOperationWithoutControlPlaneIDError struct {
+	Entity entity
+	Op     Op
+}
+
+// Error implements the error interface.
+func (e CantPerformOperationWithoutControlPlaneIDError) Error() string {
+	return fmt.Sprintf(
+		"can't %s %s %s without a Konnect ControlPlane ID",
+		e.Op, e.Entity.GetTypeName(), client.ObjectKeyFromObject(e.Entity),
+	)
+}
+
 type sdkErrorBody struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`

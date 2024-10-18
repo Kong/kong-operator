@@ -3,11 +3,9 @@ package ops
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -22,7 +20,7 @@ func createKongDataPlaneClientCertificate(
 ) error {
 	cpID := cert.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", cert, client.ObjectKeyFromObject(cert))
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: cert, Op: CreateOp}
 	}
 
 	resp, err := sdk.CreateDataplaneCertificate(ctx,

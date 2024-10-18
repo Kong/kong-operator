@@ -33,16 +33,14 @@ func createConsumer(
 ) error {
 	cpID := consumer.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", consumer, client.ObjectKeyFromObject(consumer))
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: consumer, Op: CreateOp}
 	}
 
 	resp, err := sdk.CreateConsumer(ctx,
 		cpID,
 		kongConsumerToSDKConsumerInput(consumer),
 	)
-	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it.
-	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
+
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, consumer); errWrap != nil {
 		return errWrap
 	}
@@ -78,7 +76,7 @@ func updateConsumer(
 ) error {
 	cpID := consumer.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf("can't update %T without a ControlPlaneID", consumer)
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: consumer, Op: UpdateOp}
 	}
 	id := consumer.GetKonnectStatus().GetKonnectID()
 
@@ -90,9 +88,6 @@ func updateConsumer(
 		},
 	)
 
-	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it.
-	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, consumer); errWrap != nil {
 		return errWrap
 	}
@@ -337,8 +332,8 @@ func kongConsumerToSDKConsumerInput(
 	}
 }
 
-// getConsumerForUID lists consumers in Konnect with given k8s uid as its tag.
-func getConsumerForUID(
+// getKongConsumerForUID lists consumers in Konnect with given k8s uid as its tag.
+func getKongConsumerForUID(
 	ctx context.Context,
 	sdk ConsumersSDK,
 	consumer *configurationv1.KongConsumer,

@@ -19,10 +19,7 @@ import (
 func createVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf(
-			"can't create %T %s without a Konnect ControlPlane ID",
-			vault, client.ObjectKeyFromObject(vault),
-		)
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: vault, Op: CreateOp}
 	}
 
 	vaultInput, err := kongVaultToVaultInput(vault)
@@ -44,11 +41,9 @@ func createVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1
 func updateVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf(
-			"can't update %T %s without a Konnect ControlPlane ID",
-			vault, client.ObjectKeyFromObject(vault),
-		)
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: vault, Op: UpdateOp}
 	}
+
 	id := vault.GetKonnectID()
 	vaultInput, err := kongVaultToVaultInput(vault)
 	if err != nil {

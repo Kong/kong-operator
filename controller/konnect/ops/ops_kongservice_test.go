@@ -92,9 +92,8 @@ func TestCreateKongService(t *testing.T) {
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
 				assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
-				// TODO: we should probably set a condition when the control plane ID is missing in the status.
 			},
-			expectedErrContains: `can't create *v1alpha1.KongService default/svc-1 without a Konnect ControlPlane ID`,
+			expectedErrContains: "can't create KongService default/svc-1 without a Konnect ControlPlane ID",
 		},
 		{
 			name: "fail",

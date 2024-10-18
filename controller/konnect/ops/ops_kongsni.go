@@ -23,7 +23,7 @@ func createSNI(
 ) error {
 	cpID := sni.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", sni, client.ObjectKeyFromObject(sni))
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: sni, Op: CreateOp}
 	}
 	if sni.Status.Konnect == nil || sni.Status.Konnect.CertificateID == "" {
 		return fmt.Errorf("can't create %T %s without a Konnect Certificate ID", sni, client.ObjectKeyFromObject(sni))
@@ -55,7 +55,7 @@ func updateSNI(
 ) error {
 	cpID := sni.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf("can't update %T %s without a Konnect ControlPlane ID", sni, client.ObjectKeyFromObject(sni))
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: sni, Op: UpdateOp}
 	}
 	if sni.Status.Konnect == nil || sni.Status.Konnect.CertificateID == "" {
 		return fmt.Errorf("can't update %T %s without a Konnect Certificate ID", sni, client.ObjectKeyFromObject(sni))
@@ -154,8 +154,8 @@ func kongSNIToSNIWithoutParents(sni *configurationv1alpha1.KongSNI) sdkkonnectco
 	}
 }
 
-// getSNIForUID returns the Konnect ID of the Konnect SNI that matches the UID of the provided SNI.
-func getSNIForUID(ctx context.Context, sdk SNIsSDK, sni *configurationv1alpha1.KongSNI) (string, error) {
+// getKongSNIForUID returns the Konnect ID of the Konnect SNI that matches the UID of the provided SNI.
+func getKongSNIForUID(ctx context.Context, sdk SNIsSDK, sni *configurationv1alpha1.KongSNI) (string, error) {
 	resp, err := sdk.ListSni(ctx, sdkkonnectops.ListSniRequest{
 		ControlPlaneID: sni.GetControlPlaneID(),
 		Tags:           lo.ToPtr(UIDLabelForObject(sni)),

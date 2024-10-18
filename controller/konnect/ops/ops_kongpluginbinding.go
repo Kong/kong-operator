@@ -34,7 +34,7 @@ func createPlugin(
 ) error {
 	controlPlaneID := pb.GetControlPlaneID()
 	if controlPlaneID == "" {
-		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", pb, client.ObjectKeyFromObject(pb))
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: pb, Op: CreateOp}
 	}
 	pluginInput, err := kongPluginBindingToSDKPluginInput(ctx, cl, pb)
 	if err != nil {
@@ -72,7 +72,7 @@ func updatePlugin(
 ) error {
 	controlPlaneID := pb.GetControlPlaneID()
 	if controlPlaneID == "" {
-		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", pb, client.ObjectKeyFromObject(pb))
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: pb, Op: UpdateOp}
 	}
 
 	pluginInput, err := kongPluginBindingToSDKPluginInput(ctx, cl, pb)
