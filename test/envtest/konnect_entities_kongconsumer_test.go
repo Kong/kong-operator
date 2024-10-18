@@ -2,10 +2,12 @@ package envtest
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -300,5 +302,57 @@ func TestKongConsumer(t *testing.T) {
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.ConsumerGroupSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
+	})
+
+	t.Run("should handle conflict in creation correctly", func(t *testing.T) {
+		const (
+			consumerID = "consumer-id-conflict"
+			username   = "user-3"
+		)
+		t.Log("Setup mock SDK for creating consumer and listing consumers by UID")
+		cpID := cp.GetKonnectStatus().GetKonnectID()
+		sdk.ConsumersSDK.EXPECT().CreateConsumer(
+			mock.Anything,
+			cpID,
+			mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
+				return input.Username != nil && *input.Username == username
+			}),
+		).Return(&sdkkonnectops.CreateConsumerResponse{}, &sdkkonnecterrs.ConflictError{})
+
+		sdk.ConsumersSDK.EXPECT().ListConsumer(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.ListConsumerRequest) bool {
+				return req.ControlPlaneID == cpID &&
+					req.Tags != nil && strings.HasPrefix(*req.Tags, "k8s-uid")
+			}),
+		).Return(&sdkkonnectops.ListConsumerResponse{
+			Object: &sdkkonnectops.ListConsumerResponseBody{
+				Data: []sdkkonnectcomp.Consumer{
+					{
+						ID: lo.ToPtr(consumerID),
+					},
+				},
+			},
+		}, nil)
+
+		t.Log("Creating a KongConsumer")
+		createdConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username, cp)
+
+		t.Log("Watching for KongConsumers to verify the created KongConsumer programmed")
+		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1.KongConsumer) bool {
+			if c.GetName() != createdConsumer.GetName() {
+				return false
+			}
+			return c.GetKonnectID() == consumerID && lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					condition.Status == metav1.ConditionTrue
+			})
+		}, "KongConsumer should be programmed and have ID in status after handling conflict")
+
+		t.Log("Ensuring that the SDK's create and list methods are called")
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+
 	})
 }

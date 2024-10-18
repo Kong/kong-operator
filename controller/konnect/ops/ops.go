@@ -60,10 +60,6 @@ func Create[
 		err = createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
-
-		// TODO: modify the create* operation wrappers to not set Programmed conditions and return
-		// a KonnectEntityCreatedButRelationsFailedError if the entity was created but its relations assignment failed.
-
 	case *configurationv1alpha1.KongRoute:
 		err = createRoute(ctx, sdk.GetRoutesSDK(), ent)
 
@@ -138,6 +134,8 @@ func Create[
 			id, err = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
 		case *configurationv1alpha1.KongSNI:
 			id, err = getSNIForUID(ctx, sdk.GetSNIsSDK(), ent)
+		case *configurationv1.KongConsumer:
+			id, err = getConsumerForUID(ctx, sdk.GetConsumersSDK(), ent)
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:
