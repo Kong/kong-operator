@@ -44,7 +44,7 @@ func createKeySet(
 	}
 
 	// At this point, the KeySet has been created successfully.
-	keySet.Status.Konnect.SetKonnectID(*resp.KeySet.ID)
+	keySet.SetKonnectID(*resp.KeySet.ID)
 
 	return nil
 }
