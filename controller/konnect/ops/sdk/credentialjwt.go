@@ -11,4 +11,5 @@ type KongCredentialJWTSDK interface {
 	CreateJwtWithConsumer(ctx context.Context, req sdkkonnectops.CreateJwtWithConsumerRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateJwtWithConsumerResponse, error)
 	DeleteJwtWithConsumer(ctx context.Context, request sdkkonnectops.DeleteJwtWithConsumerRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteJwtWithConsumerResponse, error)
 	UpsertJwtWithConsumer(ctx context.Context, request sdkkonnectops.UpsertJwtWithConsumerRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertJwtWithConsumerResponse, error)
+	ListJwt(ctx context.Context, request sdkkonnectops.ListJwtRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListJwtResponse, error)
 }

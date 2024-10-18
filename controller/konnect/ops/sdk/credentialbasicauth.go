@@ -11,4 +11,5 @@ type KongCredentialBasicAuthSDK interface {
 	CreateBasicAuthWithConsumer(ctx context.Context, req sdkkonnectops.CreateBasicAuthWithConsumerRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateBasicAuthWithConsumerResponse, error)
 	DeleteBasicAuthWithConsumer(ctx context.Context, request sdkkonnectops.DeleteBasicAuthWithConsumerRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteBasicAuthWithConsumerResponse, error)
 	UpsertBasicAuthWithConsumer(ctx context.Context, request sdkkonnectops.UpsertBasicAuthWithConsumerRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertBasicAuthWithConsumerResponse, error)
+	ListBasicAuth(ctx context.Context, request sdkkonnectops.ListBasicAuthRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListBasicAuthResponse, error)
 }
