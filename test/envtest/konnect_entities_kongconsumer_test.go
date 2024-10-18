@@ -323,7 +323,7 @@ func TestKongConsumer(t *testing.T) {
 			mock.Anything,
 			mock.MatchedBy(func(req sdkkonnectops.ListConsumerRequest) bool {
 				return req.ControlPlaneID == cpID &&
-					req.Tags != nil && strings.Contains(*req.Tags, "k8s-uid")
+					req.Tags != nil && strings.HasPrefix(*req.Tags, "k8s-uid")
 			}),
 		).Return(&sdkkonnectops.ListConsumerResponse{
 			Object: &sdkkonnectops.ListConsumerResponseBody{

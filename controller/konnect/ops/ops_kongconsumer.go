@@ -48,9 +48,12 @@ func createConsumer(
 		return errWrap
 	}
 
+	if resp == nil || resp.Consumer == nil || resp.Consumer.ID == nil || *resp.Consumer.ID == "" {
+		return fmt.Errorf("failed creating %s: %w", consumer.GetTypeName(), ErrNilResponse)
+	}
 	// Set the Konnect ID in the status to keep it even if ConsumerGroup assignments fail.
 	id := *resp.Consumer.ID
-	consumer.Status.Konnect.SetKonnectID(id)
+	consumer.SetKonnectID(id)
 
 	if err = handleConsumerGroupAssignments(ctx, consumer, cl, cgSDK, cpID); err != nil {
 		return KonnectEntityCreatedButRelationsFailedError{
