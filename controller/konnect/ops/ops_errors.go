@@ -5,20 +5,22 @@ import (
 	"errors"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/types"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ErrNilResponse is an error indicating that a Konnect operation returned an empty response.
 // This can sometimes happen regardless of the err being nil.
 var ErrNilResponse = errors.New("nil response received")
 
+type entity interface {
+	client.Object
+	GetTypeName() string
+}
+
 // EntityWithMatchingUIDNotFoundError is an error indicating that an entity with a matching UID was not found on Konnect.
 type EntityWithMatchingUIDNotFoundError struct {
-	Entity interface {
-		GetTypeName() string
-		GetName() string
-		GetUID() types.UID
-	}
+	Entity entity
 }
 
 // Error implements the error interface.
@@ -64,4 +66,33 @@ func ParseSDKErrorBody(body string) (sdkErrorBody, error) {
 	}
 
 	return sdkErr, nil
+}
+
+// ErrorIsCreateConflict returns true if the provided error is a Konnect conflict error.
+//
+// NOTE: Konnect APIs specific for Konnect only APIs like Gateway Control Planes
+// return 409 conflict for already existing entities and return ConflictError.
+// APIs that are shared with Kong Admin API return 400 for conflicts and return SDKError.
+func ErrorIsCreateConflict(err error) bool {
+	var (
+		errConflict *sdkkonnecterrs.ConflictError
+		sdkError    *sdkkonnecterrs.SDKError
+	)
+	if errors.As(err, &errConflict) {
+		return true
+	}
+	if errors.As(err, &sdkError) {
+		return SDKErrorIsConflict(sdkError)
+	}
+	return false
+}
+
+// SDKErrorIsConflict returns true if the provided SDKError indicates a conflict.
+func SDKErrorIsConflict(sdkError *sdkkonnecterrs.SDKError) bool {
+	sdkErrorBody, err := ParseSDKErrorBody(sdkError.Body)
+	if err != nil {
+		return false
+	}
+
+	return sdkErrorBody.Code == 3 && sdkErrorBody.Message == "data constraint error"
 }

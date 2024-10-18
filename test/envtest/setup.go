@@ -110,7 +110,7 @@ func NameFromT(t *testing.T) string {
 
 	name := strings.ToLower(t.Name())
 	name = strings.ReplaceAll(name, "_", "-")
-	name = strings.ReplaceAll(name, "/", ".")
+	name = strings.ReplaceAll(name, "/", "-")
 
 	return name
 }

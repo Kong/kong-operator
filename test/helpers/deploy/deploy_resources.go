@@ -151,7 +151,7 @@ func KonnectGatewayControlPlane(
 	return cp
 }
 
-// deploy.KonnectGatewayControlPlaneWithID deploys a KonnectGatewayControlPlane resource and returns the resource.
+// KonnectGatewayControlPlaneWithID deploys a KonnectGatewayControlPlane resource and returns the resource.
 // The Status ID and Programmed condition are set on the CP using status Update() call.
 // It can be useful where the reconciler for KonnectGatewayControlPlane is not started
 // and hence the status has to be filled manually.
@@ -177,6 +177,34 @@ func KonnectGatewayControlPlaneWithID(
 	cp.Status.ID = uuid.NewString()[:8]
 	require.NoError(t, cl.Status().Update(ctx, cp))
 	return cp
+}
+
+// KongServiceAttachedToCPWithID deploys a KongService resource and returns the resource.
+// The Status ID and Programmed condition are set on the Service using status Update() call.
+// It can be useful where the reconciler for KonnectGatewayControlPlane is not started
+// and hence the status has to be filled manually.
+func KongServiceAttachedToCPWithID(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	opts ...objOption,
+) *configurationv1alpha1.KongService {
+	t.Helper()
+
+	svc := KongServiceAttachedToCP(t, ctx, cl, cp, opts...)
+	svc.Status.Conditions = []metav1.Condition{
+		{
+			Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
+			Status:             metav1.ConditionTrue,
+			Reason:             konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
+			ObservedGeneration: svc.GetGeneration(),
+			LastTransitionTime: metav1.Now(),
+		},
+	}
+	svc.SetKonnectID(uuid.NewString()[:8])
+	require.NoError(t, cl.Status().Update(ctx, svc))
+	return svc
 }
 
 // KongServiceAttachedToCP deploys a KongService resource and returns the resource.

@@ -5,15 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/kong/gateway-operator/controller/konnect"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
@@ -58,19 +55,11 @@ func testNewKonnectEntityReconciler[
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		nsName := uuid.NewString()
-		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-			Scheme: scheme.Get(),
-			Metrics: metricsserver.Options{
-				// We do not need metrics server so we set BindAddress to 0 to disable it.
-				BindAddress: "0",
-			},
-		})
-		require.NoError(t, err)
+		mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
 
 		ns := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: nsName,
+				GenerateName: NameFromT(t),
 			},
 		}
 		require.NoError(t, mgr.GetClient().Create(ctx, ns))
@@ -78,14 +67,8 @@ func testNewKonnectEntityReconciler[
 		cl := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 		factory := ops.NewMockSDKFactory(t)
 		sdk := factory.SDK
-		reconciler := konnect.NewKonnectEntityReconciler[T, TEnt](factory, false, cl)
-		require.NoError(t, reconciler.SetupWithManager(ctx, mgr))
 
-		t.Logf("Starting manager for test case %s", t.Name())
-		go func() {
-			err := mgr.Start(ctx)
-			require.NoError(t, err)
-		}()
+		StartReconcilers(ctx, t, mgr, logs, konnect.NewKonnectEntityReconciler[T, TEnt](factory, false, cl))
 
 		const (
 			wait = time.Second

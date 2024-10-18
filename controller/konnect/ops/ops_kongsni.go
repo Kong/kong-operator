@@ -154,25 +154,18 @@ func kongSNIToSNIWithoutParents(sni *configurationv1alpha1.KongSNI) sdkkonnectco
 	}
 }
 
+// getSNIForUID returns the Konnect ID of the Konnect SNI that matches the UID of the provided SNI.
 func getSNIForUID(ctx context.Context, sdk SNIsSDK, sni *configurationv1alpha1.KongSNI) (string, error) {
 	resp, err := sdk.ListSni(ctx, sdkkonnectops.ListSniRequest{
 		ControlPlaneID: sni.GetControlPlaneID(),
 		Tags:           lo.ToPtr(UIDLabelForObject(sni)),
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to list SNI entities: %w", err)
+		return "", fmt.Errorf("failed listing %s: %w", sni.GetTypeName(), err)
 	}
 	if resp == nil || resp.Object == nil {
-		return "", fmt.Errorf("failed listing SNIs: %w", ErrNilResponse)
+		return "", fmt.Errorf("failed listing %s: %w", sni.GetTypeName(), ErrNilResponse)
 	}
 
-	for _, item := range resp.Object.Data {
-		if item.Name == sni.Spec.Name {
-			return *item.ID, nil
-		}
-	}
-
-	return "", EntityWithMatchingUIDNotFoundError{
-		Entity: sni,
-	}
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), sni)
 }

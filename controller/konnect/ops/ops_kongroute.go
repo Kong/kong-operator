@@ -9,6 +9,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -25,16 +26,18 @@ func createRoute(
 	}
 
 	resp, err := sdk.CreateRoute(ctx, route.Status.Konnect.ControlPlaneID, kongRouteToSDKRouteInput(route))
-	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it, hm
+	// that created that entity and already manages it.
+	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, route); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(route, "FailedToCreate", errWrap.Error())
 		return errWrap
 	}
 
-	route.Status.Konnect.SetKonnectID(*resp.Route.ID)
-	SetKonnectEntityProgrammedCondition(route)
+	if resp == nil || resp.Route == nil || resp.Route.ID == nil {
+		return fmt.Errorf("failed creating %s: %w", route.GetTypeName(), ErrNilResponse)
+	}
+
+	route.SetKonnectID(*resp.Route.ID)
 
 	return nil
 }
@@ -53,21 +56,41 @@ func updateRoute(
 		return fmt.Errorf("can't update %T %s without a Konnect ControlPlane ID", route, client.ObjectKeyFromObject(route))
 	}
 
+	id := route.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.UpsertRoute(ctx, sdkkonnectops.UpsertRouteRequest{
 		ControlPlaneID: cpID,
-		RouteID:        route.Status.Konnect.ID,
+		RouteID:        id,
 		Route:          kongRouteToSDKRouteInput(route),
 	})
 
-	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it, hm
+	// that created that entity and already manages it.
+	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, route); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(route, "FailedToUpdate", errWrap.Error())
+		// Route update operation returns an SDKError instead of a NotFoundError.
+		var sdkError *sdkkonnecterrs.SDKError
+		if errors.As(errWrap, &sdkError) {
+			switch sdkError.StatusCode {
+			case 404:
+				logEntityNotFoundRecreating(ctx, route, id)
+				if err := createRoute(ctx, sdk, route); err != nil {
+					return FailedKonnectOpError[configurationv1alpha1.KongRoute]{
+						Op:  UpdateOp,
+						Err: err,
+					}
+				}
+				// Create succeeded, createService sets the status so no need to do this here.
+				return nil
+			default:
+				return FailedKonnectOpError[configurationv1alpha1.KongRoute]{
+					Op:  UpdateOp,
+					Err: sdkError,
+				}
+			}
+		}
+
 		return errWrap
 	}
-
-	SetKonnectEntityProgrammedCondition(route)
 
 	return nil
 }
@@ -135,4 +158,31 @@ func kongRouteToSDKRouteInput(
 		}
 	}
 	return r
+}
+
+// getKongRouteForUID returns the Konnect ID of the KongRoute
+// that matches the UID of the provided KongRoute.
+func getKongRouteForUID(
+	ctx context.Context,
+	sdk RoutesSDK,
+	r *configurationv1alpha1.KongRoute,
+) (string, error) {
+	reqList := sdkkonnectops.ListRouteRequest{
+		// NOTE: only filter on object's UID.
+		// Other fields like name might have changed in the meantime but that's OK.
+		// Those will be enforced via subsequent updates.
+		Tags:           lo.ToPtr(UIDLabelForObject(r)),
+		ControlPlaneID: r.GetControlPlaneID(),
+	}
+
+	resp, err := sdk.ListRoute(ctx, reqList)
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", r.GetTypeName(), err)
+	}
+
+	if resp == nil || resp.Object == nil {
+		return "", fmt.Errorf("failed listing %s: %w", r.GetTypeName(), ErrNilResponse)
+	}
+
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), r)
 }

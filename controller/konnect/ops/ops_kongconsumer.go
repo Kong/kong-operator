@@ -361,24 +361,17 @@ func getConsumerForUID(
 		Tags:           lo.ToPtr(UIDLabelForObject(consumer)),
 	}
 
-	respList, err := sdk.ListConsumer(ctx, reqList)
+	resp, err := sdk.ListConsumer(ctx, reqList)
 	if err != nil {
 		return "", err
 	}
 
-	if respList == nil || respList.Object == nil {
-		return "", fmt.Errorf("failed listing KongConsumers: %w", ErrNilResponse)
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", consumer.GetTypeName(), err)
+	}
+	if resp == nil || resp.Object == nil {
+		return "", fmt.Errorf("failed listing %s: %w", consumer.GetTypeName(), ErrNilResponse)
 	}
 
-	for _, entry := range respList.Object.Data {
-		if entry.ID != nil && *entry.ID != "" {
-			// return the ID if we found a non-empty one with the given k8s uid
-			return *entry.ID, nil
-		}
-	}
-	// return UIDNotFound error if no such entry found
-	return "", EntityWithMatchingUIDNotFoundError{
-		Entity: consumer,
-	}
-
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), consumer)
 }

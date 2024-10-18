@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -68,6 +67,10 @@ func Create[
 
 	case *configurationv1.KongConsumer:
 		err = createConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent)
+
+		// TODO: modify the create* operation wrappers to not set Programmed conditions and return
+		// a KonnectEntityCreatedButRelationsFailedError if the entity was created but its relations assignment failed.
+
 	case *configurationv1beta1.KongConsumerGroup:
 		err = createConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.KongPluginBinding:
@@ -106,24 +109,9 @@ func Create[
 		return nil, fmt.Errorf("unsupported entity type %T", ent)
 	}
 
-	// NOTE: Konnect APIs specific for Konnect only APIs like Gateway Control Planes
-	// return 409 conflict for already existing entities. APIs that are shared with
-	// Kong Admin API return 400 for conflicts.
-	var (
-		errConflict        *sdkkonnecterrs.ConflictError
-		errRelationsFailed KonnectEntityCreatedButRelationsFailedError
-		errSdk             *sdkkonnecterrs.SDKError
-		errSdkBody         sdkErrorBody
-	)
-
-	if err != nil && (errors.As(err, &errSdk)) {
-		errSdkBody, _ = ParseSDKErrorBody(errSdk.Body)
-	}
-
+	var errRelationsFailed KonnectEntityCreatedButRelationsFailedError
 	switch {
-	case errors.As(err, &errConflict) ||
-		// Service API returns 400 for conflicts
-		errSdkBody.Code == 3 && errSdkBody.Message == "data constraint error":
+	case ErrorIsCreateConflict(err):
 		// If there was a conflict on the create request, we can assume the entity already exists.
 		// We'll get its Konnect ID by listing all entities of its type filtered by the Kubernetes object UID.
 		var id string
@@ -132,6 +120,8 @@ func Create[
 			id, err = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), ent)
 		case *configurationv1alpha1.KongService:
 			id, err = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
+		case *configurationv1alpha1.KongRoute:
+			id, err = getKongRouteForUID(ctx, sdk.GetRoutesSDK(), ent)
 		case *configurationv1alpha1.KongSNI:
 			id, err = getSNIForUID(ctx, sdk.GetSNIsSDK(), ent)
 		case *configurationv1.KongConsumer:
@@ -416,4 +406,51 @@ func logEntityNotFoundRecreating[
 			"type", constraints.EntityTypeName[T](),
 			"id", id,
 		)
+}
+
+type entityWithID interface {
+	GetID() *string
+}
+
+// sliceToEntityWithIDSlice converts a slice of entities to a slice of entityWithID.
+func sliceToEntityWithIDSlice[
+	T any,
+	TPtr interface {
+		*T
+		GetID() *string
+	},
+](
+	slice []T,
+) []entityWithID {
+	result := make([]entityWithID, 0, len(slice))
+	for _, item := range slice {
+		result = append(result, TPtr(&item))
+	}
+	return result
+}
+
+// getMatchingEntryFromListResponseData returns the ID of the first entry in the list response data.
+// It returns an error if no entry with a non-empty ID was found.
+// It is used in conjunction with the list operation to get the ID of the entity that matches the UID
+// hence no filtering is done here because it is assumed that the provided list response data is already filtered.
+func getMatchingEntryFromListResponseData(
+	data []entityWithID,
+	entity entity,
+) (string, error) {
+	var id string
+	for _, entry := range data {
+		entryID := entry.GetID()
+		if entryID != nil && *entryID != "" {
+			id = *entryID
+			break
+		}
+	}
+
+	if id == "" {
+		return "", EntityWithMatchingUIDNotFoundError{
+			Entity: entity,
+		}
+	}
+
+	return id, nil
 }
