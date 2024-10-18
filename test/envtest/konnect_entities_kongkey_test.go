@@ -2,10 +2,12 @@ package envtest
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -118,6 +120,60 @@ func TestKongKey(t *testing.T) {
 
 		t.Log("Waiting for KongKey to be deleted in the SDK")
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
+
+	t.Run("without KongKeySet but with conflict response", func(t *testing.T) {
+		const (
+			keyID   = "key-conflict-id"
+			keyKid  = "key-conflict-kid"
+			keyName = "key-conflict-name"
+		)
+		t.Log("Setting up SDK expectations on KongKey creation with conflict")
+		sdk.KeysSDK.EXPECT().CreateKey(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
+			mock.MatchedBy(func(input sdkkonnectcomp.KeyInput) bool {
+				return input.Kid == keyKid &&
+					input.Name != nil && *input.Name == keyName
+			}),
+		).Return(&sdkkonnectops.CreateKeyResponse{
+			Key: &sdkkonnectcomp.Key{
+				ID: lo.ToPtr(keyID),
+			},
+		}, &sdkkonnecterrs.ConflictError{})
+
+		sdk.KeysSDK.EXPECT().ListKey(
+			mock.Anything,
+			mock.MatchedBy(func(r sdkkonnectops.ListKeyRequest) bool {
+				return r.ControlPlaneID == cp.GetKonnectID() &&
+					r.Tags != nil && strings.HasPrefix(*r.Tags, "k8s-uid")
+			}),
+		).Return(&sdkkonnectops.ListKeyResponse{
+			Object: &sdkkonnectops.ListKeyResponseBody{
+				Data: []sdkkonnectcomp.Key{
+					{
+						ID: lo.ToPtr(keyID),
+					},
+				},
+			},
+		}, nil)
+
+		t.Log("Creating KongKey")
+		createdKey := deploy.KongKeyAttachedToCP(t, ctx, clientNamespaced, keyKid, keyName, cp)
+
+		t.Log("Waiting for KongKey to be programmed")
+		watchFor(t, ctx, w, watch.Modified, func(k *configurationv1alpha1.KongKey) bool {
+			if k.GetName() != createdKey.GetName() {
+				return false
+			}
+			return lo.ContainsBy(k.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					condition.Status == metav1.ConditionTrue
+			})
+		}, "KongKey's Programmed condition should be true eventually")
+
+		t.Log("Checking SDK KongKey operations")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
 	})
