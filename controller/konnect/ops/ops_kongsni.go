@@ -167,5 +167,5 @@ func getSNIForUID(ctx context.Context, sdk SNIsSDK, sni *configurationv1alpha1.K
 		return "", fmt.Errorf("failed listing %s: %w", sni.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(fromSliceToSlice(resp.Object.Data), sni)
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), sni)
 }

@@ -187,5 +187,5 @@ func getKongServiceForUID(
 		return "", fmt.Errorf("failed listing %s: %w", svc.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(fromSliceToSlice(respList.Object.Data), svc)
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(respList.Object.Data), svc)
 }

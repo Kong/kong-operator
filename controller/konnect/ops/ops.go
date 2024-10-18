@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -110,24 +109,9 @@ func Create[
 		return nil, fmt.Errorf("unsupported entity type %T", ent)
 	}
 
-	// NOTE: Konnect APIs specific for Konnect only APIs like Gateway Control Planes
-	// return 409 conflict for already existing entities. APIs that are shared with
-	// Kong Admin API return 400 for conflicts.
-	var (
-		errConflict        *sdkkonnecterrs.ConflictError
-		errRelationsFailed KonnectEntityCreatedButRelationsFailedError
-		errSdk             *sdkkonnecterrs.SDKError
-		errSdkBody         sdkErrorBody
-	)
-
-	if err != nil && (errors.As(err, &errSdk)) {
-		errSdkBody, _ = ParseSDKErrorBody(errSdk.Body)
-	}
-
+	var errRelationsFailed KonnectEntityCreatedButRelationsFailedError
 	switch {
-	case errors.As(err, &errConflict) ||
-		// ControlPlane resource APIs return 400 for conflicts
-		errSdkBody.Code == 3 && errSdkBody.Message == "data constraint error":
+	case ErrorIsCreateConflict(err):
 		// If there was a conflict on the create request, we can assume the entity already exists.
 		// We'll get its Konnect ID by listing all entities of its type filtered by the Kubernetes object UID.
 		var id string
@@ -428,7 +412,12 @@ type entityWithID interface {
 	GetID() *string
 }
 
-func fromSliceToSlice[T any](
+// sliceToEntityWithIDSlice converts a slice of entities to a slice of entityWithID.
+// The conversion is done by asserting the type of the entity to entityWithID.
+// It panics if the conversion fails.
+func sliceToEntityWithIDSlice[
+	T any,
+](
 	slice []T,
 ) []entityWithID {
 	result := make([]entityWithID, 0, len(slice))

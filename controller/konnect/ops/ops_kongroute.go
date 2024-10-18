@@ -184,5 +184,5 @@ func getKongRouteForUID(
 		return "", fmt.Errorf("failed listing %s: %w", r.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(fromSliceToSlice(respList.Object.Data), r)
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(respList.Object.Data), r)
 }

@@ -238,5 +238,5 @@ func getControlPlaneForUID(
 		return "", fmt.Errorf("failed listing %s: %w", cp.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(fromSliceToSlice(respList.ListControlPlanesResponse.Data), cp)
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(respList.ListControlPlanesResponse.Data), cp)
 }
