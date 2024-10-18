@@ -36,12 +36,14 @@ func createKey(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, key); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(key, "FailedToCreate", errWrap.Error())
 		return errWrap
 	}
 
+	if resp == nil || resp.Key == nil || resp.Key.ID == nil || *resp.Key.ID == "" {
+		return fmt.Errorf("failed creating %s: %w", key.GetTypeName(), ErrNilResponse)
+	}
+
 	key.Status.Konnect.SetKonnectID(*resp.Key.ID)
-	SetKonnectEntityProgrammedCondition(key)
 
 	return nil
 }
@@ -87,11 +89,8 @@ func updateKey(
 				Err: sdkError,
 			}
 		}
-		SetKonnectEntityProgrammedConditionFalse(key, "FailedToUpdate", errWrap.Error())
 		return errWrap
 	}
-
-	SetKonnectEntityProgrammedCondition(key)
 
 	return nil
 }
@@ -151,4 +150,24 @@ func kongKeyToKeyInput(key *configurationv1alpha1.KongKey) sdkkonnectcomp.KeyInp
 		}
 	}
 	return k
+}
+
+func getKongKeyForUID(
+	ctx context.Context,
+	sdk KeysSDK,
+	key *configurationv1alpha1.KongKey,
+) (string, error) {
+	resp, err := sdk.ListKey(ctx, sdkkonnectops.ListKeyRequest{
+		ControlPlaneID: key.GetControlPlaneID(),
+		Tags:           lo.ToPtr(UIDLabelForObject(key)),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to list KongKeys: %w", err)
+	}
+
+	if resp == nil || resp.Object == nil {
+		return "", fmt.Errorf("failed to list KongKeys: %w", ErrNilResponse)
+	}
+
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), key)
 }
