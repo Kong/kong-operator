@@ -36,12 +36,15 @@ func createKeySet(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, keySet); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(keySet, "FailedToCreate", errWrap.Error())
 		return errWrap
 	}
 
+	if resp == nil || resp.KeySet == nil || resp.KeySet.ID == nil || *resp.KeySet.ID == "" {
+		return fmt.Errorf("failed creating %s: %w", keySet.GetTypeName(), ErrNilResponse)
+	}
+
+	// At this point, the KeySet has been created successfully.
 	keySet.Status.Konnect.SetKonnectID(*resp.KeySet.ID)
-	SetKonnectEntityProgrammedCondition(keySet)
 
 	return nil
 }
@@ -87,11 +90,8 @@ func updateKeySet(
 				Err: sdkError,
 			}
 		}
-		SetKonnectEntityProgrammedConditionFalse(keySet, "FailedToUpdate", errWrap.Error())
 		return errWrap
 	}
-
-	SetKonnectEntityProgrammedCondition(keySet)
 
 	return nil
 }
@@ -135,4 +135,24 @@ func kongKeySetToKeySetInput(keySet *configurationv1alpha1.KongKeySet) sdkkonnec
 		Name: lo.ToPtr(keySet.Spec.Name),
 		Tags: GenerateTagsForObject(keySet, keySet.Spec.Tags...),
 	}
+}
+
+func getKongKeySetForUID(
+	ctx context.Context,
+	sdk KeySetsSDK,
+	keySet *configurationv1alpha1.KongKeySet,
+) (string, error) {
+	resp, err := sdk.ListKeySet(ctx, sdkkonnectops.ListKeySetRequest{
+		ControlPlaneID: keySet.GetControlPlaneID(),
+		Tags:           lo.ToPtr(UIDLabelForObject(keySet)),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to list KongKeySets: %w", err)
+	}
+
+	if resp == nil || resp.Object == nil {
+		return "", fmt.Errorf("failed listing %s: %w", keySet.GetTypeName(), ErrNilResponse)
+	}
+
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), keySet)
 }

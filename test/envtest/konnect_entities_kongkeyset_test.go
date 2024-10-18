@@ -2,10 +2,12 @@ package envtest
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -115,4 +117,55 @@ func TestKongKeySet(t *testing.T) {
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		assert.True(c, factory.SDK.KeySetsSDK.AssertExpectations(t))
 	}, waitTime, tickTime)
+
+	t.Run("should handle conflict in creation correctly", func(t *testing.T) {
+		const (
+			keySetID   = "keyset-id-conflict"
+			keySetName = "keyset-name-conflict"
+		)
+		t.Log("Setup mock SDK for creating KeySet and listing KeySets by UID")
+		cpID := cp.GetKonnectStatus().GetKonnectID()
+		sdk.KeySetsSDK.EXPECT().CreateKeySet(
+			mock.Anything,
+			cpID,
+			mock.MatchedBy(func(input sdkkonnectcomp.KeySetInput) bool {
+				return *input.Name == keySetName
+			}),
+		).Return(&sdkkonnectops.CreateKeySetResponse{}, &sdkkonnecterrs.ConflictError{})
+
+		sdk.KeySetsSDK.EXPECT().ListKeySet(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.ListKeySetRequest) bool {
+				return req.ControlPlaneID == cpID &&
+					req.Tags != nil && strings.HasPrefix(*req.Tags, "k8s-uid")
+			}),
+		).Return(&sdkkonnectops.ListKeySetResponse{
+			Object: &sdkkonnectops.ListKeySetResponseBody{
+				Data: []sdkkonnectcomp.KeySet{
+					{
+						ID: lo.ToPtr(keySetID),
+					},
+				},
+			},
+		}, nil)
+
+		t.Log("Creating a KeySet")
+		createdKeySet := deploy.KongKeySetAttachedToCP(t, ctx, clientNamespaced, keySetName, cp)
+
+		t.Log("Watching for KeySet to verify the created KeySet programmed")
+		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongKeySet) bool {
+			if c.GetName() != createdKeySet.GetName() {
+				return false
+			}
+			return c.GetKonnectID() == keySetID && lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					condition.Status == metav1.ConditionTrue
+			})
+		}, "KeySet should be programmed and have ID in status after handling conflict")
+
+		t.Log("Ensuring that the SDK's create and list methods are called")
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
 }

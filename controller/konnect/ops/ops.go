@@ -120,6 +120,8 @@ func Create[
 			id, err = getConsumerForUID(ctx, sdk.GetConsumersSDK(), ent)
 		case *configurationv1beta1.KongConsumerGroup:
 			id, err = getConsumerGroupForUID(ctx, sdk.GetConsumerGroupsSDK(), ent)
+		case *configurationv1alpha1.KongKeySet:
+			id, err = getKongKeySetForUID(ctx, sdk.GetKeySetsSDK(), ent)
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:
