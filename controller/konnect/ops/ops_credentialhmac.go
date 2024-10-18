@@ -2,12 +2,10 @@ package ops
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
@@ -71,31 +69,7 @@ func updateKongCredentialHMAC(
 			HMACAuthWithoutParents:      kongCredentialHMACToHMACWithoutParents(cred),
 		})
 
-	// TODO: handle already exists
-	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, cred); errWrap != nil {
-		// HMAC update operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrap, &sdkError) {
-			switch sdkError.StatusCode {
-			case 404:
-				if err := createKongCredentialHMAC(ctx, sdk, cred); err != nil {
-					return FailedKonnectOpError[configurationv1alpha1.KongCredentialHMAC]{
-						Op:  UpdateOp,
-						Err: err,
-					}
-				}
-				return nil
-			default:
-				return FailedKonnectOpError[configurationv1alpha1.KongCredentialHMAC]{
-					Op:  UpdateOp,
-					Err: sdkError,
-				}
-
-			}
-		}
-
 		return errWrap
 	}
 

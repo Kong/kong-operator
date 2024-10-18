@@ -129,6 +129,59 @@ func SDKErrorIsConflict(sdkError *sdkkonnecterrs.SDKError) bool {
 	return false
 }
 
+// handleUpdateError handles errors that occur during an update operation.
+// If the entity is not found, then it uses the provided create function to
+// recreate the it.
+func handleUpdateError[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	ctx context.Context,
+	err error,
+	ent TEnt,
+	createFunc func(ctx context.Context) error,
+) error {
+	var (
+		sdkError *sdkkonnecterrs.SDKError
+		id       = ent.GetKonnectStatus().GetKonnectID()
+	)
+	if errors.As(err, &sdkError) {
+		switch sdkError.StatusCode {
+		case http.StatusNotFound:
+			logEntityNotFoundRecreating(ctx, ent, id)
+			if err := createFunc(ctx); err != nil {
+				return FailedKonnectOpError[T]{
+					Op:  UpdateOp,
+					Err: err,
+				}
+			}
+			return nil
+		default:
+			return FailedKonnectOpError[T]{
+				Op:  UpdateOp,
+				Err: sdkError,
+			}
+		}
+	}
+
+	var notFoundError *sdkkonnecterrs.NotFoundError
+	if errors.As(err, &notFoundError) {
+		logEntityNotFoundRecreating(ctx, ent, id)
+		if err := createFunc(ctx); err != nil {
+			return FailedKonnectOpError[T]{
+				Op:  UpdateOp,
+				Err: err,
+			}
+		}
+		return nil
+	}
+
+	return FailedKonnectOpError[T]{
+		Op:  UpdateOp,
+		Err: err,
+	}
+}
+
 // handleDeleteError handles errors that occur during a delete operation.
 // It logs a message and returns nil if the entity was not found in Konnect (when
 // the delete operation is skipped).

@@ -75,29 +75,6 @@ func updateSNI(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, sni); errWrap != nil {
-		// SNI update operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrap, &sdkError) {
-			switch sdkError.StatusCode {
-			case 404:
-				logEntityNotFoundRecreating(ctx, sni, id)
-				if err := createSNI(ctx, sdk, sni); err != nil {
-					return FailedKonnectOpError[configurationv1alpha1.KongSNI]{
-						Op:  UpdateOp,
-						Err: err,
-					}
-				}
-				// Create succeeded, createSNI sets the status so no need to do this here.
-
-				return nil
-			default:
-				return FailedKonnectOpError[configurationv1alpha1.KongSNI]{
-					Op:  UpdateOp,
-					Err: sdkError,
-				}
-			}
-		}
-
 		return errWrap
 	}
 

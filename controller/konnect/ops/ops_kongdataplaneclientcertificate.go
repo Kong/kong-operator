@@ -33,12 +33,10 @@ func createKongDataPlaneClientCertificate(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cert); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(cert, "FailedToCreate", errWrap.Error())
 		return errWrap
 	}
 
-	cert.Status.Konnect.SetKonnectID(*resp.DataPlaneClientCertificate.Item.ID)
-	SetKonnectEntityProgrammedCondition(cert)
+	cert.SetKonnectID(*resp.DataPlaneClientCertificate.Item.ID)
 
 	return nil
 }

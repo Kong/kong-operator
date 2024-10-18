@@ -3,14 +3,11 @@ package ops
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 
@@ -60,27 +57,6 @@ func updateVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv
 	})
 
 	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, vault); errWrapped != nil {
-		// Service update operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrapped, &sdkError) {
-			switch sdkError.StatusCode {
-			case 404:
-				if err := createVault(ctx, sdk, vault); err != nil {
-					return FailedKonnectOpError[configurationv1alpha1.KongVault]{
-						Op:  UpdateOp,
-						Err: err,
-					}
-				}
-				// Create succeeded, createVault sets the status so no need to do this here.
-				return nil
-			default:
-				return FailedKonnectOpError[configurationv1alpha1.KongVault]{
-					Op:  UpdateOp,
-					Err: sdkError,
-				}
-			}
-		}
-
 		return errWrapped
 	}
 
@@ -90,11 +66,9 @@ func updateVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv
 func deleteVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf(
-			"can't delete %T %s without a Konnect ControlPlane ID",
-			vault, client.ObjectKeyFromObject(vault),
-		)
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: vault, Op: DeleteOp}
 	}
+
 	id := vault.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteVault(ctx, cpID, id)
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, vault); errWrapped != nil {

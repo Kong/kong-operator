@@ -428,65 +428,6 @@ func TestUpdateKongService(t *testing.T) {
 			},
 			expectedErr: true,
 		},
-		{
-			name: "when not found then try to create",
-			mockServicePair: func(t *testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := sdkmocks.NewMockServicesSDK(t)
-				svc := &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-					},
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Name: lo.ToPtr("svc-1"),
-						},
-					},
-					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
-								ID: "123456789",
-							},
-						},
-					},
-				}
-				sdk.
-					EXPECT().
-					UpsertService(ctx,
-						sdkkonnectops.UpsertServiceRequest{
-							ControlPlaneID: "12345",
-							ServiceID:      "123456789",
-							Service:        kongServiceToSDKServiceInput(svc),
-						},
-					).
-					Return(
-						nil,
-						&sdkkonnecterrs.SDKError{
-							StatusCode: 404,
-							Message:    "not found",
-						},
-					)
-
-				sdk.
-					EXPECT().
-					CreateService(ctx, "12345", kongServiceToSDKServiceInput(svc)).
-					Return(
-						&sdkkonnectops.CreateServiceResponse{
-							Service: &sdkkonnectcomp.Service{
-								ID:   lo.ToPtr("123456789"),
-								Name: lo.ToPtr("svc-1"),
-							},
-						},
-						nil,
-					)
-
-				return sdk, svc
-			},
-			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
-				assert.Equal(t, "123456789", svc.GetKonnectStatus().GetKonnectID())
-			},
-		},
 	}
 
 	for _, tc := range testCases {

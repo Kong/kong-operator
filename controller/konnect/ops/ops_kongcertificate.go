@@ -2,12 +2,10 @@ package ops
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
@@ -70,31 +68,7 @@ func updateCertificate(
 		},
 	)
 
-	// TODO: handle already exists
-	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, cert); errWrap != nil {
-		// Certificate update operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrap, &sdkError) {
-			switch sdkError.StatusCode {
-			case 404:
-				if err := createCertificate(ctx, sdk, cert); err != nil {
-					return FailedKonnectOpError[configurationv1alpha1.KongCertificate]{
-						Op:  UpdateOp,
-						Err: err,
-					}
-				}
-				// Create succeeded, createCertificate sets the status so no need to do this here.
-
-				return nil
-			default:
-				return FailedKonnectOpError[configurationv1alpha1.KongCertificate]{
-					Op:  UpdateOp,
-					Err: sdkError,
-				}
-			}
-		}
 		return errWrap
 	}
 

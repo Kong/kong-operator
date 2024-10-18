@@ -246,56 +246,6 @@ func TestUpdateKongVault(t *testing.T) {
 				assert.Equal(t, "12345", vault.GetKonnectID())
 			},
 		},
-		{
-			name: "try to create when not found",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
-				sdk := sdkmocks.NewMockVaultSDK(t)
-				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-1",
-					},
-					Spec: configurationv1alpha1.KongVaultSpec{
-						Config: apiextensionsv1.JSON{
-							Raw: []byte(`{}`),
-						},
-						Backend:     "aws",
-						Prefix:      "aws-vault1",
-						Description: "test vault",
-					},
-					Status: configurationv1alpha1.KongVaultStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
-								ID: "12345",
-							},
-							ControlPlaneID: "123456789",
-						},
-					},
-				}
-				sdk.EXPECT().UpsertVault(mock.Anything, sdkkonnectops.UpsertVaultRequest{
-					VaultID:        "12345",
-					ControlPlaneID: "123456789",
-					Vault:          mustConvertKongVaultToVaultInput(t, vault),
-				}).Return(nil, &sdkkonnecterrs.SDKError{
-					Message:    "not found",
-					StatusCode: http.StatusNotFound,
-				})
-				sdk.EXPECT().CreateVault(mock.Anything, "123456789", mustConvertKongVaultToVaultInput(t, vault)).
-					Return(
-						&sdkkonnectops.CreateVaultResponse{
-							Vault: &sdkkonnectcomp.Vault{
-								ID:     lo.ToPtr("12345"),
-								Name:   "aws",
-								Prefix: "aws-vault1",
-							},
-						},
-						nil,
-					)
-				return sdk, vault
-			},
-			assertions: func(t *testing.T, vault *configurationv1alpha1.KongVault) {
-				assert.Equal(t, "12345", vault.GetKonnectStatus().GetKonnectID())
-			},
-		},
 	}
 
 	for _, tc := range testCases {
