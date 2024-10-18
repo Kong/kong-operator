@@ -510,7 +510,7 @@ impersonate-kgo:
 # Run a controller from your host.
 .PHONY: run
 run: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace install.rbacs
-	$(MAKE) _run
+	@$(MAKE) _run
 
 # Run the operator without checking any preconditions, installing CRDs etc.
 # This is mostly useful when 'run' was run at least once on a server and CRDs, RBACs
