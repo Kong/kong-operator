@@ -12,4 +12,5 @@ type ConsumersSDK interface {
 	CreateConsumer(ctx context.Context, controlPlaneID string, consumerInput sdkkonnectcomp.ConsumerInput, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateConsumerResponse, error)
 	UpsertConsumer(ctx context.Context, upsertConsumerRequest sdkkonnectops.UpsertConsumerRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertConsumerResponse, error)
 	DeleteConsumer(ctx context.Context, controlPlaneID string, consumerID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteConsumerResponse, error)
+	ListConsumer(ctx context.Context, request sdkkonnectops.ListConsumerRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListConsumerResponse, error)
 }

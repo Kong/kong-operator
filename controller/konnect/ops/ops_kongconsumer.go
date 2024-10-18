@@ -16,6 +16,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -48,10 +49,15 @@ func createConsumer(
 	}
 
 	// Set the Konnect ID in the status to keep it even if ConsumerGroup assignments fail.
-	consumer.Status.Konnect.SetKonnectID(*resp.Consumer.ID)
+	id := *resp.Consumer.ID
+	consumer.Status.Konnect.SetKonnectID(id)
 
 	if err = handleConsumerGroupAssignments(ctx, consumer, cl, cgSDK, cpID); err != nil {
-		return fmt.Errorf("failed to handle ConsumerGroup assignments: %w", err)
+		return KonnectEntityCreatedButRelationsFailedError{
+			KonnectID: id,
+			Reason:    consts.FailedToAttachConsumerToConsumerGroupReason,
+			Err:       err,
+		}
 	}
 
 	// The Consumer is considered Programmed if it was successfully created and all its _valid_ ConsumerGroup references
@@ -75,11 +81,12 @@ func updateConsumer(
 	if cpID == "" {
 		return fmt.Errorf("can't update %T without a ControlPlaneID", consumer)
 	}
+	consumerID := consumer.GetKonnectStatus().GetKonnectID()
 
 	_, err := sdk.UpsertConsumer(ctx,
 		sdkkonnectops.UpsertConsumerRequest{
 			ControlPlaneID: cpID,
-			ConsumerID:     consumer.GetKonnectStatus().GetKonnectID(),
+			ConsumerID:     consumerID,
 			Consumer:       kongConsumerToSDKConsumerInput(consumer),
 		},
 	)
@@ -93,7 +100,11 @@ func updateConsumer(
 	}
 
 	if err = handleConsumerGroupAssignments(ctx, consumer, cl, cgSDK, cpID); err != nil {
-		return fmt.Errorf("failed to handle ConsumerGroup assignments: %w", err)
+		return KonnectEntityCreatedButRelationsFailedError{
+			KonnectID: consumerID,
+			Reason:    consts.FailedToAttachConsumerToConsumerGroupReason,
+			Err:       err,
+		}
 	}
 
 	// The Consumer is considered Programmed if it was successfully updated and all its _valid_ ConsumerGroup references
@@ -330,4 +341,41 @@ func kongConsumerToSDKConsumerInput(
 		Tags:     GenerateTagsForObject(consumer),
 		Username: lo.ToPtr(consumer.Username),
 	}
+}
+
+// getConsumerForUID lists consumers in Konnect with given k8s uid as its tag.
+func getConsumerForUID(
+	ctx context.Context,
+	sdk ConsumersSDK,
+	consumer *configurationv1.KongConsumer,
+) (string, error) {
+	cpID := consumer.GetControlPlaneID()
+	reqList := sdkkonnectops.ListConsumerRequest{
+		// NOTE: only filter on object's UID.
+		// Other fields like name might have changed in the meantime but that's OK.
+		// Those will be enforced via subsequent updates.
+		ControlPlaneID: cpID,
+		Tags:           lo.ToPtr(UIDLabelForObject(consumer)),
+	}
+
+	respList, err := sdk.ListConsumer(ctx, reqList)
+	if err != nil {
+		return "", err
+	}
+
+	if respList == nil || respList.Object == nil {
+		return "", fmt.Errorf("failed listing KongConsumers: %w", ErrNilResponse)
+	}
+
+	for _, entry := range respList.Object.Data {
+		if entry.ID != nil && *entry.ID != "" {
+			// return the ID if we found a non-empty one with the given k8s uid
+			return *entry.ID, nil
+		}
+	}
+	// return UIDNotFound error if no such entry found
+	return "", EntityWithMatchingUIDNotFoundError{
+		Entity: consumer,
+	}
+
 }
