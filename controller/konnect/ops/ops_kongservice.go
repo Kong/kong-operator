@@ -9,7 +9,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -21,10 +20,7 @@ func createService(
 	svc *configurationv1alpha1.KongService,
 ) error {
 	if svc.GetControlPlaneID() == "" {
-		return fmt.Errorf(
-			"can't create %T %s without a Konnect ControlPlane ID",
-			svc, client.ObjectKeyFromObject(svc),
-		)
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: svc, Op: CreateOp}
 	}
 
 	resp, err := sdk.CreateService(ctx,
@@ -32,9 +28,6 @@ func createService(
 		kongServiceToSDKServiceInput(svc),
 	)
 
-	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it.
-	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, svc); errWrap != nil {
 		return errWrap
 	}
@@ -43,7 +36,6 @@ func createService(
 		return fmt.Errorf("failed creating %s: %w", svc.GetTypeName(), ErrNilResponse)
 	}
 
-	// At this point, the Service has been created in Konnect.
 	svc.SetKonnectID(*resp.Service.ID)
 
 	return nil
@@ -59,9 +51,7 @@ func updateService(
 	svc *configurationv1alpha1.KongService,
 ) error {
 	if svc.GetControlPlaneID() == "" {
-		return fmt.Errorf("can't update %T %s without a Konnect ControlPlane ID",
-			svc, client.ObjectKeyFromObject(svc),
-		)
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: svc, Op: UpdateOp}
 	}
 
 	id := svc.GetKonnectStatus().GetKonnectID()
@@ -73,9 +63,6 @@ func updateService(
 		},
 	)
 
-	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it.
-	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, svc); errWrap != nil {
 		// Service update operation returns an SDKError instead of a NotFoundError.
 		var sdkError *sdkkonnecterrs.SDKError

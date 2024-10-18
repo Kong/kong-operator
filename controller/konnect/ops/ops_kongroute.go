@@ -10,7 +10,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -22,13 +21,11 @@ func createRoute(
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	if route.GetControlPlaneID() == "" {
-		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", route, client.ObjectKeyFromObject(route))
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: route, Op: CreateOp}
 	}
 
 	resp, err := sdk.CreateRoute(ctx, route.Status.Konnect.ControlPlaneID, kongRouteToSDKRouteInput(route))
-	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it.
-	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
+
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, route); errWrap != nil {
 		return errWrap
 	}
@@ -53,7 +50,7 @@ func updateRoute(
 ) error {
 	cpID := route.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf("can't update %T %s without a Konnect ControlPlane ID", route, client.ObjectKeyFromObject(route))
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: route, Op: UpdateOp}
 	}
 
 	id := route.GetKonnectStatus().GetKonnectID()
@@ -63,9 +60,6 @@ func updateRoute(
 		Route:          kongRouteToSDKRouteInput(route),
 	})
 
-	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it.
-	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, route); errWrap != nil {
 		// Route update operation returns an SDKError instead of a NotFoundError.
 		var sdkError *sdkkonnecterrs.SDKError

@@ -35,9 +35,6 @@ func createControlPlane(
 
 	resp, err := sdk.CreateControlPlane(ctx, req)
 
-	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it.
-	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cp); errWrap != nil {
 		return errWrap
 	}

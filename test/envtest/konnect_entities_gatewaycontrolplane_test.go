@@ -170,7 +170,12 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							ID: lo.ToPtr("12346"),
 						},
 					},
-					nil)
+					nil).
+				// NOTE: UpdateControlPlane can be called depending on the order
+				// of the events in the queue: either the group itself or the member
+				// control plane can be created first.
+				Maybe()
+
 			// verify that mock SDK is called as expected.
 			t.Cleanup(func() {
 				require.True(t, sdk.ControlPlaneSDK.AssertExpectations(t))

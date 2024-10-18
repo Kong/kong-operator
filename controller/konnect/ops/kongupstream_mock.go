@@ -175,6 +175,80 @@ func (_c *MockUpstreamsSDK_DeleteUpstream_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
+// ListUpstream provides a mock function with given fields: ctx, request, opts
+func (_m *MockUpstreamsSDK) ListUpstream(ctx context.Context, request operations.ListUpstreamRequest, opts ...operations.Option) (*operations.ListUpstreamResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, request)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListUpstream")
+	}
+
+	var r0 *operations.ListUpstreamResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, operations.ListUpstreamRequest, ...operations.Option) (*operations.ListUpstreamResponse, error)); ok {
+		return rf(ctx, request, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, operations.ListUpstreamRequest, ...operations.Option) *operations.ListUpstreamResponse); ok {
+		r0 = rf(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.ListUpstreamResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, operations.ListUpstreamRequest, ...operations.Option) error); ok {
+		r1 = rf(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockUpstreamsSDK_ListUpstream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListUpstream'
+type MockUpstreamsSDK_ListUpstream_Call struct {
+	*mock.Call
+}
+
+// ListUpstream is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request operations.ListUpstreamRequest
+//   - opts ...operations.Option
+func (_e *MockUpstreamsSDK_Expecter) ListUpstream(ctx interface{}, request interface{}, opts ...interface{}) *MockUpstreamsSDK_ListUpstream_Call {
+	return &MockUpstreamsSDK_ListUpstream_Call{Call: _e.mock.On("ListUpstream",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockUpstreamsSDK_ListUpstream_Call) Run(run func(ctx context.Context, request operations.ListUpstreamRequest, opts ...operations.Option)) *MockUpstreamsSDK_ListUpstream_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(operations.ListUpstreamRequest), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockUpstreamsSDK_ListUpstream_Call) Return(_a0 *operations.ListUpstreamResponse, _a1 error) *MockUpstreamsSDK_ListUpstream_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockUpstreamsSDK_ListUpstream_Call) RunAndReturn(run func(context.Context, operations.ListUpstreamRequest, ...operations.Option) (*operations.ListUpstreamResponse, error)) *MockUpstreamsSDK_ListUpstream_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpsertUpstream provides a mock function with given fields: ctx, req, opts
 func (_m *MockUpstreamsSDK) UpsertUpstream(ctx context.Context, req operations.UpsertUpstreamRequest, opts ...operations.Option) (*operations.UpsertUpstreamResponse, error) {
 	_va := make([]interface{}, len(opts))

@@ -12,4 +12,5 @@ type UpstreamsSDK interface {
 	CreateUpstream(ctx context.Context, controlPlaneID string, upstream sdkkonnectcomp.UpstreamInput, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateUpstreamResponse, error)
 	UpsertUpstream(ctx context.Context, req sdkkonnectops.UpsertUpstreamRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertUpstreamResponse, error)
 	DeleteUpstream(ctx context.Context, controlPlaneID, upstreamID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteUpstreamResponse, error)
+	ListUpstream(ctx context.Context, request sdkkonnectops.ListUpstreamRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListUpstreamResponse, error)
 }

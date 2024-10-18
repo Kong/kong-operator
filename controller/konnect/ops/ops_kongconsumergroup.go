@@ -9,7 +9,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -21,16 +20,14 @@ func createConsumerGroup(
 	group *configurationv1beta1.KongConsumerGroup,
 ) error {
 	if group.GetControlPlaneID() == "" {
-		return fmt.Errorf("can't create %T %s without a Konnect ControlPlane ID", group, client.ObjectKeyFromObject(group))
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: group, Op: CreateOp}
 	}
 
 	resp, err := sdk.CreateConsumerGroup(ctx,
 		group.Status.Konnect.ControlPlaneID,
 		kongConsumerGroupToSDKConsumerGroupInput(group),
 	)
-	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it.
-	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
+
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, group); errWrap != nil {
 		return errWrap
 	}
@@ -55,7 +52,7 @@ func updateConsumerGroup(
 ) error {
 	cpID := group.GetControlPlaneID()
 	if cpID == "" {
-		return fmt.Errorf("can't update %T %s without a Konnect ControlPlane ID", group, client.ObjectKeyFromObject(group))
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: group, Op: UpdateOp}
 	}
 
 	_, err := sdk.UpsertConsumerGroup(ctx,
@@ -66,9 +63,6 @@ func updateConsumerGroup(
 		},
 	)
 
-	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it.
-	// TODO: implement entity adoption https://github.com/Kong/gateway-operator/issues/460
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, group); errWrap != nil {
 		return errWrap
 	}
@@ -120,8 +114,8 @@ func kongConsumerGroupToSDKConsumerGroupInput(
 	}
 }
 
-// getConsumerGroupForUID lists consumer groups in Konnect with given k8s uid as its tag.
-func getConsumerGroupForUID(
+// getKongConsumerGroupForUID lists consumer groups in Konnect with given k8s uid as its tag.
+func getKongConsumerGroupForUID(
 	ctx context.Context,
 	sdk ConsumerGroupSDK,
 	cg *configurationv1beta1.KongConsumerGroup,

@@ -115,15 +115,17 @@ func Create[
 		case *configurationv1alpha1.KongRoute:
 			id, err = getKongRouteForUID(ctx, sdk.GetRoutesSDK(), ent)
 		case *configurationv1alpha1.KongSNI:
-			id, err = getSNIForUID(ctx, sdk.GetSNIsSDK(), ent)
+			id, err = getKongSNIForUID(ctx, sdk.GetSNIsSDK(), ent)
 		case *configurationv1.KongConsumer:
-			id, err = getConsumerForUID(ctx, sdk.GetConsumersSDK(), ent)
+			id, err = getKongConsumerForUID(ctx, sdk.GetConsumersSDK(), ent)
 		case *configurationv1beta1.KongConsumerGroup:
-			id, err = getConsumerGroupForUID(ctx, sdk.GetConsumerGroupsSDK(), ent)
+			id, err = getKongConsumerGroupForUID(ctx, sdk.GetConsumerGroupsSDK(), ent)
 		case *configurationv1alpha1.KongKeySet:
 			id, err = getKongKeySetForUID(ctx, sdk.GetKeySetsSDK(), ent)
 		case *configurationv1alpha1.KongKey:
 			id, err = getKongKeyForUID(ctx, sdk.GetKeysSDK(), ent)
+		case *configurationv1alpha1.KongUpstream:
+			id, err = getKongUpstreamForUID(ctx, sdk.GetUpstreamsSDK(), ent)
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:
