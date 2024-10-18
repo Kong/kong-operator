@@ -94,5 +94,17 @@ func SDKErrorIsConflict(sdkError *sdkkonnecterrs.SDKError) bool {
 		return false
 	}
 
-	return sdkErrorBody.Code == 3 && sdkErrorBody.Message == "data constraint error"
+	const (
+		dataConstraintMesasge = "data constraint error"
+	)
+
+	if sdkErrorBody.Message != dataConstraintMesasge {
+		return false
+	}
+
+	switch sdkErrorBody.Code {
+	case 3, 6:
+		return true
+	}
+	return false
 }

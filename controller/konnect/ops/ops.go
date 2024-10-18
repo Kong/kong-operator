@@ -61,16 +61,8 @@ func Create[
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
 		err = createRoute(ctx, sdk.GetRoutesSDK(), ent)
-
-		// TODO: modify the create* operation wrappers to not set Programmed conditions and return
-		// a KonnectEntityCreatedButRelationsFailedError if the entity was created but its relations assignment failed.
-
 	case *configurationv1.KongConsumer:
 		err = createConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent)
-
-		// TODO: modify the create* operation wrappers to not set Programmed conditions and return
-		// a KonnectEntityCreatedButRelationsFailedError if the entity was created but its relations assignment failed.
-
 	case *configurationv1beta1.KongConsumerGroup:
 		err = createConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.KongPluginBinding:
@@ -126,6 +118,8 @@ func Create[
 			id, err = getSNIForUID(ctx, sdk.GetSNIsSDK(), ent)
 		case *configurationv1.KongConsumer:
 			id, err = getConsumerForUID(ctx, sdk.GetConsumersSDK(), ent)
+		case *configurationv1beta1.KongConsumerGroup:
+			id, err = getConsumerGroupForUID(ctx, sdk.GetConsumerGroupsSDK(), ent)
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:
@@ -148,7 +142,7 @@ func Create[
 		SetKonnectEntityProgrammedCondition(e)
 	}
 
-	logOpComplete[T, TEnt](ctx, start, CreateOp, e, err)
+	logOpComplete(ctx, start, CreateOp, e, err)
 
 	return e, err
 }
