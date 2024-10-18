@@ -14,7 +14,6 @@ import (
 	"github.com/sourcegraph/conc/iter"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -70,25 +69,7 @@ func deleteControlPlane(
 	id := cp.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteControlPlane(ctx, id)
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, cp); errWrap != nil {
-		var sdkNotFoundError *sdkkonnecterrs.NotFoundError
-		if errors.As(err, &sdkNotFoundError) {
-			ctrllog.FromContext(ctx).
-				Info("entity not found in Konnect, skipping delete",
-					"op", DeleteOp, "type", cp.GetTypeName(), "id", id,
-				)
-			return nil
-		}
-		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrap, &sdkError) {
-			return FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
-				Op:  DeleteOp,
-				Err: sdkError,
-			}
-		}
-		return FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
-			Op:  DeleteOp,
-			Err: errWrap,
-		}
+		return handleDeleteError(ctx, err, cp)
 	}
 
 	return nil

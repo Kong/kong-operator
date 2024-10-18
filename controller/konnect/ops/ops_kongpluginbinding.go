@@ -3,15 +3,12 @@ package ops
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 
@@ -111,19 +108,7 @@ func deletePlugin(
 	id := pb.GetKonnectID()
 	_, err := sdk.DeletePlugin(ctx, pb.GetControlPlaneID(), id)
 	if errWrap := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongPluginBinding](err, DeleteOp, pb); errWrap != nil {
-		// plugin delete operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrap, &sdkError) && sdkError.StatusCode == 404 {
-			ctrllog.FromContext(ctx).
-				Info("entity not found in Konnect, skipping delete",
-					"op", DeleteOp, "type", pb.GetTypeName(), "id", id,
-				)
-			return nil
-		}
-		return FailedKonnectOpError[configurationv1alpha1.KongPluginBinding]{
-			Op:  DeleteOp,
-			Err: errWrap,
-		}
+		return handleDeleteError(ctx, err, pb)
 	}
 
 	return nil

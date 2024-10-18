@@ -11,7 +11,6 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
@@ -97,27 +96,7 @@ func deleteVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1
 	id := vault.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteVault(ctx, cpID, id)
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, vault); errWrapped != nil {
-		// Vault delete operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrapped, &sdkError) {
-			switch sdkError.StatusCode {
-			case 404:
-				ctrllog.FromContext(ctx).
-					Info("entity not found in Konnect, skipping delete",
-						"op", DeleteOp, "type", vault.GetTypeName(), "id", id,
-					)
-				return nil
-			default:
-				return FailedKonnectOpError[configurationv1alpha1.KongVault]{
-					Op:  DeleteOp,
-					Err: sdkError,
-				}
-			}
-		}
-		return FailedKonnectOpError[configurationv1alpha1.KongVault]{
-			Op:  DeleteOp,
-			Err: errWrapped,
-		}
+		return handleDeleteError(ctx, err, vault)
 	}
 
 	return nil

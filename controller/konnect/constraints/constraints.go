@@ -53,6 +53,7 @@ type EntityType[T SupportedKonnectEntityType] interface {
 	SetConditions([]metav1.Condition)
 	GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
 	SetKonnectID(string)
+	GetTypeName() string
 }
 
 // SupportedKonnectEntityPluginReferenceableType is an interface that all Konnect
