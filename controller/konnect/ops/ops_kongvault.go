@@ -29,12 +29,14 @@ func createVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1
 	resp, err := sdk.CreateVault(ctx, cpID, vaultInput)
 
 	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, vault); errWrapped != nil {
-		SetKonnectEntityProgrammedConditionFalse(vault, "FailedToCreate", errWrapped.Error())
 		return errWrapped
 	}
 
+	if resp == nil || resp.Vault == nil || resp.Vault.ID == nil || *resp.Vault.ID == "" {
+		return fmt.Errorf("failed creating %s: %w", vault.GetTypeName(), ErrNilResponse)
+	}
+
 	vault.SetKonnectID(*resp.Vault.ID)
-	SetKonnectEntityProgrammedCondition(vault)
 	return nil
 }
 
@@ -78,11 +80,9 @@ func updateVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1
 			}
 		}
 
-		SetKonnectEntityProgrammedConditionFalse(vault, "FailedToUpdate", errWrapped.Error())
 		return errWrapped
 	}
 
-	SetKonnectEntityProgrammedCondition(vault)
 	return nil
 }
 
@@ -139,4 +139,24 @@ func kongVaultToVaultInput(vault *configurationv1alpha1.KongVault) (sdkkonnectco
 		input.Description = lo.ToPtr(vault.Spec.Description)
 	}
 	return input, nil
+}
+
+func getKongVaultForUID(
+	ctx context.Context,
+	sdk VaultSDK,
+	vault *configurationv1alpha1.KongVault,
+) (string, error) {
+	resp, err := sdk.ListVault(ctx, sdkkonnectops.ListVaultRequest{
+		ControlPlaneID: vault.GetControlPlaneID(),
+		Tags:           lo.ToPtr(UIDLabelForObject(vault)),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to list KongVaults: %w", err)
+	}
+
+	if resp == nil || resp.Object == nil {
+		return "", fmt.Errorf("failed to list KongVaults: %w", ErrNilResponse)
+	}
+
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), vault)
 }

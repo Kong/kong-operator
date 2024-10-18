@@ -2,10 +2,12 @@ package envtest
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -118,6 +120,59 @@ func TestKongVault(t *testing.T) {
 
 		t.Log("Waiting for vault to be deleted in the SDK")
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.VaultSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
+
+	t.Run("Should correctly handle conflict on create", func(t *testing.T) {
+		const (
+			vaultBackend   = "env-conflict"
+			vaultPrefix    = "env-vault-conflict"
+			vaultRawConfig = `{"prefix":"env_vault_conflict"}`
+			vaultID        = "vault-conflict-id"
+		)
+
+		t.Log("Setting up mock SDK for vault creation with conflict")
+		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.MatchedBy(func(input sdkkonnectcomp.VaultInput) bool {
+			return input.Name == vaultBackend && input.Prefix == vaultPrefix
+		})).Return(&sdkkonnectops.CreateVaultResponse{
+			Vault: &sdkkonnectcomp.Vault{
+				ID: lo.ToPtr(vaultID),
+			},
+		}, &sdkkonnecterrs.ConflictError{})
+
+		sdk.VaultSDK.EXPECT().ListVault(
+			mock.Anything,
+			mock.MatchedBy(func(r sdkkonnectops.ListVaultRequest) bool {
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID() &&
+					r.Tags != nil && strings.Contains(*r.Tags, "k8s-uid")
+			},
+			)).Return(&sdkkonnectops.ListVaultResponse{
+			Object: &sdkkonnectops.ListVaultResponseBody{
+				Data: []sdkkonnectcomp.Vault{
+					{
+						ID: lo.ToPtr(vaultID),
+					},
+				},
+			},
+		}, nil)
+
+		vault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, []byte(vaultRawConfig), cp)
+
+		t.Log("Waiting for KongVault to be programmed")
+		watchFor(t, ctx, vaultWatch, watch.Modified, func(v *configurationv1alpha1.KongVault) bool {
+			if v.GetName() != vault.GetName() {
+				return false
+			}
+
+			return lo.ContainsBy(v.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					condition.Status == metav1.ConditionTrue
+			})
+		}, "KongVault's Programmed condition should be true eventually")
+
+		t.Log("Waiting for KongVault to be created in the SDK")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.VaultSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
 	})

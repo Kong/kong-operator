@@ -130,6 +130,8 @@ func Create[
 			id, err = getKongTargetForUID(ctx, sdk.GetTargetsSDK(), ent)
 		case *configurationv1alpha1.KongPluginBinding:
 			id, err = getPluginForUID(ctx, sdk.GetPluginSDK(), ent)
+		case *configurationv1alpha1.KongVault:
+			id, err = getKongVaultForUID(ctx, sdk.GetVaultSDK(), ent)
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:

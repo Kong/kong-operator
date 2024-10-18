@@ -15,8 +15,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -71,11 +69,6 @@ func TestCreateKongVault(t *testing.T) {
 			},
 			assertions: func(t *testing.T, vault *configurationv1alpha1.KongVault) {
 				assert.Equal(t, "12345", vault.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, vault)
-				require.True(t, ok, "Programmed condition not set on KongVault")
-				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
-				assert.Equal(t, vault.GetGeneration(), cond.ObservedGeneration)
 			},
 		},
 		{
@@ -137,11 +130,6 @@ func TestCreateKongVault(t *testing.T) {
 			expectedErr: true,
 			assertions: func(t *testing.T, vault *configurationv1alpha1.KongVault) {
 				assert.Equal(t, "", vault.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, vault)
-				require.True(t, ok, "Programmed condition not set on KongVault")
-				assert.Equal(t, metav1.ConditionFalse, cond.Status)
-				assert.Equal(t, "FailedToCreate", cond.Reason)
-				assert.Equal(t, vault.GetGeneration(), cond.ObservedGeneration)
 			},
 		},
 	}
@@ -213,11 +201,6 @@ func TestUpdateKongVault(t *testing.T) {
 			},
 			assertions: func(t *testing.T, vault *configurationv1alpha1.KongVault) {
 				assert.Equal(t, "12345", vault.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, vault)
-				require.True(t, ok, "Programmed condition not set on KongVault")
-				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
-				assert.Equal(t, vault.GetGeneration(), cond.ObservedGeneration)
 			},
 		},
 		{
@@ -258,11 +241,7 @@ func TestUpdateKongVault(t *testing.T) {
 			},
 			expectedErr: true,
 			assertions: func(t *testing.T, vault *configurationv1alpha1.KongVault) {
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, vault)
-				require.True(t, ok, "Programmed condition not set on KongVault")
-				assert.Equal(t, metav1.ConditionFalse, cond.Status)
-				assert.Equal(t, "FailedToUpdate", cond.Reason)
-				assert.Equal(t, vault.GetGeneration(), cond.ObservedGeneration)
+				assert.Equal(t, "12345", vault.GetKonnectID())
 			},
 		},
 		{
@@ -313,11 +292,6 @@ func TestUpdateKongVault(t *testing.T) {
 			},
 			assertions: func(t *testing.T, vault *configurationv1alpha1.KongVault) {
 				assert.Equal(t, "12345", vault.GetKonnectStatus().GetKonnectID())
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, vault)
-				require.True(t, ok, "Programmed condition not set on KongVault")
-				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
-				assert.Equal(t, vault.GetGeneration(), cond.ObservedGeneration)
 			},
 		},
 	}
