@@ -42,7 +42,7 @@ func createKey(
 		return fmt.Errorf("failed creating %s: %w", key.GetTypeName(), ErrNilResponse)
 	}
 
-	key.Status.Konnect.SetKonnectID(*resp.Key.ID)
+	key.SetKonnectID(*resp.Key.ID)
 
 	return nil
 }

@@ -37,12 +37,14 @@ func createTarget(
 	})
 
 	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, target); errWrapped != nil {
-		SetKonnectEntityProgrammedConditionFalse(target, "FailedToCreate", errWrapped.Error())
 		return errWrapped
 	}
 
-	target.Status.Konnect.SetKonnectID(*resp.Target.ID)
-	SetKonnectEntityProgrammedCondition(target)
+	if resp == nil || resp.Target == nil || resp.Target.ID == nil {
+		return fmt.Errorf("failed creating %s: %w", target.GetTypeName(), ErrNilResponse)
+	}
+
+	target.SetKonnectID(*resp.Target.ID)
 
 	return nil
 }
@@ -68,11 +70,9 @@ func updateTarget(
 	})
 
 	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, target); errWrapped != nil {
-		SetKonnectEntityProgrammedConditionFalse(target, "FailedToUpdate", errWrapped.Error())
 		return errWrapped
 	}
 
-	SetKonnectEntityProgrammedCondition(target)
 	return nil
 }
 
@@ -127,4 +127,31 @@ func kongTargetToTargetWithoutParents(target *configurationv1alpha1.KongTarget) 
 		Weight: lo.ToPtr(int64(target.Spec.Weight)),
 		Tags:   GenerateTagsForObject(target, target.Spec.Tags...),
 	}
+}
+
+// getKongTargetForUID returns the Konnect ID of the KongTarget
+// that matches the UID of the provided KongTarget.
+func getKongTargetForUID(
+	ctx context.Context,
+	sdk TargetsSDK,
+	target *configurationv1alpha1.KongTarget,
+) (string, error) {
+	reqList := sdkkonnectops.ListTargetWithUpstreamRequest{
+		// NOTE: only filter on object's UID.
+		// Other fields like name might have changed in the meantime but that's OK.
+		// Those will be enforced via subsequent updates.
+		Tags:           lo.ToPtr(UIDLabelForObject(target)),
+		ControlPlaneID: target.GetControlPlaneID(),
+	}
+
+	resp, err := sdk.ListTargetWithUpstream(ctx, reqList)
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", target.GetTypeName(), err)
+	}
+
+	if resp == nil || resp.Object == nil {
+		return "", fmt.Errorf("failed listing %s: %w", target.GetTypeName(), ErrNilResponse)
+	}
+
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), target)
 }
