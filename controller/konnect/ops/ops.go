@@ -413,20 +413,18 @@ type entityWithID interface {
 }
 
 // sliceToEntityWithIDSlice converts a slice of entities to a slice of entityWithID.
-// The conversion is done by asserting the type of the entity to entityWithID.
-// It panics if the conversion fails.
 func sliceToEntityWithIDSlice[
 	T any,
+	TPtr interface {
+		*T
+		GetID() *string
+	},
 ](
 	slice []T,
 ) []entityWithID {
 	result := make([]entityWithID, 0, len(slice))
 	for _, item := range slice {
-		converted, ok := any(&item).(entityWithID)
-		if !ok {
-			panic(fmt.Sprintf("failed to convert %T to entityWithID", item))
-		}
-		result = append(result, converted)
+		result = append(result, TPtr(&item))
 	}
 	return result
 }
