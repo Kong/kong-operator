@@ -13,7 +13,6 @@ retract v1.2.2
 require (
 	github.com/Kong/sdk-konnect-go v0.0.16
 	github.com/Masterminds/semver v1.5.0
-	github.com/cert-manager/cert-manager v1.16.1
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-containerregistry v0.20.2
@@ -47,6 +46,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731 // indirect
+	github.com/evanphx/json-patch v5.9.0+incompatible // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect

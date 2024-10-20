@@ -182,7 +182,7 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 				WithObjects(tc.dataPlane, hpa).
 				Build()
 
-			result, _, err := ApplyPatchIfNonEmpty(context.Background(), fakeClient, log, hpa, old, tc.dataPlane, tc.updated)
+			result, _, err := ApplyPatchIfNotEmpty(context.Background(), fakeClient, log, hpa, old, tc.updated)
 			if tc.wantErr {
 				require.Error(t, err)
 				return

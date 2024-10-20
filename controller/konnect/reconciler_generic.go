@@ -21,6 +21,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/controller/pkg/patch"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -337,7 +338,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
 	if err := r.Client.Get(ctx, apiAuthRef, &apiAuth); err != nil {
 		if k8serrors.IsNotFound(err) {
-			if res, err := updateStatusWithCondition(
+			if res, err := patch.StatusWithCondition(
 				ctx, r.Client, ent,
 				konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
 				metav1.ConditionFalse,
@@ -350,7 +351,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			return ctrl.Result{}, nil
 		}
 
-		if res, err := updateStatusWithCondition(
+		if res, err := patch.StatusWithCondition(
 			ctx, r.Client, ent,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
 			metav1.ConditionFalse,
@@ -368,7 +369,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		cond.Status != metav1.ConditionTrue ||
 		cond.ObservedGeneration != ent.GetGeneration() ||
 		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef {
-		if res, err := updateStatusWithCondition(
+		if res, err := patch.StatusWithCondition(
 			ctx, r.Client, ent,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
 			metav1.ConditionTrue,
@@ -387,7 +388,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		// If it's invalid then set the "APIAuthValid" status condition on
 		// the entity to False with "Invalid" reason.
-		if res, err := updateStatusWithCondition(
+		if res, err := patch.StatusWithCondition(
 			ctx, r.Client, ent,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionFalse,
@@ -409,7 +410,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		cond.ObservedGeneration != ent.GetGeneration() ||
 		cond.Message != conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef) {
 
-		if res, err := updateStatusWithCondition(
+		if res, err := patch.StatusWithCondition(
 			ctx, r.Client, ent,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionTrue,
@@ -423,7 +424,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, &apiAuth)
 	if err != nil {
-		if res, errStatus := updateStatusWithCondition(
+		if res, errStatus := patch.StatusWithCondition(
 			ctx, r.Client, &apiAuth,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionFalse,
@@ -459,7 +460,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 			if err := ops.Delete[T, TEnt](ctx, sdk, r.Client, ent); err != nil {
-				if res, errStatus := updateStatusWithCondition(
+				if res, errStatus := patch.StatusWithCondition(
 					ctx, r.Client, ent,
 					konnectv1alpha1.KonnectEntityProgrammedConditionType,
 					metav1.ConditionFalse,
@@ -523,7 +524,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		// Regardless of the error, set the status as it can contain the Konnect ID
-		// and/or status conditions set in Create() and that ID will be needed to
+		// and/or status ops set in Create() and that ID will be needed to
 		// update/delete the object in Konnect.
 		if err := r.Client.Status().Patch(ctx, ent, client.MergeFrom(obj)); err != nil {
 			if k8serrors.IsConflict(err) {
@@ -588,39 +589,6 @@ func setServerURLAndOrgID(
 type EntityWithControlPlaneRef interface {
 	SetControlPlaneID(string)
 	GetControlPlaneID() string
-}
-
-func updateStatusWithCondition[T interface {
-	client.Object
-	k8sutils.ConditionsAware
-}](
-	ctx context.Context,
-	client client.Client,
-	ent T,
-	conditionType consts.ConditionType,
-	conditionStatus metav1.ConditionStatus,
-	conditionReason consts.ConditionReason,
-	conditionMessage string,
-) (ctrl.Result, error) {
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			conditionType,
-			conditionStatus,
-			conditionReason,
-			conditionMessage,
-			ent.GetGeneration(),
-		),
-		ent,
-	)
-
-	if err := client.Status().Update(ctx, ent); err != nil {
-		if k8serrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("failed to update status with %s condition: %w", conditionType, err)
-	}
-
-	return ctrl.Result{}, nil
 }
 
 func getCPForRef(
@@ -820,7 +788,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	}
 
 	if err := cl.Get(ctx, nn, &consumer); err != nil {
-		if res, errStatus := updateStatusWithCondition(
+		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.KongConsumerRefValidConditionType,
 			metav1.ConditionFalse,
@@ -848,7 +816,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &consumer)
 	if !ok || cond.Status != metav1.ConditionTrue {
 		ent.SetKonnectID("")
-		if res, err := updateStatusWithCondition(
+		if res, err := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.KongConsumerRefValidConditionType,
 			metav1.ConditionFalse,
@@ -883,7 +851,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		)
 	}
 
-	if res, errStatus := updateStatusWithCondition(
+	if res, errStatus := patch.StatusWithCondition(
 		ctx, cl, ent,
 		konnectv1alpha1.KongConsumerRefValidConditionType,
 		metav1.ConditionTrue,
@@ -902,7 +870,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	}
 	cp, err := getCPForRef(ctx, cl, cpRef, ent.GetNamespace())
 	if err != nil {
-		if res, errStatus := updateStatusWithCondition(
+		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
@@ -922,7 +890,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 
 	cond, ok = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 	if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
-		if res, errStatus := updateStatusWithCondition(
+		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
@@ -936,10 +904,18 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	}
 
 	if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
+		old := ent.DeepCopyObject().(TEnt)
 		resource.SetControlPlaneID(cp.Status.ID)
+		_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
+		if err != nil {
+			if k8serrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, err
+		}
 	}
 
-	if res, errStatus := updateStatusWithCondition(
+	if res, errStatus := patch.StatusWithCondition(
 		ctx, cl, ent,
 		konnectv1alpha1.ControlPlaneRefValidConditionType,
 		metav1.ConditionTrue,
@@ -1048,7 +1024,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			nn.Namespace = cpRef.KonnectNamespacedRef.Namespace
 		}
 		if err := cl.Get(ctx, nn, &cp); err != nil {
-			if res, errStatus := updateStatusWithCondition(
+			if res, errStatus := patch.StatusWithCondition(
 				ctx, cl, ent,
 				konnectv1alpha1.ControlPlaneRefValidConditionType,
 				metav1.ConditionFalse,
@@ -1068,7 +1044,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 
 		cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &cp)
 		if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
-			if res, errStatus := updateStatusWithCondition(
+			if res, errStatus := patch.StatusWithCondition(
 				ctx, cl, ent,
 				konnectv1alpha1.ControlPlaneRefValidConditionType,
 				metav1.ConditionFalse,
@@ -1109,10 +1085,18 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		// CP ID is not stored in KonnectEntityStatus because not all entities
 		// have a ControlPlaneRef, hence the type constraints in the reconciler can't be used.
 		if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
+			old := ent.DeepCopyObject().(TEnt)
 			resource.SetControlPlaneID(cp.Status.ID)
+			_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
+			if err != nil {
+				if k8serrors.IsConflict(err) {
+					return ctrl.Result{Requeue: true}, nil
+				}
+				return ctrl.Result{}, err
+			}
 		}
 
-		if res, errStatus := updateStatusWithCondition(
+		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionTrue,

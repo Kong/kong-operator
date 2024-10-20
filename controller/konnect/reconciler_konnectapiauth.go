@@ -18,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -115,7 +116,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.client, &apiAuth)
 	if err != nil {
-		if res, errStatus := updateStatusWithCondition(
+		if res, errStatus := patch.StatusWithCondition(
 			ctx, r.client, &apiAuth,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionFalse,
@@ -155,7 +156,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 			apiAuth.Status.OrganizationID = ""
 			apiAuth.Status.ServerURL = serverURL.String()
 
-			res, errUpdate := updateStatusWithCondition(
+			res, errUpdate := patch.StatusWithCondition(
 				ctx, r.client, &apiAuth,
 				konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 				metav1.ConditionFalse,
@@ -193,7 +194,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		apiAuth.Status.OrganizationID = *respOrg.MeOrganization.ID
 		apiAuth.Status.ServerURL = serverURL.String()
 
-		res, err := updateStatusWithCondition(
+		res, err := patch.StatusWithCondition(
 			ctx, r.client, &apiAuth,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionTrue,
