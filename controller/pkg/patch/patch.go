@@ -5,41 +5,30 @@ import (
 	"context"
 	"fmt"
 
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
-	policyv1 "k8s.io/api/policy/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 )
 
-// ApplyPatchIfNonEmpty patches the provided resource if the resulting patch
+// ApplyPatchIfNotEmpty patches the provided resource if the resulting patch
 // between the provided existingResource and the provided oldExistingResource
 // is non empty.
-func ApplyPatchIfNonEmpty[
-	OwnerT *operatorv1beta1.DataPlane | *operatorv1beta1.ControlPlane,
-	ResourceT interface {
-		*appsv1.Deployment | *autoscalingv2.HorizontalPodAutoscaler | *certmanagerv1.Certificate | *policyv1.PodDisruptionBudget
-		client.Object
-	},
+func ApplyPatchIfNotEmpty[
+	T client.Object,
 ](
 	ctx context.Context,
 	cl client.Client,
 	logger logr.Logger,
-	existingResource ResourceT,
-	oldExistingResource ResourceT,
-	owner OwnerT,
+	existingResource T,
+	oldExistingResource T,
 	updated bool,
-) (res op.Result, deploy ResourceT, err error) {
+) (res op.Result, deploy T, err error) {
 	kind := existingResource.GetObjectKind().GroupVersionKind().Kind
 
 	if !updated {
-		log.Trace(logger, "No need for update", owner, kind, existingResource.GetName())
+		log.Trace(logger, "No need for update", existingResource, kind, existingResource.GetName())
 		return op.Noop, existingResource, nil
 	}
 
@@ -47,45 +36,53 @@ func ApplyPatchIfNonEmpty[
 	patch := client.MergeFrom(oldExistingResource)
 	b, err := patch.Data(existingResource)
 	if err != nil {
-		return op.Noop, nil, fmt.Errorf("failed to generate patch for %s %s: %w", kind, existingResource.GetName(), err)
+		var t T
+		return op.Noop, t, fmt.Errorf("failed to generate patch for %s %s: %w", kind, existingResource.GetName(), err)
 	}
 	// Only perform the patch operation if the resulting patch is non empty.
 	if len(b) == 0 || bytes.Equal(b, []byte("{}")) {
-		log.Trace(logger, "No need for update", owner, kind, existingResource.GetName())
+		log.Trace(logger, "No need for update", existingResource, kind, existingResource.GetName())
 		return op.Noop, existingResource, nil
 	}
 
 	if err := cl.Patch(ctx, existingResource, client.MergeFrom(oldExistingResource)); err != nil {
-		return op.Noop, nil, fmt.Errorf("failed patching %s %s: %w", kind, existingResource.GetName(), err)
+		var t T
+		return op.Noop, t, fmt.Errorf("failed patching %s %s: %w", kind, existingResource.GetName(), err)
 	}
-	log.Debug(logger, "Resource modified", owner, kind, existingResource.GetName())
+	log.Debug(logger, "Resource modified", existingResource, kind, existingResource.GetName())
 	return op.Updated, existingResource, nil
 }
 
-// ApplyGatewayStatusPatchIfNotEmpty patches the provided gateways if the
-// resulting patch between the provided existingGateway and oldExistingGateway
-// is non empty.
-func ApplyGatewayStatusPatchIfNotEmpty(ctx context.Context,
+// ApplyStatusPatchIfNotEmpty patches the provided object if the resulting patch
+// between the provided existing and oldExisting is non empty.
+func ApplyStatusPatchIfNotEmpty[
+	T client.Object,
+](
+	ctx context.Context,
 	cl client.Client,
 	logger logr.Logger,
-	existingGateway *gatewayv1.Gateway,
-	oldExistingGateway *gatewayv1.Gateway,
+	existing T,
+	oldExisting T,
 ) (res op.Result, err error) {
 	// Check if the patch to be applied is empty.
-	patch := client.MergeFrom(oldExistingGateway)
-	b, err := patch.Data(existingGateway)
+	patch := client.MergeFrom(oldExisting)
+	b, err := patch.Data(existing)
 	if err != nil {
-		return op.Noop, fmt.Errorf("failed to generate patch for gateway %s/%s: %w", existingGateway.Namespace, existingGateway.Name, err)
+		return op.Noop, fmt.Errorf("failed to generate patch for %T %s: %w",
+			existing, client.ObjectKeyFromObject(existing), err,
+		)
 	}
 	// Only perform the patch operation if the resulting patch is non empty.
 	if len(b) == 0 || bytes.Equal(b, []byte("{}")) {
-		log.Trace(logger, "No need for update", existingGateway)
+		log.Trace(logger, "No need for status patch", existing)
 		return op.Noop, nil
 	}
 
-	if err := cl.Status().Patch(ctx, existingGateway, patch); err != nil {
-		return op.Noop, fmt.Errorf("failed patching gateway %s/%s: %w", existingGateway.Namespace, existingGateway.Name, err)
+	if err := cl.Status().Patch(ctx, existing, patch); err != nil {
+		return op.Noop, fmt.Errorf("failed patching %T, %s: %w",
+			existing, client.ObjectKeyFromObject(existing), err,
+		)
 	}
-	log.Debug(logger, "Resource modified", existingGateway)
+	log.Debug(logger, "Resource modified", existing)
 	return op.Updated, nil
 }

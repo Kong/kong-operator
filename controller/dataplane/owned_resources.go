@@ -104,7 +104,7 @@ func ensureHPAForDataPlane(
 			updated = true
 		}
 
-		return patch.ApplyPatchIfNonEmpty(ctx, cl, log, existingHPA, oldExistingHPA, dataplane, updated)
+		return patch.ApplyPatchIfNotEmpty(ctx, cl, log, existingHPA, oldExistingHPA, updated)
 	}
 
 	if err = cl.Create(ctx, generatedHPA); err != nil {
@@ -160,7 +160,7 @@ func ensurePodDisruptionBudgetForDataPlane(
 			updated = true
 		}
 
-		return patch.ApplyPatchIfNonEmpty(ctx, cl, log, existingPDB, oldExistingPDB, dataplane, updated)
+		return patch.ApplyPatchIfNotEmpty(ctx, cl, log, existingPDB, oldExistingPDB, updated)
 	}
 
 	if err := cl.Create(ctx, generatedPDB); err != nil {

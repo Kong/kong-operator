@@ -345,7 +345,7 @@ func reconcileDataPlaneDeployment(
 			log.Trace(logger, "Deployment diff detected", diff)
 		}
 
-		return patch.ApplyPatchIfNonEmpty(ctx, cl, logger, existing, original, dataplane, updated)
+		return patch.ApplyPatchIfNotEmpty(ctx, cl, logger, existing, original, updated)
 	}
 
 	if err = cl.Create(ctx, desired); err != nil {

@@ -11,8 +11,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -50,7 +52,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	}
 	err := cl.Get(ctx, nn, cert)
 	if err != nil {
-		if res, errStatus := updateStatusWithCondition(
+		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.KongCertificateRefValidConditionType,
 			metav1.ConditionFalse,
@@ -79,7 +81,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cert)
 	if !ok || cond.Status != metav1.ConditionTrue {
 		ent.SetKonnectID("")
-		if res, err := updateStatusWithCondition(
+		if res, err := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.KongCertificateRefValidConditionType,
 			metav1.ConditionFalse,
@@ -111,7 +113,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		sni.Status.Konnect.CertificateID = cert.GetKonnectID()
 	}
 
-	if res, errStatus := updateStatusWithCondition(
+	if res, errStatus := patch.StatusWithCondition(
 		ctx, cl, ent,
 		konnectv1alpha1.KongCertificateRefValidConditionType,
 		metav1.ConditionTrue,
@@ -133,7 +135,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	}
 	cp, err := getCPForRef(ctx, cl, cpRef, ent.GetNamespace())
 	if err != nil {
-		if res, errStatus := updateStatusWithCondition(
+		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
@@ -156,7 +158,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 
 	cond, ok = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 	if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
-		if res, errStatus := updateStatusWithCondition(
+		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
@@ -170,10 +172,18 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	}
 
 	if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
+		old := ent.DeepCopyObject().(TEnt)
 		resource.SetControlPlaneID(cp.Status.ID)
+		_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
+		if err != nil {
+			if k8serrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, err
+		}
 	}
 
-	if res, errStatus := updateStatusWithCondition(
+	if res, errStatus := patch.StatusWithCondition(
 		ctx, cl, ent,
 		konnectv1alpha1.ControlPlaneRefValidConditionType,
 		metav1.ConditionTrue,

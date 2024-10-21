@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -52,7 +53,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	}
 	err := cl.Get(ctx, nn, kongUpstream)
 	if err != nil {
-		if res, errStatus := updateStatusWithCondition(
+		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.KongUpstreamRefValidConditionType,
 			metav1.ConditionFalse,
@@ -81,7 +82,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, kongUpstream)
 	if !ok || cond.Status != metav1.ConditionTrue {
 		ent.SetKonnectID("")
-		if res, err := updateStatusWithCondition(
+		if res, err := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.KongUpstreamRefValidConditionType,
 			metav1.ConditionFalse,
@@ -113,7 +114,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		target.Status.Konnect.UpstreamID = kongUpstream.GetKonnectID()
 	}
 
-	if res, errStatus := updateStatusWithCondition(
+	if res, errStatus := patch.StatusWithCondition(
 		ctx, cl, ent,
 		konnectv1alpha1.KongUpstreamRefValidConditionType,
 		metav1.ConditionTrue,
@@ -135,7 +136,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	}
 	cp, err := getCPForRef(ctx, cl, cpRef, ent.GetNamespace())
 	if err != nil {
-		if res, errStatus := updateStatusWithCondition(
+		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
@@ -158,7 +159,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 
 	cond, ok = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 	if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
-		if res, errStatus := updateStatusWithCondition(
+		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
@@ -175,7 +176,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		resource.SetControlPlaneID(cp.Status.ID)
 	}
 
-	if res, errStatus := updateStatusWithCondition(
+	if res, errStatus := patch.StatusWithCondition(
 		ctx, cl, ent,
 		konnectv1alpha1.ControlPlaneRefValidConditionType,
 		metav1.ConditionTrue,

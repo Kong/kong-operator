@@ -7,17 +7,20 @@ import (
 
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -115,7 +118,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.client, &apiAuth)
 	if err != nil {
-		if res, errStatus := updateStatusWithCondition(
+		if res, errStatus := patch.StatusWithCondition(
 			ctx, r.client, &apiAuth,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionFalse,
@@ -152,19 +155,25 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 			apiAuth.Status.OrganizationID != "" ||
 			apiAuth.Status.ServerURL != serverURL.String() {
 
+			old := apiAuth.DeepCopy()
 			apiAuth.Status.OrganizationID = ""
 			apiAuth.Status.ServerURL = serverURL.String()
 
-			res, errUpdate := updateStatusWithCondition(
-				ctx, r.client, &apiAuth,
+			_ = patch.SetStatusWithConditionIfDifferent(&apiAuth,
 				konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 				metav1.ConditionFalse,
 				konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
 				err.Error(),
 			)
-			if errUpdate != nil || !res.IsZero() {
-				return res, errUpdate
+
+			_, errUpdate := patch.ApplyStatusPatchIfNotEmpty(ctx, r.client, ctrllog.FromContext(ctx), &apiAuth, old)
+			if errUpdate != nil {
+				if k8serrors.IsConflict(errUpdate) {
+					return ctrl.Result{Requeue: true}, nil
+				}
+				return ctrl.Result{}, errUpdate
 			}
+
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, nil
@@ -190,19 +199,26 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		apiAuth.Status.OrganizationID != *respOrg.MeOrganization.ID ||
 		apiAuth.Status.ServerURL != serverURL.String() {
 
+		old := apiAuth.DeepCopy()
+
 		apiAuth.Status.OrganizationID = *respOrg.MeOrganization.ID
 		apiAuth.Status.ServerURL = serverURL.String()
 
-		res, err := updateStatusWithCondition(
-			ctx, r.client, &apiAuth,
+		_ = patch.SetStatusWithConditionIfDifferent(&apiAuth,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionTrue,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
 			condMessage,
 		)
-		if err != nil || !res.IsZero() {
-			return res, err
+
+		_, errUpdate := patch.ApplyStatusPatchIfNotEmpty(ctx, r.client, ctrllog.FromContext(ctx), &apiAuth, old)
+		if errUpdate != nil {
+			if k8serrors.IsConflict(errUpdate) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, errUpdate
 		}
+
 		return ctrl.Result{}, nil
 	}
 

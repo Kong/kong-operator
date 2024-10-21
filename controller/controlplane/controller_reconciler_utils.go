@@ -230,7 +230,7 @@ func (r *Reconciler) ensureDeployment(
 			}
 		}
 
-		return patch.ApplyPatchIfNonEmpty(ctx, r.Client, logger, existingDeployment, oldExistingDeployment, params.ControlPlane, updated)
+		return patch.ApplyPatchIfNotEmpty(ctx, r.Client, logger, existingDeployment, oldExistingDeployment, updated)
 	}
 
 	if !dataplaneIsSet {
