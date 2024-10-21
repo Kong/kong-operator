@@ -497,7 +497,8 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// will try to create the resource again on next reconciliation.
 
 		// Regardless of the error reported from Create(), if the Konnect ID has been
-		// set then add the finalizer so that the resource can be cleaned up from Konnect on deletion.
+		// set then:
+		// - add the finalizer so that the resource can be cleaned up from Konnect on deletion...
 		if ent.GetKonnectStatus().ID != "" {
 			objWithFinalizer := ent.DeepCopyObject().(client.Object)
 			if controllerutil.AddFinalizer(objWithFinalizer, KonnectCleanupFinalizer) {
@@ -517,15 +518,17 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 					)
 				}
 			}
-		}
 
-		if err == nil {
+			// ...
+			// - add the Org ID and Server URL to the status so that the resource can be
+			//   cleaned up from Konnect on deletion and also so that the status can
+			//   indicate where the resource is located.
 			setServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
 		}
 
-		// Regardless of the error, set the status as it can contain the Konnect ID
-		// and/or status ops set in Create() and that ID will be needed to
-		// update/delete the object in Konnect.
+		// Regardless of the error, patch the status as it can contain the Konnect ID,
+		// Org ID, Server URL and status conditions.
+		// Konnect ID will be needed for the finalizer to work.
 		if err := r.Client.Status().Patch(ctx, ent, client.MergeFrom(obj)); err != nil {
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil

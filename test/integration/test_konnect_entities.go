@@ -2,7 +2,6 @@ package integration
 
 import (
 	"testing"
-	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/google/uuid"
@@ -64,7 +63,7 @@ func TestKonnectEntities(t *testing.T) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 		require.NoError(t, err)
 		assertKonnectEntityProgrammed(t, cp)
-	}, testutils.ObjectUpdateTimeout, time.Second)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	ks := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
 		deploy.WithTestIDLabel(testID),
@@ -75,7 +74,7 @@ func TestKonnectEntities(t *testing.T) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: ks.Name, Namespace: ks.Namespace}, ks)
 		require.NoError(t, err)
 		assertKonnectEntityProgrammed(t, ks)
-	}, testutils.ObjectUpdateTimeout, time.Second)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	kr := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, ks,
 		deploy.WithTestIDLabel(testID),
@@ -92,7 +91,7 @@ func TestKonnectEntities(t *testing.T) {
 		require.NoError(t, err)
 
 		assertKonnectEntityProgrammed(t, kr)
-	}, testutils.ObjectUpdateTimeout, time.Second)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	kcg := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cp,
 		deploy.WithTestIDLabel(testID),
@@ -104,7 +103,7 @@ func TestKonnectEntities(t *testing.T) {
 		require.NoError(t, err)
 
 		assertKonnectEntityProgrammed(t, kcg)
-	}, testutils.ObjectUpdateTimeout, time.Second)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	kc := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, "kc-"+testID, cp,
 		deploy.WithTestIDLabel(testID),
@@ -124,7 +123,7 @@ func TestKonnectEntities(t *testing.T) {
 		require.NoError(t, err)
 
 		assertKonnectEntityProgrammed(t, kc)
-	}, testutils.ObjectUpdateTimeout, time.Second)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	kp := deploy.ProxyCachePlugin(t, ctx, clientNamespaced)
 	kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
@@ -142,7 +141,7 @@ func TestKonnectEntities(t *testing.T) {
 		require.NoError(t, err)
 
 		assertKonnectEntityProgrammed(t, kpb)
-	}, testutils.ObjectUpdateTimeout, time.Second)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	kup := deploy.KongUpstreamAttachedToCP(t, ctx, clientNamespaced, cp,
 		deploy.WithTestIDLabel(testID),
@@ -160,7 +159,7 @@ func TestKonnectEntities(t *testing.T) {
 		require.NoError(t, err)
 
 		assertKonnectEntityProgrammed(t, kup)
-	}, testutils.ObjectUpdateTimeout, time.Second)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	kt := deploy.KongTargetAttachedToUpstream(t, ctx, clientNamespaced, kup,
 		deploy.WithTestIDLabel(testID),
@@ -177,7 +176,7 @@ func TestKonnectEntities(t *testing.T) {
 		require.NoError(t, err)
 
 		assertKonnectEntityProgrammed(t, kt)
-	}, testutils.ObjectUpdateTimeout, time.Second)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	// Should delete KongTarget because it will block deletion of KongUpstream owning it.
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kt))
@@ -189,7 +188,7 @@ func TestKonnectEntities(t *testing.T) {
 		require.NoError(t, err)
 
 		assertKonnectEntityProgrammed(t, kv)
-	}, testutils.ObjectUpdateTimeout, time.Second)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	kcert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp)
 
@@ -202,7 +201,7 @@ func TestKonnectEntities(t *testing.T) {
 		require.NoError(t, err)
 
 		assertKonnectEntityProgrammed(t, kcert)
-	}, testutils.ObjectUpdateTimeout, time.Second)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	ksni := deploy.KongSNIAttachedToCertificate(t, ctx, clientNamespaced, kcert,
 		deploy.WithTestIDLabel(testID),
@@ -222,7 +221,7 @@ func TestKonnectEntities(t *testing.T) {
 
 		assertKonnectEntityProgrammed(t, ksni)
 		assert.Equal(t, kcert.GetKonnectID(), ksni.Status.Konnect.CertificateID)
-	}, testutils.ObjectUpdateTimeout, time.Second)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 }
 
 // deleteObjectAndWaitForDeletionFn returns a function that deletes the given object and waits for it to be gone.
@@ -235,7 +234,7 @@ func deleteObjectAndWaitForDeletionFn(t *testing.T, obj client.Object) func() {
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, obj)
 			assert.True(t, k8serrors.IsNotFound(err))
-		}, testutils.ObjectUpdateTimeout, time.Second)
+		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 	}
 }
 

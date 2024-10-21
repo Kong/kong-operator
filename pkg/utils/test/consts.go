@@ -81,6 +81,9 @@ const (
 	// conflicts to be resolved before an object update will be considered failed.
 	ObjectUpdateTimeout = time.Second * 30
 
+	// ObjectUpdateTick is the time duration between checks for object updates.
+	ObjectUpdateTick = 100 * time.Millisecond
+
 	// SubresourceReadinessWait is the maximum amount of time allowed for
 	// sub-resources to become "Ready" after being created on behalf of a
 	// parent resource.
