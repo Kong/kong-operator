@@ -12,4 +12,5 @@ type CertificatesSDK interface {
 	CreateCertificate(ctx context.Context, controlPlaneID string, certificate sdkkonnectcomp.CertificateInput, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateCertificateResponse, error)
 	UpsertCertificate(ctx context.Context, request sdkkonnectops.UpsertCertificateRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertCertificateResponse, error)
 	DeleteCertificate(ctx context.Context, controlPlaneID string, certificateID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteCertificateResponse, error)
+	ListCertificate(ctx context.Context, request sdkkonnectops.ListCertificateRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListCertificateResponse, error)
 }
