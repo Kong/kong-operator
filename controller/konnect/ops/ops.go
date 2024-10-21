@@ -126,6 +126,8 @@ func Create[
 			id, err = getKongKeyForUID(ctx, sdk.GetKeysSDK(), ent)
 		case *configurationv1alpha1.KongUpstream:
 			id, err = getKongUpstreamForUID(ctx, sdk.GetUpstreamsSDK(), ent)
+		case *configurationv1alpha1.KongTarget:
+			id, err = getKongTargetForUID(ctx, sdk.GetTargetsSDK(), ent)
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:
