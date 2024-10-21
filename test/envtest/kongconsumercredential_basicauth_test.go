@@ -2,22 +2,27 @@ package envtest
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -35,6 +40,10 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
 
+	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
+		Scheme: scheme.Get(),
+	})
+	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
@@ -77,7 +86,9 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 	}
 
 	factory := sdkmocks.NewMockSDKFactory(t)
-	factory.SDK.KongCredentialsBasicAuthSDK.EXPECT().
+	sdk := factory.SDK.KongCredentialsBasicAuthSDK
+
+	sdk.EXPECT().
 		CreateBasicAuthWithConsumer(
 			mock.Anything,
 			sdkkonnectops.CreateBasicAuthWithConsumerRequest{
@@ -98,7 +109,7 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 			},
 			nil,
 		)
-	factory.SDK.KongCredentialsBasicAuthSDK.EXPECT().
+	sdk.EXPECT().
 		UpsertBasicAuthWithConsumer(mock.Anything, mock.Anything, mock.Anything).Maybe().
 		Return(
 			&sdkkonnectops.UpsertBasicAuthWithConsumerResponse{
@@ -125,10 +136,10 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 	)
 
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, factory.SDK.KongCredentialsBasicAuthSDK.AssertExpectations(t))
+		assert.True(c, sdk.AssertExpectations(t))
 	}, waitTime, tickTime)
 
-	factory.SDK.KongCredentialsBasicAuthSDK.EXPECT().
+	sdk.EXPECT().
 		DeleteBasicAuthWithConsumer(
 			mock.Anything,
 			sdkkonnectops.DeleteBasicAuthWithConsumerRequest{
@@ -157,4 +168,63 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		assert.True(c, factory.SDK.KongCredentialsBasicAuthSDK.AssertExpectations(t))
 	}, waitTime, tickTime)
+
+	t.Run("conflict on creation should be handled successfully", func(t *testing.T) {
+		t.Log("Setting up SDK expectations on creation with conflict")
+		sdk.EXPECT().
+			CreateBasicAuthWithConsumer(
+				mock.Anything,
+				mock.MatchedBy(func(r sdkkonnectops.CreateBasicAuthWithConsumerRequest) bool {
+					return r.ControlPlaneID == cp.GetKonnectID() &&
+						r.ConsumerIDForNestedEntities == consumerID &&
+						r.BasicAuthWithoutParents.Tags != nil &&
+						slices.ContainsFunc(
+							r.BasicAuthWithoutParents.Tags,
+							func(t string) bool {
+								return strings.HasPrefix(t, "k8s-uid:")
+							},
+						)
+				},
+				),
+			).
+			Return(
+				nil,
+				&sdkkonnecterrs.SDKError{
+					StatusCode: 400,
+					Body:       ErrBodyDataConstraintError,
+				},
+			)
+
+		sdk.EXPECT().
+			ListBasicAuth(
+				mock.Anything,
+				mock.MatchedBy(func(r sdkkonnectops.ListBasicAuthRequest) bool {
+					return r.ControlPlaneID == cp.GetKonnectID() &&
+						r.Tags != nil && strings.HasPrefix(*r.Tags, "k8s-uid")
+				}),
+			).
+			Return(&sdkkonnectops.ListBasicAuthResponse{
+				Object: &sdkkonnectops.ListBasicAuthResponseBody{
+					Data: []sdkkonnectcomp.BasicAuth{
+						{
+							ID: lo.ToPtr(basicAuthID),
+						},
+					},
+				},
+			}, nil)
+
+		w := setupWatch[configurationv1alpha1.KongCredentialBasicAuthList](t, ctx, cl, client.InNamespace(ns.Name))
+		created := deploy.KongCredentialBasicAuth(t, ctx, clientNamespaced, consumer.Name, "username", "password")
+
+		t.Log("Waiting for KongCredentialBasicAuth to be programmed")
+		watchFor(t, ctx, w, watch.Modified, func(k *configurationv1alpha1.KongCredentialBasicAuth) bool {
+			return k.GetName() == created.GetName() &&
+				k8sutils.IsProgrammed(k)
+		}, "KongCredentialBasicAuth's Programmed condition should be true eventually")
+
+		t.Log("Checking SDK KongCredentialBasicAuth operations")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, sdk.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
 }

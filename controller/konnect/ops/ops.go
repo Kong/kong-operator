@@ -133,6 +133,16 @@ func Create[
 			id, err = getPluginForUID(ctx, sdk.GetPluginSDK(), ent)
 		case *configurationv1alpha1.KongVault:
 			id, err = getKongVaultForUID(ctx, sdk.GetVaultSDK(), ent)
+		case *configurationv1alpha1.KongCredentialHMAC:
+			id, err = getKongCredentialHMACForUID(ctx, sdk.GetHMACCredentialsSDK(), ent)
+		case *configurationv1alpha1.KongCredentialJWT:
+			id, err = getKongCredentialJWTForUID(ctx, sdk.GetJWTCredentialsSDK(), ent)
+		case *configurationv1alpha1.KongCredentialBasicAuth:
+			id, err = getKongCredentialBasicAuthForUID(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
+		case *configurationv1alpha1.KongCredentialAPIKey:
+			id, err = getKongCredentialAPIKeyForUID(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
+		case *configurationv1alpha1.KongCredentialACL:
+			id, err = getKongCredentialACLForUID(ctx, sdk.GetACLCredentialsSDK(), ent)
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:

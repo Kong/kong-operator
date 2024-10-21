@@ -3,10 +3,12 @@ package ops
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/samber/lo"
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 
@@ -35,12 +37,14 @@ func createKongCredentialHMAC(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cred); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(cred, "FailedToCreate", errWrap.Error())
 		return errWrap
 	}
 
-	cred.Status.Konnect.SetKonnectID(*resp.HMACAuth.ID)
-	SetKonnectEntityProgrammedCondition(cred)
+	if resp == nil || resp.HMACAuth == nil || resp.HMACAuth.ID == nil {
+		return fmt.Errorf("failed creating %s: %w", cred.GetTypeName(), ErrNilResponse)
+	}
+
+	cred.SetKonnectID(*resp.HMACAuth.ID)
 
 	return nil
 }
@@ -92,11 +96,8 @@ func updateKongCredentialHMAC(
 			}
 		}
 
-		SetKonnectEntityProgrammedConditionFalse(cred, "FailedToUpdate", errWrap.Error())
 		return errWrap
 	}
-
-	SetKonnectEntityProgrammedCondition(cred)
 
 	return nil
 }
@@ -133,4 +134,31 @@ func kongCredentialHMACToHMACWithoutParents(
 		Tags:     GenerateTagsForObject(cred, cred.Spec.Tags...),
 	}
 	return ret
+}
+
+// getKongCredentialHMACForUID lists HMAC credentials in Konnect with given k8s uid as its tag.
+func getKongCredentialHMACForUID(
+	ctx context.Context,
+	sdk sdkops.KongCredentialHMACSDK,
+	cred *configurationv1alpha1.KongCredentialHMAC,
+) (string, error) {
+	cpID := cred.GetControlPlaneID()
+
+	req := sdkkonnectops.ListHmacAuthRequest{
+		// NOTE: only filter on object's UID.
+		// Other fields like name might have changed in the meantime but that's OK.
+		// Those will be enforced via subsequent updates.
+		ControlPlaneID: cpID,
+		Tags:           lo.ToPtr(UIDLabelForObject(cred)),
+	}
+
+	resp, err := sdk.ListHmacAuth(ctx, req)
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", cred.GetTypeName(), err)
+	}
+	if resp == nil || resp.Object == nil {
+		return "", fmt.Errorf("failed listing %s: %w", cred.GetTypeName(), ErrNilResponse)
+	}
+
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), cred)
 }

@@ -3,10 +3,12 @@ package ops
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/samber/lo"
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 
@@ -35,12 +37,14 @@ func createKongCredentialJWT(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cred); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(cred, "FailedToCreate", errWrap.Error())
 		return errWrap
 	}
 
-	cred.Status.Konnect.SetKonnectID(*resp.Jwt.ID)
-	SetKonnectEntityProgrammedCondition(cred)
+	if resp == nil || resp.Jwt == nil || resp.Jwt.ID == nil {
+		return fmt.Errorf("failed creating %s: %w", cred.GetTypeName(), ErrNilResponse)
+	}
+
+	cred.SetKonnectID(*resp.Jwt.ID)
 
 	return nil
 }
@@ -92,11 +96,8 @@ func updateKongCredentialJWT(
 			}
 		}
 
-		SetKonnectEntityProgrammedConditionFalse(cred, "FailedToUpdate", errWrap.Error())
 		return errWrap
 	}
-
-	SetKonnectEntityProgrammedCondition(cred)
 
 	return nil
 }
@@ -135,4 +136,31 @@ func kongCredentialJWTToJWTWithoutParents(
 		Tags:         GenerateTagsForObject(cred, cred.Spec.Tags...),
 	}
 	return ret
+}
+
+// getKongCredentialJWTForUID lists JWT credentials in Konnect with given k8s uid as its tag.
+func getKongCredentialJWTForUID(
+	ctx context.Context,
+	sdk sdkops.KongCredentialJWTSDK,
+	cred *configurationv1alpha1.KongCredentialJWT,
+) (string, error) {
+	cpID := cred.GetControlPlaneID()
+
+	req := sdkkonnectops.ListJwtRequest{
+		// NOTE: only filter on object's UID.
+		// Other fields like name might have changed in the meantime but that's OK.
+		// Those will be enforced via subsequent updates.
+		ControlPlaneID: cpID,
+		Tags:           lo.ToPtr(UIDLabelForObject(cred)),
+	}
+
+	resp, err := sdk.ListJwt(ctx, req)
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", cred.GetTypeName(), err)
+	}
+	if resp == nil || resp.Object == nil {
+		return "", fmt.Errorf("failed listing %s: %w", cred.GetTypeName(), ErrNilResponse)
+	}
+
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), cred)
 }

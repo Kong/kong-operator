@@ -3,6 +3,7 @@ package ops
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -36,12 +37,14 @@ func createKongCredentialACL(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cred); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(cred, "FailedToCreate", errWrap.Error())
 		return errWrap
 	}
 
-	cred.Status.Konnect.SetKonnectID(*resp.ACL.ID)
-	SetKonnectEntityProgrammedCondition(cred)
+	if resp == nil || resp.ACL == nil || resp.ACL.ID == nil {
+		return fmt.Errorf("failed creating %s: %w", cred.GetTypeName(), ErrNilResponse)
+	}
+
+	cred.SetKonnectID(*resp.ACL.ID)
 
 	return nil
 }
@@ -93,11 +96,8 @@ func updateKongCredentialACL(
 			}
 		}
 
-		SetKonnectEntityProgrammedConditionFalse(cred, "FailedToUpdate", errWrap.Error())
 		return errWrap
 	}
-
-	SetKonnectEntityProgrammedCondition(cred)
 
 	return nil
 }
@@ -132,4 +132,31 @@ func kongCredentialACLToACLWithoutParents(
 		Group: lo.ToPtr(cred.Spec.Group),
 		Tags:  GenerateTagsForObject(cred, cred.Spec.Tags...),
 	}
+}
+
+// getKongCredentialACLForUID lists API key credentials in Konnect with given k8s uid as its tag.
+func getKongCredentialACLForUID(
+	ctx context.Context,
+	sdk sdkops.KongCredentialACLSDK,
+	cred *configurationv1alpha1.KongCredentialACL,
+) (string, error) {
+	cpID := cred.GetControlPlaneID()
+
+	req := sdkkonnectops.ListACLRequest{
+		// NOTE: only filter on object's UID.
+		// Other fields like name might have changed in the meantime but that's OK.
+		// Those will be enforced via subsequent updates.
+		ControlPlaneID: cpID,
+		Tags:           lo.ToPtr(UIDLabelForObject(cred)),
+	}
+
+	resp, err := sdk.ListACL(ctx, req)
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", cred.GetTypeName(), err)
+	}
+	if resp == nil || resp.Object == nil {
+		return "", fmt.Errorf("failed listing %s: %w", cred.GetTypeName(), ErrNilResponse)
+	}
+
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), cred)
 }

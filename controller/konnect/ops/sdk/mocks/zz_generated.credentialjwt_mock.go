@@ -170,6 +170,80 @@ func (_c *MockKongCredentialJWTSDK_DeleteJwtWithConsumer_Call) RunAndReturn(run 
 	return _c
 }
 
+// ListJwt provides a mock function with given fields: ctx, request, opts
+func (_m *MockKongCredentialJWTSDK) ListJwt(ctx context.Context, request operations.ListJwtRequest, opts ...operations.Option) (*operations.ListJwtResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, request)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListJwt")
+	}
+
+	var r0 *operations.ListJwtResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, operations.ListJwtRequest, ...operations.Option) (*operations.ListJwtResponse, error)); ok {
+		return rf(ctx, request, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, operations.ListJwtRequest, ...operations.Option) *operations.ListJwtResponse); ok {
+		r0 = rf(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.ListJwtResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, operations.ListJwtRequest, ...operations.Option) error); ok {
+		r1 = rf(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockKongCredentialJWTSDK_ListJwt_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListJwt'
+type MockKongCredentialJWTSDK_ListJwt_Call struct {
+	*mock.Call
+}
+
+// ListJwt is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request operations.ListJwtRequest
+//   - opts ...operations.Option
+func (_e *MockKongCredentialJWTSDK_Expecter) ListJwt(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialJWTSDK_ListJwt_Call {
+	return &MockKongCredentialJWTSDK_ListJwt_Call{Call: _e.mock.On("ListJwt",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockKongCredentialJWTSDK_ListJwt_Call) Run(run func(ctx context.Context, request operations.ListJwtRequest, opts ...operations.Option)) *MockKongCredentialJWTSDK_ListJwt_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(operations.ListJwtRequest), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockKongCredentialJWTSDK_ListJwt_Call) Return(_a0 *operations.ListJwtResponse, _a1 error) *MockKongCredentialJWTSDK_ListJwt_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockKongCredentialJWTSDK_ListJwt_Call) RunAndReturn(run func(context.Context, operations.ListJwtRequest, ...operations.Option) (*operations.ListJwtResponse, error)) *MockKongCredentialJWTSDK_ListJwt_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpsertJwtWithConsumer provides a mock function with given fields: ctx, request, opts
 func (_m *MockKongCredentialJWTSDK) UpsertJwtWithConsumer(ctx context.Context, request operations.UpsertJwtWithConsumerRequest, opts ...operations.Option) (*operations.UpsertJwtWithConsumerResponse, error) {
 	_va := make([]interface{}, len(opts))
