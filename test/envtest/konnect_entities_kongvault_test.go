@@ -135,11 +135,23 @@ func TestKongVault(t *testing.T) {
 		t.Log("Setting up mock SDK for vault creation with conflict")
 		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.MatchedBy(func(input sdkkonnectcomp.VaultInput) bool {
 			return input.Name == vaultBackend && input.Prefix == vaultPrefix
-		})).Return(&sdkkonnectops.CreateVaultResponse{
-			Vault: &sdkkonnectcomp.Vault{
-				ID: lo.ToPtr(vaultID),
-			},
-		}, &sdkkonnecterrs.ConflictError{})
+		})).Return(nil, &sdkkonnecterrs.SDKError{
+			StatusCode: 400,
+			Body: `{
+					"code": 3,
+					"message": "data constraint error",
+					"details": [
+						{
+							"@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
+							"type": "ERROR_TYPE_REFERENCE",
+							"field": "name",
+							"messages": [
+								"name (type: unique) constraint failed"
+							]
+						}
+					]
+				}`,
+		})
 
 		sdk.VaultSDK.EXPECT().ListVault(
 			mock.Anything,
