@@ -30,13 +30,13 @@ func createPlugin(
 	ctx context.Context,
 	cl client.Client,
 	sdk PluginSDK,
-	pb *configurationv1alpha1.KongPluginBinding,
+	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) error {
-	controlPlaneID := pb.GetControlPlaneID()
+	controlPlaneID := pluginBinding.GetControlPlaneID()
 	if controlPlaneID == "" {
-		return CantPerformOperationWithoutControlPlaneIDError{Entity: pb, Op: CreateOp}
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: pluginBinding, Op: CreateOp}
 	}
-	pluginInput, err := kongPluginBindingToSDKPluginInput(ctx, cl, pb)
+	pluginInput, err := kongPluginBindingToSDKPluginInput(ctx, cl, pluginBinding)
 	if err != nil {
 		return err
 	}
@@ -46,16 +46,16 @@ func createPlugin(
 		*pluginInput,
 	)
 
-	// TODO: handle already exists
-	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it, hm
-	if errWrap := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongPluginBinding](err, CreateOp, pb); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(pb, "FailedToCreate", errWrap.Error())
-		return errWrap
+	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, pluginBinding); errWrapped != nil {
+		return errWrapped
 	}
 
-	pb.SetKonnectID(*resp.Plugin.ID)
-	SetKonnectEntityProgrammedCondition(pb)
+	if resp == nil || resp.Plugin == nil || resp.Plugin.ID == nil {
+		return fmt.Errorf("failed creating %s: %w", pluginBinding.GetTypeName(), ErrNilResponse)
+	}
+
+	pluginBinding.SetKonnectID(*resp.Plugin.ID)
+	SetKonnectEntityProgrammedCondition(pluginBinding)
 
 	return nil
 }
@@ -127,6 +127,31 @@ func deletePlugin(
 	}
 
 	return nil
+}
+
+// getPluginForUID lists plugins in Konnect with given k8s uid as its tag.
+func getPluginForUID(
+	ctx context.Context,
+	sdk PluginSDK,
+	pluginBinding *configurationv1alpha1.KongPluginBinding,
+) (string, error) {
+	cpID := pluginBinding.GetControlPlaneID()
+	reqList := sdkkonnectops.ListPluginRequest{
+		// NOTE: only filter on object's UID.
+		// Other fields like name might have changed in the meantime but that's OK.
+		// Those will be enforced via subsequent updates.
+		ControlPlaneID: cpID,
+		Tags:           lo.ToPtr(UIDLabelForObject(pluginBinding)),
+	}
+	resp, err := sdk.ListPlugin(ctx, reqList)
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", pluginBinding.GetTypeName(), err)
+	}
+	if resp == nil || resp.Object == nil {
+		return "", fmt.Errorf("failed listing %s: %w", pluginBinding.GetTypeName(), ErrNilResponse)
+	}
+
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), pluginBinding)
 }
 
 // -----------------------------------------------------------------------------
