@@ -2,10 +2,12 @@ package envtest
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -28,6 +30,10 @@ func TestKongCACertificate(t *testing.T) {
 	ctx, cancel := Context(t, context.Background())
 	defer cancel()
 	cfg, ns := Setup(t, ctx, scheme.Get())
+	const (
+		tagName            = "tag1"
+		conflictingTagName = "xconflictx"
+	)
 
 	t.Log("Setting up the manager with reconcilers")
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
@@ -53,7 +59,8 @@ func TestKongCACertificate(t *testing.T) {
 	t.Log("Setting up SDK expectations on KongCACertificate creation")
 	sdk.CACertificatesSDK.EXPECT().CreateCaCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
 		mock.MatchedBy(func(input sdkkonnectcomp.CACertificateInput) bool {
-			return input.Cert == deploy.TestValidCACertPEM
+			return input.Cert == deploy.TestValidCACertPEM &&
+				slices.Contains(input.Tags, tagName)
 		}),
 	).Return(&sdkkonnectops.CreateCaCertificateResponse{
 		CACertificate: &sdkkonnectcomp.CACertificate{
@@ -65,7 +72,12 @@ func TestKongCACertificate(t *testing.T) {
 	w := setupWatch[configurationv1alpha1.KongCACertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Log("Creating KongCACertificate")
-	createdCert := deploy.KongCACertificateAttachedToCP(t, ctx, clientNamespaced, cp)
+	createdCert := deploy.KongCACertificateAttachedToCP(t, ctx, clientNamespaced, cp,
+		func(obj client.Object) {
+			cert := obj.(*configurationv1alpha1.KongCACertificate)
+			cert.Spec.Tags = []string{tagName}
+		},
+	)
 
 	t.Log("Waiting for KongCACertificate to be programmed")
 	watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongCACertificate) bool {
@@ -110,4 +122,72 @@ func TestKongCACertificate(t *testing.T) {
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		assert.True(c, factory.SDK.CACertificatesSDK.AssertExpectations(t))
 	}, waitTime, tickTime)
+
+	t.Run("should handle conflict in creation correctly", func(t *testing.T) {
+		const (
+			certID = "id-conflict"
+		)
+		t.Log("Setup mock SDK for creating CA certificate and listing CA certificates by UID")
+		cpID := cp.GetKonnectStatus().GetKonnectID()
+		sdk.CACertificatesSDK.EXPECT().
+			CreateCaCertificate(mock.Anything, cpID,
+				mock.MatchedBy(func(input sdkkonnectcomp.CACertificateInput) bool {
+					return input.Cert == deploy.TestValidCACertPEM &&
+						slices.Contains(input.Tags, conflictingTagName)
+				}),
+			).
+			Return(nil,
+				&sdkkonnecterrs.SDKError{
+					StatusCode: 400,
+					Body:       ErrBodyDataConstraintError,
+				},
+			)
+
+		sdk.CACertificatesSDK.EXPECT().
+			ListCaCertificate(
+				mock.Anything,
+				mock.MatchedBy(func(req sdkkonnectops.ListCaCertificateRequest) bool {
+					return req.ControlPlaneID == cpID
+				}),
+			).
+			Return(
+				&sdkkonnectops.ListCaCertificateResponse{
+					Object: &sdkkonnectops.ListCaCertificateResponseBody{
+						Data: []sdkkonnectcomp.CACertificate{
+							{
+								ID: lo.ToPtr(certID),
+							},
+						},
+					},
+				}, nil,
+			)
+
+		t.Log("Creating a KongCACertificate")
+		createdCert := deploy.KongCACertificateAttachedToCP(t, ctx, clientNamespaced, cp,
+			func(obj client.Object) {
+				cert := obj.(*configurationv1alpha1.KongCACertificate)
+				cert.Spec.Tags = []string{conflictingTagName}
+			},
+		)
+
+		t.Log("Watching for KongCACertificates to verify the created KongCACertificate gets programmed")
+		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongCACertificate) bool {
+			if c.GetName() != createdCert.GetName() {
+				return false
+			}
+			if !slices.Equal(c.Spec.Tags, createdCert.Spec.Tags) {
+				return false
+			}
+
+			return c.GetKonnectID() == certID && lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					condition.Status == metav1.ConditionTrue
+			})
+		}, "KongCACertificate should be programmed and have ID in status after handling conflict")
+
+		t.Log("Ensuring that the SDK's create and list methods are called")
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, sdk.CACertificatesSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
 }

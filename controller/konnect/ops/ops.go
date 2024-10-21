@@ -145,6 +145,8 @@ func Create[
 			id, err = getKongCredentialACLForUID(ctx, sdk.GetACLCredentialsSDK(), ent)
 		case *configurationv1alpha1.KongCertificate:
 			id, err = getKongCertificateForUID(ctx, sdk.GetCertificatesSDK(), ent)
+		case *configurationv1alpha1.KongCACertificate:
+			id, err = getKongCACertificateForUID(ctx, sdk.GetCACertificatesSDK(), ent)
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:
