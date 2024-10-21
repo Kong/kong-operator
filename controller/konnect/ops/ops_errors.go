@@ -1,12 +1,17 @@
 package ops
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/kong/gateway-operator/controller/konnect/constraints"
 )
 
 // ErrNilResponse is an error indicating that a Konnect operation returned an empty response.
@@ -122,4 +127,43 @@ func SDKErrorIsConflict(sdkError *sdkkonnecterrs.SDKError) bool {
 		return true
 	}
 	return false
+}
+
+// handleDeleteError handles errors that occur during a delete operation.
+// It logs a message and returns nil if the entity was not found in Konnect (when
+// the delete operation is skipped).
+func handleDeleteError[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ctx context.Context, err error, ent TEnt) error {
+	logDeleteSkipped := func() {
+		ctrllog.FromContext(ctx).
+			Info("entity not found in Konnect, skipping delete",
+				"op", DeleteOp,
+				"type", ent.GetTypeName(),
+				"id", ent.GetKonnectStatus().GetKonnectID(),
+			)
+	}
+
+	var sdkNotFoundError *sdkkonnecterrs.NotFoundError
+	if errors.As(err, &sdkNotFoundError) {
+		logDeleteSkipped()
+		return nil
+	}
+
+	var sdkError *sdkkonnecterrs.SDKError
+	if errors.As(err, &sdkError) {
+		if sdkError.StatusCode == http.StatusNotFound {
+			logDeleteSkipped()
+			return nil
+		}
+		return FailedKonnectOpError[T]{
+			Op:  DeleteOp,
+			Err: sdkError,
+		}
+	}
+	return FailedKonnectOpError[T]{
+		Op:  DeleteOp,
+		Err: err,
+	}
 }
