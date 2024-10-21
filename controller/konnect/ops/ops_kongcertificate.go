@@ -3,6 +3,8 @@ package ops
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/samber/lo"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -34,12 +36,15 @@ func createCertificate(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cert); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(cert, "FailedToCreate", errWrap.Error())
 		return errWrap
 	}
 
-	cert.Status.Konnect.SetKonnectID(*resp.Certificate.ID)
-	SetKonnectEntityProgrammedCondition(cert)
+	if resp == nil || resp.Certificate == nil || resp.Certificate.ID == nil || *resp.Certificate.ID == "" {
+		return fmt.Errorf("failed creating %s: %w", cert.GetTypeName(), ErrNilResponse)
+	}
+
+	// At this point, the Certificate has been created successfully.
+	cert.SetKonnectID(*resp.Certificate.ID)
 
 	return nil
 }
@@ -90,11 +95,8 @@ func updateCertificate(
 				}
 			}
 		}
-		SetKonnectEntityProgrammedConditionFalse(cert, "FailedToUpdate", errWrap.Error())
 		return errWrap
 	}
-
-	SetKonnectEntityProgrammedCondition(cert)
 
 	return nil
 }
@@ -122,4 +124,24 @@ func kongCertificateToCertificateInput(cert *configurationv1alpha1.KongCertifica
 		Key:  cert.Spec.Key,
 		Tags: GenerateTagsForObject(cert, cert.Spec.Tags...),
 	}
+}
+
+func getKongCertificateForUID(
+	ctx context.Context,
+	sdk CertificatesSDK,
+	cert *configurationv1alpha1.KongCertificate,
+) (string, error) {
+	resp, err := sdk.ListCertificate(ctx, sdkkonnectops.ListCertificateRequest{
+		ControlPlaneID: cert.GetControlPlaneID(),
+		Tags:           lo.ToPtr(UIDLabelForObject(cert)),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to list %s: %w", cert.GetTypeName(), err)
+	}
+
+	if resp == nil || resp.Object == nil {
+		return "", fmt.Errorf("failed listing %s: %w", cert.GetTypeName(), ErrNilResponse)
+	}
+
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), cert)
 }

@@ -175,6 +175,80 @@ func (_c *MockCertificatesSDK_DeleteCertificate_Call) RunAndReturn(run func(cont
 	return _c
 }
 
+// ListCertificate provides a mock function with given fields: ctx, request, opts
+func (_m *MockCertificatesSDK) ListCertificate(ctx context.Context, request operations.ListCertificateRequest, opts ...operations.Option) (*operations.ListCertificateResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, request)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListCertificate")
+	}
+
+	var r0 *operations.ListCertificateResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, operations.ListCertificateRequest, ...operations.Option) (*operations.ListCertificateResponse, error)); ok {
+		return rf(ctx, request, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, operations.ListCertificateRequest, ...operations.Option) *operations.ListCertificateResponse); ok {
+		r0 = rf(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.ListCertificateResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, operations.ListCertificateRequest, ...operations.Option) error); ok {
+		r1 = rf(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockCertificatesSDK_ListCertificate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListCertificate'
+type MockCertificatesSDK_ListCertificate_Call struct {
+	*mock.Call
+}
+
+// ListCertificate is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request operations.ListCertificateRequest
+//   - opts ...operations.Option
+func (_e *MockCertificatesSDK_Expecter) ListCertificate(ctx interface{}, request interface{}, opts ...interface{}) *MockCertificatesSDK_ListCertificate_Call {
+	return &MockCertificatesSDK_ListCertificate_Call{Call: _e.mock.On("ListCertificate",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockCertificatesSDK_ListCertificate_Call) Run(run func(ctx context.Context, request operations.ListCertificateRequest, opts ...operations.Option)) *MockCertificatesSDK_ListCertificate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(operations.ListCertificateRequest), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockCertificatesSDK_ListCertificate_Call) Return(_a0 *operations.ListCertificateResponse, _a1 error) *MockCertificatesSDK_ListCertificate_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockCertificatesSDK_ListCertificate_Call) RunAndReturn(run func(context.Context, operations.ListCertificateRequest, ...operations.Option) (*operations.ListCertificateResponse, error)) *MockCertificatesSDK_ListCertificate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpsertCertificate provides a mock function with given fields: ctx, request, opts
 func (_m *MockCertificatesSDK) UpsertCertificate(ctx context.Context, request operations.UpsertCertificateRequest, opts ...operations.Option) (*operations.UpsertCertificateResponse, error) {
 	_va := make([]interface{}, len(opts))
