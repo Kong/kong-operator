@@ -128,6 +128,8 @@ func Create[
 			id, err = getKongUpstreamForUID(ctx, sdk.GetUpstreamsSDK(), ent)
 		case *configurationv1alpha1.KongTarget:
 			id, err = getKongTargetForUID(ctx, sdk.GetTargetsSDK(), ent)
+		case *configurationv1alpha1.KongPluginBinding:
+			id, err = getPluginForUID(ctx, sdk.GetPluginSDK(), ent)
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:
