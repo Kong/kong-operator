@@ -14,7 +14,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
-	"github.com/kong/gateway-operator/controller/konnect/ops"
+	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -31,7 +31,7 @@ func TestKonnectEntityReconcilers(t *testing.T) {
 type konnectEntityReconcilerTestCase struct {
 	name                string
 	objectOps           func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace)
-	mockExpectations    func(t *testing.T, sdk *ops.MockSDKWrapper, cl client.Client, ns *corev1.Namespace)
+	mockExpectations    func(t *testing.T, sdk *sdkmocks.MockSDKWrapper, cl client.Client, ns *corev1.Namespace)
 	eventuallyPredicate func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace)
 }
 
@@ -65,7 +65,7 @@ func testNewKonnectEntityReconciler[
 		require.NoError(t, mgr.GetClient().Create(ctx, ns))
 
 		cl := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
-		factory := ops.NewMockSDKFactory(t)
+		factory := sdkmocks.NewMockSDKFactory(t)
 		sdk := factory.SDK
 
 		StartReconcilers(ctx, t, mgr, logs, konnect.NewKonnectEntityReconciler[T, TEnt](factory, false, cl))

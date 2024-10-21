@@ -5,6 +5,8 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
@@ -12,7 +14,7 @@ import (
 // It sets the KonnectID and the Programmed condition in the KongDataPlaneClientCertificate status.
 func createKongDataPlaneClientCertificate(
 	ctx context.Context,
-	sdk DataPlaneClientCertificatesSDK,
+	sdk sdkops.DataPlaneClientCertificatesSDK,
 	cert *configurationv1alpha1.KongDataPlaneClientCertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -46,7 +48,7 @@ func createKongDataPlaneClientCertificate(
 // It returns an error if the operation fails.
 func deleteKongDataPlaneClientCertificate(
 	ctx context.Context,
-	sdk DataPlaneClientCertificatesSDK,
+	sdk sdkops.DataPlaneClientCertificatesSDK,
 	cert *configurationv1alpha1.KongDataPlaneClientCertificate,
 ) error {
 	id := cert.Status.Konnect.GetKonnectID()

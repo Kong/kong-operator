@@ -1,15 +1,14 @@
 quiet: False
-inpackage: True
 disable-version-string: True
 with-expecter: True
 
-filename: "{{ trimSuffix .InterfaceFile \".go\" | base | lower }}_mock.go"
-dir: "{{ .InterfaceDir }}"
+filename: "zz_generated.{{ trimSuffix .InterfaceFile \".go\" | base | lower }}_mock.go"
+dir: "{{ .InterfaceDir }}/mocks"
 mockname: "Mock{{ .InterfaceName }}"
-outpkg: "{{ .PackageName }}"
+outpkg: "mocks"
 
 packages:
-  github.com/kong/gateway-operator/controller/konnect/ops:
+  github.com/kong/gateway-operator/controller/konnect/ops/sdk:
     interfaces:
       ControlPlaneSDK:
       ControlPlaneGroupSDK:

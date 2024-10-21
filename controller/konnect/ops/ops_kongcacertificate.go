@@ -6,6 +6,8 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
@@ -13,7 +15,7 @@ import (
 // It sets the KonnectID and the Programmed condition in the KongCACertificate status.
 func createCACertificate(
 	ctx context.Context,
-	sdk CACertificatesSDK,
+	sdk sdkops.CACertificatesSDK,
 	cert *configurationv1alpha1.KongCACertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -45,7 +47,7 @@ func createCACertificate(
 // It returns an error if the KongCACertificate does not have a KonnectID.
 func updateCACertificate(
 	ctx context.Context,
-	sdk CACertificatesSDK,
+	sdk sdkops.CACertificatesSDK,
 	cert *configurationv1alpha1.KongCACertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -79,7 +81,7 @@ func updateCACertificate(
 // It returns an error if the operation fails.
 func deleteCACertificate(
 	ctx context.Context,
-	sdk CACertificatesSDK,
+	sdk sdkops.CACertificatesSDK,
 	cert *configurationv1alpha1.KongCACertificate,
 ) error {
 	id := cert.Status.Konnect.GetKonnectID()

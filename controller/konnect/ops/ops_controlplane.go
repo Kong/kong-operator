@@ -15,6 +15,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -24,8 +26,8 @@ import (
 // is returned so it can be handled properly downstream.
 func createControlPlane(
 	ctx context.Context,
-	sdk ControlPlaneSDK,
-	sdkGroups ControlPlaneGroupSDK,
+	sdk sdkops.ControlPlaneSDK,
+	sdkGroups sdkops.ControlPlaneGroupSDK,
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) error {
@@ -63,7 +65,7 @@ func createControlPlane(
 // It is assumed that the Konnect ControlPlane has a Konnect ID.
 func deleteControlPlane(
 	ctx context.Context,
-	sdk ControlPlaneSDK,
+	sdk sdkops.ControlPlaneSDK,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
@@ -82,8 +84,8 @@ func deleteControlPlane(
 // be handled properly downstream.
 func updateControlPlane(
 	ctx context.Context,
-	sdk ControlPlaneSDK,
-	sdkGroups ControlPlaneGroupSDK,
+	sdk sdkops.ControlPlaneSDK,
+	sdkGroups sdkops.ControlPlaneGroupSDK,
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) error {
@@ -140,7 +142,7 @@ func setGroupMembers(
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 	id string,
-	sdkGroups ControlPlaneGroupSDK,
+	sdkGroups sdkops.ControlPlaneGroupSDK,
 ) error {
 	if len(cp.Spec.Members) == 0 ||
 		cp.Spec.ClusterType == nil ||
@@ -197,7 +199,7 @@ func (m membersByID) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 // that matches the UID of the provided KonnectGatewayControlPlane.
 func getControlPlaneForUID(
 	ctx context.Context,
-	sdk ControlPlaneSDK,
+	sdk sdkops.ControlPlaneSDK,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) (string, error) {
 	reqList := sdkkonnectops.ListControlPlanesRequest{

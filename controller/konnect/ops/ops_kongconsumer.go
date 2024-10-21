@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -25,8 +26,8 @@ import (
 
 func createConsumer(
 	ctx context.Context,
-	sdk ConsumersSDK,
-	cgSDK ConsumerGroupSDK,
+	sdk sdkops.ConsumersSDK,
+	cgSDK sdkops.ConsumerGroupSDK,
 	cl client.Client,
 	consumer *configurationv1.KongConsumer,
 ) error {
@@ -68,8 +69,8 @@ func createConsumer(
 // It returns an error if the KongConsumer does not have a ControlPlaneRef.
 func updateConsumer(
 	ctx context.Context,
-	sdk ConsumersSDK,
-	cgSDK ConsumerGroupSDK,
+	sdk sdkops.ConsumersSDK,
+	cgSDK sdkops.ConsumerGroupSDK,
 	cl client.Client,
 	consumer *configurationv1.KongConsumer,
 ) error {
@@ -113,7 +114,7 @@ func handleConsumerGroupAssignments(
 	ctx context.Context,
 	consumer *configurationv1.KongConsumer,
 	cl client.Client,
-	cgSDK ConsumerGroupSDK,
+	cgSDK sdkops.ConsumerGroupSDK,
 	cpID string,
 ) error {
 	// Resolve the Konnect IDs of the ConsumerGroups referenced by the KongConsumer.
@@ -148,7 +149,7 @@ func handleConsumerGroupAssignments(
 func reconcileConsumerGroupsWithKonnect(
 	ctx context.Context,
 	desiredConsumerGroupsIDs []string,
-	cgSDK ConsumerGroupSDK,
+	cgSDK sdkops.ConsumerGroupSDK,
 	cpID string,
 	consumer *configurationv1.KongConsumer,
 ) error {
@@ -291,7 +292,7 @@ func resolveConsumerGroupsKonnectIDs(
 // It returns an error if the operation fails.
 func deleteConsumer(
 	ctx context.Context,
-	sdk ConsumersSDK,
+	sdk sdkops.ConsumersSDK,
 	consumer *configurationv1.KongConsumer,
 ) error {
 	id := consumer.Status.Konnect.GetKonnectID()
@@ -316,7 +317,7 @@ func kongConsumerToSDKConsumerInput(
 // getKongConsumerForUID lists consumers in Konnect with given k8s uid as its tag.
 func getKongConsumerForUID(
 	ctx context.Context,
-	sdk ConsumersSDK,
+	sdk sdkops.ConsumersSDK,
 	consumer *configurationv1.KongConsumer,
 ) (string, error) {
 	cpID := consumer.GetControlPlaneID()

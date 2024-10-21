@@ -10,12 +10,14 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func createUpstream(
 	ctx context.Context,
-	sdk UpstreamsSDK,
+	sdk sdkops.UpstreamsSDK,
 	upstream *configurationv1alpha1.KongUpstream,
 ) error {
 	if upstream.GetControlPlaneID() == "" {
@@ -46,7 +48,7 @@ func createUpstream(
 // if the operation fails.
 func updateUpstream(
 	ctx context.Context,
-	sdk UpstreamsSDK,
+	sdk sdkops.UpstreamsSDK,
 	upstream *configurationv1alpha1.KongUpstream,
 ) error {
 	if upstream.GetControlPlaneID() == "" {
@@ -96,7 +98,7 @@ func updateUpstream(
 // It returns an error if the operation fails.
 func deleteUpstream(
 	ctx context.Context,
-	sdk UpstreamsSDK,
+	sdk sdkops.UpstreamsSDK,
 	upstream *configurationv1alpha1.KongUpstream,
 ) error {
 	id := upstream.GetKonnectStatus().GetKonnectID()
@@ -136,7 +138,7 @@ func kongUpstreamToSDKUpstreamInput(
 // getKongUpstreamForUID lists upstreams in Konnect with given k8s uid as its tag.
 func getKongUpstreamForUID(
 	ctx context.Context,
-	sdk UpstreamsSDK,
+	sdk sdkops.UpstreamsSDK,
 	u *configurationv1alpha1.KongUpstream,
 ) (string, error) {
 	cpID := u.GetControlPlaneID()

@@ -15,6 +15,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	konnectconsts "github.com/kong/gateway-operator/controller/konnect/consts"
+	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -24,15 +25,15 @@ func TestCreateKongService(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
 		name                string
-		mockServicePair     func(*testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService)
+		mockServicePair     func(*testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService)
 		assertions          func(*testing.T, *configurationv1alpha1.KongService)
 		expectedErrContains string
 		expectedErrType     error
 	}{
 		{
 			name: "success",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
+			mockServicePair: func(t *testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := sdkmocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
@@ -73,8 +74,8 @@ func TestCreateKongService(t *testing.T) {
 		},
 		{
 			name: "fail - no control plane ID in status returns an error and does not create the Service in Konnect",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
+			mockServicePair: func(t *testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := sdkmocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
@@ -97,8 +98,8 @@ func TestCreateKongService(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
+			mockServicePair: func(t *testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := sdkmocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
@@ -137,8 +138,8 @@ func TestCreateKongService(t *testing.T) {
 		},
 		{
 			name: "409 Conflict causes a list to find a matching (by UID) service and update it instead of creating a new one",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
+			mockServicePair: func(t *testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := sdkmocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
@@ -202,14 +203,14 @@ func TestDeleteKongService(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
 		name            string
-		mockServicePair func(*testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService)
+		mockServicePair func(*testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService)
 		expectedErr     bool
 		assertions      func(*testing.T, *configurationv1alpha1.KongService)
 	}{
 		{
 			name: "success",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
+			mockServicePair: func(t *testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := sdkmocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
@@ -240,8 +241,8 @@ func TestDeleteKongService(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
+			mockServicePair: func(t *testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := sdkmocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
@@ -274,8 +275,8 @@ func TestDeleteKongService(t *testing.T) {
 		},
 		{
 			name: "not found error is ignored and considered a success when trying to delete",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
+			mockServicePair: func(t *testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := sdkmocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
@@ -331,14 +332,14 @@ func TestUpdateKongService(t *testing.T) {
 	ctx := context.Background()
 	testCases := []struct {
 		name            string
-		mockServicePair func(*testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService)
+		mockServicePair func(*testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService)
 		expectedErr     bool
 		assertions      func(*testing.T, *configurationv1alpha1.KongService)
 	}{
 		{
 			name: "success",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
+			mockServicePair: func(t *testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := sdkmocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
@@ -382,8 +383,8 @@ func TestUpdateKongService(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
+			mockServicePair: func(t *testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := sdkmocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
@@ -429,8 +430,8 @@ func TestUpdateKongService(t *testing.T) {
 		},
 		{
 			name: "when not found then try to create",
-			mockServicePair: func(t *testing.T) (*MockServicesSDK, *configurationv1alpha1.KongService) {
-				sdk := NewMockServicesSDK(t)
+			mockServicePair: func(t *testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := sdkmocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",

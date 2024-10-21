@@ -9,12 +9,14 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func createKongCredentialACL(
 	ctx context.Context,
-	sdk KongCredentialACLSDK,
+	sdk sdkops.KongCredentialACLSDK,
 	cred *configurationv1alpha1.KongCredentialACL,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -50,7 +52,7 @@ func createKongCredentialACL(
 // if the operation fails.
 func updateKongCredentialACL(
 	ctx context.Context,
-	sdk KongCredentialACLSDK,
+	sdk sdkops.KongCredentialACLSDK,
 	cred *configurationv1alpha1.KongCredentialACL,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -105,7 +107,7 @@ func updateKongCredentialACL(
 // It returns an error if the operation fails.
 func deleteKongCredentialACL(
 	ctx context.Context,
-	sdk KongCredentialACLSDK,
+	sdk sdkops.KongCredentialACLSDK,
 	cred *configurationv1alpha1.KongCredentialACL,
 ) error {
 	cpID := cred.GetControlPlaneID()

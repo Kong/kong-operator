@@ -9,12 +9,14 @@ import (
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func createTarget(
 	ctx context.Context,
-	sdk TargetsSDK,
+	sdk sdkops.TargetsSDK,
 	target *configurationv1alpha1.KongTarget,
 ) error {
 	cpID := target.GetControlPlaneID()
@@ -47,7 +49,7 @@ func createTarget(
 
 func updateTarget(
 	ctx context.Context,
-	sdk TargetsSDK,
+	sdk sdkops.TargetsSDK,
 	target *configurationv1alpha1.KongTarget,
 ) error {
 	cpID := target.GetControlPlaneID()
@@ -74,7 +76,7 @@ func updateTarget(
 
 func deleteTarget(
 	ctx context.Context,
-	sdk TargetsSDK,
+	sdk sdkops.TargetsSDK,
 	target *configurationv1alpha1.KongTarget,
 ) error {
 	cpID := target.GetControlPlaneID()
@@ -111,7 +113,7 @@ func kongTargetToTargetWithoutParents(target *configurationv1alpha1.KongTarget) 
 // that matches the UID of the provided KongTarget.
 func getKongTargetForUID(
 	ctx context.Context,
-	sdk TargetsSDK,
+	sdk sdkops.TargetsSDK,
 	target *configurationv1alpha1.KongTarget,
 ) (string, error) {
 	reqList := sdkkonnectops.ListTargetWithUpstreamRequest{

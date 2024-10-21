@@ -20,6 +20,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
+	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -39,7 +40,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				},
 			)
 		},
-		mockExpectations: func(t *testing.T, sdk *ops.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
+		mockExpectations: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
 			sdk.ControlPlaneSDK.EXPECT().
 				CreateControlPlane(
 					mock.Anything,
@@ -108,7 +109,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				},
 			)
 		},
-		mockExpectations: func(t *testing.T, sdk *ops.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
+		mockExpectations: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
 			sdk.ControlPlaneSDK.EXPECT().
 				CreateControlPlane(
 					mock.Anything,
@@ -251,7 +252,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				},
 			)
 		},
-		mockExpectations: func(t *testing.T, sdk *ops.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
+		mockExpectations: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
 			sdk.ControlPlaneSDK.EXPECT().
 				CreateControlPlane(
 					mock.Anything,
@@ -383,7 +384,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				},
 			)
 		},
-		mockExpectations: func(t *testing.T, sdk *ops.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
+		mockExpectations: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
 			sdk.ControlPlaneSDK.EXPECT().
 				CreateControlPlane(
 					mock.Anything,

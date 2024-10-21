@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/kong/gateway-operator/controller/konnect/ops"
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -24,7 +25,7 @@ import (
 
 // KonnectAPIAuthConfigurationReconciler reconciles a KonnectAPIAuthConfiguration object.
 type KonnectAPIAuthConfigurationReconciler struct {
-	sdkFactory      ops.SDKFactory
+	sdkFactory      sdkops.SDKFactory
 	developmentMode bool
 	client          client.Client
 }
@@ -42,7 +43,7 @@ const (
 
 // NewKonnectAPIAuthConfigurationReconciler creates a new KonnectAPIAuthConfigurationReconciler.
 func NewKonnectAPIAuthConfigurationReconciler(
-	sdkFactory ops.SDKFactory,
+	sdkFactory sdkops.SDKFactory,
 	developmentMode bool,
 	client client.Client,
 ) *KonnectAPIAuthConfigurationReconciler {
@@ -129,7 +130,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 	serverURL := ops.NewServerURL(apiAuth.Spec.ServerURL)
 	sdk := r.sdkFactory.NewKonnectSDK(
 		serverURL.String(),
-		ops.SDKToken(token),
+		sdkops.SDKToken(token),
 	)
 
 	// TODO(pmalek): check if api auth config has a valid status condition

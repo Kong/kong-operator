@@ -12,10 +12,12 @@ import (
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
-func createVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1.KongVault) error {
+func createVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: vault, Op: CreateOp}
@@ -39,7 +41,7 @@ func createVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1
 	return nil
 }
 
-func updateVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1.KongVault) error {
+func updateVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: vault, Op: UpdateOp}
@@ -85,7 +87,7 @@ func updateVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1
 	return nil
 }
 
-func deleteVault(ctx context.Context, sdk VaultSDK, vault *configurationv1alpha1.KongVault) error {
+func deleteVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
 		return fmt.Errorf(
@@ -122,7 +124,7 @@ func kongVaultToVaultInput(vault *configurationv1alpha1.KongVault) (sdkkonnectco
 
 func getKongVaultForUID(
 	ctx context.Context,
-	sdk VaultSDK,
+	sdk sdkops.VaultSDK,
 	vault *configurationv1alpha1.KongVault,
 ) (string, error) {
 	resp, err := sdk.ListVault(ctx, sdkkonnectops.ListVaultRequest{

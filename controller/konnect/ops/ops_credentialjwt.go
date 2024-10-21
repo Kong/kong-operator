@@ -8,12 +8,14 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func createKongCredentialJWT(
 	ctx context.Context,
-	sdk KongCredentialJWTSDK,
+	sdk sdkops.KongCredentialJWTSDK,
 	cred *configurationv1alpha1.KongCredentialJWT,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -49,7 +51,7 @@ func createKongCredentialJWT(
 // if the operation fails.
 func updateKongCredentialJWT(
 	ctx context.Context,
-	sdk KongCredentialJWTSDK,
+	sdk sdkops.KongCredentialJWTSDK,
 	cred *configurationv1alpha1.KongCredentialJWT,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -104,7 +106,7 @@ func updateKongCredentialJWT(
 // It returns an error if the operation fails.
 func deleteKongCredentialJWT(
 	ctx context.Context,
-	sdk KongCredentialJWTSDK,
+	sdk sdkops.KongCredentialJWTSDK,
 	cred *configurationv1alpha1.KongCredentialJWT,
 ) error {
 	cpID := cred.GetControlPlaneID()
