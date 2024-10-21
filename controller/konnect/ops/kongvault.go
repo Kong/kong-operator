@@ -12,4 +12,5 @@ type VaultSDK interface {
 	CreateVault(ctx context.Context, controlPlaneID string, vault sdkkonnectcomp.VaultInput, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateVaultResponse, error)
 	UpsertVault(ctx context.Context, request sdkkonnectops.UpsertVaultRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertVaultResponse, error)
 	DeleteVault(ctx context.Context, controlPlaneID string, vaultID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteVaultResponse, error)
+	ListVault(ctx context.Context, request sdkkonnectops.ListVaultRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListVaultResponse, error)
 }
