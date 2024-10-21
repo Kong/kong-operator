@@ -10,12 +10,14 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func createService(
 	ctx context.Context,
-	sdk ServicesSDK,
+	sdk sdkops.ServicesSDK,
 	svc *configurationv1alpha1.KongService,
 ) error {
 	if svc.GetControlPlaneID() == "" {
@@ -46,7 +48,7 @@ func createService(
 // if the operation fails.
 func updateService(
 	ctx context.Context,
-	sdk ServicesSDK,
+	sdk sdkops.ServicesSDK,
 	svc *configurationv1alpha1.KongService,
 ) error {
 	if svc.GetControlPlaneID() == "" {
@@ -96,7 +98,7 @@ func updateService(
 // It returns an error if the operation fails.
 func deleteService(
 	ctx context.Context,
-	sdk ServicesSDK,
+	sdk sdkops.ServicesSDK,
 	svc *configurationv1alpha1.KongService,
 ) error {
 	id := svc.GetKonnectStatus().GetKonnectID()
@@ -133,7 +135,7 @@ func kongServiceToSDKServiceInput(
 // that matches the UID of the provided KongService.
 func getKongServiceForUID(
 	ctx context.Context,
-	sdk ServicesSDK,
+	sdk sdkops.ServicesSDK,
 	svc *configurationv1alpha1.KongService,
 ) (string, error) {
 	reqList := sdkkonnectops.ListServiceRequest{

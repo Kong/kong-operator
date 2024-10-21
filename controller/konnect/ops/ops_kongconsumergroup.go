@@ -8,12 +8,14 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 func createConsumerGroup(
 	ctx context.Context,
-	sdk ConsumerGroupSDK,
+	sdk sdkops.ConsumerGroupSDK,
 	group *configurationv1beta1.KongConsumerGroup,
 ) error {
 	if group.GetControlPlaneID() == "" {
@@ -44,7 +46,7 @@ func createConsumerGroup(
 // It returns an error if the KongConsumerGroup does not have a ControlPlaneRef.
 func updateConsumerGroup(
 	ctx context.Context,
-	sdk ConsumerGroupSDK,
+	sdk sdkops.ConsumerGroupSDK,
 	group *configurationv1beta1.KongConsumerGroup,
 ) error {
 	cpID := group.GetControlPlaneID()
@@ -72,7 +74,7 @@ func updateConsumerGroup(
 // It returns an error if the operation fails.
 func deleteConsumerGroup(
 	ctx context.Context,
-	sdk ConsumerGroupSDK,
+	sdk sdkops.ConsumerGroupSDK,
 	consumer *configurationv1beta1.KongConsumerGroup,
 ) error {
 	id := consumer.Status.Konnect.GetKonnectID()
@@ -96,7 +98,7 @@ func kongConsumerGroupToSDKConsumerGroupInput(
 // getKongConsumerGroupForUID lists consumer groups in Konnect with given k8s uid as its tag.
 func getKongConsumerGroupForUID(
 	ctx context.Context,
-	sdk ConsumerGroupSDK,
+	sdk sdkops.ConsumerGroupSDK,
 	cg *configurationv1beta1.KongConsumerGroup,
 ) (string, error) {
 	cpID := cg.GetControlPlaneID()

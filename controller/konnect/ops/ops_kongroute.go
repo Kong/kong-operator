@@ -11,12 +11,14 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func createRoute(
 	ctx context.Context,
-	sdk RoutesSDK,
+	sdk sdkops.RoutesSDK,
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	if route.GetControlPlaneID() == "" {
@@ -44,7 +46,7 @@ func createRoute(
 // if the operation fails.
 func updateRoute(
 	ctx context.Context,
-	sdk RoutesSDK,
+	sdk sdkops.RoutesSDK,
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	cpID := route.GetControlPlaneID()
@@ -92,7 +94,7 @@ func updateRoute(
 // It returns an error if the operation fails.
 func deleteRoute(
 	ctx context.Context,
-	sdk RoutesSDK,
+	sdk sdkops.RoutesSDK,
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	id := route.GetKonnectStatus().GetKonnectID()
@@ -138,7 +140,7 @@ func kongRouteToSDKRouteInput(
 // that matches the UID of the provided KongRoute.
 func getKongRouteForUID(
 	ctx context.Context,
-	sdk RoutesSDK,
+	sdk sdkops.RoutesSDK,
 	r *configurationv1alpha1.KongRoute,
 ) (string, error) {
 	reqList := sdkkonnectops.ListRouteRequest{

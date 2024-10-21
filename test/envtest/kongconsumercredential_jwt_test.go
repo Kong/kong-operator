@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
-	"github.com/kong/gateway-operator/controller/konnect/ops"
+	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
@@ -74,7 +74,7 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 		"k8s-version:v1alpha1",
 	}
 
-	factory := ops.NewMockSDKFactory(t)
+	factory := sdkmocks.NewMockSDKFactory(t)
 	factory.SDK.KongCredentialsJWTSDK.EXPECT().
 		CreateJwtWithConsumer(
 			mock.Anything,

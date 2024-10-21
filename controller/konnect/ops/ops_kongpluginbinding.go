@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -26,7 +27,7 @@ import (
 func createPlugin(
 	ctx context.Context,
 	cl client.Client,
-	sdk PluginSDK,
+	sdk sdkops.PluginSDK,
 	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) error {
 	controlPlaneID := pluginBinding.GetControlPlaneID()
@@ -63,7 +64,7 @@ func createPlugin(
 // if the operation fails.
 func updatePlugin(
 	ctx context.Context,
-	sdk PluginSDK,
+	sdk sdkops.PluginSDK,
 	cl client.Client,
 	pb *configurationv1alpha1.KongPluginBinding,
 ) error {
@@ -102,7 +103,7 @@ func updatePlugin(
 // It returns an error if the operation fails.
 func deletePlugin(
 	ctx context.Context,
-	sdk PluginSDK,
+	sdk sdkops.PluginSDK,
 	pb *configurationv1alpha1.KongPluginBinding,
 ) error {
 	id := pb.GetKonnectID()
@@ -117,7 +118,7 @@ func deletePlugin(
 // getPluginForUID lists plugins in Konnect with given k8s uid as its tag.
 func getPluginForUID(
 	ctx context.Context,
-	sdk PluginSDK,
+	sdk sdkops.PluginSDK,
 	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) (string, error) {
 	cpID := pluginBinding.GetControlPlaneID()

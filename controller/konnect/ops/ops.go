@@ -12,6 +12,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -46,7 +47,7 @@ func Create[
 	TEnt constraints.EntityType[T],
 ](
 	ctx context.Context,
-	sdk SDKWrapper,
+	sdk sdkops.SDKWrapper,
 	cl client.Client,
 	e TEnt,
 ) (*T, error) {
@@ -164,7 +165,7 @@ func Create[
 func Delete[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
-](ctx context.Context, sdk SDKWrapper, cl client.Client, e *T) error {
+](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, e *T) error {
 	ent := TEnt(e)
 	if ent.GetKonnectStatus().GetKonnectID() == "" {
 		return fmt.Errorf(
@@ -273,7 +274,7 @@ func Update[
 	TEnt constraints.EntityType[T],
 ](
 	ctx context.Context,
-	sdk SDKWrapper,
+	sdk sdkops.SDKWrapper,
 	syncPeriod time.Duration,
 	cl client.Client,
 	e TEnt,

@@ -7,12 +7,14 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func createKongCredentialAPIKey(
 	ctx context.Context,
-	sdk KongCredentialAPIKeySDK,
+	sdk sdkops.KongCredentialAPIKeySDK,
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -48,7 +50,7 @@ func createKongCredentialAPIKey(
 // if the operation fails.
 func updateKongCredentialAPIKey(
 	ctx context.Context,
-	sdk KongCredentialAPIKeySDK,
+	sdk sdkops.KongCredentialAPIKeySDK,
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -82,7 +84,7 @@ func updateKongCredentialAPIKey(
 // It returns an error if the operation fails.
 func deleteKongCredentialAPIKey(
 	ctx context.Context,
-	sdk KongCredentialAPIKeySDK,
+	sdk sdkops.KongCredentialAPIKeySDK,
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) error {
 	cpID := cred.GetControlPlaneID()

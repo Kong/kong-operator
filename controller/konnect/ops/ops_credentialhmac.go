@@ -8,12 +8,14 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func createKongCredentialHMAC(
 	ctx context.Context,
-	sdk KongCredentialHMACSDK,
+	sdk sdkops.KongCredentialHMACSDK,
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -49,7 +51,7 @@ func createKongCredentialHMAC(
 // if the operation fails.
 func updateKongCredentialHMAC(
 	ctx context.Context,
-	sdk KongCredentialHMACSDK,
+	sdk sdkops.KongCredentialHMACSDK,
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -104,7 +106,7 @@ func updateKongCredentialHMAC(
 // It returns an error if the operation fails.
 func deleteKongCredentialHMAC(
 	ctx context.Context,
-	sdk KongCredentialHMACSDK,
+	sdk sdkops.KongCredentialHMACSDK,
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) error {
 	cpID := cred.GetControlPlaneID()

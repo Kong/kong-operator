@@ -13,12 +13,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func createSNI(
 	ctx context.Context,
-	sdk SNIsSDK,
+	sdk sdkops.SNIsSDK,
 	sni *configurationv1alpha1.KongSNI,
 ) error {
 	cpID := sni.GetControlPlaneID()
@@ -50,7 +52,7 @@ func createSNI(
 
 func updateSNI(
 	ctx context.Context,
-	sdk SNIsSDK,
+	sdk sdkops.SNIsSDK,
 	sni *configurationv1alpha1.KongSNI,
 ) error {
 	cpID := sni.GetControlPlaneID()
@@ -104,7 +106,7 @@ func updateSNI(
 
 func deleteSNI(
 	ctx context.Context,
-	sdk SNIsSDK,
+	sdk sdkops.SNIsSDK,
 	sni *configurationv1alpha1.KongSNI,
 ) error {
 	cpID := sni.GetControlPlaneID()
@@ -155,7 +157,7 @@ func kongSNIToSNIWithoutParents(sni *configurationv1alpha1.KongSNI) sdkkonnectco
 }
 
 // getKongSNIForUID returns the Konnect ID of the Konnect SNI that matches the UID of the provided SNI.
-func getKongSNIForUID(ctx context.Context, sdk SNIsSDK, sni *configurationv1alpha1.KongSNI) (string, error) {
+func getKongSNIForUID(ctx context.Context, sdk sdkops.SNIsSDK, sni *configurationv1alpha1.KongSNI) (string, error) {
 	resp, err := sdk.ListSni(ctx, sdkkonnectops.ListSniRequest{
 		ControlPlaneID: sni.GetControlPlaneID(),
 		Tags:           lo.ToPtr(UIDLabelForObject(sni)),
