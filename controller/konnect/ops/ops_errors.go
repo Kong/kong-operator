@@ -152,7 +152,7 @@ func handleDeleteError[
 
 	var sdkError *sdkkonnecterrs.SDKError
 	if errors.As(err, &sdkError) {
-		if sdkError.StatusCode == 404 {
+		if sdkError.StatusCode == http.StatusNotFound {
 			logDeleteSkipped()
 			return nil
 		}
