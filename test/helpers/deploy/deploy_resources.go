@@ -515,6 +515,7 @@ func KongCertificateAttachedToCP(
 	ctx context.Context,
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	opts ...objOption,
 ) *configurationv1alpha1.KongCertificate {
 	t.Helper()
 
@@ -534,6 +535,9 @@ func KongCertificateAttachedToCP(
 				Key:  TestValidCertKeyPEM,
 			},
 		},
+	}
+	for _, opt := range opts {
+		opt(cert)
 	}
 	require.NoError(t, cl.Create(ctx, cert))
 	logObjectCreate(t, cert)

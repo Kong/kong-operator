@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/samber/lo"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/samber/lo"
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 
@@ -119,16 +119,24 @@ func deleteCertificate(
 }
 
 func kongCertificateToCertificateInput(cert *configurationv1alpha1.KongCertificate) sdkkonnectcomp.CertificateInput {
-	return sdkkonnectcomp.CertificateInput{
+	input := sdkkonnectcomp.CertificateInput{
 		Cert: cert.Spec.Cert,
 		Key:  cert.Spec.Key,
 		Tags: GenerateTagsForObject(cert, cert.Spec.Tags...),
 	}
+	if cert.Spec.CertAlt != "" {
+		input.CertAlt = lo.ToPtr(cert.Spec.CertAlt)
+	}
+	if cert.Spec.KeyAlt != "" {
+		input.KeyAlt = lo.ToPtr(cert.Spec.KeyAlt)
+	}
+
+	return input
 }
 
 func getKongCertificateForUID(
 	ctx context.Context,
-	sdk CertificatesSDK,
+	sdk sdkops.CertificatesSDK,
 	cert *configurationv1alpha1.KongCertificate,
 ) (string, error) {
 	resp, err := sdk.ListCertificate(ctx, sdkkonnectops.ListCertificateRequest{

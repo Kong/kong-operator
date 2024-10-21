@@ -156,20 +156,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			nil,
 			&sdkkonnecterrs.SDKError{
 				StatusCode: 400,
-				Body: `{
-					"code": 3,
-					"message": "data constraint error",
-					"details": [
-						{
-							"@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
-							"type": "ERROR_TYPE_REFERENCE",
-							"field": "name",
-							"messages": [
-								"name (type: unique) constraint failed"
-							]
-						}
-					]
-				}`,
+				Body:       ErrBodyDataConstraintError,
 			},
 		)
 

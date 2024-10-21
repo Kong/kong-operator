@@ -2,10 +2,12 @@ package envtest
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -53,7 +55,9 @@ func TestKongCertificate(t *testing.T) {
 	t.Log("Setting up SDK expectations on KongCertificate creation")
 	sdk.CertificatesSDK.EXPECT().CreateCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
 		mock.MatchedBy(func(input sdkkonnectcomp.CertificateInput) bool {
-			return input.Cert == deploy.TestValidCertPEM && input.Key == deploy.TestValidCertKeyPEM
+			return input.Cert == deploy.TestValidCertPEM &&
+				input.Key == deploy.TestValidCertKeyPEM &&
+				slices.Contains(input.Tags, "tag1")
 		}),
 	).Return(&sdkkonnectops.CreateCertificateResponse{
 		Certificate: &sdkkonnectcomp.Certificate{
@@ -65,7 +69,12 @@ func TestKongCertificate(t *testing.T) {
 	w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Log("Creating KongCertificate")
-	createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp)
+	createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp,
+		func(obj client.Object) {
+			cert := obj.(*configurationv1alpha1.KongCertificate)
+			cert.Spec.Tags = []string{"tag1"}
+		},
+	)
 
 	t.Log("Waiting for KongCertificate to be programmed")
 	watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongCertificate) bool {
@@ -110,4 +119,73 @@ func TestKongCertificate(t *testing.T) {
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		assert.True(c, factory.SDK.CertificatesSDK.AssertExpectations(t))
 	}, waitTime, tickTime)
+
+	t.Run("should handle conflict in creation correctly", func(t *testing.T) {
+		const (
+			certID = "id-conflict"
+		)
+		t.Log("Setup mock SDK for creating certificate and listing certificates by UID")
+		cpID := cp.GetKonnectStatus().GetKonnectID()
+		sdk.CertificatesSDK.EXPECT().
+			CreateCertificate(mock.Anything, cpID,
+				mock.MatchedBy(func(input sdkkonnectcomp.CertificateInput) bool {
+					return input.Cert == deploy.TestValidCertPEM &&
+						input.Key == deploy.TestValidCertKeyPEM &&
+						slices.Contains(input.Tags, "xconflictx")
+				}),
+			).
+			Return(nil,
+				&sdkkonnecterrs.SDKError{
+					StatusCode: 400,
+					Body:       ErrBodyDataConstraintError,
+				},
+			)
+
+		sdk.CertificatesSDK.EXPECT().
+			ListCertificate(
+				mock.Anything,
+				mock.MatchedBy(func(req sdkkonnectops.ListCertificateRequest) bool {
+					return req.ControlPlaneID == cpID
+				}),
+			).
+			Return(
+				&sdkkonnectops.ListCertificateResponse{
+					Object: &sdkkonnectops.ListCertificateResponseBody{
+						Data: []sdkkonnectcomp.Certificate{
+							{
+								ID: lo.ToPtr(certID),
+							},
+						},
+					},
+				}, nil,
+			)
+
+		t.Log("Creating a KongCertificate")
+		createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp,
+			func(obj client.Object) {
+				cert := obj.(*configurationv1alpha1.KongCertificate)
+				cert.Spec.Tags = []string{"xconflictx"}
+			},
+		)
+
+		t.Log("Watching for KongCertificates to verify the created KongCertificate gets programmed")
+		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongCertificate) bool {
+			if c.GetName() != createdCert.GetName() {
+				return false
+			}
+			if !slices.Equal(c.Spec.Tags, createdCert.Spec.Tags) {
+				return false
+			}
+
+			return c.GetKonnectID() == certID && lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					condition.Status == metav1.ConditionTrue
+			})
+		}, "KongCertificate should be programmed and have ID in status after handling conflict")
+
+		t.Log("Ensuring that the SDK's create and list methods are called")
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, sdk.CertificatesSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
 }
