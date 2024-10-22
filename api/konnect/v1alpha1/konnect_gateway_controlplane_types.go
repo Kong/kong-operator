@@ -37,6 +37,11 @@ type KonnectGatewayControlPlane struct {
 }
 
 // KonnectGatewayControlPlaneSpec defines the desired state of KonnectGatewayControlPlane.
+// +kubebuilder:validation:XValidation:message="spec.labels must not have more than 40 entries", rule="has(self.labels) ? size(self.labels) <= 40 : true"
+// +kubebuilder:validation:XValidation:message="spec.labels keys must be of length 1-63 characters", rule="has(self.labels) ? self.labels.all(key, size(key) >= 1 && size(key) <= 63) : true"
+// +kubebuilder:validation:XValidation:message="spec.labels values must be of length 1-63 characters", rule="has(self.labels) ? self.labels.all(key, size(self.labels[key]) >= 1 && size(self.labels[key]) <= 63) : true"
+// +kubebuilder:validation:XValidation:message="spec.labels keys must not start with 'k8s', 'kong', 'konnect', 'mesh', 'kic', 'insomnia' or '_'", rule="has(self.labels) ? self.labels.all(key, !key.startsWith('k8s') && !key.startsWith('kong') && !key.startsWith('konnect') && !key.startsWith('mesh') && !key.startsWith('kic') && !key.startsWith('_') && !key.startsWith('insomnia')) : true"
+// +kubebuilder:validation:XValidation:message="spec.labels keys must satisfy the '^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$' pattern", rule="has(self.labels) ? self.labels.all(key, key.matches('^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$')) : true"
 // +apireference:kgo:include
 type KonnectGatewayControlPlaneSpec struct {
 	sdkkonnectcomp.CreateControlPlaneRequest `json:",inline"`
