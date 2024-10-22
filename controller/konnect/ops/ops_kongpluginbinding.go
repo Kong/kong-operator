@@ -3,12 +3,10 @@ package ops
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -89,27 +87,6 @@ func updatePlugin(
 	)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, pluginBinding); errWrap != nil {
-		// plugin update operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrap, &sdkError) {
-			switch sdkError.StatusCode {
-			case 404:
-				logEntityNotFoundRecreating(ctx, pluginBinding, id)
-				if err := createPlugin(ctx, cl, sdk, pluginBinding); err != nil {
-					return FailedKonnectOpError[configurationv1alpha1.KongPluginBinding]{
-						Op:  UpdateOp,
-						Err: err,
-					}
-				}
-				return nil
-			default:
-				return FailedKonnectOpError[configurationv1alpha1.KongPluginBinding]{
-					Op:  UpdateOp,
-					Err: sdkError,
-				}
-			}
-		}
-
 		return errWrap
 	}
 
