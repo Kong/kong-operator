@@ -53,7 +53,6 @@ func createPlugin(
 	}
 
 	pluginBinding.SetKonnectID(*resp.Plugin.ID)
-	SetKonnectEntityProgrammedCondition(pluginBinding)
 
 	return nil
 }
@@ -66,34 +65,30 @@ func updatePlugin(
 	ctx context.Context,
 	sdk sdkops.PluginSDK,
 	cl client.Client,
-	pb *configurationv1alpha1.KongPluginBinding,
+	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) error {
-	controlPlaneID := pb.GetControlPlaneID()
+	controlPlaneID := pluginBinding.GetControlPlaneID()
 	if controlPlaneID == "" {
-		return CantPerformOperationWithoutControlPlaneIDError{Entity: pb, Op: UpdateOp}
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: pluginBinding, Op: UpdateOp}
 	}
 
-	pluginInput, err := kongPluginBindingToSDKPluginInput(ctx, cl, pb)
+	pluginInput, err := kongPluginBindingToSDKPluginInput(ctx, cl, pluginBinding)
 	if err != nil {
 		return err
 	}
 
+	id := pluginBinding.GetKonnectID()
 	_, err = sdk.UpsertPlugin(ctx,
 		sdkkonnectops.UpsertPluginRequest{
 			ControlPlaneID: controlPlaneID,
-			PluginID:       pb.GetKonnectID(),
+			PluginID:       id,
 			Plugin:         *pluginInput,
 		},
 	)
 
-	// TODO: handle already exists
-	// Can't adopt it as it will cause conflicts between the controller
-	// that created that entity and already manages it, hm
-	if errWrap := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongPluginBinding](err, UpdateOp, pb); errWrap != nil {
-		SetKonnectEntityProgrammedConditionFalse(pb, "FailedToUpdate", errWrap.Error())
+	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, pluginBinding); errWrap != nil {
 		return errWrap
 	}
-	SetKonnectEntityProgrammedCondition(pb)
 
 	return nil
 }
@@ -108,7 +103,7 @@ func deletePlugin(
 ) error {
 	id := pb.GetKonnectID()
 	_, err := sdk.DeletePlugin(ctx, pb.GetControlPlaneID(), id)
-	if errWrap := wrapErrIfKonnectOpFailed[configurationv1alpha1.KongPluginBinding](err, DeleteOp, pb); errWrap != nil {
+	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, pb); errWrap != nil {
 		return handleDeleteError(ctx, err, pb)
 	}
 
