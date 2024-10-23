@@ -71,9 +71,12 @@ func generateKubernetesMetadataTags(obj ObjectWithMetadata) []string {
 	if k8sNamespace := obj.GetNamespace(); k8sNamespace != "" {
 		labels = append(labels, lo.Entry[string, string]{Key: KubernetesNamespaceLabelKey, Value: k8sNamespace})
 	}
+
+	// The maximum length of a tag in Konnect is 128 characters. We truncate them to ensure they are within the limit.
+	const maxAllowedValueLength = 128
 	tags := make([]string, 0, len(labels))
 	for _, label := range labels {
-		tags = append(tags, fmt.Sprintf("%s:%s", label.Key, label.Value))
+		tags = append(tags, truncate(fmt.Sprintf("%s:%s", label.Key, label.Value), maxAllowedValueLength))
 	}
 	return tags
 }
@@ -95,6 +98,14 @@ func WithKubernetesMetadataLabels(obj ObjectWithMetadata, userSetLabels map[stri
 	for k, v := range userSetLabels {
 		labels[k] = v
 	}
+
+	// The maximum length of a label value in Konnect is 63 characters. We truncate the values to ensure they are
+	// within the limit.
+	const maxAllowedValueLength = 63
+	for k, v := range labels {
+		labels[k] = truncate(v, maxAllowedValueLength)
+	}
+
 	return labels
 }
 
@@ -102,4 +113,11 @@ func WithKubernetesMetadataLabels(obj ObjectWithMetadata, userSetLabels map[stri
 // separated by a semicolon.
 func UIDLabelForObject(obj client.Object) string {
 	return fmt.Sprintf("%s:%s", KubernetesUIDLabelKey, obj.GetUID())
+}
+
+func truncate(s string, limit int) string {
+	if len(s) <= limit {
+		return s
+	}
+	return s[:limit]
 }

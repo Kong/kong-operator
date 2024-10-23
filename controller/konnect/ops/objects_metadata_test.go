@@ -19,6 +19,7 @@ func TestWithKubernetesMetadataLabels(t *testing.T) {
 	testCases := []struct {
 		name           string
 		obj            testObjectKind
+		userLabels     map[string]string
 		expectedLabels map[string]string
 	}{
 		{
@@ -67,11 +68,65 @@ func TestWithKubernetesMetadataLabels(t *testing.T) {
 				ops.KubernetesGenerationLabelKey: "2",
 			},
 		},
+		{
+			name: "user-provided labels are added",
+			obj: testObjectKind{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "TestObjectKind",
+					APIVersion: "test.objects.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-object",
+					Namespace:  "test-namespace",
+					UID:        "test-uid",
+					Generation: 2,
+				},
+			},
+			userLabels: map[string]string{
+				"custom-label":  "custom-value",
+				"another-label": "another-value",
+			},
+			expectedLabels: map[string]string{
+				ops.KubernetesKindLabelKey:       "TestObjectKind",
+				ops.KubernetesGroupLabelKey:      "test.objects.io",
+				ops.KubernetesVersionLabelKey:    "v1",
+				ops.KubernetesNameLabelKey:       "test-object",
+				ops.KubernetesNamespaceLabelKey:  "test-namespace",
+				ops.KubernetesUIDLabelKey:        "test-uid",
+				ops.KubernetesGenerationLabelKey: "2",
+				"custom-label":                   "custom-value",
+				"another-label":                  "another-value",
+			},
+		},
+		{
+			name: "too long kind, group, name, and namespace are truncated",
+			obj: testObjectKind{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "TestObjectKindWithAVeryLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongName",
+					APIVersion: "testlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong.objects.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "testobjectverylonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong",
+					Namespace:  "testnamespaceverylonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong",
+					UID:        "test-uid",
+					Generation: 2,
+				},
+			},
+			expectedLabels: map[string]string{
+				ops.KubernetesKindLabelKey:       "TestObjectKindWithAVeryLongLongLongLongLongLongLongLongLongLong",
+				ops.KubernetesGroupLabelKey:      "testlonglonglonglonglonglonglonglonglonglonglonglonglonglonglon",
+				ops.KubernetesVersionLabelKey:    "v1",
+				ops.KubernetesNameLabelKey:       "testobjectverylonglonglonglonglonglonglonglonglonglonglonglongl",
+				ops.KubernetesNamespaceLabelKey:  "testnamespaceverylonglonglonglonglonglonglonglonglonglonglonglo",
+				ops.KubernetesUIDLabelKey:        "test-uid",
+				ops.KubernetesGenerationLabelKey: "2",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			labels := ops.WithKubernetesMetadataLabels(&tc.obj, tc.expectedLabels)
+			labels := ops.WithKubernetesMetadataLabels(&tc.obj, tc.userLabels)
 			require.Equal(t, tc.expectedLabels, labels)
 		})
 	}
@@ -180,6 +235,30 @@ func TestGenerateTagsForObject(t *testing.T) {
 				"tag1",
 				"tag2",
 				"tag3",
+			},
+		},
+		{
+			name: "too long kind, group, name, and namespace are truncated",
+			obj: testObjectKind{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "TestObjectKindWithAVeryLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongName",
+					APIVersion: "testlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong.objects.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "testobjectverylonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglongname",
+					Namespace:  "testnamespaceverylonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglongnamespace",
+					UID:        "test-uid",
+					Generation: 2,
+				},
+			},
+			expectedTags: []string{
+				"k8s-generation:2",
+				"k8s-group:testlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglo",
+				"k8s-kind:TestObjectKindWithAVeryLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLong",
+				"k8s-name:testobjectverylonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglongl",
+				"k8s-namespace:testnamespaceverylonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglongl",
+				"k8s-uid:test-uid",
+				"k8s-version:v1",
 			},
 		},
 	}
