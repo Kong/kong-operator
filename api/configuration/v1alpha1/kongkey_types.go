@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/kong/kubernetes-configuration/api/configuration/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -87,7 +88,7 @@ type KongKeyAPISpec struct {
 
 	// Tags is an optional set of strings associated with the Key for grouping and filtering.
 	// +optional
-	Tags []string `json:"tags,omitempty"`
+	Tags common.Tags `json:"tags,omitempty"`
 }
 
 // PEMKeyPair defines a keypair in PEM format.

@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/kong/kubernetes-configuration/api/configuration/common"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -66,7 +67,7 @@ type KongCredentialHMACAPISpec struct {
 	// Secret is the secret for the HMAC credential.
 	Secret *string `json:"secret,omitempty"`
 	// Tags is a list of tags for the HMAC credential.
-	Tags []string `json:"tags,omitempty"`
+	Tags common.Tags `json:"tags,omitempty"`
 	// Username is the username for the HMAC credential.
 	// +kubernetes:validation:Required
 	Username *string `json:"username"`

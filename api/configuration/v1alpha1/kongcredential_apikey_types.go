@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/kong/kubernetes-configuration/api/configuration/common"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -67,7 +68,7 @@ type KongCredentialAPIKeyAPISpec struct {
 	Key string `json:"key"`
 
 	// Tags is a list of tags for the API Key credential.
-	Tags []string `json:"tags,omitempty"`
+	Tags common.Tags `json:"tags,omitempty"`
 }
 
 // KongCredentialAPIKeyStatus represents the current status of the API Key credential resource.

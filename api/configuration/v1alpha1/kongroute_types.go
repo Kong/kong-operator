@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/kong/kubernetes-configuration/api/configuration/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -94,7 +95,7 @@ type KongRouteAPISpec struct {
 	Paths []string `json:"paths,omitempty"`
 	// When matching a Route via one of the `hosts` domain names, use the request `Host` header in the upstream request headers. If set to `false`, the upstream `Host` header will be that of the Service's `host`.
 	PreserveHost *bool `json:"preserve_host,omitempty"`
-	// An array of the protocols this Route should allow. See the [Route Object](#route-object) section for a list of accepted protocols. When set to only `"https"`, HTTP requests are answered with an upgrade error. When set to only `"http"`, HTTPS requests are answered with an error.
+	// An array of the protocols this Route should allow. See KongRoute for a list of accepted protocols. When set to only `"https"`, HTTP requests are answered with an upgrade error. When set to only `"http"`, HTTPS requests are answered with an error.
 	Protocols []sdkkonnectcomp.RouteProtocols `json:"protocols,omitempty"`
 	// A number used to choose which route resolves a given request when several routes match it using regexes simultaneously. When two routes match the path and have the same `regex_priority`, the older one (lowest `created_at`) is used. Note that the priority for non-regex routes is different (longer non-regex routes are matched before shorter ones).
 	RegexPriority *int64 `json:"regex_priority,omitempty"`
@@ -109,7 +110,7 @@ type KongRouteAPISpec struct {
 	// When matching a Route via one of the `paths`, strip the matching prefix from the upstream request URL.
 	StripPath *bool `json:"strip_path,omitempty"`
 	// An optional set of strings associated with the Route for grouping and filtering.
-	Tags []string `json:"tags,omitempty"`
+	Tags common.Tags `json:"tags,omitempty"`
 }
 
 // KongRouteStatus represents the current status of the Kong Route resource.

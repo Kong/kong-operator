@@ -22,6 +22,7 @@ package v1
 
 import (
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-configuration/api/configuration/common"
 	"github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -237,6 +238,11 @@ func (in *KongConsumerSpec) DeepCopyInto(out *KongConsumerSpec) {
 		in, out := &in.ControlPlaneRef, &out.ControlPlaneRef
 		*out = new(v1alpha1.ControlPlaneRef)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.Tags != nil {
+		in, out := &in.Tags, &out.Tags
+		*out = make(common.Tags, len(*in))
+		copy(*out, *in)
 	}
 }
 

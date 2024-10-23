@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/kong/kubernetes-configuration/api/configuration/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -96,7 +97,7 @@ type KongServiceAPISpec struct {
 	// The number of retries to execute upon failure to proxy.
 	Retries *int64 `json:"retries,omitempty"`
 	// An optional set of strings associated with the Service for grouping and filtering.
-	Tags []string `json:"tags,omitempty"`
+	Tags common.Tags `json:"tags,omitempty"`
 	// Whether to enable verification of upstream server TLS certificate. If set to `null`, then the Nginx default is respected.
 	TLSVerify *bool `json:"tls_verify,omitempty"`
 	// Maximum depth of chain while verifying Upstream server's TLS certificate. If set to `null`, then the Nginx default is respected.

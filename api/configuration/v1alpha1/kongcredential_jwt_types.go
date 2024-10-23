@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/kong/kubernetes-configuration/api/configuration/common"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -75,7 +76,7 @@ type KongCredentialJWTAPISpec struct {
 	// Secret is the secret for the JWT credential.
 	Secret *string `json:"secret,omitempty"`
 	// Tags is a list of tags for the JWT credential.
-	Tags []string `json:"tags,omitempty"`
+	Tags common.Tags `json:"tags,omitempty"`
 }
 
 // KongCredentialJWTStatus represents the current status of the JWT credential resource.

@@ -1,6 +1,7 @@
 package crdsvalidation_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/samber/lo"
@@ -257,6 +258,84 @@ func TestKongKey(t *testing.T) {
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr(`Unsupported value: "unknown": supported values: "konnectID", "namespacedRef"`),
+			},
+		}.Run(t)
+	})
+
+	t.Run("tags validation", func(t *testing.T) {
+		CRDValidationTestCasesGroup[*configurationv1alpha1.KongKey]{
+			{
+				Name: "up to 20 tags are allowed",
+				TestObject: &configurationv1alpha1.KongKey{
+					ObjectMeta: commonObjectMeta,
+					Spec: configurationv1alpha1.KongKeySpec{
+						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
+							KID: "1",
+							JWK: lo.ToPtr("{}"),
+							Tags: func() []string {
+								var tags []string
+								for i := range 20 {
+									tags = append(tags, fmt.Sprintf("tag-%d", i))
+								}
+								return tags
+							}(),
+						},
+					},
+				},
+			},
+			{
+				Name: "more than 20 tags are not allowed",
+				TestObject: &configurationv1alpha1.KongKey{
+					ObjectMeta: commonObjectMeta,
+					Spec: configurationv1alpha1.KongKeySpec{
+						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
+							KID: "1",
+							JWK: lo.ToPtr("{}"),
+							Tags: func() []string {
+								var tags []string
+								for i := range 21 {
+									tags = append(tags, fmt.Sprintf("tag-%d", i))
+								}
+								return tags
+							}(),
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.tags: Too many: 21: must have at most 20 items"),
+			},
+			{
+				Name: "tags entries must not be longer than 128 characters",
+				TestObject: &configurationv1alpha1.KongKey{
+					ObjectMeta: commonObjectMeta,
+					Spec: configurationv1alpha1.KongKeySpec{
+						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
+							KID: "1",
+							JWK: lo.ToPtr("{}"),
+							Tags: []string{
+								lo.RandomString(129, lo.AlphanumericCharset),
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
 			},
 		}.Run(t)
 	})
