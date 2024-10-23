@@ -11,6 +11,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func init() {
@@ -63,7 +64,7 @@ func TestDataPlaneValidatingWebhook(t *testing.T) {
 														Value: "postgres",
 													},
 												},
-												Image: consts.DefaultDataPlaneImage,
+												Image: helpers.GetDefaultDataPlaneImage(),
 											},
 										},
 									},
