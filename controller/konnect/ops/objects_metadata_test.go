@@ -261,6 +261,28 @@ func TestGenerateTagsForObject(t *testing.T) {
 				"k8s-version:v1",
 			},
 		},
+		{
+			name: "too long tags in annotations are truncated",
+			obj: func() testObjectKind {
+				obj := namespacedObject()
+				obj.ObjectMeta.Annotations = map[string]string{
+					"konghq.com/tags": "tag1,tag2,long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-tag-that-would-end-here-and-no-more-things-should-be-preserved",
+				}
+				return obj
+			}(),
+			expectedTags: []string{
+				"k8s-generation:2",
+				"k8s-group:test.objects.io",
+				"k8s-kind:TestObjectKind",
+				"k8s-name:test-object",
+				"k8s-namespace:test-namespace",
+				"k8s-uid:test-uid",
+				"k8s-version:v1",
+				"long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-tag-that-would-end-here",
+				"tag1",
+				"tag2",
+			},
+		},
 	}
 
 	for _, tc := range testCases {

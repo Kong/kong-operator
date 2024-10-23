@@ -46,11 +46,30 @@ type ObjectWithMetadata interface {
 // An optional set of tags can be passed to be included in the generated tags (e.g. tags from the spec).
 // It returns a slice of unique, sorted strings for deterministic output.
 func GenerateTagsForObject(obj ObjectWithMetadata, additionalTags ...string) []string {
-	var (
-		annotationTags = metadata.ExtractTags(obj)
-		k8sMetaTags    = generateKubernetesMetadataTags(obj)
-		res            = lo.Uniq(slices.Concat(annotationTags, k8sMetaTags, additionalTags))
+	const (
+		maxAllowedTagLength = 128
+		maxAllowedTagCount  = 20
 	)
+
+	// truncate the tags from annotations.
+	var annotationTags []string
+	for _, tag := range metadata.ExtractTags(obj) {
+		annotationTags = append(annotationTags, truncate(tag, maxAllowedTagLength))
+	}
+
+	// tags from k8s metadata must be kept.
+	k8sMetaTags := generateKubernetesMetadataTags(obj)
+
+	// If numbers "custom" tags from spec and annotations exceeds allowed count of tags, truncate them.
+	customTagCountLimit := maxAllowedTagCount - len(k8sMetaTags)
+	customTags := lo.Uniq(slices.Concat(annotationTags, additionalTags))
+	// TODO: Since the order of tags is not deterministic, when truncate happens, the preserved tags are also non deterministic.
+	// Should we provide some order like alphabetical order?
+	if len(customTags) > customTagCountLimit {
+		customTags = customTags[:customTagCountLimit]
+	}
+
+	res := lo.Uniq(slices.Concat(k8sMetaTags, customTags))
 	sort.Strings(res)
 	return res
 }
