@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -102,7 +103,10 @@ func Create[
 		return nil, fmt.Errorf("unsupported entity type %T", ent)
 	}
 
-	var errRelationsFailed KonnectEntityCreatedButRelationsFailedError
+	var (
+		errRelationsFailed KonnectEntityCreatedButRelationsFailedError
+		errSDK             *sdkkonnecterrs.SDKError
+	)
 	switch {
 	case ErrorIsCreateConflict(err):
 		// If there was a conflict on the create request, we can assume the entity already exists.
@@ -161,8 +165,17 @@ func Create[
 		} else {
 			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
 		}
+
+	case errors.As(err, &errSDK):
+		switch {
+		case ErrorIsSDKErrorTypeField(err):
+			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, errSDK.Error())
+		default:
+			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
+		}
+
 	case errors.As(err, &errRelationsFailed):
-		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, err.Error())
+		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, errRelationsFailed.Err.Error())
 	case err != nil:
 		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
 	default:
@@ -170,6 +183,14 @@ func Create[
 	}
 
 	logOpComplete(ctx, start, CreateOp, e, err)
+
+	// If the error is a type field error or bad request error, then don't propagate
+	// it to the caller.
+	// We cannot recover from this error as this requires user to change object's
+	// manifest. The entity's status is already updated with the error.
+	if ErrorIsSDKErrorTypeField(err) || ErrorIsSDKBadRequestError(err) {
+		err = nil
+	}
 
 	return e, err
 }
@@ -242,7 +263,7 @@ func Delete[
 		return fmt.Errorf("unsupported entity type %T", ent)
 	}
 
-	logOpComplete[T, TEnt](ctx, start, DeleteOp, ent, err)
+	logOpComplete(ctx, start, DeleteOp, ent, err)
 
 	return err
 }
@@ -360,8 +381,18 @@ func Update[
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
 	}
 
-	var errRelationsFailed KonnectEntityCreatedButRelationsFailedError
+	var (
+		errRelationsFailed KonnectEntityCreatedButRelationsFailedError
+		errSDK             *sdkkonnecterrs.SDKError
+	)
 	switch {
+	case errors.As(err, &errSDK):
+		switch {
+		case ErrorIsSDKErrorTypeField(err):
+			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToUpdateReason, errSDK.Body)
+		default:
+			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToUpdateReason, err.Error())
+		}
 	case errors.As(err, &errRelationsFailed):
 		e.SetKonnectID(errRelationsFailed.KonnectID)
 		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, err.Error())
@@ -371,7 +402,15 @@ func Update[
 		SetKonnectEntityProgrammedCondition(e)
 	}
 
-	logOpComplete[T, TEnt](ctx, now, UpdateOp, e, err)
+	logOpComplete(ctx, now, UpdateOp, e, err)
+
+	// If the error is a type field error or bad request error, then don't propagate
+	// it to the caller.
+	// We cannot recover from this error as this requires user to change object's
+	// manifest. The entity's status is already updated with the error.
+	if ErrorIsSDKErrorTypeField(err) || ErrorIsSDKBadRequestError(err) {
+		err = nil
+	}
 
 	return ctrl.Result{}, err
 }

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,15 +52,17 @@ func (e CantPerformOperationWithoutControlPlaneIDError) Error() string {
 	)
 }
 
+type sdkErrorDetails struct {
+	TypeAt   string   `json:"@type"`
+	Type     string   `json:"type"`
+	Field    string   `json:"field"`
+	Messages []string `json:"messages"`
+}
+
 type sdkErrorBody struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Details []struct {
-		TypeAt   string   `json:"@type"`
-		Type     string   `json:"type"`
-		Field    string   `json:"field"`
-		Messages []string `json:"messages"`
-	} `json:"details"`
+	Code    int               `json:"code"`
+	Message string            `json:"message"`
+	Details []sdkErrorDetails `json:"details"`
 }
 
 // ParseSDKErrorBody parses the body of an SDK error response.
@@ -88,6 +91,62 @@ func ParseSDKErrorBody(body string) (sdkErrorBody, error) {
 	return sdkErr, nil
 }
 
+const (
+	dataConstraintMesasge  = "data constraint error"
+	validationErrorMessage = "validation error"
+)
+
+// ErrorIsSDKErrorTypeField returns true if the provided error is a type field error.
+// These types of errors are unrecoverable and should be covered by CEL validation
+// rules on CRDs but just in case some of those are left unhandled we can handle
+// them by reacting to SDKErrors of type ERROR_TYPE_FIELD.
+//
+// Exemplary body:
+//
+//	{
+//		"code": 3,
+//		"message": "validation error",
+//		"details": [
+//			{
+//				"@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
+//				"type": "ERROR_TYPE_FIELD",
+//				"field": "tags[0]",
+//				"messages": [
+//					"length must be <= 128, but got 138"
+//				]
+//			}
+//		]
+//	}
+func ErrorIsSDKErrorTypeField(err error) bool {
+	var errSDK *sdkkonnecterrs.SDKError
+	if !errors.As(err, &errSDK) {
+		return false
+	}
+
+	errSDKBody, err := ParseSDKErrorBody(errSDK.Body)
+	if err != nil {
+		return false
+	}
+
+	if errSDKBody.Message != validationErrorMessage {
+		return false
+	}
+
+	if !slices.ContainsFunc(errSDKBody.Details, func(d sdkErrorDetails) bool {
+		return d.Type == "ERROR_TYPE_FIELD"
+	}) {
+		return false
+	}
+
+	return true
+}
+
+// ErrorIsSDKBadRequestError returns true if the provided error is a BadRequestError.
+func ErrorIsSDKBadRequestError(err error) bool {
+	var errSDK *sdkkonnecterrs.BadRequestError
+	return errors.As(err, &errSDK)
+}
+
 // ErrorIsCreateConflict returns true if the provided error is a Konnect conflict error.
 //
 // NOTE: Konnect APIs specific for Konnect only APIs like Gateway Control Planes
@@ -114,10 +173,6 @@ func SDKErrorIsConflict(sdkError *sdkkonnecterrs.SDKError) bool {
 		return false
 	}
 
-	const (
-		dataConstraintMesasge = "data constraint error"
-	)
-
 	if sdkErrorBody.Message != dataConstraintMesasge {
 		return false
 	}
@@ -127,6 +182,15 @@ func SDKErrorIsConflict(sdkError *sdkkonnecterrs.SDKError) bool {
 		return true
 	}
 	return false
+}
+
+func errIsNotFound(err error) bool {
+	var (
+		notFoundError *sdkkonnecterrs.NotFoundError
+		sdkError      *sdkkonnecterrs.SDKError
+	)
+	return errors.As(err, &notFoundError) ||
+		errors.As(err, &sdkError) && sdkError.StatusCode == http.StatusNotFound
 }
 
 // handleUpdateError handles errors that occur during an update operation.
@@ -141,41 +205,17 @@ func handleUpdateError[
 	ent TEnt,
 	createFunc func(ctx context.Context) error,
 ) error {
-	var (
-		sdkError *sdkkonnecterrs.SDKError
-		id       = ent.GetKonnectStatus().GetKonnectID()
-	)
-	if errors.As(err, &sdkError) {
-		switch sdkError.StatusCode {
-		case http.StatusNotFound:
-			logEntityNotFoundRecreating(ctx, ent, id)
-			if err := createFunc(ctx); err != nil {
-				return FailedKonnectOpError[T]{
-					Op:  UpdateOp,
-					Err: err,
-				}
-			}
-			return nil
-		default:
-			return FailedKonnectOpError[T]{
-				Op:  UpdateOp,
-				Err: sdkError,
-			}
-		}
-	}
-
-	var notFoundError *sdkkonnecterrs.NotFoundError
-	if errors.As(err, &notFoundError) {
+	if errIsNotFound(err) {
+		id := ent.GetKonnectStatus().GetKonnectID()
 		logEntityNotFoundRecreating(ctx, ent, id)
-		if err := createFunc(ctx); err != nil {
+		if createErr := createFunc(ctx); createErr != nil {
 			return FailedKonnectOpError[T]{
-				Op:  UpdateOp,
-				Err: err,
+				Op:  CreateOp,
+				Err: fmt.Errorf("failed to create %s %s: %w", ent.GetTypeName(), id, createErr),
 			}
 		}
 		return nil
 	}
-
 	return FailedKonnectOpError[T]{
 		Op:  UpdateOp,
 		Err: err,
@@ -189,32 +229,16 @@ func handleDeleteError[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ctx context.Context, err error, ent TEnt) error {
-	logDeleteSkipped := func() {
+	if errIsNotFound(err) {
 		ctrllog.FromContext(ctx).
 			Info("entity not found in Konnect, skipping delete",
 				"op", DeleteOp,
 				"type", ent.GetTypeName(),
 				"id", ent.GetKonnectStatus().GetKonnectID(),
 			)
-	}
-
-	var sdkNotFoundError *sdkkonnecterrs.NotFoundError
-	if errors.As(err, &sdkNotFoundError) {
-		logDeleteSkipped()
 		return nil
 	}
 
-	var sdkError *sdkkonnecterrs.SDKError
-	if errors.As(err, &sdkError) {
-		if sdkError.StatusCode == http.StatusNotFound {
-			logDeleteSkipped()
-			return nil
-		}
-		return FailedKonnectOpError[T]{
-			Op:  DeleteOp,
-			Err: sdkError,
-		}
-	}
 	return FailedKonnectOpError[T]{
 		Op:  DeleteOp,
 		Err: err,
