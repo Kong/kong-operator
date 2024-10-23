@@ -19,6 +19,9 @@ on:
       kong-license-data:
         required: false
         description: "The Kong License to use in the tests (required by EE build)"
+      konnect-pat:
+        required: true
+        description: "The Konnect PAT to use in the tests"
     inputs:
       dockerhub-push-username:
         description: "The username to push images to Docker Hub"
@@ -149,6 +152,8 @@ jobs:
         env:
           KONG_LICENSE_DATA: ${{ secrets.kong-license-data }}
           WEBHOOK_ENABLED: ${{ matrix.webhook-enabled }}
+          KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.konnect-pat }}
+          KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
 
   test-e2e-current-kubernetes:
     runs-on: ubuntu-latest
@@ -178,6 +183,8 @@ jobs:
         env:
           KONG_LICENSE_DATA: ${{ secrets.kong-license-data }}
           KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE: ${{ needs.build-push-images.outputs.full_tag }}
+          KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.konnect-pat }}
+          KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
 
   create-release-pr:
     runs-on: ubuntu-latest
