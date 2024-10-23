@@ -90,7 +90,7 @@ func kongConsumerGroupToSDKConsumerGroupInput(
 	group *configurationv1beta1.KongConsumerGroup,
 ) sdkkonnectcomp.ConsumerGroupInput {
 	return sdkkonnectcomp.ConsumerGroupInput{
-		Tags: GenerateTagsForObject(group),
+		Tags: GenerateTagsForObject(group, group.Spec.Tags...),
 		Name: group.Spec.Name,
 	}
 }
