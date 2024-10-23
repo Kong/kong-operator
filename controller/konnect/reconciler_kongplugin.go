@@ -219,6 +219,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				if err := k8sreduce.ReduceKongPluginBindings(ctx, clientWithNamespace, kpbList); err != nil {
 					return ctrl.Result{}, fmt.Errorf("failed to reduce KongPluginBindings: %w", err)
 				}
+				log.Info(logger, "deleted duplicated KongPluginBindings for kongPlugin", kongPlugin)
 			}
 
 		}
