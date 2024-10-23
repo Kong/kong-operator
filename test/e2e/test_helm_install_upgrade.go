@@ -25,6 +25,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func init() {
@@ -35,7 +36,6 @@ func TestHelmUpgrade(t *testing.T) {
 	const (
 		// Rel: https://github.com/Kong/charts/tree/main/charts/gateway-operator
 		chart = "kong/gateway-operator"
-		image = "docker.io/kong/gateway-operator-oss"
 
 		waitTime = 3 * time.Minute
 	)
@@ -47,13 +47,13 @@ func TestHelmUpgrade(t *testing.T) {
 	// and dumping diagnostics if the test fails.
 	e := CreateEnvironment(t, ctx)
 
-	// assertion is run after the upgrade to assert the state of the resources in the cluster.
+	// Assertion is run after the upgrade to assert the state of the resources in the cluster.
 	type assertion struct {
 		Name string
 		Func func(*assert.CollectT, *testutils.K8sClients)
 	}
 
-	testcases := []struct {
+	testCases := []struct {
 		name                   string
 		fromVersion            string
 		toVersion              string
@@ -191,10 +191,10 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 				{
-					Name: "DataPlane deployment is patched after operator upgrade (due to change in default Kong image version to 3.7)",
+					Name: fmt.Sprintf("DataPlane deployment is patched after operator upgrade (due to change in default Kong image version to %q)", helpers.GetDefaultDataPlaneImagePreviousMinor()),
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-123-130=true")(ctx, c, cl.MgrClient)
-						gatewayDataPlaneDeploymentHasImageSetTo("gw-upgrade-123-130=true", "kong:3.7")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentHasImageSetTo("gw-upgrade-123-130=true", helpers.GetDefaultDataPlaneImagePreviousMinor())(ctx, c, cl.MgrClient)
 					},
 				},
 				// NOTE: We do not check managed cluster wide resource labels because the fix for migrating
@@ -260,10 +260,10 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 				{
-					Name: "DataPlane deployment is patched after operator upgrade (due to change in default Kong image version to 3.8)",
+					Name: fmt.Sprintf("DataPlane deployment is patched after operator upgrade (due to change in default Kong image version to %q)", helpers.GetDefaultDataPlaneImage()),
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-130-current=true")(ctx, c, cl.MgrClient)
-						gatewayDataPlaneDeploymentHasImageSetTo("gw-upgrade-130-current=true", "kong:3.8")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentHasImageSetTo("gw-upgrade-130-current=true", helpers.GetDefaultDataPlaneImage())(ctx, c, cl.MgrClient)
 					},
 				},
 				{
@@ -359,11 +359,16 @@ func TestHelmUpgrade(t *testing.T) {
 		currentRepository, currentTag = splitRepoVersionFromImage(t, imageOverride)
 	}
 
-	for _, tc := range testcases {
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Repository is different for OSS and Enterprise images and it should be set accordingly.
+			var kgoImageRepository = "docker.io/kong/gateway-operator-oss"
+			if helpers.GetDefaultDataPlaneBaseImage() == consts.DefaultDataPlaneBaseEnterpriseImage {
+				kgoImageRepository = "docker.io/kong/gateway-operator"
+			}
 			var (
 				tag              string
-				targetRepository = image
+				targetRepository = kgoImageRepository
 			)
 			if tc.upgradeToCurrent {
 				if currentTag == "" {
@@ -385,7 +390,7 @@ func TestHelmUpgrade(t *testing.T) {
 			releaseName := strings.ReplaceAll(fmt.Sprintf("kgo-%s-to-%s", tc.fromVersion, tagInReleaseName), ".", "-")
 			values := map[string]string{
 				"image.tag":                          tc.fromVersion,
-				"image.repository":                   image,
+				"image.repository":                   kgoImageRepository,
 				"readinessProbe.initialDelaySeconds": "1",
 				"readinessProbe.periodSeconds":       "1",
 				// Disable leader election and anonymous reports for tests.
@@ -499,6 +504,7 @@ func baseGatewayConfigurationSpec() operatorv1beta1.GatewayConfigurationSpec {
 				},
 			},
 		},
+
 		ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
 			Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -540,7 +546,7 @@ func getGatewayByLabelSelector(gatewayLabelSelector string, ctx context.Context,
 	}
 
 	if len(gws.Items) != 1 {
-		c.Errorf("got %d gateways, expected 1", len(gws.Items))
+		c.Errorf("expected 1 Gateway, got %d", len(gws.Items))
 		return nil
 	}
 
@@ -573,8 +579,8 @@ func gatewayDataPlaneDeploymentHasImageSetTo(
 		}
 
 		if container[0].Image != image {
-			return fmt.Errorf("Gateway's DataPlane Deployment %q expected image %s but got %s",
-				client.ObjectKeyFromObject(d), container[0].Image, image,
+			return fmt.Errorf("Gateway's DataPlane Deployment %q expected image %s got %s",
+				client.ObjectKeyFromObject(d), image, container[0].Image,
 			)
 		}
 		return nil
