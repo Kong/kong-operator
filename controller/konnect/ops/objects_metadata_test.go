@@ -283,6 +283,71 @@ func TestGenerateTagsForObject(t *testing.T) {
 				"tag2",
 			},
 		},
+		{
+			name: "when too many tags in total, last from annotations are discarded",
+			obj: func() testObjectKind {
+				obj := namespacedObject()
+				obj.ObjectMeta.Annotations = map[string]string{
+					"konghq.com/tags": "a,b,c,d,e,f,g,h,i,j,k,l,m,iwillbediscarded",
+				}
+				return obj
+			}(),
+			expectedTags: []string{
+				"a",
+				"b",
+				"c",
+				"d",
+				"e",
+				"f",
+				"g",
+				"h",
+				"i",
+				"j",
+				"k",
+				"k8s-generation:2",
+				"k8s-group:test.objects.io",
+				"k8s-kind:TestObjectKind",
+				"k8s-name:test-object",
+				"k8s-namespace:test-namespace",
+				"k8s-uid:test-uid",
+				"k8s-version:v1",
+				"l",
+				"m",
+			},
+		},
+		{
+			name: "when too many tags in total and additional tags are passed, last from annotations are discarded",
+			obj: func() testObjectKind {
+				obj := namespacedObject()
+				obj.ObjectMeta.Annotations = map[string]string{
+					"konghq.com/tags": "a,c,e,gwillbediscarded,iwillbediscarded,kwillbediscarded,mwillbediscarded",
+				}
+				return obj
+			}(),
+			additionalTags: []string{"b", "d", "f", "h", "j", "l", "n", "o", "p", "r"},
+			expectedTags: []string{
+				"a",
+				"b",
+				"c",
+				"d",
+				"e",
+				"f",
+				"h",
+				"j",
+				"k8s-generation:2",
+				"k8s-group:test.objects.io",
+				"k8s-kind:TestObjectKind",
+				"k8s-name:test-object",
+				"k8s-namespace:test-namespace",
+				"k8s-uid:test-uid",
+				"k8s-version:v1",
+				"l",
+				"n",
+				"o",
+				"p",
+				"r",
+			},
+		},
 	}
 
 	for _, tc := range testCases {

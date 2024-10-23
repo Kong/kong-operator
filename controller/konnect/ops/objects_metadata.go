@@ -47,31 +47,33 @@ type ObjectWithMetadata interface {
 // It returns a slice of unique, sorted strings for deterministic output.
 func GenerateTagsForObject(obj ObjectWithMetadata, additionalTags ...string) []string {
 	const (
+		// The maximum length of a tag in Konnect.
 		maxAllowedTagLength = 128
-		maxAllowedTagCount  = 20
+		// The maximum number of tags that can be attached to a Konnect entity.
+		maxAllowedTagsCount = 20
 	)
 
-	// truncate the tags from annotations.
+	// Truncate the tags from annotations as we do not validate their length in CEL validations rules.
 	var annotationTags []string
 	for _, tag := range metadata.ExtractTags(obj) {
 		annotationTags = append(annotationTags, truncate(tag, maxAllowedTagLength))
 	}
 
-	// tags from k8s metadata must be kept.
 	k8sMetaTags := generateKubernetesMetadataTags(obj)
 
-	// If numbers "custom" tags from spec and annotations exceeds allowed count of tags, truncate them.
-	customTagCountLimit := maxAllowedTagCount - len(k8sMetaTags)
-	customTags := lo.Uniq(slices.Concat(annotationTags, additionalTags))
-	// TODO: Since the order of tags is not deterministic, when truncate happens, the preserved tags are also non deterministic.
-	// Should we provide some order like alphabetical order?
-	if len(customTags) > customTagCountLimit {
-		customTags = customTags[:customTagCountLimit]
+	// We concatenate the tags in this order to ensure that the k8sMetaTags and additionalTags (from spec) are never
+	// truncated below. CEL rules ensure that the total length of k8sMetaTags and additionalTags never exceeds
+	// the maximum allowed tags count. That means we will only discard tags from annotations.
+	allTags := lo.Uniq(slices.Concat(k8sMetaTags, additionalTags, annotationTags))
+
+	// If the total number of tags exceeds the maximum allowed tags counts, we limit the number of tags to the maximum
+	// allowed tags count, discarding the tags from annotations.
+	if len(allTags) > maxAllowedTagsCount {
+		allTags = allTags[:maxAllowedTagsCount]
 	}
 
-	res := lo.Uniq(slices.Concat(k8sMetaTags, customTags))
-	sort.Strings(res)
-	return res
+	sort.Strings(allTags)
+	return allTags
 }
 
 // generateKubernetesMetadataTags generates a list of tags from a Kubernetes object's metadata. The tags are formatted as
