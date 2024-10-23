@@ -46,13 +46,34 @@ type ObjectWithMetadata interface {
 // An optional set of tags can be passed to be included in the generated tags (e.g. tags from the spec).
 // It returns a slice of unique, sorted strings for deterministic output.
 func GenerateTagsForObject(obj ObjectWithMetadata, additionalTags ...string) []string {
-	var (
-		annotationTags = metadata.ExtractTags(obj)
-		k8sMetaTags    = generateKubernetesMetadataTags(obj)
-		res            = lo.Uniq(slices.Concat(annotationTags, k8sMetaTags, additionalTags))
+	const (
+		// The maximum length of a tag in Konnect.
+		maxAllowedTagLength = 128
+		// The maximum number of tags that can be attached to a Konnect entity.
+		maxAllowedTagsCount = 20
 	)
-	sort.Strings(res)
-	return res
+
+	// Truncate the tags from annotations as we do not validate their length in CEL validations rules.
+	var annotationTags []string
+	for _, tag := range metadata.ExtractTags(obj) {
+		annotationTags = append(annotationTags, truncate(tag, maxAllowedTagLength))
+	}
+
+	k8sMetaTags := generateKubernetesMetadataTags(obj)
+
+	// We concatenate the tags in this order to ensure that the k8sMetaTags and additionalTags (from spec) are never
+	// truncated below. CEL rules ensure that the total length of k8sMetaTags and additionalTags never exceeds
+	// the maximum allowed tags count. That means we will only discard tags from annotations.
+	allTags := lo.Uniq(slices.Concat(k8sMetaTags, additionalTags, annotationTags))
+
+	// If the total number of tags exceeds the maximum allowed tags counts, we limit the number of tags to the maximum
+	// allowed tags count, discarding the tags from annotations.
+	if len(allTags) > maxAllowedTagsCount {
+		allTags = allTags[:maxAllowedTagsCount]
+	}
+
+	sort.Strings(allTags)
+	return allTags
 }
 
 // generateKubernetesMetadataTags generates a list of tags from a Kubernetes object's metadata. The tags are formatted as
