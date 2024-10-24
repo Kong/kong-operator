@@ -125,15 +125,21 @@ func handleConsumerGroupAssignments(
 	populateConsumerGroupRefsValidCondition(invalidConsumerGroups, consumer)
 
 	if err != nil {
-		SetKonnectEntityProgrammedConditionFalse(consumer, konnectv1alpha1.KonnectEntityProgrammedReasonFailedToResolveConsumerGroupRefs, err.Error())
-		return err
+		return KonnectEntityCreatedButRelationsFailedError{
+			KonnectID: consumer.GetKonnectID(),
+			Reason:    konnectv1alpha1.KonnectEntityProgrammedReasonFailedToResolveConsumerGroupRefs,
+			Err:       err,
+		}
 	}
 
 	// Reconcile the ConsumerGroups assigned to the KongConsumer in Konnect (list the actual ConsumerGroups, calculate the
 	// difference, and add/remove the Consumer from the ConsumerGroups accordingly).
 	if err := reconcileConsumerGroupsWithKonnect(ctx, desiredConsumerGroupsIDs, cgSDK, cpID, consumer); err != nil {
-		SetKonnectEntityProgrammedConditionFalse(consumer, konnectv1alpha1.KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect, err.Error())
-		return err
+		return KonnectEntityCreatedButRelationsFailedError{
+			KonnectID: consumer.GetKonnectID(),
+			Reason:    konnectv1alpha1.KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect,
+			Err:       err,
+		}
 	}
 	return nil
 }

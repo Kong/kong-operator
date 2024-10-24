@@ -383,65 +383,6 @@ func TestUpdateKongUpstream(t *testing.T) {
 			},
 			expectedErr: true,
 		},
-		{
-			name: "when not found then try to create",
-			mockUpstreamPair: func(t *testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
-				sdk := sdkmocks.NewMockUpstreamsSDK(t)
-				svc := &configurationv1alpha1.KongUpstream{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-					},
-					Spec: configurationv1alpha1.KongUpstreamSpec{
-						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-							Name: "svc-1",
-						},
-					},
-					Status: configurationv1alpha1.KongUpstreamStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
-								ID: "123456789",
-							},
-						},
-					},
-				}
-				sdk.
-					EXPECT().
-					UpsertUpstream(ctx,
-						sdkkonnectops.UpsertUpstreamRequest{
-							ControlPlaneID: "12345",
-							UpstreamID:     "123456789",
-							Upstream:       kongUpstreamToSDKUpstreamInput(svc),
-						},
-					).
-					Return(
-						nil,
-						&sdkkonnecterrs.SDKError{
-							StatusCode: 404,
-							Message:    "not found",
-						},
-					)
-
-				sdk.
-					EXPECT().
-					CreateUpstream(ctx, "12345", kongUpstreamToSDKUpstreamInput(svc)).
-					Return(
-						&sdkkonnectops.CreateUpstreamResponse{
-							Upstream: &sdkkonnectcomp.Upstream{
-								ID:   lo.ToPtr("123456789"),
-								Name: "svc-1",
-							},
-						},
-						nil,
-					)
-
-				return sdk, svc
-			},
-			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
-				assert.Equal(t, "123456789", svc.GetKonnectStatus().GetKonnectID())
-			},
-		},
 	}
 
 	for _, tc := range testCases {

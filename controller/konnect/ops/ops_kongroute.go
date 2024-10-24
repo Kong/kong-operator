@@ -2,13 +2,11 @@ package ops
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
@@ -62,27 +60,6 @@ func updateRoute(
 	})
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, route); errWrap != nil {
-		// Route update operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrap, &sdkError) {
-			switch sdkError.StatusCode {
-			case 404:
-				logEntityNotFoundRecreating(ctx, route, id)
-				if err := createRoute(ctx, sdk, route); err != nil {
-					return FailedKonnectOpError[configurationv1alpha1.KongRoute]{
-						Op:  UpdateOp,
-						Err: err,
-					}
-				}
-				return nil
-			default:
-				return FailedKonnectOpError[configurationv1alpha1.KongRoute]{
-					Op:  UpdateOp,
-					Err: sdkError,
-				}
-			}
-		}
-
 		return errWrap
 	}
 

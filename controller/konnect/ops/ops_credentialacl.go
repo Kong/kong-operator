@@ -2,12 +2,10 @@ package ops
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
@@ -75,27 +73,6 @@ func updateKongCredentialACL(
 	// Can't adopt it as it will cause conflicts between the controller
 	// that created that entity and already manages it, hm
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, cred); errWrap != nil {
-		// ACL update operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrap, &sdkError) {
-			switch sdkError.StatusCode {
-			case 404:
-				if err := createKongCredentialACL(ctx, sdk, cred); err != nil {
-					return FailedKonnectOpError[configurationv1alpha1.KongCredentialACL]{
-						Op:  UpdateOp,
-						Err: err,
-					}
-				}
-				return nil
-			default:
-				return FailedKonnectOpError[configurationv1alpha1.KongCredentialACL]{
-					Op:  UpdateOp,
-					Err: sdkError,
-				}
-
-			}
-		}
-
 		return errWrap
 	}
 

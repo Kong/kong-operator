@@ -2,14 +2,12 @@ package ops
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	"github.com/sourcegraph/conc/iter"
 	corev1 "k8s.io/api/core/v1"
@@ -99,24 +97,10 @@ func updateControlPlane(
 	}
 
 	resp, err := sdk.UpdateControlPlane(ctx, id, req)
-	var sdkError *sdkkonnecterrs.NotFoundError
-	if errors.As(err, &sdkError) {
-		logEntityNotFoundRecreating(ctx, cp, id)
-		if err := createControlPlane(ctx, sdk, sdkGroups, cl, cp); err != nil {
-			return FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
-				Op:  UpdateOp,
-				Err: err,
-			}
-		}
-
-		return nil
-	}
-
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, cp); errWrap != nil {
-		return FailedKonnectOpError[konnectv1alpha1.KonnectGatewayControlPlane]{
-			Op:  UpdateOp,
-			Err: errWrap,
-		}
+		return handleUpdateError(ctx, err, cp, func(ctx context.Context) error {
+			return createControlPlane(ctx, sdk, sdkGroups, cl, cp)
+		})
 	}
 
 	if resp == nil || resp.ControlPlane == nil {
