@@ -682,6 +682,47 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.cluster_type must be one of 'CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE' or 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'"),
 			},
+			{
+				Name: "cluster type is immutable",
+				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: commonObjectMeta,
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							Name: "cp-1",
+						},
+						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+								Name: "name-1",
+							},
+						},
+					},
+				},
+				Update: func(cp *konnectv1alpha1.KonnectGatewayControlPlane) {
+					cp.Spec.ClusterType = sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup.ToPointer()
+				},
+				ExpectedUpdateErrorMessage: lo.ToPtr("spec.cluster_type is immutable"),
+			},
+			{
+				Name: "cluster type is immutable when having it set and then trying to unset it",
+				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: commonObjectMeta,
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							Name:        "cp-1",
+							ClusterType: sdkkonnectcomp.ClusterTypeClusterTypeControlPlane.ToPointer(),
+						},
+						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+								Name: "name-1",
+							},
+						},
+					},
+				},
+				Update: func(cp *konnectv1alpha1.KonnectGatewayControlPlane) {
+					cp.Spec.ClusterType = nil
+				},
+				ExpectedUpdateErrorMessage: lo.ToPtr("spec.cluster_type is immutable"),
+			},
 		}.Run(t)
 	})
 }

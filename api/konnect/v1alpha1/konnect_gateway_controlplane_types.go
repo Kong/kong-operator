@@ -23,7 +23,6 @@ func init() {
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
 // +kubebuilder:validation:XValidation:message="spec.konnect.authRef is immutable when an entity is already Programmed", rule="!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef"
 // +kubebuilder:validation:XValidation:message="spec.konnect.authRef is immutable when an entity refers to a Valid API Auth Configuration", rule="!self.status.conditions.exists(c, c.type == 'APIAuthValid' && c.status == 'True') ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef"
-// +kubebuilder:validation:XValidation:message="spec.cluster_type is immutable", rule="self.spec.cluster_type == oldSelf.spec.cluster_type"
 // +apireference:kgo:include
 type KonnectGatewayControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -44,6 +43,7 @@ type KonnectGatewayControlPlane struct {
 // +kubebuilder:validation:XValidation:message="spec.labels keys must satisfy the '^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$' pattern", rule="has(self.labels) ? self.labels.all(key, key.matches('^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$')) : true"
 // +kubebuilder:validation:XValidation:message="when specified, spec.cluster_type must be one of 'CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE' or 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'", rule="!has(self.cluster_type) ? true : ['CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE', 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'].exists(ct, ct == self.cluster_type)"
 // +kubebuilder:validation:XValidation:message="spec.members is only applicable for ControlPlanes that are created as groups", rule="(has(self.cluster_type) && self.cluster_type != 'CLUSTER_TYPE_CONTROL_PLANE_GROUP') ? !has(self.members) : true"
+// +kubebuilder:validation:XValidation:message="spec.cluster_type is immutable", rule="!has(self.cluster_type) ? !has(oldSelf.cluster_type) : self.cluster_type == oldSelf.cluster_type"
 // +apireference:kgo:include
 type KonnectGatewayControlPlaneSpec struct {
 	sdkkonnectcomp.CreateControlPlaneRequest `json:",inline"`
