@@ -828,6 +828,14 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 			IndexOptions: konnect.IndexOptionsForKongVault(),
 		},
 		{
+			Object:       &configurationv1alpha1.KongCertificate{},
+			IndexOptions: konnect.IndexOptionsForKongCertificate(),
+		},
+		{
+			Object:       &configurationv1alpha1.KongCACertificate{},
+			IndexOptions: konnect.IndexOptionsForKongCACertificate(),
+		},
+		{
 			Object:       &konnectv1alpha1.KonnectGatewayControlPlane{},
 			IndexOptions: konnect.IndexOptionsForKonnectGatewayControlPlane(),
 		},
