@@ -9,10 +9,12 @@ import (
 	"slices"
 
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/controller/pkg/log"
 )
 
 // ErrNilResponse is an error indicating that a Konnect operation returned an empty response.
@@ -247,12 +249,13 @@ func handleDeleteError[
 
 // IgnoreUnrecoverableAPIErr ignores unrecoverable errors that would cause the
 // reconciler to endlessly requeue.
-func IgnoreUnrecoverableAPIErr(err error) error {
+func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 	// If the error is a type field error or bad request error, then don't propagate
 	// it to the caller.
 	// We cannot recover from this error as this requires user to change object's
 	// manifest. The entity's status is already updated with the error.
 	if ErrorIsSDKErrorTypeField(err) || ErrorIsSDKBadRequestError(err) {
+		log.Debug(logger, "ignoring unrecoverable API error, consult object's status for details", "err", err)
 		return nil
 	}
 

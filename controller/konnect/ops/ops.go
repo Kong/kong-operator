@@ -7,6 +7,7 @@ import (
 	"time"
 
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -167,14 +168,9 @@ func Create[
 		}
 
 	case errors.As(err, &errSDK):
-		switch {
-		case ErrorIsSDKErrorTypeField(err):
-			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, errSDK.Error())
-		default:
-			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
-		}
-
+		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, errSDK.Error())
 	case errors.As(err, &errRelationsFailed):
+		e.SetKonnectID(errRelationsFailed.KonnectID)
 		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, errRelationsFailed.Err.Error())
 	case err != nil:
 		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
@@ -184,7 +180,7 @@ func Create[
 
 	logOpComplete(ctx, start, CreateOp, e, err)
 
-	return e, IgnoreUnrecoverableAPIErr(err)
+	return e, IgnoreUnrecoverableAPIErr(err, loggerForEntity(ctx, e, CreateOp))
 }
 
 // Delete deletes a Konnect entity.
@@ -379,12 +375,7 @@ func Update[
 	)
 	switch {
 	case errors.As(err, &errSDK):
-		switch {
-		case ErrorIsSDKErrorTypeField(err):
-			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToUpdateReason, errSDK.Body)
-		default:
-			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToUpdateReason, err.Error())
-		}
+		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToUpdateReason, errSDK.Body)
 	case errors.As(err, &errRelationsFailed):
 		e.SetKonnectID(errRelationsFailed.KonnectID)
 		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, err.Error())
@@ -396,16 +387,15 @@ func Update[
 
 	logOpComplete(ctx, now, UpdateOp, e, err)
 
-	return ctrl.Result{}, IgnoreUnrecoverableAPIErr(err)
+	return ctrl.Result{}, IgnoreUnrecoverableAPIErr(err, loggerForEntity(ctx, e, UpdateOp))
 }
 
-func logOpComplete[
+func loggerForEntity[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
-](ctx context.Context, start time.Time, op Op, e TEnt, err error) {
+](ctx context.Context, e TEnt, op Op) logr.Logger {
 	keysAndValues := []interface{}{
 		"op", op,
-		"duration", time.Since(start).String(),
 	}
 
 	// Only add the Konnect ID if it exists and it's a create operation.
@@ -413,7 +403,15 @@ func logOpComplete[
 	if id := e.GetKonnectStatus().GetKonnectID(); id != "" && op == CreateOp {
 		keysAndValues = append(keysAndValues, "konnect_id", id)
 	}
-	logger := ctrllog.FromContext(ctx).WithValues(keysAndValues...)
+	return ctrllog.FromContext(ctx).WithValues(keysAndValues...)
+}
+
+func logOpComplete[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ctx context.Context, start time.Time, op Op, e TEnt, err error) {
+	logger := loggerForEntity(ctx, e, op).
+		WithValues("duration", time.Since(start).String())
 
 	if err != nil {
 		// NOTE: We don't want to print stack trace information here so skip 99 frames
