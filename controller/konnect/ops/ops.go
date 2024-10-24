@@ -184,15 +184,7 @@ func Create[
 
 	logOpComplete(ctx, start, CreateOp, e, err)
 
-	// If the error is a type field error or bad request error, then don't propagate
-	// it to the caller.
-	// We cannot recover from this error as this requires user to change object's
-	// manifest. The entity's status is already updated with the error.
-	if ErrorIsSDKErrorTypeField(err) || ErrorIsSDKBadRequestError(err) {
-		err = nil
-	}
-
-	return e, err
+	return e, IgnoreUnrecoverableAPIErr(err)
 }
 
 // Delete deletes a Konnect entity.
@@ -404,15 +396,7 @@ func Update[
 
 	logOpComplete(ctx, now, UpdateOp, e, err)
 
-	// If the error is a type field error or bad request error, then don't propagate
-	// it to the caller.
-	// We cannot recover from this error as this requires user to change object's
-	// manifest. The entity's status is already updated with the error.
-	if ErrorIsSDKErrorTypeField(err) || ErrorIsSDKBadRequestError(err) {
-		err = nil
-	}
-
-	return ctrl.Result{}, err
+	return ctrl.Result{}, IgnoreUnrecoverableAPIErr(err)
 }
 
 func logOpComplete[
