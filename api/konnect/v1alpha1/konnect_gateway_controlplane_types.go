@@ -21,9 +21,9 @@ func init() {
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type=string,JSONPath=`.status.id`
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
-// +kubebuilder:validation:XValidation:rule="!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef", message="spec.konnect.authRef is immutable when an entity is already Programmed"
-// +kubebuilder:validation:XValidation:rule="!self.status.conditions.exists(c, c.type == 'APIAuthValid' && c.status == 'True') ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef", message="spec.konnect.authRef is immutable when an entity refers to a Valid API Auth Configuration"
-// +kubebuilder:validation:XValidation:rule="(has(self.spec.cluster_type) && self.spec.cluster_type != 'CLUSTER_TYPE_CONTROL_PLANE_GROUP') ? !has(self.spec.members) : true", message="spec.members is only applicable for ControlPlanes that are created as groups"
+// +kubebuilder:validation:XValidation:message="spec.konnect.authRef is immutable when an entity is already Programmed", rule="!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef"
+// +kubebuilder:validation:XValidation:message="spec.konnect.authRef is immutable when an entity refers to a Valid API Auth Configuration", rule="!self.status.conditions.exists(c, c.type == 'APIAuthValid' && c.status == 'True') ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef"
+// +kubebuilder:validation:XValidation:message="spec.cluster_type is immutable", rule="self.spec.cluster_type == oldSelf.spec.cluster_type"
 // +apireference:kgo:include
 type KonnectGatewayControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -42,7 +42,8 @@ type KonnectGatewayControlPlane struct {
 // +kubebuilder:validation:XValidation:message="spec.labels values must be of length 1-63 characters", rule="has(self.labels) ? self.labels.all(key, size(self.labels[key]) >= 1 && size(self.labels[key]) <= 63) : true"
 // +kubebuilder:validation:XValidation:message="spec.labels keys must not start with 'k8s', 'kong', 'konnect', 'mesh', 'kic', 'insomnia' or '_'", rule="has(self.labels) ? self.labels.all(key, !key.startsWith('k8s') && !key.startsWith('kong') && !key.startsWith('konnect') && !key.startsWith('mesh') && !key.startsWith('kic') && !key.startsWith('_') && !key.startsWith('insomnia')) : true"
 // +kubebuilder:validation:XValidation:message="spec.labels keys must satisfy the '^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$' pattern", rule="has(self.labels) ? self.labels.all(key, key.matches('^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$')) : true"
-// +kubebuilder:validation:XValidation:message="when specified spec.cluster_type must be one of 'CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE' or 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'", rule="!has(self.cluster_type) ? true : ['CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE', 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'].exists(ct, ct == self.cluster_type)"
+// +kubebuilder:validation:XValidation:message="when specified, spec.cluster_type must be one of 'CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE' or 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'", rule="!has(self.cluster_type) ? true : ['CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE', 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'].exists(ct, ct == self.cluster_type)"
+// +kubebuilder:validation:XValidation:message="spec.members is only applicable for ControlPlanes that are created as groups", rule="(has(self.cluster_type) && self.cluster_type != 'CLUSTER_TYPE_CONTROL_PLANE_GROUP') ? !has(self.members) : true"
 // +apireference:kgo:include
 type KonnectGatewayControlPlaneSpec struct {
 	sdkkonnectcomp.CreateControlPlaneRequest `json:",inline"`

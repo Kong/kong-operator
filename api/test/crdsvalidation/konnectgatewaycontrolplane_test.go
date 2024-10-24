@@ -233,6 +233,27 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					kcp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name = "name-2"
 				},
 			},
+			{
+				Name: "cluster_type change is not allowed",
+				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: commonObjectMeta,
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							Name:        "cp-1",
+							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+						},
+						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+								Name: "name-1",
+							},
+						},
+					},
+				},
+				Update: func(kcp *konnectv1alpha1.KonnectGatewayControlPlane) {
+					kcp.Spec.ClusterType = sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup.ToPointer()
+				},
+				ExpectedUpdateErrorMessage: lo.ToPtr("spec.cluster_type is immutable"),
+			},
 		}.Run(t)
 	})
 
