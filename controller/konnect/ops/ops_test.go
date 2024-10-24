@@ -4,17 +4,17 @@ import (
 	"context"
 	"testing"
 
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
-
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 type deleteTestCase[

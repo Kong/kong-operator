@@ -179,8 +179,7 @@ func Create[
 func Delete[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
-](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, e TEnt) error {
-	ent := TEnt(e)
+](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, ent TEnt) error {
 	if ent.GetKonnectStatus().GetKonnectID() == "" {
 		cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
 		if ok && cond.Status == metav1.ConditionTrue {
@@ -196,7 +195,7 @@ func Delete[
 		err   error
 		start = time.Now()
 	)
-	switch ent := any(e).(type) {
+	switch ent := any(ent).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		err = deleteControlPlane(ctx, sdk.GetControlPlaneSDK(), ent)
 	case *configurationv1alpha1.KongService:
@@ -243,7 +242,7 @@ func Delete[
 		return fmt.Errorf("unsupported entity type %T", ent)
 	}
 
-	logOpComplete[T, TEnt](ctx, start, DeleteOp, e, err)
+	logOpComplete[T, TEnt](ctx, start, DeleteOp, ent, err)
 
 	return err
 }
