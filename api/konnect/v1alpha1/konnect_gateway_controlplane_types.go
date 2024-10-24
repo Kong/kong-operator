@@ -42,6 +42,7 @@ type KonnectGatewayControlPlane struct {
 // +kubebuilder:validation:XValidation:message="spec.labels values must be of length 1-63 characters", rule="has(self.labels) ? self.labels.all(key, size(self.labels[key]) >= 1 && size(self.labels[key]) <= 63) : true"
 // +kubebuilder:validation:XValidation:message="spec.labels keys must not start with 'k8s', 'kong', 'konnect', 'mesh', 'kic', 'insomnia' or '_'", rule="has(self.labels) ? self.labels.all(key, !key.startsWith('k8s') && !key.startsWith('kong') && !key.startsWith('konnect') && !key.startsWith('mesh') && !key.startsWith('kic') && !key.startsWith('_') && !key.startsWith('insomnia')) : true"
 // +kubebuilder:validation:XValidation:message="spec.labels keys must satisfy the '^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$' pattern", rule="has(self.labels) ? self.labels.all(key, key.matches('^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$')) : true"
+// +kubebuilder:validation:XValidation:message="when specified spec.cluster_type must be one of 'CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE' or 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'", rule="!has(self.cluster_type) ? true : ['CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE', 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'].exists(ct, ct == self.cluster_type)"
 // +apireference:kgo:include
 type KonnectGatewayControlPlaneSpec struct {
 	sdkkonnectcomp.CreateControlPlaneRequest `json:",inline"`

@@ -537,4 +537,130 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			},
 		}.Run(t)
 	})
+
+	t.Run("restriction on cluster types", func(t *testing.T) {
+		CRDValidationTestCasesGroup[*konnectv1alpha1.KonnectGatewayControlPlane]{
+			{
+				Name: "unspecified cluster type (defaulting to CLUSTR_TYPE_CONTROL_PLANE) is allowed",
+				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: commonObjectMeta,
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							Name: "cp-1",
+						},
+						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+								Name: "name-1",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "CLUSTER_TYPE_CONTROL_PLANE_GROUP is supported",
+				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: commonObjectMeta,
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							Name:        "cp-1",
+							ClusterType: sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup.ToPointer(),
+						},
+						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+								Name: "name-1",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "CLUSTER_TYPE_CONTROL_PLANE is supported",
+				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: commonObjectMeta,
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							Name:        "cp-1",
+							ClusterType: sdkkonnectcomp.ClusterTypeClusterTypeControlPlane.ToPointer(),
+						},
+						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+								Name: "name-1",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "CLUSTER_TYPE_K8S_INGRESS_CONTROLLER is supported",
+				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: commonObjectMeta,
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							Name:        "cp-1",
+							ClusterType: sdkkonnectcomp.ClusterTypeClusterTypeK8SIngressController.ToPointer(),
+						},
+						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+								Name: "name-1",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "CLUSTER_TYPE_HYBRID not is supported",
+				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: commonObjectMeta,
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							Name:        "cp-1",
+							ClusterType: sdkkonnectcomp.ClusterTypeClusterTypeHybrid.ToPointer(),
+						},
+						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+								Name: "name-1",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.cluster_type must be one of 'CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE' or 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'"),
+			},
+			{
+				Name: "CLUSTER_TYPE_SERVERLESS is not supported",
+				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: commonObjectMeta,
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							Name:        "cp-1",
+							ClusterType: sdkkonnectcomp.ClusterTypeClusterTypeServerless.ToPointer(),
+						},
+						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+								Name: "name-1",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.cluster_type must be one of 'CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE' or 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'"),
+			},
+			{
+				Name: "CLUSTER_TYPE_CUSTOM is not supported",
+				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: commonObjectMeta,
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							Name:        "cp-1",
+							ClusterType: sdkkonnectcomp.ClusterType("CLUSTER_TYPE_CUSTOM").ToPointer(),
+						},
+						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+								Name: "name-1",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.cluster_type must be one of 'CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE' or 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'"),
+			},
+		}.Run(t)
+	})
 }

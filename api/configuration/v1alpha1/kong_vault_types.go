@@ -17,10 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/kong/kubernetes-configuration/api/configuration/common"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kubernetes-configuration/api/configuration/common"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
