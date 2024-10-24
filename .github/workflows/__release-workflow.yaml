@@ -155,6 +155,14 @@ jobs:
           KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.konnect-pat }}
           KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
 
+      - name: upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics-integration-webhook-enabled-${{ matrix.webhook-enabled }}
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
+
   test-e2e-current-kubernetes:
     runs-on: ubuntu-latest
     needs:
@@ -185,6 +193,14 @@ jobs:
           KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE: ${{ needs.build-push-images.outputs.full_tag }}
           KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.konnect-pat }}
           KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
+
+      - name: upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics-e2e
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
 
   create-release-pr:
     runs-on: ubuntu-latest

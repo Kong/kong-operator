@@ -25,7 +25,6 @@ require (
 	github.com/samber/lo v1.47.0
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	golang.org/x/mod v0.21.0
 	k8s.io/api v0.31.1
 	k8s.io/apimachinery v0.31.1
@@ -102,6 +101,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.29.0 // indirect
 	go.opentelemetry.io/otel/trace v1.29.0 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
+	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240827150818-7e3bb234dfed // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1 // indirect
@@ -209,7 +209,7 @@ require (
 replace (
 	k8s.io/api => k8s.io/api v0.31.1
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.31.1
-	k8s.io/apimachinery => k8s.io/apimachinery v0.31.1
+	k8s.io/apimachinery => k8s.io/apimachinery v0.31.2
 	k8s.io/apiserver => k8s.io/apiserver v0.31.1
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.31.1
 	k8s.io/client-go => k8s.io/client-go v0.31.1
@@ -219,7 +219,7 @@ replace (
 	k8s.io/component-base => k8s.io/component-base v0.31.1
 	k8s.io/component-helpers => k8s.io/component-helpers v0.31.1
 	k8s.io/controller-manager => k8s.io/controller-manager v0.31.1
-	k8s.io/cri-api => k8s.io/cri-api v0.31.1
+	k8s.io/cri-api => k8s.io/cri-api v0.31.2
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.31.1
 	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.31.1
 	k8s.io/endpointslice => k8s.io/endpointslice v0.31.1
@@ -232,7 +232,7 @@ replace (
 	k8s.io/kubelet => k8s.io/kubelet v0.31.1
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.30.3
 	k8s.io/metrics => k8s.io/metrics v0.31.1
-	k8s.io/mount-utils => k8s.io/mount-utils v0.31.1
+	k8s.io/mount-utils => k8s.io/mount-utils v0.31.2
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.31.1
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.31.1
 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.31.1
