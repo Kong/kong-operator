@@ -182,10 +182,14 @@ func Delete[
 ](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, e *T) error {
 	ent := TEnt(e)
 	if ent.GetKonnectStatus().GetKonnectID() == "" {
-		return fmt.Errorf(
-			"can't delete %T %s when it does not have the Konnect ID",
-			ent, client.ObjectKeyFromObject(ent),
-		)
+		cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
+		if ok && cond.Status == metav1.ConditionTrue {
+			return fmt.Errorf(
+				"can't delete %T %s when it does not have the Konnect ID",
+				ent, client.ObjectKeyFromObject(ent),
+			)
+		}
+		return nil
 	}
 
 	var (
