@@ -179,7 +179,7 @@ func Create[
 func Delete[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
-](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, e *T) error {
+](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, e TEnt) error {
 	ent := TEnt(e)
 	if ent.GetKonnectStatus().GetKonnectID() == "" {
 		cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
