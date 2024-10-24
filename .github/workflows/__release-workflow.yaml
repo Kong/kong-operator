@@ -16,12 +16,12 @@ on:
       gh-pat:
         required: true
         description: "The GitHub Personal Access Token to create the release PR"
-      kong-license-data:
-        required: false
-        description: "The Kong License to use in the tests (required by EE build)"
       konnect-pat:
         required: true
         description: "The Konnect PAT to use in the tests"
+      op-service-account-token:
+        required: false
+        description: "The 1Password service account token to fetch the Kong Enterprise License. If left empty, no license will be fetched"
     inputs:
       dockerhub-push-username:
         description: "The username to push images to Docker Hub"
@@ -147,10 +147,18 @@ jobs:
         with:
           install: false
 
+      - name: Get Kong Enterprise License
+        if: secrets.op-service-account-token != ''
+        id: get-license
+        uses: Kong/kong-license@master
+        with:
+          # OP (1Password) token is used to fetch the Kong Enterprise License from 1Password.
+          op-token: ${{ secrets.op-service-account-token }}
+
       - name: integration tests
         run: make test.integration
         env:
-          KONG_LICENSE_DATA: ${{ secrets.kong-license-data }}
+          KONG_LICENSE_DATA: ${{ steps.get-license.outputs.license || '' }} # The license is optional for OSS tests.
           WEBHOOK_ENABLED: ${{ matrix.webhook-enabled }}
           KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.konnect-pat }}
           KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
@@ -186,10 +194,18 @@ jobs:
         with:
           install: false
 
+      - name: Get Kong Enterprise License
+        if: ${{ secrets.op-service-account-token }}
+        id: get-license
+        uses: Kong/kong-license@master
+        with:
+          # OP (1Password) token is used to fetch the Kong Enterprise License from 1Password.
+          op-token: ${{ secrets.op-service-account-token }}
+
       - name: E2E Tests
         run: make test.e2e
         env:
-          KONG_LICENSE_DATA: ${{ secrets.kong-license-data }}
+          KONG_LICENSE_DATA: ${{ steps.get-license.outputs.license || '' }} # The license is optional for OSS tests.
           KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE: ${{ needs.build-push-images.outputs.full_tag }}
           KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.konnect-pat }}
           KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
