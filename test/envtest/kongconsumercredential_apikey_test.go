@@ -216,8 +216,7 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 
 		t.Log("Waiting for KongCredentialAPIKey to be programmed")
 		watchFor(t, ctx, w, watch.Modified, func(k *configurationv1alpha1.KongCredentialAPIKey) bool {
-			return k.GetName() == created.GetName() &&
-				k8sutils.IsProgrammed(k)
+			return k.GetName() == created.GetName() && k8sutils.IsProgrammed(k)
 		}, "KongCredentialAPIKey's Programmed condition should be true eventually")
 
 		t.Log("Checking SDK KongCredentialAPIKey operations")

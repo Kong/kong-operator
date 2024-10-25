@@ -214,8 +214,7 @@ func TestKongConsumerCredential_HMAC(t *testing.T) {
 
 		t.Log("Waiting for KongCredentialHMAC to be programmed")
 		watchFor(t, ctx, w, watch.Modified, func(k *configurationv1alpha1.KongCredentialHMAC) bool {
-			return k.GetName() == created.GetName() &&
-				k8sutils.IsProgrammed(k)
+			return k.GetName() == created.GetName() && k8sutils.IsProgrammed(k)
 		}, "KongCredentialHMAC's Programmed condition should be true eventually")
 
 		t.Log("Checking SDK KongCredentialHMAC operations")

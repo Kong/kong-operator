@@ -84,15 +84,15 @@ func TestKongUpstream(t *testing.T) {
 			},
 		)
 
-		t.Log("Checking SDK KongUpstream operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.UpstreamsSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
-
 		t.Log("Waiting for Upstream to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, watch.Modified, func(r *configurationv1alpha1.KongUpstream) bool {
 			return r.GetKonnectID() == upstreamID && k8sutils.IsProgrammed(r)
 		}, "KongUpstream didn't get Programmed status condition or didn't get the correct (upstream-12345) Konnect ID assigned")
+
+		t.Log("Checking SDK KongUpstream operations")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.UpstreamsSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Upstream update")
 		sdk.UpstreamsSDK.EXPECT().
