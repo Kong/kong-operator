@@ -10,12 +10,27 @@ MODS=($(
     curl -sS https://raw.githubusercontent.com/kubernetes/kubernetes/v${VERSION}/go.mod |
     sed -n 's|.*k8s.io/\(.*\) => ./staging/src/k8s.io/.*|k8s.io/\1|p'
 ))
-for MOD in "${MODS[@]}"; do
-    V=$(
+
+# Export variables for access in subshells run by xargs
+export VERSION
+
+# Function to update go.mod replace directive for a module
+update_mod() {
+    local MOD=$1
+    local V=$(
         go mod download -json "${MOD}@kubernetes-${VERSION}" |
         sed -n 's|.*"Version": "\(.*\)".*|\1|p'
     )
     echo "Updating go.mod replace directive for ${MOD}"
     go mod edit "-replace=${MOD}=${MOD}@${V}"
-done
+}
+
+# Export function for access in subshells run by xargs
+export -f update_mod
+
+# Run the updates concurrently
+CONCURRENCY=$(nproc)
+echo "[DEBUG] Updating modules concurrently with N=${CONCURRENCY}"
+printf "%s\n" "${MODS[@]}" | xargs -P "${CONCURRENCY}" -n 1 -I {} bash -c 'update_mod "$@"' _ {}
+
 go get "k8s.io/kubernetes@v${VERSION}"
