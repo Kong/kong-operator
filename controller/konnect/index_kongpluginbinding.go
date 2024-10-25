@@ -127,10 +127,9 @@ func kongPluginBindingReferencesKonnectGatewayControlPlane(obj client.Object) []
 	if !ok {
 		return nil
 	}
-	cpRef := binding.Spec.ControlPlaneRef
-	if cpRef == nil ||
-		cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef ||
-		cpRef.KonnectNamespacedRef == nil {
+
+	cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(binding)
+	if !ok {
 		return nil
 	}
 
