@@ -11,26 +11,34 @@ MODS=($(
     sed -n 's|.*k8s.io/\(.*\) => ./staging/src/k8s.io/.*|k8s.io/\1|p'
 ))
 
-# Export variables for access in subshells run by xargs
+# Set concurrency level to the number of available CPU cores
+CONCURRENCY=$(nproc)
 export VERSION
 
-# Function to update go.mod replace directive for a module
-update_mod() {
+# Create an empty array to store replace directives
+declare -a REPLACE_COMMANDS
+
+# Function to generate replace directive for a module
+generate_replace_command() {
     local MOD=$1
     local V=$(
         go mod download -json "${MOD}@kubernetes-${VERSION}" |
         sed -n 's|.*"Version": "\(.*\)".*|\1|p'
     )
-    echo "Updating go.mod replace directive for ${MOD}"
-    go mod edit "-replace=${MOD}=${MOD}@${V}"
+    echo "-replace=${MOD}=${MOD}@${V}"
 }
 
 # Export function for access in subshells run by xargs
-export -f update_mod
+export -f generate_replace_command
 
-# Run the updates concurrently
-CONCURRENCY=$(nproc)
-echo "[DEBUG] Updating modules concurrently with N=${CONCURRENCY}"
-printf "%s\n" "${MODS[@]}" | xargs -P "${CONCURRENCY}" -n 1 -I {} bash -c 'update_mod "$@"' _ {}
+# Run in parallel to collect replace directives
+echo "Collecting replace directives for ${#MODS[@]} modules concurrently (N=${CONCURRENCY})"
+REPLACE_COMMANDS=($(printf "%s\n" "${MODS[@]}" | xargs -P "$CONCURRENCY" -n 1 -I {} bash -c 'generate_replace_command "$@"' _ {}))
+
+# Apply each replace directive serially
+for CMD in "${REPLACE_COMMANDS[@]}"; do
+    echo "Applying go.mod $CMD"
+    go mod edit "$CMD"
+done
 
 go get "k8s.io/kubernetes@v${VERSION}"
