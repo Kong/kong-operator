@@ -58,7 +58,7 @@ package konnect
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongkeysets/status,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongkeysets/finalizers,verbs=update;patch
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes,verbs=get;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes/status,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes/finalizers,verbs=update;patch
 

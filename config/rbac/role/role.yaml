@@ -152,7 +152,6 @@ rules:
   - kongdataplaneclientcertificates
   - kongkeys
   - kongkeysets
-  - kongroutes
   - kongservices
   - kongsnis
   - kongtargets
@@ -229,6 +228,17 @@ rules:
   - kongplugins
   verbs:
   - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongroutes
+  verbs:
   - delete
   - get
   - list
