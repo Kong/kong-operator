@@ -11,5 +11,5 @@ const (
 	waitTime = 10 * time.Second
 
 	// tickTime is a generic tick time for the tests' eventual conditions.
-	tickTime = 500 * time.Millisecond
+	tickTime = 250 * time.Millisecond
 )

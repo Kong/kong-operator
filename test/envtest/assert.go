@@ -15,10 +15,15 @@ func assertCollectObjectExistsAndHasKonnectID(
 	obj interface {
 		client.Object
 		GetKonnectID() string
+		GetTypeName() string
 	},
 	konnectID string,
 ) func(c *assert.CollectT) {
 	t.Helper()
+
+	t.Logf("wait for the %s %s to get Konnect ID (%s) assigned",
+		obj.GetTypeName(), client.ObjectKeyFromObject(obj), konnectID,
+	)
 
 	return func(c *assert.CollectT) {
 		nn := client.ObjectKeyFromObject(obj)

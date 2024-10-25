@@ -3,7 +3,6 @@ package envtest
 import (
 	"context"
 	"testing"
-	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -13,18 +12,14 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/kong/gateway-operator/controller/konnect"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
-	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
@@ -38,10 +33,6 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
 
-	clientWithWatch, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
-		Scheme: scheme.Get(),
-	})
-	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
@@ -52,7 +43,6 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 
 	require.NoError(t, manager.SetupCacheIndicesForKonnectTypes(ctx, mgr, false))
 	reconcilers := []Reconciler{
-		konnect.NewKongPluginReconciler(false, mgr.GetClient()),
 		konnect.NewKonnectEntityReconciler(factory, false, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](konnectInfiniteSyncTime),
 		),
@@ -81,7 +71,6 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
 
-		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
 			konnect.NewKongPluginBindingBuilder().
 				WithControlPlaneRefKonnectNamespaced(cp.Name).
@@ -90,22 +79,14 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 				Build(),
 		)
 		t.Logf(
-			"wait for the controller to pick the new unmanaged KongPluginBinding %s and put a %s finalizer on the referenced plugin %s",
+			"wait for the controller to pick the new unmanaged KongPluginBinding %s and create it in Konnect",
 			client.ObjectKeyFromObject(kpb),
-			consts.PluginInUseFinalizer,
-			client.ObjectKeyFromObject(proxyCacheKongPlugin),
 		)
-		_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
-			func(kp *configurationv1.KongPlugin) bool {
-				return kp.Name == proxyCacheKongPlugin.Name &&
-					controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
-			},
-			"KongPlugin wasn't updated to get the plugin-in-use finalizer",
+		assert.EventuallyWithT(t,
+			assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kpb, pluginID),
+			waitTime, tickTime,
+			"KongPlugin wasn't created using Konnect API or its KonnectID wasn't set",
 		)
-		kongPluginBindingGetKonnectIDAssignedEventually(t, ctx, clientNamespaced, kpb, pluginID, waitTime, tickTime)
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
 
 		sdk.PluginSDK.EXPECT().
 			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
@@ -116,29 +97,18 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 				nil,
 			)
 
-		t.Logf("delete the KongPlugin %s, then check it does not get collected", client.ObjectKeyFromObject(proxyCacheKongPlugin))
-		require.NoError(t, clientNamespaced.Delete(ctx, proxyCacheKongPlugin))
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.False(c, k8serrors.IsNotFound(
-				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(proxyCacheKongPlugin), proxyCacheKongPlugin),
-			))
-			assert.True(c, proxyCacheKongPlugin.DeletionTimestamp != nil)
-			assert.True(c, controllerutil.ContainsFinalizer(proxyCacheKongPlugin, consts.PluginInUseFinalizer))
-		}, waitTime, tickTime)
-
-		t.Logf("delete the unmanaged KongPluginBinding %s, then check the proxy-cache KongPlugin %s gets collected",
+		t.Logf("delete the unmanaged KongPluginBinding %s, then check it gets collected",
 			client.ObjectKeyFromObject(kpb),
-			client.ObjectKeyFromObject(proxyCacheKongPlugin),
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, k8serrors.IsNotFound(
-				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(proxyCacheKongPlugin), proxyCacheKongPlugin),
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
 			))
-		}, waitTime, tickTime, "KongPlugin did not get deleted but should have")
+		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
 
 		t.Logf(
-			"delete the KongService %s and check it gets collected, as the KongPluginBinding finalizer should have been removed",
+			"delete the KongService %s and check it gets collected, as there should be no finalizer blocking its deletion",
 			client.ObjectKeyFromObject(kongService),
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kongService))
@@ -176,7 +146,6 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService)
 		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
 
-		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
 			konnect.NewKongPluginBindingBuilder().
 				WithControlPlaneRefKonnectNamespaced(cp.Name).
@@ -185,22 +154,14 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 				Build(),
 		)
 		t.Logf(
-			"wait for the controller to pick the new unmanaged KongPluginBinding %s and put a %s finalizer on the referenced plugin %s",
+			"wait for the controller to pick the new unmanaged KongPluginBinding %s and create it in Konnect",
 			client.ObjectKeyFromObject(kpb),
-			consts.PluginInUseFinalizer,
-			client.ObjectKeyFromObject(proxyCacheKongPlugin),
 		)
-		_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
-			func(kp *configurationv1.KongPlugin) bool {
-				return kp.Name == proxyCacheKongPlugin.Name &&
-					controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
-			},
-			"KongPlugin wasn't updated to get the plugin-in-use finalizer",
+		assert.EventuallyWithT(t,
+			assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kpb, pluginID),
+			waitTime, tickTime,
+			"KongPlugin wasn't created using Konnect API or its KonnectID wasn't set",
 		)
-		kongPluginBindingGetKonnectIDAssignedEventually(t, ctx, clientNamespaced, kpb, pluginID, waitTime, tickTime)
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
 
 		sdk.PluginSDK.EXPECT().
 			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
@@ -211,30 +172,18 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 				nil,
 			)
 
-		t.Logf("delete the KongPlugin %s, then check it does not get collected", client.ObjectKeyFromObject(proxyCacheKongPlugin))
-		require.NoError(t, clientNamespaced.Delete(ctx, proxyCacheKongPlugin))
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.False(c, k8serrors.IsNotFound(
-				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(proxyCacheKongPlugin), proxyCacheKongPlugin),
-			))
-			assert.True(c, proxyCacheKongPlugin.DeletionTimestamp != nil)
-			assert.True(c, controllerutil.ContainsFinalizer(proxyCacheKongPlugin, consts.PluginInUseFinalizer))
-		}, waitTime, tickTime)
-
-		t.Logf("delete the unmanaged KongPluginBinding %s, then check the proxy-cache KongPlugin %s gets collected",
+		t.Logf("delete the unmanaged KongPluginBinding %s, then check it gets collected",
 			client.ObjectKeyFromObject(kpb),
-			client.ObjectKeyFromObject(proxyCacheKongPlugin),
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
-		_ = watchFor(t, ctx, wKongPlugin, watch.Deleted,
-			func(kp *configurationv1.KongPlugin) bool {
-				return kp.Name == proxyCacheKongPlugin.Name
-			},
-			"KongPlugin did not got deleted but shouldn't have",
-		)
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, k8serrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
+			))
+		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
 
 		t.Logf(
-			"delete the KongRoute %s and check it gets collected, as the KongPluginBinding finalizer should have been removed",
+			"delete the KongRoute %s and check it gets collected, as there should be no finalizer blocking its deletion",
 			client.ObjectKeyFromObject(kongRoute),
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))
@@ -261,7 +210,6 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService)
 		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
 
-		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		sdk.PluginSDK.EXPECT().
 			CreatePlugin(
 				mock.Anything,
@@ -287,22 +235,14 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 				Build(),
 		)
 		t.Logf(
-			"wait for the controller to pick the new unmanaged KongPluginBinding %s and put a %s finalizer on the referenced plugin %s",
+			"wait for the controller to pick the new unmanaged KongPluginBinding %s and create it in Konnect",
 			client.ObjectKeyFromObject(kpb),
-			consts.PluginInUseFinalizer,
-			client.ObjectKeyFromObject(proxyCacheKongPlugin),
 		)
-		_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
-			func(kp *configurationv1.KongPlugin) bool {
-				return kp.Name == proxyCacheKongPlugin.Name &&
-					controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
-			},
-			"KongPlugin wasn't updated to get the plugin-in-use finalizer",
+		assert.EventuallyWithT(t,
+			assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kpb, pluginID),
+			waitTime, tickTime,
+			"KongPlugin wasn't created using Konnect API or its KonnectID wasn't set",
 		)
-		kongPluginBindingGetKonnectIDAssignedEventually(t, ctx, clientNamespaced, kpb, pluginID, waitTime, tickTime)
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
 
 		sdk.PluginSDK.EXPECT().
 			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
@@ -313,30 +253,18 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 				nil,
 			)
 
-		t.Logf("delete the KongPlugin %s, then check it does not get collected", client.ObjectKeyFromObject(proxyCacheKongPlugin))
-		require.NoError(t, clientNamespaced.Delete(ctx, proxyCacheKongPlugin))
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.False(c, k8serrors.IsNotFound(
-				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(proxyCacheKongPlugin), proxyCacheKongPlugin),
-			))
-			assert.True(c, proxyCacheKongPlugin.DeletionTimestamp != nil)
-			assert.True(c, controllerutil.ContainsFinalizer(proxyCacheKongPlugin, consts.PluginInUseFinalizer))
-		}, waitTime, tickTime)
-
-		t.Logf("delete the unmanaged KongPluginBinding %s, then check the proxy-cache KongPlugin %s gets collected",
+		t.Logf("delete the unmanaged KongPluginBinding %s, then check it gets collected",
 			client.ObjectKeyFromObject(kpb),
-			client.ObjectKeyFromObject(proxyCacheKongPlugin),
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
-		_ = watchFor(t, ctx, wKongPlugin, watch.Deleted,
-			func(kp *configurationv1.KongPlugin) bool {
-				return kp.Name == proxyCacheKongPlugin.Name
-			},
-			"KongPlugin did not got deleted but shouldn't have",
-		)
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, k8serrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
+			))
+		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
 
 		t.Logf(
-			"delete the KongRoute %s and check it gets collected, as the KongPluginBinding finalizer should have been removed",
+			"delete the KongRoute %s and check it gets collected, as there should be no finalizer blocking its deletion",
 			client.ObjectKeyFromObject(kongRoute),
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))
@@ -370,7 +298,6 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		})
 		updateKongConsumerStatusWithKonnectID(t, ctx, clientNamespaced, kongConsumer, consumerID, cp.GetKonnectStatus().GetKonnectID())
 
-		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		sdk.PluginSDK.EXPECT().
 			CreatePlugin(
 				mock.Anything,
@@ -396,22 +323,14 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 				Build(),
 		)
 		t.Logf(
-			"wait for the controller to pick the new unmanaged KongPluginBinding %s and put a %s finalizer on the referenced plugin %s",
+			"wait for the controller to pick the new unmanaged KongPluginBinding %s and create it in Konnect",
 			client.ObjectKeyFromObject(kpb),
-			consts.PluginInUseFinalizer,
-			client.ObjectKeyFromObject(proxyCacheKongPlugin),
 		)
-		_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
-			func(kp *configurationv1.KongPlugin) bool {
-				return kp.Name == proxyCacheKongPlugin.Name &&
-					controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
-			},
-			"KongPlugin wasn't updated to get the plugin-in-use finalizer",
+		assert.EventuallyWithT(t,
+			assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kpb, pluginID),
+			waitTime, tickTime,
+			"KongPlugin wasn't created using Konnect API or its KonnectID wasn't set",
 		)
-		kongPluginBindingGetKonnectIDAssignedEventually(t, ctx, clientNamespaced, kpb, pluginID, waitTime, tickTime)
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
 
 		sdk.PluginSDK.EXPECT().
 			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
@@ -422,30 +341,18 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 				nil,
 			)
 
-		t.Logf("delete the KongPlugin %s, then check it does not get collected", client.ObjectKeyFromObject(proxyCacheKongPlugin))
-		require.NoError(t, clientNamespaced.Delete(ctx, proxyCacheKongPlugin))
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.False(c, k8serrors.IsNotFound(
-				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(proxyCacheKongPlugin), proxyCacheKongPlugin),
-			))
-			assert.True(c, proxyCacheKongPlugin.DeletionTimestamp != nil)
-			assert.True(c, controllerutil.ContainsFinalizer(proxyCacheKongPlugin, consts.PluginInUseFinalizer))
-		}, waitTime, tickTime)
-
-		t.Logf("delete the unmanaged KongPluginBinding %s, then check the proxy-cache KongPlugin %s gets collected",
+		t.Logf("delete the unmanaged KongPluginBinding %s, then check it gets collected",
 			client.ObjectKeyFromObject(kpb),
-			client.ObjectKeyFromObject(proxyCacheKongPlugin),
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
-		_ = watchFor(t, ctx, wKongPlugin, watch.Deleted,
-			func(kp *configurationv1.KongPlugin) bool {
-				return kp.Name == proxyCacheKongPlugin.Name
-			},
-			"KongPlugin did not get deleted but should have",
-		)
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, k8serrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
+			))
+		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
 
 		t.Logf(
-			"delete the KongConsumer %s and check it gets collected, as the KongPluginBinding finalizer should have been removed",
+			"delete the KongConsumer %s and check it gets collected, as there should be no finalizer blocking its deletion",
 			client.ObjectKeyFromObject(kongConsumer),
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kongConsumer))
@@ -472,7 +379,6 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		kongConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cp)
 		updateKongConsumerGroupStatusWithKonnectID(t, ctx, clientNamespaced, kongConsumerGroup, consumerGroupID, cp.GetKonnectStatus().GetKonnectID())
 
-		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		sdk.PluginSDK.EXPECT().
 			CreatePlugin(
 				mock.Anything,
@@ -498,22 +404,14 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 				Build(),
 		)
 		t.Logf(
-			"wait for the controller to pick the new unmanaged KongPluginBinding %s and put a %s finalizer on the referenced plugin %s",
+			"wait for the controller to pick the new unmanaged KongPluginBinding %s and create it in Konnect",
 			client.ObjectKeyFromObject(kpb),
-			consts.PluginInUseFinalizer,
-			client.ObjectKeyFromObject(proxyCacheKongPlugin),
 		)
-		_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
-			func(kp *configurationv1.KongPlugin) bool {
-				return kp.Name == proxyCacheKongPlugin.Name &&
-					controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
-			},
-			"KongPlugin wasn't updated to get the plugin-in-use finalizer",
+		assert.EventuallyWithT(t,
+			assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kpb, pluginID),
+			waitTime, tickTime,
+			"KongPlugin wasn't created using Konnect API or its KonnectID wasn't set",
 		)
-		kongPluginBindingGetKonnectIDAssignedEventually(t, ctx, clientNamespaced, kpb, pluginID, waitTime, tickTime)
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
 
 		sdk.PluginSDK.EXPECT().
 			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
@@ -524,30 +422,18 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 				nil,
 			)
 
-		t.Logf("delete the KongPlugin %s, then check it does not get collected", client.ObjectKeyFromObject(proxyCacheKongPlugin))
-		require.NoError(t, clientNamespaced.Delete(ctx, proxyCacheKongPlugin))
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.False(c, k8serrors.IsNotFound(
-				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(proxyCacheKongPlugin), proxyCacheKongPlugin),
-			))
-			assert.True(c, proxyCacheKongPlugin.DeletionTimestamp != nil)
-			assert.True(c, controllerutil.ContainsFinalizer(proxyCacheKongPlugin, consts.PluginInUseFinalizer))
-		}, waitTime, tickTime)
-
-		t.Logf("delete the unmanaged KongPluginBinding %s, then check the proxy-cache KongPlugin %s gets collected",
+		t.Logf("delete the unmanaged KongPluginBinding %s, the check it gets collected",
 			client.ObjectKeyFromObject(kpb),
-			client.ObjectKeyFromObject(proxyCacheKongPlugin),
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
-		_ = watchFor(t, ctx, wKongPlugin, watch.Deleted,
-			func(kp *configurationv1.KongPlugin) bool {
-				return kp.Name == proxyCacheKongPlugin.Name
-			},
-			"KongPlugin did not got deleted but shouldn't have",
-		)
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, k8serrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
+			))
+		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
 
 		t.Logf(
-			"delete the KongConsumerGroup %s and check it gets collected, as the KongPluginBinding finalizer should have been removed",
+			"delete the KongConsumerGroup %s and check it gets collected, as there should be no finalizer blocking its deletion",
 			client.ObjectKeyFromObject(kongConsumerGroup),
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kongConsumerGroup))
@@ -561,24 +447,4 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
 	})
-}
-
-func kongPluginBindingGetKonnectIDAssignedEventually(
-	t *testing.T,
-	ctx context.Context,
-	clientNamespaced client.Client,
-	kpb *configurationv1alpha1.KongPluginBinding,
-	pluginID string,
-	waitTime time.Duration, //nolint:unparam
-	tickTime time.Duration, //nolint:unparam
-) {
-	t.Helper()
-
-	t.Logf("wait for the KongPluginBinding %s to get Konnect ID assigned", client.ObjectKeyFromObject(kpb))
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		if !assert.NoError(c, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb)) {
-			return
-		}
-		assert.True(c, kpb.GetKonnectStatus().GetKonnectID() == pluginID)
-	}, waitTime, tickTime)
 }

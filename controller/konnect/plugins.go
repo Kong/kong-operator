@@ -1,6 +1,8 @@
 package konnect
 
 import (
+	"github.com/samber/lo"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -24,4 +26,15 @@ var kongPluginsAnnotationChangedPredicate = predicate.Funcs{
 		_, ok := e.Object.GetAnnotations()[consts.PluginsAnnotationKey]
 		return ok
 	},
+}
+
+func ownerRefIsAnyKongPlugin(obj client.Object) bool {
+	return lo.ContainsBy(
+		obj.GetOwnerReferences(),
+		func(ownerRef metav1.OwnerReference) bool {
+			return ownerRef.Kind == "KongPlugin" ||
+				// NOTE: We currently do not support KongClusterPlugin, but we keep this here for future use.
+				ownerRef.Kind == "KongClusterPlugin"
+		},
+	)
 }
