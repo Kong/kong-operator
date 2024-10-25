@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/samber/lo"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -164,10 +166,14 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, err
 	}
 
+	manangedPluginBindings := lo.Filter(kongPluginBindingList.Items, func(kpb configurationv1alpha1.KongPluginBinding, _ int) bool {
+		return isManagedKongPluginBinding(&kpb)
+	})
+
 	var finalizersChangedAction string
 	// if the entity is marked for deletion, we need to delete all the PluginBindings that reference it.
 	if !ent.GetDeletionTimestamp().IsZero() {
-		for _, kpb := range kongPluginBindingList.Items {
+		for _, kpb := range manangedPluginBindings {
 			if err := cl.Delete(ctx, &kpb); err != nil {
 				if k8serrors.IsNotFound(err) {
 					continue
@@ -183,7 +189,7 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) Reconcile(
 		}
 	} else {
 		// if the entity is not marked for deletion, update the finalizers accordingly.
-		switch len(kongPluginBindingList.Items) {
+		switch len(manangedPluginBindings) {
 		case 0:
 			// in case no KongPluginBindings are referencing the entity, but it has the finalizer,
 			// we need to remove the finalizer.
@@ -235,6 +241,14 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) getKongPluginBi
 	default:
 		panic(fmt.Sprintf("unsupported entity type %s", constraints.EntityTypeName[T]()))
 	}
+}
+
+// isManagedKongPluginBinding returns true if the KongPluginBinding is managed by the controller.
+// REVIEW: Here we judge whether KongPluginBinding is managed by checking its owner references and treat it as managed if it has a plugin as owner reference.
+func isManagedKongPluginBinding(kpb *configurationv1alpha1.KongPluginBinding) bool {
+	return lo.ContainsBy(kpb.OwnerReferences, func(o metav1.OwnerReference) bool {
+		return o.Kind == "KongPlugin" || o.Kind == "KongClusterPlugin"
+	})
 }
 
 func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) setControllerBuilderOptionsForKongPluginBinding(
