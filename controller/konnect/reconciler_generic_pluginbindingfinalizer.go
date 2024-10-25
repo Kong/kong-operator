@@ -74,6 +74,12 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) enqueueObjectRe
 			return nil
 		}
 
+		// If the KongPluginBinding is unmanaged (created not using an annotation,
+		// and thus not having KongPlugin as an owner), skip it, do not delete it.
+		if !ownerRefIsAnyKongPlugin(kpb) {
+			return nil
+		}
+
 		var (
 			name string
 			e    T
@@ -125,6 +131,9 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) enqueueObjectRe
 }
 
 // Reconcile reconciles the Konnect entity that can be set as KongPluginBinding target.
+// It reconciles only entities that are referenced by managed KongPluginBindings,
+// i.e. those that are created by the controller out of konghq.com/plugins annotations.
+//
 // Its purpose is to:
 //   - check if the entity is marked for deletion and mark KongPluginBindings
 //     that reference it.

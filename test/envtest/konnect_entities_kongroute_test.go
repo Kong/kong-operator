@@ -86,6 +86,12 @@ func TestKongRoute(t *testing.T) {
 			},
 		)
 
+		assert.EventuallyWithT(t,
+			assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, createdRoute, routeID),
+			waitTime, tickTime,
+			"KongRoute wasn't created using Konnect API or its KonnectID wasn't set",
+		)
+
 		t.Log("Checking SDK KongRoute operations")
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.RoutesSDK.AssertExpectations(t))
