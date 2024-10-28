@@ -112,7 +112,8 @@ func controlPlaneRefIsKonnectNamespacedRef[
 	if !ok {
 		return configurationv1alpha1.ControlPlaneRef{}, false
 	}
-	return cpRef, cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
+	return cpRef, cpRef.KonnectNamespacedRef != nil &&
+		cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
 }
 
 // objectListToReconcileRequests converts a list of objects to a list of reconcile requests.
@@ -124,10 +125,16 @@ func objectListToReconcileRequests[
 	},
 ](
 	items []T,
+	filters ...func(TPtr) bool,
 ) []ctrl.Request {
 	ret := make([]ctrl.Request, 0, len(items))
 	for _, item := range items {
 		var e TPtr = &item
+		for _, filter := range filters {
+			if filter != nil && !filter(e) {
+				continue
+			}
+		}
 		ret = append(ret, ctrl.Request{
 			NamespacedName: types.NamespacedName{
 				Namespace: e.GetNamespace(),
