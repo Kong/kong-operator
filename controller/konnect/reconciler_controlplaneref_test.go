@@ -8,12 +8,12 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/modules/manager/scheme"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -208,7 +208,7 @@ func TestHandleControlPlaneRef(t *testing.T) {
 			},
 		},
 		{
-			name: "control plane with incompatible cluster type",
+			name: "control plane with incompatible cluster type (ControlPlane Group)",
 			ent:  svcCPRefIncompatibleType,
 			objects: []client.Object{
 				cpGroup,
@@ -254,12 +254,12 @@ func testHandleControlPlaenRef[
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			scheme := runtime.NewScheme()
-			require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
-			require.NoError(t, konnectv1alpha1.AddToScheme(scheme))
+			s := scheme.Get()
+			require.NoError(t, configurationv1alpha1.AddToScheme(s))
+			require.NoError(t, konnectv1alpha1.AddToScheme(s))
 
 			fakeClient := fake.NewClientBuilder().
-				WithScheme(scheme).
+				WithScheme(s).
 				WithObjects(tc.ent).
 				WithObjects(tc.objects...).
 				// WithStatusSubresource is required for updating status of handled entity.

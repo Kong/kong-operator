@@ -141,6 +141,8 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 
 		// Do not continue reconciling of the control plane has incompatible cluster type to prevent repeated failure of creation.
 		// Only CLUSTER_TYPE_CONTROL_PLANE and CLUSTER_TYPE_HYBRID are supported.
+		// The configuration in control plane group type are read only so they are unsupported to attach entities to them:
+		// https://docs.konghq.com/konnect/gateway-manager/control-plane-groups/#limitations
 		if cp.Spec.ClusterType != nil &&
 			!lo.Contains(compatibleControlPlaneClusterTypes, *cp.Spec.ClusterType) {
 			if res, errStatus := patch.StatusWithCondition(
@@ -194,9 +196,6 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
 		}
 
-		// TODO(pmalek): make this generic.
-		// CP ID is not stored in KonnectEntityStatus because not all entities
-		// have a ControlPlaneRef, hence the type constraints in the reconciler can't be used.
 		if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
 			old := ent.DeepCopyObject().(TEnt)
 			resource.SetControlPlaneID(cp.Status.ID)
