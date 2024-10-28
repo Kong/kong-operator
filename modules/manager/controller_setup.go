@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
@@ -507,6 +508,14 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		}
 
 		sdkFactory := sdkops.NewSDKFactory()
+		controllerFactory := konnectControllerFactory{
+			sdkFactory:              sdkFactory,
+			devMode:                 c.DevelopmentMode,
+			client:                  mgr.GetClient(),
+			syncPeriod:              c.KonnectSyncPeriod,
+			maxConcurrentReconciles: c.KonnectMaxConcurrentReconciles,
+		}
+
 		konnectControllers := map[string]ControllerDef{
 			KonnectAPIAuthConfigurationControllerName: {
 				Enabled: c.KonnectControllersEnabled,
@@ -516,168 +525,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					mgr.GetClient(),
 				),
 			},
-			KonnectGatewayControlPlaneControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.KonnectGatewayControlPlane](c.KonnectSyncPeriod),
-				),
-			},
-			KongServiceControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongService](c.KonnectSyncPeriod),
-				),
-			},
-			KongRouteControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongRoute](c.KonnectSyncPeriod),
-				),
-			},
-			KongConsumerControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1.KongConsumer](c.KonnectSyncPeriod),
-				),
-			},
-			KongConsumerGroupControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1beta1.KongConsumerGroup](c.KonnectSyncPeriod),
-				),
-			},
-			KongUpstreamControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongUpstream](c.KonnectSyncPeriod),
-				),
-			},
-			KongCACertificateControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCACertificate](c.KonnectSyncPeriod),
-				),
-			},
-			KongCertificateControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCertificate](c.KonnectSyncPeriod),
-				),
-			},
-			KongTargetControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongTarget](c.KonnectSyncPeriod),
-				),
-			},
-			KongPluginBindingControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](c.KonnectSyncPeriod),
-				),
-			},
-			KongCredentialBasicAuthControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialBasicAuth](c.KonnectSyncPeriod),
-				),
-			},
-			KongCredentialAPIKeyControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialAPIKey](c.KonnectSyncPeriod),
-				),
-			},
-			KongCredentialACLControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialACL](c.KonnectSyncPeriod),
-				),
-			},
-			KongCredentialHMACControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](c.KonnectSyncPeriod),
-				),
-			},
-			KongCredentialJWTControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialJWT](c.KonnectSyncPeriod),
-				),
-			},
-			KongKeyControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongKey](c.KonnectSyncPeriod),
-				),
-			},
-			KongKeySetControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongKeySet](c.KonnectSyncPeriod),
-				),
-			},
-			KongDataPlaneClientCertificateControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongDataPlaneClientCertificate](c.KonnectSyncPeriod),
-				),
-			},
+
 			KongPluginControllerName: {
 				Enabled: c.KonnectControllersEnabled,
 				Controller: konnect.NewKongPluginReconciler(
@@ -685,54 +533,35 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					mgr.GetClient(),
 				),
 			},
-			KongVaultControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongVault](c.KonnectSyncPeriod),
-				),
-			},
-			KongSNIControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongSNI](c.KonnectSyncPeriod),
-				),
-			},
 
 			// Controllers responsible for cleaning up KongPluginBinding cleanup finalizers.
-			KongServicePluginBindingFinalizerControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongService](
-					c.DevelopmentMode,
-					mgr.GetClient(),
-				),
-			},
-			KongRoutePluginBindingFinalizerControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongRoute](
-					c.DevelopmentMode,
-					mgr.GetClient(),
-				),
-			},
-			KongConsumerPluginBindingFinalizerControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityPluginReconciler[configurationv1.KongConsumer](
-					c.DevelopmentMode,
-					mgr.GetClient(),
-				),
-			},
-			KongConsumerGroupPluginBindingFinalizerControllerName: {
-				Enabled: c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectEntityPluginReconciler[configurationv1beta1.KongConsumerGroup](
-					c.DevelopmentMode,
-					mgr.GetClient(),
-				),
-			},
+			KongServicePluginBindingFinalizerControllerName:       newKonnectPluginController[configurationv1alpha1.KongService](controllerFactory),
+			KongRoutePluginBindingFinalizerControllerName:         newKonnectPluginController[configurationv1alpha1.KongRoute](controllerFactory),
+			KongConsumerPluginBindingFinalizerControllerName:      newKonnectPluginController[configurationv1.KongConsumer](controllerFactory),
+			KongConsumerGroupPluginBindingFinalizerControllerName: newKonnectPluginController[configurationv1beta1.KongConsumerGroup](controllerFactory),
+
+			// Controllers responsible for creating, updating and deleting Konnect entities.
+			KonnectGatewayControlPlaneControllerName:     newKonnectController[konnectv1alpha1.KonnectGatewayControlPlane](controllerFactory),
+			KongServiceControllerName:                    newKonnectController[configurationv1alpha1.KongService](controllerFactory),
+			KongRouteControllerName:                      newKonnectController[configurationv1alpha1.KongRoute](controllerFactory),
+			KongConsumerControllerName:                   newKonnectController[configurationv1.KongConsumer](controllerFactory),
+			KongConsumerGroupControllerName:              newKonnectController[configurationv1beta1.KongConsumerGroup](controllerFactory),
+			KongUpstreamControllerName:                   newKonnectController[configurationv1alpha1.KongUpstream](controllerFactory),
+			KongCACertificateControllerName:              newKonnectController[configurationv1alpha1.KongCACertificate](controllerFactory),
+			KongCertificateControllerName:                newKonnectController[configurationv1alpha1.KongCertificate](controllerFactory),
+			KongTargetControllerName:                     newKonnectController[configurationv1alpha1.KongTarget](controllerFactory),
+			KongPluginBindingControllerName:              newKonnectController[configurationv1alpha1.KongPluginBinding](controllerFactory),
+			KongCredentialBasicAuthControllerName:        newKonnectController[configurationv1alpha1.KongCredentialBasicAuth](controllerFactory),
+			KongCredentialAPIKeyControllerName:           newKonnectController[configurationv1alpha1.KongCredentialAPIKey](controllerFactory),
+			KongCredentialACLControllerName:              newKonnectController[configurationv1alpha1.KongCredentialACL](controllerFactory),
+			KongCredentialHMACControllerName:             newKonnectController[configurationv1alpha1.KongCredentialHMAC](controllerFactory),
+			KongCredentialJWTControllerName:              newKonnectController[configurationv1alpha1.KongCredentialJWT](controllerFactory),
+			KongKeyControllerName:                        newKonnectController[configurationv1alpha1.KongKey](controllerFactory),
+			KongKeySetControllerName:                     newKonnectController[configurationv1alpha1.KongKeySet](controllerFactory),
+			KongDataPlaneClientCertificateControllerName: newKonnectController[configurationv1alpha1.KongDataPlaneClientCertificate](controllerFactory),
+			KongVaultControllerName:                      newKonnectController[configurationv1alpha1.KongVault](controllerFactory),
+			KongSNIControllerName:                        newKonnectController[configurationv1alpha1.KongSNI](controllerFactory),
+			// NOTE: Reconcilers for new supported entities should be added here.
 		}
 
 		// Merge Konnect controllers into the controllers map. This is done this way instead of directly assigning
@@ -858,4 +687,41 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 	}
 
 	return nil
+}
+
+type konnectControllerFactory struct {
+	sdkFactory              sdkops.SDKFactory
+	devMode                 bool
+	client                  client.Client
+	syncPeriod              time.Duration
+	maxConcurrentReconciles uint
+}
+
+func newKonnectController[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](f konnectControllerFactory) ControllerDef {
+	return ControllerDef{
+		Enabled: true,
+		Controller: konnect.NewKonnectEntityReconciler(
+			f.sdkFactory,
+			f.devMode,
+			f.client,
+			konnect.WithKonnectEntitySyncPeriod[T, TEnt](f.syncPeriod),
+			konnect.WithKonnectMaxConcurrentReconciles[T, TEnt](f.maxConcurrentReconciles),
+		),
+	}
+}
+
+func newKonnectPluginController[
+	T constraints.SupportedKonnectEntityPluginReferenceableType,
+	TEnt constraints.EntityType[T],
+](f konnectControllerFactory) ControllerDef {
+	return ControllerDef{
+		Enabled: true,
+		Controller: konnect.NewKonnectEntityPluginReconciler[T, TEnt](
+			f.devMode,
+			f.client,
+		),
+	}
 }

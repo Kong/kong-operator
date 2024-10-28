@@ -169,4 +169,7 @@ const (
 const (
 	// DefaultKonnectSyncPeriod is the default sync period for Konnect entities.
 	DefaultKonnectSyncPeriod = time.Minute
+
+	// DefaultKonnectMaxConcurrentReconciles is the default max concurrent reconciles for Konnect entities.
+	DefaultKonnectMaxConcurrentReconciles = uint(8)
 )
