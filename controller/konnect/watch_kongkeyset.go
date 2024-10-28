@@ -41,7 +41,9 @@ func KongKeySetReconciliationWatchOptions(cl client.Client) []func(*ctrl.Builder
 			return b.Watches(
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueKongKeySetForKonnectControlPlane(cl),
+					enqueueObjectForKonnectGatewayControlPlane[*configurationv1alpha1.KongKeySetList](
+						cl, IndexFieldKongKeySetOnKonnectGatewayControlPlane,
+					),
 				),
 			)
 		},
@@ -118,28 +120,5 @@ func enqueueKongKeySetForKonnectAPIAuthConfiguration(cl client.Client) handler.M
 			}
 		}
 		return ret
-	}
-}
-
-func enqueueKongKeySetForKonnectControlPlane(
-	cl client.Client,
-) func(ctx context.Context, obj client.Object) []reconcile.Request {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
-		if !ok {
-			return nil
-		}
-		var l configurationv1alpha1.KongKeySetList
-		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(cp.GetNamespace()),
-			client.MatchingFields{
-				IndexFieldKongKeySetOnKonnectGatewayControlPlane: cp.Namespace + "/" + cp.Name,
-			},
-		); err != nil {
-			return nil
-		}
-
-		return objectListToReconcileRequests(l.Items)
 	}
 }
