@@ -138,7 +138,6 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 					Selector: map[string]string{
 						"app": "dp-1",
 					},
-					ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeCluster,
 				},
 			},
 			expectedErr: nil,
@@ -213,6 +212,80 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 						"app": "dp-1",
 					},
 					ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
+				},
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "setting ExternalTrafficPolicy to Cluster",
+			dataplane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "dp-1",
+					Namespace: "default",
+					UID:       types.UID("1234"),
+				},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway.konghq.com/v1beta1",
+					Kind:       "DataPlane",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									ServiceOptions: operatorv1beta1.ServiceOptions{
+										ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeCluster,
+										Type:                  corev1.ServiceTypeLoadBalancer,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedSvc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "dataplane-ingress-dp-1-",
+					Namespace:    "default",
+					Labels: map[string]string{
+						"app": "dp-1",
+						"gateway-operator.konghq.com/dataplane-service-type": "ingress",
+						"gateway-operator.konghq.com/managed-by":             "dataplane",
+						"konghq.com/gateway-operator":                        "dataplane",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.konghq.com/v1beta1",
+							Kind:       "DataPlane",
+							Name:       "dp-1",
+							UID:        "1234",
+							Controller: lo.ToPtr(true),
+						},
+					},
+					Finalizers: []string{
+						"gateway-operator.konghq.com/wait-for-owner",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeLoadBalancer,
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Protocol:   corev1.ProtocolTCP,
+							Port:       80,
+							TargetPort: intstr.FromInt(8000),
+						},
+						{
+							Name:       "https",
+							Protocol:   corev1.ProtocolTCP,
+							Port:       443,
+							TargetPort: intstr.FromInt(8443),
+						},
+					},
+					Selector: map[string]string{
+						"app": "dp-1",
+					},
+					ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeCluster,
 				},
 			},
 			expectedErr: nil,

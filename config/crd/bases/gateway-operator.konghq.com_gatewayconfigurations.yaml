@@ -17130,7 +17130,6 @@ spec:
                                   More info: http://kubernetes.io/docs/user-guide/annotations
                                 type: object
                               externalTrafficPolicy:
-                                default: Cluster
                                 description: |-
                                   ExternalTrafficPolicy describes how nodes distribute service traffic they
                                   receive on one of the Service's "externally-facing" addresses (NodePorts,
@@ -17172,6 +17171,11 @@ spec:
                                 - ClusterIP
                                 type: string
                             type: object
+                            x-kubernetes-validations:
+                            - message: Cannot set ExternalTrafficPolicy for ClusterIP
+                                service.
+                              rule: 'has(self.type) && self.type == ''ClusterIP''
+                                ? !has(self.externalTrafficPolicy) : true'
                         type: object
                     type: object
                   pluginsToInstall:
