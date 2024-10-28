@@ -21,6 +21,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -132,6 +133,158 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 	ctx = ctrllog.IntoContext(ctx, logger)
 	log.Debug(logger, "reconciling", ent)
+
+	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get APIAuth ref for %s: %w", client.ObjectKeyFromObject(ent), err)
+	}
+
+	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
+	if err := r.Client.Get(ctx, apiAuthRef, &apiAuth); err != nil {
+		if k8serrors.IsNotFound(err) {
+			if res, err := patch.StatusWithCondition(
+				ctx, r.Client, ent,
+				konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
+				metav1.ConditionFalse,
+				konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound,
+				fmt.Sprintf("Referenced KonnectAPIAuthConfiguration %s not found", apiAuthRef),
+			); err != nil || !res.IsZero() {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{}, nil
+		}
+
+		if res, err := patch.StatusWithCondition(
+			ctx, r.Client, ent,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
+			metav1.ConditionFalse,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefInvalid,
+			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is invalid: %v", apiAuthRef, err),
+		); err != nil || !res.IsZero() {
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{}, fmt.Errorf("failed to get KonnectAPIAuthConfiguration: %w", err)
+	}
+
+	// Update the status if the reference is resolved and it's not as expected.
+	if cond, present := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType, ent); !present ||
+		cond.Status != metav1.ConditionTrue ||
+		cond.ObservedGeneration != ent.GetGeneration() ||
+		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef {
+		if res, err := patch.StatusWithCondition(
+			ctx, r.Client, ent,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
+			metav1.ConditionTrue,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef,
+			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is resolved", apiAuthRef),
+		); err != nil || !res.IsZero() {
+			return res, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// Check if the referenced APIAuthConfiguration is valid.
+	if cond, present := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !present ||
+		cond.Status != metav1.ConditionTrue ||
+		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid {
+
+		// If it's invalid then set the "APIAuthValid" status condition on
+		// the entity to False with "Invalid" reason.
+		if res, err := patch.StatusWithCondition(
+			ctx, r.Client, ent,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
+			metav1.ConditionFalse,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
+			conditionMessageReferenceKonnectAPIAuthConfigurationInvalid(apiAuthRef),
+		); err != nil || !res.IsZero() {
+			return res, err
+		}
+
+		return ctrl.Result{}, nil
+	}
+
+	// If the referenced APIAuthConfiguration is valid, set the "APIAuthValid"
+	// condition to True with "Valid" reason.
+	// Only perform the update if the condition is not as expected.
+	if cond, present := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, ent); !present ||
+		cond.Status != metav1.ConditionTrue ||
+		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid ||
+		cond.ObservedGeneration != ent.GetGeneration() ||
+		cond.Message != conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef) {
+
+		if res, err := patch.StatusWithCondition(
+			ctx, r.Client, ent,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
+			metav1.ConditionTrue,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
+			conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef),
+		); err != nil || !res.IsZero() {
+			return res, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, &apiAuth)
+	if err != nil {
+		if res, errStatus := patch.StatusWithCondition(
+			ctx, r.Client, &apiAuth,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
+			metav1.ConditionFalse,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
+			err.Error(),
+		); errStatus != nil || !res.IsZero() {
+			return res, errStatus
+		}
+		return ctrl.Result{}, err
+	}
+
+	// NOTE: We need to create a new SDK instance for each reconciliation
+	// because the token is retrieved in runtime through KonnectAPIAuthConfiguration.
+	serverURL := ops.NewServerURL(apiAuth.Spec.ServerURL)
+	sdk := r.sdkFactory.NewKonnectSDK(
+		serverURL.String(),
+		sdkops.SDKToken(token),
+	)
+
+	if delTimestamp := ent.GetDeletionTimestamp(); !delTimestamp.IsZero() {
+		logger.Info("resource is being deleted")
+		// wait for termination grace period before cleaning up
+		if delTimestamp.After(time.Now()) {
+			logger.Info("resource still under grace period, requeueing")
+			return ctrl.Result{
+				// Requeue when grace period expires.
+				// If deletion timestamp is changed,
+				// the update will trigger another round of reconciliation.
+				// so we do not consider updates of deletion timestamp here.
+				RequeueAfter: time.Until(delTimestamp.Time),
+			}, nil
+		}
+
+		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+			if err := ops.Delete[T, TEnt](ctx, sdk, r.Client, ent); err != nil {
+				if res, errStatus := patch.StatusWithCondition(
+					ctx, r.Client, ent,
+					konnectv1alpha1.KonnectEntityProgrammedConditionType,
+					metav1.ConditionFalse,
+					konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed,
+					err.Error(),
+				); errStatus != nil || !res.IsZero() {
+					return res, errStatus
+				}
+				return ctrl.Result{}, err
+			}
+			if err := r.Client.Update(ctx, ent); err != nil {
+				if k8serrors.IsConflict(err) {
+					return ctrl.Result{Requeue: true}, nil
+				}
+				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+			}
+		}
+
+		return ctrl.Result{}, nil
+	}
 
 	// If a type has a ControlPlane ref, handle it.
 	res, err := handleControlPlaneRef(ctx, r.Client, ent)
@@ -329,158 +482,6 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, err
 	}
 
-	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to get APIAuth ref for %s: %w", client.ObjectKeyFromObject(ent), err)
-	}
-
-	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
-	if err := r.Client.Get(ctx, apiAuthRef, &apiAuth); err != nil {
-		if k8serrors.IsNotFound(err) {
-			if res, err := patch.StatusWithCondition(
-				ctx, r.Client, ent,
-				konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
-				metav1.ConditionFalse,
-				konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound,
-				fmt.Sprintf("Referenced KonnectAPIAuthConfiguration %s not found", apiAuthRef),
-			); err != nil || !res.IsZero() {
-				return ctrl.Result{}, err
-			}
-
-			return ctrl.Result{}, nil
-		}
-
-		if res, err := patch.StatusWithCondition(
-			ctx, r.Client, ent,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
-			metav1.ConditionFalse,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefInvalid,
-			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is invalid: %v", apiAuthRef, err),
-		); err != nil || !res.IsZero() {
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{}, fmt.Errorf("failed to get KonnectAPIAuthConfiguration: %w", err)
-	}
-
-	// Update the status if the reference is resolved and it's not as expected.
-	if cond, present := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType, ent); !present ||
-		cond.Status != metav1.ConditionTrue ||
-		cond.ObservedGeneration != ent.GetGeneration() ||
-		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef {
-		if res, err := patch.StatusWithCondition(
-			ctx, r.Client, ent,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
-			metav1.ConditionTrue,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef,
-			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is resolved", apiAuthRef),
-		); err != nil || !res.IsZero() {
-			return res, err
-		}
-		return ctrl.Result{}, nil
-	}
-
-	// Check if the referenced APIAuthConfiguration is valid.
-	if cond, present := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !present ||
-		cond.Status != metav1.ConditionTrue ||
-		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid {
-
-		// If it's invalid then set the "APIAuthValid" status condition on
-		// the entity to False with "Invalid" reason.
-		if res, err := patch.StatusWithCondition(
-			ctx, r.Client, ent,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
-			metav1.ConditionFalse,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
-			conditionMessageReferenceKonnectAPIAuthConfigurationInvalid(apiAuthRef),
-		); err != nil || !res.IsZero() {
-			return res, err
-		}
-
-		return ctrl.Result{}, nil
-	}
-
-	// If the referenced APIAuthConfiguration is valid, set the "APIAuthValid"
-	// condition to True with "Valid" reason.
-	// Only perform the update if the condition is not as expected.
-	if cond, present := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, ent); !present ||
-		cond.Status != metav1.ConditionTrue ||
-		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid ||
-		cond.ObservedGeneration != ent.GetGeneration() ||
-		cond.Message != conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef) {
-
-		if res, err := patch.StatusWithCondition(
-			ctx, r.Client, ent,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
-			metav1.ConditionTrue,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
-			conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef),
-		); err != nil || !res.IsZero() {
-			return res, err
-		}
-		return ctrl.Result{}, nil
-	}
-
-	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, &apiAuth)
-	if err != nil {
-		if res, errStatus := patch.StatusWithCondition(
-			ctx, r.Client, &apiAuth,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
-			metav1.ConditionFalse,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
-			err.Error(),
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
-		}
-		return ctrl.Result{}, err
-	}
-
-	// NOTE: We need to create a new SDK instance for each reconciliation
-	// because the token is retrieved in runtime through KonnectAPIAuthConfiguration.
-	serverURL := ops.NewServerURL(apiAuth.Spec.ServerURL)
-	sdk := r.sdkFactory.NewKonnectSDK(
-		serverURL.String(),
-		sdkops.SDKToken(token),
-	)
-
-	if delTimestamp := ent.GetDeletionTimestamp(); !delTimestamp.IsZero() {
-		logger.Info("resource is being deleted")
-		// wait for termination grace period before cleaning up
-		if delTimestamp.After(time.Now()) {
-			logger.Info("resource still under grace period, requeueing")
-			return ctrl.Result{
-				// Requeue when grace period expires.
-				// If deletion timestamp is changed,
-				// the update will trigger another round of reconciliation.
-				// so we do not consider updates of deletion timestamp here.
-				RequeueAfter: time.Until(delTimestamp.Time),
-			}, nil
-		}
-
-		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-			if err := ops.Delete[T, TEnt](ctx, sdk, r.Client, ent); err != nil {
-				if res, errStatus := patch.StatusWithCondition(
-					ctx, r.Client, ent,
-					konnectv1alpha1.KonnectEntityProgrammedConditionType,
-					metav1.ConditionFalse,
-					konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed,
-					err.Error(),
-				); errStatus != nil || !res.IsZero() {
-					return res, errStatus
-				}
-				return ctrl.Result{}, err
-			}
-			if err := r.Client.Update(ctx, ent); err != nil {
-				if k8serrors.IsConflict(err) {
-					return ctrl.Result{Requeue: true}, nil
-				}
-				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
-			}
-		}
-
-		return ctrl.Result{}, nil
-	}
-
 	// TODO: relying on status ID is OK but we need to rethink this because
 	// we're using a cached client so after creating the resource on Konnect it might
 	// happen that we've just created the resource but the status ID is not there yet.
@@ -498,7 +499,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// Regardless of the error reported from Create(), if the Konnect ID has been
 		// set then:
 		// - add the finalizer so that the resource can be cleaned up from Konnect on deletion...
-		if ent.GetKonnectStatus().ID != "" {
+		if status = ent.GetKonnectStatus(); status != nil && status.GetKonnectID() != "" {
 			objWithFinalizer := ent.DeepCopyObject().(client.Object)
 			if controllerutil.AddFinalizer(objWithFinalizer, KonnectCleanupFinalizer) {
 				if errUpd := r.Client.Patch(ctx, objWithFinalizer, client.MergeFrom(ent)); errUpd != nil {
@@ -841,6 +842,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
 	}
 
+	old = ent.DeepCopyObject().(TEnt)
 	type EntityWithConsumerRef interface {
 		SetKonnectConsumerIDInStatus(string)
 	}
@@ -853,14 +855,16 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		)
 	}
 
-	if res, errStatus := patch.StatusWithCondition(
-		ctx, cl, ent,
+	patch.SetStatusWithConditionIfDifferent(ent,
 		konnectv1alpha1.KongConsumerRefValidConditionType,
 		metav1.ConditionTrue,
 		konnectv1alpha1.KongConsumerRefReasonValid,
 		fmt.Sprintf("Referenced KongConsumer %s programmed", nn),
-	); errStatus != nil || !res.IsZero() {
-		return res, errStatus
+	)
+
+	logger := ctrllog.FromContext(ctx)
+	if res, errStatus := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, logger, ent, old); errStatus != nil || res != op.Noop {
+		return ctrl.Result{}, errStatus
 	}
 
 	cpRef, ok := getControlPlaneRef(&consumer).Get()
