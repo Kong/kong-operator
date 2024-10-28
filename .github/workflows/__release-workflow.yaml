@@ -280,7 +280,7 @@ jobs:
         run: make bundle
 
       - name: GPG sign the commits
-        uses: crazy-max/ghaction-import-gpg@01dd5d3ca463c7f10f7f4f7b4f177225ac661ee4
+        uses: crazy-max/ghaction-import-gpg@cb9bde2e2525e640591a934b1fd28eef1dcaf5e5
         with:
           gpg_private_key: ${{ secrets.gpg-private-key }}
           passphrase: ${{ secrets.gpg-passphrase }}
