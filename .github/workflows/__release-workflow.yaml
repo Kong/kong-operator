@@ -147,8 +147,19 @@ jobs:
         with:
           install: false
 
+      # This step is required to check if the OP Service Account Token is available and export a boolean output
+      # to be used in the next step. It's because we cannot use a secret in a step's condition.
+      # See: https://github.com/actions/runner/issues/520
+      - name: Check OP Service Account Token available
+        id: check-op-service-account-token
+        run: |
+          # If secrets.op-service-account-token is set, return true.
+          if [ -n "${{ secrets.op-service-account-token }}" ]; then
+              echo "provided=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Get Kong Enterprise License
-        if: secrets.op-service-account-token != ''
+        if: steps.check-op-service-account-token.outputs.provided == 'true'
         id: get-license
         uses: Kong/kong-license@master
         with:
@@ -194,8 +205,19 @@ jobs:
         with:
           install: false
 
+      # This step is required to check if the OP Service Account Token is available and export a boolean output
+      # to be used in the next step. It's because we cannot use a secret in a step's condition.
+      # See: https://github.com/actions/runner/issues/520
+      - name: Check OP Service Account Token available
+        id: check-op-service-account-token
+        run: |
+          # If secrets.op-service-account-token is set, return true.
+          if [ -n "${{ secrets.op-service-account-token }}" ]; then
+              echo "provided=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Get Kong Enterprise License
-        if: ${{ secrets.op-service-account-token }}
+        if: steps.check-op-service-account-token.outputs.provided == 'true'
         id: get-license
         uses: Kong/kong-license@master
         with:
