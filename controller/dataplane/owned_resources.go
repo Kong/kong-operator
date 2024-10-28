@@ -402,7 +402,8 @@ func ensureIngressServiceForDataPlane(
 			existingService.Spec.Type = generatedService.Spec.Type
 			updated = true
 		}
-		if existingService.Spec.ExternalTrafficPolicy != generatedService.Spec.ExternalTrafficPolicy {
+		if generatedService.Spec.ExternalTrafficPolicy != "" &&
+			existingService.Spec.ExternalTrafficPolicy != generatedService.Spec.ExternalTrafficPolicy {
 			existingService.Spec.ExternalTrafficPolicy = generatedService.Spec.ExternalTrafficPolicy
 			updated = true
 		}

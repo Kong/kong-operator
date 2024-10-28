@@ -126,6 +126,9 @@
   [#711](https://github.com/Kong/gateway-operator/pull/711)
 - Fixed setting `ExternalTrafficPolicy` on `DataPlane`'s ingress `Service` during update and patch operations.
   [#750](https://github.com/Kong/gateway-operator/pull/750)
+- Fixed setting `ExternalTrafficPolicy` on `DataPlane`'s ingress `Service`.
+  Remove the default value (`Cluster`). Prevent setting this field for `ClusterIP` `Service`s.
+  [#812](https://github.com/Kong/gateway-operator/pull/812)
 
 ### Changes
 

@@ -239,6 +239,7 @@ type DataPlaneServicePort struct {
 // ServiceOptions is used to includes options to customize the ingress service,
 // such as the annotations.
 // +apireference:kgo:include
+// +kubebuilder:validation:XValidation:message="Cannot set ExternalTrafficPolicy for ClusterIP service.", rule="has(self.type) && self.type == 'ClusterIP' ? !has(self.externalTrafficPolicy) : true"
 type ServiceOptions struct {
 	// Type determines how the Service is exposed.
 	// Defaults to `LoadBalancer`.
@@ -285,7 +286,6 @@ type ServiceOptions struct {
 	// More info: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
 	//
 	// +optional
-	// +kubebuilder:default=Cluster
 	// +kubebuilder:validation:Enum=Cluster;Local
 	ExternalTrafficPolicy corev1.ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
 }
