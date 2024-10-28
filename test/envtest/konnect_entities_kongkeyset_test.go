@@ -19,6 +19,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -150,17 +151,10 @@ func TestKongKeySet(t *testing.T) {
 		}, nil)
 
 		t.Log("Creating a KeySet")
-		createdKeySet := deploy.KongKeySetAttachedToCP(t, ctx, clientNamespaced, keySetName, cp)
-
+		deploy.KongKeySetAttachedToCP(t, ctx, clientNamespaced, keySetName, cp)
 		t.Log("Watching for KeySet to verify the created KeySet programmed")
 		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongKeySet) bool {
-			if c.GetName() != createdKeySet.GetName() {
-				return false
-			}
-			return c.GetKonnectID() == keySetID && lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
+			return c.GetKonnectID() == keySetID && k8sutils.IsProgrammed(c)
 		}, "KeySet should be programmed and have ID in status after handling conflict")
 
 		t.Log("Ensuring that the SDK's create and list methods are called")

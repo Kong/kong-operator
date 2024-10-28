@@ -19,6 +19,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -79,15 +80,8 @@ func TestKongVault(t *testing.T) {
 
 		t.Log("Waiting for KongVault to be programmed")
 		watchFor(t, ctx, vaultWatch, watch.Modified, func(v *configurationv1alpha1.KongVault) bool {
-			if v.GetName() != vault.GetName() {
-				return false
-			}
-
-			return lo.ContainsBy(v.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
-		}, "KongVault's Programmed condition should be true eventually")
+			return v.GetKonnectID() == vaultID && k8sutils.IsProgrammed(v)
+		}, "KongVault didn't get Programmed status condition or didn't get the correct (vault-12345) Konnect ID assigned")
 
 		t.Log("Waiting for KongVault to be created in the SDK")
 		require.EventuallyWithT(t, func(c *assert.CollectT) {

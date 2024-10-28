@@ -18,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -97,10 +98,7 @@ func TestKongSNI(t *testing.T) {
 
 		t.Log("Waiting for SNI to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, watch.Modified, func(s *configurationv1alpha1.KongSNI) bool {
-			return s.GetKonnectID() == "sni-12345" && lo.ContainsBy(s.Status.Conditions,
-				func(c metav1.Condition) bool {
-					return c.Type == "Programmed" && c.Status == metav1.ConditionTrue
-				})
+			return s.GetKonnectID() == "sni-12345" && k8sutils.IsProgrammed(s)
 		}, "SNI didn't get Programmed status condition or didn't get the correct (sni-12345) Konnect ID assigned")
 
 		t.Log("Set up SDK for SNI update")

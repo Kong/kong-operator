@@ -11,13 +11,13 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -85,18 +85,16 @@ func TestKongTarget(t *testing.T) {
 				kt.Spec.KongTargetAPISpec.Weight = targetWeight
 			},
 		)
+
+		t.Log("Waiting for Target to be programmed and get Konnect ID")
+		watchFor(t, ctx, w, watch.Modified, func(kt *configurationv1alpha1.KongTarget) bool {
+			return kt.GetKonnectID() == targetID && k8sutils.IsProgrammed(kt)
+		}, "KongTarget didn't get Programmed status condition or didn't get the correct (target-12345) Konnect ID assigned")
+
 		t.Log("Checking SDK KongTarget operations")
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.TargetsSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
-
-		t.Log("Waiting for Target to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, func(kt *configurationv1alpha1.KongTarget) bool {
-			return kt.GetKonnectID() == targetID && lo.ContainsBy(kt.Status.Conditions,
-				func(c metav1.Condition) bool {
-					return c.Type == "Programmed" && c.Status == metav1.ConditionTrue
-				})
-		}, "KongTarget didn't get Programmed status condition or didn't get the correct (target-12345) Konnect ID assigned")
 
 		t.Log("Setting up SDK expectations on Target update")
 		sdk.TargetsSDK.EXPECT().UpsertTargetWithUpstream(

@@ -19,6 +19,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -163,7 +164,7 @@ func TestKongCACertificate(t *testing.T) {
 			)
 
 		t.Log("Creating a KongCACertificate")
-		createdCert := deploy.KongCACertificateAttachedToCP(t, ctx, clientNamespaced, cp,
+		deploy.KongCACertificateAttachedToCP(t, ctx, clientNamespaced, cp,
 			func(obj client.Object) {
 				cert := obj.(*configurationv1alpha1.KongCACertificate)
 				cert.Spec.Tags = []string{conflictingTagName}
@@ -172,17 +173,7 @@ func TestKongCACertificate(t *testing.T) {
 
 		t.Log("Watching for KongCACertificates to verify the created KongCACertificate gets programmed")
 		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongCACertificate) bool {
-			if c.GetName() != createdCert.GetName() {
-				return false
-			}
-			if !slices.Equal(c.Spec.Tags, createdCert.Spec.Tags) {
-				return false
-			}
-
-			return c.GetKonnectID() == certID && lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
+			return c.GetKonnectID() == certID && k8sutils.IsProgrammed(c)
 		}, "KongCACertificate should be programmed and have ID in status after handling conflict")
 
 		t.Log("Ensuring that the SDK's create and list methods are called")

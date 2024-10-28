@@ -19,6 +19,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -176,11 +177,7 @@ func TestKongCertificate(t *testing.T) {
 			if !slices.Equal(c.Spec.Tags, createdCert.Spec.Tags) {
 				return false
 			}
-
-			return c.GetKonnectID() == certID && lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
+			return c.GetKonnectID() == certID && k8sutils.IsProgrammed(c)
 		}, "KongCertificate should be programmed and have ID in status after handling conflict")
 
 		t.Log("Ensuring that the SDK's create and list methods are called")

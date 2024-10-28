@@ -217,8 +217,7 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 
 		t.Log("Waiting for KongCredentialJWT to be programmed")
 		watchFor(t, ctx, w, watch.Modified, func(k *configurationv1alpha1.KongCredentialJWT) bool {
-			return k.GetName() == created.GetName() &&
-				k8sutils.IsProgrammed(k)
+			return k.GetName() == created.GetName() && k8sutils.IsProgrammed(k)
 		}, "KongCredentialJWT's Programmed condition should be true eventually")
 
 		t.Log("Checking SDK KongCredentialJWT operations")

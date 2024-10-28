@@ -21,6 +21,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -180,7 +181,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		)
 
 		t.Log("Creating KongConsumerGroup")
-		cg := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cp,
+		deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cp,
 			func(obj client.Object) {
 				cg := obj.(*configurationv1beta1.KongConsumerGroup)
 				cg.Spec.Name = cgName
@@ -189,13 +190,7 @@ func TestKongConsumerGroup(t *testing.T) {
 
 		t.Log("Waiting for KongConsumerGroup to be programmed")
 		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
-			if c.GetName() != cg.GetName() && c.GetKonnectID() != cgID {
-				return false
-			}
-			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
+			return c.GetKonnectID() == cgID && k8sutils.IsProgrammed(c)
 		}, "KongConsumerGroup's Programmed condition should be true eventually")
 
 		t.Log("Waiting for KongConsumerGroup to be created in the SDK")

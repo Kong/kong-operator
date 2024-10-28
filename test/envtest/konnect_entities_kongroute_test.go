@@ -86,21 +86,15 @@ func TestKongRoute(t *testing.T) {
 			},
 		)
 
-		assert.EventuallyWithT(t,
-			assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, createdRoute, routeID),
-			waitTime, tickTime,
-			"KongRoute wasn't created using Konnect API or its KonnectID wasn't set",
-		)
+		t.Log("Waiting for Route to be programmed and get Konnect ID")
+		watchFor(t, ctx, w, watch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
+			return r.GetKonnectID() == routeID && k8sutils.IsProgrammed(r)
+		}, "KongRoute didn't get Programmed status condition or didn't get the correct (route-12345) Konnect ID assigned")
 
 		t.Log("Checking SDK KongRoute operations")
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.RoutesSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
-
-		t.Log("Waiting for Route to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
-			return r.GetKonnectID() == routeID && k8sutils.IsProgrammed(r)
-		}, "KongRoute didn't get Programmed status condition or didn't get the correct (route-12345) Konnect ID assigned")
 
 		t.Log("Setting up SDK expectations on Route update")
 		sdk.RoutesSDK.EXPECT().

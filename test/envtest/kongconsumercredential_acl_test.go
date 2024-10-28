@@ -216,8 +216,7 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 
 		t.Log("Waiting for KongCredentialACL to be programmed")
 		watchFor(t, ctx, w, watch.Modified, func(k *configurationv1alpha1.KongCredentialACL) bool {
-			return k.GetName() == created.GetName() &&
-				k8sutils.IsProgrammed(k)
+			return k.GetName() == created.GetName() && k8sutils.IsProgrammed(k)
 		}, "KongCredentialACL's Programmed condition should be true eventually")
 
 		t.Log("Checking SDK KongCredentialACL operations")

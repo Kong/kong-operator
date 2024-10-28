@@ -218,8 +218,7 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 
 		t.Log("Waiting for KongCredentialBasicAuth to be programmed")
 		watchFor(t, ctx, w, watch.Modified, func(k *configurationv1alpha1.KongCredentialBasicAuth) bool {
-			return k.GetName() == created.GetName() &&
-				k8sutils.IsProgrammed(k)
+			return k.GetName() == created.GetName() && k8sutils.IsProgrammed(k)
 		}, "KongCredentialBasicAuth's Programmed condition should be true eventually")
 
 		t.Log("Checking SDK KongCredentialBasicAuth operations")
