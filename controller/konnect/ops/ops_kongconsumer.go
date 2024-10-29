@@ -105,7 +105,6 @@ func updateConsumer(
 
 // handleConsumerGroupAssignments resolves ConsumerGroup references of a KongConsumer, reconciles them with Konnect, and
 // updates the Consumer conditions accordingly:
-// - sets Programmed to False if any operation fails
 // - sets KongConsumerGroupRefsValid to False if any of the ConsumerGroup references are invalid
 // - sets KongConsumerGroupRefsValid to True if all ConsumerGroup references are valid
 // It returns an error if any of the operations fail (fetching KongConsumers from cache, fetching the actual Konnect

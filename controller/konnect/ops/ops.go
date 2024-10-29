@@ -25,12 +25,6 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// Response is the interface for the response from the Konnect API.
-type Response interface {
-	GetContentType() string
-	GetStatusCode() int
-}
-
 // Op is the type for the operation type of a Konnect entity.
 type Op string
 
@@ -323,8 +317,6 @@ func Update[
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *configurationv1alpha1.KongService:
-		// TODO: modify the create* operation wrappers to not set Programmed conditions and return
-		// a KonnectEntityCreatedButRelationsFailedError if the entity was created but its relations assignment failed.
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
 		err = updateRoute(ctx, sdk.GetRoutesSDK(), ent)

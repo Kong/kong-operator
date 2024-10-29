@@ -14,7 +14,7 @@ import (
 )
 
 // createCACertificate creates a KongCACertificate in Konnect.
-// It sets the KonnectID and the Programmed condition in the KongCACertificate status.
+// It sets the KonnectID the KongCACertificate status.
 func createCACertificate(
 	ctx context.Context,
 	sdk sdkops.CACertificatesSDK,
