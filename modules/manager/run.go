@@ -87,6 +87,7 @@ type Config struct {
 	AIGatewayControllerEnabled              bool
 	KongPluginInstallationControllerEnabled bool
 	KonnectSyncPeriod                       time.Duration
+	KonnectMaxConcurrentReconciles          uint
 
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool

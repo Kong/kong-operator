@@ -169,5 +169,6 @@ func expectedDefaultCfg() manager.Config {
 		WebhookCertificateConfigBaseImage:       consts.WebhookCertificateConfigBaseImage,
 		WebhookCertificateConfigShellImage:      consts.WebhookCertificateConfigShellImage,
 		LoggerOpts:                              &zap.Options{},
+		KonnectMaxConcurrentReconciles:          consts.DefaultKonnectMaxConcurrentReconciles,
 	}
 }

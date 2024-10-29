@@ -40,10 +40,11 @@ const (
 // KonnectEntityReconciler reconciles a Konnect entities.
 // It uses the generic type constraints to constrain the supported types.
 type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]] struct {
-	sdkFactory      sdkops.SDKFactory
-	DevelopmentMode bool
-	Client          client.Client
-	SyncPeriod      time.Duration
+	sdkFactory              sdkops.SDKFactory
+	DevelopmentMode         bool
+	Client                  client.Client
+	SyncPeriod              time.Duration
+	MaxConcurrentReconciles uint
 }
 
 // KonnectEntityReconcilerOption is a functional option for the KonnectEntityReconciler.
@@ -61,6 +62,15 @@ func WithKonnectEntitySyncPeriod[T constraints.SupportedKonnectEntityType, TEnt 
 	}
 }
 
+// WithKonnectMaxConcurrentReconciles sets the max concurrent reconciles for the reconciler.
+func WithKonnectMaxConcurrentReconciles[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
+	maxConcurrent uint,
+) KonnectEntityReconcilerOption[T, TEnt] {
+	return func(r *KonnectEntityReconciler[T, TEnt]) {
+		r.MaxConcurrentReconciles = maxConcurrent
+	}
+}
+
 // NewKonnectEntityReconciler returns a new KonnectEntityReconciler for the given
 // Konnect entity type.
 func NewKonnectEntityReconciler[
@@ -73,10 +83,11 @@ func NewKonnectEntityReconciler[
 	opts ...KonnectEntityReconcilerOption[T, TEnt],
 ) *KonnectEntityReconciler[T, TEnt] {
 	r := &KonnectEntityReconciler[T, TEnt]{
-		sdkFactory:      sdkFactory,
-		DevelopmentMode: developmentMode,
-		Client:          client,
-		SyncPeriod:      consts.DefaultKonnectSyncPeriod,
+		sdkFactory:              sdkFactory,
+		DevelopmentMode:         developmentMode,
+		Client:                  client,
+		SyncPeriod:              consts.DefaultKonnectSyncPeriod,
+		MaxConcurrentReconciles: consts.DefaultKonnectMaxConcurrentReconciles,
 	}
 	for _, opt := range opts {
 		opt(r)
