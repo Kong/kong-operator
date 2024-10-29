@@ -11,7 +11,7 @@ import (
 )
 
 // createKongDataPlaneClientCertificate creates a KongDataPlaneClientCertificate in Konnect.
-// It sets the KonnectID and the Programmed condition in the KongDataPlaneClientCertificate status.
+// It sets the KonnectID in the KongDataPlaneClientCertificate status.
 func createKongDataPlaneClientCertificate(
 	ctx context.Context,
 	sdk sdkops.DataPlaneClientCertificatesSDK,
