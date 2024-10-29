@@ -23,7 +23,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cpg-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 						},
 						Members: []corev1.LocalObjectReference{
 							{
@@ -45,7 +45,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cpg-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 						},
 						Members: []corev1.LocalObjectReference{
 							{
@@ -68,30 +68,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cpg-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeK8SIngressController),
-						},
-						Members: []corev1.LocalObjectReference{
-							{
-								Name: "cp-1",
-							},
-						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
-								Name: "name-1",
-							},
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("spec.members is only applicable for ControlPlanes that are created as groups"),
-			},
-			{
-				Name: "members cannot be set on hybrid control-planes",
-				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: commonObjectMeta,
-					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
-							Name:        "cpg-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeHybrid),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController),
 						},
 						Members: []corev1.LocalObjectReference{
 							{
@@ -114,7 +91,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cpg-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeServerless),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeServerless),
 						},
 						Members: []corev1.LocalObjectReference{
 							{
@@ -142,7 +119,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 						},
 						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
@@ -173,7 +150,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 						},
 						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
@@ -204,7 +181,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 						},
 						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
@@ -240,7 +217,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 						},
 						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
@@ -250,7 +227,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					},
 				},
 				Update: func(kcp *konnectv1alpha1.KonnectGatewayControlPlane) {
-					kcp.Spec.ClusterType = sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup.ToPointer()
+					kcp.Spec.ClusterType = sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup.ToPointer()
 				},
 				ExpectedUpdateErrorMessage: lo.ToPtr("spec.cluster_type is immutable"),
 			},
@@ -266,7 +243,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 							Labels: func() map[string]string {
 								labels := make(map[string]string)
 								for i := range 40 {
@@ -290,7 +267,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 							Labels: func() map[string]string {
 								labels := make(map[string]string)
 								for i := range 41 {
@@ -315,7 +292,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 							Labels: map[string]string{
 								lo.RandomString(64, lo.AllCharset): "value",
 							},
@@ -336,7 +313,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 							Labels: map[string]string{
 								"": "value",
 							},
@@ -358,7 +335,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 							Labels: map[string]string{
 								"key": lo.RandomString(64, lo.AllCharset),
 							},
@@ -379,7 +356,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 							Labels: map[string]string{
 								"key": "",
 							},
@@ -400,7 +377,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 							Labels: map[string]string{
 								"k8s_key": "value",
 							},
@@ -421,7 +398,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 							Labels: map[string]string{
 								"kong_key": "value",
 							},
@@ -442,7 +419,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 							Labels: map[string]string{
 								"konnect_key": "value",
 							},
@@ -463,7 +440,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 							Labels: map[string]string{
 								"mesh_key": "value",
 							},
@@ -484,7 +461,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 							Labels: map[string]string{
 								"kic_key": "value",
 							},
@@ -505,7 +482,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 							Labels: map[string]string{
 								"insomnia_key": "value",
 							},
@@ -526,7 +503,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 							Labels: map[string]string{
 								"_key": "value",
 							},
@@ -547,7 +524,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlane),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 							Labels: map[string]string{
 								"key-": "value",
 							},
@@ -584,7 +561,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup.ToPointer(),
+							ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup.ToPointer(),
 						},
 						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
@@ -601,7 +578,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: sdkkonnectcomp.ClusterTypeClusterTypeControlPlane.ToPointer(),
+							ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane.ToPointer(),
 						},
 						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
@@ -618,7 +595,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: sdkkonnectcomp.ClusterTypeClusterTypeK8SIngressController.ToPointer(),
+							ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
 						},
 						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
@@ -627,24 +604,6 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 						},
 					},
 				},
-			},
-			{
-				Name: "CLUSTER_TYPE_HYBRID not is supported",
-				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: commonObjectMeta,
-					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
-							Name:        "cp-1",
-							ClusterType: sdkkonnectcomp.ClusterTypeClusterTypeHybrid.ToPointer(),
-						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
-								Name: "name-1",
-							},
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("spec.cluster_type must be one of 'CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE' or 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'"),
 			},
 			{
 				Name: "CLUSTER_TYPE_SERVERLESS is not supported",
@@ -653,7 +612,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: sdkkonnectcomp.ClusterTypeClusterTypeServerless.ToPointer(),
+							ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeServerless.ToPointer(),
 						},
 						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
@@ -671,7 +630,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: sdkkonnectcomp.ClusterType("CLUSTER_TYPE_CUSTOM").ToPointer(),
+							ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterType("CLUSTER_TYPE_CUSTOM").ToPointer(),
 						},
 						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
@@ -698,7 +657,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					},
 				},
 				Update: func(cp *konnectv1alpha1.KonnectGatewayControlPlane) {
-					cp.Spec.ClusterType = sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup.ToPointer()
+					cp.Spec.ClusterType = sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup.ToPointer()
 				},
 				ExpectedUpdateErrorMessage: lo.ToPtr("spec.cluster_type is immutable"),
 			},
@@ -709,7 +668,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 							Name:        "cp-1",
-							ClusterType: sdkkonnectcomp.ClusterTypeClusterTypeControlPlane.ToPointer(),
+							ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane.ToPointer(),
 						},
 						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
