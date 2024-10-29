@@ -38,12 +38,12 @@ func createControlPlane(
 		return errWrap
 	}
 
-	if resp == nil || resp.ControlPlane == nil || resp.ControlPlane.ID == nil {
+	if resp == nil || resp.ControlPlane == nil || resp.ControlPlane.ID == "" {
 		return fmt.Errorf("failed creating %s: %w", cp.GetTypeName(), ErrNilResponse)
 	}
 
 	// At this point, the ControlPlane has been created in Konnect.
-	id := *resp.ControlPlane.ID
+	id := resp.ControlPlane.ID
 	cp.SetKonnectID(id)
 
 	if err := setGroupMembers(ctx, cl, cp, id, sdkGroups); err != nil {
@@ -106,7 +106,7 @@ func updateControlPlane(
 	if resp == nil || resp.ControlPlane == nil {
 		return fmt.Errorf("failed updating ControlPlane: %w", ErrNilResponse)
 	}
-	id = *resp.ControlPlane.ID
+	id = resp.ControlPlane.ID
 
 	if err := setGroupMembers(ctx, cl, cp, id, sdkGroups); err != nil {
 		// If we failed to set group membership, we should return a specific error with a reason
@@ -130,7 +130,7 @@ func setGroupMembers(
 ) error {
 	if len(cp.Spec.Members) == 0 ||
 		cp.Spec.ClusterType == nil ||
-		*cp.Spec.ClusterType != sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup {
+		*cp.Spec.ClusterType != sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup {
 		return nil
 	}
 

@@ -52,7 +52,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
 						ControlPlane: &sdkkonnectcomp.ControlPlane{
-							ID: lo.ToPtr("12345"),
+							ID: "12345",
 						},
 					},
 					nil)
@@ -100,7 +100,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
 					cp.Name = "cp-2"
 					cp.Spec.Name = "cp-2"
-					cp.Spec.ClusterType = lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup)
+					cp.Spec.ClusterType = lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup)
 					cp.Spec.Members = []corev1.LocalObjectReference{
 						{
 							Name: "cp-groupmember-1",
@@ -120,7 +120,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
 						ControlPlane: &sdkkonnectcomp.ControlPlane{
-							ID: lo.ToPtr("12345"),
+							ID: "12345",
 						},
 					},
 					nil)
@@ -129,13 +129,13 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					mock.Anything,
 					mock.MatchedBy(func(req sdkkonnectcomp.CreateControlPlaneRequest) bool {
 						return req.Name == "cp-2" &&
-							req.ClusterType != nil && *req.ClusterType == sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup
+							req.ClusterType != nil && *req.ClusterType == sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup
 					}),
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
 						ControlPlane: &sdkkonnectcomp.ControlPlane{
-							ID: lo.ToPtr("12346"),
+							ID: "12346",
 						},
 					},
 					nil)
@@ -168,7 +168,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.UpdateControlPlaneResponse{
 						ControlPlane: &sdkkonnectcomp.ControlPlane{
-							ID: lo.ToPtr("12346"),
+							ID: "12346",
 						},
 					},
 					nil).
@@ -243,7 +243,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
 					cp.Name = "cp-3"
 					cp.Spec.Name = "cp-3"
-					cp.Spec.ClusterType = lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup)
+					cp.Spec.ClusterType = lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup)
 					cp.Spec.Members = []corev1.LocalObjectReference{
 						{
 							Name: "cp-groupmember-2",
@@ -263,7 +263,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
 						ControlPlane: &sdkkonnectcomp.ControlPlane{
-							ID: lo.ToPtr("12345"),
+							ID: "12345",
 						},
 					},
 					nil,
@@ -274,13 +274,13 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					mock.MatchedBy(func(req sdkkonnectcomp.CreateControlPlaneRequest) bool {
 						return req.Name == "cp-3" &&
 							req.ClusterType != nil &&
-							*req.ClusterType == sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup
+							*req.ClusterType == sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup
 					}),
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
 						ControlPlane: &sdkkonnectcomp.ControlPlane{
-							ID: lo.ToPtr("123467"),
+							ID: "123467",
 						},
 					},
 					nil,
@@ -314,7 +314,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.UpdateControlPlaneResponse{
 						ControlPlane: &sdkkonnectcomp.ControlPlane{
-							ID: lo.ToPtr("123467"),
+							ID: "123467",
 						},
 					},
 					nil,
@@ -412,7 +412,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
 							Data: []sdkkonnectcomp.ControlPlane{
 								{
-									ID: lo.ToPtr("123456"),
+									ID: "123456",
 								},
 							},
 						},

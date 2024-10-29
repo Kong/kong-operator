@@ -131,5 +131,5 @@ func getKongKeyForUID(
 		return "", fmt.Errorf("failed to list KongKeys: %w", ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), key)
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), key)
 }

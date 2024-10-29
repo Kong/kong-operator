@@ -146,5 +146,5 @@ func getKongSNIForUID(ctx context.Context, sdk sdkops.SNIsSDK, sni *configuratio
 		return "", fmt.Errorf("failed listing %s: %w", sni.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), sni)
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), sni)
 }

@@ -61,7 +61,7 @@ func TestCreateControlPlane(t *testing.T) {
 					Return(
 						&sdkkonnectops.CreateControlPlaneResponse{
 							ControlPlane: &sdkkonnectcomp.ControlPlane{
-								ID: lo.ToPtr(cpID),
+								ID: cpID,
 							},
 						},
 						nil,
@@ -136,7 +136,7 @@ func TestCreateControlPlane(t *testing.T) {
 					},
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 							Name:        "cpg-1",
 						},
 						Members: []corev1.LocalObjectReference{
@@ -154,7 +154,7 @@ func TestCreateControlPlane(t *testing.T) {
 					Return(
 						&sdkkonnectops.CreateControlPlaneResponse{
 							ControlPlane: &sdkkonnectcomp.ControlPlane{
-								ID: lo.ToPtr(cpgID),
+								ID: cpgID,
 							},
 						},
 						nil,
@@ -205,7 +205,7 @@ func TestCreateControlPlane(t *testing.T) {
 					},
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
-							ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup),
+							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 							Name:        "cpg-1",
 						},
 						Members: []corev1.LocalObjectReference{
@@ -223,7 +223,7 @@ func TestCreateControlPlane(t *testing.T) {
 					Return(
 						&sdkkonnectops.CreateControlPlaneResponse{
 							ControlPlane: &sdkkonnectcomp.ControlPlane{
-								ID: lo.ToPtr(cpgID),
+								ID: cpgID,
 							},
 						},
 						nil,
@@ -439,7 +439,7 @@ func TestUpdateControlPlane(t *testing.T) {
 					Return(
 						&sdkkonnectops.UpdateControlPlaneResponse{
 							ControlPlane: &sdkkonnectcomp.ControlPlane{
-								ID: lo.ToPtr("12345"),
+								ID: "12345",
 							},
 						},
 						nil,
@@ -543,7 +543,7 @@ func TestUpdateControlPlane(t *testing.T) {
 					Return(
 						&sdkkonnectops.CreateControlPlaneResponse{
 							ControlPlane: &sdkkonnectcomp.ControlPlane{
-								ID: lo.ToPtr("12345"),
+								ID: "12345",
 							},
 						},
 						nil,
@@ -615,7 +615,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 		}).
 		Return(&sdkkonnectops.CreateControlPlaneResponse{
 			ControlPlane: &sdkkonnectcomp.ControlPlane{
-				ID: lo.ToPtr("12345"),
+				ID: "12345",
 			},
 		}, nil)
 	_, err := Create(ctx, sdk.SDK, fakeClient, cp)
@@ -629,7 +629,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 		}).
 		Return(&sdkkonnectops.UpdateControlPlaneResponse{
 			ControlPlane: &sdkkonnectcomp.ControlPlane{
-				ID: lo.ToPtr("12345"),
+				ID: "12345",
 			},
 		}, nil)
 	_, err = Update(ctx, sdk.SDK, 0, fakeClient, cp)
@@ -654,7 +654,7 @@ func TestSetGroupMembers(t *testing.T) {
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 						Name:        "cp-group",
-						ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup),
+						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 					},
 				},
 			},
@@ -673,7 +673,7 @@ func TestSetGroupMembers(t *testing.T) {
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 						Name:        "cp-group",
-						ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup),
+						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 					},
 					Members: []corev1.LocalObjectReference{
 						{
@@ -726,7 +726,7 @@ func TestSetGroupMembers(t *testing.T) {
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 						Name:        "cp-group",
-						ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup),
+						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 					},
 					Members: []corev1.LocalObjectReference{
 						{
@@ -760,7 +760,7 @@ func TestSetGroupMembers(t *testing.T) {
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 						Name:        "cp-group",
-						ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup),
+						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 					},
 					Members: []corev1.LocalObjectReference{
 						{
@@ -830,7 +830,7 @@ func TestSetGroupMembers(t *testing.T) {
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
 						Name:        "cp-group",
-						ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup),
+						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 					},
 					Members: []corev1.LocalObjectReference{
 						{

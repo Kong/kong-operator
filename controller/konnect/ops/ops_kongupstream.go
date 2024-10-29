@@ -135,5 +135,5 @@ func getKongUpstreamForUID(
 		return "", fmt.Errorf("failed listing %s: %w", u.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), u)
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), u)
 }

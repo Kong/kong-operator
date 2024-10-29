@@ -32,7 +32,6 @@ type handleControlPlaneRefTestCase[T constraints.SupportedKonnectEntityType, TEn
 }
 
 func TestHandleControlPlaneRef(t *testing.T) {
-
 	var (
 		cpOK = &konnectv1alpha1.KonnectGatewayControlPlane{
 			ObjectMeta: metav1.ObjectMeta{
@@ -59,7 +58,7 @@ func TestHandleControlPlaneRef(t *testing.T) {
 			},
 			Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 				CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
-					ClusterType: lo.ToPtr(sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup),
+					ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 				},
 			},
 			Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{

@@ -41,7 +41,7 @@ func konnectGatewayControlPlaneGroupMembers(object client.Object) []string {
 		return nil
 	}
 
-	if string(*clusterType) != string(sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup) {
+	if string(*clusterType) != string(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup) {
 		return nil
 	}
 

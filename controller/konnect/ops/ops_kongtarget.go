@@ -133,5 +133,5 @@ func getKongTargetForUID(
 		return "", fmt.Errorf("failed listing %s: %w", target.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), target)
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), target)
 }
