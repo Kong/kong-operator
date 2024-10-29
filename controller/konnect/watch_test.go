@@ -1,13 +1,18 @@
 package konnect
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/modules/manager/scheme"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -76,6 +81,121 @@ func TestObjectListToReconcileRequests(t *testing.T) {
 					require.Equal(t, item.GetName(), requests[i].Name)
 					require.Equal(t, item.GetNamespace(), requests[i].Namespace)
 				}
+			})
+		}
+	})
+}
+
+func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
+	cp := &konnectv1alpha1.KonnectGatewayControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test1",
+			Namespace: "default",
+		},
+	}
+	t.Run("KongConsumer", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			index       string
+			list        []client.Object
+			extractFunc client.IndexerFunc
+			expected    []ctrl.Request
+		}{
+			{
+				name:        "no ControlPlane reference",
+				index:       IndexFieldKongConsumerOnKonnectGatewayControlPlane,
+				extractFunc: kongConsumerReferencesKonnectGatewayControlPlane,
+				list: []client.Object{
+					&configurationv1.KongConsumer{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "consumer1",
+							Namespace: "default",
+						},
+					},
+					&configurationv1.KongConsumer{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "consumer2",
+							Namespace: "default",
+						},
+					},
+				},
+			},
+			{
+				name:        "1 KongConumser refers to KonnectGatewayControlPlane",
+				index:       IndexFieldKongConsumerOnKonnectGatewayControlPlane,
+				extractFunc: kongConsumerReferencesKonnectGatewayControlPlane,
+				list: []client.Object{
+					&configurationv1.KongConsumer{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "consumer1",
+							Namespace: "default",
+						},
+						Spec: configurationv1.KongConsumerSpec{
+							ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+								KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+									Name: cp.Name,
+								},
+							},
+						},
+					},
+					&configurationv1.KongConsumer{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "consumer2",
+							Namespace: "default",
+						},
+					},
+				},
+				expected: []ctrl.Request{
+					{
+						NamespacedName: types.NamespacedName{
+							Name:      "consumer1",
+							Namespace: "default",
+						},
+					},
+				},
+			},
+			{
+				name:        "1 KongConumser refers to a different KonnectGatewayControlPlane",
+				index:       IndexFieldKongConsumerOnKonnectGatewayControlPlane,
+				extractFunc: kongConsumerReferencesKonnectGatewayControlPlane,
+				list: []client.Object{
+					&configurationv1.KongConsumer{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "consumer1",
+							Namespace: "default",
+						},
+						Spec: configurationv1.KongConsumerSpec{
+							ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+								KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+									Name: "different-cp",
+								},
+							},
+						},
+					},
+					&configurationv1.KongConsumer{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "consumer2",
+							Namespace: "default",
+						},
+					},
+				},
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				cl := fakectrlruntimeclient.NewClientBuilder().
+					WithScheme(scheme.Get()).
+					WithObjects(tt.list...).
+					WithIndex(&configurationv1.KongConsumer{}, tt.index, tt.extractFunc).
+					Build()
+				require.NotNil(t, cl)
+
+				f := enqueueObjectForKonnectGatewayControlPlane[configurationv1.KongConsumerList](cl, tt.index)
+				requests := f(context.Background(), cp)
+				require.Len(t, requests, len(tt.expected))
+				require.Equal(t, tt.expected, requests)
 			})
 		}
 	})

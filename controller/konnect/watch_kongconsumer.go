@@ -54,7 +54,7 @@ func KongConsumerReconciliationWatchOptions(
 			return b.Watches(
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectForKonnectGatewayControlPlane[*configurationv1.KongConsumerList](
+					enqueueObjectForKonnectGatewayControlPlane[configurationv1.KongConsumerList](
 						cl, IndexFieldKongConsumerOnKonnectGatewayControlPlane,
 					),
 				),

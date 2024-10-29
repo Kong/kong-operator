@@ -41,7 +41,7 @@ func KongDataPlaneClientCertificateReconciliationWatchOptions(cl client.Client) 
 			return b.Watches(
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectForKonnectGatewayControlPlane[*configurationv1alpha1.KongDataPlaneClientCertificateList](
+					enqueueObjectForKonnectGatewayControlPlane[configurationv1alpha1.KongDataPlaneClientCertificateList](
 						cl, IndexFieldKongDataPlaneClientCertificateOnKonnectGatewayControlPlane,
 					),
 				),

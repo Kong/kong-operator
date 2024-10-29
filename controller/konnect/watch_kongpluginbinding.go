@@ -60,7 +60,7 @@ func KongPluginBindingReconciliationWatchOptions(
 			return b.Watches(
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectForKonnectGatewayControlPlane[*configurationv1alpha1.KongPluginBindingList](
+					enqueueObjectForKonnectGatewayControlPlane[configurationv1alpha1.KongPluginBindingList](
 						cl, IndexFieldKongPluginBindingKonnectGatewayControlPlane,
 					),
 				),
