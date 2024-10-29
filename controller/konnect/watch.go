@@ -125,6 +125,10 @@ func objectListToReconcileRequests[
 	items []T,
 	filters ...func(TPtr) bool,
 ) []ctrl.Request {
+	if len(items) == 0 {
+		return nil
+	}
+
 	ret := make([]ctrl.Request, 0, len(items))
 	for _, item := range items {
 		var e TPtr = &item
@@ -151,6 +155,10 @@ func objectListToReconcileRequests[
 // as the object.
 func enqueueObjectForKonnectGatewayControlPlane[
 	TList interface {
+		GetItems() []T
+	},
+	TListPtr interface {
+		*TList
 		client.ObjectList
 		GetItems() []T
 	},
@@ -165,8 +173,11 @@ func enqueueObjectForKonnectGatewayControlPlane[
 		if !ok {
 			return nil
 		}
-		var l TList
-		if err := cl.List(ctx, l,
+		var (
+			l    TList
+			lPtr TListPtr = &l
+		)
+		if err := cl.List(ctx, lPtr,
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(cp.GetNamespace()),
 			client.MatchingFields{

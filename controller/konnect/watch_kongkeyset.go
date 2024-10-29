@@ -41,7 +41,7 @@ func KongKeySetReconciliationWatchOptions(cl client.Client) []func(*ctrl.Builder
 			return b.Watches(
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectForKonnectGatewayControlPlane[*configurationv1alpha1.KongKeySetList](
+					enqueueObjectForKonnectGatewayControlPlane[configurationv1alpha1.KongKeySetList](
 						cl, IndexFieldKongKeySetOnKonnectGatewayControlPlane,
 					),
 				),

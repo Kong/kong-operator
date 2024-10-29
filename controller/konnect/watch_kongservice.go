@@ -52,7 +52,7 @@ func KongServiceReconciliationWatchOptions(
 			return b.Watches(
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectForKonnectGatewayControlPlane[*configurationv1alpha1.KongServiceList](
+					enqueueObjectForKonnectGatewayControlPlane[configurationv1alpha1.KongServiceList](
 						cl, IndexFieldKongServiceOnKonnectGatewayControlPlane,
 					),
 				),
