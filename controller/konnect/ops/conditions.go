@@ -66,9 +66,17 @@ const (
 	// ControlPlaneGroupMembersReferenceResolvedConditionType sets the condition for control plane groups
 	// to show whether all of its members are programmed and attached to the group.
 	ControlPlaneGroupMembersReferenceResolvedConditionType = "MembersReferenceResolved"
-	// ControlPlaneGroupMembersReferenceResolvedReasonResolved indicates that all members of the control plane groups
+	// ControlPlaneGroupMembersReferenceResolvedReasonNoMembers indicates that there are no members specified in the control plane group.
+	ControlPlaneGroupMembersReferenceResolvedReasonNoMembers consts.ConditionReason = "NoMembers"
+	// ControlPlaneGroupMembersReferenceResolvedReasonResolved indicates that all members of the control plane group
 	// are created and attached to the group in Konnect.
 	ControlPlaneGroupMembersReferenceResolvedReasonResolved consts.ConditionReason = "Resolved"
+	// ControlPlaneGroupMembersReferenceResolvedReasonPartialNotResolved indicates that some members of the control plane group
+	// are not resolved (not found or not created in Konnect).
+	ControlPlaneGroupMembersReferenceResolvedReasonPartialNotResolved consts.ConditionReason = "SomeMemberNotResolved"
+	// ControlPlaneGroupMembersReferenceResolvedReasonFailedToSet indicates that error happened on setting control plane as
+	// member of the control plane.
+	ControlPlaneGroupMembersReferenceResolvedReasonFailedToSet consts.ConditionReason = "SetGroupMemberFailed"
 )
 
 // SetControlPlaneGroupMembersReferenceResolvedCondition sets MembersReferenceResolved condition of control plane to True.

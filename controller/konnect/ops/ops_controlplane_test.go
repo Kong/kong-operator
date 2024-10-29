@@ -22,6 +22,7 @@ import (
 
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/gateway-operator/pkg/consts"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -638,11 +639,13 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 
 func TestSetGroupMembers(t *testing.T) {
 	testcases := []struct {
-		name        string
-		group       *konnectv1alpha1.KonnectGatewayControlPlane
-		cps         []client.Object
-		sdk         func(t *testing.T) *sdkmocks.MockControlPlaneGroupSDK
-		expectedErr bool
+		name                    string
+		group                   *konnectv1alpha1.KonnectGatewayControlPlane
+		cps                     []client.Object
+		sdk                     func(t *testing.T) *sdkmocks.MockControlPlaneGroupSDK
+		expectedErr             bool
+		memberRefResolvedStatus metav1.ConditionStatus
+		memberRefResolvedReason consts.ConditionReason
 	}{
 		{
 			name: "no members",
@@ -662,6 +665,8 @@ func TestSetGroupMembers(t *testing.T) {
 				sdk := sdkmocks.NewMockControlPlaneGroupSDK(t)
 				return sdk
 			},
+			memberRefResolvedStatus: metav1.ConditionFalse,
+			memberRefResolvedReason: ControlPlaneGroupMembersReferenceResolvedReasonNoMembers,
 		},
 		{
 			name: "1 member with Konnect Status ID",
@@ -715,6 +720,8 @@ func TestSetGroupMembers(t *testing.T) {
 					)
 				return sdk
 			},
+			memberRefResolvedStatus: metav1.ConditionTrue,
+			memberRefResolvedReason: ControlPlaneGroupMembersReferenceResolvedReasonResolved,
 		},
 		{
 			name: "1 member without Konnect Status ID",
@@ -748,7 +755,9 @@ func TestSetGroupMembers(t *testing.T) {
 				sdk := sdkmocks.NewMockControlPlaneGroupSDK(t)
 				return sdk
 			},
-			expectedErr: true,
+			expectedErr:             true,
+			memberRefResolvedStatus: metav1.ConditionFalse,
+			memberRefResolvedReason: ControlPlaneGroupMembersReferenceResolvedReasonPartialNotResolved,
 		},
 		{
 			name: "2 member with Konnect Status IDs",
@@ -819,6 +828,8 @@ func TestSetGroupMembers(t *testing.T) {
 					)
 				return sdk
 			},
+			memberRefResolvedStatus: metav1.ConditionTrue,
+			memberRefResolvedReason: ControlPlaneGroupMembersReferenceResolvedReasonResolved,
 		},
 		{
 			name: "2 member, 1 with Konnect Status IDs, 1 without it",
@@ -865,7 +876,9 @@ func TestSetGroupMembers(t *testing.T) {
 				sdk := sdkmocks.NewMockControlPlaneGroupSDK(t)
 				return sdk
 			},
-			expectedErr: true,
+			expectedErr:             true,
+			memberRefResolvedStatus: metav1.ConditionFalse,
+			memberRefResolvedReason: ControlPlaneGroupMembersReferenceResolvedReasonPartialNotResolved,
 		},
 	}
 
@@ -885,6 +898,13 @@ func TestSetGroupMembers(t *testing.T) {
 			}
 			assert.NoError(t, err)
 			assert.True(t, sdk.AssertExpectations(t))
+
+			membersRefResolvedCondition, conditionFound := lo.Find(tc.group.Status.Conditions, func(c metav1.Condition) bool {
+				return c.Type == ControlPlaneGroupMembersReferenceResolvedConditionType
+			})
+			assert.True(t, conditionFound, "Should find MembersReferenceResolved condition")
+			assert.Equal(t, tc.memberRefResolvedStatus, membersRefResolvedCondition.Status, "Should have expected MembersReferenceResolved status")
+			assert.Equal(t, string(tc.memberRefResolvedReason), membersRefResolvedCondition.Reason, "Should have expected MembersReferenceResolved reason")
 		})
 	}
 }
