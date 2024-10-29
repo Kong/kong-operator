@@ -128,6 +128,7 @@ func setGroupMembers(
 	id string,
 	sdkGroups sdkops.ControlPlaneGroupSDK,
 ) error {
+	// REVIEW: should we add MembersReferenceResolved condition for CP groups with 0 members?
 	if len(cp.Spec.Members) == 0 ||
 		cp.Spec.ClusterType == nil ||
 		*cp.Spec.ClusterType != sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup {
@@ -145,17 +146,28 @@ func setGroupMembers(
 			)
 			if err := cl.Get(ctx, nn, &memberCP); err != nil {
 				return sdkkonnectcomp.Members{},
-					fmt.Errorf("failed to get control plane group member %s: %w", member.Name, err)
+					GetControlPlaneGroupMemberFailedError{
+						MemberName: memberCP.Name,
+						Err:        err,
+					}
 			}
 			if memberCP.GetKonnectID() == "" {
 				return sdkkonnectcomp.Members{},
-					fmt.Errorf("control plane group %s member %s has no Konnect ID", cp.Name, member.Name)
+					ControlPlaneGroupMemberNoKonnectIDError{
+						GroupName:  cp.Name,
+						MemberName: memberCP.Name,
+					}
 			}
 			return sdkkonnectcomp.Members{
 				ID: lo.ToPtr(memberCP.GetKonnectID()),
 			}, nil
 		})
 	if err != nil {
+		SetControlPlaneGroupMembersReferenceResolvedConditionFalse(
+			cp,
+			"SomeMemberNotResolved",
+			err.Error(),
+		)
 		return fmt.Errorf("failed to set group members, some members couldn't be found: %w", err)
 	}
 
@@ -165,11 +177,17 @@ func setGroupMembers(
 	}
 	_, err = sdkGroups.PutControlPlanesIDGroupMemberships(ctx, id, &gm)
 	if err != nil {
+		SetControlPlaneGroupMembersReferenceResolvedConditionFalse(
+			cp,
+			"SetGroupMemberFailed",
+			err.Error(),
+		)
 		return fmt.Errorf("failed to set members on control plane group %s: %w",
 			client.ObjectKeyFromObject(cp), err,
 		)
 	}
 
+	SetControlPlaneGroupMembersReferenceResolvedCondition(cp)
 	return nil
 }
 
