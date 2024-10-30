@@ -8,9 +8,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	konnectconsts "github.com/kong/gateway-operator/controller/konnect/consts"
-
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func TestKongConsumerToSDKConsumerInput_Tags(t *testing.T) {
@@ -25,7 +24,7 @@ func TestKongConsumerToSDKConsumerInput_Tags(t *testing.T) {
 			Generation: 2,
 			UID:        k8stypes.UID(uuid.NewString()),
 			Annotations: map[string]string{
-				konnectconsts.AnnotationTags: "tag1,tag2",
+				metadata.AnnotationKeyPlugins: "tag1,tag2",
 			},
 		},
 	}

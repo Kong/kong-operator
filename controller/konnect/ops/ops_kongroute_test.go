@@ -8,10 +8,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	konnectconsts "github.com/kong/gateway-operator/controller/konnect/consts"
-
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func TestKongRouteToSDKRouteInput_Tags(t *testing.T) {
@@ -26,7 +25,7 @@ func TestKongRouteToSDKRouteInput_Tags(t *testing.T) {
 			UID:        k8stypes.UID(uuid.NewString()),
 			Generation: 2,
 			Annotations: map[string]string{
-				konnectconsts.AnnotationTags: "tag1,tag2,duplicate-tag",
+				metadata.AnnotationKeyPlugins: "tag1,tag2,duplicate-tag",
 			},
 		},
 		Spec: configurationv1alpha1.KongRouteSpec{

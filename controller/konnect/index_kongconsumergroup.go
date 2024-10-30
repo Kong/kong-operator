@@ -3,9 +3,8 @@ package konnect
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/pkg/annotations"
-
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 const (
@@ -36,7 +35,7 @@ func kongConsumerGroupReferencesKongPluginsViaAnnotation(object client.Object) [
 	if !ok {
 		return nil
 	}
-	return annotations.ExtractPluginsWithNamespaces(consumerGroup)
+	return metadata.ExtractPluginsWithNamespaces(consumerGroup)
 }
 
 func kongConsumerGroupReferencesKonnectGatewayControlPlane(object client.Object) []string {

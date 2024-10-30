@@ -11,12 +11,12 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	konnectconsts "github.com/kong/gateway-operator/controller/konnect/consts"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
@@ -32,7 +32,7 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 			UID:        k8stypes.UID(uuid.NewString()),
 			Generation: 2,
 			Annotations: map[string]string{
-				konnectconsts.AnnotationTags: "tag1,tag2,duplicate-tag",
+				metadata.AnnotationKeyPlugins: "tag1,tag2,duplicate-tag",
 			},
 		},
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
@@ -63,7 +63,7 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 				Name:      "plugin-1",
 				Namespace: "default",
 				Annotations: map[string]string{
-					konnectconsts.AnnotationTags: "tag3,tag4,duplicate-tag",
+					metadata.AnnotationKeyPlugins: "tag3,tag4,duplicate-tag",
 				},
 			},
 			PluginName: "basic-auth",

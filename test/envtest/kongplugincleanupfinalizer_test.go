@@ -19,6 +19,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func TestKongPluginFinalizer(t *testing.T) {
@@ -59,7 +60,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 
 		wKongService := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
-			deploy.WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
+			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 
 		_ = watchFor(t, ctx, wKongService, watch.Modified,
@@ -91,7 +92,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
 		wKongRoute := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService,
-			deploy.WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
+			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 
 		_ = watchFor(t, ctx, wKongRoute, watch.Modified,
@@ -122,7 +123,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 
 		wKongConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, "username-1", cp,
-			deploy.WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
+			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 
 		_ = watchFor(t, ctx, wKongConsumer, watch.Modified,
@@ -153,7 +154,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 
 		wKongConsumerGroup := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cp,
-			deploy.WithAnnotation(consts.PluginsAnnotationKey, rateLimitingkongPlugin.Name),
+			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 
 		_ = watchFor(t, ctx, wKongConsumerGroup, watch.Modified,

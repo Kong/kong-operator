@@ -28,6 +28,7 @@ import (
 	"github.com/kong/gateway-operator/test/helpers"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func TestKongPluginInstallationEssentials(t *testing.T) {
@@ -325,9 +326,8 @@ func attachKongPluginBasedOnKPIToRoute(t *testing.T, cleaner *clusters.Cleaner, 
 	t.Logf("attaching KongPlugin %s to HTTPRoute %s", kongPluginName, httpRouteNN)
 	require.Eventually(t,
 		testutils.HTTPRouteUpdateEventually(t, GetCtx(), httpRouteNN, clients, func(h *gatewayv1.HTTPRoute) {
-			const kpAnnotation = "konghq.com/plugins"
-			h.Annotations[kpAnnotation] = strings.Join(
-				append(strings.Split(h.Annotations[kpAnnotation], ","), kongPluginName), ",",
+			h.Annotations[metadata.AnnotationKeyPlugins] = strings.Join(
+				append(strings.Split(h.Annotations[metadata.AnnotationKeyPlugins], ","), kongPluginName), ",",
 			)
 		}),
 		time.Minute, 250*time.Millisecond,
