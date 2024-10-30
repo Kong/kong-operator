@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	"github.com/samber/lo"
 	"github.com/samber/mo"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -140,11 +139,11 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		}
 
 		// Do not continue reconciling of the control plane has incompatible cluster type to prevent repeated failure of creation.
-		// Only CLUSTER_TYPE_CONTROL_PLANE and CLUSTER_TYPE_HYBRID are supported.
+		// Only CLUSTER_TYPE_CONTROL_PLANE is supported.
 		// The configuration in control plane group type are read only so they are unsupported to attach entities to them:
 		// https://docs.konghq.com/konnect/gateway-manager/control-plane-groups/#limitations
 		if cp.Spec.ClusterType != nil &&
-			!lo.Contains(compatibleControlPlaneClusterTypes, *cp.Spec.ClusterType) {
+			*cp.Spec.ClusterType != sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane {
 			if res, errStatus := patch.StatusWithCondition(
 				ctx, cl, ent,
 				konnectv1alpha1.ControlPlaneRefValidConditionType,
@@ -230,9 +229,4 @@ func conditionMessageReferenceKonnectAPIAuthConfigurationInvalid(apiAuthRef type
 
 func conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef types.NamespacedName) string {
 	return fmt.Sprintf("referenced KonnectAPIAuthConfiguration %s is valid", apiAuthRef)
-}
-
-var compatibleControlPlaneClusterTypes = []sdkkonnectcomp.ClusterType{
-	sdkkonnectcomp.ClusterTypeClusterTypeControlPlane,
-	sdkkonnectcomp.ClusterTypeClusterTypeHybrid,
 }

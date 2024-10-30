@@ -117,5 +117,5 @@ func getKongCACertificateForUID(
 		return "", fmt.Errorf("failed listing %s: %w", cert.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), cert)
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), cert)
 }

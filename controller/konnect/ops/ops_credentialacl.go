@@ -134,6 +134,7 @@ func getKongCredentialACLForUID(
 	if resp == nil || resp.Object == nil {
 		return "", fmt.Errorf("failed listing %s: %w", cred.GetTypeName(), ErrNilResponse)
 	}
+	x := sliceToEntityWithIDPtrSlice(resp.Object.Data)
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.Object.Data), cred)
+	return getMatchingEntryFromListResponseData(x, cred)
 }

@@ -3256,7 +3256,7 @@ KonnectGatewayControlPlaneSpec defines the desired state of KonnectGatewayContro
 | --- | --- |
 | `name` _string_ | The name of the control plane. |
 | `description` _string_ | The description of the control plane in Konnect. |
-| `cluster_type` _[ClusterType](#clustertype)_ | The ClusterType value of the cluster associated with the Control Plane. |
+| `cluster_type` _[CreateControlPlaneRequestClusterType](#createcontrolplanerequestclustertype)_ | The ClusterType value of the cluster associated with the Control Plane. |
 | `auth_type` _[AuthType](#authtype)_ | The auth type value of the cluster associated with the Runtime Group. |
 | `cloud_gateway` _boolean_ | Whether this control-plane can be used for cloud-gateways. |
 | `proxy_urls` _[ProxyURL](#proxyurl) array_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
