@@ -1,12 +1,13 @@
 package konnect
 
 import (
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 var kongPluginsAnnotationChangedPredicate = predicate.Funcs{
