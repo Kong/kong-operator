@@ -3,9 +3,8 @@ package konnect
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/pkg/annotations"
-
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 const (
@@ -36,7 +35,7 @@ func kongRouteUsesPlugins(object client.Object) []string {
 	if !ok {
 		return nil
 	}
-	return annotations.ExtractPluginsWithNamespaces(route)
+	return metadata.ExtractPluginsWithNamespaces(route)
 }
 
 func kongRouteRefersToKongService(object client.Object) []string {

@@ -25,6 +25,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 // KongPluginReconciler reconciles a KongPlugin object.
@@ -651,7 +652,7 @@ func deleteUnusedKongPluginBindings(
 }
 
 func objHasPluginConfigured(obj client.Object, pluginName string) bool {
-	plugins, ok := obj.GetAnnotations()[consts.PluginsAnnotationKey]
+	plugins, ok := obj.GetAnnotations()[metadata.AnnotationKeyPlugins]
 	if !ok {
 		return false
 	}

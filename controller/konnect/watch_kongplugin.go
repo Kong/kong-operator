@@ -11,11 +11,11 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/pkg/annotations"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 // mapPluginsFromAnnotation enqueue requests for KongPlugins based on
@@ -43,7 +43,7 @@ func mapPluginsFromAnnotation[
 
 		var (
 			namespace = obj.GetNamespace()
-			plugins   = annotations.ExtractPlugins(obj)
+			plugins   = metadata.ExtractPlugins(obj)
 			requests  = make([]ctrl.Request, 0, len(plugins))
 		)
 

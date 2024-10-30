@@ -8,9 +8,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	konnectconsts "github.com/kong/gateway-operator/controller/konnect/consts"
-
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func TestKongCertificateToCertificateInput_Tags(t *testing.T) {
@@ -25,7 +24,7 @@ func TestKongCertificateToCertificateInput_Tags(t *testing.T) {
 			Generation: 2,
 			UID:        k8stypes.UID(uuid.NewString()),
 			Annotations: map[string]string{
-				konnectconsts.AnnotationTags: "tag1,tag2,duplicate",
+				metadata.AnnotationKeyTags: "tag1,tag2,duplicate",
 			},
 		},
 		Spec: configurationv1alpha1.KongCertificateSpec{

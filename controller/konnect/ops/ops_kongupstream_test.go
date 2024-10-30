@@ -14,11 +14,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	konnectconsts "github.com/kong/gateway-operator/controller/konnect/consts"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 func TestCreateKongUpstream(t *testing.T) {
@@ -417,7 +417,7 @@ func TestCreateAndUpdateKongUpstream_KubernetesMetadataConsistency(t *testing.T)
 			UID:        k8stypes.UID(uuid.NewString()),
 			Generation: 2,
 			Annotations: map[string]string{
-				konnectconsts.AnnotationTags: "tag1,tag2,duplicate-tag",
+				metadata.AnnotationKeyTags: "tag1,tag2,duplicate-tag",
 			},
 		},
 		Status: configurationv1alpha1.KongUpstreamStatus{

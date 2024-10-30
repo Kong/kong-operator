@@ -13,18 +13,20 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	v1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
-	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 // ----------------------------------------------------------------------------
 // AIGateway - AI Inference Authentication
 // ----------------------------------------------------------------------------
 
-var aiCloudPRoviderAuthHeaderMapInitializer sync.Once
-var aiCloudProviderAuthHeaders map[v1alpha1.AICloudProviderName]map[string]string
+var (
+	aiCloudPRoviderAuthHeaderMapInitializer sync.Once
+	aiCloudProviderAuthHeaders              map[v1alpha1.AICloudProviderName]map[string]string
+)
 
 func getAuthHeaderForInference(provider v1alpha1.AICloudProvider) (map[string]string, error) {
 	aiCloudPRoviderAuthHeaderMapInitializer.Do(func() {
@@ -196,7 +198,7 @@ func aiCloudGatewayToHTTPRoute(
 			Name:      fmt.Sprintf("%s-egress", aiCloudLLM.Identifier),
 			Namespace: aigateway.Namespace,
 			Annotations: map[string]string{
-				consts.PluginsAnnotationKey: strings.Join(plugins, ","),
+				metadata.AnnotationKeyPlugins: strings.Join(plugins, ","),
 			},
 		},
 		Spec: gatewayv1.HTTPRouteSpec{
