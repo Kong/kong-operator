@@ -205,7 +205,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
-        path: envtest-tests.xml  
+        path: envtest-tests.xml
 
   conformance-tests:
     runs-on: ubuntu-latest
@@ -465,8 +465,7 @@ jobs:
     needs:
       - unit-tests
       - integration-tests
-      # https://github.com/Kong/gateway-operator/issues/11#issuecomment-1514712925
-      # - conformance-tests
+      - conformance-tests
       - e2e-tests
     if: ${{ always() }}
     runs-on: ubuntu-latest
@@ -503,8 +502,9 @@ jobs:
       - install-with-kustomize
       - build
       - unit-tests
+      - envtest-tests
       - samples
-      # - conformance-tests
+      - conformance-tests
       - integration-tests
       - integration-tests-bluegreen
       - integration-tests-provision-fail
