@@ -128,9 +128,7 @@ func setGroupMembers(
 	id string,
 	sdkGroups sdkops.ControlPlaneGroupSDK,
 ) error {
-	// REVIEW: should we add MembersReferenceResolved condition for CP groups with 0 members?
-	if len(cp.Spec.Members) == 0 ||
-		cp.Spec.ClusterType == nil ||
+	if cp.Spec.ClusterType == nil ||
 		*cp.Spec.ClusterType != sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup {
 		return nil
 	}
@@ -214,6 +212,8 @@ func (m membersByID) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 func getControlPlaneForUID(
 	ctx context.Context,
 	sdk sdkops.ControlPlaneSDK,
+	sdkGroups sdkops.ControlPlaneGroupSDK,
+	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) (string, error) {
 	reqList := sdkkonnectops.ListControlPlanesRequest{
@@ -232,5 +232,20 @@ func getControlPlaneForUID(
 		return "", fmt.Errorf("failed listing %s: %w", cp.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.ListControlPlanesResponse.Data), cp)
+	id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.ListControlPlanesResponse.Data), cp)
+	if err != nil {
+		return "", err
+	}
+
+	if err := setGroupMembers(ctx, cl, cp, id, sdkGroups); err != nil {
+		// If we failed to set group membership, we should return a specific error with a reason
+		// so the downstream can handle it properly.
+		return id, KonnectEntityCreatedButRelationsFailedError{
+			KonnectID: id,
+			Err:       err,
+			Reason:    konnectv1alpha1.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
+		}
+	}
+
+	return id, nil
 }

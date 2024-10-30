@@ -111,7 +111,7 @@ func _setControlPlaneGroupMembersReferenceResolvedCondition(
 	reason consts.ConditionReason,
 	msg string,
 ) {
-	if cpGroup.Spec.ClusterType == nil || *cpGroup.Spec.ClusterType != sdkkonnectcomp.ClusterTypeClusterTypeControlPlaneGroup {
+	if cpGroup.Spec.ClusterType == nil || *cpGroup.Spec.ClusterType != sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane {
 		return
 	}
 	k8sutils.SetCondition(
