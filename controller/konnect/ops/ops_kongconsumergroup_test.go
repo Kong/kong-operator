@@ -25,7 +25,7 @@ func TestKongConsumerGroupToSDKConsumerGroupInput_Tags(t *testing.T) {
 			Generation: 2,
 			UID:        k8stypes.UID(uuid.NewString()),
 			Annotations: map[string]string{
-				metadata.AnnotationKeyPlugins: "tag1,tag2",
+				metadata.AnnotationKeyTags: "tag1,tag2",
 			},
 		},
 		Status: configurationv1beta1.KongConsumerGroupStatus{

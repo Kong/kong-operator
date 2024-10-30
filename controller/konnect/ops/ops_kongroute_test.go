@@ -25,7 +25,7 @@ func TestKongRouteToSDKRouteInput_Tags(t *testing.T) {
 			UID:        k8stypes.UID(uuid.NewString()),
 			Generation: 2,
 			Annotations: map[string]string{
-				metadata.AnnotationKeyPlugins: "tag1,tag2,duplicate-tag",
+				metadata.AnnotationKeyTags: "tag1,tag2,duplicate-tag",
 			},
 		},
 		Spec: configurationv1alpha1.KongRouteSpec{

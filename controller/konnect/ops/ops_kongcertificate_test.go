@@ -24,7 +24,7 @@ func TestKongCertificateToCertificateInput_Tags(t *testing.T) {
 			Generation: 2,
 			UID:        k8stypes.UID(uuid.NewString()),
 			Annotations: map[string]string{
-				metadata.AnnotationKeyPlugins: "tag1,tag2,duplicate",
+				metadata.AnnotationKeyTags: "tag1,tag2,duplicate",
 			},
 		},
 		Spec: configurationv1alpha1.KongCertificateSpec{

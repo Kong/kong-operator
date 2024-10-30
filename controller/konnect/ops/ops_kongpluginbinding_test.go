@@ -32,7 +32,7 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 			UID:        k8stypes.UID(uuid.NewString()),
 			Generation: 2,
 			Annotations: map[string]string{
-				metadata.AnnotationKeyPlugins: "tag1,tag2,duplicate-tag",
+				metadata.AnnotationKeyTags: "tag1,tag2,duplicate-tag",
 			},
 		},
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
@@ -63,7 +63,7 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 				Name:      "plugin-1",
 				Namespace: "default",
 				Annotations: map[string]string{
-					metadata.AnnotationKeyPlugins: "tag3,tag4,duplicate-tag",
+					metadata.AnnotationKeyTags: "tag3,tag4,duplicate-tag",
 				},
 			},
 			PluginName: "basic-auth",
