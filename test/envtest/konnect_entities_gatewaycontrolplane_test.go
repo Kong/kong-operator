@@ -222,6 +222,9 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			assert.True(t, conditionsContainProgrammedTrue(cpGroup.Status.Conditions),
 				"Programmed condition should be set and it status should be true",
 			)
+			assert.True(t, conditionsContainMembersRefResolvedTrue(cpGroup.Status.Conditions),
+				"MembersReferenceResolved condition should be set and it status should be true",
+			)
 			assert.True(t, controllerutil.ContainsFinalizer(cpGroup, konnect.KonnectCleanupFinalizer),
 				"Finalizer should be set on control plane group",
 			)
@@ -367,6 +370,9 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			assert.True(t, conditionsContainProgrammedFalse(cpGroup.Status.Conditions),
 				"Programmed condition should be set and its status should be false because of an error returned by Konnect API when setting group members",
 			)
+			assert.True(t, conditionsContainMembersRefResolvedFalse(cpGroup.Status.Conditions),
+				"MembersReferenceResolved condition should be set and it status should be false",
+			)
 			assert.True(t, controllerutil.ContainsFinalizer(cpGroup, konnect.KonnectCleanupFinalizer),
 				"Finalizer should be set on control plane group",
 			)
@@ -448,6 +454,122 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 		},
 	},
+	{
+		name: "receiving HTTP Conflict 409 on creation for creating control plane group should have members set",
+		objectOps: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) {
+			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
+			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
+				func(obj client.Object) {
+					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+					cp.Name = "cp-5"
+					cp.Spec.Name = "cp-5"
+				},
+			)
+
+			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
+				func(obj client.Object) {
+					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+					cp.Name = "cp-group-1"
+					cp.Spec.Name = "cp-group-1"
+					cp.Spec.ClusterType = lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup)
+					cp.Spec.Members = []corev1.LocalObjectReference{
+						{Name: "cp-5"},
+					}
+				},
+			)
+		},
+
+		mockExpectations: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
+			sdk.ControlPlaneSDK.EXPECT().
+				CreateControlPlane(
+					mock.Anything,
+					mock.MatchedBy(func(req sdkkonnectcomp.CreateControlPlaneRequest) bool {
+						return req.Name == "cp-5"
+					}),
+				).
+				Return(
+					&sdkkonnectops.CreateControlPlaneResponse{
+						ControlPlane: &sdkkonnectcomp.ControlPlane{
+							ID: "123456",
+						},
+					}, nil,
+				)
+
+			sdk.ControlPlaneSDK.EXPECT().
+				CreateControlPlane(
+					mock.Anything,
+					mock.MatchedBy(func(req sdkkonnectcomp.CreateControlPlaneRequest) bool {
+						return req.Name == "cp-group-1"
+					}),
+				).
+				Return(
+					nil,
+					&sdkkonnecterrs.ConflictError{},
+				)
+
+			sdk.ControlPlaneSDK.EXPECT().
+				ListControlPlanes(
+					mock.Anything,
+					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
+						var cp konnectv1alpha1.KonnectGatewayControlPlane
+						require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: "cp-group-1"}, &cp))
+						// On conflict, we list cps by UID and check if there is already one created.
+						return r.Labels != nil && *r.Labels == ops.KubernetesUIDLabelKey+":"+string(cp.UID)
+					}),
+				).
+				Return(
+					&sdkkonnectops.ListControlPlanesResponse{
+						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
+							Data: []sdkkonnectcomp.ControlPlane{
+								{
+									ID: "group-123456",
+								},
+							},
+						},
+					},
+					nil,
+				)
+
+			sdk.ControlPlaneGroupSDK.EXPECT().PutControlPlanesIDGroupMemberships(
+				mock.Anything,
+				"group-123456",
+				&sdkkonnectcomp.GroupMembership{
+					Members: []sdkkonnectcomp.Members{
+						{
+							ID: lo.ToPtr("123456"),
+						},
+					},
+				},
+			).Return(&sdkkonnectops.PutControlPlanesIDGroupMembershipsResponse{}, nil)
+
+			// verify that mock SDK is called as expected.
+			t.Cleanup(func() {
+				require.True(t, sdk.ControlPlaneSDK.AssertExpectations(t))
+			})
+		},
+
+		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
+			cpGroup := &konnectv1alpha1.KonnectGatewayControlPlane{}
+			if !assert.NoError(t,
+				cl.Get(ctx,
+					k8stypes.NamespacedName{
+						Namespace: ns.Name,
+						Name:      "cp-group-1",
+					},
+					cpGroup,
+				),
+			) {
+				return
+			}
+
+			assert.Equal(t, "group-123456", cpGroup.Status.ID, "ID should be set")
+			assert.True(t, conditionsContainProgrammedTrue(cpGroup.Status.Conditions),
+				"Programmed condition should be set and its status should be true",
+			)
+			assert.True(t, conditionsContainMembersRefResolvedTrue(cpGroup.Status.Conditions),
+				"MembersRefernceResolved condition should be set and its status should be true")
+		},
+	},
 }
 
 func conditionsContainProgrammed(conds []metav1.Condition, status metav1.ConditionStatus) bool {
@@ -465,4 +587,21 @@ func conditionsContainProgrammedFalse(conds []metav1.Condition) bool {
 
 func conditionsContainProgrammedTrue(conds []metav1.Condition) bool {
 	return conditionsContainProgrammed(conds, metav1.ConditionTrue)
+}
+
+func conditionsContainMembersRefResolved(conds []metav1.Condition, status metav1.ConditionStatus) bool {
+	return lo.ContainsBy(conds,
+		func(condition metav1.Condition) bool {
+			return condition.Type == ops.ControlPlaneGroupMembersReferenceResolvedConditionType &&
+				condition.Status == status
+		},
+	)
+}
+
+func conditionsContainMembersRefResolvedFalse(conds []metav1.Condition) bool {
+	return conditionsContainMembersRefResolved(conds, metav1.ConditionFalse)
+}
+
+func conditionsContainMembersRefResolvedTrue(conds []metav1.Condition) bool {
+	return conditionsContainMembersRefResolved(conds, metav1.ConditionTrue)
 }

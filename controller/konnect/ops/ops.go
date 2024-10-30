@@ -109,7 +109,7 @@ func Create[
 		var id string
 		switch ent := any(e).(type) {
 		case *konnectv1alpha1.KonnectGatewayControlPlane:
-			id, err = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), ent)
+			id, err = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 		case *configurationv1alpha1.KongService:
 			id, err = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
 		case *configurationv1alpha1.KongRoute:
