@@ -66,8 +66,6 @@ const (
 	// ControlPlaneGroupMembersReferenceResolvedConditionType sets the condition for control plane groups
 	// to show whether all of its members are programmed and attached to the group.
 	ControlPlaneGroupMembersReferenceResolvedConditionType = "MembersReferenceResolved"
-	// ControlPlaneGroupMembersReferenceResolvedReasonNoMembers indicates that there are no members specified in the control plane group.
-	ControlPlaneGroupMembersReferenceResolvedReasonNoMembers consts.ConditionReason = "NoMembers"
 	// ControlPlaneGroupMembersReferenceResolvedReasonResolved indicates that all members of the control plane group
 	// are created and attached to the group in Konnect.
 	ControlPlaneGroupMembersReferenceResolvedReasonResolved consts.ConditionReason = "Resolved"
