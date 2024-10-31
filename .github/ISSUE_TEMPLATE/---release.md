@@ -17,13 +17,14 @@ If the troubleshooting section does not contain the answer to the problem you en
 - [ ] Check the `CHANGELOG.md` and update it with the new version number. Make sure the log is up to date.
 - [ ] Ensure that all generators have run properly (e.g. `make generate manifests`) so that updates to things like CRDs are handled for the release, double check that all manifests from `config/samples/` still work as intended.
 - [ ] Ensure GitHub PAT is still valid (see [GitHub PAT](#github-pat) below).
-- [ ] If the new release is a new major/minor then branch off of `main` and create a branch `release/N.M.x`, e.g. 
 - [ ] From [GitHub release action][release-action], start a new workflow run:
   - Set the `Use workflow from` to the release branch: e.g. `release/1.2.x`
   - Set the `release` input set to the target version (e.g. `v1.2.0`).
 - [ ] Wait for the workflow to complete.
-- [ ] The CI should create a PR in the [Gateway Operator][kgo-prs] repo that syncs the release branch to the base branch (either `main` or `release/N.M.x`, e.g. `release/1.2.x`) branch. Merge it.
-- [ ] After the PR is merged, a new release should be created automatically. Check the [releases][releases] page. The release has to be marked manually as `latest` if this is the case.
+- [ ] The CI should create a PR in the [Gateway Operator][kgo-prs] repo that bumps KGO version in VERSION file and manifests. Merge it.
+- [ ] After the PR is merged, [release-bot][release-bot-workflow] workflow will be triggered. It will create a new GH release, as well as a release branch (if not patch or prerelease):
+  - [ ] Check the [releases][releases] page. The release has to be marked manually as `latest` if this is the case.
+  - [ ] Check the `release/N.M.x` release branch exists.
 - [ ] Update the official documentation at [github.com/Kong/docs.konghq.com][docs_repo]
   - [ ] Run post processing script for `docs/api-reference.md`, providing a tagged version of CRD reference from docs repo as an argument, e.g. `app/_src/gateway-operator/reference/custom-resources/1.2.x.md`.
     This will add the necessary skaffolding so that the reference is rendered correctly on docs.konghq.com.
@@ -48,6 +49,7 @@ If the troubleshooting section does not contain the answer to the problem you en
 [docs_repo]: https://github.com/Kong/docs.konghq.com/
 [cli_ref_docs]: https://docs.konghq.com/gateway-operator/latest/reference/cli-arguments/
 [helm_upgrade_test]: https://github.com/Kong/gateway-operator/blob/9f33d27ab875b91e50d7e750b45a293c1395da2d/test/e2e/test_upgrade.go
+[release-bot-workflow]: ../workflows/release-bot.yaml
 
 ## Verify default hardcoded versions
 
