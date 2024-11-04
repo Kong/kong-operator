@@ -41,8 +41,8 @@ If the troubleshooting section does not contain the answer to the problem you en
 
 **Only for major and minor releases**:
 
-- [ ] When the release tag is created add a test case in [upgrade E2E test][helm_upgrade_test] with just published tag so that an upgrade path from previous major/minor version is tested.
-  - [ ] When the release contains breaking changes which precludes an automated upgrade make sure to add a comment to this test for future readers.
+- [ ] After the release tag is created, bump the `fromVersion` in the `upgrade from one before latest to latest minor` [upgrade E2E test][helm_upgrade_test] to the one before the latest minor release.
+- [ ] When the release contains breaking changes which precludes an automated upgrade make sure this is documented in the release notes and the Helm chart's [UPGRADE.md][helm-chart-upgrade].
 - [ ] Schedule a retro meeting and invite the team. Link the invite in the [retro notes](https://docs.google.com/document/d/15gDtl425zyttbDwA8qQrh5yBgTD5OpnhjOquqfSJUx4/edit#heading=h.biunbyheelys)
 
 
@@ -50,6 +50,7 @@ If the troubleshooting section does not contain the answer to the problem you en
 [cli_ref_docs]: https://docs.konghq.com/gateway-operator/latest/reference/cli-arguments/
 [helm_upgrade_test]: https://github.com/Kong/gateway-operator/blob/9f33d27ab875b91e50d7e750b45a293c1395da2d/test/e2e/test_upgrade.go
 [release-bot-workflow]: ../workflows/release-bot.yaml
+[helm-chart-upgrade]: https://github.com/Kong/charts/blob/main/charts/gateway-operator/UPGRADE.md
 
 ## Verify default hardcoded versions
 
