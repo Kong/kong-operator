@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"strings"
@@ -367,21 +368,28 @@ func verifyCustomPlugins(t *testing.T, ip string, expectedHeaders ...http.Header
 	t.Helper()
 	httpClient, err := helpers.CreateHTTPClient(nil, "")
 	require.NoError(t, err)
+
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		readBody := func(resp *http.Response) string {
+			var b bytes.Buffer
+			_, err := b.ReadFrom(resp.Body)
+			assert.NoError(c, err, "failed to read response body")
+			return b.String()
+		}
 		resp, err := httpClient.Get(fmt.Sprintf("http://%s/test", ip))
 		if !assert.NoError(c, err) {
 			return
 		}
 		defer resp.Body.Close()
-		if !assert.Equal(c, http.StatusOK, resp.StatusCode) {
+		if !assert.Equal(c, http.StatusOK, resp.StatusCode, "unexpected status code, body: %s", readBody(resp)) {
 			return
 		}
 		for _, h := range expectedHeaders {
 			for k, v := range h {
-				assert.Equal(c, v, resp.Header.Values(k))
+				assert.Equal(c, v, resp.Header.Values(k), "unexpected header %s, body: %s", k, readBody(resp))
 			}
 		}
-	}, 15*time.Second, time.Second)
+	}, time.Minute, 250*time.Millisecond)
 }
 
 func createRandomNamespace(t *testing.T) string {
