@@ -663,10 +663,19 @@ func TestSetGroupMembers(t *testing.T) {
 			},
 			sdk: func(t *testing.T) *sdkmocks.MockControlPlaneGroupSDK {
 				sdk := sdkmocks.NewMockControlPlaneGroupSDK(t)
+				sdk.EXPECT().
+					PutControlPlanesIDGroupMemberships(
+						mock.Anything,
+						"cpg-12345",
+						&sdkkonnectcomp.GroupMembership{
+							Members: []sdkkonnectcomp.Members{},
+						},
+					).
+					Return(&sdkkonnectops.PutControlPlanesIDGroupMembershipsResponse{}, nil)
 				return sdk
 			},
-			memberRefResolvedStatus: metav1.ConditionFalse,
-			memberRefResolvedReason: ControlPlaneGroupMembersReferenceResolvedReasonNoMembers,
+			memberRefResolvedStatus: metav1.ConditionTrue,
+			memberRefResolvedReason: ControlPlaneGroupMembersReferenceResolvedReasonResolved,
 		},
 		{
 			name: "1 member with Konnect Status ID",
