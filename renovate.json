@@ -3,6 +3,7 @@
   "extends": [
     "config:recommended"
   ],
+  "ignorePaths": [],
   "enabledManagers": [
     "custom.regex",
     "kustomize"
@@ -40,10 +41,11 @@
       "datasourceTemplate": "docker",
       "fileMatch": [
         "^pkg/consts/dataplane\\.go$",
-        "^internal/versions/controlplane\\.go$"
+        "^internal/versions/controlplane\\.go$",
+        "^test/e2e/test_helm_install_upgrade\\.go$"
       ],
       "matchStrings": [
-        ".+\\s+=\\s+\"(?<currentValue>.+)\"\\s+//\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+depName=(?<depName>.+)"
+        ".+\\s?[=:]\\s+\"(?<currentValue>.+?)\",?\\s+//\\s+renovate:\\s+datasource=(?<datasource>.*?)\\s+(packageName=(?<packageName>.*)\\s+)?depName=(?<depName>.*)"
       ]
     }
   ],
@@ -52,6 +54,16 @@
       "description": "Strip kustomize/ version prefix",
       "matchPackageNames": ["kubernetes-sigs/kustomize"],
       "extractVersion": "^kustomize/(?<version>.*)$"
+    },
+    {
+      "description": "Ignore minor updates if depName has `@only-patch` suffix.",
+      "matchUpdateTypes": [
+        "minor"
+      ],
+      "enabled": false,
+      "matchDepNames": [
+        "/.*@only-patch/"
+      ]
     }
   ]
 }

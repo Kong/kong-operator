@@ -63,11 +63,9 @@ func TestHelmUpgrade(t *testing.T) {
 		assertionsAfterUpgrade []assertion
 	}{
 		{
-			name: "upgrade from one before latest to latest minor",
-			// TODO: use renovate to bump the version in these 2 lines.
-			// https://github.com/Kong/gateway-operator/issues/121
-			fromVersion: "1.3.0",
-			toVersion:   "1.4.0",
+			name:        "upgrade from one before latest to latest minor",
+			fromVersion: "1.3.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss depName=kong/gateway-operator-oss@only-patch
+			toVersion:   "1.4.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -137,10 +135,8 @@ func TestHelmUpgrade(t *testing.T) {
 			},
 		},
 		{
-			name: "upgrade from latest minor to current",
-			// TODO: use renovate to bump the version below
-			// https://github.com/Kong/gateway-operator/issues/121
-			fromVersion:      "1.4.0",
+			name:             "upgrade from latest minor to current",
+			fromVersion:      "1.4.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
 			upgradeToCurrent: true,
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
