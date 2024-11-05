@@ -96,7 +96,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		if err := r.prunePreviewSubresources(ctx, &dataplane); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed pruning preview DataPlane subresources: %w", err)
 		}
-		log.Trace(logger, "no Rollout with BlueGreen strategy specified, delegating to DataPlaneReconciler", req)
+		log.Trace(logger, "no Rollout with BlueGreen strategy specified, delegating to DataPlaneReconciler")
 		return r.DataPlaneController.Reconcile(ctx, req)
 	}
 
@@ -150,7 +150,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil
 	}
 
-	log.Trace(logger, "ensuring mTLS certificate", dataplane)
+	log.Trace(logger, "ensuring mTLS certificate")
 	res, certSecret, err := ensureDataPlaneCertificate(ctx, r.Client, &dataplane,
 		types.NamespacedName{
 			Namespace: r.ClusterCASecretNamespace,
@@ -165,7 +165,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 	if res != op.Noop {
-		log.Debug(logger, "mTLS certificate created/updated", dataplane)
+		log.Debug(logger, "mTLS certificate created/updated")
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
@@ -200,7 +200,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if deployment.Status.Replicas == 0 ||
 		deployment.Status.AvailableReplicas != deployment.Status.Replicas ||
 		deployment.Status.ReadyReplicas != deployment.Status.Replicas {
-		log.Trace(logger, "preview deployment for DataPlane not ready yet", dataplane)
+		log.Trace(logger, "preview deployment for DataPlane not ready yet")
 		err := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutProgressing, consts.DataPlaneConditionMessageRolledOutPreviewDeploymentNotYetReady)
 		return ctrl.Result{}, err
 	}
@@ -211,7 +211,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if proceedWithPromotion, err := canProceedWithPromotion(dataplane); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed checking if DataPlane %s/%s can be promoted: %w", dataplane.Namespace, dataplane.Name, err)
 	} else if !proceedWithPromotion {
-		log.Debug(logger, "DataPlane preview resources cannot be promoted yet or is awaiting promotion trigger", dataplane,
+		log.Debug(logger, "DataPlane preview resources cannot be promoted yet or is awaiting promotion trigger",
 			"promotion_strategy", dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen.Promotion.Strategy)
 
 		err := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutAwaitingPromotion, "")
@@ -232,7 +232,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutPromotionFailed, "failed to update DataPlane's selector")
 		return ctrl.Result{}, fmt.Errorf("failed to update DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
 	} else if updated {
-		log.Debug(logger, "preview deployment selector assigned to a live selector, promotion in progress", dataplane)
+		log.Debug(logger, "preview deployment selector assigned to a live selector, promotion in progress")
 		return ctrl.Result{}, nil
 	}
 
@@ -252,7 +252,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed waiting for live %q service to have the expected selector: %w", serviceType, err)
 		} else if !ok {
-			log.Debug(logger, fmt.Sprintf("%q live service do not have the expected selector yet, delegating to DP controller", serviceType), dataplane)
+			log.Debug(logger, fmt.Sprintf("%q live service does not have the expected selector yet, delegating to DP controller", serviceType))
 			return r.DataPlaneController.Reconcile(ctx, req)
 		}
 	}
@@ -266,7 +266,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutPromotionFailed, "failed to label DataPlane's preview Deployment for promotion")
 			return ctrl.Result{}, fmt.Errorf("failed to ensure preview deployment becomes live %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
 		} else if updated {
-			log.Trace(logger, "preview deployment labeled as live", dataplane)
+			log.Trace(logger, "preview deployment labeled as live")
 		}
 
 		// We can clear the selector in RolloutStatus which will cause next
@@ -293,7 +293,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, fmt.Errorf("failed to reduce live deployments: %w", err)
 	}
 
-	log.Debug(logger, "BlueGreen reconciliation complete for DataPlane resource", dataplane)
+	log.Debug(logger, "BlueGreen reconciliation complete for DataPlane resource")
 	return ctrl.Result{}, nil
 }
 
@@ -341,7 +341,7 @@ func shouldDelegateToDataPlaneController(
 		cReady.ObservedGeneration == cRolledOut.ObservedGeneration &&
 		cReady.ObservedGeneration == dataplane.Generation {
 		if cRolledOut.Reason == string(consts.DataPlaneConditionReasonRolloutWaitingForChange) {
-			log.Debug(logger, "DataPlane is up to date, waiting for changes, delegating to DataPlaneReconciler", dataplane)
+			log.Debug(logger, "DataPlane is up to date, waiting for changes, delegating to DataPlaneReconciler")
 			return true
 		}
 	}
@@ -352,7 +352,7 @@ func shouldDelegateToDataPlaneController(
 	// the DataPlane with the current spec which would cause the rollout to progress
 	// which is what the promotion does.
 	if cReady.Status == metav1.ConditionFalse && cReady.ObservedGeneration == dataplane.Generation {
-		log.Debug(logger, "DataPlane is not ready yet to proceed with BlueGreen rollout, delegating to DataPlaneReconciler", dataplane)
+		log.Debug(logger, "DataPlane is not ready yet to proceed with BlueGreen rollout, delegating to DataPlaneReconciler")
 		return true
 	}
 
@@ -385,7 +385,7 @@ func (r *BlueGreenReconciler) prunePreviewSubresources(
 		return err
 	}
 	if len(deployments) > 0 {
-		log.Debug(logger, "removing preview Deployments", dataplane)
+		log.Debug(logger, "removing preview Deployments")
 		if err := removeObjectSliceWithDataPlaneOwnedFinalizer(ctx, r.Client, deployments); err != nil {
 			return err
 		}
@@ -419,13 +419,13 @@ func (r *BlueGreenReconciler) prunePreviewSubresources(
 			return err
 		}
 
-		log.Debug(logger, "removing preview Secrets", dataplane)
+		log.Debug(logger, "removing preview Secrets")
 		if err := removeObjectSliceWithDataPlaneOwnedFinalizer(ctx, r.Client, secrets); err != nil {
 			return err
 		}
 	}
 	if len(services) > 0 {
-		log.Debug(logger, "removing preview Services", dataplane)
+		log.Debug(logger, "removing preview Services")
 		if err := removeObjectSliceWithDataPlaneOwnedFinalizer(ctx, r.Client, services); err != nil {
 			return err
 		}
@@ -510,11 +510,11 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 
 	switch res {
 	case op.Created, op.Updated:
-		log.Debug(logger, "deployment modified", dataplane, "reason", res)
+		log.Debug(logger, "deployment modified", "reason")
 		// requeue will be triggered by the creation or update of the owned object
 		return deployment, res, nil
 	default:
-		log.Debug(logger, "no need for deployment update", dataplane)
+		log.Debug(logger, "no need for deployment update")
 		return deployment, op.Noop, nil
 	}
 }
@@ -567,8 +567,9 @@ func (r *BlueGreenReconciler) reduceLiveDeployments(
 	})
 	// Delete all but the last deployment.
 	for _, deployment := range deployments[:len(deployments)-1] {
-		log.Debug(logger, "reducing live deployment", dataPlane,
-			"deployment", fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name))
+		log.Debug(logger, "reducing live deployment",
+			"deployment", client.ObjectKeyFromObject(&deployment),
+		)
 
 		if err := dataplane.OwnedObjectPreDeleteHook(ctx, r.Client, &deployment); err != nil {
 			return fmt.Errorf("failed executing pre delete hook: %w", err)
@@ -700,7 +701,7 @@ func (r *BlueGreenReconciler) ensureDataPlaneAdminAPIInRolloutStatus(
 // It returns a bool flag indicating that the status has been patched and an error.
 func (r *BlueGreenReconciler) patchRolloutStatus(ctx context.Context, logger logr.Logger, old, updated *operatorv1beta1.DataPlane) (bool, error) {
 	if rolloutStatusChanged(old, updated) {
-		log.Debug(logger, "patching DataPlane status", updated, "status", updated.Status)
+		log.Debug(logger, "patching DataPlane status", "status", updated.Status)
 		return true, r.Client.Status().Patch(ctx, updated, client.MergeFrom(old))
 	}
 
@@ -752,9 +753,9 @@ func (r *BlueGreenReconciler) ensurePreviewAdminAPIService(
 
 	switch res {
 	case op.Created, op.Updated:
-		log.Debug(logger, "preview admin service modified", dataplane, "service", svc.Name, "reason", res)
+		log.Debug(logger, "preview admin service modified", "service", svc.Name, "reason", res)
 	case op.Noop:
-		log.Trace(logger, "no need for preview Admin API service update", dataplane)
+		log.Trace(logger, "no need for preview Admin API service update")
 	case op.Deleted:
 	}
 	return res, svc, nil // dataplane admin service creation/update will trigger reconciliation
@@ -785,9 +786,9 @@ func (r *BlueGreenReconciler) ensurePreviewIngressService(
 
 	switch res {
 	case op.Created, op.Updated:
-		log.Debug(logger, "preview ingress service modified", dataplane, "service", svc.Name, "reason", res)
+		log.Debug(logger, "preview ingress service modified", "service", svc.Name, "reason", res)
 	case op.Noop:
-		log.Trace(logger, "no need for preview ingress service update", dataplane)
+		log.Trace(logger, "no need for preview ingress service update")
 	case op.Deleted:
 	}
 
@@ -912,8 +913,7 @@ func (r *BlueGreenReconciler) ensurePreviewDeploymentLabeledLive(
 	// It shouldn't happen in practice, but we'll log it just in case.
 	if len(deployments) > 1 {
 		ds := lo.Map(deployments, func(d appsv1.Deployment, _ int) string { return fmt.Sprintf("%s/%s", d.Namespace, d.Name) })
-		log.Info(logger, "found multiple preview deployments, expected one, will label live only the first one",
-			dataplane, "deployments", ds)
+		log.Info(logger, "found multiple preview deployments, expected one, will label live only the first one", "deployments", ds)
 	}
 
 	deployment := deployments[0]

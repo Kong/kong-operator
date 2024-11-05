@@ -87,7 +87,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "kongplugininstallation", r.DevelopmentMode)
 
-	log.Trace(logger, "reconciling KongPluginInstallation resource", req)
+	log.Trace(logger, "reconciling KongPluginInstallation resource")
 	var kpi v1alpha1.KongPluginInstallation
 	if err := r.Client.Get(ctx, req.NamespacedName, &kpi); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -98,10 +98,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	log.Trace(logger, "managing KongPluginInstallation resource", kpi)
+	log.Trace(logger, "managing KongPluginInstallation resource")
 	var credentialsStore credentials.Store
 	if kpi.Spec.ImagePullSecretRef != nil {
-		log.Trace(logger, "getting secret for KongPluginInstallation resource", kpi)
+		log.Trace(logger, "getting secret for KongPluginInstallation resource")
 		kpiNamespace := gatewayv1.Namespace(kpi.Namespace)
 		imagePullSecretRef := kpi.Spec.ImagePullSecretRef
 		ref.EnsureNamespaceInSecretRef(imagePullSecretRef, kpiNamespace)
@@ -148,7 +148,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	log.Trace(logger, "fetch plugin for KongPluginInstallation resource", kpi)
+	log.Trace(logger, "fetch plugin for KongPluginInstallation resource")
 	plugin, err := image.FetchPlugin(ctx, kpi.Spec.Image, credentialsStore)
 	if err != nil {
 		return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, fmt.Sprintf("problem with the image: %q error: %s", kpi.Spec.Image, err))

@@ -241,7 +241,6 @@ func enqueueKongPluginBindingFor[
 				logger,
 				fmt.Errorf("unsupported entity type %s in KongPluginBinding watch", constraints.EntityTypeName[T]()),
 				"unsupported entity type",
-				ent,
 			)
 			return nil
 
@@ -259,7 +258,6 @@ func enqueueKongPluginBindingFor[
 				logger,
 				err,
 				"failed to list KongPluginBindings referencing %ss", constraints.EntityTypeName[T](),
-				ent,
 			)
 			return nil
 		}

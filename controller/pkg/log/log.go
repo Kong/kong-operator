@@ -2,6 +2,7 @@ package log
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -10,27 +11,43 @@ import (
 )
 
 // Info logs a message at the info level.
-func Info[T any](log logr.Logger, msg string, rawObj T, keysAndValues ...interface{}) {
-	_log(log, logging.InfoLevel, msg, rawObj, keysAndValues...)
+func Info(logger logr.Logger, msg string, keysAndValues ...interface{}) {
+	_log(logger, logging.InfoLevel, msg, keysAndValues...)
 }
 
 // Debug logs a message at the debug level.
-func Debug[T any](log logr.Logger, msg string, rawObj T, keysAndValues ...interface{}) {
-	_log(log, logging.DebugLevel, msg, rawObj, keysAndValues...)
+func Debug(logger logr.Logger, msg string, keysAndValues ...interface{}) {
+	_log(logger, logging.DebugLevel, msg, keysAndValues...)
 }
 
 // Trace logs a message at the trace level.
-func Trace[T any](log logr.Logger, msg string, rawObj T, keysAndValues ...interface{}) {
-	_log(log, logging.TraceLevel, msg, rawObj, keysAndValues...)
+func Trace(logger logr.Logger, msg string, keysAndValues ...interface{}) {
+	_log(logger, logging.TraceLevel, msg, keysAndValues...)
 }
 
 // Error logs a message at the error level.
-func Error[T any](log logr.Logger, err error, msg string, rawObj T, keysAndValues ...interface{}) {
-	log.Error(err, msg, keysAndValues...)
+func Error(logger logr.Logger, err error, msg string, keysAndValues ...interface{}) {
+	if !oddKeyValues(logger, msg, keysAndValues...) {
+		return
+	}
+	logger.Error(err, msg, keysAndValues...)
 }
 
-func _log[T any](log logr.Logger, level logging.Level, msg string, rawObj T, keysAndValues ...interface{}) { //nolint:unparam
-	log.V(level.Value()).Info(msg, keysAndValues...)
+func _log(logger logr.Logger, level logging.Level, msg string, keysAndValues ...interface{}) {
+	if !oddKeyValues(logger, msg, keysAndValues...) {
+		return
+	}
+	logger.V(level.Value()).
+		Info(msg, keysAndValues...)
+}
+
+func oddKeyValues(logger logr.Logger, msg string, keysAndValues ...interface{}) bool {
+	if len(keysAndValues)%2 != 0 {
+		err := fmt.Errorf("log message has odd number of arguments")
+		logger.Error(err, msg)
+		return false
+	}
+	return true
 }
 
 // GetLogger returns a configured instance of logger.

@@ -273,7 +273,7 @@ func shouldUpdate[
 		timeFromLastUpdate <= syncPeriod {
 		requeueAfter := syncPeriod - timeFromLastUpdate
 		log.Debug(ctrllog.FromContext(ctx),
-			"no need for update, requeueing after configured sync period", ent,
+			"no need for update, requeueing after configured sync period",
 			"last_update", condProgrammed.LastTransitionTime.Time.String(),
 			"time_from_last_update", timeFromLastUpdate.String(),
 			"requeue_after", requeueAfter.String(),

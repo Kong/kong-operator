@@ -140,7 +140,7 @@ func ensureDataPlaneReadyStatus(
 
 	switch len(deployments) {
 	case 0:
-		log.Debug(logger, "Deployment for DataPlane not present yet", dataplane)
+		log.Debug(logger, "Deployment for DataPlane not present yet")
 
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
@@ -168,13 +168,13 @@ func ensureDataPlaneReadyStatus(
 	case 1: // Expect just 1.
 
 	default: // More than 1.
-		log.Info(logger, "expected only 1 Deployment for DataPlane", dataplane)
+		log.Info(logger, "expected only 1 Deployment for DataPlane")
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	deployment := deployments[0]
 	if _, ready := isDeploymentReady(deployment.Status); !ready {
-		log.Debug(logger, "Deployment for DataPlane not ready yet", dataplane)
+		log.Debug(logger, "Deployment for DataPlane not ready yet")
 
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
@@ -201,7 +201,7 @@ func ensureDataPlaneReadyStatus(
 
 	switch len(services) {
 	case 0:
-		log.Debug(logger, "Ingress Service for DataPlane not present", dataplane)
+		log.Debug(logger, "Ingress Service for DataPlane not present")
 
 		// Set Ready to false for dataplane as the Service is not ready yet.
 		k8sutils.SetCondition(
@@ -224,13 +224,13 @@ func ensureDataPlaneReadyStatus(
 	case 1: // Expect just 1.
 
 	default: // More than 1.
-		log.Info(logger, "expected only 1 ingress Service for DataPlane", dataplane)
+		log.Info(logger, "expected only 1 ingress Service for DataPlane")
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	ingressService := services[0]
 	if !dataPlaneIngressServiceIsReady(&ingressService) {
-		log.Debug(logger, "Ingress Service for DataPlane not ready yet", dataplane)
+		log.Debug(logger, "Ingress Service for DataPlane not ready yet")
 
 		// Set Ready to false for dataplane as the Service is not ready yet.
 		k8sutils.SetCondition(

@@ -158,7 +158,7 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) Reconcile(
 	}
 
 	ctx = ctrllog.IntoContext(ctx, logger)
-	log.Debug(logger, "reconciling", ent)
+	log.Debug(logger, "reconciling")
 
 	cl := client.NewNamespacedClient(r.Client, ent.GetNamespace())
 	kongPluginBindingList := configurationv1alpha1.KongPluginBindingList{}
@@ -183,7 +183,7 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) Reconcile(
 				}
 				return ctrl.Result{}, err
 			}
-			log.Debug(logger, "KongPluginBinding deleted", kpb)
+			log.Debug(logger, "KongPluginBinding deleted")
 		}
 		// in case no KongPluginBindings are referencing the entity, but it has the finalizer,
 		// we need to remove the finalizer.
@@ -216,7 +216,7 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) Reconcile(
 			}
 			return ctrl.Result{}, err
 		}
-		log.Debug(logger, "finalizers changed", ent,
+		log.Debug(logger, "finalizers changed",
 			"action", finalizersChangedAction,
 			"finalizer", consts.CleanupPluginBindingFinalizer,
 		)

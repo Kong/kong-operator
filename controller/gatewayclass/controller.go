@@ -43,13 +43,13 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "gatewayclass", r.DevelopmentMode)
 
-	log.Trace(logger, "reconciling gatewayclass resource", req)
+	log.Trace(logger, "reconciling gatewayclass resource")
 
 	gwc := gatewayclass.NewDecorator()
 	if err := r.Client.Get(ctx, req.NamespacedName, gwc.GatewayClass); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Debug(logger, "processing gatewayclass", gwc.GatewayClass)
+	log.Debug(logger, "processing gatewayclass")
 
 	if !gwc.IsControlled() {
 		return ctrl.Result{}, nil
@@ -70,7 +70,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		)
 		if err := r.Status().Patch(ctx, gwc.GatewayClass, client.MergeFrom(oldGwc)); err != nil {
 			if k8serrors.IsConflict(err) {
-				log.Debug(logger, "conflict found when updating GatewayClass, retrying", gwc.GatewayClass)
+				log.Debug(logger, "conflict found when updating GatewayClass, retrying")
 				return ctrl.Result{
 					Requeue:      true,
 					RequeueAfter: controller.RequeueWithoutBackoff,

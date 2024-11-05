@@ -28,7 +28,7 @@ func ApplyPatchIfNotEmpty[
 	kind := existingResource.GetObjectKind().GroupVersionKind().Kind
 
 	if !updated {
-		log.Trace(logger, "No need for update", existingResource, kind, existingResource.GetName())
+		log.Trace(logger, "No need for update", "kind", kind, "name", existingResource.GetName())
 		return op.Noop, existingResource, nil
 	}
 
@@ -41,7 +41,7 @@ func ApplyPatchIfNotEmpty[
 	}
 	// Only perform the patch operation if the resulting patch is non empty.
 	if len(b) == 0 || bytes.Equal(b, []byte("{}")) {
-		log.Trace(logger, "No need for update", existingResource, kind, existingResource.GetName())
+		log.Trace(logger, "No need for update", "kind", kind, "name", existingResource.GetName())
 		return op.Noop, existingResource, nil
 	}
 
@@ -49,7 +49,7 @@ func ApplyPatchIfNotEmpty[
 		var t T
 		return op.Noop, t, fmt.Errorf("failed patching %s %s: %w", kind, existingResource.GetName(), err)
 	}
-	log.Debug(logger, "Resource modified", existingResource, kind, existingResource.GetName())
+	log.Debug(logger, "Resource modified", "kind", kind, "name", existingResource.GetName())
 	return op.Updated, existingResource, nil
 }
 
@@ -74,7 +74,7 @@ func ApplyStatusPatchIfNotEmpty[
 	}
 	// Only perform the patch operation if the resulting patch is non empty.
 	if len(b) == 0 || bytes.Equal(b, []byte("{}")) {
-		log.Trace(logger, "No need for status patch", existing)
+		log.Trace(logger, "No need for status patch")
 		return op.Noop, nil
 	}
 
@@ -83,6 +83,6 @@ func ApplyStatusPatchIfNotEmpty[
 			existing, client.ObjectKeyFromObject(existing), err,
 		)
 	}
-	log.Debug(logger, "Resource modified", existing)
+	log.Debug(logger, "Resource modified")
 	return op.Updated, nil
 }
