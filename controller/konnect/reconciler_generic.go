@@ -142,7 +142,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		logger = logger.WithValues("konnect_id", id)
 	}
 	ctx = ctrllog.IntoContext(ctx, logger)
-	log.Debug(logger, "reconciling", ent)
+	log.Debug(logger, "reconciling")
 
 	// If a type has a ControlPlane ref, handle it.
 	res, err := handleControlPlaneRef(ctx, r.Client, ent)
@@ -212,7 +212,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 						}
 						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 					}
-					log.Debug(logger, "finalizer removed as the owning KongConsumer is being deleted or is already gone", ent,
+					log.Debug(logger, "finalizer removed as the owning KongConsumer is being deleted or is already gone",
 						"finalizer", KonnectCleanupFinalizer,
 					)
 				}
@@ -252,7 +252,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 						}
 						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 					}
-					log.Debug(logger, "finalizer removed as the owning KongUpstream is being deleted or is already gone", ent,
+					log.Debug(logger, "finalizer removed as the owning KongUpstream is being deleted or is already gone",
 						"finalizer", KonnectCleanupFinalizer,
 					)
 				}
@@ -291,7 +291,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 						}
 						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 					}
-					log.Debug(logger, "finalizer removed as the owning KongCertificate is being deleted or is already gone", ent,
+					log.Debug(logger, "finalizer removed as the owning KongCertificate is being deleted or is already gone",
 						"finalizer", KonnectCleanupFinalizer,
 					)
 				}
@@ -329,7 +329,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 						}
 						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 					}
-					log.Debug(logger, "finalizer removed as the owning KongKeySet is being deleted or is already gone", ent,
+					log.Debug(logger, "finalizer removed as the owning KongKeySet is being deleted or is already gone",
 						"finalizer", KonnectCleanupFinalizer,
 					)
 					return ctrl.Result{}, nil

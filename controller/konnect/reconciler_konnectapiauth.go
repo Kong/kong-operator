@@ -98,7 +98,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		logger         = log.GetLogger(ctx, entityTypeName, r.developmentMode)
 	)
 
-	log.Debug(logger, "reconciling", apiAuth)
+	log.Debug(logger, "reconciling")
 	if !apiAuth.GetDeletionTimestamp().IsZero() {
 		logger.Info("resource is being deleted")
 		// wait for termination grace period before cleaning up

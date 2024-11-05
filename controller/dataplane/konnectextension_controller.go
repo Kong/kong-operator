@@ -112,7 +112,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{}, err
 		}
 
-		log.Info(logger, "KonnectExtension finalizer updated", konnectExtension)
+		log.Info(logger, "KonnectExtension finalizer updated")
 	}
 
 	return ctrl.Result{}, nil

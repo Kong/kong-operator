@@ -159,12 +159,12 @@ func populateDedicatedConfigMapForKongPluginInstallation(
 		Namespace: kpi.Namespace,
 		Name:      kpi.Status.UnderlyingConfigMapName,
 	}
-	log.Trace(logger, fmt.Sprintf("Fetch underlying ConfigMap %s for KongPluginInstallation", backingCMNN), kpi)
+	log.Trace(logger, fmt.Sprintf("Fetch underlying ConfigMap %s for KongPluginInstallation", backingCMNN))
 	if err := c.Get(ctx, backingCMNN, &underlyingCM); err != nil {
 		return customPlugin{}, false, fmt.Errorf("could not fetch underlying ConfigMap to clone %s: %w", backingCMNN, err)
 	}
 
-	log.Trace(logger, "Find ConfigMap mapped to KongPluginInstallation", kpi)
+	log.Trace(logger, "Find ConfigMap mapped to KongPluginInstallation")
 	mappedConfigMapForKPI := lo.Filter(cms, func(cm corev1.ConfigMap, _ int) bool {
 		kpiNN := cm.Annotations[consts.AnnotationMappedToKongPluginInstallation]
 		return kpiNN == client.ObjectKeyFromObject(&kpi).String()
@@ -172,7 +172,7 @@ func populateDedicatedConfigMapForKongPluginInstallation(
 	var cm corev1.ConfigMap
 	switch len(mappedConfigMapForKPI) {
 	case 0:
-		log.Trace(logger, "Create new ConfigMap for KongPluginInstallation", kpi)
+		log.Trace(logger, "Create new ConfigMap for KongPluginInstallation")
 		cm.GenerateName = dataplane.Name + "-"
 		cm.Namespace = dataplane.Namespace
 		k8sutils.SetOwnerForObject(&cm, dataplane)
@@ -183,12 +183,12 @@ func populateDedicatedConfigMapForKongPluginInstallation(
 			return customPlugin{}, false, fmt.Errorf("could not create new ConfigMap for KongPluginInstallation: %w", err)
 		}
 	case 1:
-		log.Trace(logger, fmt.Sprintf("Check if update existing ConfigMap %s for KongPluginInstallation", client.ObjectKeyFromObject(&cm)), kpi)
+		log.Trace(logger, fmt.Sprintf("Check if update existing ConfigMap %s for KongPluginInstallation", client.ObjectKeyFromObject(&cm)))
 		cm = mappedConfigMapForKPI[0]
 		if maps.Equal(cm.Data, underlyingCM.Data) {
-			log.Trace(logger, fmt.Sprintf("Nothing to update in existing ConfigMap %s for KongPluginInstallation", client.ObjectKeyFromObject(&cm)), kpi)
+			log.Trace(logger, fmt.Sprintf("Nothing to update in existing ConfigMap %s for KongPluginInstallation", client.ObjectKeyFromObject(&cm)))
 		} else {
-			log.Trace(logger, fmt.Sprintf("Update existing ConfigMap %s for KongPluginInstallation", client.ObjectKeyFromObject(&cm)), kpi)
+			log.Trace(logger, fmt.Sprintf("Update existing ConfigMap %s for KongPluginInstallation", client.ObjectKeyFromObject(&cm)))
 			cm.Data = underlyingCM.Data
 			if err := c.Update(ctx, &cm); err != nil {
 				if k8serrors.IsConflict(err) {
@@ -382,7 +382,7 @@ func patchDataPlaneStatus(ctx context.Context, cl client.Client, logger logr.Log
 		current.Status.Service != updated.Status.Service ||
 		current.Status.Selector != updated.Status.Selector {
 
-		log.Debug(logger, "patching DataPlane status", updated, "status", updated.Status)
+		log.Debug(logger, "patching DataPlane status", "status", updated.Status)
 		return true, cl.Status().Patch(ctx, updated, client.MergeFrom(current))
 	}
 

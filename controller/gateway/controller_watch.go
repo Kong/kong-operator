@@ -230,9 +230,9 @@ func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj cli
 
 		if _, err := gatewayclass.Get(ctx, r.Client, string(gateway.Spec.GatewayClassName)); err != nil {
 			if errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{}) {
-				log.Debug(logger, "gateway class not supported, ignoring", gateway)
+				log.Debug(logger, "gateway class not supported, ignoring")
 			} else {
-				log.Error(logger, err, "failed to get Gateway's GatewayClass", gateway,
+				log.Error(logger, err, "failed to get Gateway's GatewayClass",
 					"gatewayClass", objKey.Name,
 					"gateway", gateway.Name,
 					"namespace", gateway.Namespace,

@@ -100,7 +100,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	log.Debug(logger, "reconciling", kongPlugin)
+	log.Debug(logger, "reconciling")
 	clientWithNamespace := client.NewNamespacedClient(r.client, kongPlugin.Namespace)
 	kongPluginNN := client.ObjectKeyFromObject(&kongPlugin)
 
@@ -195,7 +195,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				if err = clientWithNamespace.Create(ctx, kongPluginBinding); err != nil {
 					return ctrl.Result{}, fmt.Errorf("failed to create KongPluginBinding: %w", err)
 				}
-				log.Debug(logger, "Managed KongPluginBinding created", kongPluginBinding)
+				log.Debug(logger, "Managed KongPluginBinding created")
 
 			case 1:
 				existing := kpbList[0]
@@ -214,13 +214,13 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to update KongPluginBinding: %w", err)
 				}
-				log.Debug(logger, "Managed KongPluginBinding updated", kongPluginBinding)
+				log.Debug(logger, "Managed KongPluginBinding updated")
 
 			default:
 				if err := k8sreduce.ReduceKongPluginBindings(ctx, clientWithNamespace, kpbList); err != nil {
 					return ctrl.Result{}, fmt.Errorf("failed to reduce KongPluginBindings: %w", err)
 				}
-				log.Info(logger, "deleted duplicated KongPluginBindings for KongPlugin", kongPlugin)
+				log.Info(logger, "deleted duplicated KongPluginBindings for KongPlugin")
 			}
 
 		}
@@ -239,7 +239,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				}
 				return ctrl.Result{}, err
 			}
-			log.Debug(logger, "KongPlugin finalizer added", kongPlugin, "finalizer", consts.PluginInUseFinalizer)
+			log.Debug(logger, "KongPlugin finalizer added", "finalizer", consts.PluginInUseFinalizer)
 			return ctrl.Result{}, nil
 		}
 	} else {
@@ -250,12 +250,12 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				}
 				return ctrl.Result{}, err
 			}
-			log.Debug(logger, "KongPlugin finalizer removed", kongPlugin, "finalizer", consts.PluginInUseFinalizer)
+			log.Debug(logger, "KongPlugin finalizer removed", "finalizer", consts.PluginInUseFinalizer)
 			return ctrl.Result{}, nil
 		}
 	}
 
-	log.Debug(logger, "reconciliation completed", kongPlugin)
+	log.Debug(logger, "reconciliation completed")
 	return ctrl.Result{}, nil
 }
 
@@ -338,7 +338,7 @@ func deleteKongPluginBindings(
 			}
 			return err
 		}
-		log.Info(logger, "KongPluginBinding deleted", pb)
+		log.Info(logger, "KongPluginBinding deleted")
 	}
 	return nil
 }

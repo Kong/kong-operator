@@ -342,7 +342,7 @@ func reconcileDataPlaneDeployment(
 		}
 		if updated {
 			diff := cmp.Diff(original.Spec.Template, desired.Spec.Template, opts...)
-			log.Trace(logger, "DataPlane Deployment diff detected", dataplane, "diff", diff)
+			log.Trace(logger, "DataPlane Deployment diff detected", "diff", diff)
 		}
 
 		return patch.ApplyPatchIfNotEmpty(ctx, cl, logger, existing, original, updated)
@@ -352,6 +352,6 @@ func reconcileDataPlaneDeployment(
 		return op.Noop, nil, fmt.Errorf("failed creating Deployment for DataPlane %s: %w", dataplane.Name, err)
 	}
 
-	log.Debug(logger, "deployment for DataPlane created", dataplane, "deployment", desired.Name)
+	log.Debug(logger, "deployment for DataPlane created", "deployment", desired.Name)
 	return op.Created, desired, nil
 }

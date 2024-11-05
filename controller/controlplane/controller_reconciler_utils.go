@@ -240,7 +240,7 @@ func (r *Reconciler) ensureDeployment(
 		return op.Noop, nil, fmt.Errorf("failed creating ControlPlane Deployment %s: %w", generatedDeployment.Name, err)
 	}
 
-	log.Debug(logger, "deployment for ControlPlane created", params.ControlPlane, "deployment", generatedDeployment.Name)
+	log.Debug(logger, "deployment for ControlPlane created", "deployment", generatedDeployment.Name)
 	return op.Created, generatedDeployment, nil
 }
 
@@ -431,7 +431,6 @@ func (r *Reconciler) ensureClusterRoleBinding(
 		// Delete and re-create ClusterRoleBinding if name of ClusterRole changed because RoleRef is immutable.
 		if !k8sresources.CompareClusterRoleName(existing, clusterRoleName) {
 			log.Debug(logger, "ClusterRole name changed, delete and re-create a ClusterRoleBinding",
-				existing,
 				"old_cluster_role", existing.RoleRef.Name,
 				"new_cluster_role", clusterRoleName,
 			)
@@ -865,7 +864,7 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 		}
 
 		if updated {
-			log.Debug(logger, "patching existing ValidatingWebhookConfiguration", webhookConfiguration)
+			log.Debug(logger, "patching existing ValidatingWebhookConfiguration")
 			return op.Updated, r.Client.Patch(ctx, &webhookConfiguration, client.MergeFrom(old))
 		}
 

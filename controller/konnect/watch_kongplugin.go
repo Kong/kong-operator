@@ -36,7 +36,7 @@ func mapPluginsFromAnnotation[
 			logger := log.GetLogger(ctx, entityTypeName, devMode)
 			log.Error(logger,
 				fmt.Errorf("cannot cast object to %s", entityTypeName),
-				fmt.Sprintf("%s mapping handler", entityTypeName), obj,
+				fmt.Sprintf("%s mapping handler", entityTypeName),
 			)
 			return []ctrl.Request{}
 		}
@@ -64,7 +64,10 @@ func (r *KongPluginReconciler) mapKongPluginBindings(ctx context.Context, obj cl
 	logger := log.GetLogger(ctx, "KongPlugin", r.developmentMode)
 	kongPluginBinding, ok := obj.(*configurationv1alpha1.KongPluginBinding)
 	if !ok {
-		log.Error(logger, errors.New("cannot cast object to KongPluginBinding"), "KongPluginBinding mapping handler", obj)
+		log.Error(logger,
+			errors.New("cannot cast object to KongPluginBinding"),
+			"KongPluginBinding mapping handler",
+		)
 		return []ctrl.Request{}
 	}
 
