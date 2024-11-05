@@ -342,7 +342,7 @@ func reconcileDataPlaneDeployment(
 		}
 		if updated {
 			diff := cmp.Diff(original.Spec.Template, desired.Spec.Template, opts...)
-			log.Trace(logger, "Deployment diff detected", diff)
+			log.Trace(logger, "DataPlane Deployment diff detected", dataplane, "diff", diff)
 		}
 
 		return patch.ApplyPatchIfNotEmpty(ctx, cl, logger, existing, original, updated)
