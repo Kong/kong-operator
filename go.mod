@@ -11,7 +11,7 @@ toolchain go1.23.2
 retract v1.2.2
 
 require (
-	github.com/Kong/sdk-konnect-go v0.1.3
+	github.com/Kong/sdk-konnect-go v0.1.5
 	github.com/Masterminds/semver v1.5.0
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/go-logr/logr v1.4.2
