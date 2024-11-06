@@ -43,7 +43,7 @@ If the troubleshooting section does not contain the answer to the problem you en
 
 - [ ] After the release tag is created, bump the `fromVersion` in the `upgrade from one before latest to latest minor` [upgrade E2E test][helm_upgrade_test] to the one before the latest minor release.
 - [ ] When the release contains breaking changes which precludes an automated upgrade make sure this is documented in the release notes and the Helm chart's [UPGRADE.md][helm-chart-upgrade].
-- [ ] Schedule a retro meeting. Invite the team (team-kubernetes@konghq.com) and a Product Manager. Link the invite in the [retro notes](https://docs.google.com/document/d/15gDtl425zyttbDwA8qQrh5yBgTD5OpnhjOquqfSJUx4/edit#heading=h.biunbyheelys)
+- [ ] Schedule a retro meeting. Invite the team (team-kubernetes@konghq.com) and a Product Manager. Remember to link to [retro notes](https://docs.google.com/document/d/15gDtl425zyttbDwA8qQrh5yBgTD5OpnhjOquqfSJUx4/edit#heading=h.biunbyheelys) in the invite description
 
 
 [docs_repo]: https://github.com/Kong/docs.konghq.com/
