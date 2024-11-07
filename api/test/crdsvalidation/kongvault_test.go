@@ -49,7 +49,7 @@ func TestKongVault(t *testing.T) {
 				ExpectedUpdateErrorMessage: lo.ToPtr("controlPlaneRef is required once set"),
 			},
 			{
-				Name: "control plane is immutable once programmed",
+				Name: "control plane is immutable once programmed (non-empty -> non-empty)",
 				TestObject: &configurationv1alpha1.KongVault{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongVaultSpec{
@@ -82,6 +82,64 @@ func TestKongVault(t *testing.T) {
 					}
 				},
 				ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
+			},
+			{
+				Name: "control plane is immutable once programmed (empty -> non-empty)",
+				TestObject: &configurationv1alpha1.KongVault{
+					ObjectMeta: commonObjectMeta,
+					Spec: configurationv1alpha1.KongVaultSpec{
+						Backend: "aws",
+						Prefix:  "aws-vault",
+					},
+					Status: configurationv1alpha1.KongVaultStatus{
+						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+							ControlPlaneID: "konnect-1",
+						},
+						Conditions: []metav1.Condition{
+							{
+								Type:               "Programmed",
+								Status:             metav1.ConditionTrue,
+								ObservedGeneration: 1,
+								Reason:             "Programmed",
+								LastTransitionTime: metav1.Now(),
+							},
+						},
+					},
+				},
+				Update: func(v *configurationv1alpha1.KongVault) {
+					v.Spec.ControlPlaneRef = &configurationv1alpha1.ControlPlaneRef{
+						Type:      configurationv1alpha1.ControlPlaneRefKonnectID,
+						KonnectID: lo.ToPtr("konnect"),
+					}
+				},
+				ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
+			},
+			{
+				Name: "programmed object can be updated when no controlPlaneRef set",
+				TestObject: &configurationv1alpha1.KongVault{
+					ObjectMeta: commonObjectMeta,
+					Spec: configurationv1alpha1.KongVaultSpec{
+						Backend: "aws",
+						Prefix:  "aws-vault",
+					},
+					Status: configurationv1alpha1.KongVaultStatus{
+						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+							ControlPlaneID: "konnect-1",
+						},
+						Conditions: []metav1.Condition{
+							{
+								Type:               "Programmed",
+								Status:             metav1.ConditionTrue,
+								ObservedGeneration: 1,
+								Reason:             "Programmed",
+								LastTransitionTime: metav1.Now(),
+							},
+						},
+					},
+				},
+				Update: func(v *configurationv1alpha1.KongVault) {
+					v.Spec.Backend = "aws-2"
+				},
 			},
 		}.Run(t)
 	})
