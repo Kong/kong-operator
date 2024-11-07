@@ -28,7 +28,7 @@ func TestKongRoute(t *testing.T) {
 						},
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.NamespacedServiceRef{
+							NamespacedRef: &configurationv1alpha1.KongObjectRef{
 								Name: "test-konnect-service",
 							},
 						},
@@ -226,7 +226,7 @@ func TestKongRoute(t *testing.T) {
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type:          configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.NamespacedServiceRef{Name: "svc"},
+							NamespacedRef: &configurationv1alpha1.KongObjectRef{Name: "svc"},
 						},
 						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 							Paths: []string{"/"},
@@ -241,7 +241,7 @@ func TestKongRoute(t *testing.T) {
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type:          configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.NamespacedServiceRef{Name: "svc"},
+							NamespacedRef: &configurationv1alpha1.KongObjectRef{Name: "svc"},
 						},
 						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 							Protocols: []sdkkonnectcomp.RouteProtocols{"http"},
@@ -257,7 +257,7 @@ func TestKongRoute(t *testing.T) {
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type:          configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.NamespacedServiceRef{Name: "svc"},
+							NamespacedRef: &configurationv1alpha1.KongObjectRef{Name: "svc"},
 						},
 						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 							Protocols: []sdkkonnectcomp.RouteProtocols{"http"},
@@ -278,7 +278,7 @@ func TestKongRoute(t *testing.T) {
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.NamespacedServiceRef{
+							NamespacedRef: &configurationv1alpha1.KongObjectRef{
 								Name: "test-konnect-service",
 							},
 						},
@@ -287,6 +287,39 @@ func TestKongRoute(t *testing.T) {
 						},
 					},
 				},
+			},
+			{
+				Name: "NamespacedRef reference is invalid when empty name is provided",
+				TestObject: &configurationv1alpha1.KongRoute{
+					ObjectMeta: commonObjectMeta,
+					Spec: configurationv1alpha1.KongRouteSpec{
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type: configurationv1alpha1.ServiceRefNamespacedRef,
+							NamespacedRef: &configurationv1alpha1.KongObjectRef{
+								Name: "",
+							},
+						},
+						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+							Paths: []string{"/"},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.serviceRef.namespacedRef.name in body should be at least 1 chars long"),
+			},
+			{
+				Name: "NamespacedRef reference is invalid when name is not provided",
+				TestObject: &configurationv1alpha1.KongRoute{
+					ObjectMeta: commonObjectMeta,
+					Spec: configurationv1alpha1.KongRouteSpec{
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type: configurationv1alpha1.ServiceRefNamespacedRef,
+						},
+						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+							Paths: []string{"/"},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("when type is namespacedRef, namespacedRef must be set"),
 			},
 			{
 				Name: "not providing namespacedRef when type is namespacedRef yields an error",
@@ -310,7 +343,7 @@ func TestKongRoute(t *testing.T) {
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.NamespacedServiceRef{
+							NamespacedRef: &configurationv1alpha1.KongObjectRef{
 								Name: "test-konnect-service",
 							},
 						},
@@ -341,7 +374,7 @@ func TestKongRoute(t *testing.T) {
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.NamespacedServiceRef{
+							NamespacedRef: &configurationv1alpha1.KongObjectRef{
 								Name: "test-konnect-service",
 							},
 						},
@@ -363,7 +396,7 @@ func TestKongRoute(t *testing.T) {
 				Update: func(ks *configurationv1alpha1.KongRoute) {
 					ks.Spec.ServiceRef.Type = "otherRef"
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.serviceRef is immutable when an entity is already Programmed"),
+				ExpectedUpdateErrorMessage: lo.ToPtr("Unsupported value: \"otherRef\": supported values: \"namespacedRef\""),
 			},
 		}.Run(t)
 	})
