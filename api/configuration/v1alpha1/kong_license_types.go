@@ -15,6 +15,7 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Enabled",type=boolean,JSONPath=`.enabled`,description="Enabled to configure on Kong gateway instances"
+// +apireference:kic:include
 // +apireference:kgo:include
 type KongLicense struct {
 	metav1.TypeMeta   `json:",inline"`
