@@ -15,8 +15,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/toml v1.3.2/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/Kong/sdk-konnect-go v0.1.3 h1:WuQohGceIkhl7FMpHCPvE3p26ab/oH5xqgNbbX0UURs=
-github.com/Kong/sdk-konnect-go v0.1.3/go.mod h1:ipu67aQNnwDzu/LXKePG46cVqkkZnAHKWpsbhTEI8xE=
+github.com/Kong/sdk-konnect-go v0.1.5 h1:LkkL0kMA2Fe21H9gY9FIYHthNDlmfbp3+bLuMwd2cy4=
+github.com/Kong/sdk-konnect-go v0.1.5/go.mod h1:ipu67aQNnwDzu/LXKePG46cVqkkZnAHKWpsbhTEI8xE=
 github.com/Masterminds/semver v1.5.0 h1:H65muMkzWKEuNDnfl9d70GUjFniHKHRbFPGBuZ3QEww=
 github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
@@ -218,8 +218,8 @@ github.com/klauspost/compress v1.17.9 h1:6KIumPrER1LHsvBVuDa0r5xaG0Es51mhhB9BQB2
 github.com/klauspost/compress v1.17.9/go.mod h1:Di0epgTjJY877eYKx5yC51cX2A2Vl2ibi7bDH9ttBbw=
 github.com/kong/go-kong v0.59.1 h1:AJZtyCD+Zyqe/mF/m+x3/qN/GPVxAH7jq9zGJTHRfjc=
 github.com/kong/go-kong v0.59.1/go.mod h1:8Vt6HmtgLNgL/7bSwAlz3DIWqBtzG7qEt9+OnMiQOa0=
-github.com/kong/kubernetes-configuration v0.0.40 h1:Y4g/PsB8g5QRzzjTU8QHGle617cUmLvpYXQOKUrI06M=
-github.com/kong/kubernetes-configuration v0.0.40/go.mod h1:UJ6RL9ddyQ3+IA6NKmOD7NyVOTPQD61GIWZIQJ2LV94=
+github.com/kong/kubernetes-configuration v0.0.41 h1:ELdPFCpN8+VmWU2eEL8kj+8PzaMYYAlKfVJDXA13pTw=
+github.com/kong/kubernetes-configuration v0.0.41/go.mod h1:zo835UJG2Rd9M8OcdkrbbelHLXsjh8fg71P77PZX2iU=
 github.com/kong/kubernetes-telemetry v0.1.7 h1:R4NUpvbF5uZ+5kgSQsIcf/oulRBGQCHsffFRDE4wxV4=
 github.com/kong/kubernetes-telemetry v0.1.7/go.mod h1:USy5pcD1+Mm9NtKuz3Pb/rSx71VN76gHCFhdbAB4/lg=
 github.com/kong/kubernetes-testing-framework v0.47.2 h1:+2Z9anTpbV/hwNeN+NFQz53BMU+g3QJydkweBp3tULo=
