@@ -890,3 +890,40 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 		})
 	}
 }
+
+func TestSetDefaultsPodTemplateSpec(t *testing.T) {
+	testcases := []struct {
+		Name     string
+		Patch    *corev1.PodTemplateSpec
+		Expected corev1.PodTemplateSpec
+	}{
+		{
+			Name: "serivce account name is copied to deprecated field",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					ServiceAccountName: "account",
+				},
+			},
+			Expected: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					ServiceAccountName:       "account",
+					DeprecatedServiceAccount: "account",
+					// NOTE: below set fields are irrelevant for the test
+					// but are set by SetDefaultsPodTemplateSpec regardless.
+					RestartPolicy:                 corev1.RestartPolicyAlways,
+					DNSPolicy:                     corev1.DNSClusterFirst,
+					SchedulerName:                 corev1.DefaultSchedulerName,
+					TerminationGracePeriodSeconds: lo.ToPtr(int64(30)),
+					SecurityContext:               &corev1.PodSecurityContext{},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.Name, func(t *testing.T) {
+			SetDefaultsPodTemplateSpec(tc.Patch)
+			assert.Equal(t, tc.Expected, *tc.Patch)
+		})
+	}
+}

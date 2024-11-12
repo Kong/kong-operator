@@ -58,6 +58,10 @@ func SetDefaultsPodTemplateSpec(pts *corev1.PodTemplateSpec) {
 		return
 	}
 
+	// NOTE: copy the service account name to the deprecated field as the
+	// API server does that itself.
+	pts.Spec.DeprecatedServiceAccount = pts.Spec.ServiceAccountName
+
 	pkgapiscorev1.SetDefaults_PodSpec(&pts.Spec)
 	for i := range pts.Spec.Volumes {
 		SetDefaultsVolume(&pts.Spec.Volumes[i])
