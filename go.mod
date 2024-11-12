@@ -25,7 +25,7 @@ require (
 	github.com/samber/lo v1.47.0
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/mod v0.21.0
+	golang.org/x/mod v0.22.0
 	k8s.io/api v0.31.2
 	k8s.io/apimachinery v0.31.2
 	k8s.io/client-go v0.31.2
