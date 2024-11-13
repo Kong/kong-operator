@@ -32,6 +32,7 @@ import (
 
 // KongIngress is the Schema for the kongingresses API.
 // +apireference:kic:include
+// +kong:channels=ingress-controller
 type KongIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

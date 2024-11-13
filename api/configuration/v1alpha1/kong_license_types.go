@@ -17,6 +17,8 @@ import (
 // +kubebuilder:printcolumn:name="Enabled",type=boolean,JSONPath=`.enabled`,description="Enabled to configure on Kong gateway instances"
 // +apireference:kic:include
 // +apireference:kgo:include
+// +apireference:kic:include
+// +kong:channels=ingress-controller;gateway-operator
 type KongLicense struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

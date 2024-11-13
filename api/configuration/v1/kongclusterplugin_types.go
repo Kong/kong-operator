@@ -40,6 +40,7 @@ import (
 
 // KongClusterPlugin is the Schema for the kongclusterplugins API.
 // +apireference:kic:include
+// +kong:channels=ingress-controller
 type KongClusterPlugin struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

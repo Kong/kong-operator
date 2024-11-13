@@ -53,6 +53,7 @@ func init() {
 // +kubebuilder:validation:XValidation:rule="has(self.spec.healthchecks) && has(self.spec.healthchecks.passive) && has(self.spec.healthchecks.passive.unhealthy) ? !has(self.spec.healthchecks.passive.unhealthy.interval) : true", message="spec.healthchecks.passive.unhealthy.interval must not be set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) && has(self.spec.hashOn.cookie) ? !has(self.spec.hashOnFallback) : true", message="spec.hashOnFallback must not be set when spec.hashOn.cookie is set."
 // +apireference:kic:include
+// +kong:channels=ingress-controller
 type KongUpstreamPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

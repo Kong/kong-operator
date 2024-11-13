@@ -40,6 +40,7 @@ import (
 // +kubebuilder:validation:XValidation:rule="self.plugin == oldSelf.plugin", message="The plugin field is immutable"
 // +apireference:kgo:include
 // +apireference:kic:include
+// +kong:channels=ingress-controller;gateway-operator
 type KongPlugin struct {
 	metav1.TypeMeta `json:",inline"`
 	// Setting a `global` label to `true` will apply the plugin to every request proxied by the Kong.

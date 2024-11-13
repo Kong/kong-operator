@@ -44,6 +44,7 @@ type IngressClassParametersList struct {
 
 // IngressClassParameters is the Schema for the IngressClassParameters API.
 // +apireference:kic:include
+// +kong:channels=ingress-controller
 type IngressClassParameters struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

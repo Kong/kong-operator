@@ -28,6 +28,7 @@ func init() {
 // +kubebuilder:resource:categories=kong-ingress-controller
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
+// +kong:channels=ingress-controller-incubator
 type KongServiceFacade struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
