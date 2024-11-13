@@ -55,7 +55,7 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.
 	kongConfVersion, err := testutil.ExtractModuleVersion(testutil.KubernetesConfigurationModuleName)
 	require.NoError(t, err)
 	kongCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "kong", "kubernetes-configuration@"+kongConfVersion, "config", "crd")
-	kongBaseCRDPath := kongCRDPath + "/bases"
+	kongBaseCRDPath := kongCRDPath + "/gateway-operator"
 	// we do not deal with incubator resources here, so we only install base CRDs.
 	t.Logf("install Kong CRDs from path %s", kongCRDPath)
 	_, err = envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
