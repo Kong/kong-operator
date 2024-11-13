@@ -1,9 +1,6 @@
 module github.com/kong/gateway-operator
 
 go 1.22.7
-
-toolchain go1.23.2
-
 // 1.2.2 was released on main branch with a breaking change that was not
 // intended to be released in 1.2.x:
 // https://github.com/Kong/gateway-operator/commit/3876430e09e61edce58bd8464989e33236bd1872
@@ -17,7 +14,7 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-containerregistry v0.20.2
 	github.com/google/uuid v1.6.0
-	github.com/kong/kubernetes-configuration v0.0.41
+	github.com/kong/kubernetes-configuration v0.0.43
 	github.com/kong/kubernetes-telemetry v0.1.7
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
