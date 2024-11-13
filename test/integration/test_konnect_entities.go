@@ -56,7 +56,7 @@ func TestKonnectEntities(t *testing.T) {
 		deploy.WithTestIDLabel(testID),
 	)
 
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp))
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
 
 	t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
@@ -83,7 +83,7 @@ func TestKonnectEntities(t *testing.T) {
 			kr.Spec.KongRouteAPISpec.Paths = []string{"/kr-" + testID}
 		},
 	)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kr))
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kr.DeepCopy()))
 
 	t.Logf("Waiting for KongRoute to be updated with Konnect ID")
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
@@ -179,7 +179,7 @@ func TestKonnectEntities(t *testing.T) {
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	// Should delete KongTarget because it will block deletion of KongUpstream owning it.
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kt))
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kt.DeepCopy()))
 
 	kv := deploy.KongVaultAttachedToCP(t, ctx, clientNamespaced, "env", "env-vault", []byte(`{"prefix":"env-vault"}`), cp)
 	t.Logf("Waiting for KongVault to be updated with Konnect ID")
