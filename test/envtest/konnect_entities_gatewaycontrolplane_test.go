@@ -144,7 +144,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					&sdkkonnectcomp.GroupMembership{
 						Members: []sdkkonnectcomp.Members{
 							{
-								ID: lo.ToPtr("12345"),
+								ID: "12345",
 							},
 						},
 					},
@@ -287,7 +287,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					&sdkkonnectcomp.GroupMembership{
 						Members: []sdkkonnectcomp.Members{
 							{
-								ID: lo.ToPtr("12345"),
+								ID: "12345",
 							},
 						},
 					},
@@ -516,7 +516,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					&sdkkonnectcomp.GroupMembership{
 						Members: []sdkkonnectcomp.Members{
 							{
-								ID: lo.ToPtr("123456"),
+								ID: "123456",
 							},
 						},
 					},

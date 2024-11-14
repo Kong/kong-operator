@@ -95,8 +95,8 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 				ControlPlaneID:              cp.GetKonnectStatus().GetKonnectID(),
 				ConsumerIDForNestedEntities: consumerID,
 				BasicAuthWithoutParents: sdkkonnectcomp.BasicAuthWithoutParents{
-					Password: lo.ToPtr(password),
-					Username: lo.ToPtr(username),
+					Password: password,
+					Username: username,
 					Tags:     tags,
 				},
 			},

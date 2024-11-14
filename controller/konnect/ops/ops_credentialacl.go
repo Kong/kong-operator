@@ -106,7 +106,7 @@ func kongCredentialACLToACLWithoutParents(
 	cred *configurationv1alpha1.KongCredentialACL,
 ) sdkkonnectcomp.ACLWithoutParents {
 	return sdkkonnectcomp.ACLWithoutParents{
-		Group: lo.ToPtr(cred.Spec.Group),
+		Group: cred.Spec.Group,
 		Tags:  GenerateTagsForObject(cred, cred.Spec.Tags...),
 	}
 }

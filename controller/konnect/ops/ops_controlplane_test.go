@@ -166,7 +166,7 @@ func TestCreateControlPlane(t *testing.T) {
 					PutControlPlanesIDGroupMemberships(ctx, cpgID, &sdkkonnectcomp.GroupMembership{
 						Members: []sdkkonnectcomp.Members{
 							{
-								ID: lo.ToPtr(cpID),
+								ID: cpID,
 							},
 						},
 					}).
@@ -235,7 +235,7 @@ func TestCreateControlPlane(t *testing.T) {
 					PutControlPlanesIDGroupMemberships(ctx, cpgID, &sdkkonnectcomp.GroupMembership{
 						Members: []sdkkonnectcomp.Members{
 							{
-								ID: lo.ToPtr(cpID),
+								ID: cpID,
 							},
 						},
 					}).
@@ -718,7 +718,7 @@ func TestSetGroupMembers(t *testing.T) {
 						&sdkkonnectcomp.GroupMembership{
 							Members: []sdkkonnectcomp.Members{
 								{
-									ID: lo.ToPtr("cp-12345"),
+									ID: "cp-12345",
 								},
 							},
 						},
@@ -823,10 +823,10 @@ func TestSetGroupMembers(t *testing.T) {
 						&sdkkonnectcomp.GroupMembership{
 							Members: []sdkkonnectcomp.Members{
 								{
-									ID: lo.ToPtr("cp-12345"),
+									ID: "cp-12345",
 								},
 								{
-									ID: lo.ToPtr("cp-12346"),
+									ID: "cp-12346",
 								},
 							},
 						},

@@ -93,7 +93,7 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 				ControlPlaneID:              cp.GetKonnectStatus().GetKonnectID(),
 				ConsumerIDForNestedEntities: consumerID,
 				ACLWithoutParents: sdkkonnectcomp.ACLWithoutParents{
-					Group: lo.ToPtr(aclGroup),
+					Group: aclGroup,
 					Tags:  tags,
 				},
 			},
@@ -174,7 +174,7 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 				mock.MatchedBy(func(r sdkkonnectops.CreateACLWithConsumerRequest) bool {
 					return r.ControlPlaneID == cp.GetKonnectID() &&
 						r.ConsumerIDForNestedEntities == consumerID &&
-						r.ACLWithoutParents.Group != nil && *r.ACLWithoutParents.Group == aclGroup &&
+						r.ACLWithoutParents.Group == aclGroup &&
 						r.ACLWithoutParents.Tags != nil &&
 						slices.ContainsFunc(
 							r.ACLWithoutParents.Tags,

@@ -93,7 +93,7 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 				ControlPlaneID:              cp.GetKonnectStatus().GetKonnectID(),
 				ConsumerIDForNestedEntities: consumerID,
 				KeyAuthWithoutParents: sdkkonnectcomp.KeyAuthWithoutParents{
-					Key:  lo.ToPtr("key"),
+					Key:  "key",
 					Tags: tags,
 				},
 			},
