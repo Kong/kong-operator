@@ -22,6 +22,13 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- Fix setting the `ServiceAccountName` for `DataPlane`'s `Deployment`.
+  [#856](https://github.com/Kong/gateway-operator/pull/856)
+
 ## [v1.4.0]
 
 > Release date: 2024-10-31
