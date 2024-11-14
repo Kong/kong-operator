@@ -382,6 +382,7 @@ func ensureIngressServiceForDataPlane(
 	if count == 1 {
 		var updated bool
 		existingService := &services[0]
+		old := existingService.DeepCopy()
 		updated, existingService.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingService.ObjectMeta, generatedService.ObjectMeta,
 			// enforce all the annotations provided through the dataplane API
 			func(existingMeta metav1.ObjectMeta, generatedMeta metav1.ObjectMeta) (bool, metav1.ObjectMeta) {
@@ -402,11 +403,19 @@ func ensureIngressServiceForDataPlane(
 			existingService.Spec.Type = generatedService.Spec.Type
 			updated = true
 		}
-		if generatedService.Spec.ExternalTrafficPolicy != "" &&
-			existingService.Spec.ExternalTrafficPolicy != generatedService.Spec.ExternalTrafficPolicy {
+
+		const (
+			defaultExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyCluster
+		)
+		// Do not update when
+		// - the existing service has the default value for ExternalTrafficPolicy
+		// - and the generated service has the default value for ExternalTrafficPolicy or is empty.
+		if !(existingService.Spec.ExternalTrafficPolicy == defaultExternalTrafficPolicy &&
+			(generatedService.Spec.ExternalTrafficPolicy == "" || generatedService.Spec.ExternalTrafficPolicy == defaultExternalTrafficPolicy)) {
 			existingService.Spec.ExternalTrafficPolicy = generatedService.Spec.ExternalTrafficPolicy
 			updated = true
 		}
+
 		if !cmp.Equal(existingService.Spec.Selector, generatedService.Spec.Selector) {
 			existingService.Spec.Selector = generatedService.Spec.Selector
 			updated = true
@@ -421,10 +430,11 @@ func ensureIngressServiceForDataPlane(
 		}
 
 		if updated {
-			if err := cl.Update(ctx, existingService); err != nil {
+			res, existingService, err := patch.ApplyPatchIfNotEmpty(ctx, cl, logger, existingService, old, updated)
+			if err != nil {
 				return op.Noop, existingService, fmt.Errorf("failed updating DataPlane Service %s: %w", existingService.Name, err)
 			}
-			return op.Updated, existingService, nil
+			return res, existingService, nil
 		}
 		return op.Noop, existingService, nil
 	}

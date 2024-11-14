@@ -28,6 +28,9 @@
 
 - Fix setting the `ServiceAccountName` for `DataPlane`'s `Deployment`.
   [#856](https://github.com/Kong/gateway-operator/pull/856)
+- Fixed setting `ExternalTrafficPolicy` on `DataPlane`'s ingress `Service` when
+  the requested value is empty.
+  [#865](https://github.com/Kong/gateway-operator/pull/865)
 
 ## [v1.4.0]
 
