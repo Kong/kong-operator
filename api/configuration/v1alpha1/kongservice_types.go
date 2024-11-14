@@ -74,7 +74,7 @@ type KongServiceAPISpec struct {
 	// Even if the cross namespace reference is not planned, the structured reference
 	// type is preferred because it allows for easier extension in the future.
 	//
-	// sdkkonnectcomp.CreateService `json:",inline"`
+	// sdkkonnectcomp.ServiceInput`json:",inline"`
 
 	// Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses.
 	URL *string `json:"url,omitempty"`
@@ -90,9 +90,9 @@ type KongServiceAPISpec struct {
 	// The path to be used in requests to the upstream server.
 	Path *string `json:"path,omitempty"`
 	// The upstream server port.
-	Port *int64 `json:"port,omitempty"`
+	Port int64 `json:"port,omitempty"`
 	// The protocol used to communicate with the upstream.
-	Protocol *sdkkonnectcomp.Protocol `json:"protocol,omitempty"`
+	Protocol sdkkonnectcomp.Protocol `json:"protocol,omitempty"`
 	// The timeout in milliseconds between two successive read operations for transmitting a request to the upstream server.
 	ReadTimeout *int64 `json:"read_timeout,omitempty"`
 	// The number of retries to execute upon failure to proxy.

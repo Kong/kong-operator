@@ -2259,16 +2259,6 @@ func (in *KongServiceAPISpec) DeepCopyInto(out *KongServiceAPISpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Port != nil {
-		in, out := &in.Port, &out.Port
-		*out = new(int64)
-		**out = **in
-	}
-	if in.Protocol != nil {
-		in, out := &in.Protocol, &out.Protocol
-		*out = new(components.Protocol)
-		**out = **in
-	}
 	if in.ReadTimeout != nil {
 		in, out := &in.ReadTimeout, &out.ReadTimeout
 		*out = new(int64)
