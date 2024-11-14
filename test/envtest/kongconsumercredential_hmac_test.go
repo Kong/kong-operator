@@ -92,7 +92,7 @@ func TestKongConsumerCredential_HMAC(t *testing.T) {
 				ControlPlaneID:              cp.GetKonnectStatus().GetKonnectID(),
 				ConsumerIDForNestedEntities: consumerID,
 				HMACAuthWithoutParents: sdkkonnectcomp.HMACAuthWithoutParents{
-					Username: lo.ToPtr("username"),
+					Username: "username",
 					Tags:     tags,
 				},
 			},

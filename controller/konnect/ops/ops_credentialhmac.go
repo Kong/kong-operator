@@ -103,7 +103,7 @@ func kongCredentialHMACToHMACWithoutParents(
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) sdkkonnectcomp.HMACAuthWithoutParents {
 	ret := sdkkonnectcomp.HMACAuthWithoutParents{
-		Username: cred.Spec.Username,
+		Username: *cred.Spec.Username,
 		Secret:   cred.Spec.Secret,
 		Tags:     GenerateTagsForObject(cred, cred.Spec.Tags...),
 	}

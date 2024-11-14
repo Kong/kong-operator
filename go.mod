@@ -9,13 +9,13 @@ go 1.23.2
 retract v1.2.2
 
 require (
-	github.com/Kong/sdk-konnect-go v0.1.5
+	github.com/Kong/sdk-konnect-go v0.1.6
 	github.com/Masterminds/semver v1.5.0
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-containerregistry v0.20.2
 	github.com/google/uuid v1.6.0
-	github.com/kong/kubernetes-configuration v0.0.43
+	github.com/kong/kubernetes-configuration v0.0.45
 	github.com/kong/kubernetes-telemetry v0.1.7
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
@@ -100,7 +100,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.29.0 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
-	golang.org/x/tools v0.24.0 // indirect
+	golang.org/x/tools v0.26.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240827150818-7e3bb234dfed // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
@@ -127,7 +127,7 @@ require (
 	github.com/zmap/zcrypto v0.0.0-20230310154051-c8b263fd8300 // indirect
 	github.com/zmap/zlint/v3 v3.5.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/crypto v0.27.0 // indirect
+	golang.org/x/crypto v0.28.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	google.golang.org/api v0.198.0 // indirect
 	google.golang.org/grpc v1.66.2 // indirect
@@ -179,11 +179,11 @@ require (
 	github.com/tidwall/pretty v1.2.1
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.29.0 // indirect
+	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/oauth2 v0.23.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/term v0.24.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/term v0.25.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
