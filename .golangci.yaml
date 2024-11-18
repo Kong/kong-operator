@@ -40,6 +40,11 @@ linters-settings:
       - default
       - prefix(github.com/kong/kubernetes-configuration)
       - prefix(github.com/kong/gateway-operator)
+  govet:
+    enable-all: true # To have checks like e.g. unusedwrite.
+    disable:
+      - fieldalignment
+      - shadow
   importas:
     no-unaliased: true
     alias:
