@@ -331,7 +331,7 @@ func reconcileDataPlaneDeployment(
 			// the replicas to the minReplicas if the existing Deployment replicas
 			// are less than the minReplicas to enforce faster scaling before HPA
 			// kicks in.
-			(scaling != nil && scaling.HorizontalScaling != nil &&
+			(scaling.HorizontalScaling != nil &&
 				scaling.HorizontalScaling.MinReplicas != nil &&
 				existing.Spec.Replicas != nil &&
 				*existing.Spec.Replicas < *scaling.HorizontalScaling.MinReplicas) {
