@@ -67,6 +67,14 @@ func (obj *KongKey) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+func (obj *KongKey) SetControlPlaneRef(ref *ControlPlaneRef) {
+	obj.Spec.ControlPlaneRef = ref
+}
+
+func (obj *KongKey) GetControlPlaneRef() *ControlPlaneRef {
+	return obj.Spec.ControlPlaneRef
+}
+
 func (obj *KongKeySet) initKonnectStatus() {
 	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
 }
@@ -124,6 +132,14 @@ func (obj *KongKeySet) SetControlPlaneID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ControlPlaneID = id
+}
+
+func (obj *KongKeySet) SetControlPlaneRef(ref *ControlPlaneRef) {
+	obj.Spec.ControlPlaneRef = ref
+}
+
+func (obj *KongKeySet) GetControlPlaneRef() *ControlPlaneRef {
+	return obj.Spec.ControlPlaneRef
 }
 
 func (obj *KongCredentialBasicAuth) initKonnectStatus() {
@@ -535,6 +551,14 @@ func (obj *KongCACertificate) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+func (obj *KongCACertificate) SetControlPlaneRef(ref *ControlPlaneRef) {
+	obj.Spec.ControlPlaneRef = ref
+}
+
+func (obj *KongCACertificate) GetControlPlaneRef() *ControlPlaneRef {
+	return obj.Spec.ControlPlaneRef
+}
+
 func (obj *KongCertificate) initKonnectStatus() {
 	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
 }
@@ -592,6 +616,14 @@ func (obj *KongCertificate) SetControlPlaneID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ControlPlaneID = id
+}
+
+func (obj *KongCertificate) SetControlPlaneRef(ref *ControlPlaneRef) {
+	obj.Spec.ControlPlaneRef = ref
+}
+
+func (obj *KongCertificate) GetControlPlaneRef() *ControlPlaneRef {
+	return obj.Spec.ControlPlaneRef
 }
 
 func (obj *KongPluginBinding) initKonnectStatus() {
@@ -653,6 +685,14 @@ func (obj *KongPluginBinding) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+func (obj *KongPluginBinding) SetControlPlaneRef(ref *ControlPlaneRef) {
+	obj.Spec.ControlPlaneRef = ref
+}
+
+func (obj *KongPluginBinding) GetControlPlaneRef() *ControlPlaneRef {
+	return obj.Spec.ControlPlaneRef
+}
+
 func (obj *KongService) initKonnectStatus() {
 	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
 }
@@ -710,6 +750,14 @@ func (obj *KongService) SetControlPlaneID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ControlPlaneID = id
+}
+
+func (obj *KongService) SetControlPlaneRef(ref *ControlPlaneRef) {
+	obj.Spec.ControlPlaneRef = ref
+}
+
+func (obj *KongService) GetControlPlaneRef() *ControlPlaneRef {
+	return obj.Spec.ControlPlaneRef
 }
 
 func (obj *KongRoute) initKonnectStatus() {
@@ -771,6 +819,14 @@ func (obj *KongRoute) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+func (obj *KongRoute) SetControlPlaneRef(ref *ControlPlaneRef) {
+	obj.Spec.ControlPlaneRef = ref
+}
+
+func (obj *KongRoute) GetControlPlaneRef() *ControlPlaneRef {
+	return obj.Spec.ControlPlaneRef
+}
+
 func (obj *KongUpstream) initKonnectStatus() {
 	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}
 }
@@ -828,6 +884,14 @@ func (obj *KongUpstream) SetControlPlaneID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ControlPlaneID = id
+}
+
+func (obj *KongUpstream) SetControlPlaneRef(ref *ControlPlaneRef) {
+	obj.Spec.ControlPlaneRef = ref
+}
+
+func (obj *KongUpstream) GetControlPlaneRef() *ControlPlaneRef {
+	return obj.Spec.ControlPlaneRef
 }
 
 func (obj *KongTarget) initKonnectStatus() {
@@ -948,6 +1012,14 @@ func (obj *KongVault) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+func (obj *KongVault) SetControlPlaneRef(ref *ControlPlaneRef) {
+	obj.Spec.ControlPlaneRef = ref
+}
+
+func (obj *KongVault) GetControlPlaneRef() *ControlPlaneRef {
+	return obj.Spec.ControlPlaneRef
+}
+
 func (obj *KongSNI) initKonnectStatus() {
 	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndCertificateRefs{}
 }
@@ -1064,4 +1136,12 @@ func (obj *KongDataPlaneClientCertificate) SetControlPlaneID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ControlPlaneID = id
+}
+
+func (obj *KongDataPlaneClientCertificate) SetControlPlaneRef(ref *ControlPlaneRef) {
+	obj.Spec.ControlPlaneRef = ref
+}
+
+func (obj *KongDataPlaneClientCertificate) GetControlPlaneRef() *ControlPlaneRef {
+	return obj.Spec.ControlPlaneRef
 }

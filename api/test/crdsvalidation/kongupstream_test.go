@@ -14,124 +14,15 @@ import (
 
 func TestKongUpstream(t *testing.T) {
 	t.Run("cp ref", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongUpstream]{
-			{
-				Name: "konnectNamespacedRef reference is valid",
-				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: commonObjectMeta,
-					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-								Name: "test-konnect-control-plane",
-							},
-						},
-						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{},
-					},
-				},
+		obj := &configurationv1alpha1.KongUpstream{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "KongUpstream",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
 			},
-			{
-				Name: "not providing konnectNamespacedRef when type is konnectNamespacedRef yields an error",
-				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: commonObjectMeta,
-					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-						},
-						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("when type is konnectNamespacedRef, konnectNamespacedRef must be set"),
-			},
-			{
-				Name: "not providing konnectID when type is konnectID yields an error",
-				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: commonObjectMeta,
-					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-							Type: configurationv1alpha1.ControlPlaneRefKonnectID,
-						},
-						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectID must be set"),
-			},
-			{
-				Name: "providing namespace in konnectNamespacedRef yields an error",
-				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: commonObjectMeta,
-					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-								Name:      "test-konnect-control-plane",
-								Namespace: "another-namespace",
-							},
-						},
-						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("spec.controlPlaneRef cannot specify namespace for namespaced resource"),
-			},
-			{
-				Name: "konnectNamespacedRef reference name cannot be changed when an entity is Programmed",
-				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: commonObjectMeta,
-					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-								Name: "test-konnect-control-plane",
-							},
-						},
-						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{},
-					},
-					Status: configurationv1alpha1.KongUpstreamStatus{
-						Conditions: []metav1.Condition{
-							{
-								Type:               "Programmed",
-								Status:             metav1.ConditionTrue,
-								Reason:             "Programmed",
-								LastTransitionTime: metav1.Now(),
-							},
-						},
-					},
-				},
-				Update: func(ks *configurationv1alpha1.KongUpstream) {
-					ks.Spec.ControlPlaneRef.KonnectNamespacedRef.Name = "new-konnect-control-plane"
-				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
-			},
-			{
-				Name: "konnectNamespacedRef reference type cannot be changed when an entity is Programmed",
-				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: commonObjectMeta,
-					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-								Name: "test-konnect-control-plane",
-							},
-						},
-						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{},
-					},
-					Status: configurationv1alpha1.KongUpstreamStatus{
-						Conditions: []metav1.Condition{
-							{
-								Type:               "Programmed",
-								Status:             metav1.ConditionTrue,
-								Reason:             "Programmed",
-								LastTransitionTime: metav1.Now(),
-							},
-						},
-					},
-				},
-				Update: func(ks *configurationv1alpha1.KongUpstream) {
-					ks.Spec.ControlPlaneRef.Type = configurationv1alpha1.ControlPlaneRefKonnectID
-				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
-			},
-		}.Run(t)
+			ObjectMeta: commonObjectMeta,
+		}
+
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj).Run(t)
 	})
 
 	t.Run("required fields", func(t *testing.T) {

@@ -14,95 +14,18 @@ import (
 
 func TestKongConsumerGroup(t *testing.T) {
 	t.Run("cp ref", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1beta1.KongConsumerGroup]{
-			{
-				// Since KongConsumerGroups managed by KIC do not require spec.controlPlane, KongConsumerGroups without spec.controlPlaneRef should be allowed.
-				Name: "no CPRef is valid",
-				TestObject: &configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: commonObjectMeta,
-					Spec: configurationv1beta1.KongConsumerGroupSpec{
-						Name: "test",
-					},
-				},
+		obj := &configurationv1beta1.KongConsumerGroup{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "KongConsumer",
+				APIVersion: configurationv1beta1.GroupVersion.String(),
 			},
-			{
-				Name: "cpRef cannot have namespace",
-				TestObject: &configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: commonObjectMeta,
-					Spec: configurationv1beta1.KongConsumerGroupSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-								Name:      "test-konnect-control-plane",
-								Namespace: "another-namespace",
-							},
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("spec.controlPlaneRef cannot specify namespace for namespaced resource"),
+			ObjectMeta: commonObjectMeta,
+			Spec: configurationv1beta1.KongConsumerGroupSpec{
+				Name: "group1",
 			},
-			{
-				Name: "providing konnectID when type is konnectNamespacedRef yields an error",
-				TestObject: &configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: commonObjectMeta,
-					Spec: configurationv1beta1.KongConsumerGroupSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-							Type:      configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectID: lo.ToPtr("123456"),
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("when type is konnectNamespacedRef, konnectNamespacedRef must be set"),
-			},
+		}
 
-			{
-				Name: "providing konnectNamespacedRef when type is konnectID yields an error",
-				TestObject: &configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: commonObjectMeta,
-					Spec: configurationv1beta1.KongConsumerGroupSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-							Type: configurationv1alpha1.ControlPlaneRefKonnectID,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-								Name: "test-konnect-control-plane",
-							},
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectID must be set"),
-			},
-			{
-				Name: "providing konnectNamespacedRef and konnectID when type is konnectID yields an error",
-				TestObject: &configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: commonObjectMeta,
-					Spec: configurationv1beta1.KongConsumerGroupSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-							Type:      configurationv1alpha1.ControlPlaneRefKonnectID,
-							KonnectID: lo.ToPtr("123456"),
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-								Name: "test-konnect-control-plane",
-							},
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectNamespacedRef must not be set"),
-			},
-			{
-				Name: "providing konnectID and konnectNamespacedRef when type is konnectNamespacedRef yields an error",
-				TestObject: &configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: commonObjectMeta,
-					Spec: configurationv1beta1.KongConsumerGroupSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-							Type:      configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectID: lo.ToPtr("123456"),
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-								Name: "test-konnect-control-plane",
-							},
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("when type is konnectNamespacedRef, konnectID must not be set"),
-			},
-		}.Run(t)
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj).Run(t)
 	})
 
 	t.Run("cp ref update", func(t *testing.T) {

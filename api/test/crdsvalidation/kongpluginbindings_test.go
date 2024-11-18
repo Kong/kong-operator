@@ -7,92 +7,31 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 func TestKongPluginBindings(t *testing.T) {
-	t.Run("update not allowed for status conditions", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongPluginBinding]{
-			{
-				Name: "cpRef change is not allowed for Programmed=True",
-				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: commonObjectMeta,
-					Spec: configurationv1alpha1.KongPluginBindingSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-								Name: "test-konnect-control-plane",
-							},
-						},
-						PluginReference: configurationv1alpha1.PluginRef{
-							Kind: lo.ToPtr("KongPlugin"),
-							Name: "test-plugin",
-						},
-						Targets: configurationv1alpha1.KongPluginBindingTargets{
-							ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
-								Name:  "test-service",
-								Kind:  "Service",
-								Group: "core",
-							},
-						},
-					},
-					Status: configurationv1alpha1.KongPluginBindingStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{},
-						Conditions: []metav1.Condition{
-							{
-								Type:               "Programmed",
-								Status:             metav1.ConditionTrue,
-								Reason:             "Valid",
-								LastTransitionTime: metav1.Now(),
-							},
-						},
-					},
-				},
-				Update: func(c *configurationv1alpha1.KongPluginBinding) {
-					c.Spec.ControlPlaneRef.KonnectNamespacedRef.Name = "new-konnect-control-plane"
-				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
+	t.Run("cp ref", func(t *testing.T) {
+		obj := &configurationv1alpha1.KongPluginBinding{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "KongPluginBinding",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
 			},
-			{
-				Name: "cpRef change is allowed when cp is not Programmed=True nor APIAuthValid=True",
-				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: commonObjectMeta,
-					Spec: configurationv1alpha1.KongPluginBindingSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-								Name: "test-konnect-control-plane",
-							},
-						},
-						PluginReference: configurationv1alpha1.PluginRef{
-							Kind: lo.ToPtr("KongPlugin"),
-							Name: "test-plugin",
-						},
-						Targets: configurationv1alpha1.KongPluginBindingTargets{
-							ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
-								Name:  "test-service",
-								Kind:  "Service",
-								Group: "core",
-							},
-						},
-					},
-					Status: configurationv1alpha1.KongPluginBindingStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{},
-						Conditions: []metav1.Condition{
-							{
-								Type:               "Programmed",
-								Status:             metav1.ConditionFalse,
-								Reason:             "NotProgrammed",
-								LastTransitionTime: metav1.Now(),
-							},
-						},
-					},
+			ObjectMeta: commonObjectMeta,
+			Spec: configurationv1alpha1.KongPluginBindingSpec{
+				PluginReference: configurationv1alpha1.PluginRef{
+					Name: "rate-limiting",
 				},
-				Update: func(c *configurationv1alpha1.KongPluginBinding) {
-					c.Spec.ControlPlaneRef.KonnectNamespacedRef.Name = "new-konnect-control-plane"
+				Targets: configurationv1alpha1.KongPluginBindingTargets{
+					ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
+						Name:  "test-service",
+						Kind:  "KongService",
+						Group: "configuration.konghq.com",
+					},
 				},
 			},
-		}.Run(t)
+		}
+
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj).Run(t)
 	})
 
 	t.Run("plugin ref", func(t *testing.T) {
