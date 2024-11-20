@@ -137,6 +137,7 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 
 	dataPlaneOptions := &operatorv1beta1.DataPlaneOptions{
 		Deployment:       opts.Deployment,
+		Extensions:       opts.Extensions,
 		PluginsToInstall: pluginsToInstall,
 	}
 
