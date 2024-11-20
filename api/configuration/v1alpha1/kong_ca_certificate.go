@@ -32,10 +32,13 @@ type KongCACertificate struct {
 }
 
 // KongCACertificateSpec contains the specification for the KongCACertificate.
+// +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +apireference:kgo:include
 type KongCACertificateSpec struct {
 	// ControlPlaneRef references the Konnect Control Plane that this KongCACertificate should be created in.
-	ControlPlaneRef          *ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+	// +kubebuilder:validation:Required
+	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef"`
+
 	KongCACertificateAPISpec `json:",inline"`
 }
 

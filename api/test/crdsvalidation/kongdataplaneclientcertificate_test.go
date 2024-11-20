@@ -10,21 +10,25 @@ import (
 )
 
 func TestKongDataPlaneClientCertificate(t *testing.T) {
-	t.Run("cp ref", func(t *testing.T) {
-		obj := &configurationv1alpha1.KongDataPlaneClientCertificate{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongDataPlaneClientCertificate",
-				APIVersion: configurationv1alpha1.GroupVersion.String(),
+	obj := &configurationv1alpha1.KongDataPlaneClientCertificate{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "KongDataPlaneClientCertificate",
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
+		},
+		ObjectMeta: commonObjectMeta,
+		Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
+			KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
+				Cert: "cert",
 			},
-			ObjectMeta: commonObjectMeta,
-			Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
-				KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
-					Cert: "cert",
-				},
-			},
-		}
+		},
+	}
 
-		NewCRDValidationTestCasesGroupCPRefChange(t, obj).Run(t)
+	t.Run("cp ref", func(t *testing.T) {
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC).Run(t)
+	})
+
+	t.Run("cp ref, type=kic", func(t *testing.T) {
+		NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes(t, obj, EmptyControlPlaneRefNotAllowed).Run(t)
 	})
 
 	t.Run("spec", func(t *testing.T) {
@@ -36,6 +40,12 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 					Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 						KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 							Cert: "cert",
+						},
+						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
 						},
 					},
 				},
@@ -54,6 +64,12 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 					Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 						KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 							Cert: "cert",
+						},
+						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
 						},
 					},
 					Status: configurationv1alpha1.KongDataPlaneClientCertificateStatus{
@@ -78,6 +94,12 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 					Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 						KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 							Cert: "cert",
+						},
+						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
 						},
 					},
 					Status: configurationv1alpha1.KongDataPlaneClientCertificateStatus{

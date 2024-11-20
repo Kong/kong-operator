@@ -44,8 +44,7 @@ type KongTarget struct {
 	Status KongTargetStatus `json:"status,omitempty"`
 }
 
-// KongTargetSpec defines the specification of a Kong Target.
-// KongTargetSpec defines the desired state of KongTarget.
+// KongTargetSpec defines the spec of KongTarget.
 // +apireference:kgo:include
 type KongTargetSpec struct {
 	// UpstreamRef is a reference to a KongUpstream this KongTarget is attached to.

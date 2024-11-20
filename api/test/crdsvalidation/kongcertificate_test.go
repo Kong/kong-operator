@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/samber/lo"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestKongCertificate(t *testing.T) {
@@ -26,7 +26,7 @@ func TestKongCertificate(t *testing.T) {
 			},
 		}
 
-		NewCRDValidationTestCasesGroupCPRefChange(t, obj).Run(t)
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC).Run(t)
 	})
 
 	t.Run("required fields", func(t *testing.T) {

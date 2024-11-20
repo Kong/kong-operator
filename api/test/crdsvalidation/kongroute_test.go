@@ -13,16 +13,22 @@ import (
 )
 
 func TestKongRoute(t *testing.T) {
-	t.Run("cp ref", func(t *testing.T) {
-		obj := &configurationv1alpha1.KongRoute{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongRoute",
-				APIVersion: configurationv1alpha1.GroupVersion.String(),
-			},
-			ObjectMeta: commonObjectMeta,
-		}
+	obj := &configurationv1alpha1.KongRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "KongRoute",
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
+		},
+		ObjectMeta: commonObjectMeta,
+	}
 
-		NewCRDValidationTestCasesGroupCPRefChange(t, obj).Run(t)
+	t.Run("cp ref", func(t *testing.T) {
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC).Run(t)
+	})
+
+	t.Run("cp ref, type=kic", func(t *testing.T) {
+		// NOTE: empty cp ref is not allowed in this context because a route can be attached to a service
+		// but this test doesn't check that.
+		NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes(t, obj, EmptyControlPlaneRefNotAllowed).Run(t)
 	})
 
 	t.Run("protocols", func(t *testing.T) {
@@ -73,6 +79,23 @@ func TestKongRoute(t *testing.T) {
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set"),
+			},
+		}.Run(t)
+	})
+
+	t.Run("no service ref and no cp ref provided", func(t *testing.T) {
+		CRDValidationTestCasesGroup[*configurationv1alpha1.KongRoute]{
+			{
+				Name: "have to provide either controlPlaneRef or serviceRef",
+				TestObject: &configurationv1alpha1.KongRoute{
+					ObjectMeta: commonObjectMeta,
+					Spec: configurationv1alpha1.KongRouteSpec{
+						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+							Paths: []string{"/"},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("Has to set either controlPlaneRef or serviceRef"),
 			},
 		}.Run(t)
 	})

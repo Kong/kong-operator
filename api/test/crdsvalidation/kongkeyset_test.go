@@ -11,21 +11,25 @@ import (
 )
 
 func TestKongKeySet(t *testing.T) {
-	t.Run("cp ref", func(t *testing.T) {
-		obj := &configurationv1alpha1.KongKeySet{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongKeySet",
-				APIVersion: configurationv1alpha1.GroupVersion.String(),
+	obj := &configurationv1alpha1.KongKeySet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "KongKeySet",
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
+		},
+		ObjectMeta: commonObjectMeta,
+		Spec: configurationv1alpha1.KongKeySetSpec{
+			KongKeySetAPISpec: configurationv1alpha1.KongKeySetAPISpec{
+				Name: "keyset",
 			},
-			ObjectMeta: commonObjectMeta,
-			Spec: configurationv1alpha1.KongKeySetSpec{
-				KongKeySetAPISpec: configurationv1alpha1.KongKeySetAPISpec{
-					Name: "keyset",
-				},
-			},
-		}
+		},
+	}
 
-		NewCRDValidationTestCasesGroupCPRefChange(t, obj).Run(t)
+	t.Run("cp ref", func(t *testing.T) {
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC).Run(t)
+	})
+
+	t.Run("cp ref, type=kic", func(t *testing.T) {
+		NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes(t, obj, EmptyControlPlaneRefNotAllowed).Run(t)
 	})
 
 	t.Run("spec", func(t *testing.T) {

@@ -49,12 +49,13 @@ type KongUpstream struct {
 	Status KongUpstreamStatus `json:"status,omitempty"`
 }
 
-// KongUpstreamSpec defines specification of a Kong Upstream.
+// KongUpstreamSpec defines the spec of Kong Upstream.
+// +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +apireference:kgo:include
 type KongUpstreamSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this KongUpstream is associated with.
-	// +optional
-	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+	// +kubebuilder:validation:Required
+	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef"`
 
 	KongUpstreamAPISpec `json:",inline"`
 }

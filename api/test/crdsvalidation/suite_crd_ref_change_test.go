@@ -3,7 +3,6 @@ package crdsvalidation_test
 import (
 	"testing"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -12,6 +11,8 @@ import (
 	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 type Scope byte
@@ -35,6 +36,13 @@ func getGroupKindScope(t *testing.T, obj client.Object) meta.RESTScopeName {
 	return r.Scope.Name()
 }
 
+type SupportedByKicT bool
+
+const (
+	SupportedByKIC    SupportedByKicT = true
+	NotSupportedByKIC SupportedByKicT = false
+)
+
 func NewCRDValidationTestCasesGroupCPRefChange[
 	T interface {
 		client.Object
@@ -43,7 +51,11 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 		SetControlPlaneRef(*configurationv1alpha1.ControlPlaneRef)
 		GetControlPlaneRef() *configurationv1alpha1.ControlPlaneRef
 	},
-](t *testing.T, obj T) CRDValidationTestCasesGroup[T] {
+](
+	t *testing.T,
+	obj T,
+	supportedByKIC SupportedByKicT,
+) CRDValidationTestCasesGroup[T] {
 	var (
 		ret = CRDValidationTestCasesGroup[T]{}
 
@@ -63,14 +75,16 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 	)
 
 	{
-		// Since objects managed by KIC do not require spec.controlPlane,
-		// object without spec.controlPlaneRef should be allowed.
-		obj := obj.DeepCopy()
-		obj.SetControlPlaneRef(nil)
-		ret = append(ret, CRDValidationTestCase[T]{
-			Name:       "no cpRef is valid",
-			TestObject: obj,
-		})
+		if supportedByKIC == SupportedByKIC {
+			// Since objects managed by KIC do not require spec.controlPlane,
+			// object without spec.controlPlaneRef should be allowed.
+			obj := obj.DeepCopy()
+			obj.SetControlPlaneRef(nil)
+			ret = append(ret, CRDValidationTestCase[T]{
+				Name:       "no cpRef is valid",
+				TestObject: obj,
+			})
+		}
 	}
 	{
 		if objScope == meta.RESTScopeNameNamespace {
@@ -172,14 +186,16 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 		})
 	}
 	{
-		obj := obj.DeepCopy()
-		obj.SetControlPlaneRef(&configurationv1alpha1.ControlPlaneRef{
-			Type: configurationv1alpha1.ControlPlaneRefKIC,
-		})
-		ret = append(ret, CRDValidationTestCase[T]{
-			Name:       "kic control plane ref is allowed",
-			TestObject: obj,
-		})
+		if supportedByKIC == SupportedByKIC {
+			obj := obj.DeepCopy()
+			obj.SetControlPlaneRef(&configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKIC,
+			})
+			ret = append(ret, CRDValidationTestCase[T]{
+				Name:       "kic control plane ref is allowed",
+				TestObject: obj,
+			})
+		}
 	}
 
 	// Updates: KonnectNamespacedRef
@@ -229,83 +245,91 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 
 	// Updates: KIC
 	{
-		obj := obj.DeepCopy()
-		obj.SetControlPlaneRef(&configurationv1alpha1.ControlPlaneRef{
-			Type: configurationv1alpha1.ControlPlaneRefKIC,
-		})
-		obj.SetConditions([]metav1.Condition{programmedConditionTrue})
-		ret = append(ret, CRDValidationTestCase[T]{
-			Name:       "cpRef change (type=kic) is not allowed for Programmed=True",
-			TestObject: obj,
-			Update: func(obj T) {
-				cpRef := &configurationv1alpha1.ControlPlaneRef{
-					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-						Name: "new-konnect-control-plane",
-					},
-				}
-				obj.SetControlPlaneRef(cpRef)
-			},
-			ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
-		})
+		if supportedByKIC == SupportedByKIC {
+			obj := obj.DeepCopy()
+			obj.SetControlPlaneRef(&configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKIC,
+			})
+			obj.SetConditions([]metav1.Condition{programmedConditionTrue})
+			ret = append(ret, CRDValidationTestCase[T]{
+				Name:       "cpRef change (type=kic) is not allowed for Programmed=True",
+				TestObject: obj,
+				Update: func(obj T) {
+					cpRef := &configurationv1alpha1.ControlPlaneRef{
+						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							Name: "new-konnect-control-plane",
+						},
+					}
+					obj.SetControlPlaneRef(cpRef)
+				},
+				ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
+			})
+		}
 	}
 	{
-		obj := obj.DeepCopy()
-		obj.SetControlPlaneRef(&configurationv1alpha1.ControlPlaneRef{
-			Type: configurationv1alpha1.ControlPlaneRefKIC,
-		})
-		obj.SetConditions([]metav1.Condition{programmedConditionFalse})
-		ret = append(ret, CRDValidationTestCase[T]{
-			Name:       "cpRef change (type=kic) is allowed when object is not Programmed=True",
-			TestObject: obj,
-			Update: func(obj T) {
-				cpRef := &configurationv1alpha1.ControlPlaneRef{
-					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-						Name: "new-konnect-control-plane",
-					},
-				}
-				obj.SetControlPlaneRef(cpRef)
-			},
-		})
+		if supportedByKIC == SupportedByKIC {
+			obj := obj.DeepCopy()
+			obj.SetControlPlaneRef(&configurationv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKIC,
+			})
+			obj.SetConditions([]metav1.Condition{programmedConditionFalse})
+			ret = append(ret, CRDValidationTestCase[T]{
+				Name:       "cpRef change (type=kic) is allowed when object is not Programmed=True",
+				TestObject: obj,
+				Update: func(obj T) {
+					cpRef := &configurationv1alpha1.ControlPlaneRef{
+						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							Name: "new-konnect-control-plane",
+						},
+					}
+					obj.SetControlPlaneRef(cpRef)
+				},
+			})
+		}
 	}
 
 	// Updates: ControlPlane ref is unset
 	{
-		obj := obj.DeepCopy()
-		obj.SetConditions([]metav1.Condition{programmedConditionFalse})
-		ret = append(ret, CRDValidationTestCase[T]{
-			Name:       "cpRef change (type=<unset>) is allowed when object is Programmed=False",
-			TestObject: obj,
-			Update: func(obj T) {
-				cpRef := &configurationv1alpha1.ControlPlaneRef{
-					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-						Name: "new-konnect-control-plane",
-					},
-				}
-				obj.SetControlPlaneRef(cpRef)
-			},
-		})
+		if supportedByKIC == SupportedByKIC {
+			obj := obj.DeepCopy()
+			obj.SetConditions([]metav1.Condition{programmedConditionFalse})
+			ret = append(ret, CRDValidationTestCase[T]{
+				Name:       "cpRef change (type=<unset>) is allowed when object is Programmed=False",
+				TestObject: obj,
+				Update: func(obj T) {
+					cpRef := &configurationv1alpha1.ControlPlaneRef{
+						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							Name: "new-konnect-control-plane",
+						},
+					}
+					obj.SetControlPlaneRef(cpRef)
+				},
+			})
+		}
 	}
 	{
-		obj := obj.DeepCopy()
-		obj.SetControlPlaneRef(&configurationv1alpha1.ControlPlaneRef{})
-		obj.SetConditions([]metav1.Condition{programmedConditionTrue})
-		ret = append(ret, CRDValidationTestCase[T]{
-			Name:       "cpRef change (type=<unset>) is not allowed for Programmed=True",
-			TestObject: obj,
-			Update: func(obj T) {
-				cpRef := &configurationv1alpha1.ControlPlaneRef{
-					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-						Name: "new-konnect-control-plane",
-					},
-				}
-				obj.SetControlPlaneRef(cpRef)
-			},
-			ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
-		})
+		if supportedByKIC == SupportedByKIC {
+			obj := obj.DeepCopy()
+			obj.SetControlPlaneRef(&configurationv1alpha1.ControlPlaneRef{})
+			obj.SetConditions([]metav1.Condition{programmedConditionTrue})
+			ret = append(ret, CRDValidationTestCase[T]{
+				Name:       "cpRef change (type=<unset>) is not allowed for Programmed=True",
+				TestObject: obj,
+				Update: func(obj T) {
+					cpRef := &configurationv1alpha1.ControlPlaneRef{
+						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							Name: "new-konnect-control-plane",
+						},
+					}
+					obj.SetControlPlaneRef(cpRef)
+				},
+				ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
+			})
+		}
 	}
 
 	return ret

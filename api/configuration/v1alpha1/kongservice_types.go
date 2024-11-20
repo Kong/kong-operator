@@ -52,16 +52,17 @@ type KongService struct {
 }
 
 // KongServiceSpec defines specification of a Kong Route.
+// +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +apireference:kgo:include
 type KongServiceSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this KongService is associated with.
-	// +optional
-	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+	// +kubebuilder:validation:Required
+	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef"`
 
 	KongServiceAPISpec `json:",inline"`
 }
 
-// KongServiceAPISpec defines specification of a Kong Service.
+// KongServiceAPISpec defines the specification of a Kong Service.
 // +apireference:kgo:include
 type KongServiceAPISpec struct {
 	// TODO(pmalek): client certificate implement ref

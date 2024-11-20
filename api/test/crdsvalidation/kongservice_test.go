@@ -11,16 +11,20 @@ import (
 )
 
 func TestKongService(t *testing.T) {
-	t.Run("cp ref", func(t *testing.T) {
-		obj := &configurationv1alpha1.KongService{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongService",
-				APIVersion: configurationv1alpha1.GroupVersion.String(),
-			},
-			ObjectMeta: commonObjectMeta,
-		}
+	obj := &configurationv1alpha1.KongService{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "KongService",
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
+		},
+		ObjectMeta: commonObjectMeta,
+	}
 
-		NewCRDValidationTestCasesGroupCPRefChange(t, obj).Run(t)
+	t.Run("cp ref", func(t *testing.T) {
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC).Run(t)
+	})
+
+	t.Run("cp ref, type=kic", func(t *testing.T) {
+		NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes(t, obj, EmptyControlPlaneRefNotAllowed).Run(t)
 	})
 
 	t.Run("tags validation", func(t *testing.T) {

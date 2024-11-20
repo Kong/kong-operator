@@ -45,6 +45,6 @@ func TestKongCACertificate(t *testing.T) {
 			},
 		}
 
-		NewCRDValidationTestCasesGroupCPRefChange(t, obj).Run(t)
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC).Run(t)
 	})
 }

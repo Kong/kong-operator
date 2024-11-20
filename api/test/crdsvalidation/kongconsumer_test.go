@@ -22,7 +22,7 @@ func TestKongConsumer(t *testing.T) {
 			Username:   "username-1",
 		}
 
-		NewCRDValidationTestCasesGroupCPRefChange(t, obj).Run(t)
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj, SupportedByKIC).Run(t)
 	})
 
 	t.Run("required fields", func(t *testing.T) {

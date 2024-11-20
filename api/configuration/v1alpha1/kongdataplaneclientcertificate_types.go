@@ -48,11 +48,12 @@ type KongDataPlaneClientCertificate struct {
 }
 
 // KongDataPlaneClientCertificateSpec defines the spec for a KongDataPlaneClientCertificate.
+// +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +apireference:kgo:include
 type KongDataPlaneClientCertificateSpec struct {
 	// ControlPlaneRef is a reference to a Konnect ControlPlane this KongDataPlaneClientCertificate is associated with.
-	// +optional
-	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+	// +kubebuilder:validation:Required
+	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef"`
 
 	// KongDataPlaneClientCertificateAPISpec are the attributes of the KongDataPlaneClientCertificate itself.
 	KongDataPlaneClientCertificateAPISpec `json:",inline"`

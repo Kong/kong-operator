@@ -48,6 +48,7 @@ type KongKey struct {
 }
 
 // KongKeySpec defines the spec for a KongKey.
+// +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +apireference:kgo:include
 type KongKeySpec struct {
 	// ControlPlaneRef is a reference to a Konnect ControlPlane this KongKey is associated with.

@@ -45,7 +45,7 @@ type KongSNI struct {
 	Status KongSNIStatus `json:"status,omitempty"`
 }
 
-// KongSNIAPISpec defines specification of an SNI.
+// KongSNIAPISpec defines the spec of an SNI.
 // +apireference:kgo:include
 type KongSNIAPISpec struct {
 	// Name is the name of the SNI. Required and must be a host or wildcard host.
