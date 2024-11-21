@@ -28,20 +28,12 @@ import (
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
-var skippedTestsForExpressionsRouter = []string{
-	// TODO: remove the skip https://github.com/Kong/gateway-operator/issues/295
-	// This test is flaky.
-	tests.HTTPRouteWeight.ShortName,
-}
+var skippedTestsForExpressionsRouter = []string{}
 
 var skippedTestsForTraditionalCompatibleRouter = []string{
 	// httproute
 	tests.HTTPRouteHeaderMatching.ShortName,
 	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
-
-	// TODO: remove the skip https://github.com/Kong/gateway-operator/issues/295
-	// This test is flaky.
-	tests.HTTPRouteWeight.ShortName,
 }
 
 var (
