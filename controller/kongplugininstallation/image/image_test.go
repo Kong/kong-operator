@@ -58,13 +58,17 @@ func TestCredentialsStoreFromString(t *testing.T) {
 }
 
 func TestFetchPluginContent(t *testing.T) {
+	t.Log("This test accesses container registries on public internet")
+
 	t.Run("invalid image URL", func(t *testing.T) {
 		_, err := image.FetchPlugin(context.Background(), "foo bar", nil)
 		require.ErrorContains(t, err, "unexpected format of image url: could not parse reference: foo bar")
 	})
 
+	// Learn more how images were build and pushed to the registry in hack/plugin-images/README.md.
 	const registryUrl = "northamerica-northeast1-docker.pkg.dev/k8s-team-playground/"
 
+	// Source: hack/plugin-images/myheader.Dockerfile.
 	t.Run("valid image (Docker format)", func(t *testing.T) {
 		plugin, err := image.FetchPlugin(
 			context.Background(), registryUrl+"plugin-example/valid:0.1.0", nil,
@@ -73,6 +77,8 @@ func TestFetchPluginContent(t *testing.T) {
 		requireExpectedContent(t, plugin)
 	})
 
+	// Source: hack/plugin-images/myheader.Dockerfile, but with different build tool.
+	// Instead of Docker Podman or Buildah is used to build the image.
 	t.Run("valid image (OCI format)", func(t *testing.T) {
 		plugin, err := image.FetchPlugin(
 			context.Background(), registryUrl+"plugin-example/valid-oci:0.1.0", nil,
@@ -81,6 +87,7 @@ func TestFetchPluginContent(t *testing.T) {
 		requireExpectedContent(t, plugin)
 	})
 
+	// Source: hack/plugin-images/myheader.Dockerfile.
 	t.Run("valid image from private registry", func(t *testing.T) {
 		credentials := integration.GetKongPluginImageRegistryCredentialsForTests()
 		if credentials == "" {
@@ -97,6 +104,7 @@ func TestFetchPluginContent(t *testing.T) {
 		requireExpectedContentPrivate(t, plugin)
 	})
 
+	// Source: hack/plugin-images/invalid-layers.Dockerfile.
 	t.Run("invalid image - too many layers", func(t *testing.T) {
 		_, err := image.FetchPlugin(
 			context.Background(), registryUrl+"plugin-example/invalid-layers", nil,
@@ -104,6 +112,7 @@ func TestFetchPluginContent(t *testing.T) {
 		require.ErrorContains(t, err, "expected exactly one layer with plugin, found 2 layers")
 	})
 
+	// Source: hack/plugin-images/invalid-name.Dockerfile.
 	t.Run("invalid image - invalid names of files", func(t *testing.T) {
 		_, err := image.FetchPlugin(
 			context.Background(), registryUrl+"plugin-example/invalid-name", nil,
@@ -111,6 +120,7 @@ func TestFetchPluginContent(t *testing.T) {
 		require.ErrorContains(t, err, `file "add-header.lua" is unexpected, required files are handler.lua and schema.lua`)
 	})
 
+	// Source: hack/plugin-images/missing-file.Dockerfile.
 	t.Run("invalid image - missing file", func(t *testing.T) {
 		_, err := image.FetchPlugin(
 			context.Background(), registryUrl+"plugin-example/missing-file", nil,
@@ -118,7 +128,7 @@ func TestFetchPluginContent(t *testing.T) {
 		require.ErrorContains(t, err, `required files not found in the image: schema.lua`)
 	})
 
-	// Single file - handler.lua is over 1 MiB.
+	// Source: hack/plugin-images/invalid-size-one.Dockerfile.
 	t.Run("invalid image - invalid too big plugin (size of single file)", func(t *testing.T) {
 		_, err := image.FetchPlugin(
 			context.Background(), registryUrl+"plugin-example/invalid-size-one", nil,
@@ -126,7 +136,7 @@ func TestFetchPluginContent(t *testing.T) {
 		require.ErrorContains(t, err, "plugin size limit of 1.00 MiB exceeded")
 	})
 
-	// Each file is 512 KiB so together they are 1 MiB.
+	// Source: hack/plugin-images/invalid-size-combined.Dockerfile.
 	t.Run("invalid image - invalid too big plugin (size of files combined)", func(t *testing.T) {
 		_, err := image.FetchPlugin(
 			context.Background(), registryUrl+"plugin-example/invalid-size-combined", nil,
