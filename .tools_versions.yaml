@@ -17,4 +17,4 @@ crd-ref-docs: "0.1.0"
 # renovate: datasource=github-releases depName=vektra/mockery
 mockery: "2.48.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
-setup-envtest: "0.19.1"
+setup-envtest: "0.19.2"
