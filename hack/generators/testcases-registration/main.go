@@ -15,7 +15,7 @@ import (
 
 const (
 	integrationTestsPackage   = "test/integration"
-	generatedRegistrationFile = "test/integration/zz_generated_registered_testcases.go"
+	generatedRegistrationFile = "test/integration/zz_generated.registered_testcases.go"
 )
 
 func main() {

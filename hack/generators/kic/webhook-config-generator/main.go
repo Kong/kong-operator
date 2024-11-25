@@ -21,8 +21,8 @@ import (
 const (
 	validatingWebhookConfigurationPath                          = "config/webhook/manifests.yaml"
 	validatingWebhookConfigurationKustomizeURL                  = "https://github.com/kong/kubernetes-ingress-controller/config/webhook"
-	validatingWebhookConfigurationGeneratorForVersionOutputPath = "pkg/utils/kubernetes/resources/validatingwebhookconfig/zz_generated_kic_%s.go"
-	validatingWebhookConfigurationGeneratorMasterOutputPath     = "pkg/utils/kubernetes/resources/zz_generated_kic_validatingwebhookconfig.go"
+	validatingWebhookConfigurationGeneratorForVersionOutputPath = "pkg/utils/kubernetes/resources/validatingwebhookconfig/zz_generated.kic_%s.go"
+	validatingWebhookConfigurationGeneratorMasterOutputPath     = "pkg/utils/kubernetes/resources/zz_generated.kic_validatingwebhookconfig.go"
 )
 
 func main() {
