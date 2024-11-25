@@ -22,7 +22,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/samber/lo v1.47.0
 	github.com/sourcegraph/conc v0.3.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	golang.org/x/mod v0.22.0
 	k8s.io/api v0.31.3
 	k8s.io/apimachinery v0.31.3
