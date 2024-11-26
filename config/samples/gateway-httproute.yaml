@@ -115,8 +115,9 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
           resources:
-            requests:
-              cpu: 10m
+            limits:
+              cpu: 100m
+              memory: 100Mi
 ---
 kind: GatewayConfiguration
 apiVersion: gateway-operator.konghq.com/v1beta1
