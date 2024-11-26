@@ -205,7 +205,7 @@ jobs:
 
       - name: Build image
         id: build
-        uses: docker/build-push-action@v6.9.0
+        uses: docker/build-push-action@v6.10.0
         with:
           context: .
           build-contexts: ${{ inputs.additional-build-contexts }}
