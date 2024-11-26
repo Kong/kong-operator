@@ -34,14 +34,16 @@ import (
 
 func TestKongPluginInstallationEssentials(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	t.Log("this test accesses container registries on public internet")
 
+	// Learn more how images were build and pushed to the registry in hack/plugin-images/README.md.
 	const registryUrl = "northamerica-northeast1-docker.pkg.dev/k8s-team-playground/"
-
+	// Source: hack/plugin-images/invalid-layers.Dockerfile.
 	const pluginInvalidLayersImage = registryUrl + "plugin-example/invalid-layers"
-
+	// Source: hack/plugin-images/myheader.Dockerfile.
 	const pluginMyHeaderImage = registryUrl + "plugin-example/myheader"
 	expectedHeadersForMyHeader := http.Header{"myheader": {"roar"}}
-
+	// Source: hack/plugin-images/myheader-2.Dockerfile.
 	const pluginMyHeader2Image = registryUrl + "plugin-example-private/myheader-2"
 	expectedHeadersForMyHeader2 := http.Header{"newheader": {"amazing"}}
 
