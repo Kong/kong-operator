@@ -65,14 +65,23 @@ func GetCondition(cType consts.ConditionType, resource ConditionsAware) (metav1.
 	return metav1.Condition{}, false
 }
 
-// IsConditionTrue returns a true value whether the condition is ConditionTrue, false otherwise
-func IsConditionTrue(cType consts.ConditionType, resource ConditionsAware) bool {
+func isCondition(cType consts.ConditionType, resource ConditionsAware, status metav1.ConditionStatus) bool {
 	for _, condition := range resource.GetConditions() {
 		if condition.Type == string(cType) {
-			return condition.Status == metav1.ConditionTrue
+			return condition.Status == status
 		}
 	}
 	return false
+}
+
+// IsConditionFalse returns true if the condition has Status set to ConditionFalse, false otherwise.
+func IsConditionFalse(cType consts.ConditionType, resource ConditionsAware) bool {
+	return isCondition(cType, resource, metav1.ConditionFalse)
+}
+
+// IsConditionTrue returns true if the condition has Status set to ConditionTrue, false otherwise.
+func IsConditionTrue(cType consts.ConditionType, resource ConditionsAware) bool {
+	return isCondition(cType, resource, metav1.ConditionTrue)
 }
 
 // InitReady initializes the Ready status to False if Ready condition is not
