@@ -281,6 +281,17 @@ jobs:
       with:
         install: false
 
+    - uses: 1password/load-secrets-action@v2
+      id: konnect-pat
+      with:
+        export-env: false
+      env:
+        OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        PAT: 'op://team-k8s/Team K8S Konnect testing account - KGO tests token/password'
+
+    - if: ${{ steps.konnect-pat.outputs.PAT == '' }}
+      run: exit 1
+
     - name: run integration tests
       run: make test.integration
       env:
@@ -290,7 +301,7 @@ jobs:
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: integration-tests-webhook-enabled-${{ matrix.webhook-enabled }}.xml
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
+        KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ steps.konnect-pat.outputs.PAT }}
         KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
 
     - name: upload diagnostics
