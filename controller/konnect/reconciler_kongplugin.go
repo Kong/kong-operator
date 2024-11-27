@@ -147,8 +147,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				WithControlPlaneRef(&configurationv1alpha1.ControlPlaneRef{
 					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-						Namespace: cpNN.Namespace,
-						Name:      cpNN.Name,
+						Name: cpNN.Name,
 					},
 				})
 

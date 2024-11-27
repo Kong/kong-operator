@@ -103,7 +103,7 @@ func kongCredentialAPIKeyToKeyAuthWithoutParents(
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) sdkkonnectcomp.KeyAuthWithoutParents {
 	return sdkkonnectcomp.KeyAuthWithoutParents{
-		Key:  lo.ToPtr(cred.Spec.Key),
+		Key:  cred.Spec.Key,
 		Tags: GenerateTagsForObject(cred, cred.Spec.Tags...),
 	}
 }

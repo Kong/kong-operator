@@ -478,7 +478,7 @@ It is used to reference a Control Plane entity.
 
 | Field | Description |
 | --- | --- |
-| `type` _string_ | Type can be one of: - konnectID - konnectNamespacedRef - kic |
+| `type` _string_ | Type indicates the type of the control plane being referenced. Allowed values: - konnectID - konnectNamespacedRef - kic<br /><br /> The default is kic, which implies that the Control Plane is KIC. |
 | `konnectID` _string_ | KonnectID is the schema for the KonnectID type. This field is required when the Type is konnectID. |
 | `konnectNamespacedRef` _[KonnectNamespacedRef](#konnectnamespacedref)_ | KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster. It contains the name of the Konnect Control Plane. This field is required when the Type is konnectNamespacedRef. |
 
@@ -1134,19 +1134,18 @@ _Appears in:_
 #### KongObjectRef
 
 
-KongObjectRef is a reference to another object representing a Kong entity with deterministic type.<br /><br />
-TODO: https://github.com/Kong/kubernetes-configuration/issues/96
-change other types to use the generic `KongObjectRef` and move it to a common package to prevent possible import cycles.
+KongObjectRef is a reference to another object representing a Kong entity with deterministic type.
 
 
 
 | Field | Description |
 | --- | --- |
-| `name` _string_ | Name is the name of the entity.<br /><br /> NOTE: the `Required` validation rule does not reject empty strings so we use `MinLength` to reject empty string here. |
+| `name` _string_ | Name is the name of the entity. |
 
 
 _Appears in:_
 - [KongSNISpec](#kongsnispec)
+- [ServiceRef](#serviceref)
 
 #### KongPluginBindingSpec
 
@@ -1235,7 +1234,7 @@ _Appears in:_
 #### KongRouteSpec
 
 
-KongRouteSpec defines specification of a Kong Route.
+KongRouteSpec defines spec of a Kong Route.
 
 
 
@@ -1284,7 +1283,7 @@ _Appears in:_
 #### KongSNIAPISpec
 
 
-KongSNIAPISpec defines specification of an SNI.
+KongSNIAPISpec defines the spec of an SNI.
 
 
 
@@ -1333,7 +1332,7 @@ _Appears in:_
 #### KongServiceAPISpec
 
 
-KongServiceAPISpec defines specification of a Kong Service.
+KongServiceAPISpec defines the specification of a Kong Service.
 
 
 
@@ -1423,8 +1422,7 @@ _Appears in:_
 #### KongTargetSpec
 
 
-KongTargetSpec defines the specification of a Kong Target.
-KongTargetSpec defines the desired state of KongTarget.
+KongTargetSpec defines the spec of KongTarget.
 
 
 
@@ -1490,7 +1488,7 @@ _Appears in:_
 #### KongUpstreamSpec
 
 
-KongUpstreamSpec defines specification of a Kong Upstream.
+KongUpstreamSpec defines the spec of Kong Upstream.
 
 
 
@@ -1600,22 +1598,6 @@ Namespace refers to a Kubernetes namespace. It must be a RFC 1123 label.
 _Appears in:_
 - [ControllerReference](#controllerreference)
 
-#### NamespacedServiceRef
-
-
-NamespacedServiceRef is a namespaced reference to a KongService.<br /><br />
-NOTE: currently cross namespace references are not supported.
-
-
-
-| Field | Description |
-| --- | --- |
-| `name` _string_ |  |
-
-
-_Appears in:_
-- [ServiceRef](#serviceref)
-
 #### ObjectName
 _Underlying type:_ `string`
 
@@ -1673,7 +1655,7 @@ ServiceRef is a reference to a KongService.
 | Field | Description |
 | --- | --- |
 | `type` _string_ | Type can be one of: - namespacedRef |
-| `namespacedRef` _[NamespacedServiceRef](#namespacedserviceref)_ | NamespacedRef is a reference to a KongService. |
+| `namespacedRef` _[KongObjectRef](#kongobjectref)_ | NamespacedRef is a reference to a KongService. |
 
 
 _Appears in:_

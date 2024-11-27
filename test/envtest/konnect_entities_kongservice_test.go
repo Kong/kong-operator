@@ -105,14 +105,14 @@ func TestKongService(t *testing.T) {
 			UpsertService(
 				mock.Anything,
 				mock.MatchedBy(func(req sdkkonnectops.UpsertServiceRequest) bool {
-					return req.ServiceID == serviceID && req.Service.Port != nil && *req.Service.Port == port
+					return req.ServiceID == serviceID && req.Service.Port == port
 				}),
 			).
 			Return(&sdkkonnectops.UpsertServiceResponse{}, nil)
 
 		t.Log("Patching KongService")
 		serviceToPatch := createdService.DeepCopy()
-		serviceToPatch.Spec.Port = lo.ToPtr(port)
+		serviceToPatch.Spec.Port = port
 		require.NoError(t, clientNamespaced.Patch(ctx, serviceToPatch, client.MergeFrom(createdService)))
 
 		t.Log("Waiting for Service to be updated in the SDK")

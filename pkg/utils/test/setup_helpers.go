@@ -234,7 +234,7 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 	}
 	// Then install CRDs from the module found in `$GOPATH`.
 	kongCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "kong",
-		"kubernetes-configuration@"+kongCRDVersion, "config", "crd")
+		"kubernetes-configuration@"+kongCRDVersion, "config", "crd", "gateway-operator")
 	fmt.Printf("INFO: deploying Kong (kubernetes-configuration) CRDs: %s\n", kongCRDPath)
 	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kongCRDPath); err != nil {
 		return err
