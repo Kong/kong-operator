@@ -55,11 +55,8 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							ID: "12345",
 						},
 					},
-					nil)
-			// verify that mock SDK is called as expected.
-			t.Cleanup(func() {
-				require.True(t, sdk.ControlPlaneSDK.AssertExpectations(t))
-			})
+					nil,
+				)
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
@@ -176,12 +173,6 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				// of the events in the queue: either the group itself or the member
 				// control plane can be created first.
 				Maybe()
-
-			// verify that mock SDK is called as expected.
-			t.Cleanup(func() {
-				require.True(t, sdk.ControlPlaneSDK.AssertExpectations(t))
-				require.True(t, sdk.ControlPlaneGroupSDK.AssertExpectations(t))
-			})
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
@@ -326,12 +317,6 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				// of the events in the queue: either the group itself or the member
 				// control plane can be created first.
 				Maybe()
-
-			// verify that mock SDK is called as expected.
-			t.Cleanup(func() {
-				require.True(t, sdk.ControlPlaneSDK.AssertExpectations(t))
-				require.True(t, sdk.ControlPlaneGroupSDK.AssertExpectations(t))
-			})
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
@@ -425,11 +410,6 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 					nil,
 				)
-
-			// verify that mock SDK is called as expected.
-			t.Cleanup(func() {
-				require.True(t, sdk.ControlPlaneSDK.AssertExpectations(t))
-			})
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
@@ -478,7 +458,6 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				},
 			)
 		},
-
 		mockExpectations: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
 			sdk.ControlPlaneSDK.EXPECT().
 				CreateControlPlane(
@@ -530,24 +509,20 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					nil,
 				)
 
-			sdk.ControlPlaneGroupSDK.EXPECT().PutControlPlanesIDGroupMemberships(
-				mock.Anything,
-				"group-123456",
-				&sdkkonnectcomp.GroupMembership{
-					Members: []sdkkonnectcomp.Members{
-						{
-							ID: lo.ToPtr("123456"),
+			sdk.ControlPlaneGroupSDK.EXPECT().
+				PutControlPlanesIDGroupMemberships(
+					mock.Anything,
+					"group-123456",
+					&sdkkonnectcomp.GroupMembership{
+						Members: []sdkkonnectcomp.Members{
+							{
+								ID: lo.ToPtr("123456"),
+							},
 						},
 					},
-				},
-			).Return(&sdkkonnectops.PutControlPlanesIDGroupMembershipsResponse{}, nil)
-
-			// verify that mock SDK is called as expected.
-			t.Cleanup(func() {
-				require.True(t, sdk.ControlPlaneSDK.AssertExpectations(t))
-			})
+				).
+				Return(&sdkkonnectops.PutControlPlanesIDGroupMembershipsResponse{}, nil)
 		},
-
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cpGroup := &konnectv1alpha1.KonnectGatewayControlPlane{}
 			if !assert.NoError(t,
@@ -563,6 +538,69 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			}
 
 			assert.Equal(t, "group-123456", cpGroup.Status.ID, "ID should be set")
+			assert.True(t, conditionsContainProgrammedTrue(cpGroup.Status.Conditions),
+				"Programmed condition should be set and its status should be true",
+			)
+			assert.True(t, conditionsContainMembersRefResolvedTrue(cpGroup.Status.Conditions),
+				"MembersRefernceResolved condition should be set and its status should be true")
+		},
+	},
+	{
+		name: "control plane group members set are set to 0 members when no members are listed in the spec",
+		objectOps: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) {
+			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
+
+			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
+				func(obj client.Object) {
+					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+					cp.Name = "cp-group-no-members"
+					cp.Spec.Name = "cp-group-no-members"
+					cp.Spec.ClusterType = lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup)
+				},
+			)
+		},
+		mockExpectations: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
+			sdk.ControlPlaneSDK.EXPECT().
+				CreateControlPlane(
+					mock.Anything,
+					mock.MatchedBy(func(req sdkkonnectcomp.CreateControlPlaneRequest) bool {
+						return req.Name == "cp-group-no-members"
+					}),
+				).
+				Return(
+					&sdkkonnectops.CreateControlPlaneResponse{
+						ControlPlane: &sdkkonnectcomp.ControlPlane{
+							ID: "cpg-id",
+						},
+					},
+					nil,
+				)
+
+			sdk.ControlPlaneGroupSDK.EXPECT().
+				PutControlPlanesIDGroupMemberships(
+					mock.Anything,
+					"cpg-id",
+					&sdkkonnectcomp.GroupMembership{
+						Members: []sdkkonnectcomp.Members{},
+					},
+				).
+				Return(&sdkkonnectops.PutControlPlanesIDGroupMembershipsResponse{}, nil)
+		},
+		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
+			cpGroup := &konnectv1alpha1.KonnectGatewayControlPlane{}
+			if !assert.NoError(t,
+				cl.Get(ctx,
+					k8stypes.NamespacedName{
+						Namespace: ns.Name,
+						Name:      "cp-group-no-members",
+					},
+					cpGroup,
+				),
+			) {
+				return
+			}
+
+			assert.Equal(t, "cpg-id", cpGroup.Status.ID, "ID should be set")
 			assert.True(t, conditionsContainProgrammedTrue(cpGroup.Status.Conditions),
 				"Programmed condition should be set and its status should be true",
 			)

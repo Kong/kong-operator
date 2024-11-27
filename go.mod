@@ -209,7 +209,7 @@ require (
 replace (
 	k8s.io/api => k8s.io/api v0.31.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.31.2
-	k8s.io/apimachinery => k8s.io/apimachinery v0.31.2
+	k8s.io/apimachinery => k8s.io/apimachinery v0.31.3
 	k8s.io/apiserver => k8s.io/apiserver v0.31.2
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.31.2
 	k8s.io/client-go => k8s.io/client-go v0.31.2
@@ -219,7 +219,7 @@ replace (
 	k8s.io/component-base => k8s.io/component-base v0.31.2
 	k8s.io/component-helpers => k8s.io/component-helpers v0.31.2
 	k8s.io/controller-manager => k8s.io/controller-manager v0.31.2
-	k8s.io/cri-api => k8s.io/cri-api v0.31.2
+	k8s.io/cri-api => k8s.io/cri-api v0.31.3
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.31.2
 	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.31.2
 	k8s.io/endpointslice => k8s.io/endpointslice v0.31.2
@@ -232,7 +232,7 @@ replace (
 	k8s.io/kubelet => k8s.io/kubelet v0.31.2
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.30.3
 	k8s.io/metrics => k8s.io/metrics v0.31.2
-	k8s.io/mount-utils => k8s.io/mount-utils v0.31.2
+	k8s.io/mount-utils => k8s.io/mount-utils v0.31.3
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.31.2
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.31.2
 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.31.2

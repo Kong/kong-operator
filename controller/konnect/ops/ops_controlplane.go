@@ -133,16 +133,6 @@ func setGroupMembers(
 		return nil
 	}
 
-	// Set MembersReferenceResolved condition to False if there are no members in the CP group.
-	if len(cp.Spec.Members) == 0 {
-		SetControlPlaneGroupMembersReferenceResolvedConditionFalse(
-			cp,
-			ControlPlaneGroupMembersReferenceResolvedReasonNoMembers,
-			"No members in the control plane group",
-		)
-		return nil
-	}
-
 	members, err := iter.MapErr(cp.Spec.Members,
 		func(member *corev1.LocalObjectReference) (sdkkonnectcomp.Members, error) {
 			var (
