@@ -343,11 +343,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// if the controlplane wasn't ready before this reconciliation loop and now is ready, log this event
-	if !k8sutils.IsConditionTrue(ControlPlaneReadyType, oldGwConditionsAware) {
+	if !k8sutils.HasConditionTrue(ControlPlaneReadyType, oldGwConditionsAware) {
 		log.Debug(logger, "controlplane is ready")
 	}
 	// If the dataplane has not been marked as ready yet, return and wait for the next reconciliation loop.
-	if !k8sutils.IsConditionTrue(DataPlaneReadyType, gwConditionAware) {
+	if !k8sutils.HasConditionTrue(DataPlaneReadyType, gwConditionAware) {
 		log.Debug(logger, "controlplane is ready, but dataplane is not ready yet")
 		return ctrl.Result{}, nil
 	}

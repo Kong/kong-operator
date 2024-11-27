@@ -66,7 +66,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 		watchFor(t, ctx, w, watch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
 				r.Status.OrganizationID == "12345" &&
-				k8sutils.IsConditionTrue("APIAuthValid", r)
+				k8sutils.HasConditionTrue("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to true or didn't get the Org ID set")
 	})
 
@@ -90,7 +90,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=true")
 		watchFor(t, ctx, w, watch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
-				k8sutils.IsConditionFalse("APIAuthValid", r)
+				k8sutils.HasConditionFalse("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")
 	})
 
@@ -112,7 +112,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=false")
 		watchFor(t, ctx, w, watch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
-				k8sutils.IsConditionFalse("APIAuthValid", r)
+				k8sutils.HasConditionFalse("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")
 	})
 
@@ -134,7 +134,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=false")
 		watchFor(t, ctx, w, watch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
-				k8sutils.IsConditionFalse("APIAuthValid", r)
+				k8sutils.HasConditionFalse("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")
 	})
 
@@ -154,7 +154,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=false")
 		watchFor(t, ctx, w, watch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
-				k8sutils.IsConditionFalse("APIAuthValid", r)
+				k8sutils.HasConditionFalse("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")
 	})
 }
