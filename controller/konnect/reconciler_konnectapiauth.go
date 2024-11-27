@@ -146,7 +146,18 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 	// NOTE: This is needed because currently the SDK only lists the prod global API as supported:
 	// https://github.com/Kong/sdk-konnect-go/blob/999d9a987e1aa7d2e09ac11b1450f4563adf21ea/models/operations/getorganizationsme.go#L10-L12
 	respOrg, err := sdk.GetMeSDK().GetOrganizationsMe(ctx, sdkkonnectops.WithServerURL(serverURL.String()))
-	if err != nil {
+	if err != nil ||
+		respOrg == nil ||
+		respOrg.MeOrganization == nil ||
+		respOrg.MeOrganization.ID == nil {
+
+		var errMsg string
+		if err != nil {
+			errMsg = err.Error()
+		} else {
+			errMsg = "response from Konnect is nil"
+		}
+
 		logger.Error(err, "failed to get organization info from Konnect")
 		if cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
 			cond.Status != metav1.ConditionFalse ||
@@ -163,7 +174,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 				konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 				metav1.ConditionFalse,
 				konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
-				err.Error(),
+				errMsg,
 			)
 
 			_, errUpdate := patch.ApplyStatusPatchIfNotEmpty(ctx, r.client, ctrllog.FromContext(ctx), &apiAuth, old)

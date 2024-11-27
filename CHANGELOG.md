@@ -31,6 +31,9 @@
 - Fixed setting `ExternalTrafficPolicy` on `DataPlane`'s ingress `Service` when
   the requested value is empty.
   [#865](https://github.com/Kong/gateway-operator/pull/865)
+- Fixed a `panic` in `KonnectAPIAuthConfigurationReconciler` occuring when nil
+  response was returned by Konnect API when fetching the organization information.
+  [#890](https://github.com/Kong/gateway-operator/pull/890)
 
 ## [v1.4.0]
 

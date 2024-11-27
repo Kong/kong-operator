@@ -332,7 +332,7 @@ func TestIsValidCondition(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			current := IsConditionTrue(consts.ConditionType(tt.input), resource)
+			current := HasConditionTrue(consts.ConditionType(tt.input), resource)
 			assert.Equal(t, current, tt.expected)
 		})
 	}
