@@ -66,14 +66,13 @@ These versions should be updated to match the new release. The example consts to
 
 ## GitHub PAT
 
-**Next expiration date**: 2024-10-02
-
 The release workflow uses @team-k8s-bot's GitHub PAT to create a GitHub release and PRs related to it.
-It's named `Kong Gateway operator release pipeline` and is stored in `PAT_GITHUB`
-GitHub repository secret to give workflows access to it. It's always generated with 1-year expiration date.
+It's named `Github team k8s bot - PAT - Kong Gateway Operator CI` in 1password and is stored in `PAT_GITHUB`
+GitHub repository secret to give workflows access to it.
+It's always generated with 1-year expiration date.
 
 If you find it's expired, make sure to generate a new one and update the `PAT_GITHUB` secret as well as its 1Pass item
-`Github team k8s bot - PAT - Kong Gateway operator release token` for redundancy.
+`Github team k8s bot - PAT - Kong Gateway Operator CI` for redundancy.
 
 ## Troubleshooting
 
