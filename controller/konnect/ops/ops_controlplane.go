@@ -157,7 +157,7 @@ func setGroupMembers(
 					}
 			}
 			return sdkkonnectcomp.Members{
-				ID: lo.ToPtr(memberCP.GetKonnectID()),
+				ID: memberCP.GetKonnectID(),
 			}, nil
 		})
 	if err != nil {
@@ -194,7 +194,7 @@ func setGroupMembers(
 type membersByID []sdkkonnectcomp.Members
 
 func (m membersByID) Len() int           { return len(m) }
-func (m membersByID) Less(i, j int) bool { return *m[i].ID < *m[j].ID }
+func (m membersByID) Less(i, j int) bool { return m[i].ID < m[j].ID }
 func (m membersByID) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 
 // getControlPlaneForUID returns the Konnect ID of the Konnect ControlPlane

@@ -562,7 +562,7 @@ install: manifests kustomize install-gateway-api-crds
 
 KUBERNETES_CONFIGURATION_CRDS_PACKAGE ?= github.com/kong/kubernetes-configuration
 KUBERNETES_CONFIGURATION_CRDS_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(KUBERNETES_CONFIGURATION_CRDS_PACKAGE))
-KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_CRDS_PACKAGE)@$(KUBERNETES_CONFIGURATION_CRDS_VERSION)/config/crd
+KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_CRDS_PACKAGE)@$(KUBERNETES_CONFIGURATION_CRDS_VERSION)/config/crd/gateway-operator
 
 # Install kubernetes-configuration CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.kubernetes-configuration-crds

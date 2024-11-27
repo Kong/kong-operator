@@ -102,8 +102,8 @@ func kongCredentialBasicAuthToBasicAuthWithoutParents(
 	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) sdkkonnectcomp.BasicAuthWithoutParents {
 	return sdkkonnectcomp.BasicAuthWithoutParents{
-		Password: lo.ToPtr(cred.Spec.Password),
-		Username: lo.ToPtr(cred.Spec.Username),
+		Password: cred.Spec.Password,
+		Username: cred.Spec.Username,
 		Tags:     GenerateTagsForObject(cred, cred.Spec.Tags...),
 	}
 }
