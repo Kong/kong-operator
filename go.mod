@@ -11,7 +11,7 @@ toolchain go1.23.2
 retract v1.2.2
 
 require (
-	github.com/Kong/sdk-konnect-go v0.1.2
+	github.com/Kong/sdk-konnect-go v0.1.10
 	github.com/Masterminds/semver v1.5.0
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/go-logr/logr v1.4.2
@@ -24,7 +24,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/samber/lo v1.47.0
 	github.com/sourcegraph/conc v0.3.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	golang.org/x/mod v0.21.0
 	k8s.io/api v0.31.2
 	k8s.io/apimachinery v0.31.2
@@ -42,7 +42,6 @@ require (
 	github.com/aws/aws-sdk-go v1.49.13 // indirect
 	github.com/bombsimon/logrusr/v3 v3.1.0 // indirect
 	github.com/boombuler/barcode v1.0.1 // indirect
-	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731 // indirect
