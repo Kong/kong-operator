@@ -497,29 +497,21 @@ webhook-certs-dir:
 _ensure-kong-system-namespace:
 	@kubectl create ns kong-system 2>/dev/null || true
 
-TMP_DIR := $(shell mktemp -d)
-KUBECONFIG ?= $(HOME)/.kube/config
-TMP_KUBECONFIG := $(TMP_DIR)/kubeconfig
-
-.PHONY: impersonate-kgo
-impersonate-kgo:
-	cp $(KUBECONFIG) $(TMP_KUBECONFIG)
-	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-credentials kgo --token=$(shell kubectl create token --namespace=kong-system controller-manager)
-	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-context kgo --cluster=$(shell kubectl config get-contexts | grep '^\*' | tr -s ' ' | cut -d ' ' -f 3) --user=kgo --namespace=kong-system
-	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config use-context kgo
-
 # Run a controller from your host.
 .PHONY: run
 run: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace install.rbacs
 	@$(MAKE) _run
 
+KUBECONFIG ?= $(HOME)/.kube/config
+
 # Run the operator without checking any preconditions, installing CRDs etc.
 # This is mostly useful when 'run' was run at least once on a server and CRDs, RBACs
 # etc didn't change in between the runs.
-# The operator will use a temporary kubeconfig file and impersonate the real RBACs.
 .PHONY: _run
-_run: impersonate-kgo
-	KUBECONFIG=$(TMP_KUBECONFIG) GATEWAY_OPERATOR_DEVELOPMENT_MODE=true go run ./cmd/main.go \
+_run:
+	KUBECONFIG=$(KUBECONFIG) \
+		GATEWAY_OPERATOR_DEVELOPMENT_MODE=true \
+		go run ./cmd/main.go \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		-enable-controller-kongplugininstallation \
@@ -528,6 +520,21 @@ _run: impersonate-kgo
 		-zap-time-encoding iso8601 \
 		-zap-log-level 2 \
 		-zap-devel true
+
+# Run the operator locally with impersonation of controller-manager service account from kong-system namespace.
+# The operator will use a temporary kubeconfig file and impersonate the real RBACs.
+.PHONY: _run.with-impersonate
+_run.with-impersonate:
+	@$(eval TMP := $(shell mktemp -d))
+	@$(eval TMP_KUBECONFIG := $(TMP)/kubeconfig)
+	[ ! -z "$(KUBECONFIG)" ] || exit 1
+	cp $(KUBECONFIG) $(TMP_KUBECONFIG)
+	@$(eval TMP_TOKEN := $(shell kubectl create token --namespace=kong-system controller-manager))
+	@$(eval CLUSTER := $(shell kubectl config get-contexts | grep '^\*' | tr -s ' ' | cut -d ' ' -f 3))
+	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-credentials kgo --token=$(TMP_TOKEN)
+	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-context kgo --cluster=$(CLUSTER) --user=kgo --namespace=kong-system
+	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config use-context kgo
+	bash -c "trap 'echo deleting temporary kubeconfig $(TMP); rm -rf $(TMP)' EXIT; $(MAKE) _run KUBECONFIG=$(TMP_KUBECONFIG)"
 
 SKAFFOLD_RUN_PROFILE ?= dev
 
