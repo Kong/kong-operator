@@ -226,19 +226,10 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 		return err
 	}
 
-	// CRDs for Kong configuration
-	// First extract version of `kong/kubernetes-configuration` module used
-	kongCRDVersion, err := ExtractModuleVersion(KubernetesConfigurationModuleName)
-	if err != nil {
-		return fmt.Errorf("failed to extract Kong CRDs (%s) module's version: %w", KubernetesConfigurationModuleName, err)
-	}
-	// Then install CRDs from the module found in `$GOPATH`.
-	kongCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "kong",
-		"kubernetes-configuration@"+kongCRDVersion, "config", "crd", "gateway-operator")
-	fmt.Printf("INFO: deploying Kong (kubernetes-configuration) CRDs: %s\n", kongCRDPath)
-	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kongCRDPath); err != nil {
+	if err := InstallKubernetesConfigurationCRDs(ctx, env); err != nil {
 		return err
 	}
+
 	// CRDs for alpha/experimental features
 	fmt.Printf("INFO: deploying KGO AIGateway CRD: %s\n", crdPath)
 	if err := clusters.ApplyManifestByURL(ctx, env.Cluster(), path.Join(crdPath, AIGatewayCRDPath)); err != nil {
@@ -250,6 +241,32 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 	if err := waitForOperatorCRDs(ctx, operatorClient); err != nil {
 		return err
 	}
+	return nil
+}
+
+// InstallKubernetesConfigurationCRDs installs the Kong CRDs from the `kong/kubernetes-configuration` module.
+// The version is extracted using ExtractModuleVersion from go.mod.
+func InstallKubernetesConfigurationCRDs(ctx context.Context, env environments.Environment) error {
+	// First extract version of `kong/kubernetes-configuration` module used
+	kongCRDVersion, err := ExtractModuleVersion(KubernetesConfigurationModuleName)
+	if err != nil {
+		return fmt.Errorf("failed to extract Kong CRDs (%s) module's version: %w", KubernetesConfigurationModuleName, err)
+	}
+
+	// NOTE: this installs CRDs from https://github.com/Kong/kubernetes-configuration/tree/f1475e539fa92eb5318a8b0550c6012cfc945893/config/crd
+	kubernetesConfigurationCRDsDirs := []string{"gateway-operator", "ingress-controller"}
+	for _, crdDirName := range kubernetesConfigurationCRDsDirs {
+		// Install CRDs from the module found in `$GOPATH`.
+		kongCRDPath := filepath.Join(
+			build.Default.GOPATH, "pkg", "mod", "github.com", "kong",
+			"kubernetes-configuration@"+kongCRDVersion, "config", "crd", crdDirName,
+		)
+		fmt.Printf("INFO: deploying kubernetes-configuration CRDs: %s\n", kongCRDPath)
+		if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kongCRDPath); err != nil {
+			return fmt.Errorf("failed installing kubernetes-configurations (%s) CRDs: %w", kongCRDPath, err)
+		}
+	}
+
 	return nil
 }
 
