@@ -507,6 +507,7 @@ impersonate-kgo:
 	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-credentials kgo --token=$(shell kubectl create token --namespace=kong-system controller-manager)
 	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-context kgo --cluster=$(shell kubectl config get-contexts | grep '^\*' | tr -s ' ' | cut -d ' ' -f 3) --user=kgo --namespace=kong-system
 	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config use-context kgo
+
 # Run a controller from your host.
 .PHONY: run
 run: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace install.rbacs
