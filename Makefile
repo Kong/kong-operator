@@ -502,6 +502,11 @@ _ensure-kong-system-namespace:
 run: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace install.rbacs
 	@$(MAKE) _run
 
+# Run a controller from your host and make it impersonate the controller-manager service account from kong-system namespace.
+.PHONY: run.with_impersonate
+run.with_impersonate: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace install.rbacs
+	@$(MAKE) _run.with-impersonate
+
 KUBECONFIG ?= $(HOME)/.kube/config
 
 # Run the operator without checking any preconditions, installing CRDs etc.
