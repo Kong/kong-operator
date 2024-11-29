@@ -28,4 +28,5 @@ go.work
 go.work.sum
 
 # Conformance tests report
-*-report.yaml
+standard-*-report.yaml
+experimental-*-report.yaml
