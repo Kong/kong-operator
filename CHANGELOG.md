@@ -31,6 +31,12 @@
   anymore - default is set to `konghq.com`.
   [#947](https://github.com/Kong/gateway-operator/pull/947)
 
+### Fixes
+
+- Fix `DataPlane`s with `KonnectExtension` and `BlueGreen` settings. Both the Live
+  and preview deployments are now customized with Konnect-related settings.
+  [#910](https://github.com/Kong/gateway-operator/pull/910)
+
 ## [v1.4.1]
 
 > Release date: 2024-11-28
