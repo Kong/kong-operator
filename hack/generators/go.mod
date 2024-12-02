@@ -13,7 +13,7 @@ require (
 	github.com/samber/lo v1.47.0
 	k8s.io/api v0.31.3
 	k8s.io/apimachinery v0.31.3
-	sigs.k8s.io/gateway-api v1.2.0
+	sigs.k8s.io/gateway-api v1.2.1
 )
 
 require (
