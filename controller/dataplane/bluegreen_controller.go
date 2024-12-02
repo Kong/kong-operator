@@ -63,6 +63,8 @@ type BlueGreenReconciler struct {
 	ContextInjector ctxinjector.CtxInjector
 
 	DefaultImage string
+
+	KonnectEnabled bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -134,6 +136,20 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// DataPlane is ready and we can proceed with deploying preview resources.
+
+	// customize the dataplane with the extensions field
+	log.Trace(logger, "applying extensions")
+	patched, requeue, err := applyExtensions(ctx, r.Client, logger, &dataplane, r.KonnectEnabled)
+	if err != nil {
+		if !requeue {
+			log.Debug(logger, "failed to apply extensions", "err", err)
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
+	}
+	if patched {
+		return ctrl.Result{}, nil
+	}
 
 	// Ensure "preview" Admin API service.
 	res, dataplaneAdminService, err := r.ensurePreviewAdminAPIService(ctx, logger, &dataplane)
