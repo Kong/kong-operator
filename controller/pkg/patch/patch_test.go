@@ -34,7 +34,7 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 		assertHPAFunc   func(t *testing.T, hpa *autoscalingv2.HorizontalPodAutoscaler)
 		updated         bool
 		wantErr         bool
-		wantResult      op.CreatedUpdatedOrNoop
+		wantResult      op.Result
 	}{
 		{
 			name: "when no changes are needed no patch is being made",
@@ -163,8 +163,6 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
 
@@ -184,7 +182,7 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 				WithObjects(tc.dataPlane, hpa).
 				Build()
 
-			result, _, err := ApplyPatchIfNonEmpty(context.Background(), fakeClient, log, hpa, old, tc.dataPlane, tc.updated)
+			result, _, err := ApplyPatchIfNotEmpty(context.Background(), fakeClient, log, hpa, old, tc.updated)
 			if tc.wantErr {
 				require.Error(t, err)
 				return

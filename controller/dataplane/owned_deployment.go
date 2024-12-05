@@ -90,7 +90,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	ctx context.Context,
 	dataplane *operatorv1beta1.DataPlane,
 	developmentMode bool,
-) (*appsv1.Deployment, op.CreatedUpdatedOrNoop, error) {
+) (*appsv1.Deployment, op.Result, error) {
 	// run any preparatory callbacks
 	beforeDeploymentCallbacks := NewCallbackRunner(d.client)
 	cbErrors := beforeDeploymentCallbacks.For(dataplane).Runs(d.beforeCallbacks).Do(ctx, nil)
@@ -130,7 +130,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 		return nil, op.Noop, fmt.Errorf("after generation callbacks failed")
 	}
 
-	// TODO https://github.com/Kong/gateway-operator/issues/1495
+	// TODO https://github.com/Kong/gateway-operator/issues/128
 	// This is a a workaround to avoid patches clobbering the wrong EnvVar. We want to find an improved patch mechanism
 	// that doesn't clobber EnvVars (and other array fields) it shouldn't.
 	existingEnvVars := desiredDeployment.Spec.Template.Spec.Containers[0].Env
@@ -141,7 +141,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 		return nil, op.Noop, err
 	}
 	// apply default envvars and restore the hacked-out ones
-	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment)
+	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, dputils.KongDefaults)
 
 	// push the complete Deployment to Kubernetes
 	res, deployment, err := reconcileDataPlaneDeployment(ctx, d.client, d.logger,
@@ -200,8 +200,9 @@ func applyDeploymentUserPatchesForDataPlane(
 func applyEnvForDataPlane(
 	existing []corev1.EnvVar,
 	deployment *k8sresources.Deployment,
+	envSet map[string]string,
 ) *k8sresources.Deployment {
-	dputils.FillDataPlaneProxyContainerEnvs(existing, &deployment.Spec.Template)
+	dputils.FillDataPlaneProxyContainerEnvs(existing, &deployment.Spec.Template, envSet)
 	return deployment
 }
 
@@ -294,7 +295,7 @@ func reconcileDataPlaneDeployment(
 	dataplane *operatorv1beta1.DataPlane,
 	existing *appsv1.Deployment,
 	desired *appsv1.Deployment,
-) (res op.CreatedUpdatedOrNoop, deploy *appsv1.Deployment, err error) {
+) (res op.Result, deploy *appsv1.Deployment, err error) {
 	if existing != nil {
 		var updated bool
 		original := existing.DeepCopy()
@@ -307,7 +308,7 @@ func reconcileDataPlaneDeployment(
 		// some custom comparison rules are needed for some PodTemplateSpec sub-attributes, in particular
 		// resources and affinity.
 		opts := []cmp.Option{
-			cmp.Comparer(func(a, b corev1.ResourceRequirements) bool { return k8sresources.ResourceRequirementsEqual(a, b) }),
+			cmp.Comparer(k8sresources.ResourceRequirementsEqual),
 		}
 
 		// ensure that PodTemplateSpec is up to date
@@ -330,7 +331,7 @@ func reconcileDataPlaneDeployment(
 			// the replicas to the minReplicas if the existing Deployment replicas
 			// are less than the minReplicas to enforce faster scaling before HPA
 			// kicks in.
-			(scaling != nil && scaling.HorizontalScaling != nil &&
+			(scaling.HorizontalScaling != nil &&
 				scaling.HorizontalScaling.MinReplicas != nil &&
 				existing.Spec.Replicas != nil &&
 				*existing.Spec.Replicas < *scaling.HorizontalScaling.MinReplicas) {
@@ -341,16 +342,16 @@ func reconcileDataPlaneDeployment(
 		}
 		if updated {
 			diff := cmp.Diff(original.Spec.Template, desired.Spec.Template, opts...)
-			log.Trace(logger, "Deployment diff detected", diff)
+			log.Trace(logger, "DataPlane Deployment diff detected", "diff", diff)
 		}
 
-		return patch.ApplyPatchIfNonEmpty(ctx, cl, logger, existing, original, dataplane, updated)
+		return patch.ApplyPatchIfNotEmpty(ctx, cl, logger, existing, original, updated)
 	}
 
 	if err = cl.Create(ctx, desired); err != nil {
 		return op.Noop, nil, fmt.Errorf("failed creating Deployment for DataPlane %s: %w", dataplane.Name, err)
 	}
 
-	log.Debug(logger, "deployment for DataPlane created", dataplane, "deployment", desired.Name)
+	log.Debug(logger, "deployment for DataPlane created", "deployment", desired.Name)
 	return op.Created, desired, nil
 }

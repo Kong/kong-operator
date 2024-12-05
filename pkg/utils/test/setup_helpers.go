@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"go/build"
 	"io"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -15,17 +17,23 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/samber/lo"
+	"golang.org/x/mod/modfile"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kong/gateway-operator/modules/manager"
 	operatorclient "github.com/kong/gateway-operator/pkg/clientset"
 )
 
-const kicCRDsKustomizeURL = "https://github.com/Kong/kubernetes-ingress-controller/config/crd"
+const (
+	// KubernetesConfigurationModuleName is the name of the module where we import and install Kong configuration CRDs from.
+	KubernetesConfigurationModuleName = "github.com/kong/kubernetes-configuration"
+)
 
 func noOpClose() error {
 	return nil
@@ -182,21 +190,48 @@ func BuildMTLSCredentials(ctx context.Context, k8sClient *kubernetes.Clientset, 
 	}
 }
 
+// ExtractModuleVersion extracts version of an imported module in go.mod.
+// If the module is not found, or we failed to parse the module version, it will return an error.
+func ExtractModuleVersion(moduleName string) (string, error) {
+	projectRoot := ProjectRootPath()
+	content, err := os.ReadFile(filepath.Join(projectRoot, "go.mod"))
+	if err != nil {
+		return "", err
+	}
+	f, err := modfile.Parse("go.mod", content, nil)
+	if err != nil {
+		return "", err
+	}
+	module, found := lo.Find(f.Require, func(r *modfile.Require) bool {
+		return r.Mod.Path == moduleName
+	})
+	if !found {
+		return "", fmt.Errorf("module %s not found", moduleName)
+	}
+	return module.Mod.Version, nil
+}
+
 // DeployCRDs deploys the CRDs commonly used in tests.
 func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorclient.Clientset, env environments.Environment) error {
 	// CRDs for stable features
 	kubectlFlags := []string{"--server-side", "-v5"}
+	fmt.Printf("INFO: deploying KGO CRDs: %s\n", crdPath)
 	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), crdPath, kubectlFlags...); err != nil {
 		return err
 	}
-	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), GatewayExperimentalCRDsKustomizeURL); err != nil {
+
+	// CRDs for gateway APIs
+	fmt.Printf("INFO: deploying Gateway API CRDs: %s\n", GatewayStandardCRDsKustomizeURL)
+	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), GatewayStandardCRDsKustomizeURL); err != nil {
 		return err
 	}
-	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kicCRDsKustomizeURL); err != nil {
+
+	if err := InstallKubernetesConfigurationCRDs(ctx, env); err != nil {
 		return err
 	}
 
 	// CRDs for alpha/experimental features
+	fmt.Printf("INFO: deploying KGO AIGateway CRD: %s\n", crdPath)
 	if err := clusters.ApplyManifestByURL(ctx, env.Cluster(), path.Join(crdPath, AIGatewayCRDPath)); err != nil {
 		return err
 	}
@@ -209,6 +244,32 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 	return nil
 }
 
+// InstallKubernetesConfigurationCRDs installs the Kong CRDs from the `kong/kubernetes-configuration` module.
+// The version is extracted using ExtractModuleVersion from go.mod.
+func InstallKubernetesConfigurationCRDs(ctx context.Context, env environments.Environment) error {
+	// First extract version of `kong/kubernetes-configuration` module used
+	kongCRDVersion, err := ExtractModuleVersion(KubernetesConfigurationModuleName)
+	if err != nil {
+		return fmt.Errorf("failed to extract Kong CRDs (%s) module's version: %w", KubernetesConfigurationModuleName, err)
+	}
+
+	// NOTE: this installs CRDs from https://github.com/Kong/kubernetes-configuration/tree/f1475e539fa92eb5318a8b0550c6012cfc945893/config/crd
+	kubernetesConfigurationCRDsDirs := []string{"gateway-operator", "ingress-controller"}
+	for _, crdDirName := range kubernetesConfigurationCRDsDirs {
+		// Install CRDs from the module found in `$GOPATH`.
+		kongCRDPath := filepath.Join(
+			build.Default.GOPATH, "pkg", "mod", "github.com", "kong",
+			"kubernetes-configuration@"+kongCRDVersion, "config", "crd", crdDirName,
+		)
+		fmt.Printf("INFO: deploying kubernetes-configuration CRDs: %s\n", kongCRDPath)
+		if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kongCRDPath); err != nil {
+			return fmt.Errorf("failed installing kubernetes-configurations (%s) CRDs: %w", kongCRDPath, err)
+		}
+	}
+
+	return nil
+}
+
 func waitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Clientset) error {
 	ready := false
 	for !ready {
@@ -216,9 +277,19 @@ func waitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Cli
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			if _, err := operatorClient.ApisV1beta1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); err == nil {
-				ready = true
+			fmt.Printf("INFO: checking KGO DataPlane CRD\n")
+			if _, err := operatorClient.ApisV1beta1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
+				continue
 			}
+			fmt.Printf("INFO: checking KGO ControlPlane CRD\n")
+			if _, err := operatorClient.ApisV1beta1().ControlPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
+				continue
+			}
+			fmt.Printf("INFO: checking KGO AIGateway CRD\n")
+			if _, err := operatorClient.ApisV1alpha1().AIGateways(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
+				continue
+			}
+			ready = true
 		}
 	}
 	return nil

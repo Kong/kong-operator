@@ -25,23 +25,26 @@ type selfSignedCertificateOptions struct {
 	Expired     bool
 }
 
-type SelfSignedCertificateOption func(selfSignedCertificateOptions) selfSignedCertificateOptions
+type selfSignedCertificateOption func(selfSignedCertificateOptions) selfSignedCertificateOptions
 
-func WithCommonName(commonName string) SelfSignedCertificateOption {
+// WithCommonName sets the CommonName field of the certificate.
+func WithCommonName(commonName string) selfSignedCertificateOption {
 	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
 		opts.CommonName = commonName
 		return opts
 	}
 }
 
-func WithDNSNames(dnsNames ...string) SelfSignedCertificateOption {
+// WithDNSNames sets DNS names for the certificate.
+func WithDNSNames(dnsNames ...string) selfSignedCertificateOption {
 	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
 		opts.DNSNames = append(opts.DNSNames, dnsNames...)
 		return opts
 	}
 }
 
-func WithIPAdresses(ipAddresses ...string) SelfSignedCertificateOption {
+// WithIPAdresses sets IP addresses for the certificate.
+func WithIPAdresses(ipAddresses ...string) selfSignedCertificateOption {
 	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
 		for _, ip := range ipAddresses {
 			opts.IPAddresses = append(opts.IPAddresses, net.ParseIP(ip))
@@ -51,14 +54,15 @@ func WithIPAdresses(ipAddresses ...string) SelfSignedCertificateOption {
 }
 
 // WithCATrue allows to use returned certificate to sign other certificates (uses BasicConstraints extension).
-func WithCATrue() SelfSignedCertificateOption {
+func WithCATrue() selfSignedCertificateOption {
 	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
 		opts.CATrue = true
 		return opts
 	}
 }
 
-func WithAlreadyExpired() SelfSignedCertificateOption {
+// WithAlreadyExpired sets the certificate to be already expired.
+func WithAlreadyExpired() selfSignedCertificateOption {
 	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
 		opts.Expired = true
 		return opts
@@ -67,25 +71,21 @@ func WithAlreadyExpired() SelfSignedCertificateOption {
 
 // MustGenerateSelfSignedCert generates a tls.Certificate struct to be used in TLS client/listener configurations.
 // Certificate is self-signed thus returned cert can be used as CA for it.
-func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOption) tls.Certificate {
+func MustGenerateSelfSignedCert(options ...selfSignedCertificateOption) tls.Certificate {
 	// Generate a new RSA private key.
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to generate RSA key: %s", err))
 	}
 
-	options := selfSignedCertificateOptions{
-		CommonName: "",
-		DNSNames:   []string{},
-	}
-
-	for _, decorator := range decorators {
-		options = decorator(options)
+	var certOptions selfSignedCertificateOptions
+	for _, option := range options {
+		certOptions = option(certOptions)
 	}
 
 	notBefore := time.Now()
 	notAfter := notBefore.AddDate(1, 0, 0)
-	if options.Expired {
+	if certOptions.Expired {
 		notBefore = notBefore.AddDate(-2, 0, 0)
 		notAfter = notAfter.AddDate(-2, 0, 0)
 	}
@@ -100,14 +100,14 @@ func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOption) tls.C
 			Locality:      []string{"San Francisco"},
 			StreetAddress: []string{"150 Spear Street, Suite 1600"},
 			PostalCode:    []string{"94105"},
-			CommonName:    options.CommonName,
+			CommonName:    certOptions.CommonName,
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
-		DNSNames:              options.DNSNames,
-		IPAddresses:           options.IPAddresses,
+		DNSNames:              certOptions.DNSNames,
+		IPAddresses:           certOptions.IPAddresses,
 		BasicConstraintsValid: true,
-		IsCA:                  options.CATrue,
+		IsCA:                  certOptions.CATrue,
 	}
 	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
 	if err != nil {
@@ -126,8 +126,8 @@ func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOption) tls.C
 // MustGenerateSelfSignedCertPEMFormat generates self-signed certificate
 // and returns certificate and key in PEM format. Certificate is self-signed
 // thus returned cert can be used as CA for it.
-func MustGenerateSelfSignedCertPEMFormat(decorators ...SelfSignedCertificateOption) (cert []byte, key []byte) {
-	tlsCert := MustGenerateSelfSignedCert(decorators...)
+func MustGenerateSelfSignedCertPEMFormat(options ...selfSignedCertificateOption) (cert []byte, key []byte) {
+	tlsCert := MustGenerateSelfSignedCert(options...)
 
 	certBlock := &pem.Block{
 		Type:  "CERTIFICATE",

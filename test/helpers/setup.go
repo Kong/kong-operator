@@ -33,6 +33,9 @@ func SetupTestEnv(t *testing.T, ctx context.Context, env environments.Environmen
 	t.Log("performing test setup")
 	cleaner := clusters.NewCleaner(env.Cluster())
 	t.Cleanup(func() {
+		t.Helper()
+
+		t.Log("performing test cleanup")
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
 		defer cancel()
 		assert.NoError(t, cleaner.Cleanup(ctx))
@@ -78,7 +81,7 @@ func ParseGoTestFlags(testRunner func(t *testing.T), testSuiteToRun []func(t *te
 	// Hack - set test.run flag to the name of the test function that runs the test suite
 	// to execute it with tests that are returned from this function.
 	// They are explicitly passed to RunTestSuite(...) as an argument.
-	if err := fRun.Value.Set(getFunctionName(testRunner)); err != nil {
+	if err := fRun.Value.Set(getFunctionName(testRunner) + "/" + fRun.Value.String()); err != nil {
 		fmt.Println("testing: unexpected error happened (it should never happen, check the code)", err)
 		os.Exit(1)
 	}

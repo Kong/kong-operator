@@ -2,7 +2,7 @@
 # Builder
 # ------------------------------------------------------------------------------
 
-FROM golang:1.22.2 as builder
+FROM --platform=$BUILDPLATFORM golang:1.23.4 AS builder
 
 WORKDIR /workspace
 ARG GOPATH
@@ -55,7 +55,7 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
 
 # Use distroless as minimal base image to package the operator binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot as distroless
+FROM gcr.io/distroless/static:nonroot AS distroless
 
 ARG TAG
 ARG NAME="Kong Gateway Operator"

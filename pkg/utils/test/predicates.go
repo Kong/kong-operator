@@ -14,6 +14,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -101,7 +102,7 @@ func ControlPlaneIsScheduled(t *testing.T, ctx context.Context, controlPlane typ
 func DataPlaneIsReady(t *testing.T, ctx context.Context, dataplane types.NamespacedName, operatorClient *clientset.Clientset) func() bool {
 	return DataPlanePredicate(t, ctx, dataplane, func(c *operatorv1beta1.DataPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(k8sutils.ReadyType) && condition.Status == metav1.ConditionTrue {
+			if condition.Type == string(consts.ReadyType) && condition.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -146,7 +147,7 @@ func ControlPlaneIsProvisioned(t *testing.T, ctx context.Context, controlPlane t
 func ControlPlaneIsNotReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
 	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(k8sutils.ReadyType) &&
+			if condition.Type == string(consts.ReadyType) &&
 				condition.Status == metav1.ConditionFalse {
 				return true
 			}
@@ -161,7 +162,7 @@ func ControlPlaneIsNotReady(t *testing.T, ctx context.Context, controlplane type
 func ControlPlaneIsReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
 	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(k8sutils.ReadyType) &&
+			if condition.Type == string(consts.ReadyType) &&
 				condition.Status == metav1.ConditionTrue {
 				return true
 			}
@@ -265,11 +266,11 @@ func ControlPlaneCRBContainsCRAndSA(t *testing.T, ctx context.Context, controlpl
 }
 
 // ControlPlaneHasNReadyPods checks if a ControlPlane has at least N ready Pods.
-func ControlPlaneHasNReadyPods(t *testing.T, ctx context.Context, controlplaneName types.NamespacedName, clients K8sClients, n int) func() bool {
+func ControlPlaneHasNReadyPods(t *testing.T, ctx context.Context, controlplaneName types.NamespacedName, clients K8sClients, n int32) func() bool {
 	return controlPlanePredicate(t, ctx, controlplaneName, func(controlplane *operatorv1beta1.ControlPlane) bool {
 		deployments := MustListControlPlaneDeployments(t, ctx, controlplane, clients)
 		return len(deployments) == 1 &&
-			*deployments[0].Spec.Replicas == int32(n) &&
+			*deployments[0].Spec.Replicas == n &&
 			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
 	}, clients.OperatorClient)
 }
@@ -306,10 +307,11 @@ func ControlPlaneHasAdmissionWebhookCertificateSecret(t *testing.T, ctx context.
 // that can be used to check if a ControlPlane has an admission webhook configuration.
 func ControlPlaneHasAdmissionWebhookConfiguration(t *testing.T, ctx context.Context, cp *operatorv1beta1.ControlPlane, clients K8sClients) func() bool {
 	return func() bool {
-		services, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(ctx, clients.MgrClient, cp.UID)
+		managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
+		configs, err := k8sutils.ListValidatingWebhookConfigurations(ctx, clients.MgrClient, client.MatchingLabels(managedByLabelSet))
 		require.NoError(t, err)
-		t.Logf("%d validating webhook configurations", len(services))
-		return len(services) > 0
+		t.Logf("%d validating webhook configurations", len(configs))
+		return len(configs) > 0
 	}
 }
 
@@ -415,13 +417,13 @@ func DataPlaneHasDeployment(
 }
 
 // DataPlaneHasNReadyPods checks if a DataPlane has at least N ready Pods.
-func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, n int) func() bool {
+func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, n int32) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		})
 		return len(deployments) == 1 &&
-			*deployments[0].Spec.Replicas == int32(n) &&
+			*deployments[0].Spec.Replicas == n &&
 			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
 	}, clients.OperatorClient)
 }
@@ -429,10 +431,26 @@ func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName typ
 // DataPlaneHasService is a helper function for tests that returns a function
 // that can be used to check if a DataPlane has a service created.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func DataPlaneHasService(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, matchingLabels client.MatchingLabels) func() bool {
+func DataPlaneHasService(
+	t *testing.T,
+	ctx context.Context,
+	dataplaneName types.NamespacedName,
+	clients K8sClients,
+	matchingLabels client.MatchingLabels,
+	asserts ...func(corev1.Service) bool,
+) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
 		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, matchingLabels)
-		return len(services) == 1
+		if len(services) != 1 {
+			return false
+		}
+		for _, a := range asserts {
+			if !a(services[0]) {
+				return false
+			}
+		}
+
+		return true
 	}, clients.OperatorClient)
 }
 
@@ -549,6 +567,29 @@ func DataPlaneUpdateEventually(t *testing.T, ctx context.Context, dataplaneNN ty
 	}
 }
 
+// HTTPRouteUpdateEventually is a helper function for tests that returns a function
+// that can be used to update the HTTPRoute.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func HTTPRouteUpdateEventually(t *testing.T, ctx context.Context, httpRouteNN types.NamespacedName, clients K8sClients, updateFunc func(*gatewayv1.HTTPRoute)) func() bool {
+	return func() bool {
+		cl := clients.GatewayClient.GatewayV1().HTTPRoutes(httpRouteNN.Namespace)
+		dp, err := cl.Get(ctx, httpRouteNN.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting HTTPRoute: %v", err)
+			return false
+		}
+
+		updateFunc(dp)
+
+		_, err = cl.Update(ctx, dp, metav1.UpdateOptions{})
+		if err != nil {
+			t.Logf("error updating HTTPRoute: %v", err)
+			return false
+		}
+		return true
+	}
+}
+
 // ControlPlaneUpdateEventually is a helper function for tests that returns a function
 // that can be used to update the ControlPlane.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
@@ -591,6 +632,58 @@ func DataPlaneHasServiceSecret(t *testing.T, ctx context.Context, dpNN, usingSvc
 	}, clients.OperatorClient)
 }
 
+// PodDisruptionBudgetRequirement is a function type used to check if a PodDisruptionBudget meets a certain requirement.
+type PodDisruptionBudgetRequirement func(policyv1.PodDisruptionBudget) bool
+
+// AnyPodDisruptionBudget returns a function that accepts any PodDisruptionBudget.
+func AnyPodDisruptionBudget() PodDisruptionBudgetRequirement {
+	return func(policyv1.PodDisruptionBudget) bool {
+		return true
+	}
+}
+
+// DataPlaneHasPodDisruptionBudget is a helper function for tests that returns a function
+// that can be used to check if a DataPlane has a PodDisruptionBudget. It expects there is
+// only a single PodDisruptionBudget for the DataPlane with the following requirements:
+// - it is owned by the DataPlane,
+// - its `app` label matches the DP name,
+// - its `gateway-operator.konghq.com/managed-by` label is set to `dataplane`.
+// Additionally, the caller can provide a requirement function that will be used to verify
+// the PodDisruptionBudget (e.g. to check if it has an expected status).
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func DataPlaneHasPodDisruptionBudget(
+	t *testing.T,
+	ctx context.Context,
+	dataplane *operatorv1beta1.DataPlane,
+	ret *policyv1.PodDisruptionBudget,
+	clients K8sClients,
+	req PodDisruptionBudgetRequirement,
+) func() bool {
+	dataplaneName := client.ObjectKeyFromObject(dataplane)
+	const dataplaneDeploymentAppLabel = "app"
+
+	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
+		pdbs := MustListDataPlanePodDisruptionBudgets(t, ctx, dataplane, clients, client.MatchingLabels{
+			dataplaneDeploymentAppLabel:          dataplane.Name,
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		})
+		if len(pdbs) != 1 {
+			return false
+		}
+
+		pdb := pdbs[0]
+		if !req(pdb) {
+			return false
+		}
+
+		if ret != nil {
+			*ret = pdb
+		}
+
+		return true
+	}, clients.OperatorClient)
+}
+
 // GatewayClassIsAccepted is a helper function for tests that returns a function
 // that can be used to check if a GatewayClass is accepted.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
@@ -628,10 +721,10 @@ func GatewayNotExist(t *testing.T, ctx context.Context, gatewayNSN types.Namespa
 	}
 }
 
-// GatewayIsScheduled returns a function that checks if a Gateway is scheduled.
-func GatewayIsScheduled(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
+// GatewayIsAccepted returns a function that checks if a Gateway is scheduled.
+func GatewayIsAccepted(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
-		return gatewayutils.IsScheduled(MustGetGateway(t, ctx, gatewayNSN, clients))
+		return gatewayutils.IsAccepted(MustGetGateway(t, ctx, gatewayNSN, clients))
 	}
 }
 
@@ -661,7 +754,7 @@ func GatewayDataPlaneIsReady(t *testing.T, ctx context.Context, gateway *gwtypes
 				return false
 			}
 			for _, condition := range dataplanes[0].Status.Conditions {
-				if condition.Type == string(k8sutils.ReadyType) &&
+				if condition.Type == string(consts.ReadyType) &&
 					condition.Status == metav1.ConditionTrue {
 					return true
 				}
@@ -768,12 +861,9 @@ func GatewayIPAddressExist(t *testing.T, ctx context.Context, gatewayNSN types.N
 }
 
 // GetResponseBodyContains issues an HTTP request and checks if a response body contains a string.
-func GetResponseBodyContains(t *testing.T, ctx context.Context, clients K8sClients, httpc http.Client, url string, method string, responseContains string) func() bool {
+func GetResponseBodyContains(t *testing.T, clients K8sClients, httpc *http.Client, request *http.Request, responseContains string) func() bool {
 	return func() bool {
-		req, err := http.NewRequestWithContext(ctx, method, url, nil)
-		require.NoError(t, err)
-
-		resp, err := httpc.Do(req)
+		resp, err := httpc.Do(request)
 		if err != nil {
 			return false
 		}

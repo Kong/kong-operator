@@ -28,7 +28,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 		dataplane                *operatorv1beta1.DataPlane
 		additionalLabels         map[string]string
 		existingServiceModifier  func(*testing.T, context.Context, client.Client, *corev1.Service)
-		expectedCreatedOrUpdated op.CreatedUpdatedOrNoop
+		expectedCreatedOrUpdated op.Result
 		expectedServiceType      corev1.ServiceType
 		expectedServicePorts     []corev1.ServicePort
 		expectedAnnotations      map[string]string
@@ -36,10 +36,14 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 	}{
 		{
 			name: "should create a new service if service does not exist",
-			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "dp-1",
-			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
+			dataplane: builder.
+				NewDataPlaneBuilder().
+				WithObjectMeta(metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-1",
+				}).
+				WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+				Build(),
 			existingServiceModifier: func(t *testing.T, ctx context.Context, c client.Client, svc *corev1.Service) {
 				require.NoError(t, dataplane.OwnedObjectPreDeleteHook(ctx, c, svc))
 				require.NoError(t, c.Delete(ctx, svc))
@@ -50,21 +54,29 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 		},
 		{
 			name: "should not update when a service exists",
-			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "dp-1",
-			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
+			dataplane: builder.
+				NewDataPlaneBuilder().
+				WithObjectMeta(metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-1",
+				}).
+				WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+				Build(),
 			expectedCreatedOrUpdated: op.Noop,
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
 			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
 		},
 		{
 			name: "should add annotations to existing service",
-			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "dp-1",
-			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
-				WithIngressServiceAnnotations(map[string]string{"foo": "bar"}).Build(),
+			dataplane: builder.
+				NewDataPlaneBuilder().
+				WithObjectMeta(metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-1",
+				}).
+				WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+				WithIngressServiceAnnotations(map[string]string{"foo": "bar"}).
+				Build(),
 			existingServiceModifier: func(t *testing.T, ctx context.Context, c client.Client, svc *corev1.Service) {
 				svc.Annotations = nil
 				require.NoError(t, c.Update(ctx, svc))
@@ -89,11 +101,15 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 				}
 				require.NoError(t, c.Update(ctx, svc))
 			},
-			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "dp-1",
-			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
-				WithIngressServiceAnnotations(map[string]string{"foo": "bar"}).Build(),
+			dataplane: builder.
+				NewDataPlaneBuilder().
+				WithObjectMeta(metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-1",
+				}).
+				WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+				WithIngressServiceAnnotations(map[string]string{"foo": "bar"}).
+				Build(),
 			expectedCreatedOrUpdated: op.Updated,
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
 			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
@@ -108,10 +124,14 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 		{
 			name:             "should create service when service does not contain additional labels",
 			additionalLabels: map[string]string{"foo": "bar"},
-			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "dp-1",
-			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).Build(),
+			dataplane: builder.
+				NewDataPlaneBuilder().
+				WithObjectMeta(metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-1",
+				}).
+				WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+				Build(),
 			existingServiceModifier: func(t *testing.T, ctx context.Context, c client.Client, svc *corev1.Service) {
 				if svc.Labels != nil {
 					delete(svc.Labels, "foo")
@@ -125,16 +145,21 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 		},
 		{
 			name: "should update ports",
-			dataplane: builder.NewDataPlaneBuilder().WithObjectMeta(metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "dp-1",
-			}).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).WithIngressServicePorts([]operatorv1beta1.DataPlaneServicePort{
-				{
-					Name:       "http",
-					Port:       8080,
-					TargetPort: intstr.FromInt(8000),
-				},
-			}).Build(),
+			dataplane: builder.
+				NewDataPlaneBuilder().
+				WithObjectMeta(metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-1",
+				}).
+				WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+				WithIngressServicePorts([]operatorv1beta1.DataPlaneServicePort{
+					{
+						Name:       "http",
+						Port:       8080,
+						TargetPort: intstr.FromInt(8000),
+					},
+				}).
+				Build(),
 			expectedCreatedOrUpdated: op.Updated,
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
 			expectedServicePorts: []corev1.ServicePort{
@@ -146,10 +171,102 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "should not need to update the service (LB) when it already has the cluster external traffic policy",
+			dataplane: builder.
+				NewDataPlaneBuilder().
+				WithObjectMeta(metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-1",
+				}).
+				WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+				Build(),
+			existingServiceModifier: func(t *testing.T, ctx context.Context, c client.Client, svc *corev1.Service) {
+				svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeCluster
+				require.NoError(t, c.Update(ctx, svc))
+			},
+			expectedCreatedOrUpdated: op.Noop,
+			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
+			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
+		},
+		{
+			name: "should not need to update the service (LB) when it already has the cluster external traffic policy and dp spec has the same",
+			dataplane: builder.
+				NewDataPlaneBuilder().
+				WithObjectMeta(metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-1",
+				}).
+				WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+				WithIngressServiceExternalTrafficPolicy(corev1.ServiceExternalTrafficPolicyCluster).
+				Build(),
+			existingServiceModifier: func(t *testing.T, ctx context.Context, c client.Client, svc *corev1.Service) {
+				svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyCluster
+				require.NoError(t, c.Update(ctx, svc))
+			},
+			expectedCreatedOrUpdated: op.Noop,
+			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
+			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
+		},
+		{
+			name: "should update the service (LB) when it has the cluster external traffic policy and dp spec has local",
+			dataplane: builder.
+				NewDataPlaneBuilder().
+				WithObjectMeta(metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-1",
+				}).
+				WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+				WithIngressServiceExternalTrafficPolicy(corev1.ServiceExternalTrafficPolicyLocal).
+				Build(),
+			existingServiceModifier: func(t *testing.T, ctx context.Context, c client.Client, svc *corev1.Service) {
+				svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyCluster
+				require.NoError(t, c.Update(ctx, svc))
+			},
+			expectedCreatedOrUpdated: op.Updated,
+			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
+			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
+		},
+		{
+			name: "should update the service (LB) when it has the local external traffic policy and dp spec not specified it",
+			dataplane: builder.
+				NewDataPlaneBuilder().
+				WithObjectMeta(metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-1",
+				}).
+				WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+				Build(),
+			existingServiceModifier: func(t *testing.T, ctx context.Context, c client.Client, svc *corev1.Service) {
+				svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
+				require.NoError(t, c.Update(ctx, svc))
+			},
+			expectedCreatedOrUpdated: op.Updated,
+			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
+			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
+		},
+		{
+			name: "should not need to update the service (LB) when it has the local external traffic policy and dp spec has also local",
+			dataplane: builder.
+				NewDataPlaneBuilder().
+				WithObjectMeta(metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-1",
+				}).
+				WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+				WithIngressServiceExternalTrafficPolicy(corev1.ServiceExternalTrafficPolicyLocal).
+				Build(),
+			existingServiceModifier: func(t *testing.T, ctx context.Context, c client.Client, svc *corev1.Service) {
+				svc.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
+				require.NoError(t, c.Update(ctx, svc))
+			},
+			expectedCreatedOrUpdated: op.Noop,
+			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
+			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
+		},
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			fakeClient := fakectrlruntimeclient.
 				NewClientBuilder().
@@ -160,14 +277,12 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 			existingSvc, err := k8sresources.GenerateNewIngressServiceForDataPlane(tc.dataplane)
 			require.NoError(t, err)
 			k8sutils.SetOwnerForObject(existingSvc, tc.dataplane)
-			err = fakeClient.Create(ctx, existingSvc)
-			require.NoError(t, err)
+			require.NoError(t, fakeClient.Create(ctx, existingSvc))
 			if tc.existingServiceModifier != nil {
 				tc.existingServiceModifier(t, ctx, fakeClient, existingSvc)
 			}
 			// create dataplane resource.
-			err = fakeClient.Create(ctx, tc.dataplane)
-			require.NoError(t, err, "should create dataplane successfully")
+			require.NoError(t, fakeClient.Create(ctx, tc.dataplane), "should create dataplane successfully")
 			res, svc, err := ensureIngressServiceForDataPlane(
 				ctx,
 				logr.Discard(),

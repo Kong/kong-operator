@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
-	"github.com/kong/gateway-operator/hack/generators/kic"
 	kongsemver "github.com/kong/semver/v4"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
+	"github.com/kong/gateway-operator/hack/generators/kic"
 	kicversions "github.com/kong/gateway-operator/internal/versions"
 )
 
@@ -25,12 +25,12 @@ var clusterRoleRelativePaths = []string{
 
 const (
 	controllerRBACPath       = "./pkg/utils/kubernetes/resources/clusterroles/"
-	controllerRBACFilePrefix = "zz_generated_kong_ingress_controller_rbac"
+	controllerRBACFilePrefix = "zz_generated.kong_ingress_controller_rbac"
 
 	kicRBACPath       = "./pkg/utils/kubernetes/resources/clusterroles"
-	kicRBACFIlePrefix = "zz_generated_controlplane_clusterrole"
+	kicRBACFIlePrefix = "zz_generated.controlplane_clusterrole"
 
-	kicRBACHelperFileName = "./pkg/utils/kubernetes/resources/zz_generated_clusterrole_helpers.go"
+	kicRBACHelperFileName = "./pkg/utils/kubernetes/resources/zz_generated.clusterrole_helpers.go"
 
 	docFileName = controllerRBACPath + "doc.go"
 )

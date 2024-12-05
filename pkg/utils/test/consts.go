@@ -31,7 +31,7 @@ const (
 	// ControlPlaneCondDeadline is the default timeout for checking on controlplane resources.
 	ControlPlaneCondDeadline = time.Minute
 	// ControlPlaneCondTick is the default tick for checking on controlplane resources.
-	ControlPlaneCondTick = time.Second
+	ControlPlaneCondTick = 250 * time.Millisecond
 	// ControlPlaneSchedulingTimeLimit is the maximum amount of time to wait for
 	// a supported ControlPlane to be created after a Gateway resource is
 	// created
@@ -80,6 +80,9 @@ const (
 	// ObjectUpdateTimeout is the amount of time that will be allowed for
 	// conflicts to be resolved before an object update will be considered failed.
 	ObjectUpdateTimeout = time.Second * 30
+
+	// ObjectUpdateTick is the time duration between checks for object updates.
+	ObjectUpdateTick = 100 * time.Millisecond
 
 	// SubresourceReadinessWait is the maximum amount of time allowed for
 	// sub-resources to become "Ready" after being created on behalf of a

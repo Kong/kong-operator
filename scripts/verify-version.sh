@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -o nounset
+set -e
 
 get_tag() {
   tag="$(git describe --tags --exact-match HEAD 2>/dev/null)"
@@ -12,7 +13,7 @@ get_tag() {
 }
 
 get_commit() {
-  git describe --always --abbrev=40
+  git rev-parse --short HEAD
 }
 
 get_branch() {
@@ -28,6 +29,33 @@ get_release() {
   fi
 }
 
+is_set() {
+  local FIELD="${1}"
+  local GOT_VERSION="${2}"
+
+  if jq -e ".${FIELD} // \"empty\" | test(\"empty\")" <<<"${GOT_VERSION}" >/dev/null 2>/dev/null; then
+    printf "${FIELD} is unset\n"
+    exit 1
+  fi
+  if jq -e ".${FIELD} | test(\"NOT_SET\")" <<<"${GOT_VERSION}" >/dev/null; then
+    printf "${FIELD} is 'NOT_SET' but shouldn't be\n"
+    exit 1
+  fi
+}
+
+field_matches() {
+  local FIELD="${1}"
+  local EXPECTED="${2}"
+  local GOT_VERSION="${3}"
+
+  if jq -e ".${FIELD} | test(\"${EXPECTED}\")" <<<"${GOT_VERSION}" >/dev/null; then
+    printf "${FIELD} matches expected %s\n" "${EXPECTED}"
+  else
+    printf "${FIELD} value '%s' does not match, expected %s\n" "$(jq -e \".${FIELD}\")" "${EXPECTED}"
+    exit 1
+  fi
+}
+
 if [[ "${#}" != 1 ]]; then
   echo "Usage:"
   echo "verify-version.sh <GITHUB_REPO>"
@@ -38,7 +66,7 @@ if [[ "${#}" != 1 ]]; then
   exit 1
 fi
 
-REPO="https://github.com/${1}.git"
+REPO="https://github.com/${1}"
 COMMIT="$(get_commit)"
 RELEASE="$(get_release)"
 
@@ -47,10 +75,14 @@ EXPECTED_VERSION="$(jq --sort-keys <<< ${EXPECTED_VERSION})"
 GOT_VERSION="$(jq --sort-keys <&0)"
 
 echo "received version info: ${GOT_VERSION}"
-echo "${GOT_VERSION}" | jq -e ".commit | test(\"${COMMIT}\")" || (echo "commit doesn't match: ${GOT_VERSION}" && exit 1)
-echo "${GOT_VERSION}" | jq -e ".repo | test(\"${REPO}\")" || (echo "repo doesn't match: ${GOT_VERSION}" && exit 1)
+
+is_set "commit" "${GOT_VERSION}"
+is_set "repo" "${GOT_VERSION}"
+is_set "release" "${GOT_VERSION}"
+
+field_matches "commit" "${COMMIT}" "${GOT_VERSION}"
+field_matches "repo" "${REPO}" "${GOT_VERSION}"
 # We don't check the the .release field because this script will be run with
 # many pseudo tags that are pushed to container registry like v0.8.0-arm64 or sha-1a9b278-amd64.
-echo "${GOT_VERSION}" | jq -e ".release" || (echo "release doesn't exist in provided version info: ${GOT_VERSION}" && exit 1)
 
 echo "Version information match"

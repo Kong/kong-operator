@@ -87,7 +87,7 @@ const (
 	// DefaultDataPlaneTag is the base container image tag that can be used
 	// by default for a DataPlane resource if all other attempts to dynamically
 	// decide an image tag fail.
-	DefaultDataPlaneTag = "3.6" // TODO: automatic PR updates https://github.com/Kong/gateway-operator/issues/209
+	DefaultDataPlaneTag = "3.8" // renovate: datasource=docker depName=kong/kong-gateway
 
 	// DefaultDataPlaneImage is the default container image that can be used if
 	// all other attempts to dynamically decide the default image fail.
@@ -177,4 +177,14 @@ const (
 	// DataPlaneOwnedWaitForOwnerFinalizer is the finalizer added to resources owned by a DataPlane
 	// to ensure that the resources are not deleted before the DataPlane is deleted.
 	DataPlaneOwnedWaitForOwnerFinalizer = "gateway-operator.konghq.com/wait-for-owner"
+)
+
+// -----------------------------------------------------------------------------
+// Consts - KonnectExtension Finalizers
+// -----------------------------------------------------------------------------
+
+const (
+	// DataPlaneExtensionFinalizer is the finalizer added to KonnectExtension
+	// to ensure that the resources are not deleted when in use by a dataplane.
+	DataPlaneExtensionFinalizer = "gateway-operator.konghq.com/extension-in-use"
 )

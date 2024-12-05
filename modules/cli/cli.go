@@ -13,10 +13,11 @@ import (
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 // New returns a new CLI.
-func New() *CLI {
+func New(m metadata.Info) *CLI {
 	flagSet := flag.NewFlagSet("", flag.ExitOnError)
 
 	var cfg manager.Config
@@ -43,9 +44,17 @@ func New() *CLI {
 
 	// controllers for specialized APIs and features
 	flagSet.BoolVar(&cfg.AIGatewayControllerEnabled, "enable-controller-aigateway", false, "Enable the AIGateway controller. (Experimental).")
+	flagSet.BoolVar(&cfg.KongPluginInstallationControllerEnabled, "enable-controller-kongplugininstallation", false, "Enable the KongPluginInstallation controller.")
+
+	// controllers for Konnect APIs
+	flagSet.BoolVar(&cfg.KonnectControllersEnabled, "enable-controller-konnect", false, "Enable the Konnect controllers.")
+	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
+	flagSet.UintVar(&cfg.KonnectMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultKonnectMaxConcurrentReconciles, "Maximum number of concurrent reconciles for Konnect entities.")
 
 	// webhook and validation options
 	flagSet.BoolVar(&deferCfg.ValidatingWebhookEnabled, "enable-validating-webhook", true, "Enable the validating webhook.")
+	flagSet.StringVar(&cfg.WebhookCertificateConfigBaseImage, "webhook-certificate-config-base-image", consts.WebhookCertificateConfigBaseImage, "The base image for the certgen Jobs.")
+	flagSet.StringVar(&cfg.WebhookCertificateConfigShellImage, "webhook-certificate-config-shell-image", consts.WebhookCertificateConfigShellImage, "The shell image for the certgen Jobs.")
 
 	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information.")
 
@@ -64,6 +73,7 @@ func New() *CLI {
 		cfg:             &cfg,
 		loggerOpts:      loggerOpts,
 		deferFlagValues: &deferCfg,
+		metadata:        m,
 	}
 }
 
@@ -76,6 +86,8 @@ type CLI struct {
 	// logic after parsing flagSet to determine desired configuration.
 	deferFlagValues *flagsForFurtherEvaluation
 	cfg             *manager.Config
+
+	metadata metadata.Info
 }
 
 type flagsForFurtherEvaluation struct {
@@ -111,6 +123,11 @@ func (c *CLI) bindEnvVarsToFlags() (err error) {
 	})
 
 	return err
+}
+
+// Metadata returns the metadata for the controller manager.
+func (c *CLI) Metadata() metadata.Info {
+	return c.metadata
 }
 
 // Parse parses flag definitions from the argument list, which should not include the command name.
@@ -160,9 +177,9 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 			Commit  string `json:"commit"`
 		}
 		out, err := json.Marshal(Version{
-			Release: metadata.Release,
-			Repo:    metadata.Repo,
-			Commit:  metadata.Commit,
+			Release: c.metadata.Release,
+			Repo:    c.metadata.Repo,
+			Commit:  c.metadata.Commit,
 		})
 		if err != nil {
 			fmt.Printf("ERROR: failed to print version information: %v\n", err)

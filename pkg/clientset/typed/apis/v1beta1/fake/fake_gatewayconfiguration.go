@@ -41,22 +41,24 @@ var gatewayconfigurationsKind = v1beta1.SchemeGroupVersion.WithKind("GatewayConf
 
 // Get takes name of the gatewayConfiguration, and returns the corresponding gatewayConfiguration object, and an error if there is any.
 func (c *FakeGatewayConfigurations) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.GatewayConfiguration, err error) {
+	emptyResult := &v1beta1.GatewayConfiguration{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(gatewayconfigurationsResource, c.ns, name), &v1beta1.GatewayConfiguration{})
+		Invokes(testing.NewGetActionWithOptions(gatewayconfigurationsResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.GatewayConfiguration), err
 }
 
 // List takes label and field selectors, and returns the list of GatewayConfigurations that match those selectors.
 func (c *FakeGatewayConfigurations) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.GatewayConfigurationList, err error) {
+	emptyResult := &v1beta1.GatewayConfigurationList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(gatewayconfigurationsResource, gatewayconfigurationsKind, c.ns, opts), &v1beta1.GatewayConfigurationList{})
+		Invokes(testing.NewListActionWithOptions(gatewayconfigurationsResource, gatewayconfigurationsKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeGatewayConfigurations) List(ctx context.Context, opts v1.ListOption
 // Watch returns a watch.Interface that watches the requested gatewayConfigurations.
 func (c *FakeGatewayConfigurations) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(gatewayconfigurationsResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(gatewayconfigurationsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a gatewayConfiguration and creates it.  Returns the server's representation of the gatewayConfiguration, and an error, if there is any.
 func (c *FakeGatewayConfigurations) Create(ctx context.Context, gatewayConfiguration *v1beta1.GatewayConfiguration, opts v1.CreateOptions) (result *v1beta1.GatewayConfiguration, err error) {
+	emptyResult := &v1beta1.GatewayConfiguration{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(gatewayconfigurationsResource, c.ns, gatewayConfiguration), &v1beta1.GatewayConfiguration{})
+		Invokes(testing.NewCreateActionWithOptions(gatewayconfigurationsResource, c.ns, gatewayConfiguration, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.GatewayConfiguration), err
 }
 
 // Update takes the representation of a gatewayConfiguration and updates it. Returns the server's representation of the gatewayConfiguration, and an error, if there is any.
 func (c *FakeGatewayConfigurations) Update(ctx context.Context, gatewayConfiguration *v1beta1.GatewayConfiguration, opts v1.UpdateOptions) (result *v1beta1.GatewayConfiguration, err error) {
+	emptyResult := &v1beta1.GatewayConfiguration{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(gatewayconfigurationsResource, c.ns, gatewayConfiguration), &v1beta1.GatewayConfiguration{})
+		Invokes(testing.NewUpdateActionWithOptions(gatewayconfigurationsResource, c.ns, gatewayConfiguration, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.GatewayConfiguration), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeGatewayConfigurations) UpdateStatus(ctx context.Context, gatewayConfiguration *v1beta1.GatewayConfiguration, opts v1.UpdateOptions) (*v1beta1.GatewayConfiguration, error) {
+func (c *FakeGatewayConfigurations) UpdateStatus(ctx context.Context, gatewayConfiguration *v1beta1.GatewayConfiguration, opts v1.UpdateOptions) (result *v1beta1.GatewayConfiguration, err error) {
+	emptyResult := &v1beta1.GatewayConfiguration{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(gatewayconfigurationsResource, "status", c.ns, gatewayConfiguration), &v1beta1.GatewayConfiguration{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(gatewayconfigurationsResource, "status", c.ns, gatewayConfiguration, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.GatewayConfiguration), err
 }
@@ -123,7 +128,7 @@ func (c *FakeGatewayConfigurations) Delete(ctx context.Context, name string, opt
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeGatewayConfigurations) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(gatewayconfigurationsResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(gatewayconfigurationsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.GatewayConfigurationList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeGatewayConfigurations) DeleteCollection(ctx context.Context, opts v
 
 // Patch applies the patch and returns the patched gatewayConfiguration.
 func (c *FakeGatewayConfigurations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.GatewayConfiguration, err error) {
+	emptyResult := &v1beta1.GatewayConfiguration{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(gatewayconfigurationsResource, c.ns, name, pt, data, subresources...), &v1beta1.GatewayConfiguration{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(gatewayconfigurationsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.GatewayConfiguration), err
 }

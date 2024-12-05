@@ -7,6 +7,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // -----------------------------------------------------------------------------
 
 // AIGatewayEndpoint is a network endpoint for accessing an AIGateway.
+// +apireference:kgo:include
 type AIGatewayEndpoint struct {
 	// NetworkAccessHint is a hint to the user about what kind of network access
 	// is expected for the reachability of this endpoint.
@@ -49,6 +50,7 @@ type AIGatewayEndpoint struct {
 // This isn't meant to reflect knowledge of any specific network by name, which
 // is why it includes "hint" in the name. It's meant to be a hint to the user
 // such as "internet-accessible", "internal-only".
+// +apireference:kgo:include
 type EndpointNetworkAccessHint string
 
 const (
@@ -59,6 +61,7 @@ const (
 
 // AIGatewayConsumerRef indicates the Secret resource containing the credentials
 // for the Kong consumer.
+// +apireference:kgo:include
 type AIGatewayConsumerRef struct {
 	// Name is the name of the reference object.
 	//

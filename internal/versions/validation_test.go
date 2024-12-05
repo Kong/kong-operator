@@ -82,7 +82,6 @@ func Test_versionFromImage(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Tag, func(t *testing.T) {
 			actual, err := FromImage(tc.Tag)
 

@@ -30,7 +30,7 @@ import (
 )
 
 func init() {
-	if err := gatewayv1.AddToScheme(scheme.Scheme); err != nil {
+	if err := gatewayv1.Install(scheme.Scheme); err != nil {
 		fmt.Println("error while adding gatewayv1 scheme")
 		os.Exit(1)
 	}
@@ -51,6 +51,88 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 		controlplaneSubResources []controllerruntimeclient.Object
 		testBody                 func(t *testing.T, reconciler Reconciler, gatewayReq reconcile.Request)
 	}{
+		{
+			name: "gateway class not found - reconciliation should fail",
+			gatewayReq: reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "test-namespace",
+					Name:      "test-gateway",
+				},
+			},
+			gateway: &gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway.networking.k8s.io/v1beta1",
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
+				},
+				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "not-existing-gatewayclass",
+				},
+			},
+			testBody: func(t *testing.T, r Reconciler, gatewayReq reconcile.Request) {
+				ctx := context.Background()
+				_, err := r.Reconcile(ctx, gatewayReq)
+				require.Error(t, err)
+			},
+		},
+		{
+			name: "gateway class found, but controller name is not matching - gateway is ignored",
+			gatewayReq: reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "test-namespace",
+					Name:      "test-gateway",
+				},
+			},
+			gateway: &gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway.networking.k8s.io/v1beta1",
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
+				},
+				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "test-gatewayclass",
+				},
+			},
+			gatewayClass: &gatewayv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gatewayclass",
+				},
+				Spec: gatewayv1.GatewayClassSpec{
+					ControllerName: gatewayv1.GatewayController("not-existing-controller"),
+				},
+				Status: gatewayv1.GatewayClassStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
+							Status:             metav1.ConditionTrue,
+							ObservedGeneration: 0,
+							LastTransitionTime: metav1.Now(),
+							Reason:             string(gatewayv1.GatewayClassReasonAccepted),
+							Message:            "the gatewayclass has been accepted by the controller",
+						},
+					},
+				},
+			},
+			testBody: func(t *testing.T, r Reconciler, gatewayReq reconcile.Request) {
+				ctx := context.Background()
+				res, err := r.Reconcile(ctx, gatewayReq)
+				require.NoError(t, err, "reconciliation should not return an error")
+				require.Equal(t, res, reconcile.Result{}, "reconciliation should not return a requeue")
+
+				var gw gwtypes.Gateway
+				require.NoError(t, r.Client.Get(ctx, gatewayReq.NamespacedName, &gw))
+
+				require.Empty(t, gw.GetFinalizers(), "gateway should not have any finalizers as it's ignored")
+			},
+		},
 		{
 			name: "service connectivity",
 			gatewayReq: reconcile.Request{
@@ -102,7 +184,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					},
 					Status: operatorv1beta1.DataPlaneStatus{
 						Conditions: []metav1.Condition{
-							k8sutils.NewCondition(k8sutils.ReadyType, metav1.ConditionTrue, k8sutils.ResourceReadyReason, ""),
+							k8sutils.NewCondition(consts.ReadyType, metav1.ConditionTrue, consts.ResourceReadyReason, ""),
 						},
 					},
 				},
@@ -119,7 +201,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					},
 					Status: operatorv1beta1.ControlPlaneStatus{
 						Conditions: []metav1.Condition{
-							k8sutils.NewCondition(k8sutils.ReadyType, metav1.ConditionTrue, k8sutils.ResourceReadyReason, ""),
+							k8sutils.NewCondition(consts.ReadyType, metav1.ConditionTrue, consts.ResourceReadyReason, ""),
 						},
 					},
 				},
@@ -169,6 +251,16 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				// the dataplane service starts with no IP assigned, the gateway must be not ready
 				_, err := reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
+
+				t.Log("verifying the gateway gets finalizers assigned")
+				var gateway gwtypes.Gateway
+				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &gateway))
+				require.ElementsMatch(t, gateway.GetFinalizers(), []string{
+					string(GatewayFinalizerCleanupControlPlanes),
+					string(GatewayFinalizerCleanupDataPlanes),
+					string(GatewayFinalizerCleanupNetworkPolicies),
+				})
+
 				// need to trigger the Reconcile again because the first one only updated the finalizers
 				_, err = reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
@@ -181,11 +273,11 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 
 				var currentGateway gwtypes.Gateway
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
-				require.False(t, k8sutils.IsReady(gatewayConditionsAndListenersAware(&currentGateway)))
+				require.False(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found := k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionFalse)
-				require.Equal(t, k8sutils.ConditionReason(condition.Reason), GatewayReasonServiceError)
+				require.Equal(t, consts.ConditionReason(condition.Reason), GatewayReasonServiceError)
 				require.Len(t, currentGateway.Status.Addresses, 0)
 
 				t.Log("adding a ClusterIP to the dataplane service")
@@ -200,11 +292,11 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err, "reconciliation returned an error")
 				// the dataplane service now has a clusterIP assigned, the gateway must be ready
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
-				require.True(t, k8sutils.IsReady(gatewayConditionsAndListenersAware(&currentGateway)))
+				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
-				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
+				require.Equal(t, consts.ConditionReason(condition.Reason), consts.ResourceReadyReason)
 				require.Equal(t,
 					[]gwtypes.GatewayStatusAddress{
 						{
@@ -234,11 +326,11 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				_, err = reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
-				require.True(t, k8sutils.IsReady(gatewayConditionsAndListenersAware(&currentGateway)))
+				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
-				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
+				require.Equal(t, consts.ConditionReason(condition.Reason), consts.ResourceReadyReason)
 				require.Equal(t,
 					[]gwtypes.GatewayStatusAddress{
 						{
@@ -267,11 +359,11 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				_, err = reconciler.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
-				require.True(t, k8sutils.IsReady(gatewayConditionsAndListenersAware(&currentGateway)))
+				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionTrue)
-				require.Equal(t, k8sutils.ConditionReason(condition.Reason), k8sutils.ResourceReadyReason)
+				require.Equal(t, consts.ConditionReason(condition.Reason), consts.ResourceReadyReason)
 				require.Equal(t, currentGateway.Status.Addresses, []gwtypes.GatewayStatusAddress{
 					{
 						Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
@@ -289,23 +381,23 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
 				// the dataplane service has no clusterIP assigned, the gateway must be not ready
 				// and no addresses must be assigned
-				require.False(t, k8sutils.IsReady(gatewayConditionsAndListenersAware(&currentGateway)))
+				require.False(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, condition.Status, metav1.ConditionFalse)
-				require.Equal(t, k8sutils.ConditionReason(condition.Reason), GatewayReasonServiceError)
+				require.Equal(t, consts.ConditionReason(condition.Reason), GatewayReasonServiceError)
 				require.Len(t, currentGateway.Status.Addresses, 0)
 			},
 		},
 	}
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
-			ObjectsToAdd := []controllerruntimeclient.Object{
+			objectsToAdd := []controllerruntimeclient.Object{
 				tc.gateway,
-				tc.gatewayClass,
+			}
+			if tc.gatewayClass != nil {
+				objectsToAdd = append(objectsToAdd, tc.gatewayClass)
 			}
 			for _, gatewaySubResource := range tc.gatewaySubResources {
 				k8sutils.SetOwnerForObject(gatewaySubResource, tc.gateway)
@@ -313,31 +405,30 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				if gatewaySubResource.GetName() == "test-dataplane" {
 					for _, dataplaneSubresource := range tc.dataplaneSubResources {
 						k8sutils.SetOwnerForObject(dataplaneSubresource, gatewaySubResource)
-						ObjectsToAdd = append(ObjectsToAdd, dataplaneSubresource)
+						objectsToAdd = append(objectsToAdd, dataplaneSubresource)
 					}
 				}
 				if gatewaySubResource.GetName() == "test-controlplane" {
 					controlPlane := gatewaySubResource.(*operatorv1beta1.ControlPlane)
 					_ = controlplane.SetDefaults(
 						&controlPlane.Spec.ControlPlaneOptions,
-						map[string]struct{}{},
 						controlplane.DefaultsArgs{
 							Namespace:                   "test-namespace",
 							DataPlaneIngressServiceName: "test-ingress-service",
 						})
 					for _, controlplaneSubResource := range tc.controlplaneSubResources {
 						k8sutils.SetOwnerForObject(controlplaneSubResource, gatewaySubResource)
-						ObjectsToAdd = append(ObjectsToAdd, controlplaneSubResource)
+						objectsToAdd = append(objectsToAdd, controlplaneSubResource)
 					}
 				}
-				ObjectsToAdd = append(ObjectsToAdd, gatewaySubResource)
+				objectsToAdd = append(objectsToAdd, gatewaySubResource)
 			}
 
 			fakeClient := fakectrlruntimeclient.
 				NewClientBuilder().
 				WithScheme(scheme.Scheme).
-				WithObjects(ObjectsToAdd...).
-				WithStatusSubresource(ObjectsToAdd...).
+				WithObjects(objectsToAdd...).
+				WithStatusSubresource(objectsToAdd...).
 				Build()
 
 			reconciler := Reconciler{
@@ -456,7 +547,6 @@ func Test_setControlPlaneOptionsDefaults(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			setControlPlaneOptionsDefaults(&tc.input)
 			require.Equal(t, tc.expected, tc.input)
@@ -625,7 +715,6 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			setDataPlaneOptionsDefaults(&tc.input, consts.DefaultDataPlaneImage)
 			require.Equal(t, tc.expected, tc.input)

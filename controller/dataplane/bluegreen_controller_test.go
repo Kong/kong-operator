@@ -48,7 +48,7 @@ func init() {
 // test writers will be able to rely on the reconciler running against an apiserver
 // and just asserting on the actual desired effect.
 //
-// Ref: https://github.com/Kong/gateway-operator/issues/933
+// Ref: https://github.com/Kong/gateway-operator/issues/172
 func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 	ca := helpers.CreateCA(t)
 	mtlsSecret := &corev1.Secret{
@@ -313,11 +313,11 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 
 				t.Logf("DataPlane status should have the Ready status condition set to false")
 				require.Len(t, dp.Status.Conditions, 1)
-				require.EqualValues(t, dp.Status.Conditions[0].Type, k8sutils.ReadyType)
+				require.EqualValues(t, dp.Status.Conditions[0].Type, consts.ReadyType)
 				require.Equal(t, dp.Status.Conditions[0].Status, metav1.ConditionFalse,
 					"DataPlane's Ready status condition should be set to false when live Deployment has no Ready replicas",
 				)
-				require.EqualValues(t, dp.Status.Conditions[0].Reason, k8sutils.WaitingToBecomeReadyReason)
+				require.EqualValues(t, dp.Status.Conditions[0].Reason, consts.WaitingToBecomeReadyReason)
 
 				t.Logf("DataPlane rollout status should have the Ready status condition set to true")
 				require.NotNil(t, dp.Status.RolloutStatus)
@@ -332,8 +332,6 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			ObjectsToAdd := []client.Object{
 				tc.dataplane,
@@ -429,7 +427,6 @@ func TestCanProceedWithPromotion(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			canProceed, err := canProceedWithPromotion(tc.dataplane)
 			if tc.expectedErr != nil {
@@ -448,7 +445,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 		name                     string
 		dataplane                *operatorv1beta1.DataPlane
 		existingServiceModifier  func(*testing.T, context.Context, client.Client, *corev1.Service)
-		expectedCreatedOrUpdated op.CreatedUpdatedOrNoop
+		expectedCreatedOrUpdated op.Result
 		expectedService          *corev1.Service
 		// expectedErrorMessage is empty if we expect no error, otherwise returned error must contain it.
 		expectedErrorMessage string
@@ -561,7 +558,6 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 			fakeClient := fakectrlruntimeclient.

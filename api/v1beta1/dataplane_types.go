@@ -18,8 +18,11 @@ package v1beta1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/kong/gateway-operator/api/v1alpha1"
 )
 
 func init() {
@@ -31,9 +34,11 @@ func init() {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=kodp,categories=kong;all
+// +kubebuilder:validation:XValidation:message="Extension not allowed for DataPlane",rule="has(self.spec.extensions) ? self.spec.extensions.all(e, e.group == 'gateway-operator.konghq.com' && e.kind == 'KonnectExtension') : true"
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 
 // DataPlane is the Schema for the dataplanes API
+// +apireference:kgo:include
 type DataPlane struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -45,6 +50,7 @@ type DataPlane struct {
 // +kubebuilder:object:root=true
 
 // DataPlaneList contains a list of DataPlane
+// +apireference:kgo:include
 type DataPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -52,22 +58,106 @@ type DataPlaneList struct {
 }
 
 // DataPlaneSpec defines the desired state of DataPlane
+// +apireference:kgo:include
 type DataPlaneSpec struct {
 	DataPlaneOptions `json:",inline"`
 }
 
 // DataPlaneOptions defines the information specifically needed to
 // deploy the DataPlane.
+// +apireference:kgo:include
 type DataPlaneOptions struct {
 	// +optional
 	Deployment DataPlaneDeploymentOptions `json:"deployment"`
 
 	// +optional
 	Network DataPlaneNetworkOptions `json:"network"`
+
+	// +optional
+	Resources DataPlaneResources `json:"resources"`
+
+	// Extensions provide additional or replacement features for the DataPlane
+	// resources to influence or enhance functionality.
+	// NOTE: since we have one extension only (KonnectExtension), we limit the amount of extensions to 1.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=0
+	// +kubebuilder:validation:MaxItems=1
+	Extensions []v1alpha1.ExtensionRef `json:"extensions,omitempty"`
+	// PluginsToInstall is a list of KongPluginInstallation resources that
+	// will be installed and available in the DataPlane.
+	// +optional
+	PluginsToInstall []NamespacedName `json:"pluginsToInstall,omitempty"`
+}
+
+// DataPlaneResources defines the resources that will be created and managed
+// for the DataPlane.
+// +apireference:kgo:include
+type DataPlaneResources struct {
+	// PodDisruptionBudget is the configuration for the PodDisruptionBudget
+	// that will be created for the DataPlane.
+	PodDisruptionBudget *PodDisruptionBudget `json:"podDisruptionBudget,omitempty"`
+}
+
+// PodDisruptionBudget defines the configuration for the PodDisruptionBudget.
+// +apireference:kgo:include
+type PodDisruptionBudget struct {
+	// Spec defines the specification of the PodDisruptionBudget.
+	// Selector is managed by the controller and cannot be set by the user.
+	Spec PodDisruptionBudgetSpec `json:"spec,omitempty"`
+}
+
+// PodDisruptionBudgetSpec defines the specification of a PodDisruptionBudget.
+//
+// +kubebuilder:validation:XValidation:message="You can specify only one of maxUnavailable and minAvailable in a single PodDisruptionBudgetSpec.",rule="(has(self.minAvailable) && !has(self.maxUnavailable)) || (!has(self.minAvailable) && has(self.maxUnavailable))"
+// +apireference:kgo:include
+type PodDisruptionBudgetSpec struct {
+	// An eviction is allowed if at least "minAvailable" pods selected by
+	// "selector" will still be available after the eviction, i.e. even in the
+	// absence of the evicted pod.  So for example you can prevent all voluntary
+	// evictions by specifying "100%".
+	// +optional
+	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty" protobuf:"bytes,1,opt,name=minAvailable"`
+
+	// An eviction is allowed if at most "maxUnavailable" pods selected by
+	// "selector" are unavailable after the eviction, i.e. even in absence of
+	// the evicted pod. For example, one can prevent all voluntary evictions
+	// by specifying 0. This is a mutually exclusive setting with "minAvailable".
+	// +optional
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty" protobuf:"bytes,3,opt,name=maxUnavailable"`
+
+	// UnhealthyPodEvictionPolicy defines the criteria for when unhealthy pods
+	// should be considered for eviction. Current implementation considers healthy pods,
+	// as pods that have status.conditions item with type="Ready",status="True".
+	//
+	// Valid policies are IfHealthyBudget and AlwaysAllow.
+	// If no policy is specified, the default behavior will be used,
+	// which corresponds to the IfHealthyBudget policy.
+	//
+	// IfHealthyBudget policy means that running pods (status.phase="Running"),
+	// but not yet healthy can be evicted only if the guarded application is not
+	// disrupted (status.currentHealthy is at least equal to status.desiredHealthy).
+	// Healthy pods will be subject to the PDB for eviction.
+	//
+	// AlwaysAllow policy means that all running pods (status.phase="Running"),
+	// but not yet healthy are considered disrupted and can be evicted regardless
+	// of whether the criteria in a PDB is met. This means perspective running
+	// pods of a disrupted application might not get a chance to become healthy.
+	// Healthy pods will be subject to the PDB for eviction.
+	//
+	// Additional policies may be added in the future.
+	// Clients making eviction decisions should disallow eviction of unhealthy pods
+	// if they encounter an unrecognized policy in this field.
+	//
+	// This field is beta-level. The eviction API uses this field when
+	// the feature gate PDBUnhealthyPodEvictionPolicy is enabled (enabled by default).
+	// +optional
+	UnhealthyPodEvictionPolicy *policyv1.UnhealthyPodEvictionPolicyType `json:"unhealthyPodEvictionPolicy,omitempty" protobuf:"bytes,4,opt,name=unhealthyPodEvictionPolicy"`
 }
 
 // DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
 // resource "Deployment") which are created and managed for the DataPlane resource.
+// +apireference:kgo:include
 type DataPlaneDeploymentOptions struct {
 	// Rollout describes a custom rollout strategy.
 	//
@@ -78,6 +168,7 @@ type DataPlaneDeploymentOptions struct {
 }
 
 // DataPlaneNetworkOptions defines network related options for a DataPlane.
+// +apireference:kgo:include
 type DataPlaneNetworkOptions struct {
 	// Services indicates the configuration of Kubernetes Services needed for
 	// the topology of various forms of traffic (including ingress, e.t.c.) to
@@ -92,6 +183,7 @@ type DataPlaneNetworkOptions struct {
 }
 
 // DataPlaneServices contains Services related DataPlane configuration, shared with the GatewayConfiguration.
+// +apireference:kgo:include
 type DataPlaneServices struct {
 	// Ingress is the Kubernetes Service that will be used to expose ingress
 	// traffic for the DataPlane. Here you can determine whether the DataPlane
@@ -105,6 +197,7 @@ type DataPlaneServices struct {
 }
 
 // DataPlaneServiceOptions contains Services related DataPlane configuration.
+// +apireference:kgo:include
 type DataPlaneServiceOptions struct {
 	// Ports defines the list of ports that are exposed by the service.
 	// The ports field allows defining the name, port and targetPort of
@@ -118,6 +211,7 @@ type DataPlaneServiceOptions struct {
 }
 
 // DataPlaneServicePort contains information on service's port.
+// +apireference:kgo:include
 type DataPlaneServicePort struct {
 	// The name of this port within the service. This must be a DNS_LABEL.
 	// All ports within a ServiceSpec must have unique names. When considering
@@ -144,6 +238,8 @@ type DataPlaneServicePort struct {
 
 // ServiceOptions is used to includes options to customize the ingress service,
 // such as the annotations.
+// +apireference:kgo:include
+// +kubebuilder:validation:XValidation:message="Cannot set ExternalTrafficPolicy for ClusterIP service.", rule="has(self.type) && self.type == 'ClusterIP' ? !has(self.externalTrafficPolicy) : true"
 type ServiceOptions struct {
 	// Type determines how the Service is exposed.
 	// Defaults to `LoadBalancer`.
@@ -172,9 +268,30 @@ type ServiceOptions struct {
 	//
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,12,rep,name=annotations"`
+
+	// ExternalTrafficPolicy describes how nodes distribute service traffic they
+	// receive on one of the Service's "externally-facing" addresses (NodePorts,
+	// ExternalIPs, and LoadBalancer IPs). If set to "Local", the proxy will configure
+	// the service in a way that assumes that external load balancers will take care
+	// of balancing the service traffic between nodes, and so each node will deliver
+	// traffic only to the node-local endpoints of the service, without masquerading
+	// the client source IP. (Traffic mistakenly sent to a node with no endpoints will
+	// be dropped.) The default value, "Cluster", uses the standard behavior of
+	// routing to all endpoints evenly (possibly modified by topology and other
+	// features). Note that traffic sent to an External IP or LoadBalancer IP from
+	// within the cluster will always get "Cluster" semantics, but clients sending to
+	// a NodePort from within the cluster may need to take traffic policy into account
+	// when picking a node.
+	//
+	// More info: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Cluster;Local
+	ExternalTrafficPolicy corev1.ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
 }
 
 // DataPlaneStatus defines the observed state of DataPlane
+// +apireference:kgo:include
 type DataPlaneStatus struct {
 	// Conditions describe the status of the DataPlane.
 	// +listType=map
@@ -193,7 +310,7 @@ type DataPlaneStatus struct {
 
 	// Selector contains a unique DataPlane identifier used as a deterministic
 	// label selector that is used throughout its dependent resources.
-	// This is used e.g. as a label selector for DataPlane's Services and Deployments.
+	// This is used e.g. as a label selector for DataPlane's Services, Deployments and PodDisruptionBudgets.
 	//
 	// +kubebuilder:validation:MaxLength=512
 	// +kubebuilder:validation:MinLength=8
@@ -217,6 +334,7 @@ type DataPlaneStatus struct {
 }
 
 // DataPlaneRolloutStatus describes the DataPlane rollout status.
+// +apireference:kgo:include
 type DataPlaneRolloutStatus struct {
 	// Services contain the information about the services which are available
 	// through which user can access the preview deployment.
@@ -252,6 +370,7 @@ func (d *DataPlaneRolloutStatus) SetConditions(conditions []metav1.Condition) {
 
 // DataPlaneRolloutStatusServices describes the status of the services during
 // DataPlane rollout.
+// +apireference:kgo:include
 type DataPlaneRolloutStatusServices struct {
 	// Ingress contains the name and the address of the preview service for ingress.
 	// Using this service users can send requests that will hit the preview deployment.
@@ -264,6 +383,7 @@ type DataPlaneRolloutStatusServices struct {
 
 // DataPlaneRolloutStatusDeployment is a rollout status field which contains
 // fields specific for Deployments during the rollout.
+// +apireference:kgo:include
 type DataPlaneRolloutStatusDeployment struct {
 	// Selector is a stable label selector value assigned to a DataPlane rollout
 	// status which is used throughout the rollout as a deterministic labels selector
@@ -276,6 +396,7 @@ type DataPlaneRolloutStatusDeployment struct {
 
 // RolloutStatusService is a struct which contains status information about
 // services that are exposed as part of the rollout.
+// +apireference:kgo:include
 type RolloutStatusService struct {
 	// Name indicates the name of the service.
 	Name string `json:"name"`
@@ -287,6 +408,7 @@ type RolloutStatusService struct {
 }
 
 // Address describes an address which can be either an IP address or a hostname.
+// +apireference:kgo:include
 type Address struct {
 	// Type of the address.
 	//
@@ -315,6 +437,7 @@ type Address struct {
 // * `Hostname`
 //
 // +kubebuilder:validation:Pattern=`^IPAddress|Hostname$`
+// +apireference:kgo:include
 type AddressType string
 
 const (
@@ -345,6 +468,7 @@ const (
 // * `PrivateIP`
 //
 // +kubebuilder:validation:Pattern=`^PublicLoadBalancer|PrivateLoadBalancer|PublicIP|PrivateIP$`
+// +apireference:kgo:include
 type AddressSourceType string
 
 const (

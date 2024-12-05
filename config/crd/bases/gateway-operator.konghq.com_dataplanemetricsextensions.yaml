@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.16.5
   name: dataplanemetricsextensions.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -27,7 +27,6 @@ spec:
           the specified metrics configuration.
           Additionally, it will also make the operator expose DataPlane's metrics
           enriched with metadata required for in-cluster Kubernetes autoscaling.
-
 
           NOTE: This is an enterprise feature. In order to use it you need to use
           the EE version of Kong Gateway Operator with a valid license.
@@ -110,6 +109,8 @@ spec:
                     x-kubernetes-list-map-keys:
                     - name
                     x-kubernetes-list-type: map
+                required:
+                - matchNames
                 type: object
             required:
             - serviceSelector
@@ -135,10 +136,8 @@ spec:
                     description: |-
                       Namespace is the namespace of the referred resource.
 
-
                       For namespace-scoped resources if no Namespace is provided then the
                       namespace of the parent object MUST be used.
-
 
                       This field MUST not be set when referring to cluster-scoped resources.
                     type: string

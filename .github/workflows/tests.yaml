@@ -11,9 +11,11 @@ on:
   pull_request:
     branches:
       - '*'
+      - 'release/*'
   push:
     branches:
       - 'main'
+      - 'release/*'
     tags:
       - '*'
   workflow_dispatch: {}
@@ -24,8 +26,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Setup go
       uses: actions/setup-go@v5
@@ -47,8 +47,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Setup go
       uses: actions/setup-go@v5
@@ -69,13 +67,11 @@ jobs:
         max_attempts: 3
         command: make verify.generators
 
-  install-with-kustomize:
+  samples:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Setup go
       uses: actions/setup-go@v5
@@ -83,7 +79,36 @@ jobs:
         go-version-file: go.mod
 
     - name: Create k8s KinD Cluster
-      uses: helm/kind-action@v1.9.0
+      uses: helm/kind-action@v1.10.0
+
+    - uses: jdx/mise-action@v2
+      with:
+        install: false
+
+    # We use install.all to install all CRDs and resources also the ones that are not bundled
+    # in base kustomization (e.g. currently AIGateway) but which have samples defined.
+    - name: Verify installing CRDs via kustomize works
+      run: make install.all
+
+    - name: Install and delete each sample one by one
+      run: make test.samples
+
+    - name: Verify that uninstalling operator CRDs via kustomize works
+      run: make uninstall.all
+
+  install-with-kustomize:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    - name: Create k8s KinD Cluster
+      uses: helm/kind-action@v1.10.0
 
     - uses: jdx/mise-action@v2
       with:
@@ -104,10 +129,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+    - uses: actions/checkout@v4
 
     - name: setup golang
       uses: actions/setup-go@v5
@@ -116,13 +138,14 @@ jobs:
 
     - run: make build.operator
 
+    - name: Test the binary by running it with -version flag
+      run: ./bin/manager -version | ./scripts/verify-version.sh ${{ github.repository }}
+
   unit-tests:
     runs-on: ubuntu-latest
     steps:
     - name: checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v5
@@ -136,6 +159,7 @@ jobs:
     - name: run unit tests
       run: make test.unit
       env:
+        KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
         GOTESTSUM_JUNITFILE: "unit-tests.xml"
 
     - name: collect test coverage
@@ -150,40 +174,90 @@ jobs:
       with:
         name: tests-report
         path: unit-tests.xml
+  
+  envtest-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout repository
+      uses: actions/checkout@v4
 
-  # TODO: https://github.com/Kong/gateway-operator/issues/1411
-  # conformance-tests:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - name: checkout repository
-  #     uses: actions/checkout@v4
-  #     with:
-  #       fetch-depth: 0
+    - name: setup golang
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
 
-  #   - name: setup golang
-  #     uses: actions/setup-go@v5
-  #     with:
-  #       go-version-file: go.mod
+    - uses: jdx/mise-action@v2
+      with:
+        install: false
 
-  #   - name: run conformance tests
-  #     run: make test.conformance
-  #     env:
-  #       GOTESTSUM_JUNITFILE: "conformance-tests.xml"
+    - name: run envtest tests
+      run: make test.envtest
+      env:
+        GOTESTSUM_JUNITFILE: "envtest-tests.xml"
 
-  #   - name: upload diagnostics
-  #     if: ${{ always() }}
-  #     uses: actions/upload-artifact@v3
-  #     with:
-  #       name: diagnostics-conformance
-  #       path: /tmp/ktf-diag*
-  #       if-no-files-found: ignore
+    - name: collect test coverage
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-envtest
+        path: coverage.envtest.out
 
-  #   - name: collect test report
-  #     if: ${{ always() }}
-  #     uses: actions/upload-artifact@v3
-  #     with:
-  #       name: tests-report
-  #       path: conformance-tests.xml
+    - name: collect test report
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: envtest-tests.xml
+
+  conformance-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - router-flavor: traditional_compatible
+        - router-flavor: expressions
+    steps:
+    - name: checkout repository
+      uses: actions/checkout@v4
+      with:
+        # Fetch all history so that we can get the correct commit hash for the conformance tests.
+        fetch-depth: 0
+
+    - name: setup golang
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    - uses: jdx/mise-action@v2
+      with:
+        install: false
+
+    - name: run conformance tests
+      run: make test.conformance
+      env:
+        GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}.xml
+        TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
+
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: diagnostics-conformance
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
+    - name: collect test report
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: conformance-tests-${{ matrix.router-flavor }}.xml
+
+    - name: collect conformance report
+      uses: actions/upload-artifact@v4
+      with:
+        name: conformance-report-${{ matrix.router-flavor }}
+        path: standard-*-report.yaml
 
   integration-tests:
     runs-on: ubuntu-latest
@@ -197,8 +271,6 @@ jobs:
     steps:
     - name: checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v5
@@ -212,16 +284,20 @@ jobs:
     - name: run integration tests
       run: make test.integration
       env:
+        KONG_TEST_DISABLE_CERTMANAGER: "true"
+        KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
         WEBHOOK_ENABLED: ${{ matrix.webhook-enabled }}
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: integration-tests-webhook-enabled-${{ matrix.webhook-enabled }}.xml
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
+        KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
 
     - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      if: always()
+      uses: actions/upload-artifact@v4
       with:
-        name: diagnostics-integration
+        name: diagnostics-integration-webhook-enabled-${{ matrix.webhook-enabled }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
@@ -250,8 +326,6 @@ jobs:
     steps:
     - name: checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v5
@@ -265,6 +339,7 @@ jobs:
     - name: run integration tests
       run: make test.integration_bluegreen
       env:
+        KONG_TEST_DISABLE_CERTMANAGER: "true"
         WEBHOOK_ENABLED: ${{ matrix.webhook-enabled }}
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: integration-tests-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}.xml
@@ -272,9 +347,9 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: diagnostics-integration
+        name: diagnostics-integration-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
@@ -301,8 +376,6 @@ jobs:
     steps:
     - name: checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v5
@@ -316,14 +389,17 @@ jobs:
     - name: run integration tests
       run: make test.integration_provision_dataplane_fail
       env:
+        KONG_TEST_DISABLE_CERTMANAGER: "true"
         KONG_CONTROLLER_OUT: stdout
+        KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
         GOTESTSUM_JUNITFILE: integration-tests-provision-dataplane-fail.xml
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: diagnostics-integration
+        name: diagnostics-integration-provision-fail-webhook-enabled-${{ matrix.webhook-enabled }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
@@ -366,12 +442,14 @@ jobs:
     - name: run e2e tests
       run: make test.e2e
       env:
+        KONG_TEST_DISABLE_CERTMANAGER: "true"
         KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD: gateway-operator:e2e-${{ github.sha }}
         GOTESTSUM_JUNITFILE: "e2e-tests.xml"
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      if: always()
+      uses: actions/upload-artifact@v4
       with:
         name: diagnostics-e2e
         path: /tmp/ktf-diag*
@@ -388,8 +466,7 @@ jobs:
     needs:
       - unit-tests
       - integration-tests
-      # https://github.com/Kong/gateway-operator/issues/11#issuecomment-1514712925
-      # - conformance-tests
+      - conformance-tests
       - e2e-tests
     if: ${{ always() }}
     runs-on: ubuntu-latest
@@ -397,8 +474,6 @@ jobs:
 
       - name: checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: download tests report
         id: download-coverage
@@ -409,7 +484,7 @@ jobs:
 
       - name: Upload test results to BuildPulse for flaky test detection
         if: ${{ !cancelled() }}
-        uses: buildpulse/buildpulse-action@v0.11.0
+        uses: buildpulse/buildpulse-action@v0.12.0
         with:
           account: 962416
           repository: 477814940
@@ -428,7 +503,9 @@ jobs:
       - install-with-kustomize
       - build
       - unit-tests
-      # - conformance-tests
+      - envtest-tests
+      - samples
+      - conformance-tests
       - integration-tests
       - integration-tests-bluegreen
       - integration-tests-provision-fail

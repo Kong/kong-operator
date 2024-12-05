@@ -2,18 +2,20 @@ package kubernetes
 
 import (
 	"context"
+	"slices"
 
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ListDeploymentsForOwner is a helper function to map a list of Deployments
-// by list options and reduce by OwnerReference UID and namespace to efficiently
+// ListDeploymentsForOwner which gets a list of Deployments using the provided
+// list options and reduce by OwnerReference UID and namespace to efficiently
 // list only the objects owned by the provided UID.
 func ListDeploymentsForOwner(
 	ctx context.Context,
@@ -38,7 +40,6 @@ func ListDeploymentsForOwner(
 
 	deployments := make([]appsv1.Deployment, 0)
 	for _, deployment := range deploymentList.Items {
-		deployment := deployment
 		if IsOwnedByRefUID(&deployment, uid) {
 			deployments = append(deployments, deployment)
 		}
@@ -47,8 +48,8 @@ func ListDeploymentsForOwner(
 	return deployments, nil
 }
 
-// ListHPAsForOwner is a helper function to map a list of HorizontalPodAutoscalers
-// by list options and reduce by OwnerReference UID and namespace to efficiently
+// ListHPAsForOwner is a helper function which gets a list of HorizontalPodAutoscalers
+// using the provided list options and reduce by OwnerReference UID and namespace to efficiently
 // list only the objects owned by the provided UID.
 func ListHPAsForOwner(
 	ctx context.Context,
@@ -73,7 +74,6 @@ func ListHPAsForOwner(
 
 	hpas := make([]autoscalingv2.HorizontalPodAutoscaler, 0)
 	for _, hpa := range hpaList.Items {
-		hpa := hpa
 		if IsOwnedByRefUID(&hpa, uid) {
 			hpas = append(hpas, hpa)
 		}
@@ -82,8 +82,42 @@ func ListHPAsForOwner(
 	return hpas, nil
 }
 
-// ListServicesForOwner is a helper function to map a list of Services
-// by list options and reduce by OwnerReference UID and namespace to efficiently
+// ListPodDisruptionBudgetsForOwner is a helper function which gets a list of PodDisruptionBudget
+// using the provided list options and reduce by OwnerReference UID and namespace to efficiently
+// list only the objects owned by the provided UID.
+func ListPodDisruptionBudgetsForOwner(
+	ctx context.Context,
+	c client.Client,
+	namespace string,
+	uid types.UID,
+	listOpts ...client.ListOption,
+) ([]policyv1.PodDisruptionBudget, error) {
+	pdbList := &policyv1.PodDisruptionBudgetList{}
+
+	err := c.List(
+		ctx,
+		pdbList,
+		append(
+			[]client.ListOption{client.InNamespace(namespace)},
+			listOpts...,
+		)...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var pdbs []policyv1.PodDisruptionBudget
+	for _, pdb := range pdbList.Items {
+		if IsOwnedByRefUID(&pdb, uid) {
+			pdbs = append(pdbs, pdb)
+		}
+	}
+
+	return pdbs, nil
+}
+
+// ListServicesForOwner is a helper function which gets a list of Services
+// using the provided list options and reduce by OwnerReference UID and namespace to efficiently
 // list only the objects owned by the provided UID.
 func ListServicesForOwner(
 	ctx context.Context,
@@ -108,7 +142,6 @@ func ListServicesForOwner(
 
 	services := make([]corev1.Service, 0)
 	for _, service := range serviceList.Items {
-		service := service
 		if IsOwnedByRefUID(&service, uid) {
 			services = append(services, service)
 		}
@@ -117,8 +150,8 @@ func ListServicesForOwner(
 	return services, nil
 }
 
-// ListServiceAccountsForOwner is a helper function to map a list of ServiceAccounts
-// by list options and reduce by OwnerReference UID and namespace to efficiently
+// ListServiceAccountsForOwner is a helper function which gets a list of ServiceAccounts
+// using the provided list options and reduce by OwnerReference UID and namespace to efficiently
 // list only the objects owned by the provided UID.
 func ListServiceAccountsForOwner(
 	ctx context.Context,
@@ -143,7 +176,6 @@ func ListServiceAccountsForOwner(
 
 	serviceAccounts := make([]corev1.ServiceAccount, 0)
 	for _, serviceAccount := range serviceAccountList.Items {
-		serviceAccount := serviceAccount
 		if IsOwnedByRefUID(&serviceAccount, uid) {
 			serviceAccounts = append(serviceAccounts, serviceAccount)
 		}
@@ -152,13 +184,11 @@ func ListServiceAccountsForOwner(
 	return serviceAccounts, nil
 }
 
-// ListClusterRolesForOwner is a helper function to map a list of ClusterRoles
-// by list options and reduce by OwnerReference UID to efficiently
-// list only the objects owned by the provided UID.
-func ListClusterRolesForOwner(
+// ListClusterRoles is a helper function which gets a list of ClusterRoles
+// using the provided list options.
+func ListClusterRoles(
 	ctx context.Context,
 	c client.Client,
-	uid types.UID,
 	listOpts ...client.ListOption,
 ) ([]rbacv1.ClusterRole, error) {
 	clusterRoleList := &rbacv1.ClusterRoleList{}
@@ -172,24 +202,14 @@ func ListClusterRolesForOwner(
 		return nil, err
 	}
 
-	clusterRoles := make([]rbacv1.ClusterRole, 0)
-	for _, clusterRole := range clusterRoleList.Items {
-		clusterRole := clusterRole
-		if IsOwnedByRefUID(&clusterRole, uid) {
-			clusterRoles = append(clusterRoles, clusterRole)
-		}
-	}
-
-	return clusterRoles, nil
+	return clusterRoleList.Items, nil
 }
 
-// ListClusterRoleBindingsForOwner is a helper function to map a list of ClusterRoleBindings
-// by list options and reduce by OwnerReference UID to efficiently
-// list only the objects owned by the provided UID.
-func ListClusterRoleBindingsForOwner(
+// ListClusterRoleBindings is a helper function which gets a list of ClusterRoleBindings
+// using the provided list options.
+func ListClusterRoleBindings(
 	ctx context.Context,
 	c client.Client,
-	uid types.UID,
 	listOpts ...client.ListOption,
 ) ([]rbacv1.ClusterRoleBinding, error) {
 	clusterRoleBindingList := &rbacv1.ClusterRoleBindingList{}
@@ -203,19 +223,38 @@ func ListClusterRoleBindingsForOwner(
 		return nil, err
 	}
 
-	clusterRoleBindings := make([]rbacv1.ClusterRoleBinding, 0)
-	for _, clusterRoleBinding := range clusterRoleBindingList.Items {
-		clusterRoleBinding := clusterRoleBinding
-		if IsOwnedByRefUID(&clusterRoleBinding, uid) {
-			clusterRoleBindings = append(clusterRoleBindings, clusterRoleBinding)
+	return clusterRoleBindingList.Items, nil
+}
+
+// ListConfigMapsForOwner is a helper function which gets a list of ConfigMaps
+// using the provided list options and reduce by OwnerReference UID to efficiently
+// list only the objects owned by the provided UID.
+func ListConfigMapsForOwner(ctx context.Context,
+	c client.Client,
+	uid types.UID,
+	listOpts ...client.ListOption,
+) ([]corev1.ConfigMap, error) {
+	configMapList := &corev1.ConfigMapList{}
+	if err := c.List(
+		ctx,
+		configMapList,
+		listOpts...,
+	); err != nil {
+		return nil, err
+	}
+
+	configMaps := make([]corev1.ConfigMap, 0)
+	for _, cm := range configMapList.Items {
+		if IsOwnedByRefUID(&cm, uid) {
+			configMaps = append(configMaps, cm)
 		}
 	}
 
-	return clusterRoleBindings, nil
+	return configMaps, nil
 }
 
-// ListSecretsForOwner is a helper function to map a list of Secrets
-// by list options and reduce by OwnerReference UID to efficiently
+// ListSecretsForOwner is a helper function which gets a list of Secrets
+// using the provided list options and reduce by OwnerReference UID to efficiently
 // list only the objects owned by the provided UID.
 func ListSecretsForOwner(ctx context.Context,
 	c client.Client,
@@ -235,7 +274,6 @@ func ListSecretsForOwner(ctx context.Context,
 
 	secrets := make([]corev1.Secret, 0)
 	for _, secret := range secretList.Items {
-		secret := secret
 		if IsOwnedByRefUID(&secret, uid) {
 			secrets = append(secrets, secret)
 		}
@@ -244,8 +282,28 @@ func ListSecretsForOwner(ctx context.Context,
 	return secrets, nil
 }
 
-// ListValidatingWebhookConfigurationsForOwner is a helper function to map a list of ValidatingWebhookConfiguration
-// by list options and reduce by OwnerReference UID to efficiently list only the objects owned by the provided UID.
+// ListValidatingWebhookConfigurations is a helper function that gets a list of ValidatingWebhookConfiguration
+// using the provided list options.
+func ListValidatingWebhookConfigurations(
+	ctx context.Context,
+	c client.Client,
+	listOpts ...client.ListOption,
+) ([]admregv1.ValidatingWebhookConfiguration, error) {
+	cfgList := &admregv1.ValidatingWebhookConfigurationList{}
+	err := c.List(
+		ctx,
+		cfgList,
+		listOpts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return cfgList.Items, nil
+}
+
+// ListValidatingWebhookConfigurationsForOwner is a helper function that gets a list of ValidatingWebhookConfiguration
+// using the provided list options and checking if the provided object is the owner.
 func ListValidatingWebhookConfigurationsForOwner(
 	ctx context.Context,
 	c client.Client,
@@ -262,13 +320,9 @@ func ListValidatingWebhookConfigurationsForOwner(
 		return nil, err
 	}
 
-	var webhookConfigurations []admregv1.ValidatingWebhookConfiguration
-	for _, cfg := range cfgList.Items {
-		cfg := cfg
-		if IsOwnedByRefUID(&cfg, uid) {
-			webhookConfigurations = append(webhookConfigurations, cfg)
-		}
-	}
-
-	return webhookConfigurations, nil
+	return slices.DeleteFunc(
+		cfgList.Items, func(vwc admregv1.ValidatingWebhookConfiguration) bool {
+			return !IsOwnedByRefUID(&vwc, uid)
+		},
+	), nil
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -121,11 +123,12 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	}), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("attaching dataplane to controlplane")
-	controlplane, err = controlplaneClient.Get(GetCtx(), controlplane.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	controlplane.Spec.DataPlane = &dataplane.Name
-	controlplane, err = controlplaneClient.Update(GetCtx(), controlplane, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	require.Eventually(t,
+		testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
+			cp.Spec.DataPlane = &dataplane.Name
+		}),
+		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+	)
 
 	t.Log("verifying controlplane is now provisioned")
 	require.Eventually(t, testutils.ControlPlaneIsProvisioned(t, GetCtx(), controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
@@ -134,11 +137,12 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t, GetCtx(), controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("removing dataplane from controlplane")
-	controlplane, err = controlplaneClient.Get(GetCtx(), controlplane.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	controlplane.Spec.DataPlane = nil
-	_, err = controlplaneClient.Update(GetCtx(), controlplane, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	require.Eventually(t,
+		testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
+			cp.Spec.DataPlane = nil
+		}),
+		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+	)
 
 	t.Log("verifying controlplane deployment has no active replicas")
 	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasActiveDeployment(t, GetCtx(), controlplaneName, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
@@ -255,6 +259,10 @@ func TestControlPlaneEssentials(t *testing.T) {
 	controlplane, err = controlplaneClient.Create(GetCtx(), controlplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(controlplane)
+	controlplane.TypeMeta = metav1.TypeMeta{
+		APIVersion: operatorv1beta1.SchemeGroupVersion.String(),
+		Kind:       "ControlPlane",
+	}
 
 	t.Log("verifying controlplane gets marked scheduled")
 	require.Eventually(t, testutils.ControlPlaneIsScheduled(t, GetCtx(), controlplaneName, GetClients().OperatorClient), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
@@ -339,7 +347,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 	require.Eventually(t, testutils.ControlPlaneHasAdmissionWebhookConfiguration(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("verifying controlplane's webhook is functional")
-	verifyControlPlaneWebhookIsFunctional(t, GetCtx(), clients)
+	eventuallyVerifyControlPlaneWebhookIsFunctional(t, GetCtx(), client.NewNamespacedClient(clients.MgrClient, namespace.Name))
 
 	t.Log("verifying that controlplane's ClusterRole is patched if it goes out of sync")
 	clusterRoles = testutils.MustListControlPlaneClusterRoles(t, GetCtx(), controlplane, clients)
@@ -445,22 +453,42 @@ func verifyControlPlaneDeploymentAdmissionWebhookMount(t *testing.T, deployment 
 	require.Equal(t, consts.ControlPlaneAdmissionWebhookVolumeMountPath, volumeMount.MountPath)
 }
 
-// verifyControlPlaneWebhookIsFunctional verifies that the controlplane validating webhook is functional by
-// creating a resource that should be rejected by the webhook and verifying that it is rejected.
-func verifyControlPlaneWebhookIsFunctional(t *testing.T, ctx context.Context, clients testutils.K8sClients) {
-	keyAuthSecretWithNoKey := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "test-cred-",
-			Namespace:    "default",
-			Labels: map[string]string{
-				"konghq.com/credential": "key-auth",
+// eventuallyVerifyControlPlaneWebhookIsFunctional verifies that the controlplane validating webhook
+// is functional by creating a resource that should be rejected by the webhook and verifying that
+// it is rejected.
+func eventuallyVerifyControlPlaneWebhookIsFunctional(t *testing.T, ctx context.Context, cl client.Client) {
+	require.Eventually(t, func() bool {
+		ing := netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "test-ingress-",
+				Annotations: map[string]string{
+					"konghq.com/protocols": "invalid",
+				},
 			},
-		},
-	}
+			Spec: netv1.IngressSpec{
+				IngressClassName: lo.ToPtr(ingressClass),
+				DefaultBackend: &netv1.IngressBackend{
+					Service: &netv1.IngressServiceBackend{
+						Name: "test",
+						Port: netv1.ServiceBackendPort{
+							Number: 8080,
+						},
+					},
+				},
+			},
+		}
 
-	err := clients.MgrClient.Create(ctx, &keyAuthSecretWithNoKey)
-	require.Error(t, err)
-	require.ErrorContains(t, err, "admission webhook \"secrets.validation.ingress-controller.konghq.com\" denied the request")
+		err := cl.Create(ctx, &ing)
+		if err == nil {
+			t.Logf("ControlPlane webhook accepted an invalid Ingress %s, retrying and waiting for webhook to become functional", client.ObjectKeyFromObject(&ing))
+			return false
+		}
+		if !strings.Contains(err.Error(), "admission webhook \"ingresses.validation.ingress-controller.konghq.com\" denied the request") {
+			t.Logf("unexpected error: %v", err)
+			return false
+		}
+		return true
+	}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 }
 
 func TestControlPlaneUpdate(t *testing.T) {
@@ -579,18 +607,18 @@ func TestControlPlaneUpdate(t *testing.T) {
 	testEnv := GetEnvValueByName(container.Env, "TEST_ENV")
 	require.Equal(t, "before_update", testEnv)
 
-	t.Logf("updating controlplane resource")
-	controlplane, err = controlplaneClient.Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	container = k8sutils.GetPodContainerByName(&controlplane.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-	require.NotNil(t, container)
-	container.Env = []corev1.EnvVar{
-		{
-			Name: "TEST_ENV", Value: "after_update",
-		},
-	}
-	_, err = controlplaneClient.Update(GetCtx(), controlplane, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	t.Logf("updating controlplane resource with new ControlPlane environment variable value")
+
+	require.Eventually(t,
+		testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
+			cp.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Env = []corev1.EnvVar{
+				{
+					Name: "TEST_ENV", Value: "after_update",
+				},
+			}
+		}),
+		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+	)
 
 	t.Logf("verifying environment variable TEST_ENV in deployment after update")
 	require.Eventually(t, func() bool {

@@ -13,7 +13,6 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,9 +39,9 @@ const numReplicasWhenNoDataPlane = 0
 // -----------------------------------------------------------------------------
 
 func (r *Reconciler) ensureIsMarkedScheduled(
-	controlplane *operatorv1beta1.ControlPlane,
+	cp *operatorv1beta1.ControlPlane,
 ) bool {
-	_, present := k8sutils.GetCondition(ConditionTypeProvisioned, controlplane)
+	_, present := k8sutils.GetCondition(ConditionTypeProvisioned, cp)
 	if !present {
 		condition := k8sutils.NewCondition(
 			ConditionTypeProvisioned,
@@ -51,7 +50,7 @@ func (r *Reconciler) ensureIsMarkedScheduled(
 			"ControlPlane resource is scheduled for provisioning",
 		)
 
-		k8sutils.SetCondition(condition, controlplane)
+		k8sutils.SetCondition(condition, cp)
 		return true
 	}
 
@@ -62,11 +61,11 @@ func (r *Reconciler) ensureIsMarkedScheduled(
 // to carry on with the controlplane deployments reconciliation.
 // Information about the missing dataplane is stored in the controlplane status.
 func (r *Reconciler) ensureDataPlaneStatus(
-	controlplane *operatorv1beta1.ControlPlane,
+	cp *operatorv1beta1.ControlPlane,
 	dataplane *operatorv1beta1.DataPlane,
 ) (dataplaneIsSet bool) {
-	dataplaneIsSet = controlplane.Spec.DataPlane != nil && *controlplane.Spec.DataPlane == dataplane.Name
-	condition, present := k8sutils.GetCondition(ConditionTypeProvisioned, controlplane)
+	dataplaneIsSet = cp.Spec.DataPlane != nil && *cp.Spec.DataPlane == dataplane.Name
+	condition, present := k8sutils.GetCondition(ConditionTypeProvisioned, cp)
 
 	newCondition := k8sutils.NewCondition(
 		ConditionTypeProvisioned,
@@ -83,7 +82,7 @@ func (r *Reconciler) ensureDataPlaneStatus(
 		)
 	}
 	if !present || condition.Status != newCondition.Status || condition.Reason != newCondition.Reason {
-		k8sutils.SetCondition(newCondition, controlplane)
+		k8sutils.SetCondition(newCondition, cp)
 	}
 	return dataplaneIsSet
 }
@@ -94,16 +93,16 @@ func (r *Reconciler) ensureDataPlaneStatus(
 
 func (r *Reconciler) ensureDataPlaneConfiguration(
 	ctx context.Context,
-	controlplane *operatorv1beta1.ControlPlane,
+	cp *operatorv1beta1.ControlPlane,
 	dataplaneServiceName string,
 ) error {
 	changed := setControlPlaneEnvOnDataPlaneChange(
-		&controlplane.Spec.ControlPlaneOptions,
-		controlplane.Namespace,
+		&cp.Spec.ControlPlaneOptions,
+		cp.Namespace,
 		dataplaneServiceName,
 	)
 	if changed {
-		if err := r.Client.Update(ctx, controlplane); err != nil {
+		if err := r.Client.Update(ctx, cp); err != nil {
 			return fmt.Errorf("failed updating ControlPlane's DataPlane: %w", err)
 		}
 		return nil
@@ -116,24 +115,19 @@ func setControlPlaneEnvOnDataPlaneChange(
 	namespace string,
 	dataplaneServiceName string,
 ) bool {
-	var changed bool
-
-	dataplaneIsSet := spec.DataPlane != nil && *spec.DataPlane != ""
 	container := k8sutils.GetPodContainerByName(&spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-	if dataplaneIsSet {
+	if dataplaneIsSet := spec.DataPlane != nil && *spec.DataPlane != ""; dataplaneIsSet {
 		newPublishServiceValue := k8stypes.NamespacedName{Namespace: namespace, Name: dataplaneServiceName}.String()
 		if k8sutils.EnvValueByName(container.Env, "CONTROLLER_PUBLISH_SERVICE") != newPublishServiceValue {
 			container.Env = k8sutils.UpdateEnv(container.Env, "CONTROLLER_PUBLISH_SERVICE", newPublishServiceValue)
-			changed = true
+			return true
 		}
-	} else {
-		if k8sutils.EnvValueByName(container.Env, "CONTROLLER_PUBLISH_SERVICE") != "" {
-			container.Env = k8sutils.RejectEnvByName(container.Env, "CONTROLLER_PUBLISH_SERVICE")
-			changed = true
-		}
+	} else if k8sutils.EnvValueByName(container.Env, "CONTROLLER_PUBLISH_SERVICE") != "" {
+		container.Env = k8sutils.RejectEnvByName(container.Env, "CONTROLLER_PUBLISH_SERVICE")
+		return true
 	}
 
-	return changed
+	return false
 }
 
 // -----------------------------------------------------------------------------
@@ -155,7 +149,7 @@ func (r *Reconciler) ensureDeployment(
 	ctx context.Context,
 	logger logr.Logger,
 	params ensureDeploymentParams,
-) (op.CreatedUpdatedOrNoop, *appsv1.Deployment, error) {
+) (op.Result, *appsv1.Deployment, error) {
 	dataplaneIsSet := params.ControlPlane.Spec.DataPlane != nil && *params.ControlPlane.Spec.DataPlane != ""
 
 	deployments, err := k8sutils.ListDeploymentsForOwner(ctx,
@@ -208,7 +202,7 @@ func (r *Reconciler) ensureDeployment(
 		// some custom comparison rules are needed for some PodTemplateSpec sub-attributes, in particular
 		// resources and affinity.
 		opts := []cmp.Option{
-			cmp.Comparer(func(a, b corev1.ResourceRequirements) bool { return k8sresources.ResourceRequirementsEqual(a, b) }),
+			cmp.Comparer(k8sresources.ResourceRequirementsEqual),
 		}
 
 		// ensure that PodTemplateSpec is up to date
@@ -236,7 +230,7 @@ func (r *Reconciler) ensureDeployment(
 			}
 		}
 
-		return patch.ApplyPatchIfNonEmpty(ctx, r.Client, logger, existingDeployment, oldExistingDeployment, params.ControlPlane, updated)
+		return patch.ApplyPatchIfNotEmpty(ctx, r.Client, logger, existingDeployment, oldExistingDeployment, updated)
 	}
 
 	if !dataplaneIsSet {
@@ -246,19 +240,19 @@ func (r *Reconciler) ensureDeployment(
 		return op.Noop, nil, fmt.Errorf("failed creating ControlPlane Deployment %s: %w", generatedDeployment.Name, err)
 	}
 
-	log.Debug(logger, "deployment for ControlPlane created", params.ControlPlane, "deployment", generatedDeployment.Name)
+	log.Debug(logger, "deployment for ControlPlane created", "deployment", generatedDeployment.Name)
 	return op.Created, generatedDeployment, nil
 }
 
 func (r *Reconciler) ensureServiceAccount(
 	ctx context.Context,
-	controlplane *operatorv1beta1.ControlPlane,
+	cp *operatorv1beta1.ControlPlane,
 ) (createdOrModified bool, sa *corev1.ServiceAccount, err error) {
 	serviceAccounts, err := k8sutils.ListServiceAccountsForOwner(
 		ctx,
 		r.Client,
-		controlplane.Namespace,
-		controlplane.UID,
+		cp.Namespace,
+		cp.UID,
 		client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		},
@@ -275,8 +269,8 @@ func (r *Reconciler) ensureServiceAccount(
 		return false, nil, errors.New("number of serviceAccounts reduced")
 	}
 
-	generatedServiceAccount := k8sresources.GenerateNewServiceAccountForControlPlane(controlplane.Namespace, controlplane.Name)
-	k8sutils.SetOwnerForObject(generatedServiceAccount, controlplane)
+	generatedServiceAccount := k8sresources.GenerateNewServiceAccountForControlPlane(cp.Namespace, cp.Name)
+	k8sutils.SetOwnerForObject(generatedServiceAccount, cp)
 
 	if count == 1 {
 		var updated bool
@@ -296,18 +290,44 @@ func (r *Reconciler) ensureServiceAccount(
 
 func (r *Reconciler) ensureClusterRole(
 	ctx context.Context,
-	controlplane *operatorv1beta1.ControlPlane,
+	cp *operatorv1beta1.ControlPlane,
 ) (createdOrUpdated bool, cr *rbacv1.ClusterRole, err error) {
-	clusterRoles, err := k8sutils.ListClusterRolesForOwner(
+	// NOTE: Code below performs a migration from the old managedBy label to the new one.
+	// It lists both resources labeled with the old and the new label set and merges them,
+	// then it reduces the number of resources to 1 and eventually updates the resource.
+	// After several versions of soak time we can remove handling the legacy label set.
+	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
+	// PR that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
+	// TODO: https://github.com/Kong/gateway-operator/issues/401.
+	clusterRolesLegacy, err := k8sutils.ListClusterRoles(
 		ctx,
 		r.Client,
-		controlplane.UID,
-		client.MatchingLabels{
-			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
-		},
+		client.MatchingLabels(k8sutils.GetLegacyManagedByLabelSet(cp)),
 	)
 	if err != nil {
 		return false, nil, err
+	}
+
+	clusterRoles, err := k8sutils.ListClusterRoles(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
+	)
+	if err != nil {
+		return false, nil, err
+	}
+
+	// NOTE: This is a temporary workaround to handle the migration from the old managedBy label to the new one.
+	// The reason for this is because those label sets overlap.
+	for i, cr := range clusterRolesLegacy {
+		nn := client.ObjectKeyFromObject(&cr)
+		if lo.ContainsBy(clusterRoles, func(iterator rbacv1.ClusterRole) bool {
+			return client.ObjectKeyFromObject(&iterator) == nn
+		}) {
+			continue
+		}
+
+		clusterRoles = append(clusterRoles, clusterRolesLegacy[i])
 	}
 
 	count := len(clusterRoles)
@@ -318,12 +338,12 @@ func (r *Reconciler) ensureClusterRole(
 		return false, nil, errors.New("number of clusterRoles reduced")
 	}
 
-	controlplaneContainer := k8sutils.GetPodContainerByName(&controlplane.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-	generated, err := k8sresources.GenerateNewClusterRoleForControlPlane(controlplane.Name, controlplaneContainer.Image, r.DevelopmentMode)
+	controlplaneContainer := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+	generated, err := k8sresources.GenerateNewClusterRoleForControlPlane(cp.Name, controlplaneContainer.Image, r.DevelopmentMode)
 	if err != nil {
 		return false, nil, err
 	}
-	k8sutils.SetOwnerForObject(generated, controlplane)
+	k8sutils.SetOwnerForObjectThroughLabels(generated, cp)
 
 	if count == 1 {
 		var (
@@ -351,22 +371,48 @@ func (r *Reconciler) ensureClusterRole(
 
 func (r *Reconciler) ensureClusterRoleBinding(
 	ctx context.Context,
-	controlplane *operatorv1beta1.ControlPlane,
+	cp *operatorv1beta1.ControlPlane,
 	serviceAccountName string,
 	clusterRoleName string,
 ) (createdOrUpdate bool, crb *rbacv1.ClusterRoleBinding, err error) {
 	logger := log.GetLogger(ctx, "controlplane.ensureClusterRoleBinding", r.DevelopmentMode)
 
-	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(
+	// NOTE: Code below performs a migration from the old managedBy label to the new one.
+	// It lists both resources labeled with the old and the new label set and merges them,
+	// then it reduces the number of resources to 1 and eventually updates the resource.
+	// After several versions of soak time we can remove handling the legacy label set.
+	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
+	// PR that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
+	// TODO: https://github.com/Kong/gateway-operator/issues/401.
+	clusterRoleBindingsLegacy, err := k8sutils.ListClusterRoleBindings(
 		ctx,
 		r.Client,
-		controlplane.UID,
-		client.MatchingLabels{
-			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
-		},
+		client.MatchingLabels(k8sutils.GetLegacyManagedByLabelSet(cp)),
 	)
 	if err != nil {
 		return false, nil, err
+	}
+
+	clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
+	)
+	if err != nil {
+		return false, nil, err
+	}
+
+	// NOTE: This is a temporary workaround to handle the migration from the old managedBy label to the new one.
+	// The reason for this is because those label sets overlap.
+	for i, crb := range clusterRoleBindingsLegacy {
+		nn := client.ObjectKeyFromObject(&crb)
+		if lo.ContainsBy(clusterRoleBindings, func(iterator rbacv1.ClusterRoleBinding) bool {
+			return client.ObjectKeyFromObject(&iterator) == nn
+		}) {
+			continue
+		}
+
+		clusterRoleBindings = append(clusterRoleBindings, clusterRoleBindingsLegacy[i])
 	}
 
 	count := len(clusterRoleBindings)
@@ -377,15 +423,14 @@ func (r *Reconciler) ensureClusterRoleBinding(
 		return false, nil, errors.New("number of clusterRoleBindings reduced")
 	}
 
-	generated := k8sresources.GenerateNewClusterRoleBindingForControlPlane(controlplane.Namespace, controlplane.Name, serviceAccountName, clusterRoleName)
-	k8sutils.SetOwnerForObject(generated, controlplane)
+	generated := k8sresources.GenerateNewClusterRoleBindingForControlPlane(cp.Namespace, cp.Name, serviceAccountName, clusterRoleName)
+	k8sutils.SetOwnerForObjectThroughLabels(generated, cp)
 
 	if count == 1 {
 		existing := &clusterRoleBindings[0]
 		// Delete and re-create ClusterRoleBinding if name of ClusterRole changed because RoleRef is immutable.
 		if !k8sresources.CompareClusterRoleName(existing, clusterRoleName) {
 			log.Debug(logger, "ClusterRole name changed, delete and re-create a ClusterRoleBinding",
-				existing,
 				"old_cluster_role", existing.RoleRef.Name,
 				"new_cluster_role", clusterRoleName,
 			)
@@ -402,7 +447,7 @@ func (r *Reconciler) ensureClusterRoleBinding(
 		)
 		updated, existing.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existing.ObjectMeta, generated.ObjectMeta)
 
-		if !k8sresources.ClusterRoleBindingContainsServiceAccount(existing, controlplane.Namespace, serviceAccountName) {
+		if !k8sresources.ClusterRoleBindingContainsServiceAccount(existing, cp.Namespace, serviceAccountName) {
 			existing.Subjects = generated.Subjects
 			updatedServiceAccount = true
 		}
@@ -424,9 +469,9 @@ func (r *Reconciler) ensureClusterRoleBinding(
 // ControlPlane and the DataPlane.
 func (r *Reconciler) ensureAdminMTLSCertificateSecret(
 	ctx context.Context,
-	controlplane *operatorv1beta1.ControlPlane,
+	cp *operatorv1beta1.ControlPlane,
 ) (
-	op.CreatedUpdatedOrNoop,
+	op.Result,
 	*corev1.Secret,
 	error,
 ) {
@@ -441,8 +486,8 @@ func (r *Reconciler) ensureAdminMTLSCertificateSecret(
 	// this subject is arbitrary. data planes only care that client certificates are signed by the trusted CA, and will
 	// accept a certificate with any subject
 	return secrets.EnsureCertificate(ctx,
-		controlplane,
-		fmt.Sprintf("%s.%s", controlplane.Name, controlplane.Namespace),
+		cp,
+		fmt.Sprintf("%s.%s", cp.Name, cp.Namespace),
 		k8stypes.NamespacedName{
 			Namespace: r.ClusterCASecretNamespace,
 			Name:      r.ClusterCASecretName,
@@ -457,10 +502,11 @@ func (r *Reconciler) ensureAdminMTLSCertificateSecret(
 // ControlPlane's admission webhook.
 func (r *Reconciler) ensureAdmissionWebhookCertificateSecret(
 	ctx context.Context,
+	logger logr.Logger,
 	cp *operatorv1beta1.ControlPlane,
 	admissionWebhookService *corev1.Service,
 ) (
-	op.CreatedUpdatedOrNoop,
+	op.Result,
 	*corev1.Secret,
 	error,
 ) {
@@ -472,6 +518,24 @@ func (r *Reconciler) ensureAdmissionWebhookCertificateSecret(
 	matchingLabels := client.MatchingLabels{
 		consts.SecretUsedByServiceLabel: consts.ControlPlaneServiceKindWebhook,
 	}
+	if !isAdmissionWebhookEnabled(ctx, r.Client, logger, cp) {
+		labels := k8sresources.GetManagedLabelForOwner(cp)
+		labels[consts.SecretUsedByServiceLabel] = consts.ControlPlaneServiceKindWebhook
+		secrets, err := k8sutils.ListSecretsForOwner(ctx, r.Client, cp.GetUID(), matchingLabels)
+		if err != nil {
+			return op.Noop, nil, fmt.Errorf("failed listing Secrets for ControlPlane %s/: %w", client.ObjectKeyFromObject(cp), err)
+		}
+		for _, svc := range secrets {
+			if err := r.Client.Delete(ctx, &svc); err != nil {
+				return op.Noop, nil, fmt.Errorf("failed deleting ControlPlane admission webhook Secret %s: %w", svc.Name, err)
+			}
+		}
+		if len(secrets) == 0 {
+			return op.Noop, nil, nil
+		}
+		return op.Deleted, nil, nil
+	}
+
 	return secrets.EnsureCertificate(ctx,
 		cp,
 		fmt.Sprintf("%s.%s.svc", admissionWebhookService.Name, admissionWebhookService.Namespace),
@@ -490,18 +554,28 @@ func (r *Reconciler) ensureAdmissionWebhookCertificateSecret(
 // returns nil if all of owned ClusterRoles successfully deleted (ok if no owned CRs or NotFound on deleting CRs).
 func (r *Reconciler) ensureOwnedClusterRolesDeleted(
 	ctx context.Context,
-	controlplane *operatorv1beta1.ControlPlane,
+	cp *operatorv1beta1.ControlPlane,
 ) (deletions bool, err error) {
-	clusterRoles, err := k8sutils.ListClusterRolesForOwner(
-		ctx, r.Client,
-		controlplane.UID,
-		client.MatchingLabels{
-			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
-		},
+	// TODO: Remove listing with old labels https://github.com/Kong/gateway-operator/issues/401.
+	clusterRolesLegacy, err := k8sutils.ListClusterRoles(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetLegacyManagedByLabelSet(cp)),
 	)
 	if err != nil {
 		return false, err
 	}
+
+	clusterRoles, err := k8sutils.ListClusterRoles(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
+	)
+	if err != nil {
+		return false, err
+	}
+
+	clusterRoles = append(clusterRoles, clusterRolesLegacy...)
 
 	var (
 		deleted bool
@@ -509,8 +583,9 @@ func (r *Reconciler) ensureOwnedClusterRolesDeleted(
 	)
 	for i := range clusterRoles {
 		err = r.Client.Delete(ctx, &clusterRoles[i])
-		if err != nil && !k8serrors.IsNotFound(err) {
+		if client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
+			continue
 		}
 		deleted = true
 	}
@@ -523,18 +598,28 @@ func (r *Reconciler) ensureOwnedClusterRolesDeleted(
 // returns nil if all of owned ClusterRoleBindings successfully deleted (ok if no owned CRBs or NotFound on deleting CRBs).
 func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 	ctx context.Context,
-	controlplane *operatorv1beta1.ControlPlane,
+	cp *operatorv1beta1.ControlPlane,
 ) (deletions bool, err error) {
-	clusterRoleBindings, err := k8sutils.ListClusterRoleBindingsForOwner(
-		ctx, r.Client,
-		controlplane.UID,
-		client.MatchingLabels{
-			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
-		},
+	// TODO: Remove listing with old labels https://github.com/Kong/gateway-operator/issues/401.
+	clusterRoleBindingsLegacy, err := k8sutils.ListClusterRoleBindings(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetLegacyManagedByLabelSet(cp)),
 	)
 	if err != nil {
 		return false, err
 	}
+
+	clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
+	)
+	if err != nil {
+		return false, err
+	}
+
+	clusterRoleBindings = append(clusterRoleBindings, clusterRoleBindingsLegacy...)
 
 	var (
 		deleted bool
@@ -542,8 +627,9 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 	)
 	for i := range clusterRoleBindings {
 		err = r.Client.Delete(ctx, &clusterRoleBindings[i])
-		if err != nil && !k8serrors.IsNotFound(err) {
+		if client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
+			continue
 		}
 		deleted = true
 	}
@@ -551,18 +637,32 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 	return deleted, errors.Join(errs...)
 }
 
-func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx context.Context, cp *operatorv1beta1.ControlPlane) (deletions bool, err error) {
-	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(
+func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx context.Context,
+	cp *operatorv1beta1.ControlPlane,
+) (deletions bool, err error) {
+	// TODO: Remove listing with old labels and owner ref https://github.com/Kong/gateway-operator/issues/401.
+	validatingWebhookConfigurationsLegacy, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(
 		ctx,
 		r.Client,
-		cp.UID,
-		client.MatchingLabels{
-			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
-		},
+		cp.GetUID(),
+		// NOTE: this uses only the 1 label to find the legacy webhook configurations not the label set
+		// because app:<name> is not set on ValidatingWebhookConfiguration.
+		client.MatchingLabels(k8sutils.GetLegacyManagedByLabel(cp)),
 	)
 	if err != nil {
 		return false, fmt.Errorf("failed listing webhook configurations for owner: %w", err)
 	}
+
+	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed listing webhook configurations for owner: %w", err)
+	}
+
+	validatingWebhookConfigurations = append(validatingWebhookConfigurations, validatingWebhookConfigurationsLegacy...)
 
 	var (
 		deleted bool
@@ -570,8 +670,9 @@ func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx contex
 	)
 	for i := range validatingWebhookConfigurations {
 		err = r.Client.Delete(ctx, &validatingWebhookConfigurations[i])
-		if err != nil && !k8serrors.IsNotFound(err) {
+		if client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
+			continue
 		}
 		deleted = true
 	}
@@ -580,21 +681,34 @@ func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx contex
 
 func (r *Reconciler) ensureAdmissionWebhookService(
 	ctx context.Context,
+	logger logr.Logger,
 	cl client.Client,
-	controlPlane *operatorv1beta1.ControlPlane,
-) (op.CreatedUpdatedOrNoop, *corev1.Service, error) {
-	matchingLabels := k8sresources.GetManagedLabelForOwner(controlPlane)
+	cp *operatorv1beta1.ControlPlane,
+) (op.Result, *corev1.Service, error) {
+	matchingLabels := k8sresources.GetManagedLabelForOwner(cp)
 	matchingLabels[consts.ControlPlaneServiceLabel] = consts.ControlPlaneServiceKindWebhook
 
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
 		cl,
-		controlPlane.Namespace,
-		controlPlane.UID,
+		cp.Namespace,
+		cp.UID,
 		matchingLabels,
 	)
 	if err != nil {
-		return op.Noop, nil, fmt.Errorf("failed listing admission webhook Services for ControlPlane %s/%s: %w", controlPlane.Namespace, controlPlane.Name, err)
+		return op.Noop, nil, fmt.Errorf("failed listing admission webhook Services for ControlPlane %s/%s: %w", cp.Namespace, cp.Name, err)
+	}
+
+	if !isAdmissionWebhookEnabled(ctx, cl, logger, cp) {
+		for _, svc := range services {
+			if err := cl.Delete(ctx, &svc); client.IgnoreNotFound(err) != nil {
+				return op.Noop, nil, fmt.Errorf("failed deleting ControlPlane admission webhook Service %s: %w", svc.Name, err)
+			}
+		}
+		if len(services) == 0 {
+			return op.Noop, nil, nil
+		}
+		return op.Deleted, nil, nil
 	}
 
 	count := len(services)
@@ -605,7 +719,7 @@ func (r *Reconciler) ensureAdmissionWebhookService(
 		return op.Noop, nil, errors.New("number of ControlPlane admission webhook Services reduced")
 	}
 
-	generatedService, err := k8sresources.GenerateNewAdmissionWebhookServiceForControlPlane(controlPlane)
+	generatedService, err := k8sresources.GenerateNewAdmissionWebhookServiceForControlPlane(cp)
 	if err != nil {
 		return op.Noop, nil, err
 	}
@@ -644,20 +758,49 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 	certSecret *corev1.Secret,
-	webhookServiceName string,
-) (op.CreatedUpdatedOrNoop, error) {
+	webhookService *corev1.Service,
+) (op.Result, error) {
 	logger := log.GetLogger(ctx, "controlplane.ensureValidatingWebhookConfiguration", r.DevelopmentMode)
 
-	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(
+	// NOTE: Code below performs a migration from the old managedBy label to the new one.
+	// It lists both resources labeled with the old and the new label set and merges them,
+	// then it reduces the number of resources to 1 and eventually updates the resource.
+	// After several versions of soak time we can remove handling the legacy label set.
+	// PR that introduced the new set of labels: https://github.com/Kong/gateway-operator/pull/259
+	// PR that introduced the migration: https://github.com/Kong/gateway-operator/pull/369
+	// TODO: https://github.com/Kong/gateway-operator/issues/401.
+	validatingWebhookConfigurationsLegacy, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(
 		ctx,
 		r.Client,
-		cp.UID,
-		client.MatchingLabels{
-			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
-		},
+		cp.GetUID(),
+		// NOTE: this uses only the 1 label to find the legacy webhook configurations not the label set
+		// because app:<name> is not set on ValidatingWebhookConfiguration.
+		client.MatchingLabels(k8sutils.GetLegacyManagedByLabel(cp)),
 	)
 	if err != nil {
-		return op.Noop, err
+		return op.Noop, fmt.Errorf("failed listing webhook configurations for owner: %w", err)
+	}
+
+	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
+	)
+	if err != nil {
+		return op.Noop, fmt.Errorf("failed listing webhook configurations for owner: %w", err)
+	}
+
+	// NOTE: This is a temporary workaround to handle the migration from the old managedBy label to the new one.
+	// The reason for this is because those label sets overlap.
+	for i, vwc := range validatingWebhookConfigurationsLegacy {
+		nn := client.ObjectKeyFromObject(&vwc)
+		if lo.ContainsBy(validatingWebhookConfigurations, func(iterator admregv1.ValidatingWebhookConfiguration) bool {
+			return client.ObjectKeyFromObject(&iterator) == nn
+		}) {
+			continue
+		}
+
+		validatingWebhookConfigurations = append(validatingWebhookConfigurations, validatingWebhookConfigurationsLegacy[i])
 	}
 
 	count := len(validatingWebhookConfigurations)
@@ -666,6 +809,18 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 			return op.Noop, err
 		}
 		return op.Noop, errors.New("number of validatingWebhookConfigurations reduced")
+	}
+
+	if !isAdmissionWebhookEnabled(ctx, r.Client, logger, cp) {
+		for _, webhookConfiguration := range validatingWebhookConfigurations {
+			if err := r.Client.Delete(ctx, &webhookConfiguration); client.IgnoreNotFound(err) != nil {
+				return op.Noop, fmt.Errorf("failed deleting ControlPlane admission webhook ValidatingWebhookConfiguration %s: %w", webhookConfiguration.Name, err)
+			}
+		}
+		if len(validatingWebhookConfigurations) == 0 {
+			return op.Noop, nil
+		}
+		return op.Deleted, nil
 	}
 
 	cpContainer := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
@@ -684,7 +839,7 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 		admregv1.WebhookClientConfig{
 			Service: &admregv1.ServiceReference{
 				Namespace: cp.Namespace,
-				Name:      webhookServiceName,
+				Name:      webhookService.GetName(),
 				Port:      lo.ToPtr(int32(consts.ControlPlaneAdmissionWebhookListenPort)),
 			},
 			CABundle: caBundle,
@@ -693,22 +848,24 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	if err != nil {
 		return op.Noop, fmt.Errorf("failed generating ControlPlane's ValidatingWebhookConfiguration: %w", err)
 	}
-	k8sutils.SetOwnerForObject(generatedWebhookConfiguration, cp)
+	k8sutils.SetOwnerForObjectThroughLabels(generatedWebhookConfiguration, cp)
 
 	if count == 1 {
 		var updated bool
 		webhookConfiguration := validatingWebhookConfigurations[0]
-		oldWebhookConfiguration := webhookConfiguration.DeepCopy()
+		old := webhookConfiguration.DeepCopy()
 
-		updated, generatedWebhookConfiguration.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(webhookConfiguration.ObjectMeta, generatedWebhookConfiguration.ObjectMeta)
-		if !cmp.Equal(webhookConfiguration.Webhooks, generatedWebhookConfiguration.Webhooks) {
+		updated, webhookConfiguration.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(webhookConfiguration.ObjectMeta, generatedWebhookConfiguration.ObjectMeta)
+
+		if !cmp.Equal(webhookConfiguration.Webhooks, generatedWebhookConfiguration.Webhooks) ||
+			!cmp.Equal(webhookConfiguration.Labels, generatedWebhookConfiguration.Labels) {
 			webhookConfiguration.Webhooks = generatedWebhookConfiguration.Webhooks
 			updated = true
 		}
 
 		if updated {
-			log.Debug(logger, "patching existing ValidatingWebhookConfiguration", webhookConfiguration)
-			return op.Updated, r.Client.Patch(ctx, &webhookConfiguration, client.MergeFrom(oldWebhookConfiguration))
+			log.Debug(logger, "patching existing ValidatingWebhookConfiguration")
+			return op.Updated, r.Client.Patch(ctx, &webhookConfiguration, client.MergeFrom(old))
 		}
 
 		return op.Noop, nil

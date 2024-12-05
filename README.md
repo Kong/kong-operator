@@ -9,9 +9,19 @@ on Kubernetes.
 With Kong Gateway Operator, users can:
 
 * Deploy and configure Kong Gateway services.
-* Customise deployments using PodTemplateSpec to deploy sidecars, set node affinity
-  and more.
-* Upgrade Data Planes using a rolling restart or blue/green deployments.
+* Customise deployments using `PodTemplateSpec` to:
+  * [Deploy sidecars][docs_sidecar],
+  * [Set image][docs_dataplane_image],
+  * [And much more][docs_podtemplatespec].
+* Upgrade Data Planes using a [rolling restart][docs_upgrade_rolling] or [blue/green deployments][docs_upgrade_bg].
+* Configure [auto scaling on Data Planes][docs_autoscaling].
+
+[docs_sidecar]: https://docs.konghq.com/gateway-operator/latest/customization/sidecars/
+[docs_dataplane_image]: https://docs.konghq.com/gateway-operator/latest/customization/data-plane-image/
+[docs_podtemplatespec]: https://docs.konghq.com/gateway-operator/latest/customization/pod-template-spec/
+[docs_upgrade_rolling]: https://docs.konghq.com/gateway-operator/latest/guides/upgrade/data-plane/rolling/
+[docs_upgrade_bg]: https://docs.konghq.com/gateway-operator/latest/guides/upgrade/data-plane/blue-green/
+[docs_autoscaling]: https://docs.konghq.com/gateway-operator/latest/guides/autoscaling-kong/
 
 ## Current Features
 
@@ -25,6 +35,23 @@ The following features are considered supported:
 * Configuration and management of `AIGateway`s (experimental feature)
 
 See our [Features Page](/FEATURES.md) for details on these capabilities.
+
+## API stability
+
+The operator provides 2 APIs:
+
+- YAML / manifests API which users use to apply their manifests against Kubernetes clusters.
+- Go API through types exported under [api/](https://github.com/Kong/gateway-operator/tree/main/api)
+  and other exported packages.
+
+This project:
+
+- Follows [Kubernetes API versioning][k8s_api_versioning] for the YAML API.
+  - This is considered part of the user contract.
+- Tries to not break users implementing against operator's Go API but does not
+  offer a non breaking guarantee.
+
+[k8s_api_versioning]: https://kubernetes.io/docs/reference/using-api/#api-versioning
 
 ## Quick Start and documentation
 
@@ -58,11 +85,14 @@ machine against the cluster that you have configured via your `KUBECONFIG`.
 
 ### Adding new CRDs
 
-Whenever you add a new CRD ensure that it is included in project's [`PROJECT`](./PROJECT) file.
-
-This is necessary for creation of a bundle for external hubs like [Operator Hub's community operators][community-operators].
+Whenever you add a new CRD:
+- Ensure that it is included in project's [`PROJECT`](./PROJECT) file. This is necessary for creation of
+  a bundle for external hubs like [Operator Hub's community operators][community-operators].
+- Annotate the CRD and any new type it depends on with the right markers to make sure it will be included
+  in the generated documentation. See [available markers][available-markers].
 
 [community-operators]: https://github.com/k8s-operatorhub/community-operators/
+[available-markers]: https://github.com/Kong/kubernetes-configuration/blob/main/README.md#available-custom-markers
 
 ## Seeking Help
 
@@ -91,7 +121,7 @@ and [Zoom][zoom] links.
 [gwapi]:https://github.com/kubernetes-sigs/gateway-api
 [go-dev-site]: https://go.dev/
 [disc]:https://github.com/kong/gateway-operator/discussions
-[issues]:https://github.com/kong/kubernetes-ingress-controller/issues
+[issues]:https://github.com/Kong/gateway-operator/issues
 [slack]:https://kubernetes.slack.com/messages/kong
 [kong-meet]:https://konghq.com/online-meetups/
 [zoom]:https://zoom.us

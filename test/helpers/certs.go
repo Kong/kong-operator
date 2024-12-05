@@ -16,7 +16,7 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Certificate test helper functions and types
+// CP-DP mTLS Certificate test helper functions and types
 // -----------------------------------------------------------------------------
 
 // Cert represents a TLS certificate that can be used for testing purposes.

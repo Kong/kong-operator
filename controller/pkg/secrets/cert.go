@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/dataplane"
@@ -114,13 +114,13 @@ func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Se
 		return nil, err
 	}
 
-	var usages []string
+	usages := make([]string, 0, len(csr.Spec.Usages))
 	for _, usage := range csr.Spec.Usages {
 		usages = append(usages, string(usage))
 	}
 
 	certExpiryDuration := time.Second * time.Duration(*csr.Spec.ExpirationSeconds)
-	durationUntilExpiry := caCert.NotAfter.Sub(time.Now()) //nolint:gosimple
+	durationUntilExpiry := time.Until(caCert.NotAfter)
 	if durationUntilExpiry <= 0 {
 		return nil, fmt.Errorf("the signer has expired: %v", caCert.NotAfter)
 	}
@@ -147,6 +147,25 @@ func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Se
 	return certBytes, nil
 }
 
+// IsTLSSecretValid checks if a Secret contains a valid TLS certificate and key.
+func IsTLSSecretValid(secret *corev1.Secret) bool {
+	var ok bool
+	var crt, key []byte
+	if crt, ok = secret.Data["tls.crt"]; !ok {
+		return false
+	}
+	if key, ok = secret.Data["tls.key"]; !ok {
+		return false
+	}
+	if p, _ := pem.Decode(crt); p == nil {
+		return false
+	}
+	if p, _ := pem.Decode(key); p == nil {
+		return false
+	}
+	return true
+}
+
 // EnsureCertificate creates a namespace/name Secret for subject signed by the CA in the
 // mtlsCASecretNamespace/mtlsCASecretName Secret, or does nothing if a namespace/name Secret is
 // already present. It returns a boolean indicating if it created a Secret and an error indicating
@@ -164,10 +183,10 @@ func EnsureCertificate[
 	usages []certificatesv1.KeyUsage,
 	cl client.Client,
 	additionalMatchingLabels client.MatchingLabels,
-) (op.CreatedUpdatedOrNoop, *corev1.Secret, error) {
-	setCALogger(ctrlruntimelog.Log)
+) (op.Result, *corev1.Secret, error) {
+	setCALogger(ctrllog.Log)
 
-	// TODO: https://github.com/Kong/gateway-operator/pull/1101.
+	// TODO: https://github.com/Kong/gateway-operator-archive/pull/156.
 	// Use only new labels after several minor version of soak time.
 
 	// Below we list both the Secrets with the new labels and the legacy labels
@@ -313,7 +332,7 @@ func generateTLSDataSecret(
 	mtlsCASecret types.NamespacedName,
 	usages []certificatesv1.KeyUsage,
 	k8sClient client.Client,
-) (op.CreatedUpdatedOrNoop, *corev1.Secret, error) {
+) (op.Result, *corev1.Secret, error) {
 	template := x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:   subject,
@@ -415,13 +434,12 @@ func ensureContainerImageUpdated(container *corev1.Container, imageVersionStr st
 
 	imageParts := strings.Split(container.Image, ":")
 	if len(imageParts) > 3 {
-		err = fmt.Errorf("invalid container image found: %s", container.Image)
-		return
+		return false, fmt.Errorf("invalid container image found: %s", container.Image)
 	}
 
 	// This is a special case for registries that specify a non default port,
 	// e.g. localhost:5000 or myregistry.io:8000. We do look for '/' since the
-	// contianer.Image will contain it as a separator between the registry+image
+	// container.Image will contain it as a separator between the registry+image
 	// and the version.
 	if len(imageParts) == 3 {
 		if !strings.Contains(container.Image, "/") {
@@ -443,5 +461,5 @@ func ensureContainerImageUpdated(container *corev1.Container, imageVersionStr st
 		updated = true
 	}
 
-	return
+	return updated, nil
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -43,10 +42,11 @@ type Reconciler struct {
 	Callbacks                DataPlaneCallbacks
 	ContextInjector          ctxinjector.CtxInjector
 	DefaultImage             string
+	KonnectEnabled           bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	r.eventRecorder = mgr.GetEventRecorderFor("dataplane")
 
 	return DataPlaneWatchBuilder(mgr).
@@ -63,13 +63,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	ctx = r.ContextInjector.InjectKeyValues(ctx)
 	logger := log.GetLogger(ctx, "dataplane", r.DevelopmentMode)
 
-	log.Trace(logger, "reconciling DataPlane resource", req)
+	log.Trace(logger, "reconciling DataPlane resource")
+	dpNn := req.NamespacedName
 	dataplane := new(operatorv1beta1.DataPlane)
-	if err := r.Client.Get(ctx, req.NamespacedName, dataplane); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
+	if err := r.Client.Get(ctx, dpNn, dataplane); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if k8sutils.InitReady(dataplane) {
@@ -84,16 +82,29 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, fmt.Errorf("failed updating DataPlane with selector in Status: %w", err)
 	}
 
-	log.Trace(logger, "validating DataPlane configuration", dataplane)
+	log.Trace(logger, "validating DataPlane configuration")
 	err := r.Validator.Validate(dataplane)
 	if err != nil {
-		log.Info(logger, "failed to validate dataplane: "+err.Error(), dataplane)
+		log.Info(logger, "failed to validate dataplane: "+err.Error())
 		r.eventRecorder.Event(dataplane, "Warning", "ValidationFailed", err.Error())
-		markErr := r.ensureDataPlaneIsMarkedNotReady(ctx, logger, dataplane, DataPlaneConditionValidationFailed, err.Error())
+		markErr := ensureDataPlaneIsMarkedNotReady(ctx, logger, r.Client, dataplane, DataPlaneConditionValidationFailed, err.Error())
 		return ctrl.Result{}, markErr
 	}
 
-	log.Trace(logger, "exposing DataPlane deployment admin API via headless service", dataplane)
+	log.Trace(logger, "applying extensions")
+	patched, requeue, err := applyExtensions(ctx, r.Client, logger, dataplane, r.KonnectEnabled)
+	if err != nil {
+		if !requeue {
+			log.Debug(logger, "failed to apply extensions", "err", err)
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
+	}
+	if patched {
+		return ctrl.Result{}, nil
+	}
+
+	log.Trace(logger, "exposing DataPlane deployment admin API via headless service")
 	res, dataplaneAdminService, err := ensureAdminServiceForDataPlane(ctx, r.Client, dataplane,
 		client.MatchingLabels{
 			consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
@@ -105,12 +116,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	switch res {
 	case op.Created, op.Updated:
-		log.Debug(logger, "DataPlane admin service modified", dataplane, "service", dataplaneAdminService.Name, "reason", res)
+		log.Debug(logger, "DataPlane admin service modified", "service", dataplaneAdminService.Name, "reason", res)
 		return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
 	case op.Noop:
+	case op.Deleted: // This should not happen.
 	}
 
-	log.Trace(logger, "exposing DataPlane deployment via service", dataplane)
+	log.Trace(logger, "exposing DataPlane deployment via service")
 	additionalServiceLabels := map[string]string{
 		consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
 	}
@@ -127,7 +139,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 	if serviceRes == op.Created || serviceRes == op.Updated {
-		log.Debug(logger, "DataPlane ingress service created/updated", dataplane, "service", dataplaneIngressService.Name)
+		log.Debug(logger, "DataPlane ingress service created/updated", "service", dataplaneIngressService.Name)
 		return ctrl.Result{}, nil
 	}
 
@@ -136,11 +148,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 	if dataplaneServiceChanged {
-		log.Debug(logger, "ingress service updated in the dataplane status", dataplane)
+		log.Debug(logger, "ingress service updated in the dataplane status")
 		return ctrl.Result{}, nil // dataplane status update will trigger reconciliation
 	}
 
-	log.Trace(logger, "ensuring mTLS certificate", dataplane)
+	log.Trace(logger, "ensuring mTLS certificate")
 	res, certSecret, err := ensureDataPlaneCertificate(ctx, r.Client, dataplane,
 		types.NamespacedName{
 			Namespace: r.ClusterCASecretNamespace,
@@ -155,20 +167,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 	if res != op.Noop {
-		log.Debug(logger, "mTLS certificate created/updated", dataplane)
+		log.Debug(logger, "mTLS certificate created/updated")
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
-	log.Trace(logger, "checking readiness of DataPlane service", dataplaneIngressService)
+	log.Trace(logger, "checking readiness of DataPlane service", "service", dataplaneIngressService.Name)
 	if dataplaneIngressService.Spec.ClusterIP == "" {
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	log.Trace(logger, "ensuring DataPlane has service addesses in status", dataplaneIngressService)
+	log.Trace(logger, "ensuring DataPlane has service addresses in status", "service", dataplaneIngressService.Name)
 	if updated, err := r.ensureDataPlaneAddressesStatus(ctx, logger, dataplane, dataplaneIngressService); err != nil {
 		return ctrl.Result{}, err
 	} else if updated {
-		log.Debug(logger, "dataplane status.Addresses updated", dataplane)
+		log.Debug(logger, "dataplane status.Addresses updated")
 		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
@@ -178,6 +190,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	deploymentOpts := []k8sresources.DeploymentOpt{
 		labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),
 	}
+
+	log.Trace(logger, "ensuring generation of deployment configuration for KongPluginInstallations configured for DataPlane")
+	kpisForDeployment, requeue, err := ensureMappedConfigMapToKongPluginInstallationForDataPlane(ctx, logger, r.Client, dataplane)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("cannot ensure KongPluginInstallation for DataPlane: %w", err)
+	}
+	if requeue {
+		return ctrl.Result{Requeue: true}, nil
+	}
+	deploymentOpts = append(deploymentOpts, withCustomPlugins(kpisForDeployment...))
+
 	deploymentBuilder := NewDeploymentBuilder(logger.WithName("deployment_builder"), r.Client).
 		WithBeforeCallbacks(r.Callbacks.BeforeDeployment).
 		WithAfterCallbacks(r.Callbacks.AfterDeployment).
@@ -188,8 +211,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.DevelopmentMode)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("could not build Deployment for DataPlane %s/%s: %w",
-			dataplane.Namespace, dataplane.Name, err)
+		return ctrl.Result{}, fmt.Errorf("could not build Deployment for DataPlane %s: %w", dpNn, err)
 	}
 	if res != op.Noop {
 		return ctrl.Result{}, nil
@@ -203,13 +225,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
+	res, _, err = ensurePodDisruptionBudgetForDataPlane(ctx, r.Client, logger, dataplane)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("could not ensure PodDisruptionBudget for DataPlane %s: %w", dpNn, err)
+	}
+	if res != op.Noop {
+		log.Debug(logger, "PodDisruptionBudget created/updated")
+		return ctrl.Result{}, nil
+	}
+
 	if res, err := ensureDataPlaneReadyStatus(ctx, r.Client, logger, dataplane, dataplane.Generation); err != nil {
 		return ctrl.Result{}, err
-	} else if res.Requeue {
+	} else if !res.IsZero() {
 		return res, nil
 	}
 
-	log.Debug(logger, "reconciliation complete for DataPlane resource", dataplane)
+	log.Debug(logger, "reconciliation complete for DataPlane resource")
 	return ctrl.Result{}, nil
 }
 

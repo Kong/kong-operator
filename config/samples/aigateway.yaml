@@ -9,7 +9,7 @@
 # on behalf of the AIGateway to determine the address by which the Kong
 # Gateway can be reached. In later iterations we'll have endpoints provided via
 # the AIGateway resource status.
-# See: https://github.com/Kong/gateway-operator/issues/1368
+# See: https://github.com/Kong/gateway-operator/issues/137
 #
 # Once you have the endpoint, the path to your backends are based on the
 # identifiers provided in the AIGateway below, and then you should be able to
@@ -100,7 +100,7 @@ spec:
         spec:
           containers:
           - name: controller
-            image: kong/kubernetes-ingress-controller:3.1.2
+            image: kong/kubernetes-ingress-controller:3.1.5
             env:
             - name: CONTROLLER_LOG_LEVEL
               value: debug

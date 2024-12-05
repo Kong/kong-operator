@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
@@ -86,7 +86,7 @@ func NewDataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT D
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *DataPlaneOwnedResourceFinalizerReconciler[T, PT]) SetupWithManager(mgr ctrl.Manager) error {
+func (r *DataPlaneOwnedResourceFinalizerReconciler[T, PT]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	objectIsBeingDeleted := func(obj client.Object) bool {
 		return obj.GetDeletionTimestamp() != nil
 	}
@@ -99,7 +99,7 @@ func (r *DataPlaneOwnedResourceFinalizerReconciler[T, PT]) SetupWithManager(mgr 
 		labels := obj.GetLabels()
 		managedByDataPlane := labels[consts.GatewayOperatorManagedByLabel] == consts.DataPlaneManagedLabelValue
 		// TODO: Remove using this label after several versions with the new
-		// managed-by label were released: https://github.com/Kong/gateway-operator/issues/1101
+		// managed-by label were released: https://github.com/Kong/gateway-operator/issues/156
 		managedByDataPlaneLegacyLabel := labels[consts.GatewayOperatorManagedByLabelLegacy] == consts.DataPlaneManagedLabelValue
 		return managedByDataPlane || managedByDataPlaneLegacyLabel
 	}
@@ -142,7 +142,9 @@ func (r DataPlaneOwnedResourceFinalizerReconciler[T, PT]) Reconcile(ctx context.
 	// If the object does not have the finalizer, we don't need to do anything.
 	hasDataPlaneOwnedFinalizer := lo.Contains(obj.GetFinalizers(), consts.DataPlaneOwnedWaitForOwnerFinalizer)
 	if !hasDataPlaneOwnedFinalizer {
-		log.Debug(logger, fmt.Sprintf("object has no %q finalizer", consts.DataPlaneOwnedWaitForOwnerFinalizer), obj)
+		log.Debug(logger, "object has no finalizer",
+			"finalizer", consts.DataPlaneOwnedWaitForOwnerFinalizer,
+		)
 		return ctrl.Result{}, nil
 	}
 
@@ -172,7 +174,7 @@ func (r DataPlaneOwnedResourceFinalizerReconciler[T, PT]) Reconcile(ctx context.
 
 	// If the DataPlane still exists, we wait for it to be deleted.
 	if !ownerIsGone {
-		log.Debug(logger, "not deleting, owner dataplane still exists", obj, "dataplane", ownerRef.Name)
+		log.Debug(logger, "not deleting, owner dataplane still exists", "dataplane", ownerRef.Name)
 		return ctrl.Result{}, nil
 	}
 
@@ -185,13 +187,15 @@ func (r DataPlaneOwnedResourceFinalizerReconciler[T, PT]) Reconcile(ctx context.
 	if err := r.Client.Patch(ctx, obj, client.MergeFrom(old)); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// If the object is already gone, we don't need to do anything.
-			log.Debug(logger, "object is already gone", obj)
+			log.Debug(logger, "object is already gone")
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to remove finalizer from %s %s: %w", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 	}
 
-	log.Debug(logger, fmt.Sprintf("removed %q finalizer", consts.DataPlaneOwnedWaitForOwnerFinalizer), obj)
+	log.Debug(logger, "removed finalizer",
+		"finalizer", consts.DataPlaneOwnedWaitForOwnerFinalizer,
+	)
 	return ctrl.Result{}, nil
 }
 
@@ -199,7 +203,7 @@ func (r DataPlaneOwnedResourceFinalizerReconciler[T, PT]) Reconcile(ctx context.
 // objects owned by the given DataPlane.
 func requestsForDataPlaneOwnedObjects[T DataPlaneOwnedResource](cl client.Client) handler.MapFunc {
 	return func(ctx context.Context, dp client.Object) []ctrl.Request {
-		logger := k8slog.FromContext(ctx, "dataplane", dp.GetNamespace()+"/"+dp.GetName())
+		logger := ctrllog.FromContext(ctx, "dataplane", dp.GetNamespace()+"/"+dp.GetName())
 
 		switch any(*new(T)).(type) {
 		case corev1.Service:

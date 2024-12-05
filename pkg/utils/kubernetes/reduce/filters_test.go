@@ -8,11 +8,18 @@ import (
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func TestFilterSecrets(t *testing.T) {
@@ -61,7 +68,6 @@ func TestFilterSecrets(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			filteredSecrets := filterSecrets(tc.secrets)
 			require.Equal(t, filteredSecrets, tc.filteredSecrets)
@@ -103,7 +109,6 @@ func TestFilterServiceAccounts(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			filteredSecrets := filterServiceAccounts(tc.serviceAccount)
 			require.Equal(t, filteredSecrets, tc.filteredServiceAccount)
@@ -483,7 +488,6 @@ func TestFilterDeployments(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			filteredDeployments := filterDeployments(tc.deployments)
 			require.Equal(t, tc.filteredDeployments, filteredDeployments)
@@ -764,7 +768,6 @@ func TestFilterServices(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			filteredServices := filterServices(tc.services, tc.endpointSlices)
 			require.Equal(t, filteredServices, tc.filteredServices)
@@ -798,18 +801,385 @@ func TestFilterValidatingWebhookConfigurations(t *testing.T) {
 					},
 				},
 			},
-			expectedFilteredWebhookNames: []string{"newer"},
+			expectedFilteredWebhookNames: []string{"older"},
+		},
+		{
+			name: "the one with older managed-by labels must be filtered out",
+			webhooks: []admregv1.ValidatingWebhookConfiguration{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "with-new-labels",
+						CreationTimestamp: now,
+						Labels: k8sutils.GetManagedByLabelSet(
+							&operatorv1beta1.ControlPlane{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test",
+									Namespace: "test-namespace",
+								},
+							},
+						),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "with-new-labels-newer",
+						CreationTimestamp: nowPlus(time.Minute),
+						Labels: k8sutils.GetManagedByLabelSet(
+							&operatorv1beta1.ControlPlane{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test",
+									Namespace: "test-namespace",
+								},
+							},
+						),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer",
+						CreationTimestamp: nowPlus(time.Hour),
+					},
+				},
+			},
+			expectedFilteredWebhookNames: []string{"newer", "with-new-labels"},
 		},
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			filteredWebhooks := filterValidatingWebhookConfigurations(tc.webhooks)
 			filteredWebhookNames := lo.Map(filteredWebhooks, func(w admregv1.ValidatingWebhookConfiguration, _ int) string {
 				return w.Name
 			})
 			require.ElementsMatch(t, filteredWebhookNames, tc.expectedFilteredWebhookNames)
+		})
+	}
+}
+
+func TestFilterClusterRoles(t *testing.T) {
+	now := metav1.Now()
+	nowPlus := func(d time.Duration) metav1.Time {
+		return metav1.NewTime(now.Add(d))
+	}
+	testCases := []struct {
+		name          string
+		clusterRoles  []rbacv1.ClusterRole
+		expectedNames []string
+	}{
+		{
+			name: "the newer must be filtered out",
+			clusterRoles: []rbacv1.ClusterRole{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older",
+						CreationTimestamp: nowPlus(-time.Second),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer",
+						CreationTimestamp: now,
+					},
+				},
+			},
+			expectedNames: []string{"older"},
+		},
+		{
+			name: "the one with newer managed-by labels must be filtered out",
+			clusterRoles: []rbacv1.ClusterRole{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "with-new-labels",
+						CreationTimestamp: nowPlus(-time.Second),
+						Labels: k8sutils.GetManagedByLabelSet(
+							&operatorv1beta1.ControlPlane{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test",
+									Namespace: "test-namespace",
+								},
+							},
+						),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer",
+						CreationTimestamp: now,
+					},
+				},
+			},
+			expectedNames: []string{"newer"},
+		},
+		{
+			name: "the one with newer managed-by labels must be filtered out",
+			clusterRoles: []rbacv1.ClusterRole{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "with-new-labels",
+						CreationTimestamp: now,
+						Labels: k8sutils.GetManagedByLabelSet(
+							&operatorv1beta1.ControlPlane{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test",
+									Namespace: "test-namespace",
+								},
+							},
+						),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older",
+						CreationTimestamp: nowPlus(-time.Hour),
+					},
+				},
+			},
+			expectedNames: []string{"older"},
+		},
+		{
+			name: "the one with older managed-by labels must be filtered out",
+			clusterRoles: []rbacv1.ClusterRole{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "with-new-labels",
+						CreationTimestamp: now,
+						Labels: k8sutils.GetManagedByLabelSet(
+							&operatorv1beta1.ControlPlane{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test",
+									Namespace: "test-namespace",
+								},
+							},
+						),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "with-new-labels-older",
+						CreationTimestamp: nowPlus(-time.Minute),
+						Labels: k8sutils.GetManagedByLabelSet(
+							&operatorv1beta1.ControlPlane{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test",
+									Namespace: "test-namespace",
+								},
+							},
+						),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older",
+						CreationTimestamp: nowPlus(-time.Hour),
+					},
+				},
+			},
+			expectedNames: []string{"older", "with-new-labels-older"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			filtered := filterClusterRoles(tc.clusterRoles)
+			filteredNames := lo.Map(filtered, func(w rbacv1.ClusterRole, _ int) string {
+				return w.Name
+			})
+			require.ElementsMatch(t, filteredNames, tc.expectedNames)
+		})
+	}
+}
+
+func TestFilterHPA(t *testing.T) {
+	now := time.Now()
+	testCases := []struct {
+		name          string
+		hpas          []autoscalingv2.HorizontalPodAutoscaler
+		expectedNames []string
+	}{
+		{
+			name: "the newer ones must be returned to be deleted",
+			hpas: []autoscalingv2.HorizontalPodAutoscaler{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older",
+						CreationTimestamp: metav1.NewTime(now.Add(-time.Second)),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer",
+						CreationTimestamp: metav1.NewTime(now),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer-2",
+						CreationTimestamp: metav1.NewTime(now.Add(time.Second)),
+					},
+				},
+			},
+			expectedNames: []string{"newer", "newer-2"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			filtered := FilterHPAs(tc.hpas)
+			filteredNames := lo.Map(filtered, func(hpa autoscalingv2.HorizontalPodAutoscaler, _ int) string {
+				return hpa.Name
+			})
+			require.ElementsMatch(t, filteredNames, tc.expectedNames)
+		})
+	}
+}
+
+func TestFilterPodDisruptionBudgets(t *testing.T) {
+	now := time.Now()
+	testCases := []struct {
+		name          string
+		pdbs          []policyv1.PodDisruptionBudget
+		expectedNames []string
+	}{
+		{
+			name: "the newer ones must be returned to be deleted",
+			pdbs: []policyv1.PodDisruptionBudget{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older",
+						CreationTimestamp: metav1.NewTime(now.Add(-time.Second)),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer",
+						CreationTimestamp: metav1.NewTime(now),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer-2",
+						CreationTimestamp: metav1.NewTime(now.Add(time.Second)),
+					},
+				},
+			},
+			expectedNames: []string{"newer", "newer-2"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			filtered := FilterPodDisruptionBudgets(tc.pdbs)
+			filteredNames := lo.Map(filtered, func(pdb policyv1.PodDisruptionBudget, _ int) string {
+				return pdb.Name
+			})
+			require.ElementsMatch(t, filteredNames, tc.expectedNames)
+		})
+	}
+}
+
+func TestFilterKongPluginBindings(t *testing.T) {
+	testCases := []struct {
+		name         string
+		kpbs         []configurationv1alpha1.KongPluginBinding
+		filteredKpbs []configurationv1alpha1.KongPluginBinding
+	}{
+		{
+			name: "the Programmed binding must be filtered out regardless of the creation timestamp",
+			kpbs: []configurationv1alpha1.KongPluginBinding{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					},
+					Status: configurationv1alpha1.KongPluginBindingStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   "Programmed",
+								Status: "True",
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "12/31/1995",
+						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			filteredKpbs: []configurationv1alpha1.KongPluginBinding{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "12/31/1995",
+						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+		},
+		{
+			name: "the Programmed binding must be filtered out",
+			kpbs: []configurationv1alpha1.KongPluginBinding{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "12/31/1995",
+						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
+					},
+					Status: configurationv1alpha1.KongPluginBindingStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   "Programmed",
+								Status: "True",
+							},
+						},
+					},
+				},
+			},
+			filteredKpbs: []configurationv1alpha1.KongPluginBinding{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+		},
+		{
+			name: "the oldest binding must be filtered out if it's not Programmed",
+			kpbs: []configurationv1alpha1.KongPluginBinding{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "12/31/1995",
+						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			filteredKpbs: []configurationv1alpha1.KongPluginBinding{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			filteredDeployments := filterKongPluginBindings(tc.kpbs)
+			require.Equal(t, tc.filteredKpbs, filteredDeployments)
 		})
 	}
 }

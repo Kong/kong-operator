@@ -31,14 +31,15 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -82,11 +83,19 @@ type Config struct {
 	DataPlaneControllerEnabled          bool
 	DataPlaneBlueGreenControllerEnabled bool
 
-	// Controllers for speciality APIs and experimental features.
-	AIGatewayControllerEnabled bool
+	// Controllers for specialty APIs and experimental features.
+	AIGatewayControllerEnabled              bool
+	KongPluginInstallationControllerEnabled bool
+	KonnectSyncPeriod                       time.Duration
+	KonnectMaxConcurrentReconciles          uint
+
+	// Controllers for Konnect APIs.
+	KonnectControllersEnabled bool
 
 	// webhook and validation options
-	ValidatingWebhookEnabled bool
+	ValidatingWebhookEnabled           bool
+	WebhookCertificateConfigBaseImage  string
+	WebhookCertificateConfigShellImage string
 }
 
 // DefaultConfig returns a default configuration for the manager.
@@ -132,6 +141,7 @@ func Run(
 	setupControllers SetupControllersFunc,
 	admissionRequestHandler AdmissionRequestHandlerFunc,
 	startedChan chan<- struct{},
+	metadata metadata.Info,
 ) error {
 	setupLog := ctrl.Log.WithName("setup")
 	setupLog.Info("starting controller manager",
@@ -155,7 +165,16 @@ func Run(
 		setupLog.Info("leader election disabled")
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	restCfg := ctrl.GetConfigOrDie()
+	restCfg.UserAgent = metadata.UserAgent()
+
+	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{
+		Controller: config.Controller{
+			// This is needed because controller-runtime since v0.19.0 keeps a global list of controller
+			// names and panics if there are duplicates. This is a workaround for that in tests.
+			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
+			SkipNameValidation: lo.ToPtr(true),
+		},
 		Scheme: scheme,
 		Metrics: server.Options{
 			BindAddress: cfg.MetricsAddr,
@@ -181,12 +200,13 @@ func Run(
 		secretName:      cfg.ClusterCASecretName,
 		secretNamespace: cfg.ClusterCASecretNamespace,
 	}
-	err = mgr.Add(caMgr)
-	if err != nil {
+	if err = mgr.Add(caMgr); err != nil {
 		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
-	if err := setupIndexes(mgr); err != nil {
+	ctx := context.Background()
+
+	if err := setupIndexes(ctx, mgr, cfg); err != nil {
 		return err
 	}
 
@@ -200,7 +220,7 @@ func Run(
 			logger: ctrl.Log.WithName("webhook_manager"),
 			cfg:    &cfg,
 		}
-		if err := webhookMgr.PrepareWebhookServerWithControllers(context.Background(), setupControllers, admissionRequestHandler); err != nil {
+		if err := webhookMgr.PrepareWebhookServerWithControllers(ctx, setupControllers, admissionRequestHandler); err != nil {
 			return fmt.Errorf("unable to create webhook server: %w", err)
 		}
 
@@ -221,7 +241,7 @@ func Run(
 			return err
 		}
 		for _, c := range controllers {
-			if err := c.MaybeSetupWithManager(mgr); err != nil {
+			if err := c.MaybeSetupWithManager(ctx, mgr); err != nil {
 				return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
 			}
 		}
@@ -243,7 +263,7 @@ func Run(
 	// Enable anonnymous reporting when configured but not for development builds
 	// to reduce the noise.
 	if cfg.AnonymousReports && !cfg.DevelopmentMode {
-		stopAnonymousReports, err := setupAnonymousReports(context.Background(), cfg, setupLog)
+		stopAnonymousReports, err := setupAnonymousReports(ctx, restCfg, setupLog, metadata, cfg)
 		if err != nil {
 			setupLog.Error(err, "failed setting up anonymous reports")
 		} else {
@@ -282,7 +302,7 @@ func (m *caManager) Start(ctx context.Context) error {
 }
 
 func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
-	// TODO https://github.com/Kong/gateway-operator/issues/108 this also needs to check if the CA is expired and
+	// TODO https://github.com/Kong/gateway-operator/issues/199 this also needs to check if the CA is expired and
 	// managed, and needs to reissue it (and all issued certificates) if so
 	ca := &corev1.Secret{}
 	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
@@ -352,34 +372,30 @@ func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
 	return nil
 }
 
-func getKubeconfig(apiServerPath string, kubeconfig string) (*rest.Config, error) {
-	config, err := clientcmd.BuildConfigFromFlags(apiServerPath, kubeconfig)
-	if err != nil {
-		// Fall back to default client loading rules.
-		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-		// if you want to change the loading rules (which files in which order), you can do so here
-		kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, nil)
-		return kubeConfig.ClientConfig()
-	}
-	return config, nil
-}
-
 // setupAnonymousReports sets up and starts the anonymous reporting and returns
 // a cleanup function and an error.
 // The caller is responsible to call the returned function - when the returned
 // error is not nil - to stop the reports sending.
-func setupAnonymousReports(ctx context.Context, cfg Config, logger logr.Logger) (func(), error) {
+func setupAnonymousReports(
+	ctx context.Context,
+	restCfg *rest.Config,
+	logger logr.Logger,
+	metadata metadata.Info,
+	cfg Config,
+) (func(), error) {
 	logger.Info("starting anonymous reports")
-	restConfig, err := getKubeconfig(cfg.APIServerPath, cfg.KubeconfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
+
+	// NOTE: this is needed to break the import cycle between telemetry and manager packages.
+	tCfg := telemetry.Config{
+		DataPlaneControllerEnabled:          cfg.DataPlaneControllerEnabled,
+		DataPlaneBlueGreenControllerEnabled: cfg.DataPlaneBlueGreenControllerEnabled,
+		ControlPlaneControllerEnabled:       cfg.ControlPlaneControllerEnabled,
+		GatewayControllerEnabled:            cfg.GatewayControllerEnabled,
+		KonnectControllerEnabled:            cfg.KonnectControllersEnabled,
+		AIGatewayControllerEnabled:          cfg.AIGatewayControllerEnabled,
 	}
 
-	telemetryPayload := telemetry.Payload{
-		"v": metadata.Release,
-	}
-
-	tMgr, err := telemetry.CreateManager(telemetry.SignalPing, restConfig, logger, telemetryPayload)
+	tMgr, err := telemetry.CreateManager(telemetry.SignalPing, restCfg, logger, metadata, tCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create anonymous reports manager: %w", err)
 	}

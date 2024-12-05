@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -16,12 +18,16 @@ import (
 
 	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 // Expect404WithNoRouteFunc is used to check whether a given URL responds
 // with 404 and a standard Kong no route message.
 func Expect404WithNoRouteFunc(t *testing.T, ctx context.Context, url string) func() bool {
 	t.Helper()
+
+	httpClient, err := helpers.CreateHTTPClient(nil, "")
+	require.NoError(t, err)
 
 	return func() bool {
 		t.Logf("verifying connectivity to the dataplane %v", url)
@@ -31,7 +37,7 @@ func Expect404WithNoRouteFunc(t *testing.T, ctx context.Context, url string) fun
 			t.Logf("failed creating request for %s: %v", url, err)
 			return false
 		}
-		resp, err := httpc.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			t.Logf("failed issuing HTTP GET for %s: %v", url, err)
 			return false
@@ -125,20 +131,6 @@ func GetEnvValueByName(envs []corev1.EnvVar, name string) string {
 	return value
 }
 
-// SetEnvValueByName sets the EnvVar in slice with the provided name and value.
-func SetEnvValueByName(envs []corev1.EnvVar, name string, value string) []corev1.EnvVar {
-	for _, env := range envs {
-		if env.Name == name {
-			env.Value = value
-			return envs
-		}
-	}
-	return append(envs, corev1.EnvVar{
-		Name:  name,
-		Value: value,
-	})
-}
-
 // GetEnvValueFromByName returns the corresponding ValueFrom pointer of LAST item with given name.
 // returns nil if the name not appeared.
 func GetEnvValueFromByName(envs []corev1.EnvVar, name string) *corev1.EnvVarSource {
@@ -169,4 +161,11 @@ func GetVolumeMountsByVolumeName(volumeMounts []corev1.VolumeMount, name string)
 		}
 	}
 	return ret
+}
+
+// GetKongPluginImageRegistryCredentialsForTests returns the credentials for the image registry with plugins for tests.
+// The expected format is the same as ~/.docker/config.json, see
+// https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#log-in-to-docker-hub
+func GetKongPluginImageRegistryCredentialsForTests() string {
+	return os.Getenv("KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS")
 }

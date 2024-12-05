@@ -1,0 +1,69 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "ignorePaths": [],
+  "enabledManagers": [
+    "custom.regex",
+    "kustomize"
+  ],
+  "automerge": false,
+  "separateMinorPatch": true,
+  "labels": [
+    "dependencies"
+  ],
+  "schedule": "before 5am every weekday",
+  "customManagers": [
+    {
+      "description": "Match dependencies in config/samples/.*.yaml that are properly annotated with `# renovate: datasource={} versioning={}.`",
+      "customType": "regex",
+      "fileMatch": [
+        "^config/samples/.*\\.yaml$"
+      ],
+      "matchStrings": [
+        "#\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+versioning=(?<versioning>.*?)\\n.+image:\\s+(?<depName>.+?):(?<currentValue>.+)"
+      ]
+    },
+    {
+      "description": "Match dependencies in .tools_verisons.yaml that are properly annotated with `# renovate: datasource={} depName={}.`",
+      "customType": "regex",
+      "fileMatch": [
+        "\\.tools_versions\\.yaml$"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\n.+\"(?<currentValue>.*?)\""
+      ]
+    },
+    {
+      "description": "Match versions in selected *.go files that are properly annotated with `// renovate: datasource={} depName={}.`",
+      "customType": "regex",
+      "datasourceTemplate": "docker",
+      "fileMatch": [
+        "^pkg/consts/dataplane\\.go$",
+        "^internal/versions/controlplane\\.go$",
+        "^test/e2e/test_helm_install_upgrade\\.go$"
+      ],
+      "matchStrings": [
+        ".+\\s?[=:]\\s+\"(?<currentValue>.+?)\",?\\s+//\\s+renovate:\\s+datasource=(?<datasource>.*?)\\s+(packageName=(?<packageName>.*)\\s+)?depName=(?<depName>.*)"
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Strip kustomize/ version prefix",
+      "matchPackageNames": ["kubernetes-sigs/kustomize"],
+      "extractVersion": "^kustomize/(?<version>.*)$"
+    },
+    {
+      "description": "Ignore minor updates if depName has `@only-patch` suffix.",
+      "matchUpdateTypes": [
+        "minor"
+      ],
+      "enabled": false,
+      "matchDepNames": [
+        "/.*@only-patch/"
+      ]
+    }
+  ]
+}

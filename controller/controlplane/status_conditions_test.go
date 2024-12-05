@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
@@ -52,12 +53,10 @@ func TestMarkAsProvisioned(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			tc := tc
-
 			t.Run(tc.name, func(t *testing.T) {
 				dp := tc.controlplane()
 				markAsProvisioned(dp)
-				cond, ok := k8sutils.GetCondition(k8sutils.ConditionType(tc.expectedCondition.Type), dp)
+				cond, ok := k8sutils.GetCondition(consts.ConditionType(tc.expectedCondition.Type), dp)
 				require.True(t, ok)
 				assert.Equal(t, cond.Reason, tc.expectedCondition.Reason)
 				assert.Equal(t, cond.Status, tc.expectedCondition.Status)

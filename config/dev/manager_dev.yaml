@@ -22,9 +22,9 @@ spec:
             - -cluster-ca-secret-namespace=kong-system
             - -zap-log-level=debug
             - -zap-devel=true
-            - -enable-controller-gateway=true
-            - -enable-controller-controlplane=true
-            - -enable-validating-webhook=true
+            - -enable-controller-kongplugininstallation
+            - -enable-validating-webhook
+            - -enable-controller-konnect
           name: manager
           env:
           - name: GATEWAY_OPERATOR_DEVELOPMENT_MODE

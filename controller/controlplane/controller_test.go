@@ -26,7 +26,7 @@ import (
 )
 
 func init() {
-	if err := gatewayv1.AddToScheme(scheme.Scheme); err != nil {
+	if err := gatewayv1.Install(scheme.Scheme); err != nil {
 		fmt.Println("error while adding gatewayv1 scheme")
 		os.Exit(1)
 	}
@@ -139,7 +139,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(k8sutils.ReadyType),
+							Type:   string(consts.ReadyType),
 							Status: metav1.ConditionTrue,
 						},
 					},
@@ -321,7 +321,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(k8sutils.ReadyType),
+							Type:   string(consts.ReadyType),
 							Status: metav1.ConditionTrue,
 						},
 					},
@@ -422,8 +422,6 @@ func TestReconciler_Reconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.dataplane != nil {
 				k8sutils.SetOwnerForObject(tc.dataplane, tc.controlplane)

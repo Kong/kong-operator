@@ -13,7 +13,6 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
@@ -179,7 +178,6 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 
 	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			dataplane, err := dataplaneClient.Create(GetCtx(), tc.dataplane, metav1.CreateOptions{})
 			require.NoErrorf(t, err, "should not return error when create dataplane for case %s", tc.name)
@@ -235,7 +233,7 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 
 						var cond metav1.Condition
 						for _, condition := range dataplane.Status.Conditions {
-							if condition.Type == string(k8sutils.ReadyType) {
+							if condition.Type == string(consts.ReadyType) {
 								cond = condition
 								break
 							}
@@ -404,7 +402,6 @@ func testDataPlaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
 
 	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := dataplaneClient.Create(GetCtx(), tc.dataplane, metav1.CreateOptions{})
 			if tc.errMsg == "" {

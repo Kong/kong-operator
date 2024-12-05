@@ -6,21 +6,26 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"runtime/debug"
 	"testing"
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	gwapiv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
 	"github.com/kong/gateway-operator/config"
 	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/manager"
+	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
+	"github.com/kong/gateway-operator/test"
 )
 
 // -----------------------------------------------------------------------------
@@ -54,6 +59,14 @@ var (
 // -----------------------------------------------------------------------------
 
 func TestMain(m *testing.M) {
+	var code int
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("%v stack trace:\n%s\n", r, debug.Stack())
+			code = 1
+		}
+		os.Exit(code)
+	}()
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 
@@ -68,7 +81,11 @@ func TestMain(m *testing.M) {
 	// Gateway API conformance tests do not create resources like NetworkPolicy
 	// that would allow e.g. cross namespace traffic.
 	// Related upstream discussion: https://github.com/kubernetes-sigs/gateway-api/discussions/2137
-	env, err = testutils.BuildEnvironment(ctx, existingCluster)
+	env, err = testutils.BuildEnvironment(ctx, existingCluster, func(b *environments.Builder, t clusters.Type) {
+		if !test.IsMetalLBDisabled() {
+			b.WithAddons(metallb.New())
+		}
+	})
 	exitOnErr(err)
 
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
@@ -97,13 +114,14 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: starting the operator's controller manager")
 	// startControllerManager will spawn the controller manager in a separate
 	// goroutine and will report whether that succeeded.
-	started := startControllerManager()
+	metadata := metadata.Metadata()
+	started := startControllerManager(metadata)
 	<-started
 
 	exitOnErr(testutils.BuildMTLSCredentials(ctx, clients.K8sClient, &httpc))
 
 	fmt.Println("INFO: environment is ready, starting tests")
-	code := m.Run()
+	code = m.Run()
 	if code != 0 {
 		output, err := env.Cluster().DumpDiagnostics(ctx, "gateway_api_conformance")
 		if err != nil {
@@ -117,7 +135,7 @@ func TestMain(m *testing.M) {
 	// for the operator to handle Gateway finalizers.
 	// If we don't do it then we'll be left with Gateways that have a deleted
 	// timestamp and finalizers set but no operator running which could handle those.
-	if *shouldCleanup {
+	if *flags.CleanupBaseResources {
 		exitOnErr(waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1()))
 	}
 
@@ -125,8 +143,6 @@ func TestMain(m *testing.M) {
 		fmt.Println("INFO: cleaning up testing cluster and environment")
 		exitOnErr(env.Cleanup(ctx))
 	}
-
-	os.Exit(code)
 }
 
 // -----------------------------------------------------------------------------
@@ -146,7 +162,7 @@ func exitOnErr(err error) {
 
 // startControllerManager will configure the manager and start it in a separate goroutine.
 // It returns a channel which will get closed when manager.Start() gets called.
-func startControllerManager() <-chan struct{} {
+func startControllerManager(metadata metadata.Info) <-chan struct{} {
 	cfg := manager.DefaultConfig()
 	cfg.LeaderElection = false
 	cfg.DevelopmentMode = true
@@ -168,7 +184,7 @@ func startControllerManager() <-chan struct{} {
 
 	startedChan := make(chan struct{})
 	go func() {
-		exitOnErr(manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, admission.NewRequestHandler, startedChan))
+		exitOnErr(manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, admission.NewRequestHandler, startedChan, metadata))
 	}()
 
 	return startedChan

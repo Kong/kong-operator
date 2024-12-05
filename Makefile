@@ -3,7 +3,8 @@
 # ------------------------------------------------------------------------------
 
 REPO ?= github.com/kong/gateway-operator
-REPO_NAME ?= $(echo ${REPO} | cut -d / -f 3)
+REPO_URL ?= https://$(REPO)
+REPO_NAME ?= $(shell echo $(REPO) | cut -d / -f 3)
 REPO_INFO ?= $(shell git config --get remote.origin.url)
 TAG ?= $(shell git describe --tags)
 VERSION ?= $(shell cat VERSION)
@@ -21,6 +22,17 @@ SHELL = bash
 
 IMG ?= docker.io/kong/gateway-operator-oss
 KUSTOMIZE_IMG_NAME = docker.io/kong/gateway-operator-oss
+
+ifeq (Darwin,$(shell uname -s))
+LDFLAGS_COMMON ?= -extldflags=-Wl,-ld_classic
+endif
+
+LDFLAGS_METADATA ?= \
+	-X $(REPO)/modules/manager/metadata.projectName=$(REPO_NAME) \
+	-X $(REPO)/modules/manager/metadata.release=$(TAG) \
+	-X $(REPO)/modules/manager/metadata.commit=$(COMMIT) \
+	-X $(REPO)/modules/manager/metadata.repo=$(REPO_INFO) \
+	-X $(REPO)/modules/manager/metadata.repoURL=$(REPO_URL)
 
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
@@ -44,6 +56,9 @@ MISE := $(shell which mise)
 mise:
 	@mise -V >/dev/null || (echo "mise - https://github.com/jdx/mise - not found. Please install it." && exit 1)
 
+mise-plugin-install: mise
+	@$(MISE) plugin install --yes -q $(DEP) $(URL)
+
 KIC_ROLE_GENERATOR = $(PROJECT_DIR)/bin/kic-role-generator
 .PHONY: kic-role-generator
 kic-role-generator:
@@ -56,61 +71,81 @@ kic-webhook-config-generator:
 
 export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
 
-CONTROLLER_GEN_VERSION = $(shell yq -ojson -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
+# Do not store yq's version in .tools_versions.yaml as it is used to get tool versions.
+# renovate: datasource=github-releases depName=mikefarah/yq
+YQ_VERSION = 4.43.1
+YQ = $(PROJECT_DIR)/bin/installs/yq/$(YQ_VERSION)/bin/yq
+.PHONY: yq
+yq: mise # Download yq locally if necessary.
+	@$(MISE) plugin install --yes -q yq
+	@$(MISE) install -q yq@$(YQ_VERSION)
+
+CONTROLLER_GEN_VERSION = $(shell $(YQ) -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/kube-controller-tools/$(CONTROLLER_GEN_VERSION)/bin/controller-gen
 .PHONY: controller-gen
-controller-gen: mise ## Download controller-gen locally if necessary.
+controller-gen: mise yq ## Download controller-gen locally if necessary.
 	@$(MISE) plugin install --yes -q kube-controller-tools
 	@$(MISE) install -q kube-controller-tools@$(CONTROLLER_GEN_VERSION)
 
-KUSTOMIZE_VERSION = $(shell yq -ojson -r '.kustomize' < $(TOOLS_VERSIONS_FILE))
+KUSTOMIZE_VERSION = $(shell $(YQ) -r '.kustomize' < $(TOOLS_VERSIONS_FILE))
 KUSTOMIZE = $(PROJECT_DIR)/bin/installs/kustomize/$(KUSTOMIZE_VERSION)/bin/kustomize
 .PHONY: kustomize
-kustomize: mise ## Download kustomize locally if necessary.
+kustomize: mise yq ## Download kustomize locally if necessary.
 	@$(MISE) plugin install --yes -q kustomize
 	@$(MISE) install -q kustomize@$(KUSTOMIZE_VERSION)
 
-CLIENT_GEN_VERSION = $(shell yq -ojson -r '.code-generator' < $(TOOLS_VERSIONS_FILE))
+CLIENT_GEN_VERSION = $(shell $(YQ) -r '.code-generator' < $(TOOLS_VERSIONS_FILE))
 CLIENT_GEN = $(PROJECT_DIR)/bin/installs/kube-code-generator/$(CLIENT_GEN_VERSION)/bin/client-gen
 .PHONY: client-gen
-client-gen: mise ## Download client-gen locally if necessary.
+client-gen: mise yq ## Download client-gen locally if necessary.
 	@$(MISE) plugin install --yes -q kube-code-generator
 	@$(MISE) install -q kube-code-generator@$(CLIENT_GEN_VERSION)
 
-GOLANGCI_LINT_VERSION = $(shell yq -ojson -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
+GOLANGCI_LINT_VERSION = $(shell $(YQ) -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
 GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/golangci-lint/$(GOLANGCI_LINT_VERSION)/bin/golangci-lint
 .PHONY: golangci-lint
-golangci-lint: mise ## Download golangci-lint locally if necessary.
+golangci-lint: mise yq ## Download golangci-lint locally if necessary.
 	@$(MISE) plugin install --yes -q golangci-lint
 	@$(MISE) install -q golangci-lint@$(GOLANGCI_LINT_VERSION)
 
-GOTESTSUM_VERSION = $(shell yq -ojson -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
+GOTESTSUM_VERSION = $(shell $(YQ) -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum
 .PHONY: gotestsum
-gotestsum: ## Download gotestsum locally if necessary.
+gotestsum: mise yq ## Download gotestsum locally if necessary.
 	@$(MISE) plugin install --yes -q gotestsum https://github.com/pmalek/mise-gotestsum.git
-	@$(MISE) install -q gotestsum
+	@$(MISE) install -q gotestsum@$(GOTESTSUM_VERSION)
 
-CRD_REF_DOCS_VERSION = $(shell yq -ojson -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
+CRD_REF_DOCS_VERSION = $(shell $(YQ) -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
 CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
 .PHONY: crd-ref-docs
 crd-ref-docs: ## Download crd-ref-docs locally if necessary.
 	GOBIN=$(PROJECT_DIR)/bin go install -v \
 		github.com/elastic/crd-ref-docs@v$(CRD_REF_DOCS_VERSION)
 
-SKAFFOLD_VERSION = $(shell yq -ojson -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
+SKAFFOLD_VERSION = $(shell $(YQ) -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
 SKAFFOLD = $(PROJECT_DIR)/bin/installs/skaffold/$(SKAFFOLD_VERSION)/bin/skaffold
 .PHONY: skaffold
-skaffold: mise ## Download skaffold locally if necessary.
+skaffold: mise yq ## Download skaffold locally if necessary.
 	@$(MISE) plugin install --yes -q skaffold
 	@$(MISE) install -q skaffold@$(SKAFFOLD_VERSION)
 
-YQ_VERSION = $(shell yq -ojson -r '.yq' < $(TOOLS_VERSIONS_FILE))
-YQ = $(PROJECT_DIR)/bin/installs/yq/$(YQ_VERSION)/bin/yq
-.PHONY: yq
-yq: mise # Download yq locally if necessary.
-	@$(MISE) plugin install --yes -q yq
-	@$(MISE) install -q yq@$(YQ_VERSION)
+MOCKERY_VERSION = $(shell $(YQ) -r '.mockery' < $(TOOLS_VERSIONS_FILE))
+MOCKERY = $(PROJECT_DIR)/bin/installs/mockery/$(MOCKERY_VERSION)/bin/mockery
+.PHONY: mockery
+mockery: mise yq ## Download mockery locally if necessary.
+	@$(MISE) plugin install --yes -q mockery https://github.com/cabify/asdf-mockery.git
+	@$(MISE) install -q mockery@$(MOCKERY_VERSION)
+
+SETUP_ENVTEST_VERSION = $(shell $(YQ) -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
+SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
+.PHONY: setup-envtest
+setup-envtest: mise ## Download setup-envtest locally if necessary.
+	@$(MAKE) mise-plugin-install DEP=setup-envtest URL=https://github.com/pmalek/mise-setup-envtest.git
+	@$(MISE) install setup-envtest@$(SETUP_ENVTEST_VERSION)
+
+.PHONY: use-setup-envtest
+use-setup-envtest:
+	$(SETUP_ENVTEST) use
 
 # ------------------------------------------------------------------------------
 # Build
@@ -140,10 +175,8 @@ build.operator.debug:
 
 .PHONY: _build.operator
 _build.operator:
-	go build -o bin/manager $(GCFLAGS) -ldflags "$(LDFLAGS) \
-		-X $(REPO)/modules/manager/metadata.Release=$(TAG) \
-		-X $(REPO)/modules/manager/metadata.Commit=$(COMMIT) \
-		-X $(REPO)/modules/manager/metadata.Repo=$(REPO_INFO)" \
+	go build -o bin/manager $(GCFLAGS) \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		cmd/main.go
 
 .PHONY: build
@@ -179,7 +212,7 @@ verify.generators: verify.repo generate verify.diff
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.api generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config
+generate: generate.api generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config generate.mocks
 
 .PHONY: generate.api
 generate.api: controller-gen
@@ -193,16 +226,15 @@ generate.clientsets: client-gen
 	# directory.
 	#
 	# See: https://github.com/kubernetes/code-generator/issues/167
-	ln -s api apis
+	ln -sf api apis
 	$(CLIENT_GEN) \
 		--go-header-file ./hack/generators/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base '' \
 		--input $(REPO)/apis/v1alpha1 \
 		--input $(REPO)/apis/v1beta1 \
-		--output-base pkg/ \
-		--output-package $(REPO)/pkg/ \
-		--trim-path-prefix pkg/$(REPO)/
+		--output-dir pkg/ \
+		--output-pkg $(REPO)/pkg/
 	rm apis
 	find ./pkg/clientset/ -type f -name '*.go' -exec sed -i '' -e 's/github.com\/kong\/gateway-operator\/apis/github.com\/kong\/gateway-operator\/api/gI' {} \; &> /dev/null
 .PHONY: generate.rbacs
@@ -222,8 +254,8 @@ generate.testcases-registration:
 	go run ./hack/generators/testcases-registration/main.go
 
 .PHONY: generate.kic-webhook-config
-generate.kic-webhook-config: kic-webhook-config-generator
-	$(KIC_WEBHOOKCONFIG_GENERATOR)
+generate.kic-webhook-config: kustomize kic-webhook-config-generator
+	KUSTOMIZE=$(KUSTOMIZE) $(KIC_WEBHOOKCONFIG_GENERATOR)
 
 # ------------------------------------------------------------------------------
 # Files generation checks
@@ -240,12 +272,15 @@ check.rbacs: kic-role-generator
 CONTROLLER_GEN_CRD_OPTIONS ?= "+crd:generateEmbeddedObjectMeta=true"
 CONTROLLER_GEN_PATHS_RAW := ./pkg/utils/kubernetes/resources/clusterroles/ ./pkg/utils/kubernetes/reduce/ ./controller/... ./$(API_DIR)/...
 CONTROLLER_GEN_PATHS := $(patsubst %,%;,$(strip $(CONTROLLER_GEN_PATHS_RAW)))
+CONFIG_CRD_PATH = config/crd
+CONFIG_CRD_BASE_PATH = $(CONFIG_CRD_PATH)/bases
 
 .PHONY: manifests
 manifests: controller-gen manifests.versions ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" rbac:roleName=manager-role output:rbac:dir=config/rbac/role
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" webhook
-	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" $(CONTROLLER_GEN_CRD_OPTIONS) +output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" $(CONTROLLER_GEN_CRD_OPTIONS) +output:crd:artifacts:config=$(CONFIG_CRD_BASE_PATH)
+	cp $(CONFIG_CRD_BASE_PATH)/gateway-operator.konghq.com_dataplanes.yaml $(CONFIG_CRD_PATH)/dataplane/
 
 # manifests.versions ensures that image versions are set in the manifests according to the current version.
 .PHONY: manifests.versions
@@ -283,6 +318,7 @@ docker.push:
 GOTESTSUM_FORMAT ?= standard-verbose
 INTEGRATION_TEST_TIMEOUT ?= "30m"
 CONFORMANCE_TEST_TIMEOUT ?= "20m"
+E2E_TEST_TIMEOUT ?= "20m"
 
 .PHONY: test
 test: test.unit
@@ -295,6 +331,7 @@ _test.unit: gotestsum
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
 		-coverprofile=coverage.unit.out \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS)" \
 		$(UNIT_TEST_PATHS)
 
 .PHONY: test.unit
@@ -305,12 +342,38 @@ test.unit:
 test.unit.pretty:
 	@$(MAKE) _test.unit GOTESTSUM_FORMAT=pkgname GOTESTFLAGS="$(GOTESTFLAGS)" UNIT_TEST_PATHS="$(UNIT_TEST_PATHS)"
 
+ENVTEST_TEST_PATHS := ./test/envtest/...
+ENVTEST_TIMEOUT ?= 5m
+PKG_LIST=./controller/...,./internal/...,./pkg/...,./modules/...
+
+.PHONY: _test.envtest
+_test.envtest: gotestsum setup-envtest use-setup-envtest
+	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-race \
+		-timeout $(ENVTEST_TIMEOUT) \
+		-covermode=atomic \
+		-coverpkg=$(PKG_LIST) \
+		-coverprofile=coverage.envtest.out \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS)" \
+		$(ENVTEST_TEST_PATHS)
+
+.PHONY: test.envtest
+test.envtest:
+	$(MAKE) _test.envtest GOTESTSUM_FORMAT=standard-verbose
+
+.PHONY: test.envtest.pretty
+test.envtest.pretty:
+	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname
+
 .PHONY: _test.integration
 _test.integration: webhook-certs-dir gotestsum
 	GOFLAGS=$(GOFLAGS) \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		-race \
 		-coverprofile=$(COVERPROFILE) \
 		./test/integration/...
@@ -339,6 +402,8 @@ test.integration_provision_dataplane_fail:
 _test.e2e: gotestsum
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-timeout $(E2E_TEST_TIMEOUT) \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		-race \
 		./test/e2e/...
 
@@ -355,6 +420,7 @@ _test.conformance: gotestsum
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-timeout $(CONFORMANCE_TEST_TIMEOUT) \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		-race \
 		-parallel $(PARALLEL) \
 		./test/conformance/...
@@ -362,10 +428,16 @@ _test.conformance: gotestsum
 .PHONY: test.conformance
 test.conformance:
 	@$(MAKE) _test.conformance \
-		KGO_PROJECT_URL=$(REPO) \
-		KGO_PROJECT_NAME=$(REPO_NAME) \
-		KGO_RELEASE=$(TAG)
 		GOTESTFLAGS="$(GOTESTFLAGS)"
+
+.PHONY: test.samples
+test.samples: kustomize
+	find ./config/samples -not -name "kustomization.*" -type f | sort | xargs -I{} bash -c "kubectl apply -f {}; kubectl delete -f {}"
+
+# https://github.com/vektra/mockery/issues/803#issuecomment-2287198024
+.PHONY: generate.mocks
+generate.mocks: mockery
+	GODEBUG=gotypesalias=0 $(MOCKERY)
 
 # ------------------------------------------------------------------------------
 # Gateway API
@@ -384,7 +456,7 @@ GATEWAY_API_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(GATEWAY_API_PACK
 GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)/config/crd
 GATEWAY_API_REPO ?= kubernetes-sigs/gateway-api
 GATEWAY_API_RAW_REPO ?= https://raw.githubusercontent.com/$(GATEWAY_API_REPO)
-GATEWAY_API_CRDS_STANDARD_URL = github.com/$(GATEWAY_API_REPO)/config/crd/standard?ref=$(GATEWAY_API_VERSION)
+GATEWAY_API_CRDS_STANDARD_URL = github.com/$(GATEWAY_API_REPO)/config/crd?ref=$(GATEWAY_API_VERSION)
 GATEWAY_API_CRDS_EXPERIMENTAL_URL = github.com/$(GATEWAY_API_REPO)/config/crd/experimental?ref=$(GATEWAY_API_VERSION)
 GATEWAY_API_RAW_REPO_URL = $(GATEWAY_API_RAW_REPO)/$(GATEWAY_API_VERSION)
 
@@ -394,7 +466,7 @@ generate.gateway-api-urls:
 		CRDS_EXPERIMENTAL_URL="$(GATEWAY_API_CRDS_EXPERIMENTAL_URL)" \
 		RAW_REPO_URL="$(GATEWAY_API_RAW_REPO_URL)" \
 		INPUT=$(shell pwd)/internal/utils/cmd/generate-gateway-api-urls/gateway_consts.tmpl \
-		OUTPUT=$(shell pwd)/pkg/utils/test/zz_generated_gateway_api.go \
+		OUTPUT=$(shell pwd)/pkg/utils/test/zz_generated.gateway_api.go \
 		go generate -tags=generate_gateway_api_urls ./internal/utils/cmd/generate-gateway-api-urls
 
 .PHONY: go-mod-download-gateway-api
@@ -426,27 +498,48 @@ _ensure-kong-system-namespace:
 	@kubectl create ns kong-system 2>/dev/null || true
 
 # Run a controller from your host.
-# TODO: In order not to rely on 'main' version of Gateway API CRDs address but
-# on the tag that is used in code (defined in go.mod) address this by solving
-# https://github.com/Kong/gateway-operator/pull/480.
 .PHONY: run
-run: webhook-certs-dir manifests generate install-gateway-api-crds install _ensure-kong-system-namespace
+run: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace install.rbacs
 	@$(MAKE) _run
+
+# Run a controller from your host and make it impersonate the controller-manager service account from kong-system namespace.
+.PHONY: run.with_impersonate
+run.with_impersonate: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace install.rbacs
+	@$(MAKE) _run.with-impersonate
+
+KUBECONFIG ?= $(HOME)/.kube/config
 
 # Run the operator without checking any preconditions, installing CRDs etc.
 # This is mostly useful when 'run' was run at least once on a server and CRDs, RBACs
 # etc didn't change in between the runs.
 .PHONY: _run
 _run:
-	GATEWAY_OPERATOR_DEVELOPMENT_MODE=true go run ./cmd/main.go \
+	KUBECONFIG=$(KUBECONFIG) \
+		GATEWAY_OPERATOR_DEVELOPMENT_MODE=true \
+		go run ./cmd/main.go \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
-		-enable-controller-controlplane \
-		-enable-controller-gateway \
+		-enable-controller-kongplugininstallation \
 		-enable-controller-aigateway \
+		-enable-controller-konnect \
 		-zap-time-encoding iso8601 \
 		-zap-log-level 2 \
 		-zap-devel true
+
+# Run the operator locally with impersonation of controller-manager service account from kong-system namespace.
+# The operator will use a temporary kubeconfig file and impersonate the real RBACs.
+.PHONY: _run.with-impersonate
+_run.with-impersonate:
+	@$(eval TMP := $(shell mktemp -d))
+	@$(eval TMP_KUBECONFIG := $(TMP)/kubeconfig)
+	[ ! -z "$(KUBECONFIG)" ] || exit 1
+	cp $(KUBECONFIG) $(TMP_KUBECONFIG)
+	@$(eval TMP_TOKEN := $(shell kubectl create token --namespace=kong-system controller-manager))
+	@$(eval CLUSTER := $(shell kubectl config get-contexts | grep '^\*' | tr -s ' ' | cut -d ' ' -f 3))
+	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-credentials kgo --token=$(TMP_TOKEN)
+	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-context kgo --cluster=$(CLUSTER) --user=kgo --namespace=kong-system
+	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config use-context kgo
+	bash -c "trap 'echo deleting temporary kubeconfig $(TMP); rm -rf $(TMP)' EXIT; $(MAKE) _run KUBECONFIG=$(TMP_KUBECONFIG)"
 
 SKAFFOLD_RUN_PROFILE ?= dev
 
@@ -463,11 +556,12 @@ run.skaffold:
 		$(MAKE) _skaffold
 
 .PHONY: debug
-debug: webhook-certs-dir manifests generate install _ensure-kong-system-namespace
-	GATEWAY_OPERATOR_DEVELOPMENT_MODE=true dlv debug ./main.go -- \
+debug: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace
+	GATEWAY_OPERATOR_DEVELOPMENT_MODE=true dlv debug ./cmd/main.go -- \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		--enable-controller-aigateway \
+		--enable-controller-konnect \
 		-zap-time-encoding iso8601
 
 .PHONY: debug.skaffold
@@ -487,11 +581,41 @@ debug.skaffold.continuous: _ensure-kong-system-namespace
 install: manifests kustomize install-gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
 
+KUBERNETES_CONFIGURATION_CRDS_PACKAGE ?= github.com/kong/kubernetes-configuration
+KUBERNETES_CONFIGURATION_CRDS_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(KUBERNETES_CONFIGURATION_CRDS_PACKAGE))
+KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_CRDS_PACKAGE)@$(KUBERNETES_CONFIGURATION_CRDS_VERSION)/config/crd/gateway-operator
+
+# Install kubernetes-configuration CRDs into the K8s cluster specified in ~/.kube/config.
+.PHONY: install.kubernetes-configuration-crds
+install.kubernetes-configuration-crds: kustomize
+	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH) | kubectl apply -f -
+
+# Install RBACs from config/rbac into the K8s cluster specified in ~/.kube/config.
+.PHONY: install.rbacs
+install.rbacs: kustomize
+	$(KUSTOMIZE) build config/rbac | kubectl apply -f -
+
+# Install standard and experimental CRDs into the K8s cluster specified in ~/.kube/config.
+.PHONY: install.all
+install.all: manifests kustomize install-gateway-api-crds install.kubernetes-configuration-crds
+	kubectl apply --server-side -f $(PROJECT_DIR)/config/crd/bases/
+	kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
+
 # Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall
 uninstall: manifests kustomize uninstall-gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: uninstall.kubernetes-configuration-crds
+uninstall.kubernetes-configuration-crds: kustomize
+	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH) | kubectl delete -f -
+
+# Uninstall standard and experimental CRDs from the K8s cluster specified in ~/.kube/config.
+# Call with ignore-not-found=true to ignore resource not found errors during deletion.
+.PHONY: uninstall.all
+uninstall.all: manifests kustomize uninstall-gateway-api-crds uninstall.kubernetes-configuration-crds
+	kubectl delete --ignore-not-found=$(ignore-not-found) -f $(PROJECT_DIR)/config/crd/bases/
 
 # Deploy controller to the K8s cluster specified in ~/.kube/config.
 # This will wait for operator's Deployment to get Available.

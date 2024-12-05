@@ -10,6 +10,8 @@ import (
 
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/logging"
+	"github.com/kong/gateway-operator/modules/manager/metadata"
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 func TestParse(t *testing.T) {
@@ -66,13 +68,26 @@ func TestParse(t *testing.T) {
 				"--metrics-bind-address=:18080",
 			},
 			envVars: map[string]string{
-				"GATEWAY_OPERATOR_METRIC_BIND_ADDRESS":       ":28080",
+				"GATEWAY_OPERATOR_METRICS_BIND_ADDRESS":      ":28080",
 				"GATEWAY_OPERATOR_HEALTH_PROBE_BIND_ADDRESS": ":28081",
 			},
 			expectedCfg: func() manager.Config {
 				cfg := expectedDefaultCfg()
 				cfg.MetricsAddr = ":18080" // values from cli args takes precedence
 				cfg.ProbeAddr = ":28081"   // env var is present but no cli args is given, use the value from env var
+				return cfg
+			},
+		},
+		{
+			name: "webhook certificate configuration arguments are set",
+			args: []string{
+				"--webhook-certificate-config-base-image=mybaseimage:42",
+				"--webhook-certificate-config-shell-image=shellimg",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.WebhookCertificateConfigBaseImage = "mybaseimage:42"
+				cfg.WebhookCertificateConfigShellImage = "shellimg"
 				return cfg
 			},
 		},
@@ -83,7 +98,7 @@ func TestParse(t *testing.T) {
 			for k, v := range tC.envVars {
 				t.Setenv(k, v)
 			}
-			cli := New()
+			cli := New(metadata.Metadata())
 
 			cfg := cli.Parse(tC.args)
 			require.Empty(t, cmp.Diff(
@@ -103,7 +118,7 @@ func TestParseWithAdditionalFlags(t *testing.T) {
 	}
 
 	var additionalCfg additionalConfig
-	cli := New()
+	cli := New(metadata.Metadata())
 	cli.FlagSet().BoolVar(&additionalCfg.OptionBool, "additional-bool", true, "Additional bool flag")
 	cli.FlagSet().StringVar(&additionalCfg.OptionString, "additional-string", "additional", "Additional string flag")
 	cli.FlagSet().IntVar(&additionalCfg.OptionalInt, "additional-int", 0, "Additional integer flag")
@@ -129,25 +144,31 @@ func TestParseWithAdditionalFlags(t *testing.T) {
 
 func expectedDefaultCfg() manager.Config {
 	return manager.Config{
-		MetricsAddr:                         ":8080",
-		ProbeAddr:                           ":8081",
-		WebhookCertDir:                      "/tmp/k8s-webhook-server/serving-certs",
-		WebhookPort:                         9443,
-		LeaderElection:                      true,
-		LeaderElectionNamespace:             "kong-system",
-		DevelopmentMode:                     false,
-		ControllerName:                      "",
-		ControllerNamespace:                 "kong-system",
-		AnonymousReports:                    true,
-		APIServerPath:                       "",
-		KubeconfigPath:                      "",
-		ClusterCASecretName:                 "kong-operator-ca",
-		ClusterCASecretNamespace:            "kong-system",
-		GatewayControllerEnabled:            true,
-		ControlPlaneControllerEnabled:       true,
-		DataPlaneControllerEnabled:          true,
-		DataPlaneBlueGreenControllerEnabled: true,
-		ValidatingWebhookEnabled:            true,
-		LoggerOpts:                          &zap.Options{},
+		MetricsAddr:                             ":8080",
+		ProbeAddr:                               ":8081",
+		WebhookCertDir:                          "/tmp/k8s-webhook-server/serving-certs",
+		WebhookPort:                             9443,
+		LeaderElection:                          true,
+		LeaderElectionNamespace:                 "kong-system",
+		DevelopmentMode:                         false,
+		ControllerName:                          "",
+		ControllerNamespace:                     "kong-system",
+		AnonymousReports:                        true,
+		APIServerPath:                           "",
+		KubeconfigPath:                          "",
+		ClusterCASecretName:                     "kong-operator-ca",
+		ClusterCASecretNamespace:                "kong-system",
+		GatewayControllerEnabled:                true,
+		ControlPlaneControllerEnabled:           true,
+		DataPlaneControllerEnabled:              true,
+		DataPlaneBlueGreenControllerEnabled:     true,
+		KonnectControllersEnabled:               false,
+		KonnectSyncPeriod:                       consts.DefaultKonnectSyncPeriod,
+		KongPluginInstallationControllerEnabled: false,
+		ValidatingWebhookEnabled:                true,
+		WebhookCertificateConfigBaseImage:       consts.WebhookCertificateConfigBaseImage,
+		WebhookCertificateConfigShellImage:      consts.WebhookCertificateConfigShellImage,
+		LoggerOpts:                              &zap.Options{},
+		KonnectMaxConcurrentReconciles:          consts.DefaultKonnectMaxConcurrentReconciles,
 	}
 }

@@ -8,10 +8,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // FiltenNone filter nothing, that is it returns the same slice as provided.
@@ -86,20 +91,49 @@ func filterServiceAccounts(serviceAccounts []corev1.ServiceAccount) []corev1.Ser
 // filterClusterRoles filters out the ClusterRole to be kept and returns
 // all the ClusterRoles to be deleted.
 // The filtered-out ClusterRole is decided as follows:
-// 1. creationTimestamp (older is better)
+//  1. creationTimestamp (newer is better, because newer ClusterRoles can contain new policy rules)
+//  2. using legacy labels (if present): if a ClusterRole does not have the legacy labels, it is considered newer
+//     and will be kept.
 func filterClusterRoles(clusterRoles []rbacv1.ClusterRole) []rbacv1.ClusterRole {
 	if len(clusterRoles) < 2 {
 		return []rbacv1.ClusterRole{}
 	}
 
-	toFilter := 0
+	newestWithManagedByLabels := -1
+	newestLegacy := -1
 	for i, clusterRole := range clusterRoles {
-		if clusterRole.CreationTimestamp.Before(&clusterRoles[toFilter].CreationTimestamp) {
-			toFilter = i
+		labels := clusterRole.GetLabels()
+
+		_, okManagedBy := labels[consts.GatewayOperatorManagedByLabel]
+		_, okManagedByNs := labels[consts.GatewayOperatorManagedByNamespaceLabel]
+		_, okManagedByName := labels[consts.GatewayOperatorManagedByNameLabel]
+		if okManagedBy && okManagedByNs && okManagedByName {
+			if newestWithManagedByLabels == -1 {
+				newestWithManagedByLabels = i
+				continue
+			}
+
+			if clusterRole.CreationTimestamp.After(clusterRoles[newestWithManagedByLabels].CreationTimestamp.Time) {
+				newestWithManagedByLabels = i
+			}
+			continue
 		}
+
+		if newestLegacy == -1 {
+			newestLegacy = i
+			continue
+		}
+
+		if clusterRole.CreationTimestamp.After(clusterRoles[newestLegacy].CreationTimestamp.Time) {
+			newestLegacy = i
+		}
+		continue
 	}
 
-	return append(clusterRoles[:toFilter], clusterRoles[toFilter+1:]...)
+	if newestWithManagedByLabels != -1 {
+		return append(clusterRoles[:newestWithManagedByLabels], clusterRoles[newestWithManagedByLabels+1:]...)
+	}
+	return append(clusterRoles[:newestLegacy], clusterRoles[newestLegacy+1:]...)
 }
 
 // -----------------------------------------------------------------------------
@@ -115,14 +149,41 @@ func filterClusterRoleBindings(clusterRoleBindings []rbacv1.ClusterRoleBinding) 
 		return []rbacv1.ClusterRoleBinding{}
 	}
 
-	toFilter := 0
+	oldestWithManagedByLabels := -1
+	oldestLegacy := -1
 	for i, clusterRoleBinding := range clusterRoleBindings {
-		if clusterRoleBinding.CreationTimestamp.Before(&clusterRoleBindings[toFilter].CreationTimestamp) {
-			toFilter = i
+		labels := clusterRoleBinding.GetLabels()
+
+		_, okManagedBy := labels[consts.GatewayOperatorManagedByLabel]
+		_, okManagedByNs := labels[consts.GatewayOperatorManagedByNamespaceLabel]
+		_, okManagedByName := labels[consts.GatewayOperatorManagedByNameLabel]
+		if okManagedBy && okManagedByNs && okManagedByName {
+			if oldestWithManagedByLabels == -1 {
+				oldestWithManagedByLabels = i
+				continue
+			}
+
+			if clusterRoleBinding.CreationTimestamp.Before(&clusterRoleBindings[oldestWithManagedByLabels].CreationTimestamp) {
+				oldestWithManagedByLabels = i
+			}
+			continue
 		}
+
+		if oldestLegacy == -1 {
+			oldestLegacy = i
+			continue
+		}
+
+		if clusterRoleBinding.CreationTimestamp.Before(&clusterRoleBindings[oldestLegacy].CreationTimestamp) {
+			oldestLegacy = i
+		}
+		continue
 	}
 
-	return append(clusterRoleBindings[:toFilter], clusterRoleBindings[toFilter+1:]...)
+	if oldestWithManagedByLabels != -1 {
+		return append(clusterRoleBindings[:oldestWithManagedByLabels], clusterRoleBindings[oldestWithManagedByLabels+1:]...)
+	}
+	return append(clusterRoleBindings[:oldestLegacy], clusterRoleBindings[oldestLegacy+1:]...)
 }
 
 // -----------------------------------------------------------------------------
@@ -312,24 +373,78 @@ func FilterHPAs(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.Ho
 }
 
 // -----------------------------------------------------------------------------
-// Filter functions - ValidatingWebhookConfigurations
+// Filter functions - PodDisruptionBudgets
 // -----------------------------------------------------------------------------
 
-// filterValidatingWebhookConfigurations filters out the ValidatingWebhookConfigurations to be kept and returns
-// all the ValidatingWebhookConfigurations to be deleted. The oldest ValidatingWebhookConfiguration is kept.
-func filterValidatingWebhookConfigurations(webhookConfigurations []admregv1.ValidatingWebhookConfiguration) []admregv1.ValidatingWebhookConfiguration {
-	if len(webhookConfigurations) < 2 {
-		return []admregv1.ValidatingWebhookConfiguration{}
+// FilterPodDisruptionBudgets filters out the PodDisruptionBudgets to be kept and returns all
+// the PodDisruptionBudgets to be deleted.
+// The filtered-out PodDisruptionBudget is decided as follows:
+// 1. creationTimestamp (older is better)
+func FilterPodDisruptionBudgets(pdbs []policyv1.PodDisruptionBudget) []policyv1.PodDisruptionBudget {
+	if len(pdbs) < 2 {
+		return nil
 	}
 
 	best := 0
-	for i, webhookConfig := range webhookConfigurations {
-		if webhookConfig.CreationTimestamp.Before(&webhookConfigurations[best].CreationTimestamp) {
+	for i, hpa := range pdbs {
+		if hpa.CreationTimestamp.Before(&pdbs[best].CreationTimestamp) {
 			best = i
 		}
 	}
 
-	return append(webhookConfigurations[:best], webhookConfigurations[best+1:]...)
+	return append(pdbs[:best], pdbs[best+1:]...)
+}
+
+// -----------------------------------------------------------------------------
+// Filter functions - ValidatingWebhookConfigurations
+// -----------------------------------------------------------------------------
+
+// filterValidatingWebhookConfigurations filters out the ValidatingWebhookConfigurations
+// to be kept and returns all the ValidatingWebhookConfigurations to be deleted.
+// The following criteria are used:
+//  1. creationTimestamp (newer is better, because newer ValidatingWebhookConfiguration can contain new rules)
+//  2. using legacy labels (if present): if a ValidatingWebhookConfiguration does
+//     not have the legacy labels, it is considered newer and will be kept.
+func filterValidatingWebhookConfigurations(vwcs []admregv1.ValidatingWebhookConfiguration) []admregv1.ValidatingWebhookConfiguration {
+	if len(vwcs) < 2 {
+		return []admregv1.ValidatingWebhookConfiguration{}
+	}
+
+	newestWithManagedByLabels := -1
+	newestLegacy := -1
+	for i, vwc := range vwcs {
+		labels := vwc.GetLabels()
+
+		_, okManagedBy := labels[consts.GatewayOperatorManagedByLabel]
+		_, okManagedByNs := labels[consts.GatewayOperatorManagedByNamespaceLabel]
+		_, okManagedByName := labels[consts.GatewayOperatorManagedByNameLabel]
+		if okManagedBy && okManagedByNs && okManagedByName {
+			if newestWithManagedByLabels == -1 {
+				newestWithManagedByLabels = i
+				continue
+			}
+
+			if vwc.CreationTimestamp.After(vwcs[newestWithManagedByLabels].CreationTimestamp.Time) {
+				newestWithManagedByLabels = i
+			}
+			continue
+		}
+
+		if newestLegacy == -1 {
+			newestLegacy = i
+			continue
+		}
+
+		if vwc.CreationTimestamp.After(vwcs[newestLegacy].CreationTimestamp.Time) {
+			newestLegacy = i
+		}
+		continue
+	}
+
+	if newestWithManagedByLabels != -1 {
+		return append(vwcs[:newestWithManagedByLabels], vwcs[newestWithManagedByLabels+1:]...)
+	}
+	return append(vwcs[:newestLegacy], vwcs[newestLegacy+1:]...)
 }
 
 // -----------------------------------------------------------------------------
@@ -351,4 +466,44 @@ func filterDataPlanes(dataplanes []operatorv1beta1.DataPlane) []operatorv1beta1.
 	}
 
 	return append(dataplanes[:best], dataplanes[best+1:]...)
+}
+
+// -----------------------------------------------------------------------------
+// Filter functions - KongPluginBindings
+// -----------------------------------------------------------------------------
+
+// filterKongPluginBindings filters out the KongPluginBindings to be kept and returns all the KongPluginBindings
+// to be deleted.
+// The KongPluginBinding with Programmed status condition is kept.
+// If no such binding is found the oldest is kept.
+func filterKongPluginBindings(kpbs []configurationv1alpha1.KongPluginBinding) []configurationv1alpha1.KongPluginBinding {
+	if len(kpbs) < 2 {
+		return []configurationv1alpha1.KongPluginBinding{}
+	}
+
+	programmed := -1
+	best := 0
+	for i, kpb := range kpbs {
+		if lo.ContainsBy(kpb.Status.Conditions, func(c metav1.Condition) bool {
+			return c.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+				c.Status == metav1.ConditionTrue
+		}) {
+
+			if programmed != -1 && kpb.CreationTimestamp.Before(&kpbs[programmed].CreationTimestamp) {
+				best = i
+				programmed = i
+			} else if programmed == -1 {
+				best = i
+				programmed = i
+			}
+
+			continue
+		}
+
+		if kpb.CreationTimestamp.Before(&kpbs[best].CreationTimestamp) && programmed == -1 {
+			best = i
+		}
+	}
+
+	return append(kpbs[:best], kpbs[best+1:]...)
 }

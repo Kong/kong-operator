@@ -11,6 +11,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -36,7 +37,7 @@ func ensureDataPlaneCertificate(
 	dataplane *operatorv1beta1.DataPlane,
 	clusterCASecretNN types.NamespacedName,
 	adminServiceNN types.NamespacedName,
-) (op.CreatedUpdatedOrNoop, *corev1.Secret, error) {
+) (op.Result, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
 		certificatesv1.UsageDigitalSignature, certificatesv1.UsageServerAuth,
@@ -57,7 +58,7 @@ func ensureHPAForDataPlane(
 	log logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 	deploymentName string,
-) (res op.CreatedUpdatedOrNoop, hpa *autoscalingv2.HorizontalPodAutoscaler, err error) {
+) (res op.Result, hpa *autoscalingv2.HorizontalPodAutoscaler, err error) {
 	matchingLabels := k8sresources.GetManagedLabelForOwner(dataplane)
 	hpas, err := k8sutils.ListHPAsForOwner(
 		ctx,
@@ -103,7 +104,7 @@ func ensureHPAForDataPlane(
 			updated = true
 		}
 
-		return patch.ApplyPatchIfNonEmpty(ctx, cl, log, existingHPA, oldExistingHPA, dataplane, updated)
+		return patch.ApplyPatchIfNotEmpty(ctx, cl, log, existingHPA, oldExistingHPA, updated)
 	}
 
 	if err = cl.Create(ctx, generatedHPA); err != nil {
@@ -111,6 +112,62 @@ func ensureHPAForDataPlane(
 	}
 
 	return op.Created, nil, nil
+}
+
+func ensurePodDisruptionBudgetForDataPlane(
+	ctx context.Context,
+	cl client.Client,
+	log logr.Logger,
+	dataplane *operatorv1beta1.DataPlane,
+) (res op.Result, pdb *policyv1.PodDisruptionBudget, err error) {
+	dpNn := client.ObjectKeyFromObject(dataplane)
+	matchingLabels := k8sresources.GetManagedLabelForOwner(dataplane)
+	pdbs, err := k8sutils.ListPodDisruptionBudgetsForOwner(ctx, cl, dataplane.Namespace, dataplane.UID, matchingLabels)
+	if err != nil {
+		return op.Noop, nil, fmt.Errorf("failed listing PodDisruptionBudgets for DataPlane %s: %w", dpNn, err)
+	}
+
+	if dataplane.Spec.Resources.PodDisruptionBudget == nil {
+		if err := k8sreduce.ReducePodDisruptionBudgets(ctx, cl, pdbs, k8sreduce.FilterNone); err != nil {
+			return op.Noop, nil, fmt.Errorf("failed reducing PodDisruptionBudgets for DataPlane %s: %w", dpNn, err)
+		}
+		return op.Noop, nil, nil
+	}
+
+	if len(pdbs) > 1 {
+		if err := k8sreduce.ReducePodDisruptionBudgets(ctx, cl, pdbs, k8sreduce.FilterPodDisruptionBudgets); err != nil {
+			return op.Noop, nil, fmt.Errorf("failed reducing PodDisruptionBudgets for DataPlane %s: %w", dpNn, err)
+		}
+		return op.Noop, nil, nil
+	}
+
+	generatedPDB, err := k8sresources.GeneratePodDisruptionBudgetForDataPlane(dataplane)
+	if err != nil {
+		return op.Noop, nil, fmt.Errorf("failed generating PodDisruptionBudget for DataPlane %s: %w", dpNn, err)
+	}
+
+	if len(pdbs) == 1 {
+		var updated bool
+		existingPDB := &pdbs[0]
+		oldExistingPDB := existingPDB.DeepCopy()
+
+		// Ensure that PDB's metadata is up-to-date.
+		updated, existingPDB.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingPDB.ObjectMeta, generatedPDB.ObjectMeta)
+
+		// Ensure that PDB's spec is up-to-date.
+		if !cmp.Equal(existingPDB.Spec, generatedPDB.Spec) {
+			existingPDB.Spec = generatedPDB.Spec
+			updated = true
+		}
+
+		return patch.ApplyPatchIfNotEmpty(ctx, cl, log, existingPDB, oldExistingPDB, updated)
+	}
+
+	if err := cl.Create(ctx, generatedPDB); err != nil {
+		return op.Noop, nil, fmt.Errorf("failed creating PodDisruptionBudget for DataPlane %s: %w", dpNn, err)
+	}
+
+	return op.Created, generatedPDB, nil
 }
 
 func matchingLabelsToServiceOpt(ml client.MatchingLabels) k8sresources.ServiceOpt {
@@ -141,8 +198,8 @@ func ensureAdminServiceForDataPlane(
 	dataPlane *operatorv1beta1.DataPlane,
 	additionalServiceLabels client.MatchingLabels,
 	opts ...k8sresources.ServiceOpt,
-) (res op.CreatedUpdatedOrNoop, svc *corev1.Service, err error) {
-	// TODO: https://github.com/Kong/gateway-operator/pull/1101.
+) (res op.Result, svc *corev1.Service, err error) {
+	// TODO: https://github.com/Kong/gateway-operator/issues/156.
 	// Use only new labels after several minor version of soak time.
 
 	// Below we list both the Services with the new labels and the legacy labels
@@ -252,8 +309,8 @@ func ensureIngressServiceForDataPlane(
 	dataPlane *operatorv1beta1.DataPlane,
 	additionalServiceLabels client.MatchingLabels,
 	opts ...k8sresources.ServiceOpt,
-) (op.CreatedUpdatedOrNoop, *corev1.Service, error) {
-	// TODO: https://github.com/Kong/gateway-operator/pull/1101.
+) (op.Result, *corev1.Service, error) {
+	// TODO: https://github.com/Kong/gateway-operator/issues/156.
 	// Use only new labels after several minor version of soak time.
 
 	// Below we list both the Services with the new labels and the legacy labels
@@ -325,6 +382,7 @@ func ensureIngressServiceForDataPlane(
 	if count == 1 {
 		var updated bool
 		existingService := &services[0]
+		old := existingService.DeepCopy()
 		updated, existingService.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingService.ObjectMeta, generatedService.ObjectMeta,
 			// enforce all the annotations provided through the dataplane API
 			func(existingMeta metav1.ObjectMeta, generatedMeta metav1.ObjectMeta) (bool, metav1.ObjectMeta) {
@@ -345,6 +403,19 @@ func ensureIngressServiceForDataPlane(
 			existingService.Spec.Type = generatedService.Spec.Type
 			updated = true
 		}
+
+		const (
+			defaultExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyCluster
+		)
+		// Do not update when
+		// - the existing service has the default value for ExternalTrafficPolicy
+		// - and the generated service has the default value for ExternalTrafficPolicy or is empty.
+		if !(existingService.Spec.ExternalTrafficPolicy == defaultExternalTrafficPolicy &&
+			(generatedService.Spec.ExternalTrafficPolicy == "" || generatedService.Spec.ExternalTrafficPolicy == defaultExternalTrafficPolicy)) {
+			existingService.Spec.ExternalTrafficPolicy = generatedService.Spec.ExternalTrafficPolicy
+			updated = true
+		}
+
 		if !cmp.Equal(existingService.Spec.Selector, generatedService.Spec.Selector) {
 			existingService.Spec.Selector = generatedService.Spec.Selector
 			updated = true
@@ -359,10 +430,11 @@ func ensureIngressServiceForDataPlane(
 		}
 
 		if updated {
-			if err := cl.Update(ctx, existingService); err != nil {
+			res, existingService, err := patch.ApplyPatchIfNotEmpty(ctx, cl, logger, existingService, old, updated)
+			if err != nil {
 				return op.Noop, existingService, fmt.Errorf("failed updating DataPlane Service %s: %w", existingService.Name, err)
 			}
-			return op.Updated, existingService, nil
+			return res, existingService, nil
 		}
 		return op.Noop, existingService, nil
 	}

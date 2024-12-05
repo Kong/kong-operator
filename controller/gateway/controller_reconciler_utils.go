@@ -16,22 +16,22 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/controller/pkg/secrets"
+	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
-	"github.com/kong/gateway-operator/pkg/vars"
 )
 
 // -----------------------------------------------------------------------------
@@ -49,7 +49,7 @@ func (r *Reconciler) createDataPlane(ctx context.Context,
 		},
 	}
 	if gatewayConfig.Spec.DataPlaneOptions != nil {
-		dataplane.Spec.DataPlaneOptions = *gatewayConfigDataPlaneOptionsToDataPlaneOptions(*gatewayConfig.Spec.DataPlaneOptions)
+		dataplane.Spec.DataPlaneOptions = *gatewayConfigDataPlaneOptionsToDataPlaneOptions(gatewayConfig.Namespace, *gatewayConfig.Spec.DataPlaneOptions)
 	}
 	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions, r.DefaultDataPlaneImage)
 	if err := setDataPlaneIngressServicePorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners); err != nil {
@@ -124,9 +124,20 @@ func (r *Reconciler) getGatewayAddresses(
 	return gatewayAddressesFromService(services[0])
 }
 
-func gatewayConfigDataPlaneOptionsToDataPlaneOptions(opts operatorv1beta1.GatewayConfigDataPlaneOptions) *operatorv1beta1.DataPlaneOptions {
+func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
+	gatewayConfigNamespace string, opts operatorv1beta1.GatewayConfigDataPlaneOptions,
+) *operatorv1beta1.DataPlaneOptions {
+	// When Namespace is not provided, the GatewayConfiguration's namespace is assumed.
+	pluginsToInstall := lo.Map(opts.PluginsToInstall, func(pluginReference operatorv1beta1.NamespacedName, _ int) operatorv1beta1.NamespacedName {
+		if pluginReference.Namespace == "" {
+			pluginReference.Namespace = gatewayConfigNamespace
+		}
+		return pluginReference
+	})
+
 	dataPlaneOptions := &operatorv1beta1.DataPlaneOptions{
-		Deployment: opts.Deployment,
+		Deployment:       opts.Deployment,
+		PluginsToInstall: pluginsToInstall,
 	}
 
 	if opts.Network.Services != nil && opts.Network.Services.Ingress != nil {
@@ -134,8 +145,9 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(opts operatorv1beta1.Gatewa
 			Services: &operatorv1beta1.DataPlaneServices{
 				Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 					ServiceOptions: operatorv1beta1.ServiceOptions{
-						Type:        opts.Network.Services.Ingress.Type,
-						Annotations: opts.Network.Services.Ingress.Annotations,
+						Type:                  opts.Network.Services.Ingress.Type,
+						Annotations:           opts.Network.Services.Ingress.Annotations,
+						ExternalTrafficPolicy: opts.Network.Services.Ingress.ExternalTrafficPolicy,
 					},
 				},
 			},
@@ -177,23 +189,6 @@ func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAdd
 	}
 
 	return addresses, nil
-}
-
-func (r *Reconciler) verifyGatewayClassSupport(ctx context.Context, gateway *gwtypes.Gateway) (*gatewayclass.Decorator, error) {
-	if gateway.Spec.GatewayClassName == "" {
-		return nil, operatorerrors.ErrUnsupportedGateway
-	}
-
-	gwc := gatewayclass.NewDecorator()
-	if err := r.Client.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gwc.GatewayClass); err != nil {
-		return nil, err
-	}
-
-	if string(gwc.Spec.ControllerName) != vars.ControllerName() {
-		return nil, operatorerrors.ErrUnsupportedGateway
-	}
-
-	return gwc, nil
 }
 
 func (r *Reconciler) getOrCreateGatewayConfiguration(ctx context.Context, gatewayClass *gatewayv1.GatewayClass) (*operatorv1beta1.GatewayConfiguration, error) {
@@ -409,8 +404,9 @@ func (r *Reconciler) ensureOwnedControlPlanesDeleted(ctx context.Context, gatewa
 			continue
 		}
 		err = r.Client.Delete(ctx, &controlplanes[i])
-		if err != nil && !k8serrors.IsNotFound(err) {
+		if client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
+			continue
 		}
 		deleted = true
 	}
@@ -432,8 +428,9 @@ func (r *Reconciler) ensureOwnedDataPlanesDeleted(ctx context.Context, gateway *
 	)
 	for i := range dataplanes {
 		err = r.Client.Delete(ctx, &dataplanes[i])
-		if err != nil && !k8serrors.IsNotFound(err) {
+		if client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
+			continue
 		}
 		deleted = true
 	}
@@ -455,8 +452,9 @@ func (r *Reconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gate
 	)
 	for i := range networkPolicies {
 		err = r.Client.Delete(ctx, &networkPolicies[i])
-		if err != nil && !k8serrors.IsNotFound(err) {
+		if client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
+			continue
 		}
 		deleted = true
 	}
@@ -535,28 +533,37 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 	}
 }
 
-// initReadyAndProgrammed initializes the gateway Programmed and Ready conditions
-// by setting the underlying Gateway Programmed and Ready status to false.
-// Furthermore, it sets the supportedKinds and initializes the readiness to false with reason
-// Pending for each Gateway listener.
-func (g *gatewayConditionsAndListenersAwareT) initReadyAndProgrammed() {
-	k8sutils.InitReady(g)
-	k8sutils.InitProgrammed(g)
+// initProgrammedAndListenersStatus initializes the gateway Programmed condition
+// by setting the underlying Gateway Programmed status to false.
+// It also sets the listeners Programmed condition by setting the underlying
+// Listener Programmed status to false.
+func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus() {
+	k8sutils.SetCondition(
+		k8sutils.NewConditionWithGeneration(
+			consts.ConditionType(gatewayv1.GatewayConditionProgrammed),
+			metav1.ConditionFalse,
+			consts.ConditionReason(gatewayv1.GatewayReasonPending),
+			consts.DependenciesNotReadyMessage,
+			g.Generation),
+		g)
 	for i := range g.Spec.Listeners {
 		lStatus := listenerConditionsAware(&g.Status.Listeners[i])
-		k8sutils.SetCondition(metav1.Condition{
-			Type:               string(gatewayv1.ListenerConditionProgrammed),
-			Status:             metav1.ConditionFalse,
-			Reason:             string(gatewayv1.ListenerReasonPending),
-			ObservedGeneration: g.Generation,
-			LastTransitionTime: metav1.Now(),
-		}, lStatus)
+		cond, ok := k8sutils.GetCondition(consts.ConditionType(gatewayv1.ListenerConditionProgrammed), lStatus)
+		if !ok || cond.ObservedGeneration != g.Generation {
+			k8sutils.SetCondition(metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionProgrammed),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.ListenerReasonPending),
+				ObservedGeneration: g.Generation,
+				LastTransitionTime: metav1.Now(),
+			}, lStatus)
+		}
 	}
 }
 
 func (g *gatewayConditionsAndListenersAwareT) setResolvedRefsAndSupportedKinds(ctx context.Context, c client.Client) error {
 	for i, listener := range g.Spec.Listeners {
-		supportedKinds, resolvedRefsCondition, err := getSupportedKindsWithResolvedRefsCondition(ctx, c, g.Namespace, g.Generation, listener)
+		supportedKinds, resolvedRefsCondition, err := getSupportedKindsWithResolvedRefsCondition(ctx, c, *g.Gateway, g.Generation, listener)
 		if err != nil {
 			return err
 		}
@@ -580,8 +587,9 @@ func (g *gatewayConditionsAndListenersAwareT) initListenersStatus() {
 	g.Status.Listeners = listenersStatus
 }
 
-// setAccepted sets the listeners and gateway Accepted condition according to the Gateway API specification.
-func (g *gatewayConditionsAndListenersAwareT) setAccepted() {
+// setAcceptedAndAttachedRoutes sets the listeners and gateway Accepted condition according to the Gateway API specification.
+// It also sets the AttachedRoutes field in the listener status.
+func (g *gatewayConditionsAndListenersAwareT) setAcceptedAndAttachedRoutes(ctx context.Context, c client.Client) error {
 	for i, listener := range g.Spec.Listeners {
 		acceptedCondition := metav1.Condition{
 			Type:               string(gatewayv1.ListenerConditionAccepted),
@@ -590,14 +598,154 @@ func (g *gatewayConditionsAndListenersAwareT) setAccepted() {
 			LastTransitionTime: metav1.Now(),
 			ObservedGeneration: g.Generation,
 		}
-		if listener.Protocol != gatewayv1.HTTPProtocolType && listener.Protocol != gatewayv1.HTTPSProtocolType {
+
+		if _, protocolSupported := supportedRoutesByProtocol()[listener.Protocol]; !protocolSupported {
 			acceptedCondition.Status = metav1.ConditionFalse
 			acceptedCondition.Reason = string(gatewayv1.ListenerReasonUnsupportedProtocol)
 		}
 		listenerConditionsAware := listenerConditionsAware(&g.Status.Listeners[i])
 		listenerConditionsAware.SetConditions(append(listenerConditionsAware.Conditions, acceptedCondition))
+
+		// AttachedRoutes
+		count, err := countAttachedRoutesForGatewayListener(ctx, g.Gateway, g.Gateway.Spec.Listeners[i], c)
+		if err != nil {
+			return fmt.Errorf("failed to count attached routes for Gateway %s: %w", client.ObjectKeyFromObject(g), err)
+		}
+
+		g.Status.Listeners[i].AttachedRoutes = count
 	}
+
 	k8sutils.SetAcceptedConditionOnGateway(g)
+	return nil
+}
+
+// countAttachedRoutesForGatewayListener counts the number of attached routes for a given listener.
+// It takes into account the AllowedRoutes field in the listener spec and route's ParentRefs.
+// It returns the number of attached routes and an error.
+func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gateway, listener gwtypes.Listener, cl client.Client) (int32, error) {
+	allowedRoutes := listener.AllowedRoutes
+	// Gateway API defines a default value for AllowedRoutes, so if this is nil there's something wrong.
+	if allowedRoutes == nil {
+		return 0, fmt.Errorf("AllowedRoutes is nil for listener %s in gateway %s",
+			listener.Name, client.ObjectKeyFromObject(g),
+		)
+	}
+
+	var (
+		count int32
+		opts  []client.ListOption
+	)
+
+	namespaces := allowedRoutes.Namespaces
+	// Gateway API defines a default value for AllowedRoutes.Namespaces, so
+	// if this is nil there's something wrong.
+	if namespaces == nil || namespaces.From == nil {
+		return 0, fmt.Errorf("AllowedRoutes.Namespaces is nil for listener %s in gateway %s",
+			listener.Name, client.ObjectKeyFromObject(g),
+		)
+	}
+
+	switch *namespaces.From {
+	case gatewayv1.NamespacesFromAll:
+	case gatewayv1.NamespacesFromSame:
+		opts = append(opts, client.InNamespace(g.Namespace))
+	case gatewayv1.NamespacesFromSelector:
+		var nsList corev1.NamespaceList
+
+		s, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
+		if err != nil {
+			return 0, fmt.Errorf("failed to create requirement for namespace selector (for Gateway %s): %w",
+				client.ObjectKeyFromObject(g), err,
+			)
+		}
+		reqs, selectable := s.Requirements()
+		if !selectable {
+			return 0, fmt.Errorf("namespace selector is not selectable (for Gateway %s)", client.ObjectKeyFromObject(g))
+		}
+		labelSelector := labels.NewSelector()
+		for _, req := range reqs {
+			labelSelector = labelSelector.Add(req)
+		}
+		if err := cl.List(ctx, &nsList, &client.ListOptions{
+			LabelSelector: labelSelector,
+		}); err != nil {
+			if k8serrors.IsNotFound(err) {
+				return 0, nil
+			}
+			return 0, fmt.Errorf("failed to list namespaces for gateway %s: %w", g.Name, err)
+		}
+
+		switch len(nsList.Items) {
+		case 0:
+			// If no namespaces matching the selector are found, set the AttachedRoutes to 0 as
+			// there are no routes to attach.
+			return 0, nil
+
+		default:
+			for _, ns := range nsList.Items {
+				opts = append(opts, client.InNamespace(ns.Name))
+			}
+		}
+	}
+
+	kindsForProtocol, protocolSupported := supportedRoutesByProtocol()[listener.Protocol]
+	switch len(allowedRoutes.Kinds) {
+	case 0:
+		if protocolSupported {
+			for k := range kindsForProtocol {
+				// NOTE: Count other types of routes when they are supported.
+
+				switch k {
+				case "HTTPRoute":
+					httpRoutes, err := gatewayutils.ListHTTPRoutesForGateway(ctx, cl, g, opts...)
+					if err != nil {
+						return 0, fmt.Errorf(
+							"failed to list HTTPRoutes for Gateway %s when counting AttachedRoutes: %w",
+							client.ObjectKeyFromObject(g), err,
+						)
+					}
+					count += countAttachedHTTPRoutes(listener.Name, httpRoutes)
+				default:
+					return 0, fmt.Errorf("unsupported route kind: %T", k)
+				}
+			}
+		}
+	default:
+		if lo.ContainsBy(allowedRoutes.Kinds, func(gvk gatewayv1.RouteGroupKind) bool {
+			if _, ok := kindsForProtocol[gvk.Kind]; !ok {
+				return false
+			}
+			return gvk.Group != nil && *gvk.Group == gatewayv1.Group(gatewayv1.GroupVersion.Group)
+		}) {
+			httpRoutes, err := gatewayutils.ListHTTPRoutesForGateway(ctx, cl, g, opts...)
+			if err != nil {
+				return 0, fmt.Errorf(
+					"failed to list HTTPRoutes for Gateway %s when counting AttachedRoutes: %w",
+					client.ObjectKeyFromObject(g), err,
+				)
+			}
+
+			count += countAttachedHTTPRoutes(listener.Name, httpRoutes)
+		}
+	}
+
+	return count, nil
+}
+
+// countAttachedHTTPRoutes counts the number of attached HTTPRoutes for a given listener,
+// taking into account the ParentRefs' sectionName.
+func countAttachedHTTPRoutes(listenerName gatewayv1.SectionName, httpRoutes []gatewayv1.HTTPRoute) int32 {
+	var count int32
+
+	for _, httpRoute := range httpRoutes {
+		if lo.ContainsBy(httpRoute.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
+			return parentRef.SectionName == nil || *parentRef.SectionName == listenerName
+		}) {
+			count++
+		}
+	}
+
+	return count
 }
 
 // setConflicted sets the gateway Conflicted condition according to the Gateway API specification.
@@ -634,15 +782,15 @@ func (g *gatewayConditionsAndListenersAwareT) setConflicted() {
 	}
 }
 
-// setReadyAndProgrammed sets the gateway Programmed and Ready conditions by
-// setting the underlying Gateway Programmed and Ready status to true.
-// Furthermore, it sets the supportedKinds and initializes the readiness to true with reason
-// Ready or false with reason Invalid for each Gateway listener.
-func (g *gatewayConditionsAndListenersAwareT) setReadyAndProgrammed() {
-	k8sutils.SetReady(g)
+// setProgrammed sets the gateway Programmed condition by setting the underlying
+// Gateway Programmed status to true.
+// It also sets the listeners Programmed condition by setting the underlying
+// Listener Programmed status to true.
+func (g *gatewayConditionsAndListenersAwareT) setProgrammed() {
 	k8sutils.SetProgrammed(g)
 
-	for i := range g.Spec.Listeners {
+	for i := range g.Status.Listeners {
+		listener := &g.Status.Listeners[i]
 		programmedCondition := metav1.Condition{
 			Type:               string(gatewayv1.ListenerConditionProgrammed),
 			Status:             metav1.ConditionTrue,
@@ -650,7 +798,13 @@ func (g *gatewayConditionsAndListenersAwareT) setReadyAndProgrammed() {
 			ObservedGeneration: g.GetGeneration(),
 			LastTransitionTime: metav1.Now(),
 		}
-		listenerStatus := listenerConditionsAware(&g.Status.Listeners[i])
+		listenerStatus := listenerConditionsAware(listener)
+		rCond, ok := k8sutils.GetCondition(consts.ConditionType(gatewayv1.ListenerConditionResolvedRefs), listenerStatus)
+		if ok && rCond.Status == metav1.ConditionFalse {
+			programmedCondition.Status = metav1.ConditionFalse
+			programmedCondition.Reason = string(gatewayv1.ListenerReasonPending)
+			programmedCondition.Message = "Listener references are not resolved yet."
+		}
 		k8sutils.SetCondition(programmedCondition, listenerStatus)
 	}
 }
@@ -699,7 +853,7 @@ func setDataPlaneIngressServicePorts(opts *operatorv1beta1.DataPlaneOptions, lis
 
 // getSupportedKindsWithResolvedRefsCondition returns all the route kinds supported by the listener, along with the resolvedRefs
 // condition, that is based on the presence of errors in such a field.
-func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Client, gatewayNamespace string, generation int64, listener gatewayv1.Listener) (supportedKinds []gatewayv1.RouteGroupKind, resolvedRefsCondition metav1.Condition, err error) {
+func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Client, gateway gatewayv1.Gateway, generation int64, listener gatewayv1.Listener) (supportedKinds []gatewayv1.RouteGroupKind, resolvedRefsCondition metav1.Condition, err error) {
 	supportedKinds = make([]gatewayv1.RouteGroupKind, 0)
 	resolvedRefsCondition = metav1.Condition{
 		Type:               string(gatewayv1.ListenerConditionResolvedRefs),
@@ -725,52 +879,48 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 		} else {
 			isValidGroupKind := true
 			certificateRef := listener.TLS.CertificateRefs[0]
-			if certificateRef.Group != nil && *certificateRef.Group != "" && *certificateRef.Group != gatewayv1.Group(corev1.SchemeGroupVersion.Group) {
+			gatewayNamespace := gatewayv1.Namespace(gateway.Namespace)
+			ref.EnsureNamespaceInSecretRef(&certificateRef, gatewayNamespace)
+
+			if err := ref.DoesFieldReferenceCoreV1Secret(certificateRef, "CertificateRef"); err != nil {
 				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
-				message = conditionMessage(message, fmt.Sprintf("Group %s not supported in CertificateRef", *certificateRef.Group))
+				message = conditionMessage(message, err.Error())
 				isValidGroupKind = false
 			}
-			if certificateRef.Kind != nil && *certificateRef.Kind != "" && *certificateRef.Kind != gatewayv1.Kind("Secret") {
-				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
-				message = conditionMessage(message, fmt.Sprintf("Kind %s not supported in CertificateRef", *certificateRef.Kind))
-				isValidGroupKind = false
+
+			msg, isReferenceGranted, err := ref.CheckReferenceGrantForSecret(ctx, c, &gateway, certificateRef)
+			if err != nil {
+				return nil, metav1.Condition{}, fmt.Errorf("failed to resolve reference: %w", err)
 			}
-			secretNamespace := gatewayNamespace
-			if certificateRef.Namespace != nil && *certificateRef.Namespace != "" {
-				secretNamespace = string(*certificateRef.Namespace)
+			if !isReferenceGranted {
+				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonRefNotPermitted)
+				message = conditionMessage(message, msg)
 			}
 
 			var secretExists bool
-			if isValidGroupKind {
+			certificateSecret := &corev1.Secret{}
+			if isValidGroupKind && isReferenceGranted {
 				// Get the secret and check it exists.
-				certificateSecret := &corev1.Secret{}
 				err = c.Get(ctx, types.NamespacedName{
-					Namespace: secretNamespace,
+					Namespace: string(*certificateRef.Namespace),
 					Name:      string(certificateRef.Name),
 				}, certificateSecret)
 				if err != nil {
 					if !k8serrors.IsNotFound(err) {
-						return
+						return nil, metav1.Condition{}, fmt.Errorf("failed to get Secret: %w", err)
 					}
 					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
-					message = conditionMessage(message, fmt.Sprintf("Referenced secret %s/%s does not exist", secretNamespace, certificateRef.Name))
+					message = conditionMessage(message, fmt.Sprintf("Referenced secret %s/%s does not exist", *certificateRef.Namespace, certificateRef.Name))
 				} else {
 					secretExists = true
 				}
 			}
 
-			if secretExists {
-				// In case there is a cross-namespace reference, check if there is any referenceGrant allowing it.
-				if secretNamespace != gatewayNamespace {
-					referenceGrantList := &gatewayv1beta1.ReferenceGrantList{}
-					err = c.List(ctx, referenceGrantList, client.InNamespace(secretNamespace))
-					if err != nil {
-						return
-					}
-					if !isSecretCrossReferenceGranted(gatewayv1.Namespace(gatewayNamespace), certificateRef.Name, referenceGrantList.Items) {
-						resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonRefNotPermitted)
-						message = conditionMessage(message, fmt.Sprintf("Secret %s/%s reference not allowed by any referenceGrant", secretNamespace, certificateRef.Name))
-					}
+			if isReferenceGranted && secretExists {
+				// Check if the secret is a valid TLS secret.
+				if !secrets.IsTLSSecretValid(certificateSecret) {
+					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
+					message = conditionMessage(message, "Referenced secret does not contain a valid TLS certificate")
 				}
 			}
 		}
@@ -778,24 +928,24 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 
 	if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
 		supportedRoutes := supportedRoutesByProtocol()[listener.Protocol]
-		for route := range supportedRoutes {
+		for routeKind := range supportedRoutes {
 			supportedKinds = append(supportedKinds, gatewayv1.RouteGroupKind{
 				Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
-				Kind:  route,
+				Kind:  routeKind,
 			})
 		}
 	} else {
-		for _, k := range listener.AllowedRoutes.Kinds {
+		for _, routeGK := range listener.AllowedRoutes.Kinds {
 			validRoutes := supportedRoutesByProtocol()[listener.Protocol]
-			if _, ok := validRoutes[k.Kind]; !ok || k.Group == nil || *k.Group != gatewayv1.Group(gatewayv1.GroupVersion.Group) {
+			if _, ok := validRoutes[routeGK.Kind]; !ok || routeGK.Group == nil || *routeGK.Group != gatewayv1.Group(gatewayv1.GroupVersion.Group) {
 				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidRouteKinds)
-				message = conditionMessage(message, fmt.Sprintf("Route %s not supported", string(k.Kind)))
+				message = conditionMessage(message, fmt.Sprintf("Route %s not supported", string(routeGK.Kind)))
 				continue
 			}
 
 			supportedKinds = append(supportedKinds, gatewayv1.RouteGroupKind{
-				Group: k.Group,
-				Kind:  k.Kind,
+				Group: routeGK.Group,
+				Kind:  routeGK.Kind,
 			})
 		}
 	}
@@ -808,51 +958,17 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 	return supportedKinds, resolvedRefsCondition, nil
 }
 
-func isSecretCrossReferenceGranted(gatewayNamespace gatewayv1.Namespace, secretName gatewayv1.ObjectName, referenceGrants []gatewayv1beta1.ReferenceGrant) bool {
-	for _, rg := range referenceGrants {
-		var fromFound bool
-		for _, from := range rg.Spec.From {
-			if from.Group != gatewayv1.GroupName {
-				continue
-			}
-			if from.Kind != "Gateway" {
-				continue
-			}
-			if from.Namespace != gatewayNamespace {
-				continue
-			}
-			fromFound = true
-			break
-		}
-		if fromFound {
-			for _, to := range rg.Spec.To {
-				if to.Group != "" && to.Group != "core" {
-					continue
-				}
-				if to.Kind != "Secret" {
-					continue
-				}
-				if to.Name != nil && secretName != *to.Name {
-					continue
-				}
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // conditionMessage updates a condition message string with an additional message, for use when a problem
 // condition has multiple concurrent causes. It ensures all messages end with a period. New messages are
 // appended to the end of the current message with a leading space separating them.
 func conditionMessage(oldStr, newStr string) string {
+	if len(newStr) > 0 && !strings.HasSuffix(newStr, ".") {
+		newStr += "."
+	}
 	if oldStr == "" {
-		return fmt.Sprintf("%s.", newStr)
+		return newStr
 	}
-	if strings.HasSuffix(newStr, ".") {
-		return fmt.Sprintf("%s %s", oldStr, newStr)
-	}
-	return fmt.Sprintf("%s %s.", oldStr, newStr)
+	return fmt.Sprintf("%s %s", oldStr, newStr)
 }
 
 type proxyListenEndpoint struct {
@@ -915,8 +1031,8 @@ func parseKongListenEnv(str string) (kongListenConfig, error) {
 }
 
 func gatewayStatusNeedsUpdate(oldGateway, newGateway gatewayConditionsAndListenersAwareT) bool {
-	oldCondAccepted, okOld := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayConditionAccepted), oldGateway)
-	newCondAccepted, _ := k8sutils.GetCondition(k8sutils.ConditionType(gatewayv1.GatewayConditionAccepted), newGateway)
+	oldCondAccepted, okOld := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayConditionAccepted), oldGateway)
+	newCondAccepted, _ := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayConditionAccepted), newGateway)
 
 	if !okOld || !areConditionsEqual(oldCondAccepted, newCondAccepted) {
 		return true
@@ -926,23 +1042,27 @@ func gatewayStatusNeedsUpdate(oldGateway, newGateway gatewayConditionsAndListene
 		return true
 	}
 
-	for i, newlistener := range newGateway.GetListenersConditions() {
+	for i, newListener := range newGateway.GetListenersConditions() {
 		oldListener := oldGateway.Status.Listeners[i]
-		if len(newlistener.Conditions) != len(oldListener.Conditions) {
+		if newListener.AttachedRoutes != oldListener.AttachedRoutes {
 			return true
 		}
-		if !cmp.Equal(newlistener.SupportedKinds, oldListener.SupportedKinds) {
+		if len(newListener.Conditions) != len(oldListener.Conditions) {
+			return true
+		}
+		if !cmp.Equal(newListener.SupportedKinds, oldListener.SupportedKinds) {
 			return true
 		}
 
-		for j, newListenerCond := range newlistener.Conditions {
-			// Do not consider the programmed condition, as it depends on the DataPlane and ControlPlane status.
-			if newListenerCond.Type != string(gatewayv1.ListenerConditionProgrammed) {
-				if !areConditionsEqual(oldListener.Conditions[j], newListenerCond) {
+		for j, newListenerCond := range newListener.Conditions {
+			switch newListenerCond.Type {
+			case string(gatewayv1.ListenerConditionProgrammed):
+				// Do not consider the programmed condition, as it depends on the DataPlane and ControlPlane status.
+				if oldListener.Conditions[j].Type != string(gatewayv1.ListenerConditionProgrammed) {
 					return true
 				}
-			} else {
-				if oldListener.Conditions[j].Type != string(gatewayv1.ListenerConditionProgrammed) {
+			default:
+				if !areConditionsEqual(oldListener.Conditions[j], newListenerCond) {
 					return true
 				}
 			}
@@ -955,5 +1075,6 @@ func areConditionsEqual(cond1, cond2 metav1.Condition) bool {
 	return cond1.Type == cond2.Type &&
 		cond1.Status == cond2.Status &&
 		cond1.Reason == cond2.Reason &&
-		cond1.Message == cond2.Message
+		cond1.Message == cond2.Message &&
+		cond1.ObservedGeneration == cond2.ObservedGeneration
 }

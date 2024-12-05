@@ -41,22 +41,24 @@ var dataplanemetricsextensionsKind = v1alpha1.SchemeGroupVersion.WithKind("DataP
 
 // Get takes name of the dataPlaneMetricsExtension, and returns the corresponding dataPlaneMetricsExtension object, and an error if there is any.
 func (c *FakeDataPlaneMetricsExtensions) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.DataPlaneMetricsExtension, err error) {
+	emptyResult := &v1alpha1.DataPlaneMetricsExtension{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(dataplanemetricsextensionsResource, c.ns, name), &v1alpha1.DataPlaneMetricsExtension{})
+		Invokes(testing.NewGetActionWithOptions(dataplanemetricsextensionsResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.DataPlaneMetricsExtension), err
 }
 
 // List takes label and field selectors, and returns the list of DataPlaneMetricsExtensions that match those selectors.
 func (c *FakeDataPlaneMetricsExtensions) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.DataPlaneMetricsExtensionList, err error) {
+	emptyResult := &v1alpha1.DataPlaneMetricsExtensionList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(dataplanemetricsextensionsResource, dataplanemetricsextensionsKind, c.ns, opts), &v1alpha1.DataPlaneMetricsExtensionList{})
+		Invokes(testing.NewListActionWithOptions(dataplanemetricsextensionsResource, dataplanemetricsextensionsKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeDataPlaneMetricsExtensions) List(ctx context.Context, opts v1.ListO
 // Watch returns a watch.Interface that watches the requested dataPlaneMetricsExtensions.
 func (c *FakeDataPlaneMetricsExtensions) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(dataplanemetricsextensionsResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(dataplanemetricsextensionsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a dataPlaneMetricsExtension and creates it.  Returns the server's representation of the dataPlaneMetricsExtension, and an error, if there is any.
 func (c *FakeDataPlaneMetricsExtensions) Create(ctx context.Context, dataPlaneMetricsExtension *v1alpha1.DataPlaneMetricsExtension, opts v1.CreateOptions) (result *v1alpha1.DataPlaneMetricsExtension, err error) {
+	emptyResult := &v1alpha1.DataPlaneMetricsExtension{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(dataplanemetricsextensionsResource, c.ns, dataPlaneMetricsExtension), &v1alpha1.DataPlaneMetricsExtension{})
+		Invokes(testing.NewCreateActionWithOptions(dataplanemetricsextensionsResource, c.ns, dataPlaneMetricsExtension, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.DataPlaneMetricsExtension), err
 }
 
 // Update takes the representation of a dataPlaneMetricsExtension and updates it. Returns the server's representation of the dataPlaneMetricsExtension, and an error, if there is any.
 func (c *FakeDataPlaneMetricsExtensions) Update(ctx context.Context, dataPlaneMetricsExtension *v1alpha1.DataPlaneMetricsExtension, opts v1.UpdateOptions) (result *v1alpha1.DataPlaneMetricsExtension, err error) {
+	emptyResult := &v1alpha1.DataPlaneMetricsExtension{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(dataplanemetricsextensionsResource, c.ns, dataPlaneMetricsExtension), &v1alpha1.DataPlaneMetricsExtension{})
+		Invokes(testing.NewUpdateActionWithOptions(dataplanemetricsextensionsResource, c.ns, dataPlaneMetricsExtension, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.DataPlaneMetricsExtension), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeDataPlaneMetricsExtensions) UpdateStatus(ctx context.Context, dataPlaneMetricsExtension *v1alpha1.DataPlaneMetricsExtension, opts v1.UpdateOptions) (*v1alpha1.DataPlaneMetricsExtension, error) {
+func (c *FakeDataPlaneMetricsExtensions) UpdateStatus(ctx context.Context, dataPlaneMetricsExtension *v1alpha1.DataPlaneMetricsExtension, opts v1.UpdateOptions) (result *v1alpha1.DataPlaneMetricsExtension, err error) {
+	emptyResult := &v1alpha1.DataPlaneMetricsExtension{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(dataplanemetricsextensionsResource, "status", c.ns, dataPlaneMetricsExtension), &v1alpha1.DataPlaneMetricsExtension{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(dataplanemetricsextensionsResource, "status", c.ns, dataPlaneMetricsExtension, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.DataPlaneMetricsExtension), err
 }
@@ -123,7 +128,7 @@ func (c *FakeDataPlaneMetricsExtensions) Delete(ctx context.Context, name string
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeDataPlaneMetricsExtensions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(dataplanemetricsextensionsResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(dataplanemetricsextensionsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.DataPlaneMetricsExtensionList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeDataPlaneMetricsExtensions) DeleteCollection(ctx context.Context, o
 
 // Patch applies the patch and returns the patched dataPlaneMetricsExtension.
 func (c *FakeDataPlaneMetricsExtensions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.DataPlaneMetricsExtension, err error) {
+	emptyResult := &v1alpha1.DataPlaneMetricsExtension{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(dataplanemetricsextensionsResource, c.ns, name, pt, data, subresources...), &v1alpha1.DataPlaneMetricsExtension{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(dataplanemetricsextensionsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.DataPlaneMetricsExtension), err
 }

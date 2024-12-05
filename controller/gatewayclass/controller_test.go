@@ -22,7 +22,7 @@ import (
 )
 
 func init() {
-	if err := gatewayv1.AddToScheme(scheme.Scheme); err != nil {
+	if err := gatewayv1.Install(scheme.Scheme); err != nil {
 		fmt.Println("error while adding gatewayv1 scheme")
 		os.Exit(1)
 	}
@@ -96,8 +96,6 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			ObjectsToAdd := []controllerruntimeclient.Object{
 				tc.gatewayClass,

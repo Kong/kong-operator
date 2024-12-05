@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/samber/lo"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,7 +45,6 @@ func ListDataPlanesForGateway(
 
 	dataplanes := make([]operatorv1beta1.DataPlane, 0)
 	for _, dataplane := range dataplaneList.Items {
-		dataplane := dataplane
 		if k8sutils.IsOwnedByRefUID(&dataplane, gateway.UID) {
 			dataplanes = append(dataplanes, dataplane)
 		}
@@ -70,7 +70,9 @@ func ListControlPlanesForGateway(
 		ctx,
 		controlplaneList,
 		client.InNamespace(gateway.Namespace),
-		client.MatchingLabels{consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue},
+		client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+		},
 	)
 	if err != nil {
 		return nil, err
@@ -78,13 +80,73 @@ func ListControlPlanesForGateway(
 
 	controlplanes := make([]operatorv1beta1.ControlPlane, 0)
 	for _, controlplane := range controlplaneList.Items {
-		controlplane := controlplane
 		if k8sutils.IsOwnedByRefUID(&controlplane, gateway.UID) {
 			controlplanes = append(controlplanes, controlplane)
 		}
 	}
 
 	return controlplanes, nil
+}
+
+// ListHTTPRoutesForGateway is a helper function which returns a list of HTTPRoutes
+// that have the provided Gateway set as parent in their status.
+func ListHTTPRoutesForGateway(
+	ctx context.Context,
+	c client.Client,
+	gateway *gwtypes.Gateway,
+	opts ...client.ListOption,
+) ([]gwtypes.HTTPRoute, error) {
+	if gateway.Namespace == "" {
+		return nil, fmt.Errorf("can't list HTTPRoutes for gateway: Gateway %s was missing namespace", gateway.Name)
+	}
+
+	var httpRoutesList gwtypes.HTTPRouteList
+	err := c.List(
+		ctx,
+		&httpRoutesList,
+		opts...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("can't list HTTPRoutes for gateway: %w", err)
+	}
+
+	var httpRoutes []gwtypes.HTTPRoute
+	for _, httpRoute := range httpRoutesList.Items {
+		if !lo.ContainsBy(httpRoute.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
+			gwGVK := gateway.GroupVersionKind()
+			if parentRef.Group != nil && string(*parentRef.Group) != gwGVK.Group {
+				return false
+			}
+			if parentRef.Kind != nil && string(*parentRef.Kind) != gwGVK.Kind {
+				return false
+			}
+			if string(parentRef.Name) != gateway.Name {
+				return false
+			}
+
+			if parentRef.SectionName != nil {
+				if !lo.ContainsBy(gateway.Spec.Listeners, func(listener gwtypes.Listener) bool {
+					if listener.Name != *parentRef.SectionName {
+						return false
+					}
+					if parentRef.Port != nil && listener.Port != *parentRef.Port {
+						return false
+					}
+					return true
+				}) {
+					return false
+				}
+			}
+
+			return true
+		}) {
+			continue
+		}
+
+		httpRoutes = append(httpRoutes, httpRoute)
+	}
+
+	return httpRoutes, nil
 }
 
 // GetDataPlaneForControlPlane retrieves the DataPlane object referenced by a ControlPlane
@@ -162,7 +224,6 @@ func ListNetworkPoliciesForGateway(
 
 	networkPolicies := make([]networkingv1.NetworkPolicy, 0)
 	for _, networkPolicy := range networkPolicyList.Items {
-		networkPolicy := networkPolicy
 		if k8sutils.IsOwnedByRefUID(&networkPolicy, gateway.UID) {
 			networkPolicies = append(networkPolicies, networkPolicy)
 		}

@@ -58,6 +58,10 @@ func SetDefaultsPodTemplateSpec(pts *corev1.PodTemplateSpec) {
 		return
 	}
 
+	// NOTE: copy the service account name to the deprecated field as the
+	// API server does that itself.
+	pts.Spec.DeprecatedServiceAccount = pts.Spec.ServiceAccountName
+
 	pkgapiscorev1.SetDefaults_PodSpec(&pts.Spec)
 	for i := range pts.Spec.Volumes {
 		SetDefaultsVolume(&pts.Spec.Volumes[i])
@@ -99,17 +103,23 @@ func SetDefaultsVolume(v *corev1.Volume) {
 	// This is the only default volume that we include for both ControlPlanes
 	// and DataPlanes so we're good for now.
 	//
-	// TODO: https://github.com/Kong/gateway-operator/issues/1226
+	// TODO: https://github.com/Kong/gateway-operator/issues/150
 	if v.Name != consts.ClusterCertificateVolume && v.Name != consts.ControlPlaneAdmissionWebhookVolumeName {
 		pkgapiscorev1.SetDefaults_Volume(v)
 		if v.HostPath != nil {
 			pkgapiscorev1.SetDefaults_HostPathVolumeSource(v.HostPath)
 		}
-		if v.ScaleIO != nil {
-			pkgapiscorev1.SetDefaults_ScaleIOVolumeSource(v.ScaleIO)
+		if v.Secret != nil {
+			pkgapiscorev1.SetDefaults_SecretVolumeSource(v.Secret)
 		}
-		if v.RBD != nil {
-			pkgapiscorev1.SetDefaults_RBDVolumeSource(v.RBD)
+		if v.Projected != nil {
+			pkgapiscorev1.SetDefaults_ProjectedVolumeSource(v.Projected)
+		}
+		if v.ConfigMap != nil {
+			pkgapiscorev1.SetDefaults_ConfigMapVolumeSource(v.ConfigMap)
+		}
+		if v.DownwardAPI != nil {
+			pkgapiscorev1.SetDefaults_DownwardAPIVolumeSource(v.DownwardAPI)
 		}
 	}
 }

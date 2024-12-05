@@ -3,19 +3,26 @@ package dataplane
 import (
 	"context"
 	"fmt"
+	"maps"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/address"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
 // -----------------------------------------------------------------------------
@@ -51,9 +58,9 @@ func (r *Reconciler) ensureDataPlaneServiceStatus(
 }
 
 // ensureDataPlaneAddressesStatus ensures that provided DataPlane's status addresses
-// are as expected and pathes its status if there's a difference between the
+// are as expected and patches its status if there's a difference between the
 // current state and what's expected.
-// It returns a boolean indicating if the patch has been trigerred and an error.
+// It returns a boolean indicating if the patch has been triggered and an error.
 func (r *Reconciler) ensureDataPlaneAddressesStatus(
 	ctx context.Context,
 	log logr.Logger,
@@ -77,6 +84,176 @@ func (r *Reconciler) ensureDataPlaneAddressesStatus(
 	return false, nil
 }
 
+// ensureMappedConfigMapToKongPluginInstallationForDataPlane ensures that the KongPluginInstallation
+// resources referenced by the DataPlane are resolved and DataPlane is configured to use them.
+// During resolving for each DataPlane based on each instance of KongPluginInstallation
+// ConfigMap is created and mounted. The DataPlane manages its lifecycle. It returns a slice
+// of custom plugins that are intended to be used to generate a Deployment.
+func ensureMappedConfigMapToKongPluginInstallationForDataPlane(
+	ctx context.Context, logger logr.Logger, c client.Client, dataplane *operatorv1beta1.DataPlane,
+) (cps []customPlugin, requeue bool, err error) {
+	configMapsOwned, err := findCustomPluginConfigMapsOwnedByDataPlane(ctx, c, dataplane)
+	if err != nil {
+		return nil, false, err
+	}
+	configMapsToRetain := make(map[types.NamespacedName]struct{}, len(configMapsOwned))
+
+	for _, kpiNN := range dataplane.Spec.PluginsToInstall {
+		kpiNN := types.NamespacedName(kpiNN)
+		if kpiNN.Namespace == "" {
+			kpiNN.Namespace = dataplane.Namespace
+		}
+
+		var cp customPlugin
+		cp, requeue, err = populateDedicatedConfigMapForKongPluginInstallation(
+			ctx, logger, c, configMapsOwned, kpiNN, dataplane,
+		)
+		if err != nil || requeue {
+			return nil, requeue, err
+		}
+		configMapsToRetain[cp.ConfigMapNN] = struct{}{}
+		cps = append(cps, cp)
+	}
+	for _, cm := range configMapsOwned {
+		if _, retain := configMapsToRetain[client.ObjectKeyFromObject(&cm)]; !retain {
+			if err := c.Delete(ctx, &cm); client.IgnoreNotFound(err) != nil {
+				return nil, false, err
+			}
+		}
+	}
+
+	return cps, false, nil
+}
+
+func findCustomPluginConfigMapsOwnedByDataPlane(
+	ctx context.Context, c client.Client, dataplane *operatorv1beta1.DataPlane,
+) ([]corev1.ConfigMap, error) {
+	cms, err := k8sutils.ListConfigMapsForOwner(ctx, c, dataplane.GetUID())
+	if err != nil {
+		return nil, err
+	}
+	return lo.Filter(cms, func(cm corev1.ConfigMap, _ int) bool {
+		_, isForKPI := cm.Annotations[consts.AnnotationMappedToKongPluginInstallation]
+		return isForKPI
+	}), nil
+}
+
+func populateDedicatedConfigMapForKongPluginInstallation(
+	ctx context.Context,
+	logger logr.Logger,
+	c client.Client,
+	cms []corev1.ConfigMap,
+	kpiNN types.NamespacedName,
+	dataplane *operatorv1beta1.DataPlane,
+) (cp customPlugin, requeue bool, err error) {
+	kpi, ready, err := verifyKPIReadinessForDataPlane(ctx, logger, c, dataplane, kpiNN)
+	if err != nil {
+		return customPlugin{}, false, err
+	}
+	if !ready {
+		return customPlugin{}, true, nil
+	}
+
+	var underlyingCM corev1.ConfigMap
+	backingCMNN := types.NamespacedName{
+		Namespace: kpi.Namespace,
+		Name:      kpi.Status.UnderlyingConfigMapName,
+	}
+	log.Trace(logger, fmt.Sprintf("Fetch underlying ConfigMap %s for KongPluginInstallation", backingCMNN))
+	if err := c.Get(ctx, backingCMNN, &underlyingCM); err != nil {
+		return customPlugin{}, false, fmt.Errorf("could not fetch underlying ConfigMap to clone %s: %w", backingCMNN, err)
+	}
+
+	log.Trace(logger, "Find ConfigMap mapped to KongPluginInstallation")
+	mappedConfigMapForKPI := lo.Filter(cms, func(cm corev1.ConfigMap, _ int) bool {
+		kpiNN := cm.Annotations[consts.AnnotationMappedToKongPluginInstallation]
+		return kpiNN == client.ObjectKeyFromObject(&kpi).String()
+	})
+	var cm corev1.ConfigMap
+	switch len(mappedConfigMapForKPI) {
+	case 0:
+		log.Trace(logger, "Create new ConfigMap for KongPluginInstallation")
+		cm.GenerateName = dataplane.Name + "-"
+		cm.Namespace = dataplane.Namespace
+		k8sutils.SetOwnerForObject(&cm, dataplane)
+		k8sresources.LabelObjectAsDataPlaneManaged(&cm)
+		k8sresources.AnnotateConfigMapWithKongPluginInstallation(&cm, kpi)
+		cm.Data = underlyingCM.Data
+		if err := c.Create(ctx, &cm); err != nil {
+			return customPlugin{}, false, fmt.Errorf("could not create new ConfigMap for KongPluginInstallation: %w", err)
+		}
+	case 1:
+		log.Trace(logger, fmt.Sprintf("Check if update existing ConfigMap %s for KongPluginInstallation", client.ObjectKeyFromObject(&cm)))
+		cm = mappedConfigMapForKPI[0]
+		if maps.Equal(cm.Data, underlyingCM.Data) {
+			log.Trace(logger, fmt.Sprintf("Nothing to update in existing ConfigMap %s for KongPluginInstallation", client.ObjectKeyFromObject(&cm)))
+		} else {
+			log.Trace(logger, fmt.Sprintf("Update existing ConfigMap %s for KongPluginInstallation", client.ObjectKeyFromObject(&cm)))
+			cm.Data = underlyingCM.Data
+			if err := c.Update(ctx, &cm); err != nil {
+				if k8serrors.IsConflict(err) {
+					return customPlugin{}, true, nil
+				}
+				return customPlugin{}, false, fmt.Errorf("could not update mapped: %w", err)
+			}
+		}
+
+	default:
+		// It should never happen.
+		names := strings.Join(lo.Map(mappedConfigMapForKPI, func(cm corev1.ConfigMap, _ int) string {
+			return client.ObjectKeyFromObject(&cm).String()
+		}), ", ")
+		return customPlugin{}, false, fmt.Errorf("unexpected error happened - more than one ConfigMap found: %s", names)
+	}
+	return customPlugin{
+		Name:        kpi.Name,
+		ConfigMapNN: client.ObjectKeyFromObject(&cm),
+		Generation:  kpi.Generation,
+	}, false, nil
+}
+
+// verifyKPIReadinessForDataPlane updates DataPlane status conditions based on status of KPI object.
+// Possible states: it does not exist or it hasn't been fully reconciled yet, or it's failing. Those
+// problems can be fixed by the user or they're transient. Use returned kpi only when ready is true.
+func verifyKPIReadinessForDataPlane(
+	ctx context.Context, logger logr.Logger, c client.Client, dataplane *operatorv1beta1.DataPlane, kpiNN types.NamespacedName,
+) (kpi operatorv1alpha1.KongPluginInstallation, ready bool, err error) {
+	// Report to user when KPI does not exist or it hasn't been fully reconciled yet.
+	// It can be fixed by the user or it's transient.
+	if err := c.Get(ctx, kpiNN, &kpi); err != nil {
+		if k8serrors.IsNotFound(err) {
+			msg := fmt.Sprintf("referenced KongPluginInstallation %s not found", kpiNN)
+			markErr := ensureDataPlaneIsMarkedNotReady(ctx, logger, c, dataplane, DataPlaneConditionReferencedResourcesNotAvailable, msg)
+			return kpi, false, markErr
+		} else {
+			return kpi, true, err
+		}
+	}
+	if len(kpi.Status.Conditions) == 0 || lo.ContainsBy(kpi.Status.Conditions, func(c metav1.Condition) bool {
+		return c.Type == string(operatorv1alpha1.KongPluginInstallationConditionStatusAccepted) &&
+			c.Status == metav1.ConditionFalse &&
+			c.Reason == string(operatorv1alpha1.KongPluginInstallationReasonPending)
+	}) {
+		msgPending := fmt.Sprintf("please wait, referenced KongPluginInstallation %s has not been fully reconciled yet", kpiNN)
+		markErr := ensureDataPlaneIsMarkedNotReady(
+			ctx, logger, c, dataplane, DataPlaneConditionReferencedResourcesNotAvailable, msgPending,
+		)
+		return kpi, false, markErr
+	}
+	if lo.ContainsBy(kpi.Status.Conditions, func(c metav1.Condition) bool {
+		return c.Type == string(operatorv1alpha1.KongPluginInstallationConditionStatusAccepted) &&
+			c.Status == metav1.ConditionFalse &&
+			c.Reason == string(operatorv1alpha1.KongPluginInstallationReasonFailed)
+	}) {
+		msgFailed := fmt.Sprintf("something wrong with referenced KongPluginInstallation %s, please check it", kpiNN)
+		markErr := ensureDataPlaneIsMarkedNotReady(
+			ctx, logger, c, dataplane, DataPlaneConditionReferencedResourcesNotAvailable, msgFailed,
+		)
+		return kpi, false, markErr
+	}
+	return kpi, true, nil
+}
+
 // isSameDataPlaneCondition returns true if two `metav1.Condition`s
 // indicates the same condition of a `DataPlane` resource.
 func isSameDataPlaneCondition(condition1, condition2 metav1.Condition) bool {
@@ -86,14 +263,15 @@ func isSameDataPlaneCondition(condition1, condition2 metav1.Condition) bool {
 		condition1.Message == condition2.Message
 }
 
-func (r *Reconciler) ensureDataPlaneIsMarkedNotReady(
+func ensureDataPlaneIsMarkedNotReady(
 	ctx context.Context,
 	log logr.Logger,
+	c client.Client,
 	dataplane *operatorv1beta1.DataPlane,
-	reason k8sutils.ConditionReason, message string,
+	reason consts.ConditionReason, message string,
 ) error {
 	notReadyCondition := metav1.Condition{
-		Type:               string(k8sutils.ReadyType),
+		Type:               string(consts.ReadyType),
 		Status:             metav1.ConditionFalse,
 		Reason:             string(reason),
 		Message:            message,
@@ -105,7 +283,7 @@ func (r *Reconciler) ensureDataPlaneIsMarkedNotReady(
 	shouldUpdate := false
 	for i, condition := range dataplane.Status.Conditions {
 		// update the condition if condition has type `Ready`, and the condition is not the same.
-		if condition.Type == string(k8sutils.ReadyType) {
+		if condition.Type == string(consts.ReadyType) {
 			conditionFound = true
 			// update the slice if the condition is not the same as we expected.
 			if !isSameDataPlaneCondition(notReadyCondition, condition) {
@@ -122,7 +300,7 @@ func (r *Reconciler) ensureDataPlaneIsMarkedNotReady(
 	}
 
 	if shouldUpdate {
-		_, err := patchDataPlaneStatus(ctx, r.Client, log, dataplane)
+		_, err := patchDataPlaneStatus(ctx, c, log, dataplane)
 		return err
 	}
 	return nil
@@ -194,7 +372,7 @@ func patchDataPlaneStatus(ctx context.Context, cl client.Client, logger logr.Log
 	current := &operatorv1beta1.DataPlane{}
 
 	err := cl.Get(ctx, client.ObjectKeyFromObject(updated), current)
-	if err != nil && !k8serrors.IsNotFound(err) {
+	if client.IgnoreNotFound(err) != nil {
 		return false, err
 	}
 
@@ -204,7 +382,7 @@ func patchDataPlaneStatus(ctx context.Context, cl client.Client, logger logr.Log
 		current.Status.Service != updated.Status.Service ||
 		current.Status.Selector != updated.Status.Selector {
 
-		log.Debug(logger, "patching DataPlane status", updated, "status", updated.Status)
+		log.Debug(logger, "patching DataPlane status", "status", updated.Status)
 		return true, cl.Status().Patch(ctx, updated, client.MergeFrom(current))
 	}
 

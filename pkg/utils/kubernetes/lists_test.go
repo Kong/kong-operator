@@ -8,9 +8,10 @@ import (
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
@@ -19,7 +20,6 @@ func TestListValidatingWebhookConfigurationsForOwner(t *testing.T) {
 	testCases := []struct {
 		name          string
 		objects       []runtime.Object
-		ownerUID      types.UID
 		expectedCount int
 	}{
 		{
@@ -27,48 +27,42 @@ func TestListValidatingWebhookConfigurationsForOwner(t *testing.T) {
 			expectedCount: 0,
 		},
 		{
-			name:     "multiple objects, one owned by uid, one not",
-			ownerUID: types.UID("owner"),
+			name: "multiple objects, one owned by uid, one not",
 			objects: []runtime.Object{
 				&admregv1.ValidatingWebhookConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "owned",
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								UID: "owner",
-							},
+						Labels: map[string]string{
+							consts.GatewayOperatorManagedByNameLabel: "owner",
 						},
 					},
 				},
 				&admregv1.ValidatingWebhookConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "not-owned",
+						Labels: map[string]string{
+							consts.GatewayOperatorManagedByNameLabel: "not-owned",
+						},
 					},
 				},
 			},
 			expectedCount: 1,
 		},
 		{
-			name:     "multiple objects, one owned by uid, one by another",
-			ownerUID: types.UID("owner"),
+			name: "multiple objects, one owned by uid, one by another",
 			objects: []runtime.Object{
 				&admregv1.ValidatingWebhookConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "owned",
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								UID: "owner",
-							},
+						Labels: map[string]string{
+							consts.GatewayOperatorManagedByNameLabel: "owner",
 						},
 					},
 				},
 				&admregv1.ValidatingWebhookConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "not-owned",
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								UID: "another-owner",
-							},
+						Labels: map[string]string{
+							consts.GatewayOperatorManagedByNameLabel: "another-owner",
 						},
 					},
 				},
@@ -77,10 +71,14 @@ func TestListValidatingWebhookConfigurationsForOwner(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			client := fake.NewFakeClient(tc.objects...)
-			ownedCfgs, err := k8sutils.ListValidatingWebhookConfigurationsForOwner(ctx, client, tc.ownerUID)
+			c := fake.NewFakeClient(tc.objects...)
+			ownedCfgs, err := k8sutils.ListValidatingWebhookConfigurations(ctx,
+				c,
+				client.MatchingLabels{
+					consts.GatewayOperatorManagedByNameLabel: "owner",
+				},
+			)
 			require.NoError(t, err)
 			require.Len(t, ownedCfgs, tc.expectedCount)
 		})

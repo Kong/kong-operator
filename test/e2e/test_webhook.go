@@ -11,6 +11,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 func init() {
@@ -23,7 +24,7 @@ func TestDataPlaneValidatingWebhook(t *testing.T) {
 
 	// createEnvironment will queue up environment cleanup if necessary
 	// and dumping diagnostics if the test fails.
-	e := CreateEnvironment(t, ctx)
+	e := CreateEnvironment(t, ctx, WithInstallViaKustomize())
 	clients, testNamespace := e.Clients, e.Namespace
 
 	testCases := []struct {
@@ -63,7 +64,7 @@ func TestDataPlaneValidatingWebhook(t *testing.T) {
 														Value: "postgres",
 													},
 												},
-												Image: consts.DefaultDataPlaneImage,
+												Image: helpers.GetDefaultDataPlaneImage(),
 											},
 										},
 									},
@@ -79,7 +80,6 @@ func TestDataPlaneValidatingWebhook(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			dataplaneClient := clients.OperatorClient.ApisV1beta1().DataPlanes(testNamespace.Name)
 			_, err := dataplaneClient.Create(ctx, tc.dataplane, metav1.CreateOptions{})

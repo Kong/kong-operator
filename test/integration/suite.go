@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -23,6 +24,7 @@ import (
 	"github.com/kong/gateway-operator/config"
 	"github.com/kong/gateway-operator/modules/manager"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
+	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
 	"github.com/kong/gateway-operator/test/helpers/certificate"
 )
@@ -39,9 +41,6 @@ var (
 	webhookServerIP      = os.Getenv("GATEWAY_OPERATOR_WEBHOOK_IP")
 	bluegreenController  = strings.ToLower(os.Getenv("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER")) == "true"
 	webhookServerPort    = 9443
-	disableCalicoCNI     = strings.ToLower(os.Getenv("KONG_TEST_DISABLE_CALICO")) == "true"
-	disableCertManager   = strings.ToLower(os.Getenv("KONG_TEST_DISABLE_CERTMANAGER")) == "true"
-	disableMetalLB       = strings.ToLower(os.Getenv("KONG_TEST_DISABLE_METALLB")) == "true"
 )
 
 // -----------------------------------------------------------------------------
@@ -63,10 +62,6 @@ var (
 	ctx     context.Context
 	env     environments.Environment
 	clients testutils.K8sClients
-
-	httpc = http.Client{
-		Timeout: time.Second * 10,
-	}
 )
 
 // GetCtx returns the context used by the test suite.
@@ -108,6 +103,14 @@ func TestMain(
 	m *testing.M,
 	setUpAndRunManager SetUpAndRunManagerFunc,
 ) {
+	var code int
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("%v stack trace:\n%s\n", r, debug.Stack())
+			code = 1
+		}
+		os.Exit(code)
+	}()
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
@@ -119,13 +122,13 @@ func TestMain(
 	fmt.Println("INFO: configuring cluster for testing environment")
 	env, err = testutils.BuildEnvironment(GetCtx(), existingCluster,
 		func(b *environments.Builder, ct clusters.Type) {
-			if !disableCalicoCNI {
+			if !test.IsCalicoCNIDisabled() {
 				b.WithCalicoCNI()
 			}
-			if !disableCertManager {
+			if !test.IsCertManagerDisabled() {
 				b.WithAddons(certmanager.New())
 			}
-			if !disableMetalLB && ct == kind.KindClusterType {
+			if !test.IsMetalLBDisabled() && ct == kind.KindClusterType {
 				b.WithAddons(metallb.New())
 			}
 		},
@@ -171,7 +174,9 @@ func TestMain(
 	}()
 	<-startedChan
 
-	exitOnErr(testutils.BuildMTLSCredentials(GetCtx(), GetClients().K8sClient, &httpc))
+	httpClient, err := helpers.CreateHTTPClient(nil, "")
+	exitOnErr(err)
+	exitOnErr(testutils.BuildMTLSCredentials(GetCtx(), GetClients().K8sClient, httpClient))
 
 	// Wait for webhook server in controller to be ready after controller started.
 	if webhookEnabled {
@@ -179,14 +184,12 @@ func TestMain(
 	}
 
 	fmt.Println("INFO: environment is ready, starting tests")
-	code := m.Run()
+	code = m.Run()
 
 	if !skipClusterCleanup && existingCluster == "" {
 		fmt.Println("INFO: cleaning up testing cluster and environment")
 		exitOnErr(GetEnv().Cleanup(GetCtx()))
 	}
-
-	os.Exit(code)
 }
 
 // -----------------------------------------------------------------------------
@@ -215,9 +218,11 @@ func DefaultControllerConfigForTests() manager.Config {
 	cfg.ControlPlaneControllerEnabled = true
 	cfg.DataPlaneControllerEnabled = true
 	cfg.DataPlaneBlueGreenControllerEnabled = bluegreenController
+	cfg.KongPluginInstallationControllerEnabled = true
 	cfg.AIGatewayControllerEnabled = true
 	cfg.ValidatingWebhookEnabled = webhookEnabled
 	cfg.AnonymousReports = false
+	cfg.KonnectControllersEnabled = true
 
 	cfg.NewClientFunc = func(config *rest.Config, options client.Options) (client.Client, error) {
 		// always hijack and impersonate the system service account here so that the manager

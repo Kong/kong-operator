@@ -21,3 +21,7 @@ package v1alpha1
 type AIGatewayExpansion interface{}
 
 type DataPlaneMetricsExtensionExpansion interface{}
+
+type KongPluginInstallationExpansion interface{}
+
+type KonnectExtensionExpansion interface{}

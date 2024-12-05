@@ -28,15 +28,16 @@ func init() {
 	SchemeBuilder.Register(&ControlPlane{}, &ControlPlaneList{})
 }
 
-//+genclient
-//+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:resource:shortName=kocp,categories=kong;all
-//+kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
-//+kubebuilder:printcolumn:name="Provisioned",description="The Resource is provisioned",type=string,JSONPath=`.status.conditions[?(@.type=='Provisioned')].status`
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=kocp,categories=kong;all
+// +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
+// +kubebuilder:printcolumn:name="Provisioned",description="The Resource is provisioned",type=string,JSONPath=`.status.conditions[?(@.type=='Provisioned')].status`
 
 // ControlPlane is the Schema for the controlplanes API
+// +apireference:kgo:include
 type ControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -45,9 +46,10 @@ type ControlPlane struct {
 	Status ControlPlaneStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // ControlPlaneList contains a list of ControlPlane
+// +apireference:kgo:include
 type ControlPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -55,6 +57,7 @@ type ControlPlaneList struct {
 }
 
 // ControlPlaneSpec defines the desired state of ControlPlane
+// +apireference:kgo:include
 type ControlPlaneSpec struct {
 	ControlPlaneOptions `json:",inline"`
 
@@ -83,6 +86,7 @@ type ControlPlaneSpec struct {
 
 // ControlPlaneOptions indicates the specific information needed to
 // deploy and connect a ControlPlane to a DataPlane object.
+// +apireference:kgo:include
 type ControlPlaneOptions struct {
 	// +optional
 	Deployment ControlPlaneDeploymentOptions `json:"deployment"`
@@ -106,6 +110,7 @@ type ControlPlaneOptions struct {
 // includes options for managing Deployments such as the the number of replicas
 // or pod options like container image and resource requirements.
 // version, as well as Env variable overrides.
+// +apireference:kgo:include
 type ControlPlaneDeploymentOptions struct {
 	// Replicas describes the number of desired pods.
 	// This is a pointer to distinguish between explicit zero and not specified.
@@ -123,6 +128,7 @@ type ControlPlaneDeploymentOptions struct {
 }
 
 // ControlPlaneStatus defines the observed state of ControlPlane
+// +apireference:kgo:include
 type ControlPlaneStatus struct {
 	// Conditions describe the current conditions of the Gateway.
 	//

@@ -523,11 +523,10 @@ func TestSetControlPlaneDefaults(t *testing.T) {
 
 	for i, tc := range testCases {
 		index := i
-		tc := tc
+
 		t.Run(tc.name, func(t *testing.T) {
 			changed := controlplane.SetDefaults(
 				tc.spec,
-				map[string]struct{}{},
 				controlplane.DefaultsArgs{
 					Namespace:                   tc.namespace,
 					DataPlaneIngressServiceName: tc.dataplaneIngressServiceName,
@@ -920,7 +919,6 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			require.Equal(t, tc.equal, controlplane.SpecDeepEqual(tc.spec1, tc.spec2, tc.envVarsToIgnore...))
 		})

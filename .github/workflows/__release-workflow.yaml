@@ -1,5 +1,5 @@
 name: Reusable release
-run-name: "Release ${{ format('{0} (type: {1})', inputs.tag, inputs.release-type) }} "
+run-name: "Release ${{ format('{0} (type: {1}) (branch: {2})', inputs.tag, inputs.release-type, inputs.base) }} "
 
 on:
   workflow_call:
@@ -16,9 +16,12 @@ on:
       gh-pat:
         required: true
         description: "The GitHub Personal Access Token to create the release PR"
-      kong-license-data:
+      konnect-pat:
+        required: true
+        description: "The Konnect PAT to use in the tests"
+      op-service-account-token:
         required: false
-        description: "The Kong License to use in the tests (required by EE build)"
+        description: "The 1Password service account token to fetch the Kong Enterprise License. If left empty, no license will be fetched"
     inputs:
       dockerhub-push-username:
         description: "The username to push images to Docker Hub"
@@ -28,6 +31,11 @@ on:
         description: The version to release (e.g. v1.2.3)
         type: string
         required: true
+      base:
+        description: The base branch from which to release and against which to create a release PR.
+        type: string
+        default: 'main'
+        required: false
       latest:
         description: Whether to mark this release latest
         type: boolean
@@ -43,6 +51,12 @@ on:
         description: "The name of the image to push to Docker Hub"
         type: string
         required: true
+      additional-build-contexts:
+        description: >
+          Additional build context to include in the build (format name=path),
+          it's used for EE build to additionaly include path to OSS repo.
+        required: false
+        type: string
       verify-image-script:
         description: Path to the script that will be used to verify the built image.
         required: false
@@ -100,6 +114,7 @@ jobs:
       registry: docker.io
       username: ${{ inputs.dockerhub-push-username }}
       image-name: ${{ inputs.image-name }}
+      additional-build-contexts: ${{ inputs.additional-build-contexts }}
       push: true
       latest: ${{ inputs.latest }}
       tag: ${{ inputs.tag }}
@@ -107,7 +122,6 @@ jobs:
 
   test-integration-current-kubernetes:
     runs-on: ubuntu-latest
-    needs: build-push-images
     strategy:
       fail-fast: true
       matrix:
@@ -121,22 +135,52 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configure Git for private repositories (temporary until making KGO public)
+      - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
-
-      - name: Checkout KGO submodule
-        run: git submodule update --init
 
       - name: Setup golang
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
+      # This step is required to check if the OP Service Account Token is available and export a boolean output
+      # to be used in the next step. It's because we cannot use a secret in a step's condition.
+      # See: https://github.com/actions/runner/issues/520
+      - name: Check OP Service Account Token available
+        id: check-op-service-account-token
+        run: |
+          # If secrets.op-service-account-token is set, return true.
+          if [ -n "${{ secrets.op-service-account-token }}" ]; then
+              echo "provided=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get Kong Enterprise License
+        if: steps.check-op-service-account-token.outputs.provided == 'true'
+        id: get-license
+        uses: Kong/kong-license@master
+        with:
+          # OP (1Password) token is used to fetch the Kong Enterprise License from 1Password.
+          op-token: ${{ secrets.op-service-account-token }}
+
       - name: integration tests
         run: make test.integration
         env:
-          KONG_LICENSE_DATA: ${{ secrets.kong-license-data }}
+          KONG_LICENSE_DATA: ${{ steps.get-license.outputs.license || '' }} # The license is optional for OSS tests.
           WEBHOOK_ENABLED: ${{ matrix.webhook-enabled }}
+          KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.konnect-pat }}
+          KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
+
+      - name: upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics-integration-webhook-enabled-${{ matrix.webhook-enabled }}
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
 
   test-e2e-current-kubernetes:
     runs-on: ubuntu-latest
@@ -149,22 +193,52 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configure Git for private repositories (temporary until making KGO public)
+      - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
-
-      - name: Checkout KGO submodule
-        run: git submodule update --init
 
       - name: Setup golang
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+
+      # This step is required to check if the OP Service Account Token is available and export a boolean output
+      # to be used in the next step. It's because we cannot use a secret in a step's condition.
+      # See: https://github.com/actions/runner/issues/520
+      - name: Check OP Service Account Token available
+        id: check-op-service-account-token
+        run: |
+          # If secrets.op-service-account-token is set, return true.
+          if [ -n "${{ secrets.op-service-account-token }}" ]; then
+              echo "provided=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get Kong Enterprise License
+        if: steps.check-op-service-account-token.outputs.provided == 'true'
+        id: get-license
+        uses: Kong/kong-license@master
+        with:
+          # OP (1Password) token is used to fetch the Kong Enterprise License from 1Password.
+          op-token: ${{ secrets.op-service-account-token }}
+
       - name: E2E Tests
         run: make test.e2e
         env:
-          KONG_LICENSE_DATA: ${{ secrets.kong-license-data }}
+          KONG_LICENSE_DATA: ${{ steps.get-license.outputs.license || '' }} # The license is optional for OSS tests.
           KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE: ${{ needs.build-push-images.outputs.full_tag }}
+          KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.konnect-pat }}
+          KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
+
+      - name: upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics-e2e
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
 
   create-release-pr:
     runs-on: ubuntu-latest
@@ -174,34 +248,45 @@ jobs:
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
     steps:
-      # Use the main branch as a base for the release.
-      # Any changes made on the branch that the workflow was triggered on will not be included
-      # in the release PR. If anything needs to be fixed before a release, it should be
-      # done on the main branch.
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Check if we're not trying to trigger a major/minor release from non main
+        if: ${{ inputs.base != 'main' && needs.semver.outputs.patch == '0' }}
+        run: |
+          echo "Trying to release: ${{ needs.semver.outputs.fullversion }} from ${{ inputs.base }}"
+          echo "Major/minor releases can only be triggered from main branch"
+          exit 1
+
+      - name: Check if we're not trying to trigger a patch release from main
+        if: ${{ inputs.base == 'main' && needs.semver.outputs.patch != '0' }}
+        run: |
+          echo "Trying to release: ${{ needs.semver.outputs.fullversion }} from ${{ inputs.base }}"
+          echo "Patch releases can only be triggered from non main, release branch"
+          exit 1
+
+      # Use the branch set via inputs as a base for the release.
+      # If anything needs to be fixed before the release, it should be done on the base branch
+      # before the release workflow is triggered.
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main
+          ref: ${{ inputs.base }}
 
-      - name: Configure Git for private repositories (temporary until making KGO public)
+      - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
 
-      - name: Checkout KGO submodule
-        run: git submodule update --init
-
-      - name: Setup golang
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
-      # The bumped version file is included in the release PR.
-      - name: Ensure version is set
+      - name: Ensure bumped version is set in VERSION file
         env:
           VERSION: ${{ needs.semver.outputs.fullversion }}
         run: |
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo ${VERSION} > VERSION
+
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
 
       # Generated manifests are part of the release PR.
       - name: Generate manifests
@@ -210,32 +295,41 @@ jobs:
 
       # The generated bundle is part of the release PR.
       # This is done locally in this job, to avoid including unintended changes.
-      # If anything needs to be fixed before a release, it should be done on the main branch.
+      # If anything needs to be fixed before the release, it should be done on the base branch
+      # before the release workflow is triggered.
       - name: Generate bundle
         if: ${{ inputs.regenerate-bundle }}
         run: make bundle
 
       - name: GPG sign the commits
-        uses: crazy-max/ghaction-import-gpg@01dd5d3ca463c7f10f7f4f7b4f177225ac661ee4
+        uses: crazy-max/ghaction-import-gpg@cb9bde2e2525e640591a934b1fd28eef1dcaf5e5
         with:
           gpg_private_key: ${{ secrets.gpg-private-key }}
           passphrase: ${{ secrets.gpg-passphrase }}
           git_user_signingkey: true
           git_commit_gpgsign: true
 
-      # PRs to the main branch will update the version file and manifests
+      - name: Commit message
+        env:
+          MSG: "${{ inputs.latest && format('chore({0}): [bot] {1}, [latest]', inputs.release-type, env.VERSION) || format('chore({0}): [bot] {1}', inputs.release-type, env.VERSION)}}"
+        run: |
+          echo "MSG=${MSG}" >> $GITHUB_ENV
+
+      # PRs will update the version file and manifests
       - name: Create a release PR
-        uses: peter-evans/create-pull-request@9153d834b60caba6d51c9b9510b087acf9f33f83
+        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f
         with:
           token: ${{ secrets.gh-pat }}
           path: .
+          branch: release/${{ needs.semver.outputs.fullversion }}/pr-${{ inputs.base }}
+          base: ${{ inputs.base }}
           add-paths: |
             VERSION
             config
-          commit-message: "chore(${{ inputs.release-type }}): [bot] ${{ env.VERSION }}"
+          commit-message: "${{ env.MSG }}"
           committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           signoff: true
           delete-branch: true
-          title: "chore(${{ inputs.release-type }}): [bot] ${{ env.VERSION }}"
-          body: "chore(${{ inputs.release-type }}): [bot] ${{ env.VERSION }}"
+          title: "${{ env.MSG }}"
+          body: "${{ env.MSG }}"

@@ -35,7 +35,6 @@ type DefaultsArgs struct {
 // and returns true if env field is changed.
 func SetDefaults(
 	spec *operatorv1beta1.ControlPlaneOptions,
-	dontOverride map[string]struct{},
 	args DefaultsArgs,
 ) bool {
 	changed := false
@@ -57,6 +56,10 @@ func SetDefaults(
 		container = &corev1.Container{
 			Name: consts.ControlPlaneControllerContainerName,
 		}
+	}
+	dontOverride := make(map[string]struct{})
+	for _, envVar := range container.Env {
+		dontOverride[envVar.Name] = struct{}{}
 	}
 
 	const podNamespaceEnvVarName = "POD_NAMESPACE"
@@ -228,7 +231,7 @@ func GenerateImage(opts *operatorv1beta1.ControlPlaneOptions, validators ...vers
 		return relatedKongControllerImage, nil
 	}
 
-	return consts.DefaultControlPlaneImage, nil // TODO: https://github.com/Kong/gateway-operator/issues/20
+	return consts.DefaultControlPlaneImage, nil // TODO: https://github.com/Kong/gateway-operator-archive/issues/20
 }
 
 // -----------------------------------------------------------------------------

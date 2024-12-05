@@ -12,9 +12,9 @@ import (
 // Gateway Utils - Status Updates
 // -----------------------------------------------------------------------------
 
-// IsScheduled indicates whether or not the provided Gateway object was
+// IsAccepted indicates whether or not the provided Gateway object was
 // marked as scheduled by the controller.
-func IsScheduled(gateway *gwtypes.Gateway) bool {
+func IsAccepted(gateway *gwtypes.Gateway) bool {
 	for _, cond := range gateway.Status.Conditions {
 		if cond.Type == string(gatewayv1.GatewayConditionAccepted) &&
 			cond.Reason == string(gatewayv1.GatewayClassReasonAccepted) &&

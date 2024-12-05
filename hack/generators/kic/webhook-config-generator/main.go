@@ -2,40 +2,59 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"text/template"
 
-	"github.com/kong/gateway-operator/hack/generators/kic"
-	kicversions "github.com/kong/gateway-operator/internal/versions"
+	"github.com/kong/semver/v4"
 	"github.com/samber/lo"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	"github.com/kong/gateway-operator/hack/generators/kic"
+	kicversions "github.com/kong/gateway-operator/internal/versions"
 )
 
 const (
 	validatingWebhookConfigurationPath                          = "config/webhook/manifests.yaml"
-	validatingWebhookConfigurationGeneratorForVersionOutputPath = "pkg/utils/kubernetes/resources/validatingwebhookconfig/zz_generated_kic_%s.go"
-	validatingWebhookConfigurationGeneratorMasterOutputPath     = "pkg/utils/kubernetes/resources/zz_generated_kic_validatingwebhookconfig.go"
+	validatingWebhookConfigurationKustomizeURL                  = "https://github.com/kong/kubernetes-ingress-controller/config/webhook"
+	validatingWebhookConfigurationGeneratorForVersionOutputPath = "pkg/utils/kubernetes/resources/validatingwebhookconfig/zz_generated.kic_%s.go"
+	validatingWebhookConfigurationGeneratorMasterOutputPath     = "pkg/utils/kubernetes/resources/zz_generated.kic_validatingwebhookconfig.go"
 )
 
 func main() {
-	generateHelpersForAllConfiguredVersions()
+	generateHelpersForAllConfiguredVersions(context.Background())
 	generateMasterHelper()
 }
 
 // generateHelpersForAllConfiguredVersions iterates over kicversions.ManifestsVersionsForKICVersions map and generates
 // GenerateValidatingWebhookConfigurationForKIC_{versionConstraint} function for each configured version.
-func generateHelpersForAllConfiguredVersions() {
+func generateHelpersForAllConfiguredVersions(ctx context.Context) {
 	for versionConstraint, version := range kicversions.ManifestsVersionsForKICVersions {
 		log.Printf("Generating ValidatingWebhook Configuration for KIC versions %s (using manifests: %s)\n", versionConstraint, version)
 
-		// Download KIC-generated ValidatingWebhookConfiguration.
-		manifestContent, err := kic.GetFileFromKICRepositoryForVersion(validatingWebhookConfigurationPath, version)
-		if err != nil {
-			log.Fatalf("Failed to download %s from KIC repository: %s", validatingWebhookConfigurationPath, err)
+		var (
+			manifestContent []byte
+			err             error
+		)
+		// Before KIC 3.2 config/webhook directory contained only the generated manifes YAML.
+		// 3.2 and later versions contain a kustomization.yaml file that use the patches from config/webhook
+		// directory to generate the ValidatingWebhookConfiguration.
+		if version.LT(semver.MustParse("3.2.0")) {
+			// Download KIC-generated ValidatingWebhookConfiguration.
+			manifestContent, err = kic.GetFileFromKICRepositoryForVersion(validatingWebhookConfigurationPath, version)
+			if err != nil {
+				log.Fatalf("Failed to download %s from KIC repository: %s", validatingWebhookConfigurationPath, err)
+			}
+		} else {
+			// Generate ValidatingWebhookConfiguration using KIC's webhook kustomize dir.
+			manifestContent, err = kic.BuildKustomizeForURLAndRef(ctx, validatingWebhookConfigurationKustomizeURL, "v"+version.String())
+			if err != nil {
+				log.Fatalf("Failed to generate KIC's ValidatingWebhookConfiguration based on %s: %s", validatingWebhookConfigurationKustomizeURL, err)
+			}
 		}
 
 		// Get rid of the YAML objects separator as we know there's only one ValidatingWebhookConfiguration in the file.
@@ -48,16 +67,7 @@ func generateHelpersForAllConfiguredVersions() {
 		}
 
 		// Render template.
-		tpl, err := template.New("tpl").Funcs(map[string]any{
-			// Inject a function that filters out Delete operations from the list of operations.
-			// It's used to make sure we do not generate webhooks that handle DELETE operations.
-			// We will be able to drop this workaround once we release KIC 3.1.2 or 3.2.0.
-			"withoutDeletes": func(operations []admregv1.OperationType) []admregv1.OperationType {
-				return lo.Reject(operations, func(operation admregv1.OperationType, _ int) bool {
-					return operation == admregv1.Delete
-				})
-			},
-		}).Parse(generateValidatingWebhookConfigurationForKICVersionTemplate)
+		tpl, err := template.New("tpl").Parse(generateValidatingWebhookConfigurationForKICVersionTemplate)
 		if err != nil {
 			log.Fatalf("Failed to parse 'generateValidatingWebhookConfigurationForKICTemplate' template: %s", err)
 		}
@@ -85,7 +95,7 @@ func generateHelpersForAllConfiguredVersions() {
 
 		// Write the output to a file.
 		outPath := fmt.Sprintf(validatingWebhookConfigurationGeneratorForVersionOutputPath, sanitizedConstraint)
-		if err := os.WriteFile(outPath, buf.Bytes(), 0644); err != nil {
+		if err := os.WriteFile(outPath, buf.Bytes(), 0o644); err != nil {
 			log.Fatalf("Failed to write output to %s: %s", outPath, err)
 		}
 		log.Printf("Successfully generated %s\n", outPath)
@@ -114,7 +124,7 @@ func generateMasterHelper() {
 
 	// Write the output to a file.
 	outPath := validatingWebhookConfigurationGeneratorMasterOutputPath
-	if err := os.WriteFile(outPath, buf.Bytes(), 0644); err != nil {
+	if err := os.WriteFile(outPath, buf.Bytes(), 0o644); err != nil {
 		log.Fatalf("Failed to write output to %s: %s", outPath, err)
 	}
 	log.Printf("Successfully generated %s\n", outPath)

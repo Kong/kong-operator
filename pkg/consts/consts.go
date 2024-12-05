@@ -1,5 +1,7 @@
 package consts
 
+import "time"
+
 // ServiceType is a re-typing of string to be used to distinguish between proxy and admin service
 type ServiceType string
 
@@ -44,7 +46,7 @@ const (
 	// Notice: use GatewayOperatorManagedByLabel instead.
 	//
 	// TODO: Remove adding this to managed resources after several versions with
-	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/1101
+	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/156
 	GatewayOperatorManagedByLabelLegacy = "konghq.com/gateway-operator"
 
 	// GatewayManagedLabelValue indicates that the object's lifecycle is managed by
@@ -76,9 +78,6 @@ const (
 
 	// CertPurposeLabel indicates the purpose of a certificate.
 	CertPurposeLabel = OperatorLabelPrefix + "cert-purpose"
-
-	// OwnerIDLabel indicates a resource's owner ID when references are not available.
-	OwnerIDLabel = OperatorLabelPrefix + "owner-id"
 )
 
 // -----------------------------------------------------------------------------
@@ -120,6 +119,14 @@ const (
 
 	// CAFieldSecret is the field name in Kubernetes secret - WebhookCertificateConfigSecretName.
 	CAFieldSecret = "ca"
+
+	// KongClusterCertVolume is the name of the volume that holds the certificate the enables
+	// communication between Kong and Konnect.
+	KongClusterCertVolume = "kong-cluster-cert"
+
+	// KongClusterCertVolumeMountPath holds the path where the Kong Cluster certificate
+	// volume will be mounted.
+	KongClusterCertVolumeMountPath = "/etc/secrets/kong-cluster-cert"
 )
 
 // -----------------------------------------------------------------------------
@@ -129,6 +136,8 @@ const (
 const (
 	// WebhookCertificateConfigBaseImage is the image to use by the certificate config Jobs.
 	WebhookCertificateConfigBaseImage = "registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.3.0"
+	// WebhookCertificateConfigShellImage is the image to use by the certificate config Jobs.
+	WebhookCertificateConfigShellImage = "busybox"
 	// WebhookName is the ValidatingWebhookConfiguration name.
 	WebhookName = "gateway-operator-validation.konghq.com"
 	// WebhookCertificateConfigSecretName is the name of the secret containing the webhook certificate.
@@ -151,4 +160,16 @@ const (
 	ClusterCertEnvKey = "KONG_CLUSTER_CERT"
 	// ClusterCertEnvKey is the environment variable name for the cluster certificate key.
 	ClusterCertKeyEnvKey = "KONG_CLUSTER_CERT_KEY"
+)
+
+// -----------------------------------------------------------------------------
+// Consts - Konnect related consts
+// -----------------------------------------------------------------------------
+
+const (
+	// DefaultKonnectSyncPeriod is the default sync period for Konnect entities.
+	DefaultKonnectSyncPeriod = time.Minute
+
+	// DefaultKonnectMaxConcurrentReconciles is the default max concurrent reconciles for Konnect entities.
+	DefaultKonnectMaxConcurrentReconciles = uint(8)
 )

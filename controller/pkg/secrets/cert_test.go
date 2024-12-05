@@ -31,7 +31,6 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
-	gwtypes "github.com/kong/gateway-operator/internal/types"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
@@ -121,7 +120,6 @@ func Test_ensureContainerImageUpdated(t *testing.T) {
 			updated:       true,
 		},
 	} {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			container := generators.NewContainer("test", tt.originalImage, 80)
 			updated, err := ensureContainerImageUpdated(&container, tt.newImage)
@@ -152,53 +150,44 @@ func TestLog(t *testing.T) {
 		o.DestWriter = &buf
 	})
 
-	gw := gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gw",
-			Namespace: "ns",
-		},
-	}
 	t.Run("info logging works both for values and pointers to objects", func(t *testing.T) {
 		t.Cleanup(func() { buf.Reset() })
-		log.Info(logger, "message about gw", gw)
+		log.Info(logger, "message about gw")
 		require.NotContains(t, buf.String(), "unexpected type processed for")
 		buf.Reset()
-		log.Info(logger, "message about gw", &gw)
+		log.Info(logger, "message about gw")
 		require.NotContains(t, buf.String(), "unexpected type processed for")
 	})
 
 	t.Run("debug logging works both for values and pointers to objects", func(t *testing.T) {
 		t.Cleanup(func() { buf.Reset() })
-		log.Debug(logger, "message about gw", gw)
+		log.Debug(logger, "message about gw")
 		require.NotContains(t, buf.String(), "unexpected type processed for")
-		log.Debug(logger, "message about gw", &gw)
+		log.Debug(logger, "message about gw")
 		require.NotContains(t, buf.String(), "unexpected type processed for")
 	})
 
 	t.Run("trace logging works both for values and pointers to objects", func(t *testing.T) {
 		t.Cleanup(func() { buf.Reset() })
-		log.Trace(logger, "message about gw", gw)
+		log.Trace(logger, "message about gw")
 		require.NotContains(t, buf.String(), "unexpected type processed for")
+		t.Logf("log: %s", buf.String())
 		buf.Reset()
-		log.Trace(logger, "message about gw", &gw)
+		log.Trace(logger, "message about gw")
 		require.NotContains(t, buf.String(), "unexpected type processed for")
-		buf.Reset()
+		t.Logf("log: %s", buf.String())
 	})
 
 	t.Run("logging works and prints correct fields", func(t *testing.T) {
 		t.Cleanup(func() { buf.Reset() })
-		log.Info(logger, "message about gw", gw)
+		log.Info(logger, "message about gw")
 		entry := struct {
-			Level     string `json:"level,omitempty"`
-			Msg       string `json:"msg,omitempty"`
-			Name      string `json:"name,omitempty"`
-			Namespace string `json:"namespace,omitempty"`
+			Level string `json:"level,omitempty"`
+			Msg   string `json:"msg,omitempty"`
 		}{}
 		require.NoError(t, json.Unmarshal(buf.Bytes(), &entry))
 		assert.Equal(t, entry.Msg, "message about gw")
 		assert.Equal(t, entry.Level, "info")
-		assert.Equal(t, entry.Name, "gw")
-		assert.Equal(t, entry.Namespace, "ns")
 	})
 }
 
@@ -230,7 +219,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 		subject                  string
 		mtlsCASecretNN           NN
 		additionalMatchingLabels client.MatchingLabels
-		expectedResult           op.CreatedUpdatedOrNoop
+		expectedResult           op.Result
 		expectedError            error
 		objectList               client.ObjectList
 	}{
@@ -338,8 +327,6 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 
@@ -392,7 +379,6 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 			_, err = x509.ParseECPrivateKey(tlsKeyPemBlock.Bytes)
 			require.NoError(t, err)
 		})
-
 	}
 }
 

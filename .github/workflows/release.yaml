@@ -1,5 +1,5 @@
 name: release
-run-name: "Release ${{ format('{0} (type: {1})', inputs.tag, inputs.release_type) }} "
+run-name: "Release ${{ format('{0} (type: {1}) (branch: {2})', inputs.tag, inputs.release_type, github.ref_name) }} "
 
 on:
   workflow_dispatch:
@@ -28,10 +28,12 @@ jobs:
       gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
       gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
       gh-pat: ${{ secrets.PAT_GITHUB }}
+      konnect-pat: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
     with:
       dockerhub-push-username: ${{ vars.DOCKERHUB_PUSH_USERNAME  }}
       image-name: ${{ vars.DOCKERHUB_IMAGE_NAME }}
       latest: ${{ inputs.latest }}
       tag: ${{ inputs.tag }}
+      base: ${{ github.ref_name }}
       release-type: ${{ inputs.release_type }}
       regenerate-manifests: true

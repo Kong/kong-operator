@@ -31,11 +31,14 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	originalControlPlaneImageVersion := "3.1.2"
 	originalControlPlaneImage := fmt.Sprintf("%s:%s", originalControlPlaneImageName, originalControlPlaneImageVersion)
 
+	newControlPlaneImageVersion := "3.1.3"
+	newControlPlaneImage := fmt.Sprintf("%s:%s", originalControlPlaneImageName, newControlPlaneImageVersion)
+
 	originalDataPlaneImageName := helpers.GetDefaultDataPlaneBaseImage()
-	originalDataPlaneImageVersion := "2.7.0"
+	originalDataPlaneImageVersion := "3.3.0"
 	originalDataPlaneImage := fmt.Sprintf("%s:%s", originalDataPlaneImageName, originalDataPlaneImageVersion)
 
-	newDataPlaneImageVersion := "2.8.0"
+	newDataPlaneImageVersion := "3.6.0"
 	newDataPlaneImage := fmt.Sprintf("%s:%s", originalDataPlaneImageName, newDataPlaneImageVersion)
 
 	t.Log("deploying a GatewayConfiguration resource")
@@ -145,7 +148,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 			return false
 		}
 		return container.Image == fmt.Sprintf("%s:%s", originalControlPlaneImageName, originalControlPlaneImageVersion)
-	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
+	}, testutils.ControlPlaneSchedulingTimeLimit, testutils.ControlPlaneCondTick)
 
 	t.Log("verifying that the DataPlane receives the configuration override")
 	require.Eventually(t, func() bool {
@@ -170,15 +173,10 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Run("upgrade the ControlPlane", func(t *testing.T) {
-		t.Skip("skipping upgrade test because we do not have a newer image than 3.1.2 to upgrade to, unskip when 3.1.3 or 3.2.0 is out")
-
-		newControlPlaneImageVersion := "3.2.0"
-		newControlPlaneImage := fmt.Sprintf("%s:%s", originalControlPlaneImageName, newControlPlaneImageVersion)
-
-		t.Log("upgrading the ControlPlane version for the Gateway")
+		t.Logf("upgrading the ControlPlane version for the Gateway to %s", newControlPlaneImage)
 		require.Eventually(t, func() bool {
 			return changeControlPlaneImage(gatewayConfig, originalControlPlaneImageName, newControlPlaneImageVersion) == nil
-		}, time.Second*10, time.Second)
+		}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 		t.Log("verifying that the ControlPlane receives the configuration override")
 		require.Eventually(t, func() bool {
@@ -194,19 +192,19 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 				return false
 			}
 			return container.Image == fmt.Sprintf("%s:%s", originalControlPlaneImageName, newControlPlaneImageVersion)
-		}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
+		}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 		t.Log("verifying upgraded ControlPlane Pod images for Gateway")
 		require.Eventually(t, func() bool {
 			upToDate, err := verifyContainerImageForGateway(gateway, newControlPlaneImage, originalDataPlaneImage)
 			return err == nil && upToDate
-		}, time.Minute, time.Second)
+		}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 	})
 
 	t.Log("upgrading the DataPlane version for the Gateway")
 	require.Eventually(t, func() bool {
 		return changeDataPlaneImage(gatewayConfig, originalDataPlaneImageName, newDataPlaneImageVersion) == nil
-	}, time.Second*10, time.Second)
+	}, testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
 
 	t.Log("verifying that the DataPlane receives the configuration override")
 	require.Eventually(t, func() bool {
@@ -224,19 +222,17 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		return container.Image == fmt.Sprintf("%s:%s", originalDataPlaneImageName, newDataPlaneImageVersion)
 	}, testutils.GatewayReadyTimeLimit, time.Second)
 
-	t.Log("verifying upgraded DataPlane Pod images for Gateway")
+	t.Log("verifying upgraded DataPlane and ControlPlane Pod images for Gateway")
 	require.Eventually(t, func() bool {
-		upToDate, err := verifyContainerImageForGateway(gateway, originalControlPlaneImage, newDataPlaneImage)
+		upToDate, err := verifyContainerImageForGateway(gateway, newControlPlaneImage, newDataPlaneImage)
 		return err == nil && upToDate
 	}, time.Minute, time.Second)
 
 	t.Run("downgrade the ControlPlane", func(t *testing.T) {
-		t.Skip("skipping downagrade because we only have 1 supported image now (3.1.2)")
-
 		t.Log("downgrading the ControlPlane version for the Gateway")
 		require.Eventually(t, func() bool {
 			return changeControlPlaneImage(gatewayConfig, originalControlPlaneImageName, originalControlPlaneImageVersion) == nil
-		}, time.Second*10, time.Second)
+		}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 		t.Log("verifying that the ControlPlane receives the configuration override")
 		require.Eventually(t, func() bool {
@@ -252,19 +248,19 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 				return false
 			}
 			return container.Image == fmt.Sprintf("%s:%s", originalControlPlaneImageName, originalControlPlaneImageVersion)
-		}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
+		}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 		t.Log("verifying downgraded ControlPlane Pod images for Gateway")
 		require.Eventually(t, func() bool {
 			upToDate, err := verifyContainerImageForGateway(gateway, originalControlPlaneImage, newDataPlaneImage)
 			return err == nil && upToDate
-		}, time.Minute, time.Second)
+		}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 	})
 
 	t.Log("downgrading the DataPlane version for the Gateway")
 	require.Eventually(t, func() bool {
 		return changeDataPlaneImage(gatewayConfig, originalDataPlaneImageName, originalDataPlaneImageVersion) == nil
-	}, time.Second*10, time.Second)
+	}, testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
 
 	t.Log("verifying that the DataPlane receives the configuration override")
 	require.Eventually(t, func() bool {
@@ -286,7 +282,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	require.Eventually(t, func() bool {
 		upToDate, err := verifyContainerImageForGateway(gateway, originalControlPlaneImage, originalDataPlaneImage)
 		return err == nil && upToDate
-	}, time.Minute, time.Second)
+	}, testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
 }
 
 // verifyContainerImageForGateway indicates whether or not the underlying

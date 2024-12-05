@@ -10,15 +10,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
+	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
+	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
@@ -32,7 +35,7 @@ import (
 func (r *Reconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
 	gateway, ok := obj.(*gwtypes.Gateway)
 	if !ok {
-		log.FromContext(context.Background()).Error(
+		ctrllog.FromContext(context.Background()).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run predicate function",
 			"expected", "Gateway", "found", reflect.TypeOf(obj),
@@ -40,13 +43,13 @@ func (r *Reconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
 		return false
 	}
 
-	_, err := r.verifyGatewayClassSupport(context.Background(), gateway)
+	_, err := gatewayclass.Get(context.Background(), r.Client, string(gateway.Spec.GatewayClassName))
 	if err != nil {
 		// filtering here is just an optimization, the reconciler will check the
 		// class as well. If we fail here it's most likely because of some failure
 		// of the Kubernetes API and it's technically better to enqueue the object
 		// than to drop it for eventual consistency during cluster outages.
-		return !errors.Is(err, operatorerrors.ErrUnsupportedGateway)
+		return !errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{})
 	}
 
 	return true
@@ -57,7 +60,7 @@ func (r *Reconciler) gatewayConfigurationMatchesController(obj client.Object) bo
 
 	gatewayClassList := new(gatewayv1.GatewayClassList)
 	if err := r.Client.List(ctx, gatewayClassList); err != nil {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run predicate function",
 			"expected", "GatewayClass", "found", reflect.TypeOf(obj),
@@ -78,21 +81,6 @@ func (r *Reconciler) gatewayConfigurationMatchesController(obj client.Object) bo
 	return false
 }
 
-// Predicates to filter only the ReferenceGrants that allow a Gateway
-// cross-namespace reference.
-func referenceGrantHasGatewayFrom(obj client.Object) bool {
-	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
-	if !ok {
-		return false
-	}
-	for _, from := range grant.Spec.From {
-		if from.Kind == "Gateway" && from.Group == gatewayv1.GroupName {
-			return true
-		}
-	}
-	return false
-}
-
 // -----------------------------------------------------------------------------
 // GatewayReconciler - Watch Map Funcs
 // -----------------------------------------------------------------------------
@@ -100,7 +88,7 @@ func referenceGrantHasGatewayFrom(obj client.Object) bool {
 func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	gatewayClass, ok := obj.(*gatewayv1.GatewayClass)
 	if !ok {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run map funcs",
 			"expected", "GatewayClass", "found", reflect.TypeOf(obj),
@@ -110,7 +98,7 @@ func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client
 
 	gateways := new(gatewayv1.GatewayList)
 	if err := r.Client.List(ctx, gateways); err != nil {
-		log.FromContext(ctx).Error(err, "could not list gateways in map func")
+		ctrllog.FromContext(ctx).Error(err, "could not list gateways in map func")
 		return
 	}
 
@@ -128,8 +116,8 @@ func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client
 	return
 }
 
-func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
-	logger := log.FromContext(ctx)
+func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx)
 
 	gatewayConfig, ok := obj.(*operatorv1beta1.GatewayConfiguration)
 	if !ok {
@@ -138,17 +126,17 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 			"failed to run map funcs",
 			"expected", "GatewayConfiguration", "found", reflect.TypeOf(obj),
 		)
-		return
+		return nil
 	}
 
 	gatewayClassList := new(gatewayv1.GatewayClassList)
 	if err := r.Client.List(ctx, gatewayClassList); err != nil {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			fmt.Errorf("unexpected error occurred while listing GatewayClass resources"),
 			"failed to run map funcs",
 			"error", err.Error(),
 		)
-		return
+		return nil
 	}
 
 	matchingGatewayClasses := make(map[string]struct{})
@@ -163,14 +151,15 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 
 	gatewayList := new(gatewayv1.GatewayList)
 	if err := r.Client.List(ctx, gatewayList); err != nil {
-		log.FromContext(ctx).Error(
+		ctrllog.FromContext(ctx).Error(
 			fmt.Errorf("unexpected error occurred while listing Gateway resources"),
 			"failed to run map funcs",
 			"error", err.Error(),
 		)
-		return
+		return nil
 	}
 
+	var recs []reconcile.Request
 	for _, gateway := range gatewayList.Items {
 		if _, ok := matchingGatewayClasses[string(gateway.Spec.GatewayClassName)]; ok {
 			recs = append(recs, reconcile.Request{
@@ -181,14 +170,13 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 			})
 		}
 	}
-
-	return
+	return recs
 }
 
 // listReferenceGrantsForGateway is a watch predicate which finds all Gateways mentioned in a From clause for a
 // ReferenceGrant.
 func (r *Reconciler) listReferenceGrantsForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
-	logger := log.FromContext(ctx)
+	logger := ctrllog.FromContext(ctx)
 
 	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
 	if !ok {
@@ -204,12 +192,89 @@ func (r *Reconciler) listReferenceGrantsForGateway(ctx context.Context, obj clie
 		logger.Error(err, "Failed to list gateways in watch", "referencegrant", grant.Name)
 		return nil
 	}
-	recs := []reconcile.Request{}
+	var recs []reconcile.Request
 	for _, gateway := range gateways.Items {
-		for _, from := range grant.Spec.From {
-			if string(from.Namespace) == gateway.Namespace &&
-				from.Kind == gatewayv1beta1.Kind("Gateway") &&
-				from.Group == gatewayv1beta1.Group("gateway.networking.k8s.io") {
+		if ref.IsReferenceGrantForObj(grant, &gateway) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: client.ObjectKeyFromObject(&gateway),
+			})
+		}
+	}
+	return recs
+}
+
+// listManagedGatewaysInNamespace is a watch predicate which finds all Gateways
+// in provided namespace.
+func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx)
+
+	ns, ok := obj.(*corev1.Namespace)
+	if !ok {
+		logger.Error(
+			fmt.Errorf("unexpected object type"),
+			"Namespace watch predicate received unexpected object type",
+			"expected", "*corev1.Namespace", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	gateways := &gatewayv1.GatewayList{}
+	if err := r.Client.List(ctx, gateways, &client.ListOptions{
+		Namespace: ns.Name,
+	}); err != nil {
+		logger.Error(err, "Failed to list gateways in watch", "namespace", ns.Name)
+		return nil
+	}
+	recs := make([]reconcile.Request, 0, len(gateways.Items))
+	for _, gateway := range gateways.Items {
+		objKey := client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}
+
+		if _, err := gatewayclass.Get(ctx, r.Client, string(gateway.Spec.GatewayClassName)); err != nil {
+			if errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{}) {
+				log.Debug(logger, "gateway class not supported, ignoring")
+			} else {
+				log.Error(logger, err, "failed to get Gateway's GatewayClass",
+					"gatewayClass", objKey.Name,
+					"gateway", gateway.Name,
+					"namespace", gateway.Namespace,
+				)
+			}
+			continue
+		}
+		recs = append(recs, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: gateway.Namespace,
+				Name:      gateway.Name,
+			},
+		})
+	}
+	return recs
+}
+
+// listGatewaysAttachedByHTTPRoute is a watch predicate which finds all Gateways mentioned
+// in HTTPRoutes' Parents field.
+func (r *Reconciler) listGatewaysAttachedByHTTPRoute(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx)
+
+	httpRoute, ok := obj.(*gatewayv1beta1.HTTPRoute)
+	if !ok {
+		logger.Error(
+			fmt.Errorf("unexpected object type"),
+			"HTTPRoute watch predicate received unexpected object type",
+			"expected", "*gatewayapi.HTTPRoute", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	gateways := &gatewayv1.GatewayList{}
+	if err := r.Client.List(ctx, gateways); err != nil {
+		logger.Error(err, "Failed to list gateways in watch", "HTTPRoute", httpRoute.Name)
+		return nil
+	}
+	var recs []reconcile.Request
+	for _, gateway := range gateways.Items {
+		for _, parentRef := range httpRoute.Spec.ParentRefs {
+			if parentRef.Group != nil && string(*parentRef.Group) == gatewayv1.GroupName &&
+				parentRef.Kind != nil && string(*parentRef.Kind) == "Gateway" &&
+				string(parentRef.Name) == gateway.Name {
 				recs = append(recs, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Namespace: gateway.Namespace,
@@ -239,7 +304,6 @@ func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 	dataplaneAdminServiceName,
 	controlPlaneName string,
 ) {
-	dontOverride := make(map[string]struct{})
 	if gatewayConfig.Spec.ControlPlaneOptions == nil {
 		gatewayConfig.Spec.ControlPlaneOptions = new(operatorv1beta1.ControlPlaneOptions)
 	}
@@ -262,16 +326,17 @@ func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 		// This change will not be saved in the API server (i.e. user applied resource
 		// will not be changed) - which is the desired behavior - since the caller
 		// only uses the changed GatewayConfiguration to generate ControlPlane resource.
-		container = lo.ToPtr[corev1.Container](resources.GenerateControlPlaneContainer(consts.DefaultControlPlaneImage))
+		container = lo.ToPtr[corev1.Container](resources.GenerateControlPlaneContainer(
+			resources.GenerateContainerForControlPlaneParams{
+				Image: consts.DefaultControlPlaneImage,
+			},
+		))
 		controlPlanePodTemplateSpec.Spec.Containers = append(controlPlanePodTemplateSpec.Spec.Containers, *container)
-	}
-	for _, env := range container.Env {
-		dontOverride[env.Name] = struct{}{}
 	}
 
 	// an actual ControlPlane will have ObjectMeta populated with ownership information. this includes a stand-in to
 	// satisfy the signature
-	_ = controlplane.SetDefaults(gatewayConfig.Spec.ControlPlaneOptions, dontOverride,
+	_ = controlplane.SetDefaults(gatewayConfig.Spec.ControlPlaneOptions,
 		controlplane.DefaultsArgs{
 			Namespace:                   gateway.Namespace,
 			DataPlaneIngressServiceName: dataplaneIngressServiceName,

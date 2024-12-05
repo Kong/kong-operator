@@ -103,10 +103,10 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 			expectedDataPlaneStatus: operatorv1beta1.DataPlaneStatus{
 				Conditions: []metav1.Condition{
 					k8sutils.NewConditionWithGeneration(
-						k8sutils.ReadyType,
+						consts.ReadyType,
 						metav1.ConditionFalse,
-						k8sutils.WaitingToBecomeReadyReason,
-						fmt.Sprintf("%s: Deployment %s is not ready yet", k8sutils.WaitingToBecomeReadyMessage, "dataplane-deployment-1"),
+						consts.WaitingToBecomeReadyReason,
+						fmt.Sprintf("%s: Deployment %s is not ready yet", consts.WaitingToBecomeReadyMessage, "dataplane-deployment-1"),
 						102,
 					),
 				},
@@ -229,10 +229,10 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 			expectedDataPlaneStatus: operatorv1beta1.DataPlaneStatus{
 				Conditions: []metav1.Condition{
 					k8sutils.NewConditionWithGeneration(
-						k8sutils.ReadyType,
+						consts.ReadyType,
 						metav1.ConditionFalse,
-						k8sutils.WaitingToBecomeReadyReason,
-						fmt.Sprintf("%s: ingress Service %s is not ready yet", k8sutils.WaitingToBecomeReadyMessage, "dataplane-service-1"),
+						consts.WaitingToBecomeReadyReason,
+						fmt.Sprintf("%s: ingress Service %s is not ready yet", consts.WaitingToBecomeReadyMessage, "dataplane-service-1"),
 						102,
 					),
 				},
@@ -359,7 +359,7 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 			expectedDataPlaneStatus: operatorv1beta1.DataPlaneStatus{
 				Conditions: []metav1.Condition{
 					k8sutils.NewConditionWithGeneration(
-						k8sutils.ReadyType,
+						consts.ReadyType,
 						metav1.ConditionTrue,
 						"Ready",
 						"",
@@ -373,15 +373,13 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
 
 			require.NoError(t, corev1.AddToScheme(scheme))
 			require.NoError(t, appsv1.AddToScheme(scheme))
 			require.NoError(t, operatorv1beta1.AddToScheme(scheme))
-			require.NoError(t, gatewayv1.AddToScheme(scheme))
+			require.NoError(t, gatewayv1.Install(scheme))
 
 			fakeClient := fakectrlruntimeclient.
 				NewClientBuilder().

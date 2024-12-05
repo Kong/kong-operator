@@ -42,6 +42,7 @@ const (
 //
 // NOTE: This is an enterprise feature. In order to use it you need to use
 // the EE version of Kong Gateway Operator with a valid license.
+// +apireference:kgo:include
 type DataPlaneMetricsExtension struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -53,6 +54,7 @@ type DataPlaneMetricsExtension struct {
 // +kubebuilder:object:root=true
 
 // DataPlaneMetricsExtensionList contains a list of DataPlaneMetricsExtension.
+// +apireference:kgo:include
 type DataPlaneMetricsExtensionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -60,6 +62,7 @@ type DataPlaneMetricsExtensionList struct {
 }
 
 // DataPlaneMetricsExtensionSpec defines the spec for the DataPlaneMetricsExtension.
+// +apireference:kgo:include
 type DataPlaneMetricsExtensionSpec struct {
 	// ServiceSelector holds the service selector specifying the services
 	// for which metrics should be collected.
@@ -74,6 +77,7 @@ type DataPlaneMetricsExtensionSpec struct {
 }
 
 // MetricsConfig holds the configuration for the DataPlane metrics.
+// +apireference:kgo:include
 type MetricsConfig struct {
 	// Latency indicates whether latency metrics are enabled for the DataPlane.
 	// This translates into deployed instances having `latency_metrics` option set
@@ -109,6 +113,7 @@ type MetricsConfig struct {
 }
 
 // DataPlaneMetricsExtensionStatus defines the status of the DataPlaneMetricsExtension.
+// +apireference:kgo:include
 type DataPlaneMetricsExtensionStatus struct {
 	// ControlPlaneRef is a reference to the ControlPlane that this is associated with.
 	// This field is set by the operator when this extension is associated with
@@ -121,6 +126,7 @@ type DataPlaneMetricsExtensionStatus struct {
 }
 
 // ServiceSelector holds the service selector specification.
+// +apireference:kgo:include
 type ServiceSelector struct {
 	// MatchNames holds the list of Services names to match.
 	//
@@ -131,6 +137,7 @@ type ServiceSelector struct {
 }
 
 // ServiceSelectorEntry holds the name of a service to match.
+// +apireference:kgo:include
 type ServiceSelectorEntry struct {
 	// Name is the name of the service to match.
 	//

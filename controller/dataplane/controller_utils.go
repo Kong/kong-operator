@@ -3,8 +3,10 @@ package dataplane
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -26,7 +28,7 @@ import (
 
 func generateDataPlaneImage(dataplane *operatorv1beta1.DataPlane, defaultImage string, validators ...versions.VersionValidationOption) (string, error) {
 	if dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec == nil {
-		return defaultImage, nil // TODO: https://github.com/Kong/gateway-operator/issues/20
+		return defaultImage, nil // TODO: https://github.com/Kong/gateway-operator-archive/issues/20
 	}
 
 	container := k8sutils.GetPodContainerByName(&dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
@@ -49,7 +51,7 @@ func generateDataPlaneImage(dataplane *operatorv1beta1.DataPlane, defaultImage s
 		return relatedKongImage, nil
 	}
 
-	return defaultImage, nil // TODO: https://github.com/Kong/gateway-operator/issues/20
+	return defaultImage, nil // TODO: https://github.com/Kong/gateway-operator-archive/issues/20
 }
 
 // -----------------------------------------------------------------------------
@@ -138,15 +140,15 @@ func ensureDataPlaneReadyStatus(
 
 	switch len(deployments) {
 	case 0:
-		log.Debug(logger, "Deployment for DataPlane not present yet", dataplane)
+		log.Debug(logger, "Deployment for DataPlane not present yet")
 
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				k8sutils.ReadyType,
+				consts.ReadyType,
 				metav1.ConditionFalse,
-				k8sutils.WaitingToBecomeReadyReason,
-				k8sutils.WaitingToBecomeReadyMessage,
+				consts.WaitingToBecomeReadyReason,
+				consts.WaitingToBecomeReadyMessage,
 				generation,
 			),
 			dataplane,
@@ -166,21 +168,21 @@ func ensureDataPlaneReadyStatus(
 	case 1: // Expect just 1.
 
 	default: // More than 1.
-		log.Info(logger, "expected only 1 Deployment for DataPlane", dataplane)
+		log.Info(logger, "expected only 1 Deployment for DataPlane")
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	deployment := deployments[0]
 	if _, ready := isDeploymentReady(deployment.Status); !ready {
-		log.Debug(logger, "Deployment for DataPlane not ready yet", dataplane)
+		log.Debug(logger, "Deployment for DataPlane not ready yet")
 
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				k8sutils.ReadyType,
+				consts.ReadyType,
 				metav1.ConditionFalse,
-				k8sutils.WaitingToBecomeReadyReason,
-				fmt.Sprintf("%s: Deployment %s is not ready yet", k8sutils.WaitingToBecomeReadyMessage, deployment.Name),
+				consts.WaitingToBecomeReadyReason,
+				fmt.Sprintf("%s: Deployment %s is not ready yet", consts.WaitingToBecomeReadyMessage, deployment.Name),
 				generation,
 			),
 			dataplane,
@@ -199,15 +201,15 @@ func ensureDataPlaneReadyStatus(
 
 	switch len(services) {
 	case 0:
-		log.Debug(logger, "Ingress Service for DataPlane not present", dataplane)
+		log.Debug(logger, "Ingress Service for DataPlane not present")
 
 		// Set Ready to false for dataplane as the Service is not ready yet.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				k8sutils.ReadyType,
+				consts.ReadyType,
 				metav1.ConditionFalse,
-				k8sutils.WaitingToBecomeReadyReason,
-				k8sutils.WaitingToBecomeReadyMessage,
+				consts.WaitingToBecomeReadyReason,
+				consts.WaitingToBecomeReadyMessage,
 				generation,
 			),
 			dataplane,
@@ -222,21 +224,21 @@ func ensureDataPlaneReadyStatus(
 	case 1: // Expect just 1.
 
 	default: // More than 1.
-		log.Info(logger, "expected only 1 ingress Service for DataPlane", dataplane)
+		log.Info(logger, "expected only 1 ingress Service for DataPlane")
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	ingressService := services[0]
 	if !dataPlaneIngressServiceIsReady(&ingressService) {
-		log.Debug(logger, "Ingress Service for DataPlane not ready yet", dataplane)
+		log.Debug(logger, "Ingress Service for DataPlane not ready yet")
 
 		// Set Ready to false for dataplane as the Service is not ready yet.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				k8sutils.ReadyType,
+				consts.ReadyType,
 				metav1.ConditionFalse,
-				k8sutils.WaitingToBecomeReadyReason,
-				fmt.Sprintf("%s: ingress Service %s is not ready yet", k8sutils.WaitingToBecomeReadyMessage, ingressService.Name),
+				consts.WaitingToBecomeReadyReason,
+				fmt.Sprintf("%s: ingress Service %s is not ready yet", consts.WaitingToBecomeReadyMessage, ingressService.Name),
 				generation,
 			),
 			dataplane,
@@ -307,4 +309,54 @@ func isDeploymentReady(deploymentStatus appsv1.DeploymentStatus) (metav1.Conditi
 	} else {
 		return metav1.ConditionFalse, false
 	}
+}
+
+// -----------------------------------------------------------------------------
+// DataPlane - Private Functions - extensions
+// -----------------------------------------------------------------------------
+
+// applyExtensions patches the dataplane spec by taking into account customizations from the referenced extensions.
+// In case any extension is referenced, it adds a resolvedRefs condition to the dataplane, indicating the status of the
+// extension reference. it returns 3 values:
+//   - patched: a boolean indicating if the dataplane was patched. If the dataplane was patched, a reconciliation loop will be automatically re-triggered.
+//   - requeue: a boolean indicating if the dataplane should be requeued. If the error was unexpected (e.g., because of API server error), the dataplane should be requeued.
+//     In case the error is related to a misconfiguration, the dataplane does not need to be requeued, and feedback is provided into the dataplane status.
+//   - err: an error in case of failure.
+func applyExtensions(ctx context.Context, cl client.Client, logger logr.Logger, dataplane *operatorv1beta1.DataPlane, konnectEnabled bool) (patched bool, requeue bool, err error) {
+	if len(dataplane.Spec.Extensions) == 0 {
+		return false, false, nil
+	}
+
+	// the konnect extension is the only one implemented at the moment. In case konnect is not enabled, we return early.
+	if !konnectEnabled {
+		return false, false, nil
+	}
+
+	condition := k8sutils.NewConditionWithGeneration(consts.ResolvedRefsType, metav1.ConditionTrue, consts.ResolvedRefsReason, "", dataplane.GetGeneration())
+	err = applyKonnectExtension(ctx, cl, dataplane)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrCrossNamespaceReference):
+			condition.Status = metav1.ConditionFalse
+			condition.Reason = string(consts.RefNotPermittedReason)
+			condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
+		case errors.Is(err, ErrKonnectExtensionNotFound):
+			condition.Status = metav1.ConditionFalse
+			condition.Reason = string(consts.InvalidExtensionRefReason)
+			condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
+		case errors.Is(err, ErrClusterCertificateNotFound):
+			condition.Status = metav1.ConditionFalse
+			condition.Reason = string(consts.InvalidSecretRefReason)
+			condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
+		default:
+			return patched, true, err
+		}
+	}
+	newDataPlane := dataplane.DeepCopy()
+	k8sutils.SetCondition(condition, newDataPlane)
+	patched, patchErr := patchDataPlaneStatus(ctx, cl, logger, newDataPlane)
+	if patchErr != nil {
+		return false, true, fmt.Errorf("failed patching status for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, patchErr)
+	}
+	return patched, false, err
 }

@@ -16,7 +16,8 @@ spec:
         spec:
           containers:
           - name: proxy
-            image: kong:3.6
+            # renovate: datasource=docker versioning=docker
+            image: kong/kong-gateway:3.8
             readinessProbe:
               initialDelaySeconds: 1
               periodSeconds: 1

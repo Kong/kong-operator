@@ -41,22 +41,24 @@ var dataplanesKind = v1beta1.SchemeGroupVersion.WithKind("DataPlane")
 
 // Get takes name of the dataPlane, and returns the corresponding dataPlane object, and an error if there is any.
 func (c *FakeDataPlanes) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.DataPlane, err error) {
+	emptyResult := &v1beta1.DataPlane{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(dataplanesResource, c.ns, name), &v1beta1.DataPlane{})
+		Invokes(testing.NewGetActionWithOptions(dataplanesResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.DataPlane), err
 }
 
 // List takes label and field selectors, and returns the list of DataPlanes that match those selectors.
 func (c *FakeDataPlanes) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.DataPlaneList, err error) {
+	emptyResult := &v1beta1.DataPlaneList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(dataplanesResource, dataplanesKind, c.ns, opts), &v1beta1.DataPlaneList{})
+		Invokes(testing.NewListActionWithOptions(dataplanesResource, dataplanesKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -75,40 +77,43 @@ func (c *FakeDataPlanes) List(ctx context.Context, opts v1.ListOptions) (result 
 // Watch returns a watch.Interface that watches the requested dataPlanes.
 func (c *FakeDataPlanes) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(dataplanesResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(dataplanesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a dataPlane and creates it.  Returns the server's representation of the dataPlane, and an error, if there is any.
 func (c *FakeDataPlanes) Create(ctx context.Context, dataPlane *v1beta1.DataPlane, opts v1.CreateOptions) (result *v1beta1.DataPlane, err error) {
+	emptyResult := &v1beta1.DataPlane{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(dataplanesResource, c.ns, dataPlane), &v1beta1.DataPlane{})
+		Invokes(testing.NewCreateActionWithOptions(dataplanesResource, c.ns, dataPlane, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.DataPlane), err
 }
 
 // Update takes the representation of a dataPlane and updates it. Returns the server's representation of the dataPlane, and an error, if there is any.
 func (c *FakeDataPlanes) Update(ctx context.Context, dataPlane *v1beta1.DataPlane, opts v1.UpdateOptions) (result *v1beta1.DataPlane, err error) {
+	emptyResult := &v1beta1.DataPlane{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(dataplanesResource, c.ns, dataPlane), &v1beta1.DataPlane{})
+		Invokes(testing.NewUpdateActionWithOptions(dataplanesResource, c.ns, dataPlane, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.DataPlane), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeDataPlanes) UpdateStatus(ctx context.Context, dataPlane *v1beta1.DataPlane, opts v1.UpdateOptions) (*v1beta1.DataPlane, error) {
+func (c *FakeDataPlanes) UpdateStatus(ctx context.Context, dataPlane *v1beta1.DataPlane, opts v1.UpdateOptions) (result *v1beta1.DataPlane, err error) {
+	emptyResult := &v1beta1.DataPlane{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(dataplanesResource, "status", c.ns, dataPlane), &v1beta1.DataPlane{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(dataplanesResource, "status", c.ns, dataPlane, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.DataPlane), err
 }
@@ -123,7 +128,7 @@ func (c *FakeDataPlanes) Delete(ctx context.Context, name string, opts v1.Delete
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeDataPlanes) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(dataplanesResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(dataplanesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.DataPlaneList{})
 	return err
@@ -131,11 +136,12 @@ func (c *FakeDataPlanes) DeleteCollection(ctx context.Context, opts v1.DeleteOpt
 
 // Patch applies the patch and returns the patched dataPlane.
 func (c *FakeDataPlanes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.DataPlane, err error) {
+	emptyResult := &v1beta1.DataPlane{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(dataplanesResource, c.ns, name, pt, data, subresources...), &v1beta1.DataPlane{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(dataplanesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.DataPlane), err
 }
