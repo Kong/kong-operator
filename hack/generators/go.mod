@@ -11,8 +11,8 @@ require (
 	github.com/kong/gateway-operator v0.0.0-00010101000000-000000000000
 	github.com/kong/semver/v4 v4.0.1
 	github.com/samber/lo v1.47.0
-	k8s.io/api v0.31.3
-	k8s.io/apimachinery v0.31.3
+	k8s.io/api v0.31.4
+	k8s.io/apimachinery v0.31.4
 	sigs.k8s.io/gateway-api v1.2.1
 )
 
