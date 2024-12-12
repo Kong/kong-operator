@@ -19,9 +19,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 
-	v1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	apisv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	scheme "github.com/kong/gateway-operator/pkg/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -37,33 +37,34 @@ type AIGatewaysGetter interface {
 
 // AIGatewayInterface has methods to work with AIGateway resources.
 type AIGatewayInterface interface {
-	Create(ctx context.Context, aIGateway *v1alpha1.AIGateway, opts v1.CreateOptions) (*v1alpha1.AIGateway, error)
-	Update(ctx context.Context, aIGateway *v1alpha1.AIGateway, opts v1.UpdateOptions) (*v1alpha1.AIGateway, error)
+	Create(ctx context.Context, aIGateway *apisv1alpha1.AIGateway, opts v1.CreateOptions) (*apisv1alpha1.AIGateway, error)
+	Update(ctx context.Context, aIGateway *apisv1alpha1.AIGateway, opts v1.UpdateOptions) (*apisv1alpha1.AIGateway, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, aIGateway *v1alpha1.AIGateway, opts v1.UpdateOptions) (*v1alpha1.AIGateway, error)
+	UpdateStatus(ctx context.Context, aIGateway *apisv1alpha1.AIGateway, opts v1.UpdateOptions) (*apisv1alpha1.AIGateway, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.AIGateway, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.AIGatewayList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*apisv1alpha1.AIGateway, error)
+	List(ctx context.Context, opts v1.ListOptions) (*apisv1alpha1.AIGatewayList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.AIGateway, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *apisv1alpha1.AIGateway, err error)
 	AIGatewayExpansion
 }
 
 // aIGateways implements AIGatewayInterface
 type aIGateways struct {
-	*gentype.ClientWithList[*v1alpha1.AIGateway, *v1alpha1.AIGatewayList]
+	*gentype.ClientWithList[*apisv1alpha1.AIGateway, *apisv1alpha1.AIGatewayList]
 }
 
 // newAIGateways returns a AIGateways
 func newAIGateways(c *ApisV1alpha1Client, namespace string) *aIGateways {
 	return &aIGateways{
-		gentype.NewClientWithList[*v1alpha1.AIGateway, *v1alpha1.AIGatewayList](
+		gentype.NewClientWithList[*apisv1alpha1.AIGateway, *apisv1alpha1.AIGatewayList](
 			"aigateways",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1alpha1.AIGateway { return &v1alpha1.AIGateway{} },
-			func() *v1alpha1.AIGatewayList { return &v1alpha1.AIGatewayList{} }),
+			func() *apisv1alpha1.AIGateway { return &apisv1alpha1.AIGateway{} },
+			func() *apisv1alpha1.AIGatewayList { return &apisv1alpha1.AIGatewayList{} },
+		),
 	}
 }

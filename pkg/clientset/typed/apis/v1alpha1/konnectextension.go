@@ -19,9 +19,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 
-	v1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	apisv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	scheme "github.com/kong/gateway-operator/pkg/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -37,33 +37,34 @@ type KonnectExtensionsGetter interface {
 
 // KonnectExtensionInterface has methods to work with KonnectExtension resources.
 type KonnectExtensionInterface interface {
-	Create(ctx context.Context, konnectExtension *v1alpha1.KonnectExtension, opts v1.CreateOptions) (*v1alpha1.KonnectExtension, error)
-	Update(ctx context.Context, konnectExtension *v1alpha1.KonnectExtension, opts v1.UpdateOptions) (*v1alpha1.KonnectExtension, error)
+	Create(ctx context.Context, konnectExtension *apisv1alpha1.KonnectExtension, opts v1.CreateOptions) (*apisv1alpha1.KonnectExtension, error)
+	Update(ctx context.Context, konnectExtension *apisv1alpha1.KonnectExtension, opts v1.UpdateOptions) (*apisv1alpha1.KonnectExtension, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, konnectExtension *v1alpha1.KonnectExtension, opts v1.UpdateOptions) (*v1alpha1.KonnectExtension, error)
+	UpdateStatus(ctx context.Context, konnectExtension *apisv1alpha1.KonnectExtension, opts v1.UpdateOptions) (*apisv1alpha1.KonnectExtension, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.KonnectExtension, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.KonnectExtensionList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*apisv1alpha1.KonnectExtension, error)
+	List(ctx context.Context, opts v1.ListOptions) (*apisv1alpha1.KonnectExtensionList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.KonnectExtension, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *apisv1alpha1.KonnectExtension, err error)
 	KonnectExtensionExpansion
 }
 
 // konnectExtensions implements KonnectExtensionInterface
 type konnectExtensions struct {
-	*gentype.ClientWithList[*v1alpha1.KonnectExtension, *v1alpha1.KonnectExtensionList]
+	*gentype.ClientWithList[*apisv1alpha1.KonnectExtension, *apisv1alpha1.KonnectExtensionList]
 }
 
 // newKonnectExtensions returns a KonnectExtensions
 func newKonnectExtensions(c *ApisV1alpha1Client, namespace string) *konnectExtensions {
 	return &konnectExtensions{
-		gentype.NewClientWithList[*v1alpha1.KonnectExtension, *v1alpha1.KonnectExtensionList](
+		gentype.NewClientWithList[*apisv1alpha1.KonnectExtension, *apisv1alpha1.KonnectExtensionList](
 			"konnectextensions",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1alpha1.KonnectExtension { return &v1alpha1.KonnectExtension{} },
-			func() *v1alpha1.KonnectExtensionList { return &v1alpha1.KonnectExtensionList{} }),
+			func() *apisv1alpha1.KonnectExtension { return &apisv1alpha1.KonnectExtension{} },
+			func() *apisv1alpha1.KonnectExtensionList { return &apisv1alpha1.KonnectExtensionList{} },
+		),
 	}
 }

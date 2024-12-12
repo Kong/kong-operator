@@ -19,10 +19,10 @@ limitations under the License.
 package v1beta1
 
 import (
-	"net/http"
+	http "net/http"
 
-	v1beta1 "github.com/kong/gateway-operator/api/v1beta1"
-	"github.com/kong/gateway-operator/pkg/clientset/scheme"
+	apisv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	scheme "github.com/kong/gateway-operator/pkg/clientset/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
@@ -95,10 +95,10 @@ func New(c rest.Interface) *ApisV1beta1Client {
 }
 
 func setConfigDefaults(config *rest.Config) error {
-	gv := v1beta1.SchemeGroupVersion
+	gv := apisv1beta1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	config.NegotiatedSerializer = rest.CodecFactoryForGeneratedClient(scheme.Scheme, scheme.Codecs).WithoutConversion()
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()

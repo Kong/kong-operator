@@ -19,129 +19,32 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
 	v1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	apisv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1alpha1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeAIGateways implements AIGatewayInterface
-type FakeAIGateways struct {
+// fakeAIGateways implements AIGatewayInterface
+type fakeAIGateways struct {
+	*gentype.FakeClientWithList[*v1alpha1.AIGateway, *v1alpha1.AIGatewayList]
 	Fake *FakeApisV1alpha1
-	ns   string
 }
 
-var aigatewaysResource = v1alpha1.SchemeGroupVersion.WithResource("aigateways")
-
-var aigatewaysKind = v1alpha1.SchemeGroupVersion.WithKind("AIGateway")
-
-// Get takes name of the aIGateway, and returns the corresponding aIGateway object, and an error if there is any.
-func (c *FakeAIGateways) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.AIGateway, err error) {
-	emptyResult := &v1alpha1.AIGateway{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(aigatewaysResource, c.ns, name, options), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
+func newFakeAIGateways(fake *FakeApisV1alpha1, namespace string) apisv1alpha1.AIGatewayInterface {
+	return &fakeAIGateways{
+		gentype.NewFakeClientWithList[*v1alpha1.AIGateway, *v1alpha1.AIGatewayList](
+			fake.Fake,
+			namespace,
+			v1alpha1.SchemeGroupVersion.WithResource("aigateways"),
+			v1alpha1.SchemeGroupVersion.WithKind("AIGateway"),
+			func() *v1alpha1.AIGateway { return &v1alpha1.AIGateway{} },
+			func() *v1alpha1.AIGatewayList { return &v1alpha1.AIGatewayList{} },
+			func(dst, src *v1alpha1.AIGatewayList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.AIGatewayList) []*v1alpha1.AIGateway { return gentype.ToPointerSlice(list.Items) },
+			func(list *v1alpha1.AIGatewayList, items []*v1alpha1.AIGateway) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1alpha1.AIGateway), err
-}
-
-// List takes label and field selectors, and returns the list of AIGateways that match those selectors.
-func (c *FakeAIGateways) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.AIGatewayList, err error) {
-	emptyResult := &v1alpha1.AIGatewayList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(aigatewaysResource, aigatewaysKind, c.ns, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.AIGatewayList{ListMeta: obj.(*v1alpha1.AIGatewayList).ListMeta}
-	for _, item := range obj.(*v1alpha1.AIGatewayList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested aIGateways.
-func (c *FakeAIGateways) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(aigatewaysResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a aIGateway and creates it.  Returns the server's representation of the aIGateway, and an error, if there is any.
-func (c *FakeAIGateways) Create(ctx context.Context, aIGateway *v1alpha1.AIGateway, opts v1.CreateOptions) (result *v1alpha1.AIGateway, err error) {
-	emptyResult := &v1alpha1.AIGateway{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(aigatewaysResource, c.ns, aIGateway, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.AIGateway), err
-}
-
-// Update takes the representation of a aIGateway and updates it. Returns the server's representation of the aIGateway, and an error, if there is any.
-func (c *FakeAIGateways) Update(ctx context.Context, aIGateway *v1alpha1.AIGateway, opts v1.UpdateOptions) (result *v1alpha1.AIGateway, err error) {
-	emptyResult := &v1alpha1.AIGateway{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(aigatewaysResource, c.ns, aIGateway, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.AIGateway), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeAIGateways) UpdateStatus(ctx context.Context, aIGateway *v1alpha1.AIGateway, opts v1.UpdateOptions) (result *v1alpha1.AIGateway, err error) {
-	emptyResult := &v1alpha1.AIGateway{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(aigatewaysResource, "status", c.ns, aIGateway, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.AIGateway), err
-}
-
-// Delete takes name of the aIGateway and deletes it. Returns an error if one occurs.
-func (c *FakeAIGateways) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(aigatewaysResource, c.ns, name, opts), &v1alpha1.AIGateway{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeAIGateways) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(aigatewaysResource, c.ns, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.AIGatewayList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched aIGateway.
-func (c *FakeAIGateways) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.AIGateway, err error) {
-	emptyResult := &v1alpha1.AIGateway{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(aigatewaysResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.AIGateway), err
 }

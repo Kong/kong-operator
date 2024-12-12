@@ -29,19 +29,19 @@ type FakeApisV1alpha1 struct {
 }
 
 func (c *FakeApisV1alpha1) AIGateways(namespace string) v1alpha1.AIGatewayInterface {
-	return &FakeAIGateways{c, namespace}
+	return newFakeAIGateways(c, namespace)
 }
 
 func (c *FakeApisV1alpha1) DataPlaneMetricsExtensions(namespace string) v1alpha1.DataPlaneMetricsExtensionInterface {
-	return &FakeDataPlaneMetricsExtensions{c, namespace}
+	return newFakeDataPlaneMetricsExtensions(c, namespace)
 }
 
 func (c *FakeApisV1alpha1) KongPluginInstallations(namespace string) v1alpha1.KongPluginInstallationInterface {
-	return &FakeKongPluginInstallations{c, namespace}
+	return newFakeKongPluginInstallations(c, namespace)
 }
 
 func (c *FakeApisV1alpha1) KonnectExtensions(namespace string) v1alpha1.KonnectExtensionInterface {
-	return &FakeKonnectExtensions{c, namespace}
+	return newFakeKonnectExtensions(c, namespace)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

@@ -19,9 +19,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 
-	v1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
+	apisv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	scheme "github.com/kong/gateway-operator/pkg/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -37,33 +37,34 @@ type KongPluginInstallationsGetter interface {
 
 // KongPluginInstallationInterface has methods to work with KongPluginInstallation resources.
 type KongPluginInstallationInterface interface {
-	Create(ctx context.Context, kongPluginInstallation *v1alpha1.KongPluginInstallation, opts v1.CreateOptions) (*v1alpha1.KongPluginInstallation, error)
-	Update(ctx context.Context, kongPluginInstallation *v1alpha1.KongPluginInstallation, opts v1.UpdateOptions) (*v1alpha1.KongPluginInstallation, error)
+	Create(ctx context.Context, kongPluginInstallation *apisv1alpha1.KongPluginInstallation, opts v1.CreateOptions) (*apisv1alpha1.KongPluginInstallation, error)
+	Update(ctx context.Context, kongPluginInstallation *apisv1alpha1.KongPluginInstallation, opts v1.UpdateOptions) (*apisv1alpha1.KongPluginInstallation, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, kongPluginInstallation *v1alpha1.KongPluginInstallation, opts v1.UpdateOptions) (*v1alpha1.KongPluginInstallation, error)
+	UpdateStatus(ctx context.Context, kongPluginInstallation *apisv1alpha1.KongPluginInstallation, opts v1.UpdateOptions) (*apisv1alpha1.KongPluginInstallation, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.KongPluginInstallation, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.KongPluginInstallationList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*apisv1alpha1.KongPluginInstallation, error)
+	List(ctx context.Context, opts v1.ListOptions) (*apisv1alpha1.KongPluginInstallationList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.KongPluginInstallation, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *apisv1alpha1.KongPluginInstallation, err error)
 	KongPluginInstallationExpansion
 }
 
 // kongPluginInstallations implements KongPluginInstallationInterface
 type kongPluginInstallations struct {
-	*gentype.ClientWithList[*v1alpha1.KongPluginInstallation, *v1alpha1.KongPluginInstallationList]
+	*gentype.ClientWithList[*apisv1alpha1.KongPluginInstallation, *apisv1alpha1.KongPluginInstallationList]
 }
 
 // newKongPluginInstallations returns a KongPluginInstallations
 func newKongPluginInstallations(c *ApisV1alpha1Client, namespace string) *kongPluginInstallations {
 	return &kongPluginInstallations{
-		gentype.NewClientWithList[*v1alpha1.KongPluginInstallation, *v1alpha1.KongPluginInstallationList](
+		gentype.NewClientWithList[*apisv1alpha1.KongPluginInstallation, *apisv1alpha1.KongPluginInstallationList](
 			"kongplugininstallations",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1alpha1.KongPluginInstallation { return &v1alpha1.KongPluginInstallation{} },
-			func() *v1alpha1.KongPluginInstallationList { return &v1alpha1.KongPluginInstallationList{} }),
+			func() *apisv1alpha1.KongPluginInstallation { return &apisv1alpha1.KongPluginInstallation{} },
+			func() *apisv1alpha1.KongPluginInstallationList { return &apisv1alpha1.KongPluginInstallationList{} },
+		),
 	}
 }
