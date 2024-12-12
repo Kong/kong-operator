@@ -19,9 +19,9 @@ limitations under the License.
 package v1beta1
 
 import (
-	"context"
+	context "context"
 
-	v1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	apisv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	scheme "github.com/kong/gateway-operator/pkg/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -37,33 +37,34 @@ type GatewayConfigurationsGetter interface {
 
 // GatewayConfigurationInterface has methods to work with GatewayConfiguration resources.
 type GatewayConfigurationInterface interface {
-	Create(ctx context.Context, gatewayConfiguration *v1beta1.GatewayConfiguration, opts v1.CreateOptions) (*v1beta1.GatewayConfiguration, error)
-	Update(ctx context.Context, gatewayConfiguration *v1beta1.GatewayConfiguration, opts v1.UpdateOptions) (*v1beta1.GatewayConfiguration, error)
+	Create(ctx context.Context, gatewayConfiguration *apisv1beta1.GatewayConfiguration, opts v1.CreateOptions) (*apisv1beta1.GatewayConfiguration, error)
+	Update(ctx context.Context, gatewayConfiguration *apisv1beta1.GatewayConfiguration, opts v1.UpdateOptions) (*apisv1beta1.GatewayConfiguration, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, gatewayConfiguration *v1beta1.GatewayConfiguration, opts v1.UpdateOptions) (*v1beta1.GatewayConfiguration, error)
+	UpdateStatus(ctx context.Context, gatewayConfiguration *apisv1beta1.GatewayConfiguration, opts v1.UpdateOptions) (*apisv1beta1.GatewayConfiguration, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.GatewayConfiguration, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.GatewayConfigurationList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*apisv1beta1.GatewayConfiguration, error)
+	List(ctx context.Context, opts v1.ListOptions) (*apisv1beta1.GatewayConfigurationList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.GatewayConfiguration, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *apisv1beta1.GatewayConfiguration, err error)
 	GatewayConfigurationExpansion
 }
 
 // gatewayConfigurations implements GatewayConfigurationInterface
 type gatewayConfigurations struct {
-	*gentype.ClientWithList[*v1beta1.GatewayConfiguration, *v1beta1.GatewayConfigurationList]
+	*gentype.ClientWithList[*apisv1beta1.GatewayConfiguration, *apisv1beta1.GatewayConfigurationList]
 }
 
 // newGatewayConfigurations returns a GatewayConfigurations
 func newGatewayConfigurations(c *ApisV1beta1Client, namespace string) *gatewayConfigurations {
 	return &gatewayConfigurations{
-		gentype.NewClientWithList[*v1beta1.GatewayConfiguration, *v1beta1.GatewayConfigurationList](
+		gentype.NewClientWithList[*apisv1beta1.GatewayConfiguration, *apisv1beta1.GatewayConfigurationList](
 			"gatewayconfigurations",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1beta1.GatewayConfiguration { return &v1beta1.GatewayConfiguration{} },
-			func() *v1beta1.GatewayConfigurationList { return &v1beta1.GatewayConfigurationList{} }),
+			func() *apisv1beta1.GatewayConfiguration { return &apisv1beta1.GatewayConfiguration{} },
+			func() *apisv1beta1.GatewayConfigurationList { return &apisv1beta1.GatewayConfigurationList{} },
+		),
 	}
 }

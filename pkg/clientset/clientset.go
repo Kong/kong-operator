@@ -19,8 +19,8 @@ limitations under the License.
 package clientset
 
 import (
-	"fmt"
-	"net/http"
+	fmt "fmt"
+	http "net/http"
 
 	apisv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1alpha1"
 	apisv1beta1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1beta1"

@@ -19,129 +19,34 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-
 	v1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	apisv1alpha1 "github.com/kong/gateway-operator/pkg/clientset/typed/apis/v1alpha1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeKonnectExtensions implements KonnectExtensionInterface
-type FakeKonnectExtensions struct {
+// fakeKonnectExtensions implements KonnectExtensionInterface
+type fakeKonnectExtensions struct {
+	*gentype.FakeClientWithList[*v1alpha1.KonnectExtension, *v1alpha1.KonnectExtensionList]
 	Fake *FakeApisV1alpha1
-	ns   string
 }
 
-var konnectextensionsResource = v1alpha1.SchemeGroupVersion.WithResource("konnectextensions")
-
-var konnectextensionsKind = v1alpha1.SchemeGroupVersion.WithKind("KonnectExtension")
-
-// Get takes name of the konnectExtension, and returns the corresponding konnectExtension object, and an error if there is any.
-func (c *FakeKonnectExtensions) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.KonnectExtension, err error) {
-	emptyResult := &v1alpha1.KonnectExtension{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(konnectextensionsResource, c.ns, name, options), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
+func newFakeKonnectExtensions(fake *FakeApisV1alpha1, namespace string) apisv1alpha1.KonnectExtensionInterface {
+	return &fakeKonnectExtensions{
+		gentype.NewFakeClientWithList[*v1alpha1.KonnectExtension, *v1alpha1.KonnectExtensionList](
+			fake.Fake,
+			namespace,
+			v1alpha1.SchemeGroupVersion.WithResource("konnectextensions"),
+			v1alpha1.SchemeGroupVersion.WithKind("KonnectExtension"),
+			func() *v1alpha1.KonnectExtension { return &v1alpha1.KonnectExtension{} },
+			func() *v1alpha1.KonnectExtensionList { return &v1alpha1.KonnectExtensionList{} },
+			func(dst, src *v1alpha1.KonnectExtensionList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.KonnectExtensionList) []*v1alpha1.KonnectExtension {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1alpha1.KonnectExtensionList, items []*v1alpha1.KonnectExtension) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1alpha1.KonnectExtension), err
-}
-
-// List takes label and field selectors, and returns the list of KonnectExtensions that match those selectors.
-func (c *FakeKonnectExtensions) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.KonnectExtensionList, err error) {
-	emptyResult := &v1alpha1.KonnectExtensionList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(konnectextensionsResource, konnectextensionsKind, c.ns, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.KonnectExtensionList{ListMeta: obj.(*v1alpha1.KonnectExtensionList).ListMeta}
-	for _, item := range obj.(*v1alpha1.KonnectExtensionList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested konnectExtensions.
-func (c *FakeKonnectExtensions) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(konnectextensionsResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a konnectExtension and creates it.  Returns the server's representation of the konnectExtension, and an error, if there is any.
-func (c *FakeKonnectExtensions) Create(ctx context.Context, konnectExtension *v1alpha1.KonnectExtension, opts v1.CreateOptions) (result *v1alpha1.KonnectExtension, err error) {
-	emptyResult := &v1alpha1.KonnectExtension{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(konnectextensionsResource, c.ns, konnectExtension, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.KonnectExtension), err
-}
-
-// Update takes the representation of a konnectExtension and updates it. Returns the server's representation of the konnectExtension, and an error, if there is any.
-func (c *FakeKonnectExtensions) Update(ctx context.Context, konnectExtension *v1alpha1.KonnectExtension, opts v1.UpdateOptions) (result *v1alpha1.KonnectExtension, err error) {
-	emptyResult := &v1alpha1.KonnectExtension{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(konnectextensionsResource, c.ns, konnectExtension, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.KonnectExtension), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeKonnectExtensions) UpdateStatus(ctx context.Context, konnectExtension *v1alpha1.KonnectExtension, opts v1.UpdateOptions) (result *v1alpha1.KonnectExtension, err error) {
-	emptyResult := &v1alpha1.KonnectExtension{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(konnectextensionsResource, "status", c.ns, konnectExtension, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.KonnectExtension), err
-}
-
-// Delete takes name of the konnectExtension and deletes it. Returns an error if one occurs.
-func (c *FakeKonnectExtensions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(konnectextensionsResource, c.ns, name, opts), &v1alpha1.KonnectExtension{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeKonnectExtensions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(konnectextensionsResource, c.ns, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.KonnectExtensionList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched konnectExtension.
-func (c *FakeKonnectExtensions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.KonnectExtension, err error) {
-	emptyResult := &v1alpha1.KonnectExtension{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(konnectextensionsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.KonnectExtension), err
 }

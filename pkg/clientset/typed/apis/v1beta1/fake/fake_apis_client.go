@@ -29,15 +29,15 @@ type FakeApisV1beta1 struct {
 }
 
 func (c *FakeApisV1beta1) ControlPlanes(namespace string) v1beta1.ControlPlaneInterface {
-	return &FakeControlPlanes{c, namespace}
+	return newFakeControlPlanes(c, namespace)
 }
 
 func (c *FakeApisV1beta1) DataPlanes(namespace string) v1beta1.DataPlaneInterface {
-	return &FakeDataPlanes{c, namespace}
+	return newFakeDataPlanes(c, namespace)
 }
 
 func (c *FakeApisV1beta1) GatewayConfigurations(namespace string) v1beta1.GatewayConfigurationInterface {
-	return &FakeGatewayConfigurations{c, namespace}
+	return newFakeGatewayConfigurations(c, namespace)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

@@ -19,9 +19,9 @@ limitations under the License.
 package v1beta1
 
 import (
-	"context"
+	context "context"
 
-	v1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	apisv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	scheme "github.com/kong/gateway-operator/pkg/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -37,33 +37,34 @@ type DataPlanesGetter interface {
 
 // DataPlaneInterface has methods to work with DataPlane resources.
 type DataPlaneInterface interface {
-	Create(ctx context.Context, dataPlane *v1beta1.DataPlane, opts v1.CreateOptions) (*v1beta1.DataPlane, error)
-	Update(ctx context.Context, dataPlane *v1beta1.DataPlane, opts v1.UpdateOptions) (*v1beta1.DataPlane, error)
+	Create(ctx context.Context, dataPlane *apisv1beta1.DataPlane, opts v1.CreateOptions) (*apisv1beta1.DataPlane, error)
+	Update(ctx context.Context, dataPlane *apisv1beta1.DataPlane, opts v1.UpdateOptions) (*apisv1beta1.DataPlane, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, dataPlane *v1beta1.DataPlane, opts v1.UpdateOptions) (*v1beta1.DataPlane, error)
+	UpdateStatus(ctx context.Context, dataPlane *apisv1beta1.DataPlane, opts v1.UpdateOptions) (*apisv1beta1.DataPlane, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.DataPlane, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.DataPlaneList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*apisv1beta1.DataPlane, error)
+	List(ctx context.Context, opts v1.ListOptions) (*apisv1beta1.DataPlaneList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.DataPlane, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *apisv1beta1.DataPlane, err error)
 	DataPlaneExpansion
 }
 
 // dataPlanes implements DataPlaneInterface
 type dataPlanes struct {
-	*gentype.ClientWithList[*v1beta1.DataPlane, *v1beta1.DataPlaneList]
+	*gentype.ClientWithList[*apisv1beta1.DataPlane, *apisv1beta1.DataPlaneList]
 }
 
 // newDataPlanes returns a DataPlanes
 func newDataPlanes(c *ApisV1beta1Client, namespace string) *dataPlanes {
 	return &dataPlanes{
-		gentype.NewClientWithList[*v1beta1.DataPlane, *v1beta1.DataPlaneList](
+		gentype.NewClientWithList[*apisv1beta1.DataPlane, *apisv1beta1.DataPlaneList](
 			"dataplanes",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1beta1.DataPlane { return &v1beta1.DataPlane{} },
-			func() *v1beta1.DataPlaneList { return &v1beta1.DataPlaneList{} }),
+			func() *apisv1beta1.DataPlane { return &apisv1beta1.DataPlane{} },
+			func() *apisv1beta1.DataPlaneList { return &apisv1beta1.DataPlaneList{} },
+		),
 	}
 }
