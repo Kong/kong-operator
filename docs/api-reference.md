@@ -1234,7 +1234,7 @@ _Appears in:_
 #### KongRouteSpec
 
 
-KongRouteSpec defines specification of a Kong Route.
+KongRouteSpec defines spec of a Kong Route.
 
 
 
@@ -1283,7 +1283,7 @@ _Appears in:_
 #### KongSNIAPISpec
 
 
-KongSNIAPISpec defines specification of an SNI.
+KongSNIAPISpec defines the spec of an SNI.
 
 
 
@@ -1332,7 +1332,7 @@ _Appears in:_
 #### KongServiceAPISpec
 
 
-KongServiceAPISpec defines specification of a Kong Service.
+KongServiceAPISpec defines the specification of a Kong Service.
 
 
 
@@ -1422,8 +1422,7 @@ _Appears in:_
 #### KongTargetSpec
 
 
-KongTargetSpec defines the specification of a Kong Target.
-KongTargetSpec defines the desired state of KongTarget.
+KongTargetSpec defines the spec of KongTarget.
 
 
 
@@ -1489,7 +1488,7 @@ _Appears in:_
 #### KongUpstreamSpec
 
 
-KongUpstreamSpec defines specification of a Kong Upstream.
+KongUpstreamSpec defines the spec of Kong Upstream.
 
 
 
