@@ -43,7 +43,6 @@ on:
       release-type:
         description: Whether to make a created release a pre-release
         required: true
-        default: 'prerelease'
         # Reusable workflows do not support choice type, so we use string instead.
         # Allowed values: prerelease, release.
         type: string

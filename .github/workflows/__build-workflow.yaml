@@ -70,8 +70,6 @@ on:
         value: ${{ jobs.build.outputs.tags }}
       version:
         value: ${{ jobs.build.outputs.version }}
-      artifact:
-        value: ${{ jobs.build.outputs.artifact }}
 
 jobs:
   semver:
@@ -159,17 +157,21 @@ jobs:
       - name: Add standard tags
         if: ${{ inputs.tag != '' }}
         run: |
-          echo 'TAGS_STANDARD<<EOF' >> $GITHUB_ENV
-          echo 'type=raw,value=${{ needs.semver.outputs.fullversion }}' >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
+          (
+            echo 'TAGS_STANDARD<<EOF'
+            echo 'type=raw,value=${{ needs.semver.outputs.fullversion }}'
+            echo 'EOF'
+          ) >> $GITHUB_ENV
 
       - name: Add major.minor tag
         if: ${{ inputs.tag != '' && needs.semver.outputs.prerelease == '' }}
         run: |
-          echo 'TAGS_SUPPLEMENTAL<<EOF' >> $GITHUB_ENV
-          echo "" >> $GITHUB_ENV
-          echo 'type=raw,value=${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}' >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
+          (
+            echo 'TAGS_SUPPLEMENTAL<<EOF'
+            echo ""
+            echo 'type=raw,value=${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}'
+            echo 'EOF'
+          ) >> $GITHUB_ENV
 
       - name: Docker meta
         id: meta
@@ -279,17 +281,21 @@ jobs:
       - name: Add standard tags
         if: ${{ inputs.tag != '' }}
         run: |
-          echo 'TAGS_STANDARD<<EOF' >> $GITHUB_ENV
-          echo 'type=raw,value=${{ needs.semver.outputs.fullversion }}' >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
+          (
+            echo 'TAGS_STANDARD<<EOF'
+            echo 'type=raw,value=${{ needs.semver.outputs.fullversion }}'
+            echo 'EOF'
+          ) >> $GITHUB_ENV
 
       - name: Add major.minor tag
         if: ${{ inputs.tag != '' && needs.semver.outputs.prerelease == '' }}
         run: |
-          echo 'TAGS_SUPPLEMENTAL<<EOF' >> $GITHUB_ENV
-          echo "" >> $GITHUB_ENV
-          echo 'type=raw,value=${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}' >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
+          (
+            echo 'TAGS_SUPPLEMENTAL<<EOF'
+            echo ""
+            echo 'type=raw,value=${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}'
+            echo 'EOF'
+          ) >> $GITHUB_ENV
 
       - name: Docker metadata
         id: meta

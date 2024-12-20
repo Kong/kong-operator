@@ -73,7 +73,7 @@ jobs:
         uses: mukunku/tag-exists-action@bdad1eaa119ce71b150b952c97351c75025c06a9 # v1.6.0
         id: tag_exists
         with:
-          tag: ${{ steps.commit_parser.outputs.release_version }}
+          tag: ${{ env.VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
