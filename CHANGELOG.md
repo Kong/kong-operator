@@ -25,6 +25,12 @@
 
 ## Unreleased
 
+### Changed
+
+- `KonnectExtension` does not require `spec.serverHostname` to be set by a user
+  anymore - default is set to `konghq.com`.
+  [#947](https://github.com/Kong/gateway-operator/pull/947)
+
 ## [v1.4.1]
 
 > Release date: 2024-11-28

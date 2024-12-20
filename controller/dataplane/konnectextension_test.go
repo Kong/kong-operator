@@ -30,14 +30,14 @@ func TestApplyKonnectExtension(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		dataplane     *operatorv1beta1.DataPlane
+		dataPlane     *operatorv1beta1.DataPlane
 		konnectExt    *operatorv1alpha1.KonnectExtension
 		secret        *corev1.Secret
 		expectedError error
 	}{
 		{
 			name: "no extensions",
-			dataplane: &operatorv1beta1.DataPlane{
+			dataPlane: &operatorv1beta1.DataPlane{
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Extensions: []operatorv1alpha1.ExtensionRef{},
@@ -47,7 +47,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 		},
 		{
 			name: "cross-namespace reference",
-			dataplane: &operatorv1beta1.DataPlane{
+			dataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 				},
@@ -93,7 +93,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 		},
 		{
 			name: "Extension not found",
-			dataplane: &operatorv1beta1.DataPlane{
+			dataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 				},
@@ -120,7 +120,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 		},
 		{
 			name: "Extension properly referenced, secret not found",
-			dataplane: &operatorv1beta1.DataPlane{
+			dataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 				},
@@ -165,7 +165,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 		},
 		{
 			name: "Extension properly referenced, no deployment Options set.",
-			dataplane: &operatorv1beta1.DataPlane{
+			dataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 				},
@@ -215,7 +215,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 		},
 		{
 			name: "Extension properly referenced, with deployment Options set.",
-			dataplane: &operatorv1beta1.DataPlane{
+			dataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 				},
@@ -281,7 +281,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			objs := []runtime.Object{tt.dataplane}
+			objs := []runtime.Object{tt.dataPlane}
 			if tt.konnectExt != nil {
 				objs = append(objs, tt.konnectExt)
 			}
@@ -290,15 +290,15 @@ func TestApplyKonnectExtension(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 
-			dataplane := tt.dataplane.DeepCopy()
+			dataplane := tt.dataPlane.DeepCopy()
 			err := applyKonnectExtension(context.Background(), cl, dataplane)
 			if tt.expectedError != nil {
 				require.ErrorIs(t, err, tt.expectedError)
 			} else {
 				require.NoError(t, err)
 				requiredEnv := []corev1.EnvVar{}
-				if tt.dataplane.Spec.Deployment.PodTemplateSpec != nil {
-					if container := k8sutils.GetPodContainerByName(&tt.dataplane.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName); container != nil {
+				if tt.dataPlane.Spec.Deployment.PodTemplateSpec != nil {
+					if container := k8sutils.GetPodContainerByName(&tt.dataPlane.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName); container != nil {
 						requiredEnv = container.Env
 					}
 				}

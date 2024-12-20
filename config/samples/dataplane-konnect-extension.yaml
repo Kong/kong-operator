@@ -26,7 +26,6 @@ spec:
   controlPlaneRef:
     type: konnectID
     konnectID: <YOUR-CP-KONNECT-ID>
-  serverHostname: your.konnect.server
   controlPlaneRegion: eu
   konnectControlPlaneAPIAuthConfiguration:
     clusterCertificateSecretRef:
