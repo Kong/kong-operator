@@ -1824,7 +1824,7 @@ and configured with KongPlugin CRD.
 
 
 KonnectExtension is the Schema for the KonnectExtension API,
-and is intended to be referenced as extension by the dataplane API.
+and is intended to be referenced as extension by the DataPlane API.
 If a DataPlane successfully refers a KonnectExtension, the DataPlane
 deployment spec gets customized to include the konnect-related configuration.
 
@@ -2107,7 +2107,7 @@ KonnectExtensionSpec defines the desired state of KonnectExtension.
 | --- | --- |
 | `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KonnectExtension is associated with. |
 | `controlPlaneRegion` _string_ | ControlPlaneRegion is the region of the Konnect Control Plane. |
-| `serverHostname` _string_ | ServerHostname is the fully qualified domain name of the konnect server. This matches the RFC 1123 definition of a hostname with 1 notable exception that numeric IP addresses are not allowed.<br /><br /> Note that as per RFC1035 and RFC1123, a *label* must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character. No other punctuation is allowed. |
+| `serverHostname` _string_ | ServerHostname is the fully qualified domain name of the Konnect server. For typical operation a default value doesn't need to be adjusted. It matches the RFC 1123 definition of a hostname with 1 notable exception that numeric IP addresses are not allowed.<br /><br /> Note that as per RFC1035 and RFC1123, a *label* must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character. No other punctuation is allowed. |
 | `konnectControlPlaneAPIAuthConfiguration` _[KonnectControlPlaneAPIAuthConfiguration](#konnectcontrolplaneapiauthconfiguration)_ | AuthConfiguration must be used to configure the Konnect API authentication. |
 | `clusterDataPlaneLabels` _object (keys:string, values:string)_ | ClusterDataPlaneLabels is a set of labels that will be applied to the Konnect DataPlane. |
 

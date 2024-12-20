@@ -35,7 +35,7 @@ const (
 // +kubebuilder:subresource:status
 
 // KonnectExtension is the Schema for the KonnectExtension API,
-// and is intended to be referenced as extension by the dataplane API.
+// and is intended to be referenced as extension by the DataPlane API.
 // If a DataPlane successfully refers a KonnectExtension, the DataPlane
 // deployment spec gets customized to include the konnect-related configuration.
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable."
@@ -74,15 +74,16 @@ type KonnectExtensionSpec struct {
 	// +kubebuilder:validation:Required
 	ControlPlaneRegion string `json:"controlPlaneRegion"`
 
-	// ServerHostname is the fully qualified domain name of the konnect server. This
-	// matches the RFC 1123 definition of a hostname with 1 notable exception that
-	// numeric IP addresses are not allowed.
+	// ServerHostname is the fully qualified domain name of the Konnect server.
+	// For typical operation a default value doesn't need to be adjusted.
+	// It matches the RFC 1123 definition of a hostname with 1 notable exception
+	// that numeric IP addresses are not allowed.
 	//
 	// Note that as per RFC1035 and RFC1123, a *label* must consist of lower case
 	// alphanumeric characters or '-', and must start and end with an alphanumeric
 	// character. No other punctuation is allowed.
 	//
-	// +kubebuilder:example:=foo.example.com
+	// +kubebuilder:default:=konghq.com
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`

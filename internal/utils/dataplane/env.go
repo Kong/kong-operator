@@ -60,7 +60,7 @@ type KongInKonnectParams struct {
 	Server       string
 }
 
-// KongInKonnectDefaults returnes the map of Konnect-related env vars properly configured.
+// KongInKonnectDefaults returns the map of Konnect-related env vars properly configured.
 func KongInKonnectDefaults(params KongInKonnectParams) map[string]string {
 	newEnvSet := make(map[string]string, len(kongInKonnectDefaultsTemplate))
 	for k, v := range kongInKonnectDefaultsTemplate {
