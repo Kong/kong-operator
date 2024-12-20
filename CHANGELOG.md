@@ -25,6 +25,11 @@
 
 ## Unreleased
 
+### Fixes
+
+- Fix watch predicates for types shared between KGO and KIC.
+  [#948](https://github.com/Kong/gateway-operator/pull/948)
+
 ### Changed
 
 - `KonnectExtension` does not require `spec.serverHostname` to be set by a user

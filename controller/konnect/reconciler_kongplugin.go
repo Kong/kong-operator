@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -59,6 +60,7 @@ func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Mana
 			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1alpha1.KongService](r.developmentMode)),
 			builder.WithPredicates(
 				kongPluginsAnnotationChangedPredicate,
+				predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongService]),
 			),
 		).
 		Watches(
@@ -66,6 +68,7 @@ func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Mana
 			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1alpha1.KongRoute](r.developmentMode)),
 			builder.WithPredicates(
 				kongPluginsAnnotationChangedPredicate,
+				predicate.NewPredicateFuncs(kongRouteRefersToKonnectGatewayControlPlane(r.client)),
 			),
 		).
 		Watches(
@@ -73,6 +76,7 @@ func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Mana
 			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1.KongConsumer](r.developmentMode)),
 			builder.WithPredicates(
 				kongPluginsAnnotationChangedPredicate,
+				predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1.KongConsumer]),
 			),
 		).
 		Watches(
@@ -80,6 +84,7 @@ func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Mana
 			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1beta1.KongConsumerGroup](r.developmentMode)),
 			builder.WithPredicates(
 				kongPluginsAnnotationChangedPredicate,
+				predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1beta1.KongConsumerGroup]),
 			),
 		).
 		Complete(r)

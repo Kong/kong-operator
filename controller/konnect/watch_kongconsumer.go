@@ -66,6 +66,9 @@ func KongConsumerReconciliationWatchOptions(
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueKongConsumerForKongConsumerGroup(cl),
 				),
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1beta1.KongConsumerGroup]),
+				),
 			)
 		},
 	}

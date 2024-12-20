@@ -46,6 +46,9 @@ func kongCredentialBasicAuthReconciliationWatchOptions(
 				handler.EnqueueRequestsFromMapFunc(
 					kongCredentialBasicAuthForKongConsumer(cl),
 				),
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1.KongConsumer]),
+				),
 			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {

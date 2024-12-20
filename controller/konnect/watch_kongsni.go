@@ -32,6 +32,9 @@ func KongSNIReconciliationWatchOptions(cl client.Client,
 			return b.Watches(
 				&configurationv1alpha1.KongCertificate{},
 				handler.EnqueueRequestsFromMapFunc(enqueueKongSNIForKongCertificate(cl)),
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongCertificate]),
+				),
 			)
 		},
 	}
