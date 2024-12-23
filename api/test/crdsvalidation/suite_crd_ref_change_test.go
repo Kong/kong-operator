@@ -124,9 +124,11 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			},
 		})
 		ret = append(ret, CRDValidationTestCase[T]{
-			Name:                 "providing konnectNamespacedRef when type is konnectID yields an error",
-			TestObject:           obj,
-			ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectID must be set"),
+			Name:       "providing konnectNamespacedRef when type is konnectID yields an error",
+			TestObject: obj,
+			// TODO: change when konnectID is allowed
+			// ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectID must be set"),
+			ExpectedErrorMessage: lo.ToPtr("Unsupported value: \"konnectID\": supported values: \"konnectNamespacedRef\", \"kic\""),
 		})
 	}
 	{
@@ -139,9 +141,10 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			},
 		})
 		ret = append(ret, CRDValidationTestCase[T]{
-			Name:                 "providing konnectNamespacedRef and konnectID when type is konnectID yields an error",
-			TestObject:           obj,
-			ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectNamespacedRef must not be set"),
+			Name:       "providing konnectNamespacedRef and konnectID when type is konnectID yields an error",
+			TestObject: obj,
+			// TODO: change when konnectID is allowed
+			ExpectedErrorMessage: lo.ToPtr("Unsupported value: \"konnectID\": supported values: \"konnectNamespacedRef\", \"kic\""),
 		})
 	}
 	{
