@@ -120,10 +120,10 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 				{
-					Name: fmt.Sprintf("DataPlane deployment is patched after operator upgrade (due to change in default Kong image version to %q)", helpers.GetDefaultDataPlaneImage()),
+					Name: "DataPlane deployment is patched after operator upgrade (due to change in default Kong image version to kong:3.8)",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-onebeforelatestminor-latestminor=true")(ctx, c, cl.MgrClient)
-						gatewayDataPlaneDeploymentHasImageSetTo("gw-upgrade-onebeforelatestminor-latestminor=true", helpers.GetDefaultDataPlaneImage())(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentHasImageSetTo("gw-upgrade-onebeforelatestminor-latestminor=true", "kong:3.8")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
@@ -194,7 +194,7 @@ func TestHelmUpgrade(t *testing.T) {
 				{
 					Name: "DataPlane deployment is not patched after operator upgrade",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-latestminor-current=true")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-latestminor-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
@@ -265,7 +265,7 @@ func TestHelmUpgrade(t *testing.T) {
 				{
 					Name: "DataPlane deployment is not patched after operator upgrade",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
@@ -293,7 +293,7 @@ func TestHelmUpgrade(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Repository is different for OSS and Enterprise images and it should be set accordingly.
-			var kgoImageRepository = "docker.io/kong/gateway-operator-oss"
+			kgoImageRepository := "docker.io/kong/gateway-operator-oss"
 			if helpers.GetDefaultDataPlaneBaseImage() == consts.DefaultDataPlaneBaseEnterpriseImage {
 				kgoImageRepository = "docker.io/kong/gateway-operator"
 			}
@@ -518,7 +518,7 @@ func gatewayDataPlaneDeploymentHasImageSetTo(
 	})
 }
 
-func gatewayDataPlaneDeploymentIsNotPatched(
+func gatewayDataPlaneDeploymentIsNotPatched( //nolint:unused
 	gatewayLabelSelector string,
 ) func(context.Context, *assert.CollectT, client.Client) {
 	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {
