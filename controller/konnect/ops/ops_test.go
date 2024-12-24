@@ -17,6 +17,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
+	"github.com/kong/gateway-operator/internal/metrics"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 
@@ -237,7 +238,7 @@ func testCreate[
 				sdk = tc.sdkFunc(t, sdk)
 			}
 
-			_, err := Create(context.Background(), sdk, fakeClient, tc.entity)
+			_, err := Create(context.Background(), sdk, fakeClient, &metrics.MockRecorder{}, tc.entity)
 			if tc.expectedErrorContains != "" {
 				require.ErrorContains(t, err, tc.expectedErrorContains)
 			} else {
@@ -345,7 +346,7 @@ func testDelete[
 				sdk = tc.sdkFunc(t, sdk)
 			}
 
-			err := Delete(context.Background(), sdk, fakeClient, tc.entity)
+			err := Delete(context.Background(), sdk, fakeClient, &metrics.MockRecorder{}, tc.entity)
 			if tc.expectedError != "" {
 				require.ErrorContains(t, err, tc.expectedError)
 				return

@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
+	"github.com/kong/gateway-operator/internal/metrics"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 
@@ -619,7 +620,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 				ID: "12345",
 			},
 		}, nil)
-	_, err := Create(ctx, sdk.SDK, fakeClient, cp)
+	_, err := Create(ctx, sdk.SDK, fakeClient, &metrics.MockRecorder{}, cp)
 	require.NoError(t, err)
 
 	t.Log("Triggering UpdateControlPlane with expected labels")
@@ -633,7 +634,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 				ID: "12345",
 			},
 		}, nil)
-	_, err = Update(ctx, sdk.SDK, 0, fakeClient, cp)
+	_, err = Update(ctx, sdk.SDK, 0, fakeClient, &metrics.MockRecorder{}, cp)
 	require.NoError(t, err)
 }
 
