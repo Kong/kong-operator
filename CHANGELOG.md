@@ -52,8 +52,8 @@
 ### Added
 
 - Added prometheus metrics for Konnect entity operations in the metrics server:
-  - `gateway_operator_konnect_entity_operation_count` for number of operations
-  - `gateway_operator_konnect_entity_operation_duration` for duration of operations
+  - `gateway_operator_konnect_entity_operation_count` for number of operations.
+  - `gateway_operator_konnect_entity_operation_duration_milliseconds` for duration of operations.
   [#953](https://github.com/Kong/gateway-operator/pull/953)
 
 ## [v1.4.1]

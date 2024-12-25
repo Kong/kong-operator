@@ -189,6 +189,8 @@ func setupIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 // SetupControllers returns a list of ControllerDefs based on config.
 func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef, error) {
 	ctx := context.Background()
+	// metricRecorder is the recorder used to record custom metrics in the controller manager's metrics server.
+	metricRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
 
 	// These checks prevent controller-runtime spamming in logs about failing
 	// to get informer from cache.
@@ -509,8 +511,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			return nil, err
 		}
 
-		// REVIEW: Should we define the recorder here, or define it out of the section to allow setting custom metrics in other controllers?
-		metricRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
+		// REVIEW: Should we define the recorder here, or define it out of the section to allow setting custom metrics in other controllers
 
 		sdkFactory := sdkops.NewSDKFactory()
 		controllerFactory := konnectControllerFactory{

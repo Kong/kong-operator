@@ -38,35 +38,6 @@ const (
 	DeleteOp Op = "delete"
 )
 
-// EntityTypeName is the type of the Konnect entity name used for distinguish operations on different types of entities in the prometheus metrics.
-type EntityTypeName string
-
-// Entity type names for Konnect entity as labels in metrics.
-const (
-	// Entity type names used in metrics.
-	// REVIEW: Should we use the path inside the API as the type names? These are not very consistent in
-	EntityTypeControlPlane         EntityTypeName = "control_planes"
-	EntityTypeService              EntityTypeName = "services"
-	EntityTypeRoute                EntityTypeName = "routes"
-	EntityTypeConsumer             EntityTypeName = "consumers"
-	EntityTypeConsumerGroup        EntityTypeName = "consumer_groups"
-	EntityTypePlugin               EntityTypeName = "plugins"
-	EntityTypeUpstream             EntityTypeName = "upstreams"
-	EntityTypeTarget               EntityTypeName = "targets"
-	EntityTypeBasicAuthCredential  EntityTypeName = "basic_auth_credentials" //nolint:gosec
-	EntityTypeAPIKeyCredential     EntityTypeName = "api_key_credentials"    //nolint:gosec
-	EntityTypeACLCredential        EntityTypeName = "acl_credentials"
-	EntityTypeJWTCredential        EntityTypeName = "jwt_credentials"
-	EntityTypeHMACCredential       EntityTypeName = "hmac_credentials"
-	EntityTypeCACertificate        EntityTypeName = "ca_certificates"
-	EntityTypeCertificate          EntityTypeName = "certificates"
-	EntityTypeSNI                  EntityTypeName = "snis"
-	EntityTypeKey                  EntityTypeName = "keys"
-	EntityTypeKeySet               EntityTypeName = "key_sets"
-	EntityTypeVault                EntityTypeName = "vaults"
-	EntityTypeDataPlaneCertificate EntityTypeName = "data_plane_certificates"
-)
-
 // Create creates a Konnect entity.
 func Create[
 	T constraints.SupportedKonnectEntityType,
@@ -82,69 +53,49 @@ func Create[
 		err   error
 		start = time.Now()
 
-		entityType EntityTypeName
+		entityType = e.GetTypeName()
 		statusCode int
 	)
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		entityType = EntityTypeControlPlane
 		err = createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *configurationv1alpha1.KongService:
-		entityType = EntityTypeService
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
-		entityType = EntityTypeRoute
 		err = createRoute(ctx, sdk.GetRoutesSDK(), ent)
 	case *configurationv1.KongConsumer:
-		entityType = EntityTypeConsumer
 		err = createConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		entityType = EntityTypeConsumerGroup
 		err = createConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.KongPluginBinding:
-		entityType = EntityTypePlugin
 		err = createPlugin(ctx, cl, sdk.GetPluginSDK(), ent)
 	case *configurationv1alpha1.KongUpstream:
-		entityType = EntityTypeUpstream
 		err = createUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialBasicAuth:
-		entityType = EntityTypeBasicAuthCredential
 		err = createKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialAPIKey:
-		entityType = EntityTypeAPIKeyCredential
 		err = createKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialACL:
-		entityType = EntityTypeACLCredential
 		err = createKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialJWT:
-		entityType = EntityTypeJWTCredential
 		err = createKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialHMAC:
-		entityType = EntityTypeHMACCredential
 		err = createKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
-		entityType = EntityTypeCACertificate
 		err = createCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCertificate:
-		entityType = EntityTypeCertificate
 		err = createCertificate(ctx, sdk.GetCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
-		entityType = EntityTypeTarget
 		err = createTarget(ctx, sdk.GetTargetsSDK(), ent)
 	case *configurationv1alpha1.KongVault:
-		entityType = EntityTypeVault
 		err = createVault(ctx, sdk.GetVaultSDK(), ent)
 	case *configurationv1alpha1.KongKey:
-		entityType = EntityTypeKey
 		err = createKey(ctx, sdk.GetKeysSDK(), ent)
 	case *configurationv1alpha1.KongKeySet:
-		entityType = EntityTypeKeySet
 		err = createKeySet(ctx, sdk.GetKeySetsSDK(), ent)
 	case *configurationv1alpha1.KongSNI:
-		entityType = EntityTypeSNI
 		err = createSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
-		entityType = EntityTypeDataPlaneCertificate
 		err = createKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -229,15 +180,17 @@ func Create[
 
 	if err != nil {
 		metricRecorder.RecordKonnectEntityOperationFailure(
+			sdk.GetServerURL(),
 			metrics.KonnectEntityOperationCreate,
-			string(entityType),
+			entityType,
 			time.Since(start),
 			statusCode,
 		)
 	} else {
 		metricRecorder.RecordKonnectEntityOperationSuccess(
+			sdk.GetServerURL(),
 			metrics.KonnectEntityOperationCreate,
-			string(entityType),
+			entityType,
 			time.Since(start),
 		)
 	}
@@ -267,69 +220,49 @@ func Delete[
 		err   error
 		start = time.Now()
 
-		entityType EntityTypeName
+		entityType = ent.GetTypeName()
 		statusCode int
 	)
 	switch ent := any(ent).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		entityType = EntityTypeControlPlane
 		err = deleteControlPlane(ctx, sdk.GetControlPlaneSDK(), ent)
 	case *configurationv1alpha1.KongService:
-		entityType = EntityTypeService
 		err = deleteService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
-		entityType = EntityTypeRoute
 		err = deleteRoute(ctx, sdk.GetRoutesSDK(), ent)
 	case *configurationv1.KongConsumer:
-		entityType = EntityTypeConsumer
 		err = deleteConsumer(ctx, sdk.GetConsumersSDK(), ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		entityType = EntityTypeConsumerGroup
 		err = deleteConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.KongPluginBinding:
-		entityType = EntityTypePlugin
 		err = deletePlugin(ctx, sdk.GetPluginSDK(), ent)
 	case *configurationv1alpha1.KongUpstream:
-		entityType = EntityTypeUpstream
 		err = deleteUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialBasicAuth:
-		entityType = EntityTypeBasicAuthCredential
 		err = deleteKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialAPIKey:
-		entityType = EntityTypeAPIKeyCredential
 		err = deleteKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialACL:
-		entityType = EntityTypeACLCredential
 		err = deleteKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialJWT:
-		entityType = EntityTypeJWTCredential
 		err = deleteKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialHMAC:
-		entityType = EntityTypeHMACCredential
 		err = deleteKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
-		entityType = EntityTypeCACertificate
 		err = deleteCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCertificate:
-		entityType = EntityTypeCertificate
 		err = deleteCertificate(ctx, sdk.GetCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
-		entityType = EntityTypeTarget
 		err = deleteTarget(ctx, sdk.GetTargetsSDK(), ent)
 	case *configurationv1alpha1.KongVault:
-		entityType = EntityTypeVault
 		err = deleteVault(ctx, sdk.GetVaultSDK(), ent)
 	case *configurationv1alpha1.KongKey:
-		entityType = EntityTypeKey
 		err = deleteKey(ctx, sdk.GetKeysSDK(), ent)
 	case *configurationv1alpha1.KongKeySet:
-		entityType = EntityTypeKeySet
 		err = deleteKeySet(ctx, sdk.GetKeySetsSDK(), ent)
 	case *configurationv1alpha1.KongSNI:
-		entityType = EntityTypeSNI
 		err = deleteSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
-		entityType = EntityTypeDataPlaneCertificate
 		err = deleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
@@ -343,15 +276,17 @@ func Delete[
 			statusCode = errSDK.StatusCode
 		}
 		metricRecorder.RecordKonnectEntityOperationFailure(
+			sdk.GetServerURL(),
 			metrics.KonnectEntityOperationDelete,
-			string(entityType),
+			entityType,
 			time.Since(start),
 			statusCode,
 		)
 	} else {
 		metricRecorder.RecordKonnectEntityOperationSuccess(
+			sdk.GetServerURL(),
 			metrics.KonnectEntityOperationDelete,
-			string(entityType),
+			entityType,
 			time.Since(start),
 		)
 	}
@@ -426,67 +361,48 @@ func Update[
 	var (
 		err error
 
-		entityType EntityTypeName
+		entityType = e.GetTypeName()
 		statusCode int
 		start      = time.Now()
 	)
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		entityType = EntityTypeControlPlane
 		err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *configurationv1alpha1.KongService:
-		entityType = EntityTypeService
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
-		entityType = EntityTypeRoute
 		err = updateRoute(ctx, sdk.GetRoutesSDK(), ent)
 	case *configurationv1.KongConsumer:
-		entityType = EntityTypeConsumer
 		err = updateConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		entityType = EntityTypeConsumerGroup
 		err = updateConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.KongPluginBinding:
-		entityType = EntityTypePlugin
 		err = updatePlugin(ctx, sdk.GetPluginSDK(), cl, ent)
 	case *configurationv1alpha1.KongUpstream:
-		entityType = EntityTypeUpstream
 		err = updateUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialBasicAuth:
-		entityType = EntityTypeBasicAuthCredential
 		err = updateKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialAPIKey:
-		entityType = EntityTypeAPIKeyCredential
 		err = updateKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialACL:
-		entityType = EntityTypeACLCredential
 		err = updateKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialJWT:
-		entityType = EntityTypeJWTCredential
 		err = updateKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialHMAC:
-		entityType = EntityTypeJWTCredential
 		err = updateKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
-		entityType = EntityTypeCACertificate
 		err = updateCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCertificate:
-		entityType = EntityTypeCertificate
 		err = updateCertificate(ctx, sdk.GetCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
-		entityType = EntityTypeTarget
 		err = updateTarget(ctx, sdk.GetTargetsSDK(), ent)
 	case *configurationv1alpha1.KongVault:
-		entityType = EntityTypeVault
 		err = updateVault(ctx, sdk.GetVaultSDK(), ent)
 	case *configurationv1alpha1.KongKey:
-		entityType = EntityTypeKey
 		err = updateKey(ctx, sdk.GetKeysSDK(), ent)
 	case *configurationv1alpha1.KongKeySet:
-		entityType = EntityTypeKeySet
 		err = updateKeySet(ctx, sdk.GetKeySetsSDK(), ent)
 	case *configurationv1alpha1.KongSNI:
-		entityType = EntityTypeSNI
 		err = updateSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = nil // DataPlaneCertificates are immutable.
@@ -516,15 +432,17 @@ func Update[
 
 	if err != nil {
 		metricRecorder.RecordKonnectEntityOperationFailure(
-			metrics.KonnectEnttiyOperationUpdate,
-			string(entityType),
+			sdk.GetServerURL(),
+			metrics.KonnectEntityOperationUpdate,
+			entityType,
 			time.Since(start),
 			statusCode,
 		)
 	} else {
 		metricRecorder.RecordKonnectEntityOperationSuccess(
-			metrics.KonnectEnttiyOperationUpdate,
-			string(entityType),
+			sdk.GetServerURL(),
+			metrics.KonnectEntityOperationUpdate,
+			entityType,
 			time.Since(start),
 		)
 	}
