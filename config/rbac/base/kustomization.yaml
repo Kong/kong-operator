@@ -14,11 +14,11 @@ resources:
 - mtls_secret_role.yaml
 - mtls_secret_role_binding.yaml
 # Comment the following 4 lines if you want to disable
-# the auth proxy (https://github.com/brancz/kube-rbac-proxy)
+# the metrics access rbac filter,
 # which protects your /metrics endpoint.
-- auth_proxy_service.yaml
-- auth_proxy_role.yaml
-- auth_proxy_role_binding.yaml
-- auth_proxy_client_clusterrole.yaml
+- metrics_access_service.yaml
+- metrics_access_role.yaml
+- metrics_access_role_binding.yaml
+- metrics_access_client_clusterrole.yaml
 
 namespace: kong-system

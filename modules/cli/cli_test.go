@@ -91,6 +91,17 @@ func TestParse(t *testing.T) {
 				return cfg
 			},
 		},
+		{
+			name: "metrics access filter argument is set",
+			args: []string{
+				"--metrics-access-filter=rbac",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.MetricsAccessFilter = "rbac"
+				return cfg
+			},
+		},
 	}
 
 	for _, tC := range testCases {
@@ -145,6 +156,7 @@ func TestParseWithAdditionalFlags(t *testing.T) {
 func expectedDefaultCfg() manager.Config {
 	return manager.Config{
 		MetricsAddr:                             ":8080",
+		MetricsAccessFilter:                     "off",
 		ProbeAddr:                               ":8081",
 		WebhookCertDir:                          "/tmp/k8s-webhook-server/serving-certs",
 		WebhookPort:                             9443,
