@@ -205,6 +205,8 @@ func TestHelmUpgrade(t *testing.T) {
 				},
 			},
 		},
+		/**
+		// TODO(Jintao): This test is disabled. After a new nightly image is available which uses KIC 3.4.1, we can enable it.
 		{
 			name:             "upgrade from nightly to current",
 			fromVersion:      "nightly",
@@ -276,6 +278,7 @@ func TestHelmUpgrade(t *testing.T) {
 				},
 			},
 		},
+		**/
 	}
 
 	var (
