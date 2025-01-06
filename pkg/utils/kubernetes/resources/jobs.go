@@ -82,7 +82,6 @@ func newWebhookCertificateConfigJobCommon(namespace, serviceAccountName string, 
 					ServiceAccountName: serviceAccountName,
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: lo.ToPtr(true),
-						RunAsUser:    lo.ToPtr(int64(2000)),
 					},
 				},
 			},
