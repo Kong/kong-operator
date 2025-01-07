@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/samber/lo"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -119,6 +120,28 @@ func ReduceServices(ctx context.Context, k8sClient client.Client, services []cor
 		mappedEndpointSlices[service.Name] = endpointSliceList.Items
 	}
 	filteredServices := filterServices(services, mappedEndpointSlices)
+	for _, service := range filteredServices {
+		for _, hook := range preDeleteHooks {
+			if err := hook(ctx, k8sClient, &service); err != nil {
+				return fmt.Errorf("failed to execute pre delete hook: %w", err)
+			}
+		}
+		if err := k8sClient.Delete(ctx, &service); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=list;watch
+// +kubebuilder:rbac:groups=core,resources=services,verbs=delete
+
+// ReduceServicesByName deletes all service in the list except the one with specified name (if exists).
+// It accepts optional preDeleteHooks which are executed before every Service delete operation.
+func ReduceServicesByName(ctx context.Context, k8sClient client.Client, services []corev1.Service, name string, preDeleteHooks ...PreDeleteHook) error {
+	filteredServices := lo.Filter(services, func(svc corev1.Service, _ int) bool {
+		return svc.Name != name
+	})
 	for _, service := range filteredServices {
 		for _, hook := range preDeleteHooks {
 			if err := hook(ctx, k8sClient, &service); err != nil {

@@ -57,6 +57,13 @@ func (b *testDataPlaneBuilder) WithIngressServiceType(typ corev1.ServiceType) *t
 	return b
 }
 
+// WithIngressServiceName sets the Name of the Ingress service.
+func (b *testDataPlaneBuilder) WithIngressServiceName(name string) *testDataPlaneBuilder {
+	b.initIngressServiceOptions()
+	b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.Name = &name
+	return b
+}
+
 // WithIngressServiceExternalTrafficPolicy sets the ExternalTrafficPolicy of the Ingress service.
 func (b *testDataPlaneBuilder) WithIngressServiceExternalTrafficPolicy(typ corev1.ServiceExternalTrafficPolicyType) *testDataPlaneBuilder {
 	b.initIngressServiceOptions()

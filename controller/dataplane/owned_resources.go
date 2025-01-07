@@ -295,7 +295,14 @@ func ensureIngressServiceForDataPlane(
 	}
 
 	count := len(services)
-	if count > 1 {
+	if serviceName := k8sresources.GetDataPlaneIngressServiceName(dataPlane); serviceName != "" {
+		if count > 1 || (count == 1 && services[0].Name != serviceName) {
+			if err := k8sreduce.ReduceServicesByName(ctx, cl, services, serviceName, dataplane.OwnedObjectPreDeleteHook); err != nil {
+				return op.Noop, nil, err
+			}
+			return op.Noop, nil, errors.New("DataPlane ingress services with different names reduced")
+		}
+	} else if count > 1 {
 		if err := k8sreduce.ReduceServices(ctx, cl, services, dataplane.OwnedObjectPreDeleteHook); err != nil {
 			return op.Noop, nil, err
 		}
