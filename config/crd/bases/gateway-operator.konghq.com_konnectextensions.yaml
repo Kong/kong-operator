@@ -82,13 +82,11 @@ spec:
                     default: kic
                     description: |-
                       Type indicates the type of the control plane being referenced. Allowed values:
-                      - konnectID
                       - konnectNamespacedRef
                       - kic
 
                       The default is kic, which implies that the Control Plane is KIC.
                     enum:
-                    - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string

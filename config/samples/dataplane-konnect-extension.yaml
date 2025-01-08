@@ -18,41 +18,42 @@
 #     WSK9kndNKpFI4vPvuw6j2JJl
 #     -----END PRIVATE KEY-----
 # ---
-apiVersion: gateway-operator.konghq.com/v1alpha1
-kind: KonnectExtension
-metadata:
-  name: my-konnect-config
-spec:
-  controlPlaneRef:
-    type: konnectID
-    konnectID: <YOUR-CP-KONNECT-ID>
-  controlPlaneRegion: eu
-  konnectControlPlaneAPIAuthConfiguration:
-    clusterCertificateSecretRef:
-      name: konnect-client-tls
----
-apiVersion: gateway-operator.konghq.com/v1beta1
-kind: DataPlane
-metadata:
-  name: konnect-extension-example
-spec:
-  extensions:
-  - kind: KonnectExtension
-    name: my-konnect-config
-    group: gateway-operator.konghq.com
-  deployment:
-    replicas: 3
-    podTemplateSpec:
-      metadata:
-        labels:
-          dataplane-pod-label: example
-        annotations:
-          dataplane-pod-annotation: example
-      spec:
-        containers:
-        - name: proxy
-          # renovate: datasource=docker versioning=docker
-          image: kong/kong-gateway:3.9
-          readinessProbe:
-            initialDelaySeconds: 1
-            periodSeconds: 1
+# TODO: Uncomment when https://github.com/Kong/gateway-operator/issues/922 will be done.
+# apiVersion: gateway-operator.konghq.com/v1alpha1
+# kind: KonnectExtension
+# metadata:
+#   name: my-konnect-config
+# spec:
+#   controlPlaneRef:
+#     type: konnectID
+#     konnectID: <YOUR-CP-KONNECT-ID>
+#   controlPlaneRegion: eu
+#   konnectControlPlaneAPIAuthConfiguration:
+#     clusterCertificateSecretRef:
+#       name: konnect-client-tls
+# ---
+# apiVersion: gateway-operator.konghq.com/v1beta1
+# kind: DataPlane
+# metadata:
+#   name: konnect-extension-example
+# spec:
+#   extensions:
+#   - kind: KonnectExtension
+#     name: my-konnect-config
+#     group: gateway-operator.konghq.com
+#   deployment:
+#     replicas: 3
+#     podTemplateSpec:
+#       metadata:
+#         labels:
+#           dataplane-pod-label: example
+#         annotations:
+#           dataplane-pod-annotation: example
+#       spec:
+#         containers:
+#         - name: proxy
+#           # renovate: datasource=docker versioning=docker
+#           image: kong/kong-gateway:3.9
+#           readinessProbe:
+#             initialDelaySeconds: 1
+#             periodSeconds: 1
