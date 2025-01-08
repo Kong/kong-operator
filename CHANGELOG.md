@@ -37,6 +37,8 @@
   [#947](https://github.com/Kong/gateway-operator/pull/947)
 - Support KIC 3.4
   [#972](https://github.com/Kong/gateway-operator/pull/972)
+- Allow more than 1 replica for `ControlPlane`'s `Deployment` to support HA deployments of KIC.
+  [#978](https://github.com/Kong/gateway-operator/pull/978)
 
 ### Fixes
 
