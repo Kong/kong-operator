@@ -30,6 +30,8 @@
 - `KonnectExtension` does not require `spec.serverHostname` to be set by a user
   anymore - default is set to `konghq.com`.
   [#947](https://github.com/Kong/gateway-operator/pull/947)
+- Support KIC 3.4
+  [#972](https://github.com/Kong/gateway-operator/pull/972)
 
 ### Fixes
 

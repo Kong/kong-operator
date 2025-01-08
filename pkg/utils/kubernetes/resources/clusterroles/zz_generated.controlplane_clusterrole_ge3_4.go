@@ -15,10 +15,10 @@ import (
 // ClusterRole generator
 // -----------------------------------------------------------------------------
 
-// GenerateNewClusterRoleForControlPlane_ge3_3 is a helper to generate a ClusterRole
+// GenerateNewClusterRoleForControlPlane_ge3_4 is a helper to generate a ClusterRole
 // resource with all the permissions needed by the controlplane deployment.
-// It is used for controlplanes that match the semver constraint ">=3.3"
-func GenerateNewClusterRoleForControlPlane_ge3_3(controlplaneName string) *rbacv1.ClusterRole {
+// It is used for controlplanes that match the semver constraint ">=3.4"
+func GenerateNewClusterRoleForControlPlane_ge3_4(controlplaneName string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", controlplaneName)),
@@ -45,10 +45,10 @@ func GenerateNewClusterRoleForControlPlane_ge3_3(controlplaneName string) *rbacv
 					"",
 				},
 				Resources: []string{
-					"events",
+					"configmaps", "nodes", "secrets",
 				},
 				Verbs: []string{
-					"create", "patch",
+					"list", "watch",
 				},
 			},
 			{
@@ -56,10 +56,10 @@ func GenerateNewClusterRoleForControlPlane_ge3_3(controlplaneName string) *rbacv
 					"",
 				},
 				Resources: []string{
-					"nodes", "secrets",
+					"events",
 				},
 				Verbs: []string{
-					"list", "watch",
+					"create", "patch",
 				},
 			},
 			{
@@ -201,7 +201,7 @@ func GenerateNewClusterRoleForControlPlane_ge3_3(controlplaneName string) *rbacv
 					"",
 				},
 				Resources: []string{
-					"namespaces",
+					"configmaps", "namespaces", "secrets", "services",
 				},
 				Verbs: []string{
 					"get", "list", "watch",
@@ -212,10 +212,21 @@ func GenerateNewClusterRoleForControlPlane_ge3_3(controlplaneName string) *rbacv
 					"gateway.networking.k8s.io",
 				},
 				Resources: []string{
-					"gatewayclasses", "grpcroutes", "httproutes", "referencegrants", "tcproutes", "tlsroutes", "udproutes",
+					"backendtlspolicies", "gatewayclasses", "grpcroutes", "httproutes", "referencegrants", "tcproutes", "tlsroutes", "udproutes",
 				},
 				Verbs: []string{
 					"get", "list", "watch",
+				},
+			},
+			{
+				APIGroups: []string{
+					"gateway.networking.k8s.io",
+				},
+				Resources: []string{
+					"backendtlspolicies/status",
+				},
+				Verbs: []string{
+					"patch", "update",
 				},
 			},
 			{

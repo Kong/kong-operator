@@ -76,12 +76,23 @@ func GenerateValidatingWebhookConfigurationForControlPlane(webhookName string, i
 		return cfg, nil
 	}	
 	
-	constraint, err = semver.NewConstraint(">=3.3")
+	constraint, err = semver.NewConstraint(">=3.3, <3.4")
 	if err != nil {
 		return nil, err
 	}
 	if constraint.Check(semVersion) {
-		cfg := webhook.GenerateValidatingWebhookConfigurationForKIC_ge3_3(webhookName, clientConfig)
+		cfg := webhook.GenerateValidatingWebhookConfigurationForKIC_ge3_3_lt3_4(webhookName, clientConfig)
+		pkgapisadmregv1.SetObjectDefaults_ValidatingWebhookConfiguration(cfg)
+		LabelObjectAsControlPlaneManaged(cfg)
+		return cfg, nil
+	}	
+	
+	constraint, err = semver.NewConstraint(">=3.4")
+	if err != nil {
+		return nil, err
+	}
+	if constraint.Check(semVersion) {
+		cfg := webhook.GenerateValidatingWebhookConfigurationForKIC_ge3_4(webhookName, clientConfig)
 		pkgapisadmregv1.SetObjectDefaults_ValidatingWebhookConfiguration(cfg)
 		LabelObjectAsControlPlaneManaged(cfg)
 		return cfg, nil

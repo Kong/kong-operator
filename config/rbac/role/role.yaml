@@ -328,6 +328,7 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - backendtlspolicies
   - gatewayclasses
   - grpcroutes
   - referencegrants
@@ -338,6 +339,13 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - backendtlspolicies/status
+  verbs:
+  - patch
+  - update
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
