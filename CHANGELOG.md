@@ -38,6 +38,9 @@
 - Fix `DataPlane`s with `KonnectExtension` and `BlueGreen` settings. Both the Live
   and preview deployments are now customized with Konnect-related settings.
   [#910](https://github.com/Kong/gateway-operator/pull/910)
+- Remove `RunAsUser` specification in jobs to create webhook certificates
+  because Openshift does not specifying `RunAsUser` by default.
+  [#964](https://github.com/Kong/gateway-operator/pull/964)
 
 ## [v1.4.1]
 
