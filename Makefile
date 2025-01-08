@@ -431,8 +431,8 @@ test.conformance:
 		GOTESTFLAGS="$(GOTESTFLAGS)"
 
 .PHONY: test.samples
-test.samples: kustomize
-	find ./config/samples -not -name "kustomization.*" -type f | sort | xargs -I{} bash -c "kubectl apply -f {}; kubectl delete -f {}"
+test.samples:
+	@cd config/samples/ && find . -not -name "kustomization.*" -type f | sort | xargs -I{} bash -c "echo;echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
 
 # https://github.com/vektra/mockery/issues/803#issuecomment-2287198024
 .PHONY: generate.mocks
