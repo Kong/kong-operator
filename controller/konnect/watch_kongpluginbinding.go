@@ -80,6 +80,9 @@ func KongPluginBindingReconciliationWatchOptions(
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueKongPluginBindingFor[configurationv1alpha1.KongService](cl),
 				),
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongService]),
+				),
 			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
@@ -87,6 +90,9 @@ func KongPluginBindingReconciliationWatchOptions(
 				&configurationv1alpha1.KongRoute{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueKongPluginBindingFor[configurationv1alpha1.KongRoute](cl),
+				),
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongRoute]),
 				),
 			)
 		},
@@ -96,6 +102,9 @@ func KongPluginBindingReconciliationWatchOptions(
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueKongPluginBindingFor[configurationv1.KongConsumer](cl),
 				),
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1.KongConsumer]),
+				),
 			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
@@ -103,6 +112,9 @@ func KongPluginBindingReconciliationWatchOptions(
 				&configurationv1beta1.KongConsumerGroup{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueKongPluginBindingFor[configurationv1beta1.KongConsumerGroup](cl),
+				),
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1beta1.KongConsumerGroup]),
 				),
 			)
 		},

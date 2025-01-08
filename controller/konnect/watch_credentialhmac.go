@@ -46,6 +46,9 @@ func kongCredentialHMACReconciliationWatchOptions(
 				handler.EnqueueRequestsFromMapFunc(
 					kongCredentialHMACForKongConsumer(cl),
 				),
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1.KongConsumer]),
+				),
 			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {

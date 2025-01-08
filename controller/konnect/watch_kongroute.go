@@ -45,6 +45,9 @@ func KongRouteReconciliationWatchOptions(
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueKongRouteForKongService(cl),
 				),
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongService]),
+				),
 			)
 		},
 	}
