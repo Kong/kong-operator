@@ -28,7 +28,7 @@ require (
 	k8s.io/apimachinery v0.32.0
 	k8s.io/client-go v0.32.0
 	oras.land/oras-go/v2 v2.5.0
-	sigs.k8s.io/controller-runtime v0.19.3
+	sigs.k8s.io/controller-runtime v0.19.4
 	sigs.k8s.io/gateway-api v1.2.1
 )
 
@@ -81,6 +81,7 @@ require (
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731 // indirect
 	github.com/evanphx/json-patch v5.9.0+incompatible // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
