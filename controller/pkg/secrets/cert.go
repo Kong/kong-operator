@@ -23,7 +23,6 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -186,13 +185,6 @@ func EnsureCertificate[
 ) (op.Result, *corev1.Secret, error) {
 	setCALogger(ctrllog.Log)
 
-	// TODO: https://github.com/Kong/gateway-operator-archive/pull/156.
-	// Use only new labels after several minor version of soak time.
-
-	// Below we list both the Secrets with the new labels and the legacy labels
-	// in order to support upgrades from older versions of the operator and perform
-	// the reduction of the Secrets using the older labels.
-
 	// Get the Secrets for the DataPlane using new labels.
 	matchingLabels := k8sresources.GetManagedLabelForOwner(owner)
 	for k, v := range additionalMatchingLabels {
@@ -203,24 +195,6 @@ func EnsureCertificate[
 	if err != nil {
 		return op.Noop, nil, fmt.Errorf("failed listing Secrets for %T %s/%s: %w", owner, owner.GetNamespace(), owner.GetName(), err)
 	}
-
-	// Get the Secrets for the DataPlane using legacy labels.
-	reqLegacyLabels, err := k8sresources.GetManagedLabelRequirementsForOwnerLegacy(owner)
-	if err != nil {
-		return op.Noop, nil, err
-	}
-	secretsLegacy, err := k8sutils.ListSecretsForOwner(
-		ctx,
-		cl,
-		owner.GetUID(),
-		&client.ListOptions{
-			LabelSelector: labels.NewSelector().Add(reqLegacyLabels...),
-		},
-	)
-	if err != nil {
-		return op.Noop, nil, fmt.Errorf("failed listing Secrets for %T %s/%s: %w", owner, owner.GetNamespace(), owner.GetName(), err)
-	}
-	secrets = append(secrets, secretsLegacy...)
 
 	count := len(secrets)
 	if count > 1 {

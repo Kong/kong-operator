@@ -17,7 +17,6 @@ import (
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------
@@ -165,18 +164,10 @@ func (r *Reconciler) getControlPlaneRequestFromManagedByNameLabel(ctx context.Co
 }
 
 // objectIsOwnedByControlPlane checks if the object is owned by the control plane.
-//
-// NOTE: We are using the managed-by-name label to identify the owner of the resource.
-// To keep backward compatibility, we also check the owner reference which
-// is not used anymore for cluster-scoped resources since that's considered
-// an error.
+// It relies on managed-by-name label to identify the owner of the resource.
+// It doesn't check owner reference which is considered as an error for cluster-scoped resources.
 func objectIsOwnedByControlPlane(obj client.Object, cp *operatorv1beta1.ControlPlane) bool {
-	if k8sutils.IsOwnedByRefUID(obj, cp.GetUID()) {
-		return true
-	}
-
-	labels := obj.GetLabels()
-	if labels[consts.GatewayOperatorManagedByNameLabel] == cp.Name {
+	if obj.GetLabels()[consts.GatewayOperatorManagedByNameLabel] == cp.Name {
 		if obj.GetNamespace() != "" {
 			return cp.GetNamespace() == obj.GetNamespace()
 		} else {

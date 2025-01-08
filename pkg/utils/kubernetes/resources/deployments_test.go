@@ -308,7 +308,6 @@ func TestGenerateNewDeploymentForControlPlane(t *testing.T) {
 					Labels: map[string]string{
 						"app":                                    "cp-1",
 						"gateway-operator.konghq.com/managed-by": "controlplane",
-						"konghq.com/gateway-operator":            "controlplane",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
@@ -466,7 +465,6 @@ func TestGenerateNewDeploymentForControlPlane(t *testing.T) {
 					Labels: map[string]string{
 						"app":                                    "cp-1",
 						"gateway-operator.konghq.com/managed-by": "controlplane",
-						"konghq.com/gateway-operator":            "controlplane",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{

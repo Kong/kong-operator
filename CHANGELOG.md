@@ -34,6 +34,9 @@
   [#972](https://github.com/Kong/gateway-operator/pull/972)
 - Allow more than 1 replica for `ControlPlane`'s `Deployment` to support HA deployments of KIC.
   [#978](https://github.com/Kong/gateway-operator/pull/978)
+- Removed support for the migration of legacy labels so upgrading the operator from 1.3 (or older) to 1.5.0,
+  should be done through 1.4.1
+  [#976](https://github.com/Kong/gateway-operator/pull/976)
 
 ### Fixes
 
@@ -167,7 +170,7 @@
 ### Fixed
 
 - Fixed `ControlPlane` cluster wide resources not migrating to new ownership labels
-  (introduced in 1.3.0) when upgrading the operator form 1.2 (or older) to 1.3.0.
+  (introduced in 1.3.0) when upgrading the operator from 1.2 (or older) to 1.3.0.
   [#369](https://github.com/Kong/gateway-operator/pull/369)
 - Requeue instead of reporting an error when a finalizer removal yields a conflict.
   [#454](https://github.com/Kong/gateway-operator/pull/454)

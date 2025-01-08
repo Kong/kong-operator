@@ -122,10 +122,9 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 						Name:      "test-dataplane-deployment",
 						Namespace: "default",
 						Labels: map[string]string{
-							"app":                                      "test-dataplane",
-							consts.DataPlaneDeploymentStateLabel:       string(consts.DataPlaneStateLabelValueLive),
-							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
-							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
+							"app":                                "test-dataplane",
+							consts.DataPlaneDeploymentStateLabel: string(consts.DataPlaneStateLabelValueLive),
+							consts.GatewayOperatorManagedByLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Status: appsv1.DeploymentStatus{
@@ -139,11 +138,10 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 						Name:      "test-admin-service",
 						Namespace: "default",
 						Labels: map[string]string{
-							"app":                                      "test-dataplane",
-							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneAdminServiceLabelValue),
-							consts.DataPlaneServiceStateLabel:          string(consts.DataPlaneStateLabelValueLive),
-							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
-							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
+							"app":                                "test-dataplane",
+							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
+							consts.DataPlaneServiceStateLabel:    string(consts.DataPlaneStateLabelValueLive),
+							consts.GatewayOperatorManagedByLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -155,11 +153,10 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 						Name:      "test-proxy-service",
 						Namespace: "default",
 						Labels: map[string]string{
-							"app":                                      "test-dataplane",
-							consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValueLive,
-							consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
-							consts.GatewayOperatorManagedByLabel:       string(consts.DataPlaneManagedLabelValue),
-							consts.GatewayOperatorManagedByLabelLegacy: string(consts.DataPlaneManagedLabelValue),
+							"app":                                "test-dataplane",
+							consts.DataPlaneServiceStateLabel:    consts.DataPlaneStateLabelValueLive,
+							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel: string(consts.DataPlaneManagedLabelValue),
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -465,9 +462,9 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 					Labels: map[string]string{
 						"app":                                "dp-0",
 						consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
-						consts.GatewayOperatorManagedByLabelLegacy: consts.DataPlaneManagedLabelValue,
-						consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
-						consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValuePreview,
+
+						consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
+						consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 					},
 				},
 				Spec: corev1.ServiceSpec{
@@ -496,9 +493,9 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 					Labels: map[string]string{
 						"app":                                "dp-1",
 						consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
-						consts.GatewayOperatorManagedByLabelLegacy: consts.DataPlaneManagedLabelValue,
-						consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
-						consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValuePreview,
+
+						consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
+						consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 					},
 				},
 				Spec: corev1.ServiceSpec{
@@ -542,9 +539,9 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 					Labels: map[string]string{
 						"app":                                "dp-1",
 						consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
-						consts.GatewayOperatorManagedByLabelLegacy: consts.DataPlaneManagedLabelValue,
-						consts.DataPlaneServiceTypeLabel:           string(consts.DataPlaneIngressServiceLabelValue),
-						consts.DataPlaneServiceStateLabel:          consts.DataPlaneStateLabelValuePreview,
+
+						consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
+						consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 					},
 				},
 				Spec: corev1.ServiceSpec{

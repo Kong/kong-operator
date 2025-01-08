@@ -361,7 +361,6 @@ func TestCallbackRun(t *testing.T) {
 						Labels: map[string]string{
 							"cert-purpose":                           "faketest",
 							"gateway-operator.konghq.com/managed-by": "dataplane",
-							"konghq.com/gateway-operator":            "dataplane",
 						},
 					},
 					Data: helpers.TLSSecretData(t, ca,

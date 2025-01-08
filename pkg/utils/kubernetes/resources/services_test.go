@@ -104,7 +104,6 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 						"app": "dp-1",
 						"gateway-operator.konghq.com/dataplane-service-type": "ingress",
 						"gateway-operator.konghq.com/managed-by":             "dataplane",
-						"konghq.com/gateway-operator":                        "dataplane",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
@@ -177,7 +176,6 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 						"app": "dp-1",
 						"gateway-operator.konghq.com/dataplane-service-type": "ingress",
 						"gateway-operator.konghq.com/managed-by":             "dataplane",
-						"konghq.com/gateway-operator":                        "dataplane",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
@@ -251,7 +249,6 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 						"app": "dp-1",
 						"gateway-operator.konghq.com/dataplane-service-type": "ingress",
 						"gateway-operator.konghq.com/managed-by":             "dataplane",
-						"konghq.com/gateway-operator":                        "dataplane",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
