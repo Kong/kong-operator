@@ -26,12 +26,13 @@ const (
 // +apireference:kgo:include
 type ControlPlaneRef struct {
 	// Type indicates the type of the control plane being referenced. Allowed values:
+	// - konnectID
 	// - konnectNamespacedRef
 	// - kic
 	//
 	// The default is kic, which implies that the Control Plane is KIC.
 	//
-	// +kubebuilder:validation:Enum=konnectNamespacedRef;kic
+	// +kubebuilder:validation:Enum=konnectID;konnectNamespacedRef;kic
 	// +kubebuilder:default:=kic
 	Type string `json:"type,omitempty"`
 
