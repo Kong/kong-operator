@@ -301,7 +301,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			log.Debug(
 				logger,
 				"conflict found when trying to ensure ControlPlane's DataPlane configuration was up to date, retrying",
-				cp,
+				"controlPlane", cp,
 			)
 			return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
 		}

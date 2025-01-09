@@ -68,7 +68,7 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 	}
 
 	if keySetRef.Type != configurationv1alpha1.KeySetRefNamespacedRef {
-		ctrllog.FromContext(ctx).Error(fmt.Errorf("unsupported KeySet ref type %q", keySetRef.Type), "entity", ent)
+		ctrllog.FromContext(ctx).Error(fmt.Errorf("unsupported KeySet ref type %q", keySetRef.Type), "unsupported KeySet ref type", "entity", ent)
 		return ctrl.Result{}, nil
 	}
 

@@ -102,7 +102,7 @@ func listDataPlanesReferencingKonnectExtension(
 		if err := c.List(ctx, &dataPlaneList, client.MatchingFields{
 			index.KonnectExtensionIndex: ext.Namespace + "/" + ext.Name,
 		}); err != nil {
-			logger.Error(err, "Failed to list DataPlanes in watch", operatorv1alpha1.KonnectExtensionKind)
+			logger.Error(err, "Failed to list DataPlanes in watch", "extensionKind", operatorv1alpha1.KonnectExtensionKind)
 			return nil
 		}
 		return lo.Map(dataPlaneList.Items, func(dp operatorv1beta1.DataPlane, _ int) reconcile.Request {
