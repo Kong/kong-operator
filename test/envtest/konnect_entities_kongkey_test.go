@@ -40,7 +40,7 @@ func TestKongKey(t *testing.T) {
 	cfg, ns := Setup(t, ctx, scheme.Get())
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get(), WithKonnectCacheIndices(ctx))
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
 	StartReconcilers(ctx, t, mgr, logs,
@@ -267,6 +267,44 @@ func TestKongKey(t *testing.T) {
 
 		t.Log("Waiting for KongKey to be deattached from KongKeySet in the SDK")
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
+
+	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
+		t.Log("Setting up SDK expectations on KongKey creation")
+		sdk.KeysSDK.EXPECT().CreateKey(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
+			mock.MatchedBy(func(input sdkkonnectcomp.KeyInput) bool {
+				return input.Kid == keyKid &&
+					input.Name != nil && *input.Name == keyName
+			}),
+		).Return(&sdkkonnectops.CreateKeyResponse{
+			Key: &sdkkonnectcomp.Key{
+				ID: lo.ToPtr(keyID),
+			},
+		}, nil)
+
+		t.Log("Creating KongKey with ControlPlaneRef type=konnectID")
+		createdKey := deploy.KongKeyAttachedToCP(t, ctx, clientNamespaced, keyKid, keyName, cp,
+			func(k *configurationv1alpha1.KongKey) { deploy.WithKonnectIDControlPlaneRef(cp)(k) },
+		)
+
+		t.Log("Waiting for KongKey to be programmed")
+		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongKey) bool {
+			if c.GetName() != createdKey.GetName() {
+				return false
+			}
+			if c.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
+				return false
+			}
+			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					condition.Status == metav1.ConditionTrue
+			})
+		}, "KongKey's Programmed condition should be true eventually")
+
+		t.Log("Checking SDK KongKey operations")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
 	})

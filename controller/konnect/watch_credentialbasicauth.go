@@ -89,21 +89,16 @@ func kongCredentialBasicAuthForKonnectAPIAuthConfiguration(
 
 		var ret []reconcile.Request
 		for _, consumer := range l.Items {
-			cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&consumer)
+			cpRef, ok := getControlPlaneRef(&consumer).Get()
 			if !ok {
 				continue
 			}
-
-			cpNN := types.NamespacedName{
-				Name:      cpRef.KonnectNamespacedRef.Name,
-				Namespace: consumer.Namespace,
-			}
-			var cp konnectv1alpha1.KonnectGatewayControlPlane
-			if err := cl.Get(ctx, cpNN, &cp); err != nil {
+			cp, err := getCPForRef(ctx, cl, cpRef, consumer.Namespace)
+			if err != nil {
 				ctrllog.FromContext(ctx).Error(
 					err,
 					"failed to get KonnectGatewayControlPlane",
-					"KonnectGatewayControlPlane", cpNN,
+					"KonnectGatewayControlPlane", cpRef,
 				)
 				continue
 			}

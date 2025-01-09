@@ -91,15 +91,23 @@ func objRefersToKonnectGatewayControlPlane[
 		return false
 	}
 
-	return objHasControlPlaneRefKonnectNamespacedRef(ent)
+	return objHasControlPlaneRef(ent)
 }
 
-func objHasControlPlaneRefKonnectNamespacedRef[
+func objHasControlPlaneRef[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ent TEnt) bool {
-	_, ok := controlPlaneRefIsKonnectNamespacedRef(ent)
-	return ok
+	cpRef, ok := getControlPlaneRef(ent).Get()
+	if !ok {
+		return false
+	}
+	switch cpRef.Type {
+	case configurationv1alpha1.ControlPlaneRefKonnectID, configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
+		return true
+	default:
+		return false
+	}
 }
 
 // controlPlaneRefIsKonnectNamespacedRef returns:

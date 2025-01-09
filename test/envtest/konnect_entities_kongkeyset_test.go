@@ -38,7 +38,7 @@ func TestKongKeySet(t *testing.T) {
 	cfg, ns := Setup(t, ctx, scheme.Get())
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get(), WithKonnectCacheIndices(ctx))
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
 	StartReconcilers(ctx, t, mgr, logs,
@@ -160,6 +160,46 @@ func TestKongKeySet(t *testing.T) {
 		t.Log("Ensuring that the SDK's create and list methods are called")
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
+
+	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
+		t.Log("Setting up SDK expectations on KongKeySet creation")
+		sdk.KeySetsSDK.EXPECT().CreateKeySet(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
+			mock.MatchedBy(func(input sdkkonnectcomp.KeySetInput) bool {
+				return input.Name != nil && *input.Name == keySetName
+			}),
+		).Return(&sdkkonnectops.CreateKeySetResponse{
+			KeySet: &sdkkonnectcomp.KeySet{
+				ID: lo.ToPtr(keySetID),
+			},
+		}, nil)
+
+		t.Log("Setting up a watch for KongKeySet events")
+		w := setupWatch[configurationv1alpha1.KongKeySetList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Creating KongKeySet with ControlPlaneRef type=konnectID")
+		createdKeySet := deploy.KongKeySetAttachedToCP(t, ctx, clientNamespaced, keySetName, cp,
+			deploy.WithKonnectIDControlPlaneRef(cp),
+		)
+
+		t.Log("Waiting for KongKeySet to be programmed")
+		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongKeySet) bool {
+			if c.GetName() != createdKeySet.GetName() {
+				return false
+			}
+			if c.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
+				return false
+			}
+			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					condition.Status == metav1.ConditionTrue
+			})
+		}, "KongKeySet's Programmed condition should be true eventually")
+
+		t.Log("Waiting for KongKeySet to be created in the SDK")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.KeySetsSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
 	})
 }

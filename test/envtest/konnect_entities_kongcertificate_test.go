@@ -33,7 +33,7 @@ func TestKongCertificate(t *testing.T) {
 	cfg, ns := Setup(t, ctx, scheme.Get())
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get(), WithKonnectCacheIndices(ctx))
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
 	StartReconcilers(ctx, t, mgr, logs,
@@ -183,6 +183,49 @@ func TestKongCertificate(t *testing.T) {
 		t.Log("Ensuring that the SDK's create and list methods are called")
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, sdk.CertificatesSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
+
+	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
+		t.Log("Setting up SDK expectations on KongCertificate creation")
+		sdk.CertificatesSDK.EXPECT().CreateCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
+			mock.MatchedBy(func(input sdkkonnectcomp.CertificateInput) bool {
+				return input.Cert == deploy.TestValidCertPEM &&
+					input.Key == deploy.TestValidCertKeyPEM &&
+					slices.Contains(input.Tags, "tag1")
+			}),
+		).Return(&sdkkonnectops.CreateCertificateResponse{
+			Certificate: &sdkkonnectcomp.Certificate{
+				ID: lo.ToPtr("cert-12345"),
+			},
+		}, nil)
+
+		t.Log("Creating KongCertificate with ControlPlaneRef type=konnectID")
+		createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp,
+			func(obj client.Object) {
+				cert := obj.(*configurationv1alpha1.KongCertificate)
+				cert.Spec.Tags = []string{"tag1"}
+			},
+			deploy.WithKonnectIDControlPlaneRef(cp),
+		)
+
+		t.Log("Waiting for KongCertificate to be programmed")
+		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongCertificate) bool {
+			if c.GetName() != createdCert.GetName() {
+				return false
+			}
+			if c.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
+				return false
+			}
+			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					condition.Status == metav1.ConditionTrue
+			})
+		}, "KongCertificate's Programmed condition should be true eventually")
+
+		t.Log("Waiting for KongCertificate to be created in the SDK")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.CertificatesSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
 	})
 }

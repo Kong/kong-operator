@@ -17,7 +17,7 @@ const (
 )
 
 // IndexOptionsForKongConsumer returns required Index options for KongConsumer reconciler.
-func IndexOptionsForKongConsumer() []ReconciliationIndexOption {
+func IndexOptionsForKongConsumer(cl client.Client) []ReconciliationIndexOption {
 	return []ReconciliationIndexOption{
 		{
 			IndexObject:  &configurationv1.KongConsumer{},
@@ -32,7 +32,7 @@ func IndexOptionsForKongConsumer() []ReconciliationIndexOption {
 		{
 			IndexObject:  &configurationv1.KongConsumer{},
 			IndexField:   IndexFieldKongConsumerOnKonnectGatewayControlPlane,
-			ExtractValue: kongConsumerReferencesKonnectGatewayControlPlane,
+			ExtractValue: indexKonnectGatewayControlPlaneRef[configurationv1.KongConsumer](cl),
 		},
 	}
 }
@@ -51,13 +51,4 @@ func kongConsumerReferencesKongPluginsViaAnnotation(object client.Object) []stri
 		return nil
 	}
 	return metadata.ExtractPluginsWithNamespaces(consumer)
-}
-
-func kongConsumerReferencesKonnectGatewayControlPlane(object client.Object) []string {
-	consumer, ok := object.(*configurationv1.KongConsumer)
-	if !ok {
-		return nil
-	}
-
-	return controlPlaneKonnectNamespacedRefAsSlice(consumer)
 }

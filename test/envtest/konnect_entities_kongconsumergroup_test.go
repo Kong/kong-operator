@@ -24,6 +24,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -35,7 +36,7 @@ func TestKongConsumerGroup(t *testing.T) {
 	cfg, ns := Setup(t, ctx, scheme.Get())
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get(), WithKonnectCacheIndices(ctx))
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
 	reconcilers := []Reconciler{
@@ -191,6 +192,53 @@ func TestKongConsumerGroup(t *testing.T) {
 		t.Log("Waiting for KongConsumerGroup to be programmed")
 		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
 			return c.GetKonnectID() == cgID && k8sutils.IsProgrammed(c)
+		}, "KongConsumerGroup's Programmed condition should be true eventually")
+
+		t.Log("Waiting for KongConsumerGroup to be created in the SDK")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.ConsumerGroupSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
+
+	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
+		const (
+			cgID   = "cg-with-konnectid-cp-ref-id"
+			cgName = "cg-with-konnectid-cp-ref"
+		)
+		t.Log("Setting up SDK expectations on KongConsumerGroup creation")
+		sdk.ConsumerGroupSDK.EXPECT().
+			CreateConsumerGroup(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
+				mock.MatchedBy(func(cg sdkkonnectcomp.ConsumerGroupInput) bool {
+					return cg.Name == cgName
+				}),
+			).Return(&sdkkonnectops.CreateConsumerGroupResponse{
+			ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{
+				ID: lo.ToPtr(cgID),
+			},
+		}, nil,
+		)
+
+		t.Log("Creating KongConsumerGroup with ControlPlaneRef type=konnectID")
+		cg := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cp,
+			func(obj client.Object) {
+				cg := obj.(*configurationv1beta1.KongConsumerGroup)
+				cg.Spec.Name = cgName
+			},
+			deploy.WithKonnectIDControlPlaneRef(cp),
+		)
+
+		t.Log("Waiting for KongConsumerGroup to be programmed")
+		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
+			if c.GetName() != cg.GetName() {
+				return false
+			}
+			if c.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
+				return false
+			}
+			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					condition.Status == metav1.ConditionTrue
+			})
 		}, "KongConsumerGroup's Programmed condition should be true eventually")
 
 		t.Log("Waiting for KongConsumerGroup to be created in the SDK")

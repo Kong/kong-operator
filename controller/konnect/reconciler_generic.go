@@ -623,17 +623,68 @@ func getCPForRef(
 	cpRef configurationv1alpha1.ControlPlaneRef,
 	namespace string,
 ) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
-	if cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
-		return nil, fmt.Errorf("unsupported ControlPlane ref type %q", cpRef.Type)
+	switch cpRef.Type {
+	case configurationv1alpha1.ControlPlaneRefKonnectID:
+		return getCPForKonnectID(ctx, cl, cpRef)
+	case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
+		return getCPForNamespacedRef(ctx, cl, cpRef, namespace)
+	default:
+		return nil, ReferencedKongGatewayControlPlaneIsUnsupported{Reference: cpRef}
 	}
+}
+
+func getCPForKonnectID(
+	ctx context.Context,
+	cl client.Client,
+	cpRef configurationv1alpha1.ControlPlaneRef,
+) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
+	var l konnectv1alpha1.KonnectGatewayControlPlaneList
+	if err := cl.List(ctx, &l,
+		client.MatchingFields{
+			IndexFieldKonnectGatewayControlPlaneOnKonnectID: *cpRef.KonnectID,
+		},
+	); err != nil {
+		return nil, fmt.Errorf("failed to list ControlPlanes: %w", err)
+	}
+
+	if len(l.Items) == 0 {
+		return nil, ReferencedControlPlaneDoesNotExistError{
+			Reference: cpRef,
+			Err:       errors.New("no KonnectControlPlane with given status.konnectID found"),
+		}
+	}
+	return &l.Items[0], nil
+}
+
+func getCPForNamespacedRef(
+	ctx context.Context,
+	cl client.Client,
+	ref configurationv1alpha1.ControlPlaneRef,
+	namespace string,
+) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
 	// TODO(pmalek): handle cross namespace refs
+	if namespace != "" && ref.KonnectNamespacedRef.Namespace != "" && ref.KonnectNamespacedRef.Namespace != namespace {
+		return nil, fmt.Errorf("%s ControlPlaneRef from different namespace than %s", ref.KonnectNamespacedRef.Namespace, namespace)
+	}
+
 	nn := types.NamespacedName{
-		Name:      cpRef.KonnectNamespacedRef.Name,
+		Name:      ref.KonnectNamespacedRef.Name,
 		Namespace: namespace,
+	}
+
+	// Set namespace of control plane when it is non-empty. Only applies for cluster-scoped resources (KongVault).
+	if namespace == "" && ref.KonnectNamespacedRef.Namespace != "" {
+		nn.Namespace = ref.KonnectNamespacedRef.Namespace
 	}
 
 	var cp konnectv1alpha1.KonnectGatewayControlPlane
 	if err := cl.Get(ctx, nn, &cp); err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil, ReferencedControlPlaneDoesNotExistError{
+				Reference: ref,
+				Err:       err,
+			}
+		}
 		return nil, fmt.Errorf("failed to get ControlPlane %s: %w", nn, err)
 	}
 	return &cp, nil
@@ -666,9 +717,14 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 	// ref from the referenced ControlPlane.
 	cpRef, ok := getControlPlaneRef(ent).Get()
 	if ok {
+		cp, err := getCPForRef(ctx, cl, cpRef, ent.GetNamespace())
+		if err != nil {
+			return types.NamespacedName{}, fmt.Errorf("failed to get ControlPlane for %s: %w", client.ObjectKeyFromObject(ent), err)
+		}
+
 		cpNamespace := ent.GetNamespace()
-		if ent.GetNamespace() == "" && cpRef.KonnectNamespacedRef.Namespace != "" {
-			cpNamespace = cpRef.KonnectNamespacedRef.Namespace
+		if ent.GetNamespace() == "" && cp.GetNamespace() != "" {
+			cpNamespace = cp.GetNamespace()
 		}
 		return getCPAuthRefForRef(ctx, cl, cpRef, cpNamespace)
 	}
@@ -907,7 +963,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		}
 		if k8serrors.IsNotFound(err) {
 			return ctrl.Result{}, ReferencedControlPlaneDoesNotExistError{
-				Reference: nn,
+				Reference: cpRef,
 				Err:       err,
 			}
 		}

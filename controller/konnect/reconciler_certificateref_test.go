@@ -321,8 +321,7 @@ func TestHandleCertificateRef(t *testing.T) {
 				testKongCertificateControlPlaneRefNotFound,
 			},
 			expectError: true,
-			expectErrorContains: fmt.Sprintf("referenced Control Plane %s/%s does not exist",
-				testKongCertificateControlPlaneRefNotFound.Namespace,
+			expectErrorContains: fmt.Sprintf("referenced Control Plane %q does not exist",
 				testKongCertificateControlPlaneRefNotFound.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
 			),
 		},
@@ -389,7 +388,7 @@ func testHandleCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 
 			if tc.expectError {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), tc.expectErrorContains)
+				require.ErrorContains(t, err, tc.expectErrorContains)
 				return
 			}
 

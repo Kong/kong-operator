@@ -197,7 +197,7 @@ func TestHandleControlPlaneRef(t *testing.T) {
 			ent:                 svcCPRefNotFound,
 			expectResult:        ctrl.Result{},
 			expectError:         true,
-			expectErrorContains: `referenced Control Plane default/cp-not-found does not exist`,
+			expectErrorContains: `referenced Control Plane "cp-not-found" does not exist`,
 			updatedEntAssertions: []func(svc *configurationv1alpha1.KongService) (ok bool, message string){
 				func(svc *configurationv1alpha1.KongService) (bool, string) {
 					return lo.ContainsBy(svc.Status.Conditions, func(c metav1.Condition) bool {

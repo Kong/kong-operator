@@ -5,13 +5,32 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/modules/manager/scheme"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-func TestControlPlaneKonnectNamespacedRefAsSlice(t *testing.T) {
+func TestIndexKonnectGatewayControlPlaneRef(t *testing.T) {
+	cp := &konnectv1alpha1.KonnectGatewayControlPlane{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			Kind:       "KonnectGatewayControlPlane",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "cp-1",
+		},
+	}
+	cl := fakeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(cp).
+		Build()
+
 	t.Run("KongService", func(t *testing.T) {
 		tests := []struct {
 			name     string
@@ -76,7 +95,7 @@ func TestControlPlaneKonnectNamespacedRefAsSlice(t *testing.T) {
 			},
 		}
 
-		testControlPlaneKonnectNamespacedRefAsSlice(t, tests)
+		testIndexKonnectGatewayControlPlaneRef(t, cl, tests)
 	})
 
 	t.Run("KongRoute", func(t *testing.T) {
@@ -143,15 +162,16 @@ func TestControlPlaneKonnectNamespacedRefAsSlice(t *testing.T) {
 			},
 		}
 
-		testControlPlaneKonnectNamespacedRefAsSlice(t, tests)
+		testIndexKonnectGatewayControlPlaneRef(t, cl, tests)
 	})
 }
 
-func testControlPlaneKonnectNamespacedRefAsSlice[
+func testIndexKonnectGatewayControlPlaneRef[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](
 	t *testing.T,
+	cl client.Client,
 	tests []struct {
 		name     string
 		ent      TEnt
@@ -162,7 +182,7 @@ func testControlPlaneKonnectNamespacedRefAsSlice[
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := controlPlaneKonnectNamespacedRefAsSlice(tt.ent)
+			result := indexKonnectGatewayControlPlaneRef[T, TEnt](cl)(tt.ent)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
