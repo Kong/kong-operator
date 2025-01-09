@@ -120,10 +120,10 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 				{
-					Name: "DataPlane deployment is patched after operator upgrade (due to change in default Kong image version to kong:3.8)",
+					Name: "DataPlane deployment is patched after operator upgrade (due to change in default Kong image version to 3.8)",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-onebeforelatestminor-latestminor=true")(ctx, c, cl.MgrClient)
-						gatewayDataPlaneDeploymentHasImageSetTo("gw-upgrade-onebeforelatestminor-latestminor=true", "kong:3.8")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentHasImageSetTo("gw-upgrade-onebeforelatestminor-latestminor=true", helpers.GetDefaultDataPlaneBaseImage()+":3.8")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
