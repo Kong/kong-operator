@@ -85,7 +85,7 @@ jobs:
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
 
     steps:
-      - uses: mukunku/tag-exists-action@v1.6.0
+      - uses: mukunku/tag-exists-action@bdad1eaa119ce71b150b952c97351c75025c06a9 # v1.6.0
         id: check-tag
         if: ${{ inputs.tag != '' }}
         name: check if tag already exists
@@ -106,7 +106,7 @@ jobs:
       - name: Parse semver string
         id: semver_parser
         if: ${{ inputs.tag != '' }}
-        uses: booxmedialtd/ws-action-parse-semver@v1.4.7
+        uses: booxmedialtd/ws-action-parse-semver@7784200024d6b3fc01253e617ec0168daf603de3 # v1.4.7
         with:
           input_string: ${{ inputs.tag }}
           version_extractor_regex: 'v(.*)$'
@@ -154,7 +154,7 @@ jobs:
           password: ${{ secrets.dockerhub-token }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3 # v3.8.0
 
       - name: Add standard tags
         if: ${{ inputs.tag != '' }}
@@ -173,7 +173,7 @@ jobs:
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v5.5.1
+        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
         with:
           images: |
             ${{ inputs.registry }}/${{ inputs.image-name }}
@@ -231,7 +231,7 @@ jobs:
           outputs: |
             ${{ !inputs.push && 'type=docker,dest=/tmp/image.tar' }}
 
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.3.0
         with:
           platforms: ${{ matrix.arch }}
 
@@ -274,7 +274,7 @@ jobs:
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3 # v3.8.0
 
       - name: Add standard tags
         if: ${{ inputs.tag != '' }}
@@ -293,7 +293,7 @@ jobs:
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5.5.1
+        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
         with:
           images: |
             ${{ inputs.registry }}/${{ inputs.image-name }}
@@ -324,7 +324,7 @@ jobs:
       # When building with `inputs.tag` set, `steps.meta.outputs.tags` contains multiple entries, so it cannot be used
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # `needs.semver.outputs.fullversion`.
-      - uses: int128/docker-manifest-create-action@v2
+      - uses: int128/docker-manifest-create-action@736aaa0f6ae97b2fb7f43e8dcef3ab47a02ea96e # v2.8.0
         if: ${{ inputs.tag != '' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
@@ -335,7 +335,7 @@ jobs:
       # When building on schedule, `steps.meta.outputs.tags` contains multiple entries, so it cannot be used
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # the current date.
-      - uses: int128/docker-manifest-create-action@v2
+      - uses: int128/docker-manifest-create-action@736aaa0f6ae97b2fb7f43e8dcef3ab47a02ea96e # v2.8.0
         if: ${{ inputs.tag == '' && github.event_name == 'schedule' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
@@ -345,7 +345,7 @@ jobs:
 
       # When building on push (e.g. on main), `steps.meta.outputs.tags` contains only a single entry, so it can be used
       # directly in sources.
-      - uses: int128/docker-manifest-create-action@v2
+      - uses: int128/docker-manifest-create-action@736aaa0f6ae97b2fb7f43e8dcef3ab47a02ea96e # v2.8.0
         if: ${{ inputs.tag == '' && github.event_name == 'push' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}

@@ -64,13 +64,13 @@ jobs:
         
       - name: Parse semver string
         id: semver_parser
-        uses: booxmedialtd/ws-action-parse-semver@v1.4.7
+        uses: booxmedialtd/ws-action-parse-semver@7784200024d6b3fc01253e617ec0168daf603de3 # v1.4.7
         with:
           input_string: ${{ env.VERSION }}
           version_extractor_regex: '(.*)$'
 
       - name: check if tag already exists
-        uses: mukunku/tag-exists-action@v1.6.0
+        uses: mukunku/tag-exists-action@bdad1eaa119ce71b150b952c97351c75025c06a9 # v1.6.0
         id: tag_exists
         with:
           tag: ${{ steps.commit_parser.outputs.release_version }}
@@ -88,7 +88,7 @@ jobs:
     if: ${{ needs.look_for_release.outputs.release_found == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: ncipollo/release-action@v1
+      - uses: ncipollo/release-action@2c591bcc8ecdcd2db72b97d6147f871fcd833ba5 # v1.14.0
         with:
           body: |
             #### Download Kong Gateway Operator ${{ needs.semver.outputs.version }}:
@@ -117,7 +117,7 @@ jobs:
     if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.patch == '0' && needs.semver.outputs.prerelease == '' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: peterjgrainger/action-create-branch@v3.0.0
+      - uses: peterjgrainger/action-create-branch@10c7d268152480ae859347db45dc69086cef1d9c # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -136,7 +136,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: carloscastrojumo/github-cherry-pick-action@v1.0.10
+      - uses: carloscastrojumo/github-cherry-pick-action@503773289f4a459069c832dc628826685b75b4b3 # v1.0.10
         with:
           branch: main
           title: '[cherry-pick] ${{ needs.semver.outputs.version }} - ${{ github.sha }}'
