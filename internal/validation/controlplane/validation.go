@@ -33,24 +33,19 @@ func (v *Validator) ValidateDeploymentOptions(opts *operatorv1beta1.ControlPlane
 	if opts == nil || opts.PodTemplateSpec == nil {
 		// Can't use empty DeploymentOptions because we still require users
 		// to provide an image
-		// Related: https://github.com/Kong/gateway-operator/issues/754.
+		// Related: https://github.com/Kong/gateway-operator-archive/issues/754.
 		return errors.New("ControlPlane requires an image")
-	}
-
-	// Ref: https://github.com/Kong/gateway-operator/issues/736
-	if opts.Replicas != nil && *opts.Replicas != 1 {
-		return errors.New("ControlPlane only supports replicas of 1")
 	}
 
 	container := k8sutils.GetPodContainerByName(&opts.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
 	if container == nil {
 		// We need the controller container for e.g. specifying an image which
 		// is still required.
-		// Ref: https://github.com/Kong/gateway-operator/issues/754.
+		// Ref: https://github.com/Kong/gateway-operator-archive/issues/754.
 		return errors.New("no controller container found in ControlPlane spec")
 	}
 
-	// Ref: https://github.com/Kong/gateway-operator/issues/754.
+	// Ref: https://github.com/Kong/gateway-operator-archive/issues/754.
 	if container.Image == "" {
 		return errors.New("ControlPlane requires an image")
 	}
