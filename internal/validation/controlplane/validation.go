@@ -1,13 +1,9 @@
 package controlplane
 
 import (
-	"errors"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
-	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 // Validator validates ControlPlane objects.
@@ -30,25 +26,5 @@ func (v *Validator) Validate(controlplane *operatorv1beta1.ControlPlane) error {
 
 // ValidateDeploymentOptions validates the DeploymentOptions field of ControlPlane object.
 func (v *Validator) ValidateDeploymentOptions(opts *operatorv1beta1.ControlPlaneDeploymentOptions) error {
-	if opts == nil || opts.PodTemplateSpec == nil {
-		// Can't use empty DeploymentOptions because we still require users
-		// to provide an image
-		// Related: https://github.com/Kong/gateway-operator-archive/issues/754.
-		return errors.New("ControlPlane requires an image")
-	}
-
-	container := k8sutils.GetPodContainerByName(&opts.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-	if container == nil {
-		// We need the controller container for e.g. specifying an image which
-		// is still required.
-		// Ref: https://github.com/Kong/gateway-operator-archive/issues/754.
-		return errors.New("no controller container found in ControlPlane spec")
-	}
-
-	// Ref: https://github.com/Kong/gateway-operator-archive/issues/754.
-	if container.Image == "" {
-		return errors.New("ControlPlane requires an image")
-	}
-
 	return nil
 }

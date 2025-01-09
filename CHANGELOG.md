@@ -44,6 +44,8 @@
 - Removed support for the migration of legacy labels so upgrading the operator from 1.3 (or older) to 1.5.0,
   should be done through 1.4.1
   [#976](https://github.com/Kong/gateway-operator/pull/976)
+- Move `ControlPlane` `image` validation to CRD CEL rules.
+  [#984](https://github.com/Kong/gateway-operator/pull/984)
 
 ### Fixes
 

@@ -56,6 +56,8 @@ type ControlPlaneList struct {
 	Items           []ControlPlane `json:"items"`
 }
 
+// +kubebuilder:validation:XValidation:message="ControlPlane requires an image to be set on controller container",rule="has(self.deployment.podTemplateSpec) && has(self.deployment.podTemplateSpec.spec.containers) && self.deployment.podTemplateSpec.spec.containers.exists(c, c.name == 'controller' && has(c.image))"
+
 // ControlPlaneSpec defines the desired state of ControlPlane
 // +apireference:kgo:include
 type ControlPlaneSpec struct {
