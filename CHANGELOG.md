@@ -25,11 +25,6 @@
 
 ## Unreleased
 
-### Fixes
-
-- Fix watch predicates for types shared between KGO and KIC.
-  [#948](https://github.com/Kong/gateway-operator/pull/948)
-
 ### Changed
 
 - `KonnectExtension` does not require `spec.serverHostname` to be set by a user
@@ -46,6 +41,11 @@
 - Remove `RunAsUser` specification in jobs to create webhook certificates
   because Openshift does not specifying `RunAsUser` by default.
   [#964](https://github.com/Kong/gateway-operator/pull/964)
+- Fix watch predicates for types shared between KGO and KIC.
+  [#948](https://github.com/Kong/gateway-operator/pull/948)
+- Fix unexpected error logs caused by passing an odd number of arguments to the logger
+  in the `KongConsumer` reconciler.
+  [#983](https://github.com/Kong/gateway-operator/pull/983)
 
 ## [v1.4.1]
 
