@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: search for release command in commit message
         id: commit_parser
@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Read version from VERSION file
         run: |
@@ -73,7 +73,7 @@ jobs:
         uses: mukunku/tag-exists-action@bdad1eaa119ce71b150b952c97351c75025c06a9 # v1.6.0
         id: tag_exists
         with:
-          tag: ${{ steps.commit_parser.outputs.release_version }}
+          tag: ${{ env.VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -134,7 +134,7 @@ jobs:
     if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.patch != '0' && needs.semver.outputs.prerelease == '' && needs.look_for_release.outputs.release_latest == 'true' && github.ref_name != 'main' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - uses: carloscastrojumo/github-cherry-pick-action@503773289f4a459069c832dc628826685b75b4b3 # v1.0.10
         with:

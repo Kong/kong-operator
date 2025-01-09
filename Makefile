@@ -143,6 +143,20 @@ setup-envtest: mise ## Download setup-envtest locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=setup-envtest URL=https://github.com/pmalek/mise-setup-envtest.git
 	@$(MISE) install setup-envtest@$(SETUP_ENVTEST_VERSION)
 
+ACTIONLINT_VERSION = $(shell $(YQ) -r '.actionlint' < $(TOOLS_VERSIONS_FILE))
+ACTIONLINT = $(PROJECT_DIR)/bin/installs/actionlint/$(ACTIONLINT_VERSION)/bin/actionlint
+.PHONY: download.actionlint
+download.actionlint: mise yq ## Download actionlint locally if necessary.
+	@$(MISE) plugin install --yes -q actionlint
+	@$(MISE) install -q actionlint@$(ACTIONLINT_VERSION)
+
+SHELLCHECK_VERSION = $(shell $(YQ) -r '.shellcheck' < $(TOOLS_VERSIONS_FILE))
+SHELLCHECK = $(PROJECT_DIR)/bin/installs/shellcheck/$(SHELLCHECK_VERSION)/bin/shellcheck
+.PHONY: download.shellcheck
+download.shellcheck: mise yq ## Download shellcheck locally if necessary.
+	@$(MISE) plugin install --yes -q shellcheck
+	@$(MISE) install -q shellcheck@$(SHELLCHECK_VERSION)
+
 .PHONY: use-setup-envtest
 use-setup-envtest:
 	$(SETUP_ENVTEST) use
@@ -187,6 +201,13 @@ GOLANGCI_LINT_CONFIG ?= $(PROJECT_DIR)/.golangci.yaml
 .PHONY: lint
 lint: golangci-lint
 	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) $(GOLANGCI_LINT_FLAGS)
+
+.PHONY: lint.actions
+lint.actions: download.actionlint download.shellcheck
+# TODO: add more files to be checked
+	SHELLCHECK_OPTS='--exclude=SC2086,SC2155,SC2046' \
+	$(ACTIONLINT) -shellcheck $(SHELLCHECK) \
+		./.github/workflows/*
 
 .PHONY: verify
 verify: verify.manifests verify.generators
