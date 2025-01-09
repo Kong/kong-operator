@@ -97,7 +97,7 @@ jobs:
         run: exit 1
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0
 
@@ -130,7 +130,7 @@ jobs:
       version: ${{ steps.meta.outputs.version }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
@@ -253,7 +253,7 @@ jobs:
               ${{ inputs.image-name }}:${{ steps.meta.outputs.version }} -version | ${{ inputs.verify-image-script }} ${{ github.repository }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: image-${{ matrix.os }}-${{ matrix.arch }}
           path: /tmp/image.tar
@@ -271,7 +271,7 @@ jobs:
       - build
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
