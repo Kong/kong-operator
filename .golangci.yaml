@@ -33,6 +33,7 @@ linters:
   - unparam
   - unused
   - wastedassign
+  - loggercheck
 linters-settings:
   gci:
     sections:

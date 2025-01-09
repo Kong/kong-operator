@@ -158,6 +158,8 @@ func reconcileConsumerGroupsWithKonnect(
 	cpID string,
 	consumer *configurationv1.KongConsumer,
 ) error {
+	logger := ctrllog.FromContext(ctx).WithValues("kongconsumer", client.ObjectKeyFromObject(consumer).String())
+
 	// List the ConsumerGroups that the Consumer is assigned to in Konnect.
 	cgsResp, err := cgSDK.ListConsumerGroupsForConsumer(ctx, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 		ControlPlaneID: cpID,
@@ -177,14 +179,14 @@ func reconcileConsumerGroupsWithKonnect(
 
 	// Calculate the difference between the desired and actual ConsumerGroups.
 	consumerGroupsToBeAddedTo, consumerGroupsToBeRemovedFrom := lo.Difference(desiredConsumerGroupsIDs, actualConsumerGroupsIDs)
-	log.Debug(ctrllog.FromContext(ctx), "reconciling ConsumerGroups for KongConsumer", consumer,
+	log.Debug(logger, "reconciling ConsumerGroups for KongConsumer",
 		"groupsToBeAddedTo", consumerGroupsToBeAddedTo,
 		"groupsToBeRemovedFrom", consumerGroupsToBeRemovedFrom,
 	)
 
 	// Adding consumer to consumer groups that it is not assigned to yet.
 	for _, cgID := range consumerGroupsToBeAddedTo {
-		log.Debug(ctrllog.FromContext(ctx), "adding KongConsumer to group", consumer,
+		log.Debug(ctrllog.FromContext(ctx), "adding KongConsumer to group",
 			"group", cgID,
 		)
 		_, err := cgSDK.AddConsumerToGroup(ctx, sdkkonnectops.AddConsumerToGroupRequest{
@@ -201,7 +203,7 @@ func reconcileConsumerGroupsWithKonnect(
 
 	// Removing consumer from consumer groups that it is not assigned to anymore.
 	for _, cgID := range consumerGroupsToBeRemovedFrom {
-		log.Debug(ctrllog.FromContext(ctx), "removing KongConsumer from group", consumer,
+		log.Debug(logger, "removing KongConsumer from group",
 			"group", cgID,
 		)
 		_, err := cgSDK.RemoveConsumerFromGroup(ctx, sdkkonnectops.RemoveConsumerFromGroupRequest{
