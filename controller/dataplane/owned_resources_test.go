@@ -266,7 +266,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
 		},
 		{
-			name: "should generate service with specified name",
+			name: "should create service with specified name if name is specified",
 			dataplane: builder.NewDataPlaneBuilder().
 				WithObjectMeta(metav1.ObjectMeta{
 					Namespace: "default",
@@ -274,7 +274,11 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 				}).WithIngressServiceName("ingress-service-1").
 				WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
 				Build(),
-			expectedCreatedOrUpdated: op.Noop,
+			existingServiceModifier: func(t *testing.T, ctx context.Context, c client.Client, svc *corev1.Service) {
+				require.NoError(t, dataplane.OwnedObjectPreDeleteHook(ctx, c, svc))
+				require.NoError(t, c.Delete(ctx, svc))
+			},
+			expectedCreatedOrUpdated: op.Created,
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
 			expectedServiceName:      "ingress-service-1",
 			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,

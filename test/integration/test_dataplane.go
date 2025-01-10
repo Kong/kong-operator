@@ -1033,3 +1033,111 @@ func TestDataPlaneServiceExternalTrafficPolicy(t *testing.T) {
 	}), waitTime, tickTime)
 	verifyEventuallyExternalTrafficPolicy(t, dataplaneName, corev1.ServiceExternalTrafficPolicyLocal)
 }
+
+func TestDataPlaneSpecifyingServiceName(t *testing.T) {
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+
+	t.Log("deploying dataplane resource with service name specified")
+	dataplaneName := types.NamespacedName{
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
+	}
+	serviceName := "ingress-service-" + uuid.NewString()
+	dataplane := &operatorv1beta1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: dataplaneName.Namespace,
+			Name:      dataplaneName.Name,
+		},
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Env: []corev1.EnvVar{
+											{
+												Name:  "TEST_ENV",
+												Value: "test",
+											},
+										},
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: helpers.GetDefaultDataPlaneImage(),
+									},
+								},
+							},
+						},
+					},
+				},
+				Network: operatorv1beta1.DataPlaneNetworkOptions{
+					Services: &operatorv1beta1.DataPlaneServices{
+						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+							ServiceOptions: operatorv1beta1.ServiceOptions{
+								Name: &serviceName,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(dataplane)
+
+	t.Logf("verifying that dataplane is provisioned")
+	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), waitTime, tickTime)
+
+	t.Log("verifying that ingress service with the specified name is created")
+	require.Eventually(t, testutils.DataPlaneHasActiveServiceWithName(t, GetCtx(), dataplaneName, nil, clients, client.MatchingLabels{
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+	}, serviceName,
+	), waitTime, tickTime)
+
+	t.Log("verifying dataplane services receive IP addresses")
+	var dataplaneIP string
+	require.Eventually(t, func() bool {
+		dataplaneService, err := GetClients().K8sClient.CoreV1().Services(dataplane.Namespace).Get(GetCtx(), serviceName, metav1.GetOptions{})
+		require.NoError(t, err)
+		if len(dataplaneService.Status.LoadBalancer.Ingress) > 0 {
+			dataplaneIP = dataplaneService.Status.LoadBalancer.Ingress[0].IP
+			return true
+		}
+		return false
+	}, waitTime, tickTime)
+
+	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+dataplaneIP), waitTime, tickTime)
+
+	t.Logf("updating ingress service name in dataplane")
+	serviceName = "ingress-service-" + uuid.NewString()
+	require.Eventually(t,
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+			dp.Spec.Network.Services.Ingress.Name = &serviceName
+		}),
+		time.Minute, time.Second,
+	)
+
+	t.Log("verifying that ingress service with the new name is created")
+	require.Eventually(t, testutils.DataPlaneHasActiveServiceWithName(t, GetCtx(), dataplaneName, nil, clients, client.MatchingLabels{
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+	}, serviceName,
+	), waitTime, tickTime)
+
+	t.Log("verifying dataplane services receive IP addresses after service name is updated")
+	require.Eventually(t, func() bool {
+		dataplaneService, err := GetClients().K8sClient.CoreV1().Services(dataplane.Namespace).Get(GetCtx(), serviceName, metav1.GetOptions{})
+		require.NoError(t, err)
+		if len(dataplaneService.Status.LoadBalancer.Ingress) > 0 {
+			dataplaneIP = dataplaneService.Status.LoadBalancer.Ingress[0].IP
+			return true
+		}
+		return false
+	}, waitTime, tickTime)
+
+	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+dataplaneIP), waitTime, tickTime)
+}
