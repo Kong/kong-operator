@@ -40,15 +40,6 @@ const (
 	// Kubernetes API.
 	GatewayOperatorManagedByNamespaceLabel = OperatorLabelPrefix + "managed-by-namespace"
 
-	// GatewayOperatorManagedByLabelLegacy is the legacy label used for object
-	// with were created by this operator
-	//
-	// Notice: use GatewayOperatorManagedByLabel instead.
-	//
-	// TODO: Remove adding this to managed resources after several versions with
-	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/156
-	GatewayOperatorManagedByLabelLegacy = "konghq.com/gateway-operator"
-
 	// GatewayManagedLabelValue indicates that the object's lifecycle is managed by
 	// the gateway controller.
 	GatewayManagedLabelValue = "gateway"

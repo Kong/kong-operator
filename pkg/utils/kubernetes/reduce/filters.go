@@ -37,20 +37,6 @@ func filterSecrets(secrets []corev1.Secret) []corev1.Secret {
 		return []corev1.Secret{}
 	}
 
-	legacySecrets := lo.Filter(secrets, func(s corev1.Secret, index int) bool {
-		_, okLegacy := s.Labels[consts.GatewayOperatorManagedByLabelLegacy]
-		_, ok := s.Labels[consts.GatewayOperatorManagedByLabel]
-		return okLegacy && !ok
-	})
-	// If all Secrets are legacy, then remove all but one.
-	// The last one which we won't return for deletion will get updated on the next reconcile.
-	if len(legacySecrets) == len(secrets) {
-		return legacySecrets[:len(legacySecrets)-1]
-		// Otherwise - if not all Secrets are legacy - then remove all legacy Secrets.
-	} else if len(legacySecrets) > 0 {
-		return legacySecrets
-	}
-
 	toFilter := 0
 	for i, secret := range secrets {
 		if secret.CreationTimestamp.Before(&secrets[toFilter].CreationTimestamp) {
@@ -92,48 +78,19 @@ func filterServiceAccounts(serviceAccounts []corev1.ServiceAccount) []corev1.Ser
 // all the ClusterRoles to be deleted.
 // The filtered-out ClusterRole is decided as follows:
 //  1. creationTimestamp (newer is better, because newer ClusterRoles can contain new policy rules)
-//  2. using legacy labels (if present): if a ClusterRole does not have the legacy labels, it is considered newer
-//     and will be kept.
 func filterClusterRoles(clusterRoles []rbacv1.ClusterRole) []rbacv1.ClusterRole {
-	if len(clusterRoles) < 2 {
+	if len(clusterRoles) == 1 {
 		return []rbacv1.ClusterRole{}
 	}
 
-	newestWithManagedByLabels := -1
-	newestLegacy := -1
-	for i, clusterRole := range clusterRoles {
-		labels := clusterRole.GetLabels()
-
-		_, okManagedBy := labels[consts.GatewayOperatorManagedByLabel]
-		_, okManagedByNs := labels[consts.GatewayOperatorManagedByNamespaceLabel]
-		_, okManagedByName := labels[consts.GatewayOperatorManagedByNameLabel]
-		if okManagedBy && okManagedByNs && okManagedByName {
-			if newestWithManagedByLabels == -1 {
-				newestWithManagedByLabels = i
-				continue
-			}
-
-			if clusterRole.CreationTimestamp.After(clusterRoles[newestWithManagedByLabels].CreationTimestamp.Time) {
-				newestWithManagedByLabels = i
-			}
-			continue
+	best := 0
+	for i, cr := range clusterRoles {
+		if cr.CreationTimestamp.After(clusterRoles[best].CreationTimestamp.Time) {
+			best = i
 		}
-
-		if newestLegacy == -1 {
-			newestLegacy = i
-			continue
-		}
-
-		if clusterRole.CreationTimestamp.After(clusterRoles[newestLegacy].CreationTimestamp.Time) {
-			newestLegacy = i
-		}
-		continue
 	}
 
-	if newestWithManagedByLabels != -1 {
-		return append(clusterRoles[:newestWithManagedByLabels], clusterRoles[newestWithManagedByLabels+1:]...)
-	}
-	return append(clusterRoles[:newestLegacy], clusterRoles[newestLegacy+1:]...)
+	return append(clusterRoles[:best], clusterRoles[best+1:]...)
 }
 
 // -----------------------------------------------------------------------------
@@ -194,27 +151,12 @@ func filterClusterRoleBindings(clusterRoleBindings []rbacv1.ClusterRoleBinding) 
 // all the Deployments to be deleted.
 //
 // The filtered-out Deployment is decided as follows:
-// 1. using legacy labels (if present)
-// 2. number of availableReplicas (higher is better)
-// 3. number of readyReplicas (higher is better)
-// 4. creationTimestamp (older is better)
+// 1. number of availableReplicas (higher is better)
+// 2. number of readyReplicas (higher is better)
+// 3. creationTimestamp (older is better)
 func filterDeployments(deployments []appsv1.Deployment) []appsv1.Deployment {
 	if len(deployments) < 2 {
 		return []appsv1.Deployment{}
-	}
-
-	legacyDeployments := lo.Filter(deployments, func(d appsv1.Deployment, index int) bool {
-		_, okLegacy := d.Labels[consts.GatewayOperatorManagedByLabelLegacy]
-		_, ok := d.Labels[consts.GatewayOperatorManagedByLabel]
-		return okLegacy && !ok
-	})
-	// If all Deployments are legacy, then remove all but one.
-	// The last one which we won't return for deletion will get updated on the next reconcile.
-	if len(legacyDeployments) == len(deployments) {
-		return legacyDeployments[:len(legacyDeployments)-1]
-		// Otherwise - if not all Deployments are legacy - then remove all legacy Deployments.
-	} else if len(legacyDeployments) > 0 {
-		return legacyDeployments
 	}
 
 	toFilter := 0
@@ -253,28 +195,13 @@ func filterDeployments(deployments []appsv1.Deployment) []appsv1.Deployment {
 // that associates all the Services to the owned EndpointSlices.
 //
 // The filtered-out Service is decided as follows:
-// 1. using legacy labels (if present)
-// 2. amount of LoadBalancer Ingresses (higher is better)
-// 3. amount of endpointSlices allocated for the service (higher is better)
-// 4. amount of ready endpoints for the service (higher is better)
-// 5. creationTimestamp (older is better)
+// 1. amount of LoadBalancer Ingresses (higher is better)
+// 2. amount of endpointSlices allocated for the service (higher is better)
+// 3. amount of ready endpoints for the service (higher is better)
+// 4. creationTimestamp (older is better)
 func filterServices(services []corev1.Service, endpointSlices map[string][]discoveryv1.EndpointSlice) []corev1.Service {
 	if len(services) < 2 {
 		return []corev1.Service{}
-	}
-
-	legacyServices := lo.Filter(services, func(s corev1.Service, index int) bool {
-		_, okLegacy := s.Labels[consts.GatewayOperatorManagedByLabelLegacy]
-		_, ok := s.Labels[consts.GatewayOperatorManagedByLabel]
-		return okLegacy && !ok
-	})
-	// If all services are legacy, then remove all but one.
-	// The last one which we won't return for deletion will get updated on the next reconcile.
-	if len(legacyServices) == len(services) {
-		return legacyServices[:len(legacyServices)-1]
-		// Otherwise - if not all services are legacy - then remove all legacy services.
-	} else if len(legacyServices) > 0 {
-		return legacyServices
 	}
 
 	toFilter, toFilterReadyEndpointsCount := 0, getReadyEndpointsCount(endpointSlices[services[0].Name])
@@ -403,48 +330,19 @@ func FilterPodDisruptionBudgets(pdbs []policyv1.PodDisruptionBudget) []policyv1.
 // to be kept and returns all the ValidatingWebhookConfigurations to be deleted.
 // The following criteria are used:
 //  1. creationTimestamp (newer is better, because newer ValidatingWebhookConfiguration can contain new rules)
-//  2. using legacy labels (if present): if a ValidatingWebhookConfiguration does
-//     not have the legacy labels, it is considered newer and will be kept.
 func filterValidatingWebhookConfigurations(vwcs []admregv1.ValidatingWebhookConfiguration) []admregv1.ValidatingWebhookConfiguration {
-	if len(vwcs) < 2 {
+	if len(vwcs) == 1 {
 		return []admregv1.ValidatingWebhookConfiguration{}
 	}
 
-	newestWithManagedByLabels := -1
-	newestLegacy := -1
+	best := 0
 	for i, vwc := range vwcs {
-		labels := vwc.GetLabels()
-
-		_, okManagedBy := labels[consts.GatewayOperatorManagedByLabel]
-		_, okManagedByNs := labels[consts.GatewayOperatorManagedByNamespaceLabel]
-		_, okManagedByName := labels[consts.GatewayOperatorManagedByNameLabel]
-		if okManagedBy && okManagedByNs && okManagedByName {
-			if newestWithManagedByLabels == -1 {
-				newestWithManagedByLabels = i
-				continue
-			}
-
-			if vwc.CreationTimestamp.After(vwcs[newestWithManagedByLabels].CreationTimestamp.Time) {
-				newestWithManagedByLabels = i
-			}
-			continue
+		if vwc.CreationTimestamp.After(vwcs[best].CreationTimestamp.Time) {
+			best = i
 		}
-
-		if newestLegacy == -1 {
-			newestLegacy = i
-			continue
-		}
-
-		if vwc.CreationTimestamp.After(vwcs[newestLegacy].CreationTimestamp.Time) {
-			newestLegacy = i
-		}
-		continue
 	}
 
-	if newestWithManagedByLabels != -1 {
-		return append(vwcs[:newestWithManagedByLabels], vwcs[newestWithManagedByLabels+1:]...)
-	}
-	return append(vwcs[:newestLegacy], vwcs[newestLegacy+1:]...)
+	return append(vwcs[:best], vwcs[best+1:]...)
 }
 
 // -----------------------------------------------------------------------------

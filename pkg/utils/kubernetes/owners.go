@@ -74,22 +74,6 @@ func GetManagedByLabelSet[managingObject managingObjectT](object managingObject)
 	}
 }
 
-// GetLegacyManagedByLabel returns a map of legacy labels with the provided object's metadata.
-// These can be applied to other objects that are owned by the object provided as an argument.
-func GetLegacyManagedByLabel[managingObject managingObjectT](object managingObject) map[string]string {
-	return map[string]string{
-		consts.GatewayOperatorManagedByLabel: getKindLabel(object),
-	}
-}
-
-// GetLegacyManagedByLabelSet returns a map of legacy labels with the provided object's metadata.
-// These can be applied to other objects that are owned by the object provided as an argument.
-func GetLegacyManagedByLabelSet[managingObject managingObjectT](object managingObject) map[string]string {
-	m := GetLegacyManagedByLabel(object)
-	m["app"] = object.GetName()
-	return m
-}
-
 func getKindLabel[managingObject managingObjectT](object managingObject) string {
 	switch any(object).(type) {
 	case *gatewayv1.Gateway:

@@ -11,7 +11,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
@@ -251,25 +250,6 @@ func listOrReduceDataPlaneDeployments(
 	if err != nil {
 		return false, nil, fmt.Errorf("failed listing Deployments for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
-
-	// Get the Deploments for the DataPlane using legacy labels.
-	reqLegacyLabels, err := k8sresources.GetManagedLabelRequirementsForOwnerLegacy(dataplane)
-	if err != nil {
-		return false, nil, err
-	}
-	deploymentsLegacy, err := k8sutils.ListDeploymentsForOwner(
-		ctx,
-		cl,
-		dataplane.Namespace,
-		dataplane.UID,
-		&client.ListOptions{
-			LabelSelector: labels.NewSelector().Add(reqLegacyLabels...),
-		},
-	)
-	if err != nil {
-		return false, nil, fmt.Errorf("failed listing Deployments for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
-	}
-	deployments = append(deployments, deploymentsLegacy...)
 
 	count := len(deployments)
 	if count > 1 {

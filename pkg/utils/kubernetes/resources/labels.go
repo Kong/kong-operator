@@ -1,12 +1,7 @@
 package resources
 
 import (
-	"fmt"
-
-	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
@@ -22,9 +17,6 @@ func LabelObjectAsDataPlaneManaged(obj metav1.Object) {
 		labels = make(map[string]string)
 	}
 	labels[consts.GatewayOperatorManagedByLabel] = consts.DataPlaneManagedLabelValue
-	// TODO: Remove adding this to managed resources after several versions with
-	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/156
-	labels[consts.GatewayOperatorManagedByLabelLegacy] = consts.DataPlaneManagedLabelValue
 	obj.SetLabels(labels)
 }
 
@@ -37,9 +29,6 @@ func LabelObjectAsKongPluginInstallationManaged(obj metav1.Object) {
 		labels = make(map[string]string)
 	}
 	labels[consts.GatewayOperatorManagedByLabel] = consts.KongPluginInstallationManagedLabelValue
-	// TODO: Remove adding this to managed resources after several versions with
-	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/156
-	labels[consts.GatewayOperatorManagedByLabelLegacy] = consts.KongPluginInstallationManagedLabelValue
 	obj.SetLabels(labels)
 }
 
@@ -52,9 +41,6 @@ func LabelObjectAsControlPlaneManaged(obj metav1.Object) {
 		labels = make(map[string]string)
 	}
 	labels[consts.GatewayOperatorManagedByLabel] = consts.ControlPlaneManagedLabelValue
-	// TODO: Remove adding this to managed resources after several versions with
-	// the new managed-by label were released: https://github.com/Kong/gateway-operator/issues/156
-	labels[consts.GatewayOperatorManagedByLabelLegacy] = consts.ControlPlaneManagedLabelValue
 	obj.SetLabels(labels)
 }
 
@@ -71,48 +57,4 @@ func GetManagedLabelForOwner(owner metav1.Object) client.MatchingLabels {
 		}
 	}
 	return client.MatchingLabels{}
-}
-
-// GetManagedLabelForOwnerLegacy returns the legacy managed-by labels for the
-// provided owner.
-//
-// Deprecated: use getManagedLabelForOwner instead.
-// Removed when https://github.com/Kong/gateway-operator/issues/156 is closed.
-func GetManagedLabelForOwnerLegacy(owner metav1.Object) client.MatchingLabels {
-	switch owner.(type) {
-	case *operatorv1beta1.ControlPlane:
-		return client.MatchingLabels{
-			consts.GatewayOperatorManagedByLabelLegacy: consts.ControlPlaneManagedLabelValue,
-		}
-	case *operatorv1beta1.DataPlane:
-		return client.MatchingLabels{
-			consts.GatewayOperatorManagedByLabelLegacy: consts.DataPlaneManagedLabelValue,
-		}
-	}
-	return client.MatchingLabels{}
-}
-
-// GetManagedLabelRequirementsForOwnerLegacy returns the legacy managed-by label requirements for the provided owner.
-func GetManagedLabelRequirementsForOwnerLegacy(owner metav1.Object) (labels.Requirements, error) {
-	managedByLabelsLegacy := GetManagedLabelForOwnerLegacy(owner)
-	if len(managedByLabelsLegacy) == 0 {
-		return nil, fmt.Errorf("no legacy managed-by labels for owner %s", owner.GetName())
-	}
-	reqLegacy, err := labels.NewRequirement(
-		lo.Keys(managedByLabelsLegacy)[0], selection.Equals, lo.Values(managedByLabelsLegacy),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	managedByLabels := GetManagedLabelForOwner(owner)
-	if len(managedByLabels) == 0 {
-		return nil, fmt.Errorf("no managed-by labels for owner %s", owner.GetName())
-	}
-	req, err := labels.NewRequirement(lo.Keys(managedByLabels)[0], selection.DoesNotExist, []string{})
-	if err != nil {
-		return nil, err
-	}
-
-	return labels.Requirements{*req, *reqLegacy}, nil
 }
