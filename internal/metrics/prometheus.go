@@ -15,27 +15,36 @@ type Recorder interface {
 	RecordKonnectEntityOperationFailure(serverURL string, operationType KonnectEntityOperation, entityType string, duration time.Duration, statusCode int)
 }
 
+// KonnectEntityOperation specifies the type of Konnect entity operation, including `create`, `update`, and `delete`.
 type KonnectEntityOperation string
 
 const (
-	KonnectServerURLKey                                  = "server_url"
+	// KonnectServerURLKey is the key for the Konnect server URL which accepts the requests of entity opertions.
+	KonnectServerURLKey = "server_url"
+	// KonnectEntityOperationTypeKey is the key for the opertion type:  `create`, `update`, or `delete`.
 	KonnectEntityOperationTypeKey                        = "operation_type"
 	KonnectEntityOperationCreate  KonnectEntityOperation = "create"
 	KonnectEntityOperationUpdate  KonnectEntityOperation = "update"
 	KonnectEntityOperationDelete  KonnectEntityOperation = "delete"
-
+	// KonnectEntityTypeKey indicated the type of the operated Konnect entity.
 	KonnectEntityTypeKey = "entity_type"
-
-	SuccessKey   = "success"
-	SuccessTrue  = "true"
+	// SuccessKey indicates whether the operation is successfully done.
+	SuccessKey = "success"
+	// SuccessTrue means that the opertion succeeded.
+	SuccessTrue = "true"
+	// SuccessFalse means that the operation failed.
 	SuccessFalse = "false"
-
+	// StatusCodeKey is the HTTP status code in the response from the Konnect server for the entity opertion.
+	// It is always `0` for successful operations.
+	// When the opertion fails, it will be the actual status code if we can get it. Otherwise it will also be `0`.
 	StatusCodeKey = "status_code"
 )
 
 // metric names for konnect entity operations.
 const (
-	MetricNameKonnectEntityOperationCount    = "gateway_operator_konnect_entity_operation_count"
+	// MetricNameKonnectEntityOperationCount is the metric of number of operations, grouped by server URL, entity type, successful status and status code.
+	MetricNameKonnectEntityOperationCount = "gateway_operator_konnect_entity_operation_count"
+	// MetricNameKonnectEntityOperationDuration is the metric of durations of the operations.
 	MetricNameKonnectEntityOperationDuration = "gateway_operator_konnect_entity_operation_duration_milliseconds"
 )
 
@@ -49,13 +58,13 @@ var (
 					"`%s` describes the operation type (`%s`, `%s`, or `%s`)."+
 					"`%s` describes the type of the operated entity. "+
 					"`%s` describes whether the operation is successful (`%s`) or not (`%s`). "+
-					"`%s` is populated in case of `%s=\"%s\"` and describes the status code returned from Konnect API. "+
+					"`%s` is always \"0\" when  `%s=\"%s\"` and is populated in case of `%s=\"%s\"` and describes the status code returned from Konnect API. "+
 					"`%s`=\"0\" and %s=\"%s\" means we cannot collect the status code or error happens in the process other than Konnect API call.",
 				KonnectServerURLKey,
 				KonnectEntityOperationTypeKey, KonnectEntityOperationCreate, KonnectEntityOperationUpdate, KonnectEntityOperationDelete,
 				KonnectEntityTypeKey,
 				SuccessKey, SuccessTrue, SuccessFalse,
-				StatusCodeKey, SuccessKey, SuccessFalse,
+				StatusCodeKey, SuccessKey, SuccessTrue, SuccessKey, SuccessFalse,
 				StatusCodeKey, SuccessKey, SuccessFalse,
 			),
 		},
@@ -71,13 +80,13 @@ var (
 					"`%s` describes the operation type (`%s`, `%s`, or `%s`)."+
 					"`%s` describes the type of the operated entity. "+
 					"`%s` describes whether the operation is successful (`%s`) or not (`%s`). "+
-					"`%s` is populated in case of `%s=\"%s\"` and describes the status code returned from Konnect API. "+
+					"`%s` is always \"0\" when  `%s=\"%s\"` and is populated in case of `%s=\"%s\"` and describes the status code returned from Konnect API. "+
 					"`%s`=\"0\" and %s=\"%s\" means we cannot collect the status code or error happens in the process other than Konnect API call.",
 				KonnectServerURLKey,
 				KonnectEntityOperationTypeKey, KonnectEntityOperationCreate, KonnectEntityOperationUpdate, KonnectEntityOperationDelete,
 				KonnectEntityTypeKey,
 				SuccessKey, SuccessTrue, SuccessFalse,
-				StatusCodeKey, SuccessKey, SuccessFalse,
+				StatusCodeKey, SuccessKey, SuccessTrue, SuccessKey, SuccessFalse,
 				StatusCodeKey, SuccessKey, SuccessFalse,
 			),
 			// Duration range from 1ms to 10min.
@@ -101,14 +110,18 @@ func NewGlobalCtrlRuntimeMetricsRecorder() *GlobalCtrlRuntimeMetricsRecorder {
 	return &GlobalCtrlRuntimeMetricsRecorder{}
 }
 
+// RecordKonnectEntityOperationSuccess is called when an entity opertion is successfully done.
 func (r *GlobalCtrlRuntimeMetricsRecorder) RecordKonnectEntityOperationSuccess(
-	serverURL string, operationType KonnectEntityOperation, entityType string, duration time.Duration) {
+	serverURL string, operationType KonnectEntityOperation, entityType string, duration time.Duration,
+) {
 	r.recordKonnectEntityOperationCount(serverURL, operationType, entityType, true, 0)
 	r.recordKonnectEntityOperationDuration(serverURL, operationType, entityType, true, 0, duration)
 }
 
+// RecordKonnectEntityOperationFailure is called when an entity operation fails.
 func (r *GlobalCtrlRuntimeMetricsRecorder) RecordKonnectEntityOperationFailure(
-	serverURL string, operationType KonnectEntityOperation, entityType string, duration time.Duration, statusCode int) {
+	serverURL string, operationType KonnectEntityOperation, entityType string, duration time.Duration, statusCode int,
+) {
 	r.recordKonnectEntityOperationCount(serverURL, operationType, entityType, false, statusCode)
 	r.recordKonnectEntityOperationDuration(serverURL, operationType, entityType, false, statusCode, duration)
 }
@@ -127,6 +140,8 @@ func (r *GlobalCtrlRuntimeMetricsRecorder) recordKonnectEntityOperationDuration(
 	konnectEntityOperationDuration.With(labels).Observe(duration.Seconds())
 }
 
+// konnectEntityOperationLabels generates the labels for recording metrics about Konnect entity opertions,
+// including: server URL, operation type, entity type, whether the opertion succeeded, and status code.
 func konnectEntityOperationLabels(
 	serverURL string, operationType KonnectEntityOperation, entityType string, success bool, statusCode int,
 ) prometheus.Labels {
