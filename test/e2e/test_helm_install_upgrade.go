@@ -32,6 +32,11 @@ func init() {
 	addTestsToTestSuite(TestHelmUpgrade)
 }
 
+const (
+	kgoNightlyImageRepository           = "docker.io/kong/nightly-gateway-operator-oss"
+	kgoEnterpriseNightlyImageRepository = "docker.io/kong/nightly-gateway-operator"
+)
+
 func TestHelmUpgrade(t *testing.T) {
 	const (
 		// Rel: https://github.com/Kong/charts/tree/main/charts/gateway-operator
@@ -58,6 +63,7 @@ func TestHelmUpgrade(t *testing.T) {
 		fromVersion            string
 		toVersion              string
 		objectsToDeploy        []client.Object
+		upgradeFromNightly     bool
 		upgradeToCurrent       bool
 		assertionsAfterInstall []assertion
 		assertionsAfterUpgrade []assertion
@@ -205,12 +211,12 @@ func TestHelmUpgrade(t *testing.T) {
 				},
 			},
 		},
-		/**
-		// TODO(Jintao): This test is disabled. After a new nightly image is available which uses KIC 3.4.1, we can enable it.
+
 		{
-			name:             "upgrade from nightly to current",
-			fromVersion:      "nightly",
-			upgradeToCurrent: true,
+			name:               "upgrade from nightly to current",
+			fromVersion:        "nightly",
+			upgradeFromNightly: true,
+			upgradeToCurrent:   true,
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -278,7 +284,6 @@ func TestHelmUpgrade(t *testing.T) {
 				},
 			},
 		},
-		**/
 	}
 
 	var (
@@ -302,8 +307,17 @@ func TestHelmUpgrade(t *testing.T) {
 			}
 			var (
 				tag              string
+				sourceRepository = kgoImageRepository
 				targetRepository = kgoImageRepository
 			)
+
+			if tc.upgradeFromNightly {
+				sourceRepository = kgoNightlyImageRepository
+				if helpers.GetDefaultDataPlaneBaseImage() == consts.DefaultDataPlaneBaseEnterpriseImage {
+					sourceRepository = kgoEnterpriseNightlyImageRepository
+				}
+			}
+
 			if tc.upgradeToCurrent {
 				if currentTag == "" {
 					t.Skip(
@@ -324,7 +338,7 @@ func TestHelmUpgrade(t *testing.T) {
 			releaseName := strings.ReplaceAll(fmt.Sprintf("kgo-%s-to-%s", tc.fromVersion, tagInReleaseName), ".", "-")
 			values := map[string]string{
 				"image.tag":                          tc.fromVersion,
-				"image.repository":                   kgoImageRepository,
+				"image.repository":                   sourceRepository,
 				"readinessProbe.initialDelaySeconds": "1",
 				"readinessProbe.periodSeconds":       "1",
 				// Disable leader election and anonymous reports for tests.
