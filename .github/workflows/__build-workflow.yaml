@@ -87,7 +87,7 @@ jobs:
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
 
     steps:
-      - uses: mukunku/tag-exists-action@v1.6.0
+      - uses: mukunku/tag-exists-action@bdad1eaa119ce71b150b952c97351c75025c06a9 # v1.6.0
         id: check-tag
         if: ${{ inputs.tag != '' }}
         name: check if tag already exists
@@ -108,7 +108,7 @@ jobs:
       - name: Parse semver string
         id: semver_parser
         if: ${{ inputs.tag != '' }}
-        uses: booxmedialtd/ws-action-parse-semver@v1.4.7
+        uses: booxmedialtd/ws-action-parse-semver@7784200024d6b3fc01253e617ec0168daf603de3 # v1.4.7
         with:
           input_string: ${{ inputs.tag }}
           version_extractor_regex: 'v(.*)$'
@@ -153,19 +153,19 @@ jobs:
 
       - name: Log in to the Container registry
         if: ${{ inputs.push }}
-        uses: docker/login-action@v3.1.0
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
         with:
           registry: ${{ inputs.registry }}
           username: ${{ inputs.username }}
           password: ${{ secrets.dockerhub-token }}
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@53851d14592bedcffcf25ea515637cff71ef929a # v3.8.0
         with:
           platforms: ${{ matrix.arch }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5 # v3.8.0
 
       - name: Add standard tags
         if: ${{ inputs.tag != '' }}
@@ -184,7 +184,7 @@ jobs:
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v5.5.1
+        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
         with:
           images: |
             ${{ inputs.registry }}/${{ inputs.image-name }}
@@ -199,7 +199,7 @@ jobs:
             ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
           flavor: latest=${{ inputs.latest }},suffix=-${{ matrix.arch  }}
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5 # v3.8.0
 
       # Setup Golang to use go pkg cache which is utilized in Dockerfile's cache mount.
       - name: Setup golang
@@ -212,7 +212,7 @@ jobs:
 
       - name: Build image
         id: build
-        uses: docker/build-push-action@v5.3.0
+        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
         with:
           context: .
           push: ${{ inputs.push }}
@@ -280,7 +280,7 @@ jobs:
         run: git submodule update --init
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5 # v3.8.0
 
       - name: Add standard tags
         if: ${{ inputs.tag != '' }}
@@ -299,7 +299,7 @@ jobs:
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5.5.1
+        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
         with:
           images: |
             ${{ inputs.registry }}/${{ inputs.image-name }}
@@ -316,7 +316,7 @@ jobs:
 
       - name: Log in to the Container registry
         if: ${{ inputs.push }}
-        uses: docker/login-action@v3.1.0
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
         with:
           registry: ${{ inputs.registry }}
           username: ${{ inputs.username }}
@@ -330,7 +330,7 @@ jobs:
       # When building with `inputs.tag` set, `steps.meta.outputs.tags` contains multiple entries, so it cannot be used
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # `needs.semver.outputs.fullversion`.
-      - uses: int128/docker-manifest-create-action@v2
+      - uses: int128/docker-manifest-create-action@736aaa0f6ae97b2fb7f43e8dcef3ab47a02ea96e # v2.8.0
         if: ${{ inputs.tag != '' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
@@ -341,7 +341,7 @@ jobs:
       # When building on schedule, `steps.meta.outputs.tags` contains multiple entries, so it cannot be used
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # the current date.
-      - uses: int128/docker-manifest-create-action@v2
+      - uses: int128/docker-manifest-create-action@736aaa0f6ae97b2fb7f43e8dcef3ab47a02ea96e # v2.8.0
         if: ${{ inputs.tag == '' && github.event_name == 'schedule' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
@@ -351,7 +351,7 @@ jobs:
 
       # When building on push (e.g. on main), `steps.meta.outputs.tags` contains only a single entry, so it can be used
       # directly in sources.
-      - uses: int128/docker-manifest-create-action@v2
+      - uses: int128/docker-manifest-create-action@736aaa0f6ae97b2fb7f43e8dcef3ab47a02ea96e # v2.8.0
         if: ${{ inputs.tag == '' && github.event_name == 'push' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
