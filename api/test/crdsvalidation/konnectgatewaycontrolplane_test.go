@@ -11,11 +11,12 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 func TestKonnectGatewayControlPlane(t *testing.T) {
 	t.Run("members can only be set on groups", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*konnectv1alpha1.KonnectGatewayControlPlane]{
+		crdsvalidation.TestCasesGroup[*konnectv1alpha1.KonnectGatewayControlPlane]{
 			{
 				Name: "members can be set on control-plane group",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
@@ -111,7 +112,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 	})
 
 	t.Run("updates not allowed for status conditions", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*konnectv1alpha1.KonnectGatewayControlPlane]{
+		crdsvalidation.TestCasesGroup[*konnectv1alpha1.KonnectGatewayControlPlane]{
 			{
 				Name: "konnect.authRef change is not allowed for Programmed=True",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
@@ -235,7 +236,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 	})
 
 	t.Run("labels constraints", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*konnectv1alpha1.KonnectGatewayControlPlane]{
+		crdsvalidation.TestCasesGroup[*konnectv1alpha1.KonnectGatewayControlPlane]{
 			{
 				Name: "spec.labels of length 40 is allowed",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
@@ -537,7 +538,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 	})
 
 	t.Run("restriction on cluster types", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*konnectv1alpha1.KonnectGatewayControlPlane]{
+		crdsvalidation.TestCasesGroup[*konnectv1alpha1.KonnectGatewayControlPlane]{
 			{
 				Name: "unspecified cluster type (defaulting to CLUSTR_TYPE_CONTROL_PLANE) is allowed",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{

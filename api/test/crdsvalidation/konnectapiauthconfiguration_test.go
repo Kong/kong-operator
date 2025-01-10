@@ -7,11 +7,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 func TestKonnectAPIAuthConfiguration(t *testing.T) {
 	t.Run("spec", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*konnectv1alpha1.KonnectAPIAuthConfiguration]{
+		crdsvalidation.TestCasesGroup[*konnectv1alpha1.KonnectAPIAuthConfiguration]{
 			{
 				Name: "valid token type - spat prefix",
 				TestObject: &konnectv1alpha1.KonnectAPIAuthConfiguration{

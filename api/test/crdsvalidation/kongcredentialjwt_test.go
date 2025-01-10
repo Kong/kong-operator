@@ -12,11 +12,12 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 func TestKongCredentialJWT(t *testing.T) {
 	t.Run("updates not allowed for status conditions", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongCredentialJWT]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongCredentialJWT]{
 			{
 				Name: "consumerRef change is not allowed for Programmed=True",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
@@ -78,7 +79,7 @@ func TestKongCredentialJWT(t *testing.T) {
 	})
 
 	t.Run("fields validation", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongCredentialJWT]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongCredentialJWT]{
 			{
 				Name: "rsa_public_key is required when algorithm is RS256",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
@@ -288,7 +289,7 @@ func TestKongCredentialJWT(t *testing.T) {
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongCredentialJWT]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongCredentialJWT]{
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{

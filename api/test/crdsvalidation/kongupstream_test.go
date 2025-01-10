@@ -10,6 +10,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 func TestKongUpstream(t *testing.T) {
@@ -30,7 +31,7 @@ func TestKongUpstream(t *testing.T) {
 	})
 
 	t.Run("required fields", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongUpstream]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongUpstream]{
 			{
 				Name: "hash_fallback_header is required when hash_fallback is set to 'header'",
 				TestObject: &configurationv1alpha1.KongUpstream{
@@ -383,7 +384,7 @@ func TestKongUpstream(t *testing.T) {
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongUpstream]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongUpstream]{
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongUpstream{

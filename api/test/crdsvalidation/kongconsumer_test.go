@@ -9,6 +9,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 func TestKongConsumer(t *testing.T) {
@@ -26,7 +27,7 @@ func TestKongConsumer(t *testing.T) {
 	})
 
 	t.Run("required fields", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1.KongConsumer]{
+		crdsvalidation.TestCasesGroup[*configurationv1.KongConsumer]{
 			{
 				Name: "username or custom_id required (username provided)",
 				TestObject: &configurationv1.KongConsumer{
@@ -76,7 +77,7 @@ func TestKongConsumer(t *testing.T) {
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1.KongConsumer]{
+		crdsvalidation.TestCasesGroup[*configurationv1.KongConsumer]{
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1.KongConsumer{

@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 type Scope byte
@@ -55,9 +56,9 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 	t *testing.T,
 	obj T,
 	supportedByKIC SupportedByKicT,
-) CRDValidationTestCasesGroup[T] {
+) crdsvalidation.TestCasesGroup[T] {
 	var (
-		ret = CRDValidationTestCasesGroup[T]{}
+		ret = crdsvalidation.TestCasesGroup[T]{}
 
 		programmedConditionTrue = metav1.Condition{
 			Type:               "Programmed",
@@ -80,7 +81,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			// object without spec.controlPlaneRef should be allowed.
 			obj := obj.DeepCopy()
 			obj.SetControlPlaneRef(nil)
-			ret = append(ret, CRDValidationTestCase[T]{
+			ret = append(ret, crdsvalidation.TestCase[T]{
 				Name:       "no cpRef is valid",
 				TestObject: obj,
 			})
@@ -96,7 +97,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 					Namespace: "another-namespace",
 				},
 			})
-			ret = append(ret, CRDValidationTestCase[T]{
+			ret = append(ret, crdsvalidation.TestCase[T]{
 				Name:                 "cpRef (type=konnectNamespacedRef) cannot have namespace",
 				TestObject:           obj,
 				ExpectedErrorMessage: lo.ToPtr("spec.controlPlaneRef cannot specify namespace for namespaced resource"),
@@ -109,7 +110,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			Type:      configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 			KonnectID: lo.ToPtr("123456"),
 		})
-		ret = append(ret, CRDValidationTestCase[T]{
+		ret = append(ret, crdsvalidation.TestCase[T]{
 			Name:                 "providing konnectID when type is konnectNamespacedRef yields an error",
 			TestObject:           obj,
 			ExpectedErrorMessage: lo.ToPtr("when type is konnectNamespacedRef, konnectNamespacedRef must be set"),
@@ -123,7 +124,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 				Name: "test-konnect-control-plane",
 			},
 		})
-		ret = append(ret, CRDValidationTestCase[T]{
+		ret = append(ret, crdsvalidation.TestCase[T]{
 			Name:                 "providing konnectNamespacedRef when type is konnectID yields an error",
 			TestObject:           obj,
 			ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectID must be set"),
@@ -138,7 +139,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 				Name: "test-konnect-control-plane",
 			},
 		})
-		ret = append(ret, CRDValidationTestCase[T]{
+		ret = append(ret, crdsvalidation.TestCase[T]{
 			Name:                 "providing konnectNamespacedRef and konnectID when type is konnectID yields an error",
 			TestObject:           obj,
 			ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectNamespacedRef must not be set"),
@@ -153,7 +154,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 				Name: "test-konnect-control-plane",
 			},
 		})
-		ret = append(ret, CRDValidationTestCase[T]{
+		ret = append(ret, crdsvalidation.TestCase[T]{
 			Name:                 "providing konnectID and konnectNamespacedRef when type is konnectNamespacedRef yields an error",
 			TestObject:           obj,
 			ExpectedErrorMessage: lo.ToPtr("when type is konnectNamespacedRef, konnectID must not be set"),
@@ -165,7 +166,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			Type:      configurationv1alpha1.ControlPlaneRefKIC,
 			KonnectID: lo.ToPtr("123456"),
 		})
-		ret = append(ret, CRDValidationTestCase[T]{
+		ret = append(ret, crdsvalidation.TestCase[T]{
 			Name:                 "providing konnectID when type is kic yields an error",
 			TestObject:           obj,
 			ExpectedErrorMessage: lo.ToPtr("when type is kic, konnectID must not be set"),
@@ -179,7 +180,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 				Name: "test-konnect-control-plane",
 			},
 		})
-		ret = append(ret, CRDValidationTestCase[T]{
+		ret = append(ret, crdsvalidation.TestCase[T]{
 			Name:                 "providing konnectNamespaceRef when type is kic yields an error",
 			TestObject:           obj,
 			ExpectedErrorMessage: lo.ToPtr("when type is kic, konnectNamespacedRef must not be set"),
@@ -191,7 +192,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			obj.SetControlPlaneRef(&configurationv1alpha1.ControlPlaneRef{
 				Type: configurationv1alpha1.ControlPlaneRefKIC,
 			})
-			ret = append(ret, CRDValidationTestCase[T]{
+			ret = append(ret, crdsvalidation.TestCase[T]{
 				Name:       "kic control plane ref is allowed",
 				TestObject: obj,
 			})
@@ -208,7 +209,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			},
 		})
 		obj.SetConditions([]metav1.Condition{programmedConditionTrue})
-		ret = append(ret, CRDValidationTestCase[T]{
+		ret = append(ret, crdsvalidation.TestCase[T]{
 			Name:       "cpRef change (type=konnectNamespacedRef) is not allowed for Programmed=True",
 			TestObject: obj,
 			Update: func(obj T) {
@@ -228,7 +229,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			},
 		})
 		obj.SetConditions([]metav1.Condition{programmedConditionFalse})
-		ret = append(ret, CRDValidationTestCase[T]{
+		ret = append(ret, crdsvalidation.TestCase[T]{
 			Name:       "cpRef change (type=konnectNamespacedRef) is allowed when object is Programmed=False",
 			TestObject: obj,
 			Update: func(obj T) {
@@ -251,7 +252,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 				Type: configurationv1alpha1.ControlPlaneRefKIC,
 			})
 			obj.SetConditions([]metav1.Condition{programmedConditionTrue})
-			ret = append(ret, CRDValidationTestCase[T]{
+			ret = append(ret, crdsvalidation.TestCase[T]{
 				Name:       "cpRef change (type=kic) is not allowed for Programmed=True",
 				TestObject: obj,
 				Update: func(obj T) {
@@ -274,7 +275,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 				Type: configurationv1alpha1.ControlPlaneRefKIC,
 			})
 			obj.SetConditions([]metav1.Condition{programmedConditionFalse})
-			ret = append(ret, CRDValidationTestCase[T]{
+			ret = append(ret, crdsvalidation.TestCase[T]{
 				Name:       "cpRef change (type=kic) is allowed when object is not Programmed=True",
 				TestObject: obj,
 				Update: func(obj T) {
@@ -295,7 +296,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 		if supportedByKIC == SupportedByKIC {
 			obj := obj.DeepCopy()
 			obj.SetConditions([]metav1.Condition{programmedConditionFalse})
-			ret = append(ret, CRDValidationTestCase[T]{
+			ret = append(ret, crdsvalidation.TestCase[T]{
 				Name:       "cpRef change (type=<unset>) is allowed when object is Programmed=False",
 				TestObject: obj,
 				Update: func(obj T) {
@@ -315,7 +316,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			obj := obj.DeepCopy()
 			obj.SetControlPlaneRef(&configurationv1alpha1.ControlPlaneRef{})
 			obj.SetConditions([]metav1.Condition{programmedConditionTrue})
-			ret = append(ret, CRDValidationTestCase[T]{
+			ret = append(ret, crdsvalidation.TestCase[T]{
 				Name:       "cpRef change (type=<unset>) is not allowed for Programmed=True",
 				TestObject: obj,
 				Update: func(obj T) {

@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 type EmptyControlPlaneRefAllowedT bool
@@ -29,15 +30,15 @@ func NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes[
 	t *testing.T,
 	obj T,
 	emptyControlPlaneRefAllowed EmptyControlPlaneRefAllowedT,
-) CRDValidationTestCasesGroup[T] {
-	ret := CRDValidationTestCasesGroup[T]{}
+) crdsvalidation.TestCasesGroup[T] {
+	ret := crdsvalidation.TestCasesGroup[T]{}
 
 	{
 		obj := obj.DeepCopy()
 		obj.SetControlPlaneRef(&configurationv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKIC,
 		})
-		ret = append(ret, CRDValidationTestCase[T]{
+		ret = append(ret, crdsvalidation.TestCase[T]{
 			Name:                 "kic control plane ref is not allowed",
 			TestObject:           obj,
 			ExpectedErrorMessage: lo.ToPtr("KIC is not supported as control plane"),
@@ -48,13 +49,13 @@ func NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes[
 		obj.SetControlPlaneRef(nil)
 		switch emptyControlPlaneRefAllowed {
 		case EmptyControlPlaneRefNotAllowed:
-			ret = append(ret, CRDValidationTestCase[T]{
+			ret = append(ret, crdsvalidation.TestCase[T]{
 				Name:                 "<unset> control plane ref is not allowed",
 				TestObject:           obj,
 				ExpectedErrorMessage: lo.ToPtr("controlPlaneRef"),
 			})
 		case EmptyControlPlaneRefAllowed:
-			ret = append(ret, CRDValidationTestCase[T]{
+			ret = append(ret, crdsvalidation.TestCase[T]{
 				Name:       "<unset> control plane ref is allowed",
 				TestObject: obj,
 			})

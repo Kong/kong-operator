@@ -3,14 +3,16 @@ package crdsvalidation_test
 import (
 	"testing"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/samber/lo"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 func TestKongCustomEntity(t *testing.T) {
 	t.Run("spec", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongCustomEntity]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongCustomEntity]{
 			{
 				Name: "basic allowed spec",
 				TestObject: &configurationv1alpha1.KongCustomEntity{

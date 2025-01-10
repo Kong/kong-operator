@@ -10,11 +10,12 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 func TestKongCredentialAPIKey(t *testing.T) {
 	t.Run("updates not allowed for status conditions", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongCredentialAPIKey]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongCredentialAPIKey]{
 			{
 				Name: "consumerRef change is not allowed for Programmed=True",
 				TestObject: &configurationv1alpha1.KongCredentialAPIKey{
@@ -76,7 +77,7 @@ func TestKongCredentialAPIKey(t *testing.T) {
 	})
 
 	t.Run("required fields validation", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongCredentialAPIKey]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongCredentialAPIKey]{
 			{
 				Name: "key is required",
 				TestObject: &configurationv1alpha1.KongCredentialAPIKey{
@@ -107,7 +108,7 @@ func TestKongCredentialAPIKey(t *testing.T) {
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongCredentialAPIKey]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongCredentialAPIKey]{
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongCredentialAPIKey{

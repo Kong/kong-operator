@@ -8,11 +8,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 func TestKongSNI(t *testing.T) {
 	t.Run("certificate ref", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongSNI]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongSNI]{
 			{
 				Name: "certificate ref name is required",
 				TestObject: &configurationv1alpha1.KongSNI{
@@ -80,7 +81,7 @@ func TestKongSNI(t *testing.T) {
 	})
 
 	t.Run("spec", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongSNI]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongSNI]{
 			{
 				Name: "spec.name must not be empty",
 				TestObject: &configurationv1alpha1.KongSNI{
@@ -97,7 +98,7 @@ func TestKongSNI(t *testing.T) {
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongSNI]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongSNI]{
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongSNI{

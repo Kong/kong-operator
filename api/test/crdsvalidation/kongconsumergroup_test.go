@@ -10,6 +10,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 func TestKongConsumerGroup(t *testing.T) {
@@ -29,7 +30,7 @@ func TestKongConsumerGroup(t *testing.T) {
 	})
 
 	t.Run("cp ref update", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1beta1.KongConsumerGroup]{
+		crdsvalidation.TestCasesGroup[*configurationv1beta1.KongConsumerGroup]{
 			{
 				Name: "cpRef change is not allowed for Programmed=True",
 				TestObject: &configurationv1beta1.KongConsumerGroup{
@@ -113,7 +114,7 @@ func TestKongConsumerGroup(t *testing.T) {
 	})
 
 	t.Run("fields", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1beta1.KongConsumerGroup]{
+		crdsvalidation.TestCasesGroup[*configurationv1beta1.KongConsumerGroup]{
 			{
 				Name: "name field can be set",
 				TestObject: &configurationv1beta1.KongConsumerGroup{
@@ -133,7 +134,7 @@ func TestKongConsumerGroup(t *testing.T) {
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1beta1.KongConsumerGroup]{
+		crdsvalidation.TestCasesGroup[*configurationv1beta1.KongConsumerGroup]{
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1beta1.KongConsumerGroup{

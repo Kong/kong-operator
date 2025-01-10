@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 func TestKongKeySet(t *testing.T) {
@@ -33,7 +34,7 @@ func TestKongKeySet(t *testing.T) {
 	})
 
 	t.Run("spec", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongKeySet]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongKeySet]{
 			{
 				Name: "name must be set",
 				TestObject: &configurationv1alpha1.KongKeySet{
@@ -48,7 +49,7 @@ func TestKongKeySet(t *testing.T) {
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongKeySet]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongKeySet]{
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongKeySet{

@@ -1,4 +1,4 @@
-package crdsvalidation_test
+package crdsvalidation
 
 import (
 	"context"
@@ -7,24 +7,32 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/kong/kubernetes-configuration/pkg/clientset/scheme"
 )
 
-// CRDValidationTestCasesGroup is a group of test cases related to CRD validation.
-type CRDValidationTestCasesGroup[T client.Object] []CRDValidationTestCase[T]
+// TestCasesGroup is a group of test cases related to CRD validation.
+type TestCasesGroup[T client.Object] []TestCase[T]
 
-// Run runs all test cases in the group.
-func (g CRDValidationTestCasesGroup[T]) Run(t *testing.T) {
+// RunWithConfig runs all test cases in the group against the provided rest.Config's cluster.
+func (g TestCasesGroup[T]) RunWithConfig(t *testing.T, cfg *rest.Config) {
 	for _, tc := range g {
-		tc.Run(t)
+		tc.RunWithConfig(t, cfg)
 	}
 }
 
-// CRDValidationTestCase represents a test case for CRD validation.
-type CRDValidationTestCase[T client.Object] struct {
+// Run runs all test cases in the group.
+func (g TestCasesGroup[T]) Run(t *testing.T) {
+	cfg, err := config.GetConfig()
+	require.NoError(t, err)
+	g.RunWithConfig(t, cfg)
+}
+
+// TestCase represents a test case for CRD validation.
+type TestCase[T client.Object] struct {
 	// Name is the name of the test case.
 	Name string
 
@@ -42,15 +50,14 @@ type CRDValidationTestCase[T client.Object] struct {
 	Update func(T)
 }
 
-func (tc *CRDValidationTestCase[T]) Run(t *testing.T) {
+// RunWithConfig runs the test case against the provided rest.Config's cluster.
+func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config) {
 	// Run the test case.
 	t.Run(tc.Name, func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
 
 		// Create a new controller-runtime client.Client.
-		cfg, err := config.GetConfig()
-		require.NoError(t, err)
 		cl, err := client.New(cfg, client.Options{
 			Scheme: scheme.Scheme,
 		})
@@ -109,4 +116,12 @@ func (tc *CRDValidationTestCase[T]) Run(t *testing.T) {
 			require.NoError(t, err)
 		}
 	})
+}
+
+// Run runs the test case.
+func (tc *TestCase[T]) Run(t *testing.T) {
+	cfg, err := config.GetConfig()
+	require.NoError(t, err)
+
+	tc.RunWithConfig(t, cfg)
 }

@@ -7,11 +7,12 @@ import (
 	"github.com/samber/lo"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 func TestKongTarget(t *testing.T) {
 	t.Run("spec", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongTarget]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongTarget]{
 			{
 				Name: "weight must between 0 and 65535",
 				TestObject: &configurationv1alpha1.KongTarget{
@@ -36,7 +37,7 @@ func TestKongTarget(t *testing.T) {
 	})
 
 	t.Run("upstream ref", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongTarget]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongTarget]{
 			{
 				Name: "upstream ref is immutable",
 				TestObject: &configurationv1alpha1.KongTarget{
@@ -62,7 +63,7 @@ func TestKongTarget(t *testing.T) {
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongTarget]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongTarget]{
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongTarget{

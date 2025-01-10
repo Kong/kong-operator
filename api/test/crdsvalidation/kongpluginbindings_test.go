@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 func TestKongPluginBindings(t *testing.T) {
@@ -35,7 +36,7 @@ func TestKongPluginBindings(t *testing.T) {
 	})
 
 	t.Run("plugin ref", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongPluginBinding]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongPluginBinding]{
 			{
 				Name: "no plugin reference",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
@@ -131,7 +132,7 @@ func TestKongPluginBindings(t *testing.T) {
 	})
 
 	t.Run("target combinations", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongPluginBinding]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongPluginBinding]{
 			{
 				Name: "consumer, route, service targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
@@ -508,7 +509,7 @@ func TestKongPluginBindings(t *testing.T) {
 	})
 
 	t.Run("targets group/kind", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongPluginBinding]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongPluginBinding]{
 			{
 				Name: "networking.k8s.io/Ingress, as service target",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
@@ -553,7 +554,7 @@ func TestKongPluginBindings(t *testing.T) {
 	})
 
 	t.Run("cross targets validation", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongPluginBinding]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongPluginBinding]{
 			{
 				Name: "core/Service, configuration.konghq.com/KongRoute targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{

@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 func TestKongDataPlaneClientCertificate(t *testing.T) {
@@ -32,7 +33,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	})
 
 	t.Run("spec", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongDataPlaneClientCertificate]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongDataPlaneClientCertificate]{
 			{
 				Name: "valid KongDataPlaneClientCertificate",
 				TestObject: &configurationv1alpha1.KongDataPlaneClientCertificate{

@@ -10,6 +10,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
 func TestKongRoute(t *testing.T) {
@@ -32,7 +33,7 @@ func TestKongRoute(t *testing.T) {
 	})
 
 	t.Run("protocols", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongRoute]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongRoute]{
 			{
 				Name: "no http in protocols implies no other requirements",
 				TestObject: &configurationv1alpha1.KongRoute{
@@ -84,7 +85,7 @@ func TestKongRoute(t *testing.T) {
 	})
 
 	t.Run("no service ref and no cp ref provided", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongRoute]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongRoute]{
 			{
 				Name: "have to provide either controlPlaneRef or serviceRef",
 				TestObject: &configurationv1alpha1.KongRoute{
@@ -101,7 +102,7 @@ func TestKongRoute(t *testing.T) {
 	})
 
 	t.Run("service ref", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongRoute]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongRoute]{
 			{
 				Name: "NamespacedRef reference is valid",
 				TestObject: &configurationv1alpha1.KongRoute{
@@ -233,7 +234,7 @@ func TestKongRoute(t *testing.T) {
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
-		CRDValidationTestCasesGroup[*configurationv1alpha1.KongRoute]{
+		crdsvalidation.TestCasesGroup[*configurationv1alpha1.KongRoute]{
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongRoute{
