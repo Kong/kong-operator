@@ -31,6 +31,12 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.
 
 	testEnv := &envtest.Environment{
 		ControlPlaneStopTimeout: time.Second * 60,
+		CRDInstallOptions: envtest.CRDInstallOptions{
+			Paths: []string{
+				// TODO: remove this when CRDs are moved (e.g. to kubernetes-configuration repository)
+				"../../config/crd/bases",
+			},
+		},
 	}
 
 	t.Logf("starting envtest environment for test %s...", t.Name())
