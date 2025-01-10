@@ -22,6 +22,7 @@ import (
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
+	"github.com/kong/gateway-operator/internal/metrics"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -45,6 +46,8 @@ type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt cons
 	Client                  client.Client
 	SyncPeriod              time.Duration
 	MaxConcurrentReconciles uint
+
+	MetricRecoder metrics.Recorder
 }
 
 // KonnectEntityReconcilerOption is a functional option for the KonnectEntityReconciler.
@@ -71,6 +74,15 @@ func WithKonnectMaxConcurrentReconciles[T constraints.SupportedKonnectEntityType
 	}
 }
 
+// WithMetricRecoder sets the metric recorder to record metrics of Konnect entity operations of the reconciler.
+func WithMetricRecorder[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
+	metricRecorder metrics.Recorder,
+) KonnectEntityReconcilerOption[T, TEnt] {
+	return func(r *KonnectEntityReconciler[T, TEnt]) {
+		r.MetricRecoder = metricRecorder
+	}
+}
+
 // NewKonnectEntityReconciler returns a new KonnectEntityReconciler for the given
 // Konnect entity type.
 func NewKonnectEntityReconciler[
@@ -88,6 +100,7 @@ func NewKonnectEntityReconciler[
 		Client:                  client,
 		SyncPeriod:              consts.DefaultKonnectSyncPeriod,
 		MaxConcurrentReconciles: consts.DefaultKonnectMaxConcurrentReconciles,
+		MetricRecoder:           &metrics.MockRecorder{},
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -469,7 +482,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-			if err := ops.Delete[T, TEnt](ctx, sdk, r.Client, ent); err != nil {
+			if err := ops.Delete[T, TEnt](ctx, sdk, r.Client, r.MetricRecoder, ent); err != nil {
 				if res, errStatus := patch.StatusWithCondition(
 					ctx, r.Client, ent,
 					konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -500,7 +513,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go
 	if status := ent.GetKonnectStatus(); status == nil || status.GetKonnectID() == "" {
 		obj := ent.DeepCopyObject().(client.Object)
-		_, err := ops.Create[T, TEnt](ctx, sdk, r.Client, ent)
+		_, err := ops.Create[T, TEnt](ctx, sdk, r.Client, r.MetricRecoder, ent)
 
 		// TODO: this is actually not 100% error prone because when status
 		// update fails we don't store the Konnect ID and hence the reconciler
@@ -557,7 +570,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if res, err := ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, ent); err != nil {
+	if res, err := ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecoder, ent); err != nil {
 		setServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
 		if errUpd := r.Client.Status().Update(ctx, ent); errUpd != nil {
 			if k8serrors.IsConflict(errUpd) {

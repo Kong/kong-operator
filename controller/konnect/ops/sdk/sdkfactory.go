@@ -29,13 +29,22 @@ type SDKWrapper interface {
 	GetKeySetsSDK() KeySetsSDK
 	GetSNIsSDK() SNIsSDK
 	GetDataPlaneCertificatesSDK() DataPlaneClientCertificatesSDK
+
+	// GetServerURL returns the server URL for recording metrics.
+	GetServerURL() string
 }
 
 type sdkWrapper struct {
-	sdk *sdkkonnectgo.SDK
+	serverURL string
+	sdk       *sdkkonnectgo.SDK
 }
 
 var _ SDKWrapper = sdkWrapper{}
+
+// GetServerURL returns the Konnect server URL for recording metrics.
+func (w sdkWrapper) GetServerURL() string {
+	return w.serverURL
+}
 
 // GetControlPlaneSDK returns the SDK to operate Konnect control planes.
 func (w sdkWrapper) GetControlPlaneSDK() ControlPlaneSDK {
@@ -165,6 +174,7 @@ func NewSDKFactory() SDKFactory {
 // NewKonnectSDK creates a new Konnect SDK.
 func (f sdkFactory) NewKonnectSDK(serverURL string, token SDKToken) SDKWrapper {
 	return sdkWrapper{
+		serverURL: serverURL,
 		sdk: sdkkonnectgo.New(
 			sdkkonnectgo.WithSecurity(
 				sdkkonnectcomp.Security{

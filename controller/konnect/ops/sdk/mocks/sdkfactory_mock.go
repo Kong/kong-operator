@@ -62,6 +62,14 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 	}
 }
 
+const (
+	mockSDKServerURL = "http://mock-api.konnect.test"
+)
+
+func (m MockSDKWrapper) GetServerURL() string {
+	return mockSDKServerURL
+}
+
 func (m MockSDKWrapper) GetControlPlaneSDK() sdkops.ControlPlaneSDK {
 	return m.ControlPlaneSDK
 }

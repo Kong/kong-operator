@@ -16,6 +16,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/internal/metrics"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -45,11 +46,15 @@ func Create[
 	ctx context.Context,
 	sdk sdkops.SDKWrapper,
 	cl client.Client,
+	metricRecorder metrics.Recorder,
 	e TEnt,
 ) (*T, error) {
 	var (
 		err   error
 		start = time.Now()
+
+		entityType = e.GetTypeName()
+		statusCode int
 	)
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
@@ -162,6 +167,7 @@ func Create[
 		}
 
 	case errors.As(err, &errSDK):
+		statusCode = errSDK.StatusCode
 		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, errSDK.Error())
 	case errors.As(err, &errRelationsFailed):
 		e.SetKonnectID(errRelationsFailed.KonnectID)
@@ -172,6 +178,22 @@ func Create[
 		SetKonnectEntityProgrammedCondition(e)
 	}
 
+	if err != nil {
+		metricRecorder.RecordKonnectEntityOperationFailure(
+			sdk.GetServerURL(),
+			metrics.KonnectEntityOperationCreate,
+			entityType,
+			time.Since(start),
+			statusCode,
+		)
+	} else {
+		metricRecorder.RecordKonnectEntityOperationSuccess(
+			sdk.GetServerURL(),
+			metrics.KonnectEntityOperationCreate,
+			entityType,
+			time.Since(start),
+		)
+	}
 	logOpComplete(ctx, start, CreateOp, e, err)
 
 	return e, IgnoreUnrecoverableAPIErr(err, loggerForEntity(ctx, e, CreateOp))
@@ -182,7 +204,7 @@ func Create[
 func Delete[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
-](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, ent TEnt) error {
+](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, metricRecorder metrics.Recorder, ent TEnt) error {
 	if ent.GetKonnectStatus().GetKonnectID() == "" {
 		cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
 		if ok && cond.Status == metav1.ConditionTrue {
@@ -197,6 +219,9 @@ func Delete[
 	var (
 		err   error
 		start = time.Now()
+
+		entityType = ent.GetTypeName()
+		statusCode int
 	)
 	switch ent := any(ent).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
@@ -245,6 +270,26 @@ func Delete[
 		return fmt.Errorf("unsupported entity type %T", ent)
 	}
 
+	if err != nil {
+		var errSDK *sdkkonnecterrs.SDKError
+		if errors.As(err, &errSDK) {
+			statusCode = errSDK.StatusCode
+		}
+		metricRecorder.RecordKonnectEntityOperationFailure(
+			sdk.GetServerURL(),
+			metrics.KonnectEntityOperationDelete,
+			entityType,
+			time.Since(start),
+			statusCode,
+		)
+	} else {
+		metricRecorder.RecordKonnectEntityOperationSuccess(
+			sdk.GetServerURL(),
+			metrics.KonnectEntityOperationDelete,
+			entityType,
+			time.Since(start),
+		)
+	}
 	logOpComplete(ctx, start, DeleteOp, ent, err)
 
 	return err
@@ -297,6 +342,7 @@ func Update[
 	sdk sdkops.SDKWrapper,
 	syncPeriod time.Duration,
 	cl client.Client,
+	metricRecorder metrics.Recorder,
 	e TEnt,
 ) (ctrl.Result, error) {
 	now := time.Now()
@@ -312,7 +358,13 @@ func Update[
 		)
 	}
 
-	var err error
+	var (
+		err error
+
+		entityType = e.GetTypeName()
+		statusCode int
+		start      = time.Now()
+	)
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
@@ -367,6 +419,7 @@ func Update[
 	)
 	switch {
 	case errors.As(err, &errSDK):
+		statusCode = errSDK.StatusCode
 		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToUpdateReason, errSDK.Body)
 	case errors.As(err, &errRelationsFailed):
 		e.SetKonnectID(errRelationsFailed.KonnectID)
@@ -377,7 +430,23 @@ func Update[
 		SetKonnectEntityProgrammedCondition(e)
 	}
 
-	logOpComplete(ctx, now, UpdateOp, e, err)
+	if err != nil {
+		metricRecorder.RecordKonnectEntityOperationFailure(
+			sdk.GetServerURL(),
+			metrics.KonnectEntityOperationUpdate,
+			entityType,
+			time.Since(start),
+			statusCode,
+		)
+	} else {
+		metricRecorder.RecordKonnectEntityOperationSuccess(
+			sdk.GetServerURL(),
+			metrics.KonnectEntityOperationUpdate,
+			entityType,
+			time.Since(start),
+		)
+	}
+	logOpComplete(ctx, start, UpdateOp, e, err)
 
 	return ctrl.Result{}, IgnoreUnrecoverableAPIErr(err, loggerForEntity(ctx, e, UpdateOp))
 }

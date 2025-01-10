@@ -27,6 +27,7 @@ import (
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/specialized"
+	"github.com/kong/gateway-operator/internal/metrics"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	dataplanevalidator "github.com/kong/gateway-operator/internal/validation/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -188,6 +189,8 @@ func setupIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 // SetupControllers returns a list of ControllerDefs based on config.
 func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef, error) {
 	ctx := context.Background()
+	// metricRecorder is the recorder used to record custom metrics in the controller manager's metrics server.
+	metricRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
 
 	// These checks prevent controller-runtime spamming in logs about failing
 	// to get informer from cache.
@@ -508,6 +511,8 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			return nil, err
 		}
 
+		// REVIEW: Should we define the recorder here, or define it out of the section to allow setting custom metrics in other controllers
+
 		sdkFactory := sdkops.NewSDKFactory()
 		controllerFactory := konnectControllerFactory{
 			sdkFactory:              sdkFactory,
@@ -515,6 +520,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			client:                  mgr.GetClient(),
 			syncPeriod:              c.KonnectSyncPeriod,
 			maxConcurrentReconciles: c.KonnectMaxConcurrentReconciles,
+			metricRecorder:          metricRecorder,
 		}
 
 		konnectControllers := map[string]ControllerDef{
@@ -696,6 +702,7 @@ type konnectControllerFactory struct {
 	client                  client.Client
 	syncPeriod              time.Duration
 	maxConcurrentReconciles uint
+	metricRecorder          metrics.Recorder
 }
 
 func newKonnectController[
@@ -710,6 +717,7 @@ func newKonnectController[
 			f.client,
 			konnect.WithKonnectEntitySyncPeriod[T, TEnt](f.syncPeriod),
 			konnect.WithKonnectMaxConcurrentReconciles[T, TEnt](f.maxConcurrentReconciles),
+			konnect.WithMetricRecorder[T, TEnt](f.metricRecorder),
 		),
 	}
 }
