@@ -27,6 +27,19 @@ jobs:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - uses: zgosalvez/github-actions-ensure-sha-pinned-actions@c3a2b64f69b7a1542a68f44d9edbd9ec3fc1455e # v3.0.20
 
+  ossf-scorecard:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    # Ref: https://github.com/ossf/scorecard
+    # TODO: add other checks as needed
+    - run: |
+        docker run --rm --env GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} gcr.io/openssf/scorecard:stable \
+          --repo=github.com/${{ github.repository }} \
+          --commit ${{ github.sha }} \
+          --show-details \
+          --checks=Pinned-Dependencies
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -537,6 +550,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - ensure-actions-sha-pin
+      - ossf-scorecard
       - lint
       - verify
       - install-with-kustomize
