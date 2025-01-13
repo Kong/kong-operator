@@ -1038,12 +1038,12 @@ func TestDataPlaneSpecifyingServiceName(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
-	t.Log("deploying dataplane resource with service name specified")
+	serviceName := "ingress-service-" + uuid.NewString()
+	t.Logf("deploying dataplane resource with service name specified to %s", serviceName)
 	dataplaneName := types.NamespacedName{
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	serviceName := "ingress-service-" + uuid.NewString()
 	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dataplaneName.Namespace,
@@ -1088,10 +1088,10 @@ func TestDataPlaneSpecifyingServiceName(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
-	t.Logf("verifying that dataplane is provisioned")
+	t.Log("verifying that dataplane is provisioned")
 	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), waitTime, tickTime)
 
-	t.Log("verifying that ingress service with the specified name is created")
+	t.Logf("verifying that ingress service with the specified name '%s' is created", serviceName)
 	require.Eventually(t, testutils.DataPlaneHasActiveServiceWithName(t, GetCtx(), dataplaneName, nil, clients, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
@@ -1112,8 +1112,9 @@ func TestDataPlaneSpecifyingServiceName(t *testing.T) {
 
 	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+dataplaneIP), waitTime, tickTime)
 
-	t.Logf("updating ingress service name in dataplane")
+	oldServiceName := serviceName
 	serviceName = "ingress-service-" + uuid.NewString()
+	t.Logf("updating ingress service name from '%s' to '%s' in dataplane", oldServiceName, serviceName)
 	require.Eventually(t,
 		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
 			dp.Spec.Network.Services.Ingress.Name = &serviceName
@@ -1121,12 +1122,18 @@ func TestDataPlaneSpecifyingServiceName(t *testing.T) {
 		time.Minute, time.Second,
 	)
 
-	t.Log("verifying that ingress service with the new name is created")
+	t.Logf("verifying that ingress service with the new name '%s' is created", serviceName)
 	require.Eventually(t, testutils.DataPlaneHasActiveServiceWithName(t, GetCtx(), dataplaneName, nil, clients, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	}, serviceName,
 	), waitTime, tickTime)
+
+	t.Logf("verifying that the old ingress service '%s' is deleted", oldServiceName)
+	require.Eventually(t, func() bool {
+		_, err := clients.K8sClient.CoreV1().Services(dataplane.Namespace).Get(GetCtx(), oldServiceName, metav1.GetOptions{})
+		return err != nil && k8serrors.IsNotFound(err)
+	}, waitTime, tickTime)
 
 	t.Log("verifying dataplane services receive IP addresses after service name is updated")
 	require.Eventually(t, func() bool {

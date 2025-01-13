@@ -133,9 +133,6 @@ func ReduceServices(ctx context.Context, k8sClient client.Client, services []cor
 	return nil
 }
 
-// +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=list;watch
-// +kubebuilder:rbac:groups=core,resources=services,verbs=delete
-
 // ReduceServicesByName deletes all service in the list except the one with specified name (if exists).
 // It accepts optional preDeleteHooks which are executed before every Service delete operation.
 func ReduceServicesByName(ctx context.Context, k8sClient client.Client, services []corev1.Service, name string, preDeleteHooks ...PreDeleteHook) error {
