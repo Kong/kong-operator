@@ -71,6 +71,9 @@ on:
       version:
         value: ${{ jobs.build.outputs.version }}
 
+permissions:
+  contents: read
+
 jobs:
   semver:
     runs-on: ubuntu-latest
