@@ -13,4 +13,5 @@ type ControlPlaneSDK interface {
 	DeleteControlPlane(ctx context.Context, id string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteControlPlaneResponse, error)
 	UpdateControlPlane(ctx context.Context, id string, req sdkkonnectcomp.UpdateControlPlaneRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpdateControlPlaneResponse, error)
 	ListControlPlanes(ctx context.Context, request sdkkonnectops.ListControlPlanesRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListControlPlanesResponse, error)
+	GetControlPlane(ctx context.Context, id string, opts ...sdkkonnectops.Option) (*sdkkonnectops.GetControlPlaneResponse, error)
 }

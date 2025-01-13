@@ -36,6 +36,8 @@ const (
 	UpdateOp Op = "update"
 	// DeleteOp is the operation type for deleting a Konnect entity.
 	DeleteOp Op = "delete"
+	// GetOp is the operation type for getting a Konnect entity.
+	GetOp Op = "get"
 )
 
 // Create creates a Konnect entity.
@@ -293,6 +295,60 @@ func Delete[
 	logOpComplete(ctx, start, DeleteOp, ent, err)
 
 	return err
+}
+
+// GetByID gets a Konnect entity by its ID.
+func GetByID[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	ctx context.Context,
+	sdk sdkops.SDKWrapper,
+	id string,
+	ent TEnt,
+	metricRecorder metrics.Recorder,
+) (
+	*T, error,
+) {
+	var (
+		err   error
+		start = time.Now()
+
+		entityType = ent.GetTypeName()
+		statusCode int
+		e          *T
+	)
+	switch any(ent).(type) {
+	case *konnectv1alpha1.KonnectGatewayControlPlane:
+		err = getControlPlaneByID(ctx, sdk.GetControlPlaneSDK(), id)
+	// TODO: add other Konnect entities.
+	default:
+		err = fmt.Errorf("unsupported entity type %T", ent)
+	}
+
+	if err != nil {
+		var errSDK *sdkkonnecterrs.SDKError
+		if errors.As(err, &errSDK) {
+			statusCode = errSDK.StatusCode
+		}
+		metricRecorder.RecordKonnectEntityOperationFailure(
+			sdk.GetServerURL(),
+			metrics.KonnectEntityOpertionGet,
+			entityType,
+			time.Since(start),
+			statusCode,
+		)
+	} else {
+		metricRecorder.RecordKonnectEntityOperationSuccess(
+			sdk.GetServerURL(),
+			metrics.KonnectEntityOpertionGet,
+			entityType,
+			time.Since(start),
+		)
+	}
+	logOpComplete(ctx, start, GetOp, ent, err)
+
+	return e, err
 }
 
 func shouldUpdate[

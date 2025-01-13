@@ -512,6 +512,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// We should look at the "expectations" for this:
 	// https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go
 	if status := ent.GetKonnectStatus(); status == nil || status.GetKonnectID() == "" {
+		// If the object is annotated to adopt an existing Konnect entity,
+		// call the method to adopt the existing entity instead of creating one.
+		if adoptEntityID := getAdoptEntityID(ent.GetAnnotations()); adoptEntityID != "" {
+			return r.adoptExistingEntity(ctx, sdk, adoptEntityID, apiAuth.Status.OrganizationID, ent)
+		}
+
 		obj := ent.DeepCopyObject().(client.Object)
 		_, err := ops.Create[T, TEnt](ctx, sdk, r.Client, r.MetricRecoder, ent)
 
@@ -598,6 +604,70 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	return ctrl.Result{
 		RequeueAfter: r.SyncPeriod,
 	}, nil
+}
+
+// adoptExistingEntity fetches the existing Konnect entity by `id` and attach the Konnect entity
+// to the reconciled object.
+func (r *KonnectEntityReconciler[T, TEnt]) adoptExistingEntity(
+	ctx context.Context,
+	sdk sdkops.SDKWrapper,
+	id string,
+	orgID string,
+	ent TEnt,
+) (
+	ctrl.Result, error,
+) {
+	obj := ent.DeepCopyObject().(client.Object)
+	_, getErr := ops.GetByID(ctx, sdk, id, ent, r.MetricRecoder)
+
+	ent.SetKonnectID(id)
+	if getErr == nil {
+		ops.SetKonnectEntityProgrammedCondition(ent)
+	} else {
+		ops.SetKonnectEntityProgrammedConditionFalse(ent, consts.KonnectEntitiesFailedToAdoptReason, getErr.Error())
+	}
+
+	// Regardless of the error returned from Konnect to get the existing entity,
+	// Add the finalizer so that the resource can be cleaned up from Konnect on deletion...
+	objWithFinalizer := ent.DeepCopyObject().(client.Object)
+	// TODO: extract setting finalizer to a common function?
+	if needToAddFinalizer := controllerutil.AddFinalizer(objWithFinalizer, KonnectCleanupFinalizer); needToAddFinalizer {
+		if errUpd := r.Client.Patch(ctx, objWithFinalizer, client.MergeFrom(ent)); errUpd != nil {
+			if k8serrors.IsConflict(errUpd) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			if getErr != nil {
+				return ctrl.Result{}, fmt.Errorf(
+					"failed to update finalizer %s: %w, object adoption operation failed because failed to get entity against Konnect API: %w",
+					KonnectCleanupFinalizer, errUpd, getErr,
+				)
+			}
+			return ctrl.Result{}, fmt.Errorf(
+				"failed to update finalizer %s: %w",
+				KonnectCleanupFinalizer, errUpd,
+			)
+		}
+	}
+
+	setServerURLAndOrgID(ent, ops.ServerURL(sdk.GetServerURL()), orgID)
+	// Regardless of the error, patch the status as it can contain the Konnect ID,
+	// Org ID, Server URL and status conditions.
+	// Konnect ID will be needed for the finalizer to work.
+	if err := r.Client.Status().Patch(ctx, ent, client.MergeFrom(obj)); err != nil {
+		if k8serrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("failed to update status after getting existing entity fron Konnect: %w", err)
+	}
+
+	if getErr != nil {
+		return ctrl.Result{}, ops.FailedKonnectOpError[T]{
+			Op:  ops.GetOp,
+			Err: getErr,
+		}
+	}
+
+	return ctrl.Result{}, nil
 }
 
 func setServerURLAndOrgID(

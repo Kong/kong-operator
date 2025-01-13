@@ -64,6 +64,9 @@ const (
 	// KonnectEntitiesFailedToUpdateReason is the reason assigned to Konnect entities that failed to get updated.
 	// It must be used when Programmed condition is set to False.
 	KonnectEntitiesFailedToUpdateReason ConditionReason = "FailedToUpdate"
+	// KonnectEntitiesFailedToAdoptReason is the reason assigned to Konnect entities that failed to adopt existing entity.
+	// It must be used when Programmed condition is set to False.
+	KonnectEntitiesFailedToAdoptReason ConditionReason = "FailedToAdopt"
 	// FailedToAttachConsumerToConsumerGroupReason is the reason assigned to KonnConsumers when failed to attach it to any consumer group.
 	// It must be used when Programmed condition is set to False.
 	FailedToAttachConsumerToConsumerGroupReason ConditionReason = "FailedToAttachConsumerToConsumerGroup"
