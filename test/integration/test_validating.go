@@ -49,6 +49,7 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 	testCases := []struct {
 		name             string
 		dataplane        *operatorv1beta1.DataPlane
+		creationErr      bool
 		validatingOK     bool
 		conditionMessage string
 	}{
@@ -60,7 +61,7 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 					Name:      uuid.NewString(),
 				},
 			},
-			validatingOK:     false,
+			creationErr:      true,
 			conditionMessage: "DataPlane requires an image",
 		},
 
@@ -180,6 +181,11 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dataplane, err := dataplaneClient.Create(GetCtx(), tc.dataplane, metav1.CreateOptions{})
+			if tc.creationErr {
+				require.Error(t, err, "should return error when create dataplane for case %s", tc.name)
+				return
+			}
+
 			require.NoErrorf(t, err, "should not return error when create dataplane for case %s", tc.name)
 
 			if tc.validatingOK {
