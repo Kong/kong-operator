@@ -26,9 +26,6 @@ jobs:
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - uses: zgosalvez/github-actions-ensure-sha-pinned-actions@c3a2b64f69b7a1542a68f44d9edbd9ec3fc1455e # v3.0.20
-      with:
-        allowlist: |
-          github/codeql-action/upload-sarif
 
   lint:
     runs-on: ubuntu-latest
