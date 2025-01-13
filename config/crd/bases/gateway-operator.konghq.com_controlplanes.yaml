@@ -8256,11 +8256,6 @@ spec:
                   If omitted, Ingress resources will not be supported by the ControlPlane.
                 type: string
             type: object
-            x-kubernetes-validations:
-            - message: ControlPlane requires an image to be set on controller container
-              rule: has(self.deployment.podTemplateSpec) && has(self.deployment.podTemplateSpec.spec.containers)
-                && self.deployment.podTemplateSpec.spec.containers.exists(c, c.name
-                == 'controller' && has(c.image))
           status:
             description: ControlPlaneStatus defines the observed state of ControlPlane
             properties:
@@ -8333,6 +8328,11 @@ spec:
                 x-kubernetes-list-type: map
             type: object
         type: object
+        x-kubernetes-validations:
+        - message: ControlPlane requires an image to be set on controller container
+          rule: has(self.spec.deployment.podTemplateSpec) && has(self.spec.deployment.podTemplateSpec.spec.containers)
+            && self.spec.deployment.podTemplateSpec.spec.containers.exists(c, c.name
+            == 'controller' && has(c.image))
     served: true
     storage: true
     subresources:

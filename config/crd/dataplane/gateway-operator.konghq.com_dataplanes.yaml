@@ -9450,6 +9450,10 @@ spec:
         - message: Extension not allowed for DataPlane
           rule: 'has(self.spec.extensions) ? self.spec.extensions.all(e, e.group ==
             ''gateway-operator.konghq.com'' && e.kind == ''KonnectExtension'') : true'
+        - message: DataPlane requires an image to be set on proxy container
+          rule: has(self.spec.deployment.podTemplateSpec) && has(self.spec.deployment.podTemplateSpec.spec.containers)
+            && self.spec.deployment.podTemplateSpec.spec.containers.exists(c, c.name
+            == 'proxy' && has(c.image))
     served: true
     storage: true
     subresources:

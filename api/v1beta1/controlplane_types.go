@@ -35,6 +35,7 @@ func init() {
 // +kubebuilder:resource:shortName=kocp,categories=kong;all
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Provisioned",description="The Resource is provisioned",type=string,JSONPath=`.status.conditions[?(@.type=='Provisioned')].status`
+// +kubebuilder:validation:XValidation:message="ControlPlane requires an image to be set on controller container",rule="has(self.spec.deployment.podTemplateSpec) && has(self.spec.deployment.podTemplateSpec.spec.containers) && self.spec.deployment.podTemplateSpec.spec.containers.exists(c, c.name == 'controller' && has(c.image))"
 
 // ControlPlane is the Schema for the controlplanes API
 // +apireference:kgo:include
@@ -55,8 +56,6 @@ type ControlPlaneList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ControlPlane `json:"items"`
 }
-
-// +kubebuilder:validation:XValidation:message="ControlPlane requires an image to be set on controller container",rule="has(self.deployment.podTemplateSpec) && has(self.deployment.podTemplateSpec.spec.containers) && self.deployment.podTemplateSpec.spec.containers.exists(c, c.name == 'controller' && has(c.image))"
 
 // ControlPlaneSpec defines the desired state of ControlPlane
 // +apireference:kgo:include
