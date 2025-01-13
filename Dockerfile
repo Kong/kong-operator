@@ -2,7 +2,7 @@
 # Builder
 # ------------------------------------------------------------------------------
 
-FROM --platform=$BUILDPLATFORM golang:1.23.4 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.23.4@sha256:7ea4c9dcb2b97ff8ee80a67db3d44f98c8ffa0d191399197007d8459c1453041 AS builder
 
 WORKDIR /workspace
 ARG GOPATH
@@ -55,7 +55,7 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
 
 # Use distroless as minimal base image to package the operator binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot AS distroless
+FROM gcr.io/distroless/static:nonroot@sha256:6ec5aa99dc335666e79dc64e4a6c8b89c33a543a1967f20d360922a80dd21f02 AS distroless
 
 ARG TAG
 ARG NAME="Kong Gateway Operator"
@@ -74,43 +74,4 @@ WORKDIR /
 COPY --from=builder /workspace/bin/manager .
 USER 65532:65532
 
-ENTRYPOINT ["/manager"]
-
-# ------------------------------------------------------------------------------
-# RedHat UBI
-# ------------------------------------------------------------------------------
-
-FROM registry.access.redhat.com/ubi8/ubi AS redhat
-
-ARG TAG
-ARG NAME="Kong Gateway Operator"
-ARG DESCRIPTION="Kong Gateway Operator drives deployment via the Gateway resource. You can deploy a Gateway resource to the cluster which will result in the underlying control-plane (the Kong Kubernetes Ingress Controller) and the data-plane (the Kong Gateway)."
-
-LABEL name="${NAME}" \
-    io.k8s.display-name="${NAME}" \
-    description="${DESCRIPTION}" \
-    io.k8s.description="${DESCRIPTION}" \
-    org.opencontainers.image.description="${DESCRIPTION}" \
-    vendor="Kong" \
-    version="${TAG}" \
-    release="1" \
-    url="https://github.com/Kong/gateway-operator" \
-    summary="A Kubernetes Operator for the Kong Gateway."
-
-# Create the user (ID 1000) and group that will be used in the
-# running container to run the process as an unprivileged user.
-RUN groupadd --system gateway-operator && \
-    adduser --system gateway-operator -g gateway-operator -u 1000
-
-COPY --from=builder /workspace/bin/manager .
-COPY LICENSE /licenses/
-
-# Run yum update to prevent vulnerable packages getting into the final image
-# and preventing publishing on Redhat connect registry.
-RUN yum update -y
-
-# Perform any further action as an unprivileged user.
-USER 1000
-
-# Run the compiled binary.
 ENTRYPOINT ["/manager"]
