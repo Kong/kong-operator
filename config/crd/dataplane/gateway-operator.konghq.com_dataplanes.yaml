@@ -9462,6 +9462,10 @@ spec:
             ? true : self.spec.deployment.podTemplateSpec.spec.containers[0].env.all(e,
             e.name != ''KONG_DATABASE'' || e.value == ''off'' || e.value == ''''))
             : true)'
+        - message: DataPlane spec cannot be updated when promotion is in progress
+          rule: '((self.spec == oldSelf.spec) || !has(self.status.rollout)) ? true
+            : self.status.rollout.conditions.all(c, c.type != ''RolledOut'' || c.reason
+            != ''PromotionInProgress'')'
     served: true
     storage: true
     subresources:

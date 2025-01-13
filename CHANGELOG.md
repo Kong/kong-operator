@@ -64,6 +64,9 @@
   With this change only the `KONG_DATABASE` environment variable directly set in
   the `podTemplateSpec` is validated. `EnvFrom` is not evaluated anymore for this validation.
   [#1049](https://github.com/Kong/gateway-operator/pull/1049)
+- Move `DataPlane` promotion in progress validation to CRD CEL validation expressions.
+  This is relevant for `DataPlane`s with BlueGreen rollouts enabled only.
+  [#1054](https://github.com/Kong/gateway-operator/pull/1054)
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 
