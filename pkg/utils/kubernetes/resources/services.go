@@ -49,8 +49,8 @@ func GenerateNewServiceForCertificateConfig(namespace, name string) *corev1.Serv
 func GenerateNewIngressServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, opts ...ServiceOpt) (*corev1.Service, error) {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    dataplane.Namespace,
-			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-ingress-%s-", consts.DataPlanePrefix, dataplane.Name)),
+			Namespace: dataplane.Namespace,
+
 			Labels: map[string]string{
 				"app":                            dataplane.Name,
 				consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneIngressServiceLabelValue),
@@ -63,6 +63,14 @@ func GenerateNewIngressServiceForDataPlane(dataplane *operatorv1beta1.DataPlane,
 			},
 			Ports: DefaultDataPlaneIngressServicePorts,
 		},
+	}
+
+	// Assign the service name if the DataPlane specifies name of ingress service.
+	if serviceName := GetDataPlaneIngressServiceName(dataplane); serviceName != "" {
+		svc.Name = serviceName
+	} else {
+		// If the service name is not specified, use the generated name.
+		svc.GenerateName = k8sutils.TrimGenerateName(fmt.Sprintf("%s-ingress-%s-", consts.DataPlanePrefix, dataplane.Name))
 	}
 
 	setDataPlaneIngressServiceExternalTrafficPolicy(dataplane, svc)
@@ -287,4 +295,17 @@ func GenerateNewAdmissionWebhookServiceForControlPlane(cp *operatorv1beta1.Contr
 	k8sutils.SetOwnerForObject(svc, cp)
 
 	return svc, nil
+}
+
+// GetDataPlaneIngressServiceName fetches the specified name of ingress service of dataplane.
+// If the service name is not specified, it returns an empty string.
+func GetDataPlaneIngressServiceName(dataPlane *operatorv1beta1.DataPlane) string {
+	if dataPlane == nil {
+		return ""
+	}
+	dpServices := dataPlane.Spec.DataPlaneOptions.Network.Services
+	if dpServices == nil || dpServices.Ingress == nil || dpServices.Ingress.Name == nil {
+		return ""
+	}
+	return *dpServices.Ingress.Name
 }

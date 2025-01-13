@@ -30,6 +30,7 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 		existingServiceModifier  func(*testing.T, context.Context, client.Client, *corev1.Service)
 		expectedCreatedOrUpdated op.Result
 		expectedServiceType      corev1.ServiceType
+		expectedServiceName      string
 		expectedServicePorts     []corev1.ServicePort
 		expectedAnnotations      map[string]string
 		expectedLabels           map[string]string
@@ -264,6 +265,24 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
 			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
 		},
+		{
+			name: "should create service with specified name if name is specified",
+			dataplane: builder.NewDataPlaneBuilder().
+				WithObjectMeta(metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "ingress-service-specified",
+				}).WithIngressServiceName("ingress-service-1").
+				WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+				Build(),
+			existingServiceModifier: func(t *testing.T, ctx context.Context, c client.Client, svc *corev1.Service) {
+				require.NoError(t, dataplane.OwnedObjectPreDeleteHook(ctx, c, svc))
+				require.NoError(t, c.Delete(ctx, svc))
+			},
+			expectedCreatedOrUpdated: op.Created,
+			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
+			expectedServiceName:      "ingress-service-1",
+			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -293,6 +312,10 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 			)
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedCreatedOrUpdated, res)
+			// check service name.
+			if tc.expectedServiceName != "" {
+				require.Equal(t, tc.expectedServiceName, svc.Name, "should have the same name")
+			}
 			// check service type.
 			require.Equal(t, tc.expectedServiceType, svc.Spec.Type, "should have the same service type")
 			// check service ports.

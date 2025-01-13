@@ -25,6 +25,13 @@
 
 ## Unreleased
 
+### Added
+
+- Added `Name` field in `ServiceOptions` to allow specifying name of the
+  owning service. Currently specifying ingress service of `DataPlane` is
+  supported.
+  [#966](https://github.com/Kong/gateway-operator/pull/966)
+
 ### Changed
 
 - `KonnectExtension` does not require `spec.serverHostname` to be set by a user

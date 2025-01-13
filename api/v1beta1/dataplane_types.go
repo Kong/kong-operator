@@ -260,6 +260,10 @@ type ServiceOptions struct {
 	// +kubebuilder:validation:Enum=LoadBalancer;ClusterIP
 	Type corev1.ServiceType `json:"type,omitempty" protobuf:"bytes,4,opt,name=type,casttype=ServiceType"`
 
+	// Name defines the name of the service.
+	// If Name is empty, the controller will generate a service name from the owning object.
+	Name *string `json:"name,omitempty"`
+
 	// Annotations is an unstructured key value map stored with a resource that may be
 	// set by external tools to store and retrieve arbitrary metadata. They are not
 	// queryable and should be preserved when modifying objects.
