@@ -3,7 +3,6 @@ package controlplane
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
@@ -33,46 +32,6 @@ func TestValidator_ValidateDeploymentOptions(t *testing.T) {
 				},
 			},
 			wantErr: false,
-		},
-		{
-			name: "not specifying the image is an error",
-			v:    &Validator{},
-			opts: &operatorv1beta1.ControlPlaneDeploymentOptions{
-				PodTemplateSpec: &corev1.PodTemplateSpec{
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							{
-								Name: "controller",
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name:    "not specifying the controller container is an error",
-			v:       &Validator{},
-			opts:    &operatorv1beta1.ControlPlaneDeploymentOptions{},
-			wantErr: true,
-		},
-		{
-			// TODO: https://github.com/Kong/gateway-operator/issues/736
-			name: "using more than 1 replica is an error",
-			v:    &Validator{},
-			opts: &operatorv1beta1.ControlPlaneDeploymentOptions{
-				Replicas: lo.ToPtr(int32(2)),
-				PodTemplateSpec: &corev1.PodTemplateSpec{
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							{
-								Name: "controller",
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
 		},
 		{
 			name: "volumes and volume mounts can be specified on ControlPlane deployment options",

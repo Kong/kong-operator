@@ -15,7 +15,7 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-containerregistry v0.20.2
 	github.com/google/uuid v1.6.0
-	github.com/kong/kubernetes-configuration v1.0.4
+	github.com/kong/kubernetes-configuration v1.0.6-0.20250113094037-f1f2a6542010
 	github.com/kong/kubernetes-telemetry v0.1.7
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
@@ -222,7 +222,7 @@ require (
 	github.com/tidwall/pretty v1.2.1
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/net v0.33.0
 	golang.org/x/oauth2 v0.24.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/term v0.27.0 // indirect

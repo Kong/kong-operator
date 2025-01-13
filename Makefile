@@ -388,6 +388,14 @@ test.envtest:
 test.envtest.pretty:
 	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname
 
+.PHONY: test.crds-validation
+test.crds-validation:
+	$(MAKE) _test.envtest GOTESTSUM_FORMAT=standard-verbose ENVTEST_TEST_PATHS=./test/crdsvalidation/...
+
+.PHONY: test.crds-validation.pretty
+test.crds-validation.pretty:
+	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname ENVTEST_TEST_PATHS=./test/crdsvalidation/...
+
 .PHONY: _test.integration
 _test.integration: webhook-certs-dir gotestsum
 	GOFLAGS=$(GOFLAGS) \
