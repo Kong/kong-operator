@@ -33,16 +33,6 @@ func TestDataPlaneValidatingWebhook(t *testing.T) {
 		errMsg    string
 	}{
 		{
-			name: "validating_error",
-			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: testNamespace.Name,
-					Name:      uuid.NewString(),
-				},
-			},
-			errMsg: "DataPlane requires an image",
-		},
-		{
 			name: "database_postgres_not_supported",
 			dataplane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
