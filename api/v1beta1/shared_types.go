@@ -5,13 +5,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// +kubebuilder:validation:XValidation:message="Using both replicas and scaling fields is not allowed.",rule="!(has(self.scaling) && has(self.replicas))"
+
 // DeploymentOptions is a shared type used on objects to indicate that their
 // configuration results in a Deployment which is managed by the Operator and
 // includes options for managing Deployments such as the number of replicas
 // or pod options like container image and resource requirements.
 // version, as well as Env variable overrides.
 //
-// +kubebuilder:validation:XValidation:message="Using both replicas and scaling fields is not allowed.",rule="!(has(self.scaling) && has(self.replicas))"
 // +apireference:kgo:include
 type DeploymentOptions struct {
 	// Replicas describes the number of desired pods.

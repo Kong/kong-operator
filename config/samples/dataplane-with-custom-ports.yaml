@@ -40,7 +40,7 @@ spec:
         ports:
           - name: http
             port: 8080
-            targetPort: 9001
+            targetPort: 9000
           - name: https
             port: 8083
             targetPort: 9443

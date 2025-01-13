@@ -297,9 +297,12 @@ CONFIG_CRD_PATH = config/crd
 CONFIG_CRD_BASE_PATH = $(CONFIG_CRD_PATH)/bases
 
 .PHONY: manifests
-manifests: controller-gen manifests.versions ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: controller-gen manifests.versions manifests.crds ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" rbac:roleName=manager-role output:rbac:dir=config/rbac/role
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" webhook
+
+.PHONY: manifests.crds
+manifests.crds: controller-gen manifests.versions ## Generate CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" $(CONTROLLER_GEN_CRD_OPTIONS) +output:crd:artifacts:config=$(CONFIG_CRD_BASE_PATH)
 	cp $(CONFIG_CRD_BASE_PATH)/gateway-operator.konghq.com_dataplanes.yaml $(CONFIG_CRD_PATH)/dataplane/
 
