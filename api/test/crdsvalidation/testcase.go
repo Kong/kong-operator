@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -18,9 +19,9 @@ import (
 type TestCasesGroup[T client.Object] []TestCase[T]
 
 // RunWithConfig runs all test cases in the group against the provided rest.Config's cluster.
-func (g TestCasesGroup[T]) RunWithConfig(t *testing.T, cfg *rest.Config) {
+func (g TestCasesGroup[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *runtime.Scheme) {
 	for _, tc := range g {
-		tc.RunWithConfig(t, cfg)
+		tc.RunWithConfig(t, cfg, scheme)
 	}
 }
 
@@ -28,7 +29,7 @@ func (g TestCasesGroup[T]) RunWithConfig(t *testing.T, cfg *rest.Config) {
 func (g TestCasesGroup[T]) Run(t *testing.T) {
 	cfg, err := config.GetConfig()
 	require.NoError(t, err)
-	g.RunWithConfig(t, cfg)
+	g.RunWithConfig(t, cfg, scheme.Scheme)
 }
 
 // TestCase represents a test case for CRD validation.
@@ -51,7 +52,7 @@ type TestCase[T client.Object] struct {
 }
 
 // RunWithConfig runs the test case against the provided rest.Config's cluster.
-func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config) {
+func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *runtime.Scheme) {
 	// Run the test case.
 	t.Run(tc.Name, func(t *testing.T) {
 		t.Parallel()
@@ -59,7 +60,7 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config) {
 
 		// Create a new controller-runtime client.Client.
 		cl, err := client.New(cfg, client.Options{
-			Scheme: scheme.Scheme,
+			Scheme: scheme,
 		})
 		require.NoError(t, err)
 
@@ -123,5 +124,5 @@ func (tc *TestCase[T]) Run(t *testing.T) {
 	cfg, err := config.GetConfig()
 	require.NoError(t, err)
 
-	tc.RunWithConfig(t, cfg)
+	tc.RunWithConfig(t, cfg, scheme.Scheme)
 }
