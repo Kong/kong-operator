@@ -470,6 +470,22 @@ func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName 
 	}, clients.OperatorClient)
 }
 
+// DataPlaneHasActiveServiceWithName is a helper function for tests that returns a function
+// that can be used to check if a DataPlane has an active proxy service with the specified name.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func DataPlaneHasActiveServiceWithName(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, ret *corev1.Service, clients K8sClients, matchingLabels client.MatchingLabels, name string) func() bool {
+	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
+		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, matchingLabels)
+		if len(services) == 1 && services[0].Name == name {
+			if ret != nil {
+				*ret = services[0]
+			}
+			return true
+		}
+		return false
+	}, clients.OperatorClient)
+}
+
 // DataPlaneServiceHasNActiveEndpoints is a helper function for tests that returns a function
 // that can be used to check if a Service has active endpoints.
 // Should be used in conjunction with require.Eventually or assert.Eventually.

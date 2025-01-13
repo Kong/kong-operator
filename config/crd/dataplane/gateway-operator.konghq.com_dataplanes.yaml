@@ -8989,6 +8989,11 @@ spec:
                             - Cluster
                             - Local
                             type: string
+                          name:
+                            description: |-
+                              Name defines the name of the service.
+                              If Name is empty, the controller will generate a service name from the owning object.
+                            type: string
                           ports:
                             description: |-
                               Ports defines the list of ports that are exposed by the service.

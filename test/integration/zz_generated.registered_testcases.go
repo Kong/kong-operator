@@ -14,6 +14,7 @@ func init() {
 		TestDataPlaneHorizontalScaling,
 		TestDataPlanePodDisruptionBudget,
 		TestDataPlaneServiceExternalTrafficPolicy,
+		TestDataPlaneSpecifyingServiceName,
 		TestDataPlaneUpdate,
 		TestDataPlaneValidation,
 		TestDataPlaneVolumeMounts,
