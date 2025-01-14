@@ -357,34 +357,6 @@ func TestHandleDataPlaneValidation(t *testing.T) {
 			hasError: true,
 			errMsg:   "database backend xxx of DataPlane not supported currently",
 		},
-		{
-			name: "validate_error:missing_container_image",
-			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-db-off-in-secret",
-					Namespace: "default",
-				},
-				Spec: operatorv1beta1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
-						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1beta1.DeploymentOptions{
-								PodTemplateSpec: &corev1.PodTemplateSpec{
-									Spec: corev1.PodSpec{
-										Containers: []corev1.Container{
-											{
-												Name: consts.DataPlaneProxyContainerName,
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			hasError: true,
-			errMsg:   "DataPlane requires an image",
-		},
 	}
 
 	for _, tc := range testCases {

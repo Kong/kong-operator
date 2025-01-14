@@ -112,10 +112,6 @@ func (v *Validator) ValidateDataPlaneDeploymentOptions(namespace string, opts *o
 		return fmt.Errorf("couldn't find proxy container in DataPlane spec")
 	}
 
-	if container.Image == "" {
-		return errors.New("DataPlane requires an image")
-	}
-
 	// validate db mode.
 	dbMode, _, err := k8sutils.GetEnvValueFromContainer(context.Background(), container, namespace, consts.EnvVarKongDatabase, v.c)
 	if err != nil {
