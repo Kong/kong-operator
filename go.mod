@@ -9,7 +9,7 @@ go 1.23.2
 retract v1.2.2
 
 require (
-	github.com/Kong/sdk-konnect-go v0.1.19
+	github.com/Kong/sdk-konnect-go v0.1.20
 	github.com/Masterminds/semver v1.5.0
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/go-logr/logr v1.4.2
@@ -202,7 +202,7 @@ require (
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
-	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/net v0.33.0
 	golang.org/x/oauth2 v0.24.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
