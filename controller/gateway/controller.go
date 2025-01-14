@@ -123,9 +123,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log.Trace(logger, "checking gatewayclass")
 	gwc, err := gatewayclass.Get(ctx, r.Client, string(gateway.Spec.GatewayClassName))
 	if err != nil {
-		if errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{}) {
+		switch {
+		case errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{}):
 			log.Debug(logger, "resource not supported, ignoring",
 				"expectedGatewayClass", vars.ControllerName(),
+				"gatewayClass", gateway.Spec.GatewayClassName,
+				"reason", err.Error(),
+			)
+			return ctrl.Result{}, nil
+		case errors.As(err, &operatorerrors.ErrNotAcceptedGatewayClass{}):
+			log.Debug(logger, "GatewayClass not accepted, ignoring",
 				"gatewayClass", gateway.Spec.GatewayClassName,
 				"reason", err.Error(),
 			)

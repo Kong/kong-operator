@@ -3,6 +3,8 @@ package errors
 import (
 	"errors"
 	"fmt"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // -----------------------------------------------------------------------------
@@ -29,6 +31,21 @@ func NewErrUnsupportedGateway(reason string) ErrUnsupportedGatewayClass {
 
 func (e ErrUnsupportedGatewayClass) Error() string {
 	return fmt.Sprintf("unsupported gateway class: %s", e.reason)
+}
+
+// ErrNotAcceptedGatewayClass is an error which indicates that a provided GatewayClass
+// is not accepted.
+type ErrNotAcceptedGatewayClass struct {
+	gatewayClass string
+	condition    metav1.Condition
+}
+
+func NewErrNotAcceptedGatewayClass(gatewayClass string, condition metav1.Condition) ErrNotAcceptedGatewayClass {
+	return ErrNotAcceptedGatewayClass{gatewayClass: gatewayClass, condition: condition}
+}
+
+func (e ErrNotAcceptedGatewayClass) Error() string {
+	return fmt.Sprintf("gateway class %s not accepted; reason: %s, message: %s", e.gatewayClass, e.condition.Reason, e.condition.Message)
 }
 
 // -----------------------------------------------------------------------------

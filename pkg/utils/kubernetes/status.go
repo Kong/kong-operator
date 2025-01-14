@@ -45,7 +45,12 @@ func SetCondition(condition metav1.Condition, resource ConditionsAware) {
 		if conditions[i].Type != condition.Type {
 			newConditions = append(newConditions, conditions[i])
 		} else {
-			newConditions = append(newConditions, condition)
+			oldCondition := conditions[i]
+			if conditionNeedsUpdate(oldCondition, condition) {
+				newConditions = append(newConditions, condition)
+			} else {
+				newConditions = append(newConditions, oldCondition)
+			}
 			conditionFound = true
 		}
 	}
@@ -264,9 +269,13 @@ func NeedsUpdate(current, updated ConditionsAware) bool {
 		if !exists {
 			return true
 		}
-		if u.Reason != c.Reason || u.Message != c.Message || u.Status != c.Status || u.ObservedGeneration != c.ObservedGeneration {
+		if conditionNeedsUpdate(c, u) {
 			return true
 		}
 	}
 	return false
+}
+
+func conditionNeedsUpdate(current, updated metav1.Condition) bool {
+	return updated.Reason != current.Reason || updated.Message != current.Message || updated.Status != current.Status || updated.ObservedGeneration != current.ObservedGeneration
 }
