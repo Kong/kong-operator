@@ -5,6 +5,9 @@ on:
     - cron: '30 3 * * *'
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+
 jobs:
   build-push-images:
     uses: ./.github/workflows/__build-workflow.yaml

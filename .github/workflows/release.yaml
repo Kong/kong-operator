@@ -20,6 +20,9 @@ on:
         - prerelease
         - release
 
+permissions:
+  contents: read
+
 jobs:
   release:
     uses: ./.github/workflows/__release-workflow.yaml

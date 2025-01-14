@@ -70,6 +70,9 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   semver:
     outputs:
@@ -241,6 +244,8 @@ jobs:
 
   create-release-pr:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     needs:
       - semver
       - build-push-images

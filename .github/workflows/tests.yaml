@@ -20,6 +20,9 @@ on:
       - '*'
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+
 jobs:
   ensure-actions-sha-pin:
     runs-on: ubuntu-latest
