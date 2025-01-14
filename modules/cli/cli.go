@@ -20,7 +20,10 @@ import (
 func New(m metadata.Info) *CLI {
 	flagSet := flag.NewFlagSet("", flag.ExitOnError)
 
-	var cfg manager.Config
+	cfg := manager.Config{
+		// set default values for MetricsAccessFilter
+		MetricsAccessFilter: manager.MetricsAccessFilterOff,
+	}
 	var deferCfg flagsForFurtherEvaluation
 
 	flagSet.BoolVar(&cfg.AnonymousReports, "anonymous-reports", true, "Send anonymized usage data to help improve Kong.")
@@ -28,6 +31,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.StringVar(&cfg.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 
 	flagSet.StringVar(&cfg.MetricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	flagSet.Var(&cfg.MetricsAccessFilter, "metrics-access-filter", "Specifies the filter access function to be used for accessing the metrics endpoint (possible values: off, rbac). Default is off.")
 	flagSet.StringVar(&cfg.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flagSet.BoolVar(&deferCfg.DisableLeaderElection, "no-leader-election", false,
 		"Disable leader election for controller manager. Disabling this will not ensure there is only one active controller manager.")

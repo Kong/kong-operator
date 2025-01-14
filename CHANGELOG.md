@@ -46,6 +46,17 @@
   [#976](https://github.com/Kong/gateway-operator/pull/976)
 - Move `ControlPlane` `image` validation to CRD CEL rules.
   [#984](https://github.com/Kong/gateway-operator/pull/984)
+- Remove usage of `kube-rbac-proxy`.
+  Its functionality of can be now achieved by using the new flag `--metrics-access-filter`
+  (or a corresponding `GATEWAY_OPERATOR_METRICS_ACCESS_FILTER` env).
+  The default value for the flag is `off` which doesn't restrict the access to the metrics
+  endpoint. The flag can be set to `rbac` which will configure KGO to verify the token
+  sent with the request.
+  For more information on this migration please consult
+  [kubernetes-sigs/kubebuilder#3907][kubebuilder_3907].
+  [#956](https://github.com/Kong/gateway-operator/pull/956)
+
+[kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 
 ### Fixes
 

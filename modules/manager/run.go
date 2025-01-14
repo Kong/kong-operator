@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"net/http"
 	"os"
 	"time"
 
@@ -43,6 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -60,6 +62,7 @@ const (
 // Config represents the configuration for the manager.
 type Config struct {
 	MetricsAddr              string
+	MetricsAccessFilter      MetricsAccessFilter
 	ProbeAddr                string
 	WebhookCertDir           string
 	WebhookPort              int
@@ -107,6 +110,7 @@ func DefaultConfig() Config {
 
 	return Config{
 		MetricsAddr:                   ":8080",
+		MetricsAccessFilter:           MetricsAccessFilterOff,
 		ProbeAddr:                     ":8081",
 		WebhookCertDir:                defaultWebhookCertDir,
 		WebhookPort:                   9443,
@@ -178,6 +182,17 @@ func Run(
 		Scheme: scheme,
 		Metrics: server.Options{
 			BindAddress: cfg.MetricsAddr,
+			FilterProvider: func() func(c *rest.Config, httpClient *http.Client) (server.Filter, error) {
+				switch cfg.MetricsAccessFilter {
+				case MetricsAccessFilterRBAC:
+					return filters.WithAuthenticationAndAuthorization
+				case MetricsAccessFilterOff:
+					return nil
+				default:
+					// This is checked in flags validation so this should never happen.
+					panic("unsupported metrics filter")
+				}
+			}(),
 		},
 		WebhookServer: webhook.NewServer(
 			webhook.Options{
