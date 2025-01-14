@@ -6,12 +6,14 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 func TestGetAcceptedCondition(t *testing.T) {
@@ -126,6 +128,139 @@ func TestGetAcceptedCondition(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, condition.Status)
 			assert.Equal(t, tt.expectedReason, condition.Reason)
 			assert.Equal(t, tt.expectedMsg, condition.Message)
+		})
+	}
+}
+func TestGetRouterFlavor(t *testing.T) {
+	scheme := runtime.NewScheme()
+	assert.NoError(t, gatewayv1.Install(scheme))
+	assert.NoError(t, operatorv1beta1.AddToScheme(scheme))
+
+	tests := []struct {
+		name           string
+		gatewayConfig  *operatorv1beta1.GatewayConfiguration
+		existingObjs   []runtime.Object
+		expectedFlavor consts.RouterFlavor
+	}{
+		{
+			name:           "GatewayConfiguration is nil",
+			gatewayConfig:  nil,
+			expectedFlavor: consts.RouterFlavorExpressions,
+		},
+		{
+			name: "DataPlaneOptions is nil",
+			gatewayConfig: &operatorv1beta1.GatewayConfiguration{
+				Spec: operatorv1beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: nil,
+				},
+			},
+			expectedFlavor: consts.RouterFlavorExpressions,
+		},
+		{
+			name: "PodTemplateSpec is nil",
+			gatewayConfig: &operatorv1beta1.GatewayConfiguration{
+				Spec: operatorv1beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: nil,
+							},
+						},
+					},
+				},
+			},
+			expectedFlavor: consts.RouterFlavorExpressions,
+		},
+		{
+			name: "Container not found",
+			gatewayConfig: &operatorv1beta1.GatewayConfiguration{
+				Spec: operatorv1beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedFlavor: consts.RouterFlavorExpressions,
+		},
+		{
+			name: "KONG_ROUTER_FLAVOR not found",
+			gatewayConfig: &operatorv1beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedFlavor: consts.RouterFlavorExpressions,
+		},
+		{
+			name: "KONG_ROUTER_FLAVOR found",
+			gatewayConfig: &operatorv1beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+												Env: []corev1.EnvVar{
+													{
+														Name:  consts.RouterFlavorEnvKey,
+														Value: string(consts.RouterFlavorTraditionalCompatible),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedFlavor: consts.RouterFlavorTraditionalCompatible,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithRuntimeObjects(tt.existingObjs...).
+				Build()
+
+			flavor, err := getRouterFlavor(ctx, cl, tt.gatewayConfig)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedFlavor, flavor)
 		})
 	}
 }

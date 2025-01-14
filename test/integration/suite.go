@@ -226,6 +226,7 @@ func DefaultControllerConfigForTests() manager.Config {
 	cfg.AnonymousReports = false
 	cfg.KonnectControllersEnabled = true
 	cfg.ClusterCAKeyType = mgrconfig.ECDSA
+	cfg.GatewayAPIExperimentalEnabled = true
 
 	cfg.NewClientFunc = func(config *rest.Config, options client.Options) (client.Client, error) {
 		// always hijack and impersonate the system service account here so that the manager

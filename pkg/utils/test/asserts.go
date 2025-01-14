@@ -170,3 +170,12 @@ func MustGetGateway(t *testing.T, ctx context.Context, gatewayNSN types.Namespac
 	require.NoError(t, err)
 	return gateway
 }
+
+// MustGetGatewayClass is a helper function for tests that conveniently gets a gatewayclass by name.
+// It will fail the test if getting the gatewayclass fails.
+func MustGetGatewayClass(t *testing.T, ctx context.Context, gatewayClassName string, clients K8sClients) *gwtypes.GatewayClass {
+	gatewayClasses := clients.GatewayClient.GatewayV1().GatewayClasses()
+	gatewayClass, err := gatewayClasses.Get(ctx, gatewayClassName, metav1.GetOptions{})
+	require.NoError(t, err)
+	return gatewayClass
+}

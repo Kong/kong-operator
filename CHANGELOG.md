@@ -96,6 +96,10 @@
   `ValidationAdmissionPolicy`.
   Flag remains in place to not cause a breaking change for users that rely on it.
   [#1066](https://github.com/Kong/gateway-operator/pull/1066)
+- The `SupportedFeatures` field is properly set in the `GatewayClass` status.
+  It requires the experimental version of Gateway API installed in your cluster,
+  and the flag `--enable-gateway-api-experimental` set.
+  [#1010](https://github.com/Kong/gateway-operator/pull/1010)
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 

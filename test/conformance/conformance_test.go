@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -24,6 +25,7 @@ import (
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/pkg/consts"
+	gatewayapipkg "github.com/kong/gateway-operator/pkg/gatewayapi"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -36,35 +38,8 @@ var skippedTestsForTraditionalCompatibleRouter = []string{
 	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
 }
 
-var (
-	commonSupportedFeatures = sets.New(
-		// core features
-		features.SupportHTTPRoute,
-		features.SupportGateway,
-		features.SupportReferenceGrant,
-
-		// Gateway extended
-		features.SupportGatewayPort8080,
-
-		// HTTPRoute extended
-		features.SupportHTTPRouteResponseHeaderModification,
-		features.SupportHTTPRoutePathRewrite,
-		features.SupportHTTPRouteHostRewrite,
-	)
-
-	traditionalCompatibleRouterSupportedFeatures = commonSupportedFeatures.Clone().Insert(
-	// add here the traditional compatible router specific features
-	)
-
-	expressionsRouterSupportedFeatures = commonSupportedFeatures.Clone().Insert(
-		// extended
-		features.SupportHTTPRouteMethodMatching,
-		features.SupportHTTPRouteQueryParamMatching,
-	)
-)
-
 type ConformanceConfig struct {
-	KongRouterFlavor RouterFlavor
+	KongRouterFlavor consts.RouterFlavor
 }
 
 func TestGatewayConformance(t *testing.T) {
@@ -78,19 +53,21 @@ func TestGatewayConformance(t *testing.T) {
 		config            ConformanceConfig
 		skippedTests      []string
 		supportedFeatures sets.Set[features.FeatureName]
+		err               error
 	)
 	switch rf := KongRouterFlavor(t); rf {
-	case RouterFlavorTraditionalCompatible:
+	case consts.RouterFlavorTraditionalCompatible:
 		skippedTests = skippedTestsForTraditionalCompatibleRouter
-		config.KongRouterFlavor = RouterFlavorTraditionalCompatible
-		supportedFeatures = traditionalCompatibleRouterSupportedFeatures
-	case RouterFlavorExpressions:
+		config.KongRouterFlavor = consts.RouterFlavorTraditionalCompatible
+	case consts.RouterFlavorExpressions:
 		skippedTests = skippedTestsForExpressionsRouter
-		config.KongRouterFlavor = RouterFlavorExpressions
-		supportedFeatures = expressionsRouterSupportedFeatures
+		config.KongRouterFlavor = consts.RouterFlavorExpressions
 	default:
 		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
 	}
+
+	supportedFeatures, err = gatewayapipkg.GetSupportedFeatures(config.KongRouterFlavor)
+	assert.NoError(t, err)
 
 	t.Logf("using the following configuration for the conformance tests: %+v", config)
 

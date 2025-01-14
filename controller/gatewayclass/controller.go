@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -25,8 +26,9 @@ import (
 // GatewayReconciler reconciles a Gateway object
 type Reconciler struct {
 	client.Client
-	Scheme          *runtime.Scheme
-	DevelopmentMode bool
+	Scheme                        *runtime.Scheme
+	DevelopmentMode               bool
+	GatewayAPIExperimentalEnabled bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -54,14 +56,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	oldGwc := gwc.DeepCopy()
-
 	condition, err := getAcceptedCondition(ctx, r.Client, gwc.GatewayClass)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to get accepted condition: %w", err)
 	}
 	k8sutils.SetCondition(*condition, gwc)
 
-	if err := r.Status().Patch(ctx, gwc.GatewayClass, client.MergeFrom(oldGwc)); err != nil {
+	// SupportedFeatures is a Gateway API experimental feature, hence it is enforced only
+	// when the Gateway API experimental flag is enabled.
+	if r.GatewayAPIExperimentalEnabled {
+		if condition.Status == metav1.ConditionTrue {
+			gatewayConfig, err := getGatewayConfiguration(ctx, r.Client, gwc.GatewayClass)
+			// The error here should never be NotFound, as the GatewayClass is accepted (which means the parametersRef has been properly resolved).
+			if err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to get GatewayConfiguration: %w", err)
+			}
+			if err = setSupportedFeatures(ctx, r.Client, gwc.GatewayClass, gatewayConfig); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to set supported features: %w", err)
+			}
+		}
+	}
+
+	if err := r.Client.Status().Patch(ctx, gwc.GatewayClass, client.MergeFrom(oldGwc)); err != nil {
 		if k8serrors.IsConflict(err) {
 			log.Debug(logger, "conflict found when updating GatewayClass, retrying")
 			return ctrl.Result{

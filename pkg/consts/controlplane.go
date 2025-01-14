@@ -62,5 +62,20 @@ const (
 	ControlPlaneAdmissionWebhookVolumeMountPath = "/admission-webhook"
 )
 
+// -----------------------------------------------------------------------------
+// Consts - Router flavor parameters
+// -----------------------------------------------------------------------------
+
+// RouterFlavor represents the flavor of the Kong router.
+// ref: https://docs.konghq.com/gateway/latest/reference/configuration/#router_flavor
+type RouterFlavor string
+
+const (
+	// RouterFlavorTraditionalCompatible is the traditional compatible router flavor.
+	RouterFlavorTraditionalCompatible RouterFlavor = "traditional_compatible"
+	// RouterFlavorExpressions is the expressions router flavor.
+	RouterFlavorExpressions RouterFlavor = "expressions"
+)
+
 // TODO: https://github.com/Kong/gateway-operator/issues/141
 // Extract as constants all the Env var Keys used to configure the ControlPlane.
