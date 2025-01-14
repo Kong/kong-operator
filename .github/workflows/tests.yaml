@@ -35,13 +35,11 @@ jobs:
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     # Ref: https://github.com/ossf/scorecard
-    # TODO: add other checks as needed
     - run: |
         docker run --rm --env GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} gcr.io/openssf/scorecard:stable \
           --repo=github.com/${{ github.repository }} \
           --commit ${{ github.sha }} \
-          --show-details \
-          --checks=Pinned-Dependencies
+          --show-details
 
   lint:
     runs-on: ubuntu-latest
