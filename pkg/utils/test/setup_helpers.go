@@ -212,27 +212,27 @@ func ExtractModuleVersion(moduleName string) (string, error) {
 }
 
 // DeployCRDs deploys the CRDs commonly used in tests.
-func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorclient.Clientset, env environments.Environment) error {
-	// CRDs for stable features
+func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorclient.Clientset, cluster clusters.Cluster) error {
+	// CRDs for stable features.
 	kubectlFlags := []string{"--server-side", "-v5"}
 	fmt.Printf("INFO: deploying KGO CRDs: %s\n", crdPath)
-	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), crdPath, kubectlFlags...); err != nil {
+	if err := clusters.KustomizeDeployForCluster(ctx, cluster, crdPath, kubectlFlags...); err != nil {
 		return err
 	}
 
-	// CRDs for gateway APIs
+	// CRDs for gateway APIs.
 	fmt.Printf("INFO: deploying Gateway API CRDs: %s\n", GatewayStandardCRDsKustomizeURL)
-	if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), GatewayStandardCRDsKustomizeURL); err != nil {
+	if err := clusters.KustomizeDeployForCluster(ctx, cluster, GatewayStandardCRDsKustomizeURL); err != nil {
 		return err
 	}
 
-	if err := InstallKubernetesConfigurationCRDs(ctx, env); err != nil {
+	if err := InstallKubernetesConfigurationCRDs(ctx, cluster); err != nil {
 		return err
 	}
 
-	// CRDs for alpha/experimental features
+	// CRDs for alpha/experimental features.
 	fmt.Printf("INFO: deploying KGO AIGateway CRD: %s\n", crdPath)
-	if err := clusters.ApplyManifestByURL(ctx, env.Cluster(), path.Join(crdPath, AIGatewayCRDPath)); err != nil {
+	if err := clusters.ApplyManifestByURL(ctx, cluster, path.Join(crdPath, AIGatewayCRDPath)); err != nil {
 		return err
 	}
 
@@ -246,8 +246,8 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 
 // InstallKubernetesConfigurationCRDs installs the Kong CRDs from the `kong/kubernetes-configuration` module.
 // The version is extracted using ExtractModuleVersion from go.mod.
-func InstallKubernetesConfigurationCRDs(ctx context.Context, env environments.Environment) error {
-	// First extract version of `kong/kubernetes-configuration` module used
+func InstallKubernetesConfigurationCRDs(ctx context.Context, cluster clusters.Cluster) error {
+	// First extract version of `kong/kubernetes-configuration` module used.
 	kongCRDVersion, err := ExtractModuleVersion(KubernetesConfigurationModuleName)
 	if err != nil {
 		return fmt.Errorf("failed to extract Kong CRDs (%s) module's version: %w", KubernetesConfigurationModuleName, err)
@@ -262,7 +262,7 @@ func InstallKubernetesConfigurationCRDs(ctx context.Context, env environments.En
 			"kubernetes-configuration@"+kongCRDVersion, "config", "crd", crdDirName,
 		)
 		fmt.Printf("INFO: deploying kubernetes-configuration CRDs: %s\n", kongCRDPath)
-		if err := clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kongCRDPath); err != nil {
+		if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongCRDPath); err != nil {
 			return fmt.Errorf("failed installing kubernetes-configurations (%s) CRDs: %w", kongCRDPath, err)
 		}
 	}
