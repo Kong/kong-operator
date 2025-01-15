@@ -11,7 +11,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"oras.land/oras-go/v2/registry/remote/credentials"
+	orascreds "oras.land/oras-go/v2/registry/remote/credentials"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -99,7 +99,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "managing KongPluginInstallation resource")
-	var credentialsStore credentials.Store
+	var credentialsStore orascreds.Store
 	if kpi.Spec.ImagePullSecretRef != nil {
 		log.Trace(logger, "getting secret for KongPluginInstallation resource")
 		kpiNamespace := gatewayv1.Namespace(kpi.Namespace)
@@ -142,7 +142,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			)
 		}
 		var err error
-		credentialsStore, err = image.CredentialsStoreFromString(string(secretData))
+		credentialsStore, err = orascreds.NewMemoryStoreFromDockerConfig(secretData)
 		if err != nil {
 			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, fmt.Sprintf("can't parse secret: %q data: %s", secretNN, err))
 		}
