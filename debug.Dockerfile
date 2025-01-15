@@ -2,7 +2,7 @@
 # Debug image
 # ------------------------------------------------------------------------------
 
-FROM --platform=$BUILDPLATFORM golang:1.23.4@sha256:3b1a7de61ce1ae141ca21d925d6c09c4e7f2001b253d724c2d7b24d496c85c37 AS debug
+FROM --platform=$BUILDPLATFORM golang:1.23.4@sha256:585103a29aa6d4c98bbb45d2446e1fdf41441698bbdf707d1801f5708e479f04 AS debug
 
 ARG GOPATH
 ARG GOCACHE
