@@ -157,7 +157,7 @@ func TestMain(
 	exitOnErr(err)
 
 	fmt.Println("INFO: deploying CRDs to test cluster")
-	exitOnErr(testutils.DeployCRDs(GetCtx(), path.Join(configPath, "/crd"), GetClients().OperatorClient, GetEnv()))
+	exitOnErr(testutils.DeployCRDs(GetCtx(), path.Join(configPath, "/crd"), GetClients().OperatorClient, GetEnv().Cluster()))
 
 	var ca, cert, key []byte // Certificate generated for tests used by webhook.
 	if webhookEnabled {
