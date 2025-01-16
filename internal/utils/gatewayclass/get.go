@@ -36,7 +36,7 @@ func Get(ctx context.Context, cl client.Client, gatewayClassName string) (*Decor
 		))
 	}
 	acceptedCondition, found := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayClassConditionStatusAccepted), gwc)
-	if acceptedCondition.Status != metav1.ConditionTrue || !found {
+	if !found || acceptedCondition.Status != metav1.ConditionTrue {
 		return nil, operatorerrors.NewErrNotAcceptedGatewayClass(gatewayClassName, acceptedCondition)
 	}
 

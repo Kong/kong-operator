@@ -59,10 +59,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to get accepted condition: %w", err)
 	}
-	k8sutils.SetCondition(
-		*condition,
-		gwc,
-	)
+	k8sutils.SetCondition(*condition, gwc)
 
 	if err := r.Status().Patch(ctx, gwc.GatewayClass, client.MergeFrom(oldGwc)); err != nil {
 		if k8serrors.IsConflict(err) {
