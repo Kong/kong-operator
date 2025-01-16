@@ -67,13 +67,12 @@
 - Move `DataPlane` promotion in progress validation to CRD CEL validation expressions.
   This is relevant for `DataPlane`s with BlueGreen rollouts enabled only.
   [#1054](https://github.com/Kong/gateway-operator/pull/1054)
-- The `GatewayClass` Accepted Condition is set to False with reason `InvalidParameters`
+- The `GatewayClass` Accepted Condition is set to `False` with reason `InvalidParameters`
   in case the `.spec.parametersRef` field is not a valid reference to an existing
   `GatewayConfiguration` object.
   [#1021](https://github.com/Kong/gateway-operator/pull/1021)
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
-
 
 ### Fixes
 
