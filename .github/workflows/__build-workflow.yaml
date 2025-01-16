@@ -99,7 +99,7 @@ jobs:
         run: exit 1
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0
 
@@ -132,13 +132,13 @@ jobs:
       version: ${{ steps.meta.outputs.version }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
 
       - name: Cache Docker layers
-        uses: actions/cache@v4
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -192,7 +192,7 @@ jobs:
 
       # Setup Golang to use go pkg cache which is utilized in Dockerfile's cache mount.
       - name: Setup golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
         with:
           go-version-file: go.mod
 
@@ -246,7 +246,7 @@ jobs:
               ${{ inputs.image-name }}:${{ steps.meta.outputs.version }} -version | ${{ inputs.verify-image-script }} ${{ github.repository }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
         with:
           name: image-${{ matrix.os }}-${{ matrix.arch }}
           path: /tmp/image.tar
@@ -264,7 +264,7 @@ jobs:
       - build
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
