@@ -322,7 +322,7 @@ func TestHandleCertificateRef(t *testing.T) {
 			},
 			expectError: true,
 			expectErrorContains: fmt.Sprintf("referenced Control Plane %q does not exist",
-				testKongCertificateControlPlaneRefNotFound.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
+				testKongCertificateControlPlaneRefNotFound.Spec.ControlPlaneRef.String(),
 			),
 		},
 		{

@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	"github.com/samber/lo"
 	"github.com/samber/mo"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -134,7 +133,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.ControlPlaneRefReasonInvalid,
-			fmt.Sprintf("Attaching to ControlPlane %s with cluster type %s is not supported", controlPlaneRefToString(cpRef), *cp.Spec.ClusterType),
+			fmt.Sprintf("Attaching to ControlPlane %s with cluster type %s is not supported", cpRef.String(), *cp.Spec.ClusterType),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
@@ -148,7 +147,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.ControlPlaneRefReasonInvalid,
-			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", controlPlaneRefToString(cpRef)),
+			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", cpRef.String()),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
@@ -197,7 +196,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		konnectv1alpha1.ControlPlaneRefValidConditionType,
 		metav1.ConditionTrue,
 		konnectv1alpha1.ControlPlaneRefReasonValid,
-		fmt.Sprintf("Referenced ControlPlane %s is programmed", controlPlaneRefToString(cpRef)),
+		fmt.Sprintf("Referenced ControlPlane %s is programmed", cpRef.String()),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
@@ -210,18 +209,4 @@ func conditionMessageReferenceKonnectAPIAuthConfigurationInvalid(apiAuthRef type
 
 func conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef types.NamespacedName) string {
 	return fmt.Sprintf("referenced KonnectAPIAuthConfiguration %s is valid", apiAuthRef)
-}
-
-func controlPlaneRefToString(cpRef configurationv1alpha1.ControlPlaneRef) string {
-	switch cpRef.Type {
-	case configurationv1alpha1.ControlPlaneRefKonnectID:
-		return lo.FromPtrOr(cpRef.KonnectID, "nil")
-	case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-		if cpRef.KonnectNamespacedRef.Namespace == "" {
-			return cpRef.KonnectNamespacedRef.Name
-		}
-		return cpRef.KonnectNamespacedRef.Namespace + "/" + cpRef.KonnectNamespacedRef.Name
-	default:
-		return fmt.Sprintf("unknown type %q", cpRef.Type)
-	}
 }

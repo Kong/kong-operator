@@ -19,7 +19,7 @@ type ReferencedControlPlaneDoesNotExistError struct {
 // Error implements the error interface.
 func (e ReferencedControlPlaneDoesNotExistError) Error() string {
 	return fmt.Sprintf("referenced Control Plane %q does not exist: %v",
-		controlPlaneRefToString(e.Reference), e.Err,
+		e.Reference.String(), e.Err,
 	)
 }
 
@@ -146,5 +146,5 @@ type ReferencedKongGatewayControlPlaneIsUnsupported struct {
 }
 
 func (e ReferencedKongGatewayControlPlaneIsUnsupported) Error() string {
-	return fmt.Sprintf("referenced ControlPlaneRef %s is unsupported", controlPlaneRefToString(e.Reference))
+	return fmt.Sprintf("referenced ControlPlaneRef %s is unsupported", e.Reference.String())
 }
