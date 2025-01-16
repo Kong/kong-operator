@@ -24,10 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
     - name: Setup go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
       with:
         go-version-file: go.mod
 
@@ -45,10 +45,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
     - name: Setup go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
       with:
         go-version-file: go.mod
 
@@ -70,10 +70,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
     - name: Setup go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
       with:
         go-version-file: go.mod
 
@@ -99,10 +99,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
     - name: Setup go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
       with:
         go-version-file: go.mod
 
@@ -128,10 +128,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
     - name: setup golang
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
       with:
         go-version-file: go.mod
 
@@ -144,10 +144,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
     - name: setup golang
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
       with:
         go-version-file: go.mod
 
@@ -161,14 +161,14 @@ jobs:
         GOTESTSUM_JUNITFILE: "unit-tests.xml"
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: coverage
         path: coverage.unit.out
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: tests-report
         path: unit-tests.xml
@@ -183,13 +183,13 @@ jobs:
         - router-flavor: expressions
     steps:
     - name: checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       with:
         # Fetch all history so that we can get the correct commit hash for the conformance tests.
         fetch-depth: 0
 
     - name: setup golang
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
       with:
         go-version-file: go.mod
 
@@ -205,7 +205,7 @@ jobs:
 
     - name: upload diagnostics
       if: ${{ always() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
       with:
         name: diagnostics-conformance
         path: /tmp/ktf-diag*
@@ -213,13 +213,13 @@ jobs:
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: tests-report
         path: conformance-tests-${{ matrix.router-flavor }}.xml
 
     - name: collect conformance report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
       with:
         name: conformance-report-${{ matrix.router-flavor }}
         path: standard-*-report.yaml
@@ -235,10 +235,10 @@ jobs:
     name: "integration-tests (WEBHOOK_ENABLED=${{ matrix.webhook-enabled }})"
     steps:
     - name: checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
     - name: setup golang
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
       with:
         go-version-file: go.mod
 
@@ -257,21 +257,21 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
       with:
         name: diagnostics-integration-webhook-enabled-${{ matrix.webhook-enabled }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: coverage
         path: coverage.integration.out
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: tests-report
         path: integration-tests-webhook-enabled-${{ matrix.webhook-enabled }}.xml
@@ -287,10 +287,10 @@ jobs:
     name: "integration-tests-bluegreen (WEBHOOK_ENABLED=${{ matrix.webhook-enabled }})"
     steps:
     - name: checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
     - name: setup golang
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
       with:
         go-version-file: go.mod
 
@@ -309,21 +309,21 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
       with:
         name: diagnostics-integration-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: coverage
         path: coverage.integration-bluegreen.out
 
     - name: collect test report
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: tests-report
         path: integration-tests-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}.xml
@@ -337,10 +337,10 @@ jobs:
     name: integration-tests-provision-dataplane-fail
     steps:
     - name: checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
     - name: setup golang
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
       with:
         go-version-file: go.mod
 
@@ -358,21 +358,21 @@ jobs:
     
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
       with:
         name: diagnostics-integration-provision-fail-webhook-enabled-${{ matrix.webhook-enabled }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: coverage
         path: coverage.integration-provision-dataplane-fail.out
 
     - name: collect test report
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: tests-report
         path: integration-tests-provision-dataplane-fai.xml
@@ -381,12 +381,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       with:
         fetch-depth: 0
 
     - name: setup golang
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
       with:
         go-version-file: go.mod
 
@@ -410,7 +410,7 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
       with:
         name: diagnostics-e2e
         path: /tmp/ktf-diag*
@@ -418,7 +418,7 @@ jobs:
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
       with:
         name: tests-report
         path: e2e-tests.xml
@@ -435,11 +435,11 @@ jobs:
     steps:
 
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: download tests report
         id: download-coverage
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
         with:
           name: tests-report
           path: report
