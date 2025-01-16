@@ -17,22 +17,22 @@ import (
 // getAcceptedCondition returns the accepted condition for the GatewayClass, with
 // the proper status, reason and message.
 func getAcceptedCondition(ctx context.Context, cl client.Client, gwc *gatewayv1.GatewayClass) (*metav1.Condition, error) {
-	reason := string(gatewayv1.GatewayClassReasonAccepted)
-	message := []string{}
+	reason := gatewayv1.GatewayClassReasonAccepted
+	messages := []string{}
 	status := metav1.ConditionFalse
 
 	if gwc.Spec.ParametersRef != nil {
 		validRef := true
 		if gwc.Spec.ParametersRef.Group != gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group) ||
 			gwc.Spec.ParametersRef.Kind != "GatewayConfiguration" {
-			reason = string(gatewayv1.GatewayClassReasonInvalidParameters)
-			message = append(message, "ParametersRef must reference a gateway-operator.konghq.com/GatewayConfiguration")
+			reason = gatewayv1.GatewayClassReasonInvalidParameters
+			messages = append(messages, "ParametersRef must reference a gateway-operator.konghq.com/GatewayConfiguration")
 			validRef = false
 		}
 
 		if gwc.Spec.ParametersRef.Namespace == nil {
-			reason = string(gatewayv1.GatewayClassReasonInvalidParameters)
-			message = append(message, "ParametersRef must reference a namespaced resource")
+			reason = gatewayv1.GatewayClassReasonInvalidParameters
+			messages = append(messages, "ParametersRef must reference a namespaced resource")
 			validRef = false
 		}
 
@@ -43,21 +43,21 @@ func getAcceptedCondition(ctx context.Context, cl client.Client, gwc *gatewayv1.
 				return nil, err
 			}
 			if k8serrors.IsNotFound(err) {
-				reason = string(gatewayv1.GatewayClassReasonInvalidParameters)
-				message = append(message, "The referenced GatewayConfiguration does not exist")
+				reason = gatewayv1.GatewayClassReasonInvalidParameters
+				messages = append(messages, "The referenced GatewayConfiguration does not exist")
 			}
 		}
 	}
-	if reason == string(gatewayv1.GatewayClassReasonAccepted) {
+	if reason == gatewayv1.GatewayClassReasonAccepted {
 		status = metav1.ConditionTrue
-		message = []string{"GatewayClass is accepted"}
+		messages = []string{"GatewayClass is accepted"}
 	}
 
 	acceptedCondition := k8sutils.NewConditionWithGeneration(
 		consts.ConditionType(gatewayv1.GatewayClassConditionStatusAccepted),
 		status,
 		consts.ConditionReason(reason),
-		strings.Join(message, ". "),
+		strings.Join(messages, ". "),
 		gwc.GetGeneration(),
 	)
 
