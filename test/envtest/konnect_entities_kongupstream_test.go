@@ -30,7 +30,7 @@ func TestKongUpstream(t *testing.T) {
 	cfg, ns := Setup(t, ctx, scheme.Get())
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get(), WithKonnectCacheIndices(ctx))
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
 	StartReconcilers(ctx, t, mgr, logs,
@@ -50,13 +50,11 @@ func TestKongUpstream(t *testing.T) {
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-	t.Run("adding, patching and deleting KongUpstream", func(t *testing.T) {
-		const (
-			upstreamID = "upstream-12345"
-		)
+	t.Log("Setting up a watch for KongUpstream events")
+	w := setupWatch[configurationv1alpha1.KongUpstreamList](t, ctx, cl, client.InNamespace(ns.Name))
 
-		t.Log("Setting up a watch for KongUpstream events")
-		w := setupWatch[configurationv1alpha1.KongUpstreamList](t, ctx, cl, client.InNamespace(ns.Name))
+	t.Run("adding, patching and deleting KongUpstream", func(t *testing.T) {
+		const upstreamID = "upstream-12345"
 
 		t.Log("Setting up SDK expectations on Upstream creation")
 		sdk.UpstreamsSDK.EXPECT().
@@ -137,6 +135,54 @@ func TestKongUpstream(t *testing.T) {
 
 		t.Log("Waiting for Upstream to be deleted in the SDK")
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.UpstreamsSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
+
+	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
+
+		const upstreamID = "upstream-12345"
+
+		t.Log("Setting up SDK expectations on Upstream creation")
+		sdk.UpstreamsSDK.EXPECT().
+			CreateUpstream(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.UpstreamInput) bool {
+					return req.Algorithm != nil && *req.Algorithm == "round-robin"
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateUpstreamResponse{
+					Upstream: &sdkkonnectcomp.Upstream{
+						ID: lo.ToPtr(upstreamID),
+					},
+				},
+				nil,
+			)
+
+		t.Log("Creating a KongUpstream with ControlPlaneRef type=konnectID")
+		createdUpstream := deploy.KongUpstreamAttachedToCP(t, ctx, clientNamespaced, cp,
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongUpstream)
+				s.Spec.KongUpstreamAPISpec.Algorithm = sdkkonnectcomp.UpstreamAlgorithmRoundRobin.ToPointer()
+			},
+			deploy.WithKonnectIDControlPlaneRef(cp),
+		)
+
+		t.Log("Waiting for Upstream to be programmed and get Konnect ID")
+		watchFor(t, ctx, w, watch.Modified, func(r *configurationv1alpha1.KongUpstream) bool {
+			if r.GetName() != createdUpstream.GetName() {
+				return false
+			}
+			if r.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
+				return false
+			}
+			return r.GetKonnectID() == upstreamID && k8sutils.IsProgrammed(r)
+		}, "KongUpstream didn't get Programmed status condition or didn't get the correct (upstream-12345) Konnect ID assigned")
+
+		t.Log("Checking SDK KongUpstream operations")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.UpstreamsSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
 	})

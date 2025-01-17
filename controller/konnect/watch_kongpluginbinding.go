@@ -279,5 +279,5 @@ func enqueueKongPluginBindingFor[
 }
 
 func kongPluginBindingIsBoundToKonnectGatewayControlPlane(kpb *configurationv1alpha1.KongPluginBinding) bool {
-	return objHasControlPlaneRefKonnectNamespacedRef(kpb)
+	return objHasControlPlaneRef(kpb)
 }

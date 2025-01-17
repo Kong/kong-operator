@@ -2,7 +2,6 @@ package konnect
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -13,10 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/gateway-operator/modules/manager/logging"
-
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -97,54 +93,29 @@ func enqueueKongConsumerForKonnectAPIAuthConfiguration(
 				continue
 			}
 
-			switch cpRef.Type {
-			case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-				nn := types.NamespacedName{
-					Name:      cpRef.KonnectNamespacedRef.Name,
-					Namespace: consumer.Namespace,
-				}
-				// TODO: change this when cross namespace refs are allowed.
-				if nn.Namespace != auth.Namespace {
-					continue
-				}
-				var cp konnectv1alpha1.KonnectGatewayControlPlane
-				if err := cl.Get(ctx, nn, &cp); err != nil {
-					ctrllog.FromContext(ctx).Error(
-						err,
-						"failed to get KonnectGatewayControlPlane",
-						"KonnectGatewayControlPlane", nn,
-					)
-					continue
-				}
-
-				// TODO: change this when cross namespace refs are allowed.
-				if cp.GetKonnectAPIAuthConfigurationRef().Name != auth.Name {
-					continue
-				}
-
-				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: consumer.Namespace,
-						Name:      consumer.Name,
-					},
-				})
-
-			case configurationv1alpha1.ControlPlaneRefKonnectID:
+			cp, err := getCPForRef(ctx, cl, cpRef, consumer.GetNamespace())
+			if err != nil {
 				ctrllog.FromContext(ctx).Error(
-					fmt.Errorf("unimplemented ControlPlaneRef type %q", cpRef.Type),
-					"unimplemented ControlPlaneRef for KongConsumer",
-					"KongConsumer", consumer, "refType", cpRef.Type,
-				)
-				continue
-
-			default:
-				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
-					"unsupported ControlPlaneRef for KongConsumer",
-					"KongConsumer", consumer, "refType", cpRef.Type,
+					err,
+					"failed to get KonnectGatewayControlPlane",
+					"KonnectGatewayControlPlane", cpRef,
 				)
 				continue
 			}
+
+			// TODO: change this when cross namespace refs are allowed.
+			if cp.GetKonnectAPIAuthConfigurationRef().Name != auth.Name {
+				continue
+			}
+
+			ret = append(ret, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: consumer.Namespace,
+					Name:      consumer.Name,
+				},
+			})
 		}
+
 		return ret
 	}
 }

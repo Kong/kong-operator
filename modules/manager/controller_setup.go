@@ -588,6 +588,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 // This is done only once because 1 manager's cache can only have one index with
 // a predefined key and so that different controllers can share the same indices.
 func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, developmentMode bool) error {
+	cl := mgr.GetClient()
 	types := []struct {
 		Object interface {
 			client.Object
@@ -621,15 +622,15 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 		},
 		{
 			Object:       &configurationv1.KongConsumer{},
-			IndexOptions: konnect.IndexOptionsForKongConsumer(),
+			IndexOptions: konnect.IndexOptionsForKongConsumer(cl),
 		},
 		{
 			Object:       &configurationv1beta1.KongConsumerGroup{},
-			IndexOptions: konnect.IndexOptionsForKongConsumerGroup(),
+			IndexOptions: konnect.IndexOptionsForKongConsumerGroup(cl),
 		},
 		{
 			Object:       &configurationv1alpha1.KongService{},
-			IndexOptions: konnect.IndexOptionsForKongService(),
+			IndexOptions: konnect.IndexOptionsForKongService(cl),
 		},
 		{
 			Object:       &configurationv1alpha1.KongRoute{},
@@ -637,7 +638,7 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 		},
 		{
 			Object:       &configurationv1alpha1.KongUpstream{},
-			IndexOptions: konnect.IndexOptionsForKongUpstream(),
+			IndexOptions: konnect.IndexOptionsForKongUpstream(cl),
 		},
 		{
 			Object:       &configurationv1alpha1.KongTarget{},
@@ -649,27 +650,27 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 		},
 		{
 			Object:       &configurationv1alpha1.KongKey{},
-			IndexOptions: konnect.IndexOptionsForKongKey(),
+			IndexOptions: konnect.IndexOptionsForKongKey(cl),
 		},
 		{
 			Object:       &configurationv1alpha1.KongKeySet{},
-			IndexOptions: konnect.IndexOptionsForKongKeySet(),
+			IndexOptions: konnect.IndexOptionsForKongKeySet(cl),
 		},
 		{
 			Object:       &configurationv1alpha1.KongDataPlaneClientCertificate{},
-			IndexOptions: konnect.IndexOptionsForKongDataPlaneCertificate(),
+			IndexOptions: konnect.IndexOptionsForKongDataPlaneCertificate(cl),
 		},
 		{
 			Object:       &configurationv1alpha1.KongVault{},
-			IndexOptions: konnect.IndexOptionsForKongVault(),
+			IndexOptions: konnect.IndexOptionsForKongVault(cl),
 		},
 		{
 			Object:       &configurationv1alpha1.KongCertificate{},
-			IndexOptions: konnect.IndexOptionsForKongCertificate(),
+			IndexOptions: konnect.IndexOptionsForKongCertificate(cl),
 		},
 		{
 			Object:       &configurationv1alpha1.KongCACertificate{},
-			IndexOptions: konnect.IndexOptionsForKongCACertificate(),
+			IndexOptions: konnect.IndexOptionsForKongCACertificate(cl),
 		},
 		{
 			Object:       &konnectv1alpha1.KonnectGatewayControlPlane{},

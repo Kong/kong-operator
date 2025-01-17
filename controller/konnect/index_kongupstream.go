@@ -12,21 +12,12 @@ const (
 )
 
 // IndexOptionsForKongUpstream returns required Index options for KongUpstream reconciler.
-func IndexOptionsForKongUpstream() []ReconciliationIndexOption {
+func IndexOptionsForKongUpstream(cl client.Client) []ReconciliationIndexOption {
 	return []ReconciliationIndexOption{
 		{
 			IndexObject:  &configurationv1alpha1.KongUpstream{},
 			IndexField:   IndexFieldKongUpstreamOnKonnectGatewayControlPlane,
-			ExtractValue: kongUpstreamReferencesKonnectGatewayControlPlane,
+			ExtractValue: indexKonnectGatewayControlPlaneRef[configurationv1alpha1.KongUpstream](cl),
 		},
 	}
-}
-
-func kongUpstreamReferencesKonnectGatewayControlPlane(object client.Object) []string {
-	upstream, ok := object.(*configurationv1alpha1.KongUpstream)
-	if !ok {
-		return nil
-	}
-
-	return controlPlaneKonnectNamespacedRefAsSlice(upstream)
 }

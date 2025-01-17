@@ -13,6 +13,9 @@ const (
 
 	// IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration is the index field for KonnectGatewayControlPlane -> APIAuthConfiguration.
 	IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration = "konnectGatewayControlPlaneAPIAuthConfigurationRef"
+
+	// IndexFieldKonnectGatewayControlPlaneOnKonnectID is the index field for KonnectGatewayControlPlane -> KonnectID.
+	IndexFieldKonnectGatewayControlPlaneOnKonnectID = "konnectGatewayControlPlaneKonnectID"
 )
 
 // IndexOptionsForKonnectGatewayControlPlane returns required Index options for KonnectGatewayControlPlane reconciler.
@@ -27,6 +30,11 @@ func IndexOptionsForKonnectGatewayControlPlane() []ReconciliationIndexOption {
 			IndexObject:  &konnectv1alpha1.KonnectGatewayControlPlane{},
 			IndexField:   IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration,
 			ExtractValue: konnectGatewayControlPlaneAPIAuthConfigurationRef,
+		},
+		{
+			IndexObject:  &konnectv1alpha1.KonnectGatewayControlPlane{},
+			IndexField:   IndexFieldKonnectGatewayControlPlaneOnKonnectID,
+			ExtractValue: konnectGatewayControlPlaneKonnectID,
 		},
 	}
 }
@@ -60,4 +68,16 @@ func konnectGatewayControlPlaneAPIAuthConfigurationRef(object client.Object) []s
 	}
 
 	return []string{cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
+}
+
+func konnectGatewayControlPlaneKonnectID(object client.Object) []string {
+	cp, ok := object.(*konnectv1alpha1.KonnectGatewayControlPlane)
+	if !ok {
+		return nil
+	}
+
+	if konnectID := cp.GetKonnectStatus().GetKonnectID(); konnectID != "" {
+		return []string{konnectID}
+	}
+	return nil
 }

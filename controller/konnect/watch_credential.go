@@ -51,6 +51,6 @@ func kongCredentialRefersToKonnectGatewayControlPlane[
 			return false
 		}
 
-		return objHasControlPlaneRefKonnectNamespacedRef(&consumer)
+		return objHasControlPlaneRef(&consumer)
 	}
 }

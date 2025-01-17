@@ -31,6 +31,9 @@
   owning service. Currently specifying ingress service of `DataPlane` is
   supported.
   [#966](https://github.com/Kong/gateway-operator/pull/966)
+- Added support for `ControlPlaneRef`s with `type` equal to `konnectID` for
+  all Konnect entities that refer to a `ControlPlane`.
+  [#985](https://github.com/Kong/gateway-operator/pull/985)
 
 ### Changed
 

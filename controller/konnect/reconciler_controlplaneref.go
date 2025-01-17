@@ -107,120 +107,100 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return ctrl.Result{}, nil
 	}
 
-	switch cpRef.Type {
-	case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-		cp := konnectv1alpha1.KonnectGatewayControlPlane{}
-		// TODO(pmalek): handle cross namespace refs
-		nn := types.NamespacedName{
-			Name:      cpRef.KonnectNamespacedRef.Name,
-			Namespace: ent.GetNamespace(),
-		}
-		// Set namespace of control plane when it is non-empty. Only applyies for cluster scoped resources (KongVault).
-		if ent.GetNamespace() == "" && cpRef.KonnectNamespacedRef.Namespace != "" {
-			nn.Namespace = cpRef.KonnectNamespacedRef.Namespace
-		}
-		if err := cl.Get(ctx, nn, &cp); err != nil {
-			if res, errStatus := patch.StatusWithCondition(
-				ctx, cl, ent,
-				konnectv1alpha1.ControlPlaneRefValidConditionType,
-				metav1.ConditionFalse,
-				konnectv1alpha1.ControlPlaneRefReasonInvalid,
-				err.Error(),
-			); errStatus != nil || !res.IsZero() {
-				return res, errStatus
-			}
-			if k8serrors.IsNotFound(err) {
-				return ctrl.Result{}, ReferencedControlPlaneDoesNotExistError{
-					Reference: nn,
-					Err:       err,
-				}
-			}
-			return ctrl.Result{}, err
-		}
-
-		// Do not continue reconciling of the control plane has incompatible cluster type to prevent repeated failure of creation.
-		// Only CLUSTER_TYPE_CONTROL_PLANE is supported.
-		// The configuration in control plane group type are read only so they are unsupported to attach entities to them:
-		// https://docs.konghq.com/konnect/gateway-manager/control-plane-groups/#limitations
-		if cp.Spec.ClusterType != nil &&
-			*cp.Spec.ClusterType != sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane {
-			if res, errStatus := patch.StatusWithCondition(
-				ctx, cl, ent,
-				konnectv1alpha1.ControlPlaneRefValidConditionType,
-				metav1.ConditionFalse,
-				konnectv1alpha1.ControlPlaneRefReasonInvalid,
-				fmt.Sprintf("Attaching to ControlPlane %s with cluster type %s is not supported", nn, *cp.Spec.ClusterType),
-			); errStatus != nil || !res.IsZero() {
-				return res, errStatus
-			}
-			return ctrl.Result{}, nil
-		}
-
-		cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &cp)
-		if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
-			if res, errStatus := patch.StatusWithCondition(
-				ctx, cl, ent,
-				konnectv1alpha1.ControlPlaneRefValidConditionType,
-				metav1.ConditionFalse,
-				konnectv1alpha1.ControlPlaneRefReasonInvalid,
-				fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
-			); errStatus != nil || !res.IsZero() {
-				return res, errStatus
-			}
-
-			return ctrl.Result{Requeue: true}, nil
-		}
-
-		var (
-			old = ent.DeepCopyObject().(TEnt)
-
-			// A cluster scoped object cannot set a namespaced object as its owner, and also we cannot set cross namespaced owner reference.
-			// So we skip setting owner reference for cluster scoped resources (KongVault).
-			// TODO: handle cross namespace refs
-			isNamespaceScoped = ent.GetNamespace() != ""
-
-			// If an entity has another owner, we should not set the owner reference as that would prevent the entity from being deleted.
-			hasNoOwners = len(ent.GetOwnerReferences()) == 0
-		)
-		if isNamespaceScoped && hasNoOwners {
-			if err := controllerutil.SetOwnerReference(&cp, ent, cl.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
-			}
-		}
-
-		if err := cl.Patch(ctx, ent, client.MergeFrom(old)); err != nil {
-			if k8serrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-			return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
-		}
-
-		if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
-			old := ent.DeepCopyObject().(TEnt)
-			resource.SetControlPlaneID(cp.Status.ID)
-			_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
-			if err != nil {
-				if k8serrors.IsConflict(err) {
-					return ctrl.Result{Requeue: true}, nil
-				}
-				return ctrl.Result{}, err
-			}
-		}
-
+	cp, err := getCPForRef(ctx, cl, cpRef, ent.GetNamespace())
+	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
-			metav1.ConditionTrue,
-			konnectv1alpha1.ControlPlaneRefReasonValid,
-			fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
+			metav1.ConditionFalse,
+			konnectv1alpha1.ControlPlaneRefReasonInvalid,
+			err.Error(),
+		); errStatus != nil || !res.IsZero() {
+			return res, errStatus
+		}
+
+		return ctrl.Result{}, err
+	}
+
+	// Do not continue reconciling of the control plane has incompatible cluster type to prevent repeated failure of creation.
+	// Only CLUSTER_TYPE_CONTROL_PLANE is supported.
+	// The configuration in control plane group type are read only so they are unsupported to attach entities to them:
+	// https://docs.konghq.com/konnect/gateway-manager/control-plane-groups/#limitations
+	if cp.Spec.ClusterType != nil &&
+		*cp.Spec.ClusterType != sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane {
+		if res, errStatus := patch.StatusWithCondition(
+			ctx, cl, ent,
+			konnectv1alpha1.ControlPlaneRefValidConditionType,
+			metav1.ConditionFalse,
+			konnectv1alpha1.ControlPlaneRefReasonInvalid,
+			fmt.Sprintf("Attaching to ControlPlane %s with cluster type %s is not supported", cpRef.String(), *cp.Spec.ClusterType),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 		return ctrl.Result{}, nil
-
-	default:
-		return ctrl.Result{}, fmt.Errorf("unimplemented ControlPlane ref type %q", cpRef.Type)
 	}
+
+	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
+	if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
+		if res, errStatus := patch.StatusWithCondition(
+			ctx, cl, ent,
+			konnectv1alpha1.ControlPlaneRefValidConditionType,
+			metav1.ConditionFalse,
+			konnectv1alpha1.ControlPlaneRefReasonInvalid,
+			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", cpRef.String()),
+		); errStatus != nil || !res.IsZero() {
+			return res, errStatus
+		}
+
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	var (
+		old = ent.DeepCopyObject().(TEnt)
+
+		// A cluster scoped object cannot set a namespaced object as its owner, and also we cannot set cross namespaced owner reference.
+		// So we skip setting owner reference for cluster scoped resources (KongVault).
+		// TODO: handle cross namespace refs
+		isNamespaceScoped = ent.GetNamespace() != ""
+
+		// If an entity has another owner, we should not set the owner reference as that would prevent the entity from being deleted.
+		hasNoOwners = len(ent.GetOwnerReferences()) == 0
+	)
+	if isNamespaceScoped && hasNoOwners {
+		if err := controllerutil.SetOwnerReference(cp, ent, cl.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
+		}
+	}
+
+	if err := cl.Patch(ctx, ent, client.MergeFrom(old)); err != nil {
+		if k8serrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
+	}
+
+	if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
+		old := ent.DeepCopyObject().(TEnt)
+		resource.SetControlPlaneID(cp.Status.ID)
+		_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
+		if err != nil {
+			if k8serrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, err
+		}
+	}
+
+	if res, errStatus := patch.StatusWithCondition(
+		ctx, cl, ent,
+		konnectv1alpha1.ControlPlaneRefValidConditionType,
+		metav1.ConditionTrue,
+		konnectv1alpha1.ControlPlaneRefReasonValid,
+		fmt.Sprintf("Referenced ControlPlane %s is programmed", cpRef.String()),
+	); errStatus != nil || !res.IsZero() {
+		return res, errStatus
+	}
+	return ctrl.Result{}, nil
 }
 
 func conditionMessageReferenceKonnectAPIAuthConfigurationInvalid(apiAuthRef types.NamespacedName) string {

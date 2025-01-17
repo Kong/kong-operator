@@ -58,7 +58,7 @@ func kongSNIRefersToKonnectGatewayControlPlane(
 			return true
 		}
 
-		return objHasControlPlaneRefKonnectNamespacedRef(&cert)
+		return objHasControlPlaneRef(&cert)
 	}
 }
 
@@ -71,7 +71,7 @@ func enqueueKongSNIForKongCertificate(
 			return nil
 		}
 
-		if !objHasControlPlaneRefKonnectNamespacedRef(cert) {
+		if !objHasControlPlaneRef(cert) {
 			return nil
 		}
 

@@ -11,10 +11,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	kgomanager "github.com/kong/gateway-operator/modules/manager"
 )
 
 // Reconciler represents a reconciler.
@@ -22,11 +23,21 @@ type Reconciler interface {
 	SetupWithManager(context.Context, ctrl.Manager) error
 }
 
+// ManagerOption is a function that can be used to configure the manager.
+type ManagerOption func(manager.Manager) error
+
+// WithKonnectCacheIndices is a manager option that sets up cache indices for Konnect types.
+func WithKonnectCacheIndices(ctx context.Context) ManagerOption {
+	return func(mgr manager.Manager) error {
+		return kgomanager.SetupCacheIndicesForKonnectTypes(ctx, mgr, true)
+	}
+}
+
 // NewManager returns a manager and a logs observer.
 // The logs observer can be used to dump logs if the test fails.
 // The returned manager can be used with StartReconcilers() to start a list of
 // provided reconcilers with the manager.
-func NewManager(t *testing.T, ctx context.Context, cfg *rest.Config, s *runtime.Scheme) (manager.Manager, LogsObserver) {
+func NewManager(t *testing.T, ctx context.Context, cfg *rest.Config, s *runtime.Scheme, opts ...ManagerOption) (manager.Manager, LogsObserver) {
 	_, logger, logs := CreateTestLogger(ctx)
 
 	o := manager.Options{
@@ -50,6 +61,11 @@ func NewManager(t *testing.T, ctx context.Context, cfg *rest.Config, s *runtime.
 
 	mgr, err := ctrl.NewManager(cfg, o)
 	require.NoError(t, err)
+
+	for _, opt := range opts {
+		require.NoError(t, opt(mgr))
+	}
+
 	return mgr, logs
 }
 
@@ -83,13 +99,4 @@ func StartReconcilers(
 		wg.Wait()
 		DumpLogsIfTestFailed(t, logs)
 	})
-}
-
-// NewControllerClient returns a new controller-runtime Client for provided runtime.Scheme and rest.Config.
-func NewControllerClient(t *testing.T, scheme *runtime.Scheme, cfg *rest.Config) ctrlclient.Client {
-	client, err := ctrlclient.New(cfg, ctrlclient.Options{
-		Scheme: scheme,
-	})
-	require.NoError(t, err)
-	return client
 }

@@ -30,7 +30,7 @@ func TestKongService(t *testing.T) {
 	cfg, ns := Setup(t, ctx, scheme.Get())
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get(), WithKonnectCacheIndices(ctx))
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
 	StartReconcilers(ctx, t, mgr, logs,
@@ -142,5 +142,64 @@ func TestKongService(t *testing.T) {
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.ServicesSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
+	})
+
+	t.Run("should handle konnectID control plane references", func(t *testing.T) {
+		const (
+			upstreamID = "kup-12345"
+			serviceID  = "service-12345"
+			host       = "example.com"
+			port       = int64(8081)
+		)
+
+		t.Log("Creating a KongUpstream and setting it to programmed")
+		upstream := deploy.KongUpstreamAttachedToCP(t, ctx, clientNamespaced, cp)
+		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
+
+		t.Log("Setting up a watch for KongService events")
+		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on Service creation")
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.ServiceInput) bool {
+					return req.Host == host
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateServiceResponse{
+					Service: &sdkkonnectcomp.Service{
+						ID: lo.ToPtr(serviceID),
+					},
+				},
+				nil,
+			)
+
+		t.Log("Creating a KongService with ControlPlaneRef type=konnectID")
+		createdService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.KongServiceAPISpec.Host = host
+			},
+			deploy.WithKonnectIDControlPlaneRef(cp),
+		)
+		t.Log("Checking SDK KongService operations")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.ServicesSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+
+		t.Log("Waiting for Service to be programmed and get Konnect ID")
+		watchFor(t, ctx, w, watch.Modified, func(kt *configurationv1alpha1.KongService) bool {
+			if kt.GetName() != createdService.GetName() {
+				return false
+			}
+			if kt.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
+				return false
+			}
+			return kt.GetKonnectID() == serviceID && k8sutils.IsProgrammed(kt)
+		}, "KongService didn't get Programmed status condition or didn't get the correct (service-12345) Konnect ID assigned")
+
 	})
 }

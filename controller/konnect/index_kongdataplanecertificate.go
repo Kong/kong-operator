@@ -12,21 +12,12 @@ const (
 )
 
 // IndexOptionsForKongDataPlaneCertificate returns required Index options for KongConsumer reconciler.
-func IndexOptionsForKongDataPlaneCertificate() []ReconciliationIndexOption {
+func IndexOptionsForKongDataPlaneCertificate(cl client.Client) []ReconciliationIndexOption {
 	return []ReconciliationIndexOption{
 		{
 			IndexObject:  &configurationv1alpha1.KongDataPlaneClientCertificate{},
 			IndexField:   IndexFieldKongDataPlaneClientCertificateOnKonnectGatewayControlPlane,
-			ExtractValue: kongDataPlaneCertificateReferencesKonnectGatewayControlPlane,
+			ExtractValue: indexKonnectGatewayControlPlaneRef[configurationv1alpha1.KongDataPlaneClientCertificate](cl),
 		},
 	}
-}
-
-func kongDataPlaneCertificateReferencesKonnectGatewayControlPlane(object client.Object) []string {
-	dpCert, ok := object.(*configurationv1alpha1.KongDataPlaneClientCertificate)
-	if !ok {
-		return nil
-	}
-
-	return controlPlaneKonnectNamespacedRefAsSlice(dpCert)
 }

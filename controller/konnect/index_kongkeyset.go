@@ -12,21 +12,12 @@ const (
 )
 
 // IndexOptionsForKongKeySet returns required Index options for KongKeySet reconclier.
-func IndexOptionsForKongKeySet() []ReconciliationIndexOption {
+func IndexOptionsForKongKeySet(cl client.Client) []ReconciliationIndexOption {
 	return []ReconciliationIndexOption{
 		{
 			IndexObject:  &configurationv1alpha1.KongKeySet{},
 			IndexField:   IndexFieldKongKeySetOnKonnectGatewayControlPlane,
-			ExtractValue: konnectGatewayControlPlaneRefFromKongKeySet,
+			ExtractValue: indexKonnectGatewayControlPlaneRef[configurationv1alpha1.KongKeySet](cl),
 		},
 	}
-}
-
-// konnectGatewayControlPlaneRefFromKongKeySet returns namespace/name of referenced KonnectGatewayControlPlane in KongKeySet spec.
-func konnectGatewayControlPlaneRefFromKongKeySet(obj client.Object) []string {
-	keySet, ok := obj.(*configurationv1alpha1.KongKeySet)
-	if !ok {
-		return nil
-	}
-	return controlPlaneKonnectNamespacedRefAsSlice(keySet)
 }
