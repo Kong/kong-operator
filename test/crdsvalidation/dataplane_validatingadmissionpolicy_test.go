@@ -19,7 +19,7 @@ import (
 
 const (
 	// KustomizePathValidationPolicies is the path to the Kustomize directory containing the validation policies.
-	KustomizePathValidationPolicies = "config/default/validation_policies/"
+	KustomizePathValidationPolicies = "config/default/validating_policies/"
 )
 
 func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
