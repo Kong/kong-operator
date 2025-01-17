@@ -87,6 +87,9 @@
 - Fix unexpected error logs caused by passing an odd number of arguments to the logger
   in the `KongConsumer` reconciler.
   [#983](https://github.com/Kong/gateway-operator/pull/983)
+- Fix `KongRoute` Konnect entity with a non-empty `headers` field reconciliation. The
+  `headers` field is now properly mapped to the expected Konnect schema.
+  [#1044](https://github.com/Kong/gateway-operator/pull/1044)
 
 ### Added
 
