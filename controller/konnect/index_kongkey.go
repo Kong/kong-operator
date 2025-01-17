@@ -15,7 +15,7 @@ const (
 )
 
 // IndexOptionsForKongKey returns required Index options for KongKey reconclier.
-func IndexOptionsForKongKey() []ReconciliationIndexOption {
+func IndexOptionsForKongKey(cl client.Client) []ReconciliationIndexOption {
 	return []ReconciliationIndexOption{
 		{
 			IndexObject:  &configurationv1alpha1.KongKey{},
@@ -25,7 +25,7 @@ func IndexOptionsForKongKey() []ReconciliationIndexOption {
 		{
 			IndexObject:  &configurationv1alpha1.KongKey{},
 			IndexField:   IndexFieldKongKeyOnKonnectGatewayControlPlane,
-			ExtractValue: konnectGatewayControlPlaneRefFromKongKey,
+			ExtractValue: indexKonnectGatewayControlPlaneRef[configurationv1alpha1.KongKey](cl),
 		},
 	}
 }
@@ -44,13 +44,4 @@ func kongKeySetRefFromKongKey(obj client.Object) []string {
 	}
 
 	return []string{key.GetNamespace() + "/" + key.Spec.KeySetRef.NamespacedRef.Name}
-}
-
-// konnectGatewayControlPlaneRefFromKongKey returns namespace/name of referenced KonnectGatewayControlPlane in KongKey spec.
-func konnectGatewayControlPlaneRefFromKongKey(obj client.Object) []string {
-	key, ok := obj.(*configurationv1alpha1.KongKey)
-	if !ok {
-		return nil
-	}
-	return controlPlaneKonnectNamespacedRefAsSlice(key)
 }

@@ -33,7 +33,7 @@ func TestKongVault(t *testing.T) {
 	cfg, ns := Setup(t, ctx, scheme.Get())
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get(), WithKonnectCacheIndices(ctx))
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
 	reconcilers := []Reconciler{
@@ -57,7 +57,7 @@ func TestKongVault(t *testing.T) {
 	t.Log("Setting up a watch for KongVault events")
 	vaultWatch := setupWatch[configurationv1alpha1.KongVaultList](t, ctx, cl)
 
-	t.Run("Should create, update and delete vault successfully", func(t *testing.T) {
+	t.Run("should create, update and delete vault successfully", func(t *testing.T) {
 		const (
 			vaultBackend     = "env"
 			vaultPrefix      = "env-vault"
@@ -118,7 +118,7 @@ func TestKongVault(t *testing.T) {
 		}, waitTime, tickTime)
 	})
 
-	t.Run("Should correctly handle conflict on create", func(t *testing.T) {
+	t.Run("should correctly handle conflict on create", func(t *testing.T) {
 		const (
 			vaultBackend   = "env-conflict"
 			vaultPrefix    = "env-vault-conflict"
@@ -176,6 +176,45 @@ func TestKongVault(t *testing.T) {
 					condition.Status == metav1.ConditionTrue
 			})
 		}, "KongVault's Programmed condition should be true eventually")
+
+		t.Log("Waiting for KongVault to be created in the SDK")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.VaultSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
+
+	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
+		const (
+			vaultBackend   = "env"
+			vaultPrefix    = "env-vault"
+			vaultRawConfig = `{"prefix":"env_vault"}`
+			vaultID        = "vault-12345"
+		)
+
+		t.Log("Setting up mock SDK for vault creation")
+		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.MatchedBy(func(input sdkkonnectcomp.VaultInput) bool {
+			return input.Name == vaultBackend && input.Prefix == vaultPrefix
+		})).Return(&sdkkonnectops.CreateVaultResponse{
+			Vault: &sdkkonnectcomp.Vault{
+				ID: lo.ToPtr(vaultID),
+			},
+		}, nil)
+
+		t.Log("Creating a KongVault with ControlPlaneRef type=konnectID")
+		vault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, []byte(vaultRawConfig), cp,
+			deploy.WithKonnectIDControlPlaneRef(cp),
+		)
+
+		t.Log("Waiting for KongVault to be programmed")
+		watchFor(t, ctx, vaultWatch, watch.Modified, func(v *configurationv1alpha1.KongVault) bool {
+			if vault.GetName() != v.GetName() {
+				return false
+			}
+			if vault.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
+				return false
+			}
+			return v.GetKonnectID() == vaultID && k8sutils.IsProgrammed(v)
+		}, "KongVault didn't get Programmed status condition or didn't get the correct (vault-12345) Konnect ID assigned")
 
 		t.Log("Waiting for KongVault to be created in the SDK")
 		require.EventuallyWithT(t, func(c *assert.CollectT) {

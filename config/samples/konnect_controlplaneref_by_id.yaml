@@ -1,0 +1,46 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-dev
+  namespace: default
+spec:
+  type: token
+  token: kpat_XXXXXX
+  serverURL: us.api.konghq.tech
+---
+kind: KonnectGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: cp-to-be-referred-by-id
+  namespace: default
+spec:
+  name: cp-to-be-referred-by-id
+  konnect:
+    authRef:
+      name: konnect-api-auth-dev
+---
+kind: KongService
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: service-1
+  namespace: default
+spec:
+  name: service-1
+  host: example.com
+  controlPlaneRef:
+    type: konnectID
+    # Once `cp-to-be-referred-by-id` is created and has a Konnect ID assigned, replace the value below with it.
+    konnectID: "e43fcae3-1851-44e9-9b55-50e51b97a741"
+---
+kind: KongConsumer
+apiVersion: configuration.konghq.com/v1
+metadata:
+  name: consumer-1
+  namespace: default
+username: consumer-1
+custom_id: 08433C12-2B81-4738-B61D-3AA2136F0212
+spec:
+  controlPlaneRef:
+    type: konnectID
+    # Once `cp-to-be-referred-by-id` is created and has a Konnect ID assigned, replace the value below with it.
+    konnectID: "e43fcae3-1851-44e9-9b55-50e51b97a741"

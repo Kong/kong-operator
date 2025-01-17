@@ -349,9 +349,8 @@ func TestHandleUpstreamRef(t *testing.T) {
 			},
 			objects:     []client.Object{testKongUpstreamControlPlaneRefNotFound},
 			expectError: true,
-			expectErrorContains: fmt.Sprintf("referenced Control Plane %s/%s does not exist",
-				testKongUpstreamControlPlaneRefNotFound.Namespace,
-				testKongUpstreamControlPlaneRefNotFound.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
+			expectErrorContains: fmt.Sprintf(`referenced Control Plane %q does not exist`,
+				testKongUpstreamControlPlaneRefNotFound.Spec.ControlPlaneRef.String(),
 			),
 		},
 		{

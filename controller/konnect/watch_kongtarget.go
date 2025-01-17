@@ -62,7 +62,7 @@ func kongTargetRefersToKonnectGatewayControlPlane(cl client.Client) func(obj cli
 		if err := cl.Get(context.Background(), nn, &upstream); client.IgnoreNotFound(err) != nil {
 			return true
 		}
-		return objHasControlPlaneRefKonnectNamespacedRef(&upstream)
+		return objHasControlPlaneRef(&upstream)
 	}
 }
 
@@ -73,7 +73,7 @@ func enqueueKongTargetForKongUpstream(cl client.Client,
 		if !ok {
 			return nil
 		}
-		if !objHasControlPlaneRefKonnectNamespacedRef(kongUpstream) {
+		if !objHasControlPlaneRef(kongUpstream) {
 			return nil
 		}
 

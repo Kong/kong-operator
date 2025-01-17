@@ -2,6 +2,7 @@ package konnect
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,22 +33,25 @@ func (f ForeignRelationsGroupedByControlPlane) GetCombinations() map[types.Names
 	return ret
 }
 
-// GetCombinations groups all the entities by ControlPlane.
-// NOTE: currently only supports Konnect ControlPlane which is referenced by a konnectNamespacedRef.
+// GroupByControlPlane groups all the entities by ControlPlane.
 func (relations *ForeignRelations) GroupByControlPlane(
 	ctx context.Context,
 	cl client.Client,
 ) (ForeignRelationsGroupedByControlPlane, error) {
 	ret := make(map[types.NamespacedName]ForeignRelations)
 	for _, service := range relations.Service {
-		cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&service)
+		cpRef, ok := getControlPlaneRef(&service).Get()
 		if !ok {
 			continue
+		}
+		cp, err := getCPForRef(ctx, cl, cpRef, service.Namespace)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get ControlPlane for KongService %s: %w", service.Name, err)
 		}
 		nn := types.NamespacedName{
 			// TODO: implement cross namespace references
 			Namespace: service.Namespace,
-			Name:      cpRef.KonnectNamespacedRef.Name,
+			Name:      cp.Name,
 		}
 		fr := ret[nn]
 		fr.Service = append(fr.Service, service)
@@ -56,15 +60,18 @@ func (relations *ForeignRelations) GroupByControlPlane(
 	for _, route := range relations.Route {
 		svcRef := route.Spec.ServiceRef
 		if svcRef == nil || svcRef.NamespacedRef == nil {
-
-			cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&route)
+			cpRef, ok := getControlPlaneRef(&route).Get()
 			if !ok {
 				continue
+			}
+			cp, err := getCPForRef(ctx, cl, cpRef, route.Namespace)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get ControlPlane for KongRoute %s: %w", route.Name, err)
 			}
 
 			nn := types.NamespacedName{
 				Namespace: route.Namespace,
-				Name:      cpRef.KonnectNamespacedRef.Name,
+				Name:      cp.Name,
 			}
 			fr := ret[nn]
 			fr.Route = append(fr.Route, route)
@@ -84,43 +91,55 @@ func (relations *ForeignRelations) GroupByControlPlane(
 			return nil, err
 		}
 
-		cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&svc)
+		cpRef, ok := getControlPlaneRef(&svc).Get()
 		if !ok {
 			continue
+		}
+		cp, err := getCPForRef(ctx, cl, cpRef, svc.Namespace)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get ControlPlane for KongService %s: %w", svc.Name, err)
 		}
 
 		nn := types.NamespacedName{
 			// TODO: implement cross namespace references
 			Namespace: route.Namespace,
-			Name:      cpRef.KonnectNamespacedRef.Name,
+			Name:      cp.Name,
 		}
 		fr := ret[nn]
 		fr.Route = append(fr.Route, route)
 		ret[nn] = fr
 	}
 	for _, consumer := range relations.Consumer {
-		cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&consumer)
+		cpRef, ok := getControlPlaneRef(&consumer).Get()
 		if !ok {
 			continue
+		}
+		cp, err := getCPForRef(ctx, cl, cpRef, consumer.Namespace)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get ControlPlane for KongConsumer %s: %w", consumer.Name, err)
 		}
 		nn := types.NamespacedName{
 			// TODO: implement cross namespace references
 			Namespace: consumer.Namespace,
-			Name:      cpRef.KonnectNamespacedRef.Name,
+			Name:      cp.Name,
 		}
 		fr := ret[nn]
 		fr.Consumer = append(fr.Consumer, consumer)
 		ret[nn] = fr
 	}
 	for _, group := range relations.ConsumerGroup {
-		cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&group)
+		cpRef, ok := getControlPlaneRef(&group).Get()
 		if !ok {
 			continue
+		}
+		cp, err := getCPForRef(ctx, cl, cpRef, group.Namespace)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get ControlPlane for KongConsumerGroup %s: %w", group.Name, err)
 		}
 		nn := types.NamespacedName{
 			// TODO: implement cross namespace references
 			Namespace: group.Namespace,
-			Name:      cpRef.KonnectNamespacedRef.Name,
+			Name:      cp.Name,
 		}
 		fr := ret[nn]
 		fr.ConsumerGroup = append(fr.ConsumerGroup, group)

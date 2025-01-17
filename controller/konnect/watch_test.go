@@ -88,6 +88,10 @@ func TestObjectListToReconcileRequests(t *testing.T) {
 
 func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 	cp := &konnectv1alpha1.KonnectGatewayControlPlane{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			Kind:       "KonnectGatewayControlPlane",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test1",
 			Namespace: "default",
@@ -98,13 +102,13 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 			name        string
 			index       string
 			list        []client.Object
-			extractFunc client.IndexerFunc
+			extractFunc func(client.Client) client.IndexerFunc
 			expected    []ctrl.Request
 		}{
 			{
 				name:        "no ControlPlane reference",
 				index:       IndexFieldKongConsumerOnKonnectGatewayControlPlane,
-				extractFunc: kongConsumerReferencesKonnectGatewayControlPlane,
+				extractFunc: indexKonnectGatewayControlPlaneRef[configurationv1.KongConsumer],
 				list: []client.Object{
 					&configurationv1.KongConsumer{
 						ObjectMeta: metav1.ObjectMeta{
@@ -123,7 +127,7 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 			{
 				name:        "1 KongConumser refers to KonnectGatewayControlPlane",
 				index:       IndexFieldKongConsumerOnKonnectGatewayControlPlane,
-				extractFunc: kongConsumerReferencesKonnectGatewayControlPlane,
+				extractFunc: indexKonnectGatewayControlPlaneRef[configurationv1.KongConsumer],
 				list: []client.Object{
 					&configurationv1.KongConsumer{
 						ObjectMeta: metav1.ObjectMeta{
@@ -158,7 +162,7 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 			{
 				name:        "1 KongConumser refers to a different KonnectGatewayControlPlane",
 				index:       IndexFieldKongConsumerOnKonnectGatewayControlPlane,
-				extractFunc: kongConsumerReferencesKonnectGatewayControlPlane,
+				extractFunc: indexKonnectGatewayControlPlaneRef[configurationv1.KongConsumer],
 				list: []client.Object{
 					&configurationv1.KongConsumer{
 						ObjectMeta: metav1.ObjectMeta{
@@ -185,11 +189,18 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				cl := fakectrlruntimeclient.NewClientBuilder().
+				builder := fakectrlruntimeclient.NewClientBuilder().
 					WithScheme(scheme.Get()).
-					WithObjects(tt.list...).
-					WithIndex(&configurationv1.KongConsumer{}, tt.index, tt.extractFunc).
-					Build()
+					WithObjects(append(tt.list, cp)...)
+
+				// Build a separate client for indices as we have kind of a chicken-egg problem here. We need a client
+				// in the extract function passed to the builder's WithIndex function, but it's the builder that creates
+				// the client. So we build the client for indices first (without the index) and then build the client
+				// with the index.
+				clForIndices := builder.Build()
+				require.NotNil(t, clForIndices)
+
+				cl := builder.WithIndex(&configurationv1.KongConsumer{}, tt.index, tt.extractFunc(clForIndices)).Build()
 				require.NotNil(t, cl)
 
 				f := enqueueObjectForKonnectGatewayControlPlane[configurationv1.KongConsumerList](cl, tt.index)

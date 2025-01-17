@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -24,10 +25,11 @@ const (
 	TestIDLabel = "konghq.com/test-id"
 )
 
-type objOption func(obj client.Object)
+// ObjOption is a function that modifies a  client.Object.
+type ObjOption func(obj client.Object)
 
-// WithAnnotation returns an objOption that sets the given key-value pair as an annotation on the object.
-func WithAnnotation(key, value string) objOption {
+// WithAnnotation returns an ObjOption that sets the given key-value pair as an annotation on the object.
+func WithAnnotation(key, value string) ObjOption {
 	return func(obj client.Object) {
 		annotations := obj.GetAnnotations()
 		if annotations == nil {
@@ -38,7 +40,7 @@ func WithAnnotation(key, value string) objOption {
 	}
 }
 
-// WithTestIDLabel returns an objOption that sets the test ID label on the object.
+// WithTestIDLabel returns an ObjOption that sets the test ID label on the object.
 func WithTestIDLabel(testID string) func(obj client.Object) {
 	return func(obj client.Object) {
 		labels := obj.GetLabels()
@@ -50,13 +52,21 @@ func WithTestIDLabel(testID string) func(obj client.Object) {
 	}
 }
 
-// WithLabels returns an objOption that sets the given key-value pairs as labels on the object.
-func WithLabels[
-	T client.Object,
-](labels map[string]string) func(obj T) {
-	return func(obj T) {
-		for k, v := range labels {
-			obj.GetLabels()[k] = v
+// WithKonnectIDControlPlaneRef returns an ObjOption that sets the ControlPlaneRef on the object to a KonnectID.
+func WithKonnectIDControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane) ObjOption {
+	return func(obj client.Object) {
+		o, ok := obj.(interface {
+			GetControlPlaneRef() *configurationv1alpha1.ControlPlaneRef
+		})
+		if !ok {
+			// As it's only used in tests, we can panic here - it will mean test code is incorrect.
+			panic(fmt.Errorf("%T does not implement GetControlPlaneRef method", obj))
+		}
+
+		objCPRef := o.GetControlPlaneRef()
+		*objCPRef = configurationv1alpha1.ControlPlaneRef{
+			Type:      configurationv1alpha1.ControlPlaneRefKonnectID,
+			KonnectID: lo.ToPtr(cp.GetKonnectStatus().GetKonnectID()),
 		}
 	}
 }
@@ -67,7 +77,7 @@ func KonnectAPIAuthConfiguration(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	opts ...objOption,
+	opts ...ObjOption,
 ) *konnectv1alpha1.KonnectAPIAuthConfiguration {
 	t.Helper()
 
@@ -122,7 +132,7 @@ func KonnectGatewayControlPlane(
 	ctx context.Context,
 	cl client.Client,
 	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
-	opts ...objOption,
+	opts ...ObjOption,
 ) *konnectv1alpha1.KonnectGatewayControlPlane {
 	t.Helper()
 
@@ -160,7 +170,7 @@ func KonnectGatewayControlPlaneWithID(
 	ctx context.Context,
 	cl client.Client,
 	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
-	opts ...objOption,
+	opts ...ObjOption,
 ) *konnectv1alpha1.KonnectGatewayControlPlane {
 	t.Helper()
 
@@ -188,7 +198,7 @@ func KongServiceAttachedToCPWithID(
 	ctx context.Context,
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-	opts ...objOption,
+	opts ...ObjOption,
 ) *configurationv1alpha1.KongService {
 	t.Helper()
 
@@ -213,7 +223,7 @@ func KongServiceAttachedToCP(
 	ctx context.Context,
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-	opts ...objOption,
+	opts ...ObjOption,
 ) *configurationv1alpha1.KongService {
 	t.Helper()
 
@@ -252,7 +262,7 @@ func KongRouteAttachedToService(
 	ctx context.Context,
 	cl client.Client,
 	kongService *configurationv1alpha1.KongService,
-	opts ...objOption,
+	opts ...ObjOption,
 ) *configurationv1alpha1.KongRoute {
 	t.Helper()
 
@@ -315,7 +325,7 @@ func KongPluginBinding(
 	ctx context.Context,
 	cl client.Client,
 	kpb *configurationv1alpha1.KongPluginBinding,
-	opts ...objOption,
+	opts ...ObjOption,
 ) *configurationv1alpha1.KongPluginBinding {
 	t.Helper()
 
@@ -484,7 +494,7 @@ func KongCACertificateAttachedToCP(
 	ctx context.Context,
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-	opts ...objOption,
+	opts ...ObjOption,
 ) *configurationv1alpha1.KongCACertificate {
 	t.Helper()
 
@@ -519,7 +529,7 @@ func KongCertificateAttachedToCP(
 	ctx context.Context,
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-	opts ...objOption,
+	opts ...ObjOption,
 ) *configurationv1alpha1.KongCertificate {
 	t.Helper()
 
@@ -555,7 +565,7 @@ func KongUpstreamAttachedToCP(
 	ctx context.Context,
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-	opts ...objOption,
+	opts ...ObjOption,
 ) *configurationv1alpha1.KongUpstream {
 	t.Helper()
 
@@ -588,7 +598,7 @@ func KongTargetAttachedToUpstream(
 	ctx context.Context,
 	cl client.Client,
 	upstream *configurationv1alpha1.KongUpstream,
-	opts ...objOption,
+	opts ...ObjOption,
 ) *configurationv1alpha1.KongTarget {
 	t.Helper()
 
@@ -619,7 +629,7 @@ func KongConsumerAttachedToCP(
 	cl client.Client,
 	username string,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-	opts ...objOption,
+	opts ...ObjOption,
 ) *configurationv1.KongConsumer {
 	t.Helper()
 
@@ -653,7 +663,7 @@ func KongConsumerGroupAttachedToCP(
 	ctx context.Context,
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-	opts ...objOption,
+	opts ...ObjOption,
 ) *configurationv1beta1.KongConsumerGroup {
 	t.Helper()
 
@@ -691,6 +701,7 @@ func KongVaultAttachedToCP(
 	prefix string,
 	rawConfig []byte,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	opts ...ObjOption,
 ) *configurationv1alpha1.KongVault {
 	t.Helper()
 
@@ -712,6 +723,10 @@ func KongVaultAttachedToCP(
 			Prefix:  prefix,
 			Backend: backend,
 		},
+	}
+
+	for _, opt := range opts {
+		opt(vault)
 	}
 
 	require.NoError(t, cl.Create(ctx, vault))
@@ -812,6 +827,7 @@ func KongKeySetAttachedToCP(
 	cl client.Client,
 	name string,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	opts ...ObjOption,
 ) *configurationv1alpha1.KongKeySet {
 	t.Helper()
 
@@ -831,6 +847,11 @@ func KongKeySetAttachedToCP(
 			},
 		},
 	}
+
+	for _, opt := range opts {
+		opt(keySet)
+	}
+
 	require.NoError(t, cl.Create(ctx, keySet))
 	logObjectCreate(t, keySet)
 
@@ -843,7 +864,7 @@ func KongSNIAttachedToCertificate(
 	ctx context.Context,
 	cl client.Client,
 	cert *configurationv1alpha1.KongCertificate,
-	opts ...objOption,
+	opts ...ObjOption,
 ) *configurationv1alpha1.KongSNI {
 	t.Helper()
 
@@ -877,6 +898,7 @@ func KongDataPlaneClientCertificateAttachedToCP(
 	ctx context.Context,
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	opts ...ObjOption,
 ) *configurationv1alpha1.KongDataPlaneClientCertificate {
 	t.Helper()
 
@@ -896,6 +918,11 @@ func KongDataPlaneClientCertificateAttachedToCP(
 			},
 		},
 	}
+
+	for _, opt := range opts {
+		opt(cert)
+	}
+
 	require.NoError(t, cl.Create(ctx, cert))
 	logObjectCreate(t, cert)
 

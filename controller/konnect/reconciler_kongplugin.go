@@ -375,16 +375,20 @@ func deleteUnusedKongPluginBindings(
 			continue
 		}
 
-		cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(&pb)
+		cpRef, ok := getControlPlaneRef(&pb).Get()
 		if !ok {
 			continue
 		}
+		cp, err := getCPForRef(ctx, clientWithNamespace, cpRef, pb.Namespace)
+		if err != nil {
+			return fmt.Errorf("failed to get ControlPlane for KongPluginBinding: %w", err)
+		}
 
-		// If a ControlPlane this KongPluginBinding references, is not found, delete the it.
+		// If a ControlPlane this KongPluginBinding references, is not found, delete it.
 		combinations, ok := groupedCombinations[types.NamespacedName{
 			// TODO: implement cross namespace references
 			Namespace: pb.Namespace,
-			Name:      cpRef.KonnectNamespacedRef.Name,
+			Name:      cp.Name,
 		}]
 		if !ok {
 			pluginBindingsToDelete[client.ObjectKeyFromObject(&pb)] = pb

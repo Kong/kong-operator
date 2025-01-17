@@ -15,6 +15,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 func TestGetCombinations(t *testing.T) {
@@ -473,6 +474,14 @@ func TestGetCombinations(t *testing.T) {
 }
 
 func TestGroupByControlPlane(t *testing.T) {
+	cpWithName := func(name string) *konnectv1alpha1.KonnectGatewayControlPlane {
+		return &konnectv1alpha1.KonnectGatewayControlPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      name,
+			},
+		}
+	}
 	type args struct {
 		relations ForeignRelations
 	}
@@ -800,9 +809,11 @@ func TestGroupByControlPlane(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			objects := tt.objects
+			objects = append(objects, cpWithName("cp1"), cpWithName("cp2"))
 			cl := fake.NewClientBuilder().
 				WithScheme(scheme.Get()).
-				WithObjects(tt.objects...).
+				WithObjects(objects...).
 				Build()
 			got, err := tt.args.relations.GroupByControlPlane(context.Background(), cl)
 			require.NoError(t, err)
