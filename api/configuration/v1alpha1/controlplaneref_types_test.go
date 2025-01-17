@@ -3,9 +3,10 @@ package v1alpha1_test
 import (
 	"testing"
 
-	"github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func TestControlPlaneRefStringer(t *testing.T) {

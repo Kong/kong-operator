@@ -28,10 +28,22 @@ func TestKongTarget(t *testing.T) {
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.weight: Invalid value: 100000"),
-				Update: func(kt *configurationv1alpha1.KongTarget) {
-					kt.Spec.KongTargetAPISpec.Weight = -1
+			},
+			{
+				Name: "weight must between 0 and 65535",
+				TestObject: &configurationv1alpha1.KongTarget{
+					ObjectMeta: commonObjectMeta,
+					Spec: configurationv1alpha1.KongTargetSpec{
+						UpstreamRef: configurationv1alpha1.TargetRef{
+							Name: "upstream",
+						},
+						KongTargetAPISpec: configurationv1alpha1.KongTargetAPISpec{
+							Target: "example.com",
+							Weight: -1,
+						},
+					},
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.weight: Invalid value: -1"),
+				ExpectedErrorMessage: lo.ToPtr("spec.weight: Invalid value: -1"),
 			},
 		}.Run(t)
 	})
