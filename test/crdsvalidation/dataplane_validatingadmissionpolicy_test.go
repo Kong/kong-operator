@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	// KustomizePathValidationPolicies is the path to the Kustomize directory containing the validation policies.
-	KustomizePathValidationPolicies = "config/default/validating_policies/"
+	// KustomizePathValidatingPolicies is the path to the Kustomize directory containing the validation policies.
+	KustomizePathValidatingPolicies = "config/default/validating_policies/"
 )
 
 func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
@@ -27,7 +27,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 	ctx := context.Background()
 	scheme := scheme.Get()
 	cfg, ns := envtest.Setup(t, ctx, scheme)
-	kustomize.Apply(ctx, t, cfg, KustomizePathValidationPolicies)
+	kustomize.Apply(ctx, t, cfg, KustomizePathValidatingPolicies)
 
 	t.Run("ports", func(t *testing.T) {
 		kcfgcrdsvalidation.TestCasesGroup[*operatorv1beta1.DataPlane]{
