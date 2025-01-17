@@ -3,6 +3,7 @@ package crdsvalidation
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
@@ -24,9 +25,21 @@ const (
 
 func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
-	scheme := scheme.Get()
-	cfg, ns := envtest.Setup(t, ctx, scheme)
+
+	var (
+		ctx              = context.Background()
+		scheme           = scheme.Get()
+		cfg, ns          = envtest.Setup(t, ctx, scheme)
+		commonObjectMeta = metav1.ObjectMeta{
+			GenerateName: "dp-",
+			Namespace:    ns.Name,
+		}
+		sharedEventuallyConfig = kcfgcrdsvalidation.EventuallyConfig{
+			Timeout: 15 * time.Second,
+			Period:  100 * time.Millisecond,
+		}
+	)
+
 	kustomize.Apply(ctx, t, cfg, KustomizePathValidatingPolicies)
 
 	t.Run("ports", func(t *testing.T) {
@@ -34,21 +47,15 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 			{
 				Name: "not providing spec fails",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
-					Spec: operatorv1beta1.DataPlaneSpec{},
+					ObjectMeta: commonObjectMeta,
+					Spec:       operatorv1beta1.DataPlaneSpec{},
 				},
 				ExpectedErrorMessage: lo.ToPtr("DataPlane requires an image to be set on proxy container"),
 			},
 			{
 				Name: "providing correct ingress service ports and KONG_PORT_MAPS env succeeds",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
+					ObjectMeta: commonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -100,10 +107,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 			{
 				Name: "providing incorrect ingress service ports and KONG_PORT_MAPS env fails",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
+					ObjectMeta: commonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -152,15 +156,13 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("is forbidden: ValidatingAdmissionPolicy 'ports.dataplane.gateway-operator.konghq.com' with binding 'binding-ports.dataplane.gateway-operator.konghq.com' denied request: Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PORT_MAPS env"),
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorMessage:          lo.ToPtr("is forbidden: ValidatingAdmissionPolicy 'ports.dataplane.gateway-operator.konghq.com' with binding 'binding-ports.dataplane.gateway-operator.konghq.com' denied request: Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PORT_MAPS env"),
 			},
 			{
 				Name: "providing correct ingress service ports and KONG_PROXY_LISTEN env succeeds",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
+					ObjectMeta: commonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -207,10 +209,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 			{
 				Name: "providing incorrect ingress service ports and KONG_PROXY_LISTEN env fails",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
+					ObjectMeta: commonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -254,7 +253,8 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("is forbidden: ValidatingAdmissionPolicy 'ports.dataplane.gateway-operator.konghq.com' with binding 'binding-ports.dataplane.gateway-operator.konghq.com' denied request: Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PORT_MAPS env"),
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorMessage:          lo.ToPtr("is forbidden: ValidatingAdmissionPolicy 'ports.dataplane.gateway-operator.konghq.com' with binding 'binding-ports.dataplane.gateway-operator.konghq.com' denied request: Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PORT_MAPS env"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})

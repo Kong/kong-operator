@@ -70,6 +70,7 @@ func apply(ctx context.Context, restConfig *rest.Config, data []byte) (result []
 				_, errPatch := dr.Patch(ctx, obj.GetName(), types.ApplyPatchType, dataBytes, metav1.PatchOptions{
 					FieldManager: "test",
 				})
+
 				if errPatch != nil {
 					err = errors.Join(errPatch, err)
 				} else {
