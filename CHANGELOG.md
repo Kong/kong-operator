@@ -58,6 +58,8 @@
   For more information on this migration please consult
   [kubernetes-sigs/kubebuilder#3907][kubebuilder_3907].
   [#956](https://github.com/Kong/gateway-operator/pull/956)
+- Move `DataPlane` ports validation to `ValidationAdmissionPolicy` and `ValidationAdmissionPolicyBinding`.
+  [#1007](https://github.com/Kong/gateway-operator/pull/1007)
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 

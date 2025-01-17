@@ -7,6 +7,7 @@ namePrefix: gateway-operator-
 resources:
 - ../rbac
 - ../manager
+- ./validating_policies/
 
 patches:
 - path: manager_metrics_access_filter_rbac_patch.yaml
