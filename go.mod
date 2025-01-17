@@ -41,7 +41,7 @@ require (
 	// TODO: Use official release when
 	// https://github.com/oras-project/oras-go/pull/850 becomes part of it.
 	oras.land/oras-go/v2 v2.5.1-0.20250115103459-a15da41d19be
-	sigs.k8s.io/controller-runtime v0.19.4
+	sigs.k8s.io/controller-runtime v0.20.0
 	sigs.k8s.io/gateway-api v1.2.1
 	sigs.k8s.io/kustomize/api v0.19.0
 )
@@ -237,6 +237,7 @@ require (
 
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/google/btree v1.1.3 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	golang.org/x/oauth2 v0.25.0 // indirect
