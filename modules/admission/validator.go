@@ -28,9 +28,7 @@ func (v *validator) ValidateDataPlane(ctx context.Context, dataPlane, old operat
 			return err
 		}
 		if operation == admissionv1.Update {
-			if err := v.dataplaneValidator.ValidateUpdate(&dataPlane, &old); err != nil {
-				return err
-			}
+			return nil
 		}
 		return nil
 	default:
