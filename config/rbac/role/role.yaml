@@ -21,13 +21,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - configmaps/status
-  - serviceaccounts/status
-  verbs:
-  - get
-- apiGroups:
-  - ""
-  resources:
   - events
   verbs:
   - create
@@ -97,12 +90,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - apps
-  resources:
-  - deployments/status
-  verbs:
-  - get
 - apiGroups:
   - autoscaling
   resources:
@@ -294,9 +281,9 @@ rules:
   - controlplanes/status
   - dataplanes/status
   - kongplugininstallations/status
+  - konnectextensions/finalizers
   - konnectextensions/status
   verbs:
-  - get
   - patch
   - update
 - apiGroups:
@@ -318,13 +305,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - gateway-operator.konghq.com
-  resources:
-  - konnectextensions/finalizers
-  verbs:
-  - patch
-  - update
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
@@ -422,17 +402,10 @@ rules:
   - konnect.konghq.com
   resources:
   - konnectapiauthconfigurations/finalizers
+  - konnectapiauthconfigurations/status
   - konnectgatewaycontrolplanes/finalizers
   - konnectgatewaycontrolplanes/status
   verbs:
-  - patch
-  - update
-- apiGroups:
-  - konnect.konghq.com
-  resources:
-  - konnectapiauthconfigurations/status
-  verbs:
-  - get
   - patch
   - update
 - apiGroups:
@@ -489,13 +462,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - clusterrolebindings/status
-  - clusterroles/status
-  verbs:
-  - get
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
