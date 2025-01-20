@@ -70,6 +70,9 @@ func (b *KongPluginBindingBuilder) WithControlPlaneRefKonnectNamespaced(name str
 
 // WithConsumerTarget sets the consumer target of the KongPluginBinding.
 func (b *KongPluginBindingBuilder) WithConsumerTarget(consumer string) *KongPluginBindingBuilder {
+	if b.binding.Spec.Targets == nil {
+		b.binding.Spec.Targets = &configurationv1alpha1.KongPluginBindingTargets{}
+	}
 	b.binding.Spec.Targets.ConsumerReference = &configurationv1alpha1.TargetRef{
 		Name: consumer,
 	}
@@ -78,6 +81,9 @@ func (b *KongPluginBindingBuilder) WithConsumerTarget(consumer string) *KongPlug
 
 // WithConsumerGroupTarget sets the consumer group target of the KongPluginBinding.
 func (b *KongPluginBindingBuilder) WithConsumerGroupTarget(cg string) *KongPluginBindingBuilder {
+	if b.binding.Spec.Targets == nil {
+		b.binding.Spec.Targets = &configurationv1alpha1.KongPluginBindingTargets{}
+	}
 	b.binding.Spec.Targets.ConsumerGroupReference = &configurationv1alpha1.TargetRef{
 		Name: cg,
 	}
@@ -86,6 +92,9 @@ func (b *KongPluginBindingBuilder) WithConsumerGroupTarget(cg string) *KongPlugi
 
 // WithServiceTarget sets the service target of the KongPluginBinding.
 func (b *KongPluginBindingBuilder) WithServiceTarget(serviceName string) *KongPluginBindingBuilder {
+	if b.binding.Spec.Targets == nil {
+		b.binding.Spec.Targets = &configurationv1alpha1.KongPluginBindingTargets{}
+	}
 	b.binding.Spec.Targets.ServiceReference = &configurationv1alpha1.TargetRefWithGroupKind{
 		Group: configurationv1alpha1.GroupVersion.Group,
 		Kind:  "KongService",
@@ -96,6 +105,9 @@ func (b *KongPluginBindingBuilder) WithServiceTarget(serviceName string) *KongPl
 
 // WithRouteTarget sets the route target of the KongPluginBinding.
 func (b *KongPluginBindingBuilder) WithRouteTarget(routeName string) *KongPluginBindingBuilder {
+	if b.binding.Spec.Targets == nil {
+		b.binding.Spec.Targets = &configurationv1alpha1.KongPluginBindingTargets{}
+	}
 	b.binding.Spec.Targets.RouteReference = &configurationv1alpha1.TargetRefWithGroupKind{
 		Group: configurationv1alpha1.GroupVersion.Group,
 		Kind:  "KongRoute",
@@ -114,6 +126,12 @@ func (b *KongPluginBindingBuilder) WithOwnerReference(owner client.Object, schem
 	}
 
 	return b, nil
+}
+
+// WithScope sets the scope of the KongPluginBinding.
+func (b *KongPluginBindingBuilder) WithScope(scope configurationv1alpha1.KongPluginBindingScope) *KongPluginBindingBuilder {
+	b.binding.Spec.Scope = scope
+	return b
 }
 
 // Build returns the KongPluginBinding.

@@ -143,6 +143,22 @@ func TestKonnectEntities(t *testing.T) {
 		assertKonnectEntityProgrammed(t, kpb)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
+	globalKPB := deploy.KongPluginBinding(t, ctx, clientNamespaced,
+		konnect.NewKongPluginBindingBuilder().
+			WithPluginRef(kp.Name).
+			WithControlPlaneRefKonnectNamespaced(cp.Name).
+			WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
+			Build(),
+		deploy.WithTestIDLabel(testID),
+	)
+
+	t.Logf("Waiting for KongPluginBinding to be updated with Konnect ID")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: globalKPB.Name, Namespace: globalKPB.Namespace}, globalKPB)
+		require.NoError(t, err)
+		assertKonnectEntityProgrammed(t, globalKPB)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+
 	kup := deploy.KongUpstreamAttachedToCP(t, ctx, clientNamespaced, cp,
 		deploy.WithTestIDLabel(testID),
 		func(obj client.Object) {

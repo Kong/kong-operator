@@ -447,4 +447,64 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
 	})
+
+	t.Run("binding globally", func(t *testing.T) {
+		proxyCacheKongPlugin := deploy.ProxyCachePlugin(t, ctx, clientNamespaced)
+		pluginID := uuid.NewString()
+
+		sdk.PluginSDK.EXPECT().
+			CreatePlugin(
+				mock.Anything,
+				cp.GetKonnectStatus().GetKonnectID(),
+				mock.MatchedBy(func(pi sdkkonnectcomp.PluginInput) bool {
+					return pi.Consumer == nil && pi.ConsumerGroup == nil && pi.Route == nil && pi.Service == nil
+				})).
+			Return(
+				&sdkkonnectops.CreatePluginResponse{
+					Plugin: &sdkkonnectcomp.Plugin{
+						ID: lo.ToPtr(pluginID),
+					},
+				},
+				nil,
+			)
+		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
+			konnect.NewKongPluginBindingBuilder().
+				WithControlPlaneRefKonnectNamespaced(cp.Name).
+				WithPluginRef(proxyCacheKongPlugin.Name).
+				WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
+				Build(),
+		)
+		t.Logf(
+			"wait for the controller to pick the new unmanaged global KongPluginBinding %s and create it in Konnect",
+			client.ObjectKeyFromObject(kpb),
+		)
+		assert.EventuallyWithT(t,
+			assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kpb, pluginID),
+			waitTime, tickTime,
+			"KongPluginBinding wasn't created using Konnect API or its KonnectID wasn't set",
+		)
+
+		sdk.PluginSDK.EXPECT().
+			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			Return(
+				&sdkkonnectops.DeletePluginResponse{
+					StatusCode: 200,
+				},
+				nil,
+			)
+
+		t.Logf("delete the unmanaged KongPluginBinding %s, the check it gets collected",
+			client.ObjectKeyFromObject(kpb),
+		)
+		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, k8serrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
+			))
+		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
+
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
 }

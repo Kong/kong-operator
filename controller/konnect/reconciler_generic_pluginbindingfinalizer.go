@@ -88,7 +88,8 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) enqueueObjectRe
 
 		switch any(ent).(type) {
 		case *configurationv1alpha1.KongService:
-			if kpb.Spec.Targets.ServiceReference == nil ||
+			if kpb.Spec.Targets == nil ||
+				kpb.Spec.Targets.ServiceReference == nil ||
 				kpb.Spec.Targets.ServiceReference.Kind != "KongService" ||
 				kpb.Spec.Targets.ServiceReference.Group != configurationv1alpha1.GroupVersion.Group {
 				return nil
@@ -96,7 +97,8 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) enqueueObjectRe
 			name = kpb.Spec.Targets.ServiceReference.Name
 
 		case *configurationv1alpha1.KongRoute:
-			if kpb.Spec.Targets.RouteReference == nil ||
+			if kpb.Spec.Targets == nil ||
+				kpb.Spec.Targets.RouteReference == nil ||
 				kpb.Spec.Targets.RouteReference.Kind != "KongRoute" ||
 				kpb.Spec.Targets.RouteReference.Group != configurationv1alpha1.GroupVersion.Group {
 				return nil
@@ -104,13 +106,13 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) enqueueObjectRe
 			name = kpb.Spec.Targets.RouteReference.Name
 
 		case *configurationv1.KongConsumer:
-			if kpb.Spec.Targets.ConsumerReference == nil {
+			if kpb.Spec.Targets == nil || kpb.Spec.Targets.ConsumerReference == nil {
 				return nil
 			}
 			name = kpb.Spec.Targets.ConsumerReference.Name
 
 		case *configurationv1beta1.KongConsumerGroup:
-			if kpb.Spec.Targets.ConsumerGroupReference == nil {
+			if kpb.Spec.Targets == nil || kpb.Spec.Targets.ConsumerGroupReference == nil {
 				return nil
 			}
 			name = kpb.Spec.Targets.ConsumerGroupReference.Name
