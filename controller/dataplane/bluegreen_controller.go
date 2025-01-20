@@ -526,7 +526,7 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 
 	switch res {
 	case op.Created, op.Updated:
-		log.Debug(logger, "deployment modified", "reason")
+		log.Debug(logger, "deployment modified")
 		// requeue will be triggered by the creation or update of the owned object
 		return deployment, res, nil
 	default:
