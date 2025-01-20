@@ -17,6 +17,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	konnectextensions "github.com/kong/gateway-operator/internal/extensions/konnect"
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -336,15 +337,15 @@ func applyExtensions(ctx context.Context, cl client.Client, logger logr.Logger, 
 	err = applyKonnectExtension(ctx, cl, dataplane)
 	if err != nil {
 		switch {
-		case errors.Is(err, ErrCrossNamespaceReference):
+		case errors.Is(err, konnectextensions.ErrCrossNamespaceReference):
 			condition.Status = metav1.ConditionFalse
 			condition.Reason = string(consts.RefNotPermittedReason)
 			condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
-		case errors.Is(err, ErrKonnectExtensionNotFound):
+		case errors.Is(err, konnectextensions.ErrKonnectExtensionNotFound):
 			condition.Status = metav1.ConditionFalse
 			condition.Reason = string(consts.InvalidExtensionRefReason)
 			condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
-		case errors.Is(err, ErrClusterCertificateNotFound):
+		case errors.Is(err, konnectextensions.ErrClusterCertificateNotFound):
 			condition.Status = metav1.ConditionFalse
 			condition.Reason = string(consts.InvalidSecretRefReason)
 			condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")

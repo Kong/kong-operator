@@ -38,9 +38,7 @@ const numReplicasWhenNoDataPlane = 0
 // Reconciler - Status Management
 // -----------------------------------------------------------------------------
 
-func (r *Reconciler) ensureIsMarkedScheduled(
-	cp *operatorv1beta1.ControlPlane,
-) bool {
+func (r *Reconciler) ensureIsMarkedScheduled(cp *operatorv1beta1.ControlPlane) {
 	_, present := k8sutils.GetCondition(ConditionTypeProvisioned, cp)
 	if !present {
 		condition := k8sutils.NewCondition(
@@ -51,10 +49,7 @@ func (r *Reconciler) ensureIsMarkedScheduled(
 		)
 
 		k8sutils.SetCondition(condition, cp)
-		return true
 	}
-
-	return false
 }
 
 // ensureDataPlaneStatus ensures that the dataplane is in the correct state
@@ -85,6 +80,27 @@ func (r *Reconciler) ensureDataPlaneStatus(
 		k8sutils.SetCondition(newCondition, cp)
 	}
 	return dataplaneIsSet
+}
+
+// patchControlPlaneStatus patches the resource status only when there are changes
+// that requires it.
+func patchControlPlaneStatus(ctx context.Context, cl client.Client, logger logr.Logger, updated *operatorv1beta1.ControlPlane) (bool, error) {
+	current := &operatorv1beta1.ControlPlane{}
+
+	err := cl.Get(ctx, client.ObjectKeyFromObject(updated), current)
+	if client.IgnoreNotFound(err) != nil {
+		return false, err
+	}
+
+	if k8sutils.NeedsUpdate(current, updated) {
+		log.Debug(logger, "patching ControlPlane status", "status", updated.Status)
+		if err := cl.Status().Patch(ctx, updated, client.MergeFrom(current)); err != nil {
+			return false, fmt.Errorf("failed updating ControlPlane's status : %w", err)
+		}
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // -----------------------------------------------------------------------------
