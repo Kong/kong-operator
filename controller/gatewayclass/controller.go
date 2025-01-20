@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -16,7 +15,6 @@ import (
 	"github.com/kong/gateway-operator/controller"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
-	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
@@ -55,29 +53,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	if !gwc.IsAccepted() {
-		oldGwc := gwc.DeepCopy()
+	oldGwc := gwc.DeepCopy()
 
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				consts.ConditionType(gatewayv1.GatewayClassConditionStatusAccepted),
-				metav1.ConditionTrue,
-				consts.ConditionReason(gatewayv1.GatewayClassReasonAccepted),
-				"the gatewayclass has been accepted by the operator",
-				gwc.GetGeneration(),
-			),
-			gwc,
-		)
-		if err := r.Status().Patch(ctx, gwc.GatewayClass, client.MergeFrom(oldGwc)); err != nil {
-			if k8serrors.IsConflict(err) {
-				log.Debug(logger, "conflict found when updating GatewayClass, retrying")
-				return ctrl.Result{
-					Requeue:      true,
-					RequeueAfter: controller.RequeueWithoutBackoff,
-				}, nil
-			}
-			return ctrl.Result{}, fmt.Errorf("failed patching GatewayClass: %w", err)
+	condition, err := getAcceptedCondition(ctx, r.Client, gwc.GatewayClass)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get accepted condition: %w", err)
+	}
+	k8sutils.SetCondition(*condition, gwc)
+
+	if err := r.Status().Patch(ctx, gwc.GatewayClass, client.MergeFrom(oldGwc)); err != nil {
+		if k8serrors.IsConflict(err) {
+			log.Debug(logger, "conflict found when updating GatewayClass, retrying")
+			return ctrl.Result{
+				Requeue:      true,
+				RequeueAfter: controller.RequeueWithoutBackoff,
+			}, nil
 		}
+		return ctrl.Result{}, fmt.Errorf("failed patching GatewayClass: %w", err)
 	}
 
 	return ctrl.Result{}, nil

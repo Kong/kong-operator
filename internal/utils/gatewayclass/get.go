@@ -4,14 +4,19 @@ import (
 	"context"
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	"github.com/kong/gateway-operator/pkg/consts"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
 // Get returns a decorated GatewayClass object for the provided GatewayClass name. If the GatewayClass is
 // not found or is not supported, an `ErrUnsupportedGatewayClass` error is returned with a descriptive message.
+// If the GatewayClass is not accepted, an `ErrNotAcceptedGatewayClass` error is returned with a descriptive message.
 func Get(ctx context.Context, cl client.Client, gatewayClassName string) (*Decorator, error) {
 	if gatewayClassName == "" {
 		return nil, operatorerrors.NewErrUnsupportedGateway("no GatewayClassName provided")
@@ -29,6 +34,10 @@ func Get(ctx context.Context, cl client.Client, gatewayClassName string) (*Decor
 			gwc.Spec.ControllerName,
 			vars.ControllerName(),
 		))
+	}
+	acceptedCondition, found := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayClassConditionStatusAccepted), gwc)
+	if !found || acceptedCondition.Status != metav1.ConditionTrue {
+		return nil, operatorerrors.NewErrNotAcceptedGatewayClass(gatewayClassName, acceptedCondition)
 	}
 
 	return gwc, nil
