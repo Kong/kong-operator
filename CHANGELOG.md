@@ -31,6 +31,9 @@
   owning service. Currently specifying ingress service of `DataPlane` is
   supported.
   [#966](https://github.com/Kong/gateway-operator/pull/966)
+- Added support for `ControlPlaneRef`s with `type` equal to `konnectID` for
+  all Konnect entities that refer to a `ControlPlane`.
+  [#985](https://github.com/Kong/gateway-operator/pull/985)
 
 ### Changed
 
@@ -55,6 +58,8 @@
   For more information on this migration please consult
   [kubernetes-sigs/kubebuilder#3907][kubebuilder_3907].
   [#956](https://github.com/Kong/gateway-operator/pull/956)
+- Move `DataPlane` ports validation to `ValidationAdmissionPolicy` and `ValidationAdmissionPolicyBinding`.
+  [#1007](https://github.com/Kong/gateway-operator/pull/1007)
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 

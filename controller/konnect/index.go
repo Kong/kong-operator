@@ -1,6 +1,8 @@
 package konnect
 
 import (
+	"context"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
@@ -13,24 +15,33 @@ type ReconciliationIndexOption struct {
 	ExtractValue client.IndexerFunc
 }
 
-// controlPlaneKonnectNamespacedRefAsSlice returns a slice of strings representing
-// the KonnectNamespacedRef of the object.
-func controlPlaneKonnectNamespacedRefAsSlice[
+// indexKonnectGatewayControlPlaneRef returns a function that extracts the KonnectGatewayControlPlane reference from the
+// object and returns it as a slice of strings for indexing.
+func indexKonnectGatewayControlPlaneRef[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
-](ent TEnt) []string {
-	cpRef, ok := controlPlaneRefIsKonnectNamespacedRef(ent)
+](cl client.Client) client.IndexerFunc {
+	return func(obj client.Object) []string {
+		o, ok := obj.(TEnt)
+		if !ok {
+			return nil
+		}
+		return controlPlaneRefAsSlice(o, cl)
+	}
+}
+
+// controlPlaneRefAsSlice returns a slice of strings representing the KonnectNamespacedRef of the object.
+func controlPlaneRefAsSlice[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt, cl client.Client) []string {
+	cpRef, ok := getControlPlaneRef(ent).Get()
 	if !ok {
 		return nil
 	}
-
-	konnectRef := cpRef.KonnectNamespacedRef
-	// NOTE: cross namespace refs are not supported yet.
-	// TODO: https://github.com/Kong/kubernetes-configuration/issues/36
-	// Specifying the same namespace is optional and is supported.
-	if konnectRef.Namespace != "" && konnectRef.Namespace != ent.GetNamespace() {
+	cp, err := getCPForRef(context.Background(), cl, cpRef, ent.GetNamespace())
+	if err != nil {
 		return nil
 	}
-
-	return []string{ent.GetNamespace() + "/" + konnectRef.Name}
+	return []string{client.ObjectKeyFromObject(cp).String()}
 }

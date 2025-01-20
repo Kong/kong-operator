@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -116,26 +115,6 @@ func FetchPlugin(ctx context.Context, imageURL string, credentialsStore credenti
 	}
 
 	return extractKongPluginFromLayer(contentOfLayerWithPlugin)
-}
-
-// CredentialsStoreFromString expects content of typical configuration as a string, described
-// in https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry
-// and returns credentials.Store.
-// This is typical way how private registries are used with Docker and Kubernetes.
-func CredentialsStoreFromString(s string) (credentials.Store, error) {
-	// TODO: Now we create temporary file, which is not great and should be changed,
-	// but it's the only way to use credentials.NewFileStore(...) which robustly
-	// parses config.json (format used by Docker and Kubernetes).
-	tmpFile, err := os.CreateTemp("", "credentials")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temporary file: %w", err)
-	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
-	if _, err = tmpFile.WriteString(s); err != nil {
-		return nil, fmt.Errorf("failed to write credentials to file: %w", err)
-	}
-	return credentials.NewFileStore(tmpFile.Name())
 }
 
 type sizeLimitBytes int64

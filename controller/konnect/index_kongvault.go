@@ -12,21 +12,12 @@ const (
 )
 
 // IndexOptionsForKongVault returns required Index options for KongVault reconciler.
-func IndexOptionsForKongVault() []ReconciliationIndexOption {
+func IndexOptionsForKongVault(cl client.Client) []ReconciliationIndexOption {
 	return []ReconciliationIndexOption{
 		{
 			IndexObject:  &configurationv1alpha1.KongVault{},
 			IndexField:   IndexFieldKongVaultOnKonnectGatewayControlPlane,
-			ExtractValue: kongVaultReferencesKonnectGatewayControlPlane,
+			ExtractValue: indexKonnectGatewayControlPlaneRef[configurationv1alpha1.KongVault](cl),
 		},
 	}
-}
-
-func kongVaultReferencesKonnectGatewayControlPlane(object client.Object) []string {
-	vault, ok := object.(*configurationv1alpha1.KongVault)
-	if !ok {
-		return nil
-	}
-
-	return controlPlaneKonnectNamespacedRefAsSlice(vault)
 }

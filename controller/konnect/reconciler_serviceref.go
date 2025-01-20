@@ -155,7 +155,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 			}
 			if k8serrors.IsNotFound(err) {
 				return ctrl.Result{}, ReferencedControlPlaneDoesNotExistError{
-					Reference: nn,
+					Reference: cpRef,
 					Err:       err,
 				}
 			}

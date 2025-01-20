@@ -53,9 +53,7 @@ func TestKongRoute(t *testing.T) {
 	svc := deploy.KongServiceAttachedToCPWithID(t, ctx, clientNamespaced, cp)
 
 	t.Run("adding, patching and deleting KongRoute", func(t *testing.T) {
-		const (
-			routeID = "route-12345"
-		)
+		const routeID = "route-12345"
 
 		t.Log("Setting up a watch for KongRoute events")
 		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl, client.InNamespace(ns.Name))
@@ -88,6 +86,9 @@ func TestKongRoute(t *testing.T) {
 
 		t.Log("Waiting for Route to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, watch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
+			if r.GetName() != createdRoute.GetName() {
+				return false
+			}
 			return r.GetKonnectID() == routeID && k8sutils.IsProgrammed(r)
 		}, "KongRoute didn't get Programmed status condition or didn't get the correct (route-12345) Konnect ID assigned")
 

@@ -146,11 +146,8 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		}
 		if k8serrors.IsNotFound(err) {
 			return ctrl.Result{}, ReferencedControlPlaneDoesNotExistError{
-				Reference: types.NamespacedName{
-					Namespace: ent.GetNamespace(),
-					Name:      cpRef.KonnectNamespacedRef.Name,
-				},
-				Err: err,
+				Reference: cpRef,
+				Err:       err,
 			}
 		}
 		return ctrl.Result{}, err

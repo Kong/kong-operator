@@ -12,21 +12,12 @@ const (
 )
 
 // IndexOptionsForKongCACertificate returns required Index options for KongCACertificate reconclier.
-func IndexOptionsForKongCACertificate() []ReconciliationIndexOption {
+func IndexOptionsForKongCACertificate(cl client.Client) []ReconciliationIndexOption {
 	return []ReconciliationIndexOption{
 		{
 			IndexObject:  &configurationv1alpha1.KongCACertificate{},
 			IndexField:   IndexFieldKongCACertificateOnKonnectGatewayControlPlane,
-			ExtractValue: konnectGatewayControlPlaneRefFromKongCACertificate,
+			ExtractValue: indexKonnectGatewayControlPlaneRef[configurationv1alpha1.KongCACertificate](cl),
 		},
 	}
-}
-
-// konnectGatewayControlPlaneRefFromKongCACertificate returns namespace/name of referenced KonnectGatewayControlPlane in KongCACertificate spec.
-func konnectGatewayControlPlaneRefFromKongCACertificate(obj client.Object) []string {
-	cert, ok := obj.(*configurationv1alpha1.KongCACertificate)
-	if !ok {
-		return nil
-	}
-	return controlPlaneKonnectNamespacedRefAsSlice(cert)
 }

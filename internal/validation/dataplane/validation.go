@@ -4,14 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
-	"strconv"
-	"strings"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
@@ -130,115 +125,5 @@ func (v *Validator) ValidateDataPlaneDeploymentOptions(namespace string, opts *o
 func (v *Validator) ValidateDataPlaneIngressServiceOptions(
 	namespace string, opts *operatorv1beta1.DataPlaneServiceOptions, proxyContainer *corev1.Container,
 ) error {
-	if len(opts.Ports) > 0 {
-		kongPortMaps, hasKongPortMaps, err := k8sutils.GetEnvValueFromContainer(context.Background(), proxyContainer, namespace, "KONG_PORT_MAPS", v.c)
-		if err != nil {
-			return err
-		}
-		kongProxyListen, hasProxyListen, err := k8sutils.GetEnvValueFromContainer(context.Background(), proxyContainer, namespace, "KONG_PROXY_LISTEN", v.c)
-		if err != nil {
-			return err
-		}
-
-		var portNumberMap map[int32]int32 = make(map[int32]int32, 0)
-		if hasKongPortMaps {
-			portNumberMap, err = parseKongPortMaps(kongPortMaps)
-			if err != nil {
-				return err
-			}
-
-		}
-
-		var listenPortNumbers []int32 = make([]int32, 0)
-		if hasProxyListen {
-			listenPortNumbers, err = parseKongProxyListenPortNumbers(kongProxyListen)
-			if err != nil {
-				return err
-			}
-
-		}
-
-		for _, port := range opts.Ports {
-			targetPortNumber, err := getTargetPortNumber(port.TargetPort, proxyContainer)
-			if err != nil {
-				return fmt.Errorf("failed to get target port of port %d (port name %s) of ingress service: %w",
-					port.Port, port.Name, err)
-			}
-			if hasKongPortMaps && portNumberMap[port.Port] != targetPortNumber {
-				return fmt.Errorf("KONG_PORT_MAPS specified but target port %s not properly set", port.TargetPort.String())
-			}
-			if hasProxyListen && !lo.Contains(listenPortNumbers, targetPortNumber) {
-				return fmt.Errorf("target port %s not included in KONG_PROXY_LISTEN", port.TargetPort.String())
-			}
-		}
-	}
-
 	return nil
-}
-
-func getTargetPortNumber(targetPort intstr.IntOrString, container *corev1.Container) (int32, error) {
-	switch targetPort.Type {
-	case intstr.Int:
-		return targetPort.IntVal, nil
-	case intstr.String:
-		for _, containerPort := range container.Ports {
-			if containerPort.Name == targetPort.StrVal {
-				return containerPort.ContainerPort, nil
-			}
-		}
-		return 0, fmt.Errorf("port %s not found in container", targetPort.StrVal)
-	}
-
-	return 0, fmt.Errorf("unknown targetPort Type: %v", targetPort.Type)
-}
-
-// parseKongPortMaps parses port maps specified in `proxy_maps` configuration.
-// and returns a map with expose port -> listening port.
-// For example, "80:8000,443:8443" will be parsed into map{80:8000,443:8443}.
-func parseKongPortMaps(kongPortMapEnv string) (map[int32]int32, error) {
-	portMaps := strings.Split(kongPortMapEnv, ",")
-	portNumberMap := map[int32]int32{}
-	for _, port := range portMaps {
-		parts := strings.SplitN(port, ":", 2)
-		if len(parts) != 2 {
-			return nil, fmt.Errorf("port map item %s cannot be parsed into 'port:port' format", port)
-		}
-		servicePort, err := strconv.ParseInt(parts[0], 10, 32)
-		if err != nil {
-			return nil, fmt.Errorf("port %s cannot be parsed into number: %w", parts[0], err)
-		}
-		targetPort, err := strconv.ParseInt(parts[1], 10, 32)
-		if err != nil {
-			return nil, fmt.Errorf("port %s cannot be parsed into number: %w", parts[1], err)
-		}
-		portNumberMap[int32(servicePort)] = int32(targetPort)
-	}
-	return portNumberMap, nil
-}
-
-// parseKongProxyListenPortNumbers parses `proxy_listen` configuration to listening ports.
-// It returns the list of listening port numbers.  For example,
-// `"0.0.0.0:8000 reuseport backlog=16384, 0.0.0.0:8443 http2 ssl reuseport backlog=16384`
-// will be parsed into []int32{8000,8443}.
-func parseKongProxyListenPortNumbers(kongProxyListenEnv string) ([]int32, error) {
-	listenAddresses := strings.Split(kongProxyListenEnv, ",")
-	retPorts := make([]int32, 0, len(listenAddresses))
-	for _, addr := range listenAddresses {
-		addr = strings.Trim(addr, " ")
-		// The splitted single listen address would be a list of strings starting with the host and port
-		// and following with options of listening separated by spaces, like `0.0.0.0:8000 reuseport backlog=16384`.
-		// So we extract the part before the first space as the host and port.
-		// It is possible that the listen port have only one part like `0.0.0.0:8000` so we do not check presence of space.
-		hostPort, _, _ := strings.Cut(addr, " ")
-		_, port, err := net.SplitHostPort(hostPort)
-		if err != nil {
-			return nil, fmt.Errorf("listening address %s cannot be parsed into host:port format: %w", hostPort, err)
-		}
-		portNum, err := strconv.ParseInt(port, 10, 32)
-		if err != nil {
-			return nil, fmt.Errorf("listening port %s cannot be parsed to number: %w", port, err)
-		}
-		retPorts = append(retPorts, int32(portNum))
-	}
-	return retPorts, nil
 }
