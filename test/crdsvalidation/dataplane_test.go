@@ -61,7 +61,7 @@ func TestDataPlane(t *testing.T) {
 				},
 			},
 			{
-				Name: "dbmode off is supported",
+				Name: "dbmode '' is supported",
 				TestObject: &operatorv1beta1.DataPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						GenerateName: "dp-",
@@ -94,7 +94,7 @@ func TestDataPlane(t *testing.T) {
 				},
 			},
 			{
-				Name: "dbmode '' is supported",
+				Name: "dbmode off is supported",
 				TestObject: &operatorv1beta1.DataPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						GenerateName: "dp-",
