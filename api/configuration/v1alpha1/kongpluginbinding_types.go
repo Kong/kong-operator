@@ -22,6 +22,22 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
+// KongPluginBindingScope defines the scope of the plugin binding.
+// Allowed values are:
+// - OnlyTargets
+// - GlobalInControlPlane
+// +kubebuilder:validation:Enum=OnlyTargets;GlobalInControlPlane
+type KongPluginBindingScope string
+
+const (
+	// KongPluginBindingScopeOnlyTargets is the scope for the plugin binding to be applied only to the targets.
+	KongPluginBindingScopeOnlyTargets KongPluginBindingScope = "OnlyTargets"
+
+	// KongPluginBindingScopeGlobalInControlPlane is the scope for the plugin binding to be applied to all entities in the
+	// control plane (a.k.a. global scope).
+	KongPluginBindingScopeGlobalInControlPlane KongPluginBindingScope = "GlobalInControlPlane"
+)
+
 // KongPluginBinding is the schema for Plugin Bindings API which defines a Kong Plugin Binding.
 //
 // +genclient
@@ -49,6 +65,8 @@ type KongPluginBinding struct {
 }
 
 // KongPluginBindingSpec defines specification of a KongPluginBinding.
+// +kubebuilder:validation:XValidation:message="At least one target reference must be set when scope is 'OnlyTargets'",rule="self.scope == 'OnlyTargets' ? has(self.targets) && (has(self.targets.routeRef) || has(self.targets.serviceRef) || has(self.targets.consumerRef) || has(self.targets.consumerGroupRef)) : true"
+// +kubebuilder:validation:XValidation:message="No targets must be set when scope is 'GlobalInControlPlane'",rule="self.scope == 'GlobalInControlPlane' ? !has(self.targets) : true"
 // +apireference:kgo:include
 type KongPluginBindingSpec struct {
 	// PluginReference is a reference to the KongPlugin or KongClusterPlugin resource.
@@ -73,14 +91,18 @@ type KongPluginBindingSpec struct {
 	// 11. Service
 	//
 	// +kubebuilder:validation:XValidation:message="Cannot set Consumer and ConsumerGroup at the same time",rule="(has(self.consumerRef) ? !has(self.consumerGroupRef) : true)"
-	// +kubebuilder:validation:XValidation:message="At least one entity reference must be set",rule="has(self.routeRef) || has(self.serviceRef) || has(self.consumerRef) || has(self.consumerGroupRef)"
 	// +kubebuilder:validation:XValidation:message="KongRoute can be used only when serviceRef is unset or set to KongService",rule="(has(self.routeRef) && self.routeRef.kind == 'KongRoute') ? (!has(self.serviceRef) || self.serviceRef.kind == 'KongService') : true"
 	// +kubebuilder:validation:XValidation:message="KongService can be used only when routeRef is unset or set to KongRoute",rule="(has(self.serviceRef) && self.serviceRef.kind == 'KongService') ? (!has(self.routeRef) || self.routeRef.kind == 'KongRoute') : true"
-	Targets KongPluginBindingTargets `json:"targets"`
+	Targets *KongPluginBindingTargets `json:"targets,omitempty"`
 
 	// ControlPlaneRef is a reference to a ControlPlane this KongPluginBinding is associated with.
 	// +optional
 	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+
+	// Scope defines the scope of the plugin binding.
+	// +optional
+	// +kubebuilder:default:=OnlyTargets
+	Scope KongPluginBindingScope `json:"scope,omitempty"`
 }
 
 // KongPluginBindingTargets contains the targets references.

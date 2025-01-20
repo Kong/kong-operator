@@ -1783,7 +1783,11 @@ func (in *KongPluginBindingList) DeepCopyObject() runtime.Object {
 func (in *KongPluginBindingSpec) DeepCopyInto(out *KongPluginBindingSpec) {
 	*out = *in
 	in.PluginReference.DeepCopyInto(&out.PluginReference)
-	in.Targets.DeepCopyInto(&out.Targets)
+	if in.Targets != nil {
+		in, out := &in.Targets, &out.Targets
+		*out = new(KongPluginBindingTargets)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.ControlPlaneRef != nil {
 		in, out := &in.ControlPlaneRef, &out.ControlPlaneRef
 		*out = new(ControlPlaneRef)
