@@ -1,9 +1,7 @@
 package dataplane
 
 import (
-	"context"
 	"errors"
-	"fmt"
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
@@ -92,32 +90,6 @@ func (v *Validator) ValidateIfRolloutInProgress(dataplane, oldDataPlane *operato
 
 // ValidateDataPlaneDeploymentOptions validates the DeploymentOptions field of DataPlane object.
 func (v *Validator) ValidateDataPlaneDeploymentOptions(namespace string, opts *operatorv1beta1.DeploymentOptions) error {
-	if opts == nil || opts.PodTemplateSpec == nil {
-		// Can't use empty DeploymentOptions because we still require users
-		// to provide an image
-		// Related: https://github.com/Kong/gateway-operator/issues/754.
-		return errors.New("DataPlane requires an image")
-	}
-
-	// Until https://github.com/Kong/gateway-operator/issues/20 is resolved we
-	// require DataPlanes that they are provided with image and version set.
-	// Related: https://github.com/Kong/gateway-operator/issues/754.
-	container := k8sutils.GetPodContainerByName(&opts.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
-	if container == nil {
-		return fmt.Errorf("couldn't find proxy container in DataPlane spec")
-	}
-
-	// validate db mode.
-	dbMode, _, err := k8sutils.GetEnvValueFromContainer(context.Background(), container, namespace, consts.EnvVarKongDatabase, v.c)
-	if err != nil {
-		return err
-	}
-
-	// only support dbless mode.
-	if dbMode != "" && dbMode != "off" {
-		return fmt.Errorf("database backend %s of DataPlane not supported currently", dbMode)
-	}
-
 	return nil
 }
 

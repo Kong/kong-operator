@@ -9455,6 +9455,13 @@ spec:
           rule: has(self.spec.deployment.podTemplateSpec) && has(self.spec.deployment.podTemplateSpec.spec.containers)
             && self.spec.deployment.podTemplateSpec.spec.containers.exists(c, c.name
             == 'proxy' && has(c.image))
+        - message: DataPlane supports only db mode 'off'
+          rule: '!has(self.spec.deployment.podTemplateSpec) ? true : ( self.spec.deployment.podTemplateSpec.spec.containers.size()
+            == 0 || self.spec.deployment.podTemplateSpec.spec.containers[0].name ==
+            ''proxy'' ? (!has(self.spec.deployment.podTemplateSpec.spec.containers[0].env)
+            ? true : self.spec.deployment.podTemplateSpec.spec.containers[0].env.all(e,
+            e.name != ''KONG_DATABASE'' || e.value == ''off'' || e.value == ''''))
+            : true)'
     served: true
     storage: true
     subresources:

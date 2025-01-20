@@ -60,6 +60,106 @@ func TestDataPlane(t *testing.T) {
 					},
 				},
 			},
+			{
+				Name: "dbmode '' is supported",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "dp-",
+						Namespace:    ns.Name,
+					},
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  "proxy",
+													Image: "kong:3.9",
+													Env: []corev1.EnvVar{
+														{
+															Name:  "KONG_DATABASE",
+															Value: "",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "dbmode off is supported",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "dp-",
+						Namespace:    ns.Name,
+					},
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  "proxy",
+													Image: "kong:3.9",
+													Env: []corev1.EnvVar{
+														{
+															Name:  "KONG_DATABASE",
+															Value: "off",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "dbmode postgres is not supported",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "dp-",
+						Namespace:    ns.Name,
+					},
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  "proxy",
+													Image: "kong:3.9",
+													Env: []corev1.EnvVar{
+														{
+															Name:  "KONG_DATABASE",
+															Value: "postgres",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("DataPlane supports only db mode 'off'"),
+			},
 		}.RunWithConfig(t, cfg, scheme.Get())
 	})
 }
