@@ -57,16 +57,61 @@ func TestGet(t *testing.T) {
 			),
 		},
 		{
-			name:             "gateway class supported",
+			name:             "gateway class supported but not accepted",
+			gatewayClassName: "gateway-class-not-accepted",
+			objectsToAdd: []client.Object{
+				&gatewayv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "gateway-class-not-accepted",
+					},
+					Spec: gatewayv1.GatewayClassSpec{
+						ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
+					},
+					Status: gatewayv1.GatewayClassStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:    string(gatewayv1.GatewayClassConditionStatusAccepted),
+								Status:  metav1.ConditionFalse,
+								Reason:  string(gatewayv1.GatewayClassReasonInvalidParameters),
+								Message: "ParametersRef must reference a gateway-operator.konghq.com/GatewayConfiguration",
+							},
+						},
+					},
+				},
+			},
+			expectedError: operatorerrors.NewErrNotAcceptedGatewayClass(
+				"gateway-class-not-accepted",
+				metav1.Condition{
+					Type:    string(gatewayv1.GatewayClassConditionStatusAccepted),
+					Status:  metav1.ConditionFalse,
+					Reason:  string(gatewayv1.GatewayClassReasonInvalidParameters),
+					Message: "ParametersRef must reference a gateway-operator.konghq.com/GatewayConfiguration",
+				},
+			),
+		},
+		{
+			name:             "gateway class supported and accepted",
 			gatewayClassName: "gateway-class-2",
-			objectsToAdd: []client.Object{&gatewayv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "gateway-class-2",
+			objectsToAdd: []client.Object{
+				&gatewayv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "gateway-class-2",
+					},
+					Spec: gatewayv1.GatewayClassSpec{
+						ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
+					},
+					Status: gatewayv1.GatewayClassStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:    string(gatewayv1.GatewayClassConditionStatusAccepted),
+								Status:  metav1.ConditionTrue,
+								Reason:  string(gatewayv1.GatewayClassReasonAccepted),
+								Message: "GatewayClass is accepted",
+							},
+						},
+					},
 				},
-				Spec: gatewayv1.GatewayClassSpec{
-					ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
-				},
-			}},
+			},
 			expectedError: nil,
 		},
 	}

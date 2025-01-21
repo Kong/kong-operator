@@ -69,8 +69,19 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// See: https://github.com/kubernetes-sigs/controller-runtime/issues/1996
 	gwc, err := gatewayclass.Get(ctx, r.Client, aigateway.Spec.GatewayClassName)
 	if err != nil {
-		if errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{}) {
-			log.Debug(logger, "resource not supported, ignoring", "ExpectedGatewayClass", vars.ControllerName())
+		switch {
+		case errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{}):
+			log.Debug(logger, "resource not supported, ignoring",
+				"expectedGatewayClass", vars.ControllerName(),
+				"gatewayClass", aigateway.Spec.GatewayClassName,
+				"reason", err.Error(),
+			)
+			return ctrl.Result{}, nil
+		case errors.As(err, &operatorerrors.ErrNotAcceptedGatewayClass{}):
+			log.Debug(logger, "GatewayClass not accepted, ignoring",
+				"gatewayClass", aigateway.Spec.GatewayClassName,
+				"reason", err.Error(),
+			)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err

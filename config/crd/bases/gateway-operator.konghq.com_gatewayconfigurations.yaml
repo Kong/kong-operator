@@ -16584,7 +16584,6 @@ spec:
                                           and tests succeed, OR if you even want it to break before performing
                                           the promotion to allow manual inspection.
                                         enum:
-                                        - AutomaticPromotion
                                         - BreakBeforePromotion
                                         type: string
                                     required:
