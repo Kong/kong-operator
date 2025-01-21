@@ -168,9 +168,11 @@ type RolloutResources struct {
 // which control how the operator handles resources during and after a rollout.
 // +apireference:kgo:include
 type RolloutResourcePlan struct {
+	// TODO: https://github.com/Kong/gateway-operator/issues/163
+
 	// Deployment describes how the operator manages Deployments during and after a rollout.
 	//
-	// +kubebuilder:validation:Enum=ScaleDownOnPromotionScaleUpOnRollout;DeleteOnPromotionRecreateOnRollout
+	// +kubebuilder:validation:Enum=ScaleDownOnPromotionScaleUpOnRollout
 	// +kubebuilder:default=ScaleDownOnPromotionScaleUpOnRollout
 	Deployment RolloutResourcePlanDeployment `json:"deployment,omitempty"`
 }

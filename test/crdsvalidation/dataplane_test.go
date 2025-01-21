@@ -21,26 +21,25 @@ func TestDataPlane(t *testing.T) {
 	ctx := context.Background()
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get())
 
+	commonObjectMeta := metav1.ObjectMeta{
+		GenerateName: "dp-",
+		Namespace:    ns.Name,
+	}
+
 	t.Run("spec", func(t *testing.T) {
 		kcfgcrdsvalidation.TestCasesGroup[*operatorv1beta1.DataPlane]{
 			{
 				Name: "not providing image fails",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
-					Spec: operatorv1beta1.DataPlaneSpec{},
+					ObjectMeta: commonObjectMeta,
+					Spec:       operatorv1beta1.DataPlaneSpec{},
 				},
 				ExpectedErrorMessage: lo.ToPtr("DataPlane requires an image to be set on proxy container"),
 			},
 			{
 				Name: "providing image succeeds",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
+					ObjectMeta: commonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -64,10 +63,7 @@ func TestDataPlane(t *testing.T) {
 			{
 				Name: "dbmode '' is supported",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
+					ObjectMeta: commonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -97,10 +93,7 @@ func TestDataPlane(t *testing.T) {
 			{
 				Name: "dbmode off is supported",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
+					ObjectMeta: commonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -130,10 +123,7 @@ func TestDataPlane(t *testing.T) {
 			{
 				Name: "dbmode postgres is not supported",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
+					ObjectMeta: commonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -164,10 +154,7 @@ func TestDataPlane(t *testing.T) {
 			{
 				Name: "can't update DataPlane when rollout in progress",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
+					ObjectMeta: commonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -213,10 +200,7 @@ func TestDataPlane(t *testing.T) {
 			{
 				Name: "can update DataPlane when rollout not in progress",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
+					ObjectMeta: commonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -261,10 +245,7 @@ func TestDataPlane(t *testing.T) {
 			{
 				Name: "BlueGreen promotion strategy AutomaticPromotion is not supported",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
+					ObjectMeta: commonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -304,10 +285,7 @@ func TestDataPlane(t *testing.T) {
 			{
 				Name: "BlueGreen promotion strategy BreakBeforePromotion is supported",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
+					ObjectMeta: commonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -334,6 +312,83 @@ func TestDataPlane(t *testing.T) {
 										BlueGreen: &operatorv1beta1.BlueGreenStrategy{
 											Promotion: operatorv1beta1.Promotion{
 												Strategy: operatorv1beta1.BreakBeforePromotion,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "BlueGreen rollout resource plan DeleteOnPromotionRecreateOnRollout in unsupported",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: commonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  "proxy",
+													Image: "kong:3.9",
+												},
+											},
+										},
+									},
+								},
+								Rollout: &operatorv1beta1.Rollout{
+									Strategy: operatorv1beta1.RolloutStrategy{
+										BlueGreen: &operatorv1beta1.BlueGreenStrategy{
+											Promotion: operatorv1beta1.Promotion{
+												Strategy: operatorv1beta1.BreakBeforePromotion,
+											},
+											Resources: operatorv1beta1.RolloutResources{
+												Plan: operatorv1beta1.RolloutResourcePlan{
+													Deployment: operatorv1beta1.RolloutResourcePlanDeploymentDeleteOnPromotionRecreateOnRollout,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.deployment.rollout.strategy.blueGreen.resources.plan.deployment: Unsupported value: \"DeleteOnPromotionRecreateOnRollout\": supported values: \"ScaleDownOnPromotionScaleUpOnRollout\""),
+			},
+			{
+				Name: "BlueGreen rollout resource plan ScaleDownOnPromotionScaleUpOnRollout in supported",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: commonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  "proxy",
+													Image: "kong:3.9",
+												},
+											},
+										},
+									},
+								},
+								Rollout: &operatorv1beta1.Rollout{
+									Strategy: operatorv1beta1.RolloutStrategy{
+										BlueGreen: &operatorv1beta1.BlueGreenStrategy{
+											Promotion: operatorv1beta1.Promotion{
+												Strategy: operatorv1beta1.BreakBeforePromotion,
+											},
+											Resources: operatorv1beta1.RolloutResources{
+												Plan: operatorv1beta1.RolloutResourcePlan{
+													Deployment: operatorv1beta1.RolloutResourcePlanDeploymentScaleDownOnPromotionScaleUpOnRollout,
+												},
 											},
 										},
 									},

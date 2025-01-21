@@ -77,6 +77,10 @@
   to CRD CEL validation expressions.
   This is relevant for `DataPlane`s with BlueGreen rollouts enabled only.
   [#1056](https://github.com/Kong/gateway-operator/pull/1056)
+- Move `DataPlane`'s rollout resource strategy validation of disallowed `DeleteOnPromotionRecreateOnRollout`
+  to CRD CEL validation expressions.
+  This is relevant for `DataPlane`s with BlueGreen rollouts enabled only.
+  [#1065](https://github.com/Kong/gateway-operator/pull/1065)
 - The `GatewayClass` Accepted Condition is set to `False` with reason `InvalidParameters`
   in case the `.spec.parametersRef` field is not a valid reference to an existing
   `GatewayConfiguration` object.
