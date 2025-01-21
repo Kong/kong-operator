@@ -115,12 +115,14 @@ type BlueGreenStrategy struct {
 // promotion of resources during a blue/green rollout.
 // +apireference:kgo:include
 type Promotion struct {
+	// TODO: implement AutomaticPromotion https://github.com/Kong/gateway-operator/issues/164
+
 	// Strategy indicates how you want the operator to handle the promotion of
 	// the preview (green) resources (Deployments and Services) after all workflows
 	// and tests succeed, OR if you even want it to break before performing
 	// the promotion to allow manual inspection.
 	//
-	// +kubebuilder:validation:Enum=AutomaticPromotion;BreakBeforePromotion
+	// +kubebuilder:validation:Enum=BreakBeforePromotion
 	// +kubebuilder:default=BreakBeforePromotion
 	Strategy PromotionStrategy `json:"strategy"`
 }
