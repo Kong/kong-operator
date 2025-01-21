@@ -67,6 +67,10 @@
 - Move `DataPlane` promotion in progress validation to CRD CEL validation expressions.
   This is relevant for `DataPlane`s with BlueGreen rollouts enabled only.
   [#1054](https://github.com/Kong/gateway-operator/pull/1054)
+- Move `DataPlane`'s rollout strategy validation of disallowed `AutomaticPromotion`
+  to CRD CEL validation expressions.
+  This is relevant for `DataPlane`s with BlueGreen rollouts enabled only.
+  [#1056](https://github.com/Kong/gateway-operator/pull/1056)
 - The `GatewayClass` Accepted Condition is set to `False` with reason `InvalidParameters`
   in case the `.spec.parametersRef` field is not a valid reference to an existing
   `GatewayConfiguration` object.
