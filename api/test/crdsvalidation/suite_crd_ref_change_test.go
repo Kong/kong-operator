@@ -332,6 +332,17 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			})
 		}
 	}
+	{
+		if supportedByKIC == NotSupportedByKIC {
+			obj := obj.DeepCopy()
+			obj.SetControlPlaneRef(nil)
+			ret = append(ret, crdsvalidation.TestCase[T]{
+				Name:                       "cpRef is required",
+				TestObject:                 obj,
+				ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is required"),
+			})
+		}
+	}
 
 	return ret
 }

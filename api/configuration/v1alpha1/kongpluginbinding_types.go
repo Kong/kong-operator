@@ -96,8 +96,8 @@ type KongPluginBindingSpec struct {
 	Targets *KongPluginBindingTargets `json:"targets,omitempty"`
 
 	// ControlPlaneRef is a reference to a ControlPlane this KongPluginBinding is associated with.
-	// +optional
-	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+	// +kubebuilder:validation:Required
+	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef"`
 
 	// Scope defines the scope of the plugin binding.
 	// +optional

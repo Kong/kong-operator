@@ -686,11 +686,15 @@ func (obj *KongPluginBinding) SetControlPlaneID(id string) {
 }
 
 func (obj *KongPluginBinding) SetControlPlaneRef(ref *ControlPlaneRef) {
-	obj.Spec.ControlPlaneRef = ref
+	if ref == nil {
+		obj.Spec.ControlPlaneRef = ControlPlaneRef{}
+		return
+	}
+	obj.Spec.ControlPlaneRef = *ref
 }
 
 func (obj *KongPluginBinding) GetControlPlaneRef() *ControlPlaneRef {
-	return obj.Spec.ControlPlaneRef
+	return &obj.Spec.ControlPlaneRef
 }
 
 func (obj *KongService) initKonnectStatus() {
