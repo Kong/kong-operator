@@ -158,7 +158,7 @@ func kongPluginBindingToSDKPluginInput(
 	}
 
 	tags := GenerateTagsForObject(pluginBinding, metadata.ExtractTags(plugin)...)
-	return kongPluginWithTargetsToKongPluginInput(plugin, targets, tags)
+	return kongPluginWithTargetsToKongPluginInput(pluginBinding, plugin, targets, tags)
 }
 
 // getPluginBindingTargets returns the list of client objects referenced
@@ -169,6 +169,10 @@ func getPluginBindingTargets(
 	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) ([]pluginTarget, error) {
 	targets := pluginBinding.Spec.Targets
+	if targets == nil {
+		return nil, nil
+	}
+
 	targetObjects := []pluginTarget{}
 	if ref := targets.ServiceReference; ref != nil {
 		ref := targets.ServiceReference
@@ -241,12 +245,8 @@ type pluginTarget interface {
 
 // kongPluginWithTargetsToKongPluginInput converts a KongPlugin configuration along with KongPluginBinding's targets and
 // tags to an SKD PluginInput.
-func kongPluginWithTargetsToKongPluginInput(
-	plugin *configurationv1.KongPlugin,
-	targets []pluginTarget,
-	tags []string,
-) (*sdkkonnectcomp.PluginInput, error) {
-	if len(targets) == 0 {
+func kongPluginWithTargetsToKongPluginInput(binding *configurationv1alpha1.KongPluginBinding, plugin *configurationv1.KongPlugin, targets []pluginTarget, tags []string) (*sdkkonnectcomp.PluginInput, error) {
+	if binding.Spec.Scope == configurationv1alpha1.KongPluginBindingScopeOnlyTargets && len(targets) == 0 {
 		return nil, fmt.Errorf("no targets found for KongPluginBinding %s", client.ObjectKeyFromObject(plugin))
 	}
 
