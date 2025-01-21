@@ -258,6 +258,91 @@ func TestDataPlane(t *testing.T) {
 					}
 				},
 			},
+			{
+				Name: "BlueGreen promotion strategy AutomaticPromotion is not supported",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "dp-",
+						Namespace:    ns.Name,
+					},
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  "proxy",
+													Image: "kong:3.9",
+													Env: []corev1.EnvVar{
+														{
+															Name:  "KONG_DATABASE",
+															Value: "postgres",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+								Rollout: &operatorv1beta1.Rollout{
+									Strategy: operatorv1beta1.RolloutStrategy{
+										BlueGreen: &operatorv1beta1.BlueGreenStrategy{
+											Promotion: operatorv1beta1.Promotion{
+												Strategy: operatorv1beta1.AutomaticPromotion,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("Unsupported value: \"AutomaticPromotion\": supported values: \"BreakBeforePromotion\""),
+			},
+			{
+				Name: "BlueGreen promotion strategy BreakBeforePromotion is supported",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "dp-",
+						Namespace:    ns.Name,
+					},
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  "proxy",
+													Image: "kong:3.9",
+													Env: []corev1.EnvVar{
+														{
+															Name:  "KONG_DATABASE",
+															Value: "postgres",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+								Rollout: &operatorv1beta1.Rollout{
+									Strategy: operatorv1beta1.RolloutStrategy{
+										BlueGreen: &operatorv1beta1.BlueGreenStrategy{
+											Promotion: operatorv1beta1.Promotion{
+												Strategy: operatorv1beta1.BreakBeforePromotion,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		}.RunWithConfig(t, cfg, scheme.Get())
 	})
 }
