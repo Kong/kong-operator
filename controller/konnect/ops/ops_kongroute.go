@@ -88,7 +88,7 @@ func kongRouteToSDKRouteInput(
 ) sdkkonnectcomp.RouteInput {
 	r := sdkkonnectcomp.RouteInput{
 		Destinations:            route.Spec.KongRouteAPISpec.Destinations,
-		Headers:                 route.Spec.KongRouteAPISpec.Headers,
+		Headers:                 kongRouteHeadersToSDK(route.Spec.Headers),
 		Hosts:                   route.Spec.KongRouteAPISpec.Hosts,
 		HTTPSRedirectStatusCode: route.Spec.KongRouteAPISpec.HTTPSRedirectStatusCode,
 		Methods:                 route.Spec.KongRouteAPISpec.Methods,
@@ -138,4 +138,14 @@ func getKongRouteForUID(
 	}
 
 	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), r)
+}
+
+// kongRouteHeadersToSDK converts KongRoute headers to Konnect SDK headers.
+// It's a simple conversion from map[string]string to map[string][]string - the format expected by Konnect SDK.
+// TODO: Support multiple header values in KongRoute CRD.
+// https://github.com/Kong/kubernetes-configuration/issues/234
+func kongRouteHeadersToSDK(headers map[string]string) map[string][]string {
+	return lo.MapEntries(headers, func(k, v string) (string, []string) {
+		return k, []string{v}
+	})
 }
