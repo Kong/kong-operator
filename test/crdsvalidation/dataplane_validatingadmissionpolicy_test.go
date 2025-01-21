@@ -256,6 +256,79 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
 				ExpectedErrorMessage:          lo.ToPtr("is forbidden: ValidatingAdmissionPolicy 'ports.dataplane.gateway-operator.konghq.com' with binding 'binding-ports.dataplane.gateway-operator.konghq.com' denied request: Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PORT_MAPS env"),
 			},
+			{
+				Name: "providing network services ingress options without ports does not fail",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: commonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  "proxy",
+													Image: "kong:3.9",
+												},
+											},
+										},
+									},
+								},
+							},
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Annotations: map[string]string{
+												"a": "b",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "providing network services ingress ports without matching envs does not fail (legacy webhook behavior)",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: commonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  "proxy",
+													Image: "kong:3.9",
+												},
+											},
+										},
+									},
+								},
+							},
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										Ports: []operatorv1beta1.DataPlaneServicePort{
+											{
+												Name: "http",
+												Port: 80,
+												// No matching port in KONG_PORT_MAPS
+												TargetPort: intstr.FromInt(8001),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
 }

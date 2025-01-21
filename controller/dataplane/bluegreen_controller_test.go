@@ -29,7 +29,6 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/dataplane"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
-	dpv "github.com/kong/gateway-operator/internal/validation/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
@@ -364,7 +363,6 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 					ClusterCAKeyConfig: secrets.KeyConfig{
 						Type: x509.ECDSA,
 					},
-					Validator: dpv.NewValidator(fakeClient),
 				},
 			}
 
