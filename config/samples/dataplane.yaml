@@ -15,9 +15,6 @@ spec:
         - name: proxy
           # renovate: datasource=docker versioning=docker
           image: kong/kong-gateway:3.9
-          env:
-          - name: KONG_LOG_LEVEL
-            value: debug
           resources:
             requests:
               memory: "64Mi"
@@ -29,8 +26,3 @@ spec:
             initialDelaySeconds: 1
             periodSeconds: 1
 
-  network:
-    services:
-      ingress:
-        annotations:
-          foo: bar
