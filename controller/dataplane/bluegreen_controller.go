@@ -505,7 +505,7 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 				d.Spec.Replicas = lo.ToPtr(int32(0))
 			})
 		}
-		// TODO: implemented DeleteOnPromotionRecreateOnRollout
+		// TODO: implement DeleteOnPromotionRecreateOnRollout
 		// Ref: https://github.com/Kong/gateway-operator/issues/163
 	}
 	deploymentLabels := client.MatchingLabels{

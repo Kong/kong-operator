@@ -8235,7 +8235,6 @@ spec:
                                           after a rollout.
                                         enum:
                                         - ScaleDownOnPromotionScaleUpOnRollout
-                                        - DeleteOnPromotionRecreateOnRollout
                                         type: string
                                     type: object
                                 type: object
