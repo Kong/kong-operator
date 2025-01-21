@@ -41,7 +41,7 @@ func init() {
 }
 
 func TestGatewayReconciler_Reconcile(t *testing.T) {
-	testCases := []struct {
+	i := []struct {
 		name                     string
 		gatewayReq               reconcile.Request
 		gatewayClass             *gatewayv1.GatewayClass
@@ -49,7 +49,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 		gatewaySubResources      []controllerruntimeclient.Object
 		dataplaneSubResources    []controllerruntimeclient.Object
 		controlplaneSubResources []controllerruntimeclient.Object
-		testBody                 func(t *testing.T, reconciler Reconciler, gatewayReq reconcile.Request)
+		testBody                 func(t *testing.T, reconciler Reconciler, gatewayReq reconcile.Request, gateway *gwtypes.Gateway)
 	}{
 		{
 			name: "gateway class not found - reconciliation should fail",
@@ -73,9 +73,9 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					GatewayClassName: "not-existing-gatewayclass",
 				},
 			},
-			testBody: func(t *testing.T, r Reconciler, gatewayReq reconcile.Request) {
+			testBody: func(t *testing.T, r Reconciler, gatewayReq reconcile.Request, gateway *gwtypes.Gateway) {
 				ctx := context.Background()
-				_, err := r.Reconcile(ctx, gatewayReq)
+				_, err := r.Reconcile(ctx, gateway)
 				require.Error(t, err)
 			},
 		},
@@ -121,9 +121,9 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			testBody: func(t *testing.T, r Reconciler, gatewayReq reconcile.Request) {
+			testBody: func(t *testing.T, r Reconciler, gatewayReq reconcile.Request, gateway *gwtypes.Gateway) {
 				ctx := context.Background()
-				res, err := r.Reconcile(ctx, gatewayReq)
+				res, err := r.Reconcile(ctx, gateway)
 				require.NoError(t, err, "reconciliation should not return an error")
 				require.Equal(t, res, reconcile.Result{}, "reconciliation should not return a requeue")
 
@@ -237,7 +237,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			testBody: func(t *testing.T, reconciler Reconciler, gatewayReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, gatewayReq reconcile.Request, gateway *gwtypes.Gateway) {
 				ctx := context.Background()
 
 				// These addresses are just placeholders, their value doesn't matter. No check is performed in the Gateway-controller,
@@ -249,12 +249,11 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 
 				t.Log("first reconciliation, the dataplane has no IP assigned")
 				// the dataplane service starts with no IP assigned, the gateway must be not ready
-				_, err := reconciler.Reconcile(ctx, gatewayReq)
+				_, err := reconciler.Reconcile(ctx, gateway)
 				require.NoError(t, err, "reconciliation returned an error")
 
 				t.Log("verifying the gateway gets finalizers assigned")
-				var gateway gwtypes.Gateway
-				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &gateway))
+				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, gateway))
 				require.ElementsMatch(t, gateway.GetFinalizers(), []string{
 					string(GatewayFinalizerCleanupControlPlanes),
 					string(GatewayFinalizerCleanupDataPlanes),
@@ -262,13 +261,13 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				})
 
 				// need to trigger the Reconcile again because the first one only updated the finalizers
-				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				_, err = reconciler.Reconcile(ctx, gateway)
 				require.NoError(t, err, "reconciliation returned an error")
 				// need to trigger the Reconcile again because the previous updated the Gateway Status
-				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				_, err = reconciler.Reconcile(ctx, gateway)
 				require.NoError(t, err, "reconciliation returned an error")
 				// need to trigger the Reconcile again because the previous updated the NetworkPolicy
-				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				_, err = reconciler.Reconcile(ctx, gateway)
 				require.NoError(t, err, "reconciliation returned an error")
 
 				var currentGateway gwtypes.Gateway
@@ -288,7 +287,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					Type:      corev1.ServiceTypeClusterIP,
 				}
 				require.NoError(t, reconciler.Client.Update(ctx, dataplaneService))
-				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				_, err = reconciler.Reconcile(ctx, gateway)
 				require.NoError(t, err, "reconciliation returned an error")
 				// the dataplane service now has a clusterIP assigned, the gateway must be ready
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
@@ -323,7 +322,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					},
 				}
 				require.NoError(t, reconciler.Client.Status().Update(ctx, dataplaneService))
-				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				_, err = reconciler.Reconcile(ctx, gateway)
 				require.NoError(t, err, "reconciliation returned an error")
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
 				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
@@ -356,7 +355,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					},
 				}
 				require.NoError(t, reconciler.Client.Status().Update(ctx, dataplaneService))
-				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				_, err = reconciler.Reconcile(ctx, gateway)
 				require.NoError(t, err, "reconciliation returned an error")
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
 				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
@@ -376,7 +375,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					ClusterIP: "",
 				}
 				require.NoError(t, reconciler.Client.Update(ctx, dataplaneService))
-				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				_, err = reconciler.Reconcile(ctx, gateway)
 				require.NoError(t, err, "reconciliation returned an error")
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
 				// the dataplane service has no clusterIP assigned, the gateway must be not ready
@@ -390,6 +389,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 			},
 		},
 	}
+	testCases := i
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -435,7 +435,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				Client: fakeClient,
 			}
 
-			tc.testBody(t, reconciler, tc.gatewayReq)
+			tc.testBody(t, reconciler, tc.gatewayReq, tc.gateway)
 		})
 	}
 }
@@ -768,17 +768,10 @@ func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
 		Client: fakeClient,
 	}
 
-	gatewayReq := reconcile.Request{
-		NamespacedName: types.NamespacedName{
-			Namespace: "test-namespace",
-			Name:      "test-gateway",
-		},
-	}
-
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := reconciler.Reconcile(context.Background(), gatewayReq)
+		_, err := reconciler.Reconcile(context.Background(), gateway)
 		if err != nil {
 			b.Error(err)
 		}

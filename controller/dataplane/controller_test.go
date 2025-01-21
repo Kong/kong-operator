@@ -71,7 +71,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 		dataplaneReq          reconcile.Request
 		dataplane             *operatorv1beta1.DataPlane
 		dataplaneSubResources []controllerruntimeclient.Object
-		testBody              func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request)
+		testBody              func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request, dataplane *operatorv1beta1.DataPlane)
 	}{
 		{
 			name: "service reduction",
@@ -170,14 +170,14 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request, dataplane *operatorv1beta1.DataPlane) {
 				ctx := context.Background()
 
 				// first reconcile loop to allow the reconciler to set the dataplane defaults
-				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				_, err := reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.EqualError(t, err, "number of DataPlane ingress services reduced")
 
 				svcToBeDeleted, svcToBeKept := &corev1.Service{}, &corev1.Service{}
@@ -267,14 +267,14 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request, dataplane *operatorv1beta1.DataPlane) {
 				ctx := context.Background()
 
 				// first reconcile loop to allow the reconciler to set the dataplane defaults
-				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				_, err := reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 			},
 		},
@@ -370,27 +370,27 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					),
 				},
 			},
-			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request, dataplane *operatorv1beta1.DataPlane) {
 				ctx := context.Background()
 
 				// first reconcile loop to allow the reconciler to set the dataplane defaults
-				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				_, err := reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
 				// second reconcile loop to allow the reconciler to set the service name in the dataplane status
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.EqualError(t, err, "could not build Deployment for DataPlane default/test-dataplane: could not generate Deployment: unsupported DataPlane image kong:1.0")
 			},
 		},
@@ -502,27 +502,27 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					),
 				},
 			},
-			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request, dataplane *operatorv1beta1.DataPlane) {
 				ctx := context.Background()
 
-				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				_, err := reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 				// The second reconcile is needed because the first one would only get to marking
 				// the DataPlane as Scheduled.
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
 				// The third reconcile is needed because the second one will only ensure
 				// the service is deployed for the DataPlane.
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 				// The fourth reconcile is needed to ensure the service name in the dataplane status
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
 				dp := &operatorv1beta1.DataPlane{}
@@ -657,22 +657,22 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					),
 				},
 			},
-			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request, dataplane *operatorv1beta1.DataPlane) {
 				ctx := context.Background()
 
-				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				_, err := reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 				// The second reconcile is needed because the first one would only get to marking
 				// the DataPlane as Scheduled.
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
 				// The third reconcile is needed because the second one will only ensure
 				// the service is deployed for the DataPlane.
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 				// The fourth reconcile is needed to ensure the service name in the dataplane status
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
 				dp := &operatorv1beta1.DataPlane{}
@@ -685,13 +685,13 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				assert.EqualValues(t, 0, dp.Status.ReadyReplicas)
 				assert.EqualValues(t, 0, dp.Status.Replicas)
 
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
 				err = reconciler.Client.Get(ctx, nn, dp)
@@ -819,22 +819,22 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					),
 				},
 			},
-			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, dataplaneReq reconcile.Request, dataplane *operatorv1beta1.DataPlane) {
 				ctx := context.Background()
 
-				_, err := reconciler.Reconcile(ctx, dataplaneReq)
+				_, err := reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 				// The second reconcile is needed because the first one would only get to marking
 				// the DataPlane as Scheduled.
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
 				// The third reconcile is needed because the second one will only ensure
 				// the service is deployed for the DataPlane.
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 				// The fourth reconcile is needed to ensure the service name in the dataplane status
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
 				dp := &operatorv1beta1.DataPlane{}
@@ -847,13 +847,13 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				assert.EqualValues(t, 0, dp.Status.ReadyReplicas)
 				assert.EqualValues(t, 0, dp.Status.Replicas)
 
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
 				err = reconciler.Client.Get(ctx, nn, dp)
@@ -871,13 +871,13 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				// Below code checks if the dataplane gets properly updated status conditions when
 				// the dataplane spec changes with a field that has non zero defaults.
 				// See: https://github.com/Kong/gateway-operator/issues/904
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
-				_, err = reconciler.Reconcile(ctx, dataplaneReq)
+				_, err = reconciler.Reconcile(ctx, dataplane)
 				require.NoError(t, err)
 
 				require.NoError(t, reconciler.Client.Get(ctx, nn, dp))
@@ -917,7 +917,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				Validator:                dataplane.NewValidator(fakeClient),
 			}
 
-			tc.testBody(t, reconciler, tc.dataplaneReq)
+			tc.testBody(t, reconciler, tc.dataplaneReq, tc.dataplane)
 		})
 	}
 }

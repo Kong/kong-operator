@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
@@ -62,6 +63,8 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	validatinWebhookConfigurationOwnerPredicate.UpdateFunc = func(e event.UpdateEvent) bool {
 		return r.validatingWebhookConfigurationHasControlPlaneOwner(e.ObjectOld)
 	}
+
+	or := reconcile.AsReconciler[*operatorv1beta1.ControlPlane](mgr.GetClient(), r)
 
 	return ctrl.NewControllerManagedBy(mgr).
 		// watch ControlPlane objects
@@ -108,18 +111,14 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Watches(
 			&appsv1.Deployment{},
 			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlaneDeployment)).
-		Complete(r)
+		Complete(or)
 }
 
 // Reconcile moves the current state of an object to the intended state.
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, cp *operatorv1beta1.ControlPlane) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "controlplane", r.DevelopmentMode)
 
 	log.Trace(logger, "reconciling ControlPlane resource")
-	cp := new(operatorv1beta1.ControlPlane)
-	if err := r.Client.Get(ctx, req.NamespacedName, cp); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 
 	// controlplane is deleted, just run garbage collection for cluster wide resources.
 	if !cp.DeletionTimestamp.IsZero() {

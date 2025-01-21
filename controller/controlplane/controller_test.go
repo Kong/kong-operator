@@ -57,7 +57,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 		controlplaneSubResources []controllerruntimeclient.Object
 		dataplaneSubResources    []controllerruntimeclient.Object
 		dataplanePods            []controllerruntimeclient.Object
-		testBody                 func(t *testing.T, reconciler Reconciler, controlplane reconcile.Request)
+		testBody                 func(t *testing.T, reconciler Reconciler, controlplane *operatorv1beta1.ControlPlane)
 	}{
 		{
 			name: "valid ControlPlane image",
@@ -230,14 +230,14 @@ func TestReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			testBody: func(t *testing.T, reconciler Reconciler, controlplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, controlplane *operatorv1beta1.ControlPlane) {
 				ctx := context.Background()
 
 				// first reconcile loop to allow the reconciler to set the controlplane defaults
-				_, err := reconciler.Reconcile(ctx, controlplaneReq)
+				_, err := reconciler.Reconcile(ctx, controlplane)
 				require.NoError(t, err)
 
-				_, err = reconciler.Reconcile(ctx, controlplaneReq)
+				_, err = reconciler.Reconcile(ctx, controlplane)
 				require.NoError(t, err)
 			},
 		},
@@ -412,10 +412,10 @@ func TestReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			testBody: func(t *testing.T, reconciler Reconciler, controlplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, controlplane *operatorv1beta1.ControlPlane) {
 				ctx := context.Background()
 
-				_, err := reconciler.Reconcile(ctx, controlplaneReq)
+				_, err := reconciler.Reconcile(ctx, controlplane)
 				require.EqualError(t, err, "unsupported ControlPlane image kong/kubernetes-ingress-controller:1.0")
 			},
 		},
@@ -457,7 +457,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				ClusterCASecretNamespace: mtlsSecret.Namespace,
 			}
 
-			tc.testBody(t, reconciler, tc.controlplaneReq)
+			tc.testBody(t, reconciler, tc.controlplane)
 		})
 	}
 }

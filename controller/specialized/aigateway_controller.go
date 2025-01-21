@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/gateway-operator/api/v1alpha1"
@@ -36,6 +37,7 @@ type AIGatewayReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *AIGatewayReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	or := reconcile.AsReconciler[*v1alpha1.AIGateway](mgr.GetClient(), r)
 	return ctrl.NewControllerManagedBy(mgr).
 		// watch AIGateway objects, filtering out any Gateways which are not
 		// configured with a supported GatewayClass controller name.
@@ -49,17 +51,12 @@ func (r *AIGatewayReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 		// TODO watch on Gateways, KongPlugins, e.t.c.
 		//
 		// See: https://github.com/Kong/gateway-operator/issues/137
-		Complete(r)
+		Complete(or)
 }
 
 // Reconcile reconciles the AIGateway resource.
-func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *AIGatewayReconciler) Reconcile(ctx context.Context, aigateway *v1alpha1.AIGateway) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "aigateway", r.DevelopmentMode)
-
-	var aigateway v1alpha1.AIGateway
-	if err := r.Client.Get(ctx, req.NamespacedName, &aigateway); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 
 	log.Trace(logger, "verifying gatewayclass for aigateway")
 	// we verify the GatewayClass in the watch predicates as well, but the watch
@@ -99,9 +96,9 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	log.Trace(logger, "marking aigateway as accepted")
 	oldAIGateway := aigateway.DeepCopy()
-	k8sutils.SetCondition(newAIGatewayAcceptedCondition(&aigateway), &aigateway)
-	if k8sutils.NeedsUpdate(oldAIGateway, &aigateway) {
-		if err := r.Client.Status().Patch(ctx, &aigateway, client.MergeFrom(oldAIGateway)); err != nil {
+	k8sutils.SetCondition(newAIGatewayAcceptedCondition(aigateway), aigateway)
+	if k8sutils.NeedsUpdate(oldAIGateway, aigateway) {
+		if err := r.Client.Status().Patch(ctx, aigateway, client.MergeFrom(oldAIGateway)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to patch status for aigateway: %w", err)
 		}
 		log.Info(logger, "aigateway marked as accepted")
@@ -109,7 +106,7 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	log.Info(logger, "managing gateway resources for aigateway")
-	gatewayResourcesChanged, err := r.manageGateway(ctx, logger, &aigateway)
+	gatewayResourcesChanged, err := r.manageGateway(ctx, logger, aigateway)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -118,7 +115,7 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	log.Info(logger, "configuring plugin and route resources for aigateway")
-	pluginResourcesChanged, err := r.configurePlugins(ctx, logger, &aigateway)
+	pluginResourcesChanged, err := r.configurePlugins(ctx, logger, aigateway)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

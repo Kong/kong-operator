@@ -60,7 +60,7 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 			},
 			testBody: func(t *testing.T, reconciler Reconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1.GatewayClass) {
 				ctx := context.Background()
-				_, err := reconciler.Reconcile(ctx, gatewayClassReq)
+				_, err := reconciler.Reconcile(ctx, gatewayClass)
 				require.NoError(t, err)
 				gwc := gatewayclass.NewDecorator()
 				err = reconciler.Client.Get(ctx, gatewayClassReq.NamespacedName, gwc.GatewayClass)
@@ -85,7 +85,7 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 			},
 			testBody: func(t *testing.T, reconciler Reconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1.GatewayClass) {
 				ctx := context.Background()
-				_, err := reconciler.Reconcile(ctx, gatewayClassReq)
+				_, err := reconciler.Reconcile(ctx, gatewayClass)
 				require.NoError(t, err)
 				gwc := gatewayclass.NewDecorator()
 				err = reconciler.Client.Get(ctx, gatewayClassReq.NamespacedName, gwc.GatewayClass)

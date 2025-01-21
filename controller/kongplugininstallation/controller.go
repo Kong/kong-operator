@@ -42,6 +42,7 @@ type Reconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	or := reconcile.AsReconciler[*v1alpha1.KongPluginInstallation](mgr.GetClient(), r)
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.KongPluginInstallation{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
@@ -80,20 +81,17 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 				),
 			),
 		).
-		Complete(r)
+		Complete(or)
 }
 
 // Reconcile moves the current state of an object to the intended state.
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, kpi *v1alpha1.KongPluginInstallation) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "kongplugininstallation", r.DevelopmentMode)
 
 	log.Trace(logger, "reconciling KongPluginInstallation resource")
-	var kpi v1alpha1.KongPluginInstallation
-	if err := r.Client.Get(ctx, req.NamespacedName, &kpi); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
+
 	if err := setStatusConditionForKongPluginInstallation(
-		ctx, r.Client, &kpi, metav1.ConditionFalse, v1alpha1.KongPluginInstallationReasonPending, "fetching plugin is in progress",
+		ctx, r.Client, kpi, metav1.ConditionFalse, v1alpha1.KongPluginInstallationReasonPending, "fetching plugin is in progress",
 	); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -106,16 +104,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		imagePullSecretRef := kpi.Spec.ImagePullSecretRef
 		ref.EnsureNamespaceInSecretRef(imagePullSecretRef, kpiNamespace)
 		if err := ref.DoesFieldReferenceCoreV1Secret(*imagePullSecretRef, "imagePullSecretRef"); err != nil {
-			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, err.Error())
+			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, kpi, err.Error())
 		}
 		whyNotGrantedMsg, isReferenceGranted, refErr := ref.CheckReferenceGrantForSecret(
-			ctx, r.Client, &kpi, *imagePullSecretRef,
+			ctx, r.Client, kpi, *imagePullSecretRef,
 		)
 		if refErr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to resolve reference: %w", refErr)
 		}
 		if !isReferenceGranted {
-			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, whyNotGrantedMsg)
+			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, kpi, whyNotGrantedMsg)
 		}
 
 		secretNN := client.ObjectKey{
@@ -129,7 +127,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			&secret,
 		); err != nil {
 			if k8serrors.IsNotFound(err) {
-				return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, fmt.Sprintf("referenced Secret %q not found", secretNN))
+				return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, kpi, fmt.Sprintf("referenced Secret %q not found", secretNN))
 			}
 			return ctrl.Result{}, fmt.Errorf("something unexpected during fetching secret %s: %w", secretNN, err)
 		}
@@ -138,20 +136,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		secretData, ok := secret.Data[requiredKey]
 		if !ok {
 			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(
-				ctx, r.Client, &kpi, fmt.Sprintf("can't parse secret %q - unexpected type, it should follow 'kubernetes.io/dockerconfigjson'", secretNN),
+				ctx, r.Client, kpi, fmt.Sprintf("can't parse secret %q - unexpected type, it should follow 'kubernetes.io/dockerconfigjson'", secretNN),
 			)
 		}
 		var err error
 		credentialsStore, err = orascreds.NewMemoryStoreFromDockerConfig(secretData)
 		if err != nil {
-			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, fmt.Sprintf("can't parse secret: %q data: %s", secretNN, err))
+			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, kpi, fmt.Sprintf("can't parse secret: %q data: %s", secretNN, err))
 		}
 	}
 
 	log.Trace(logger, "fetch plugin for KongPluginInstallation resource")
 	plugin, err := image.FetchPlugin(ctx, kpi.Spec.Image, credentialsStore)
 	if err != nil {
-		return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, fmt.Sprintf("problem with the image: %q error: %s", kpi.Spec.Image, err))
+		return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, kpi, fmt.Sprintf("problem with the image: %q error: %s", kpi.Spec.Image, err))
 	}
 
 	cms, err := kubernetes.ListConfigMapsForOwner(ctx, r.Client, kpi.GetUID())
@@ -167,10 +165,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			cm.GenerateName = kpi.Name + "-"
 		}
 		resources.LabelObjectAsKongPluginInstallationManaged(&cm)
-		resources.AnnotateConfigMapWithKongPluginInstallation(&cm, kpi)
+		resources.AnnotateConfigMapWithKongPluginInstallation(&cm, *kpi)
 		cm.Namespace = kpi.Namespace
 		cm.Data = plugin
-		if err := ctrl.SetControllerReference(&kpi, &cm, r.Scheme); err != nil {
+		if err := ctrl.SetControllerReference(kpi, &cm, r.Scheme); err != nil {
 			return ctrl.Result{}, err
 		}
 		if err := r.Client.Create(ctx, &cm); err != nil {
@@ -189,7 +187,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	return ctrl.Result{}, setStatusConditionForKongPluginInstallation(
-		ctx, r.Client, &kpi, metav1.ConditionTrue, v1alpha1.KongPluginInstallationReasonReady, "plugin successfully saved in cluster as ConfigMap",
+		ctx, r.Client, kpi, metav1.ConditionTrue, v1alpha1.KongPluginInstallationReasonReady, "plugin successfully saved in cluster as ConfigMap",
 	)
 }
 

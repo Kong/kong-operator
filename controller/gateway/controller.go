@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -60,6 +61,7 @@ const provisionDataPlaneFailRetryAfter = 5 * time.Second
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	or := reconcile.AsReconciler[*gwtypes.Gateway](mgr.GetClient(), r)
 	return ctrl.NewControllerManagedBy(mgr).
 		// watch Gateway objects, filtering out any Gateways which are not configured with
 		// a supported GatewayClass controller name.
@@ -100,21 +102,17 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Watches(
 			&corev1.Namespace{},
 			handler.EnqueueRequestsFromMapFunc(r.listManagedGatewaysInNamespace)).
-		Complete(r)
+		Complete(or)
 }
 
 // Reconcile moves the current state of an object to the intended state.
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "gateway", r.DevelopmentMode)
 
 	log.Trace(logger, "reconciling gateway resource")
-	var gateway gwtypes.Gateway
-	if err := r.Client.Get(ctx, req.NamespacedName, &gateway); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 
 	log.Trace(logger, "managing cleanup for gateway resource")
-	if shouldReturnEarly, result, err := r.cleanup(ctx, logger, &gateway); err != nil || !result.IsZero() {
+	if shouldReturnEarly, result, err := r.cleanup(ctx, logger, gateway); err != nil || !result.IsZero() {
 		return result, err
 	} else if shouldReturnEarly {
 		return ctrl.Result{}, nil
@@ -142,12 +140,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "managing the gateway resource finalizers")
-	cpFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupControlPlanes))
-	dpFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupDataPlanes))
-	npFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupNetworkPolicies))
+	cpFinalizerSet := controllerutil.AddFinalizer(gateway, string(GatewayFinalizerCleanupControlPlanes))
+	dpFinalizerSet := controllerutil.AddFinalizer(gateway, string(GatewayFinalizerCleanupDataPlanes))
+	npFinalizerSet := controllerutil.AddFinalizer(gateway, string(GatewayFinalizerCleanupNetworkPolicies))
 	if cpFinalizerSet || dpFinalizerSet || npFinalizerSet {
 		log.Trace(logger, "Setting finalizers")
-		if err := r.Client.Update(ctx, &gateway); err != nil {
+		if err := r.Client.Update(ctx, gateway); err != nil {
 			res, err := handleGatewayFinalizerPatchOrUpdateError(err, logger)
 			if err != nil {
 				return res, fmt.Errorf("failed updating Gateway's finalizers: %w", err)
@@ -165,7 +163,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	oldGateway := gateway.DeepCopy()
-	gwConditionAware := gatewayConditionsAndListenersAware(&gateway)
+	gwConditionAware := gatewayConditionsAndListenersAware(gateway)
 	oldGwConditionsAware := gatewayConditionsAndListenersAware(oldGateway)
 
 	log.Trace(logger, "resource is supported that it gets marked as accepted")
@@ -183,7 +181,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// If the static Gateway API conditions (Accepted, ResolvedRefs, Conflicted) changed, we need to update the Gateway status
 	if gatewayStatusNeedsUpdate(oldGwConditionsAware, gwConditionAware) {
 		// Requeue will be triggered by the update of the gateway status.
-		if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway); err != nil {
+		if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, gateway, oldGateway); err != nil {
 			return ctrl.Result{}, err
 		}
 		if acceptedCondition.Status == metav1.ConditionTrue {
@@ -208,7 +206,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// Provision dataplane creates a dataplane and adds the DataPlaneReady=True
 	// condition to the Gateway status if the dataplane is ready. If not ready
 	// the status DataPlaneReady=False will be set instead.
-	dataplane, provisionErr := r.provisionDataPlane(ctx, logger, &gateway, gatewayConfig)
+	dataplane, provisionErr := r.provisionDataPlane(ctx, logger, gateway, gatewayConfig)
 	// Set the DataPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no DataPlaneReady condition in the old gateway, or
 	// * the new status is false and the previous status was true
@@ -225,7 +223,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		oldCondition, oldFound := k8sutils.GetCondition(DataPlaneReadyType, oldGwConditionsAware)
 		if !oldFound || oldCondition.Status == metav1.ConditionTrue {
 			// requeue will be triggered by the update of the dataplane status
-			if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil {
+			if err := r.patchStatus(ctx, gateway, oldGateway); err != nil {
 				return ctrl.Result{}, err
 			}
 			log.Debug(logger, "dataplane not ready yet")
@@ -328,7 +326,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
 	// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false.
-	controlplane := r.provisionControlPlane(ctx, logger, gwc.GatewayClass, &gateway, gatewayConfig, dataplane, ingressServices[0], adminServices[0])
+	controlplane := r.provisionControlPlane(ctx, logger, gwc.GatewayClass, gateway, gatewayConfig, dataplane, ingressServices[0], adminServices[0])
 
 	// Set the ControlPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no ControlPlaneReady condition in the gateway
@@ -341,7 +339,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 		conditionOld, foundOld := k8sutils.GetCondition(ControlPlaneReadyType, oldGwConditionsAware)
 		if !foundOld || conditionOld.Status == metav1.ConditionTrue {
-			if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil {
+			if err := r.patchStatus(ctx, gateway, oldGateway); err != nil {
 				return ctrl.Result{}, err
 			}
 			log.Debug(logger, "controlplane not ready yet")
@@ -366,7 +364,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// DataPlane NetworkPolicies
 	log.Trace(logger, "ensuring DataPlane's NetworkPolicy exists")
-	createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, dataplane, controlplane)
+	createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, gateway, dataplane, controlplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -379,15 +377,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	gateway.Status.Addresses, err = r.getGatewayAddresses(ctx, dataplane)
 	if err == nil {
 		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(GatewayServiceType, metav1.ConditionTrue, consts.ResourceReadyReason, "", gateway.Generation),
-			gatewayConditionsAndListenersAware(&gateway))
+			gatewayConditionsAndListenersAware(gateway))
 	} else {
 		log.Info(logger, "could not determine gateway status", "err", err)
 		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(GatewayServiceType, metav1.ConditionFalse, GatewayReasonServiceError, err.Error(), gateway.Generation),
-			gatewayConditionsAndListenersAware(&gateway))
+			gatewayConditionsAndListenersAware(gateway))
 	}
 
 	gwConditionAware.setProgrammed()
-	res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
+	res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, gateway, oldGateway)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

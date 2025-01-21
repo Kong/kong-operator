@@ -36,10 +36,11 @@ type KonnectExtensionReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	or := reconcile.AsReconciler[*operatorv1alpha1.KonnectExtension](mgr.GetClient(), r)
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&operatorv1alpha1.KonnectExtension{}).
 		Watches(&operatorv1beta1.DataPlane{}, handler.EnqueueRequestsFromMapFunc(r.listDataPlaneExtensionsReferenced)).
-		Complete(r)
+		Complete(or)
 }
 
 // listDataPlaneExtensionsReferenced returns a list of all the KonnectExtensions referenced by the DataPlane object.
@@ -82,12 +83,8 @@ func (r *KonnectExtensionReconciler) listDataPlaneExtensionsReferenced(ctx conte
 }
 
 // Reconcile reconciles a KonnectExtension object.
-func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, konnectExtension *operatorv1alpha1.KonnectExtension) (ctrl.Result, error) {
 	ctx = r.ContextInjector.InjectKeyValues(ctx)
-	var konnectExtension operatorv1alpha1.KonnectExtension
-	if err := r.Client.Get(ctx, req.NamespacedName, &konnectExtension); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 
 	logger := log.GetLogger(ctx, operatorv1alpha1.KonnectExtensionKind, r.DevelopmentMode)
 	var dataPlaneList operatorv1beta1.DataPlaneList
@@ -100,12 +97,12 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	var updated bool
 	switch len(dataPlaneList.Items) {
 	case 0:
-		updated = controllerutil.RemoveFinalizer(&konnectExtension, consts.DataPlaneExtensionFinalizer)
+		updated = controllerutil.RemoveFinalizer(konnectExtension, consts.DataPlaneExtensionFinalizer)
 	default:
-		updated = controllerutil.AddFinalizer(&konnectExtension, consts.DataPlaneExtensionFinalizer)
+		updated = controllerutil.AddFinalizer(konnectExtension, consts.DataPlaneExtensionFinalizer)
 	}
 	if updated {
-		if err := r.Client.Update(ctx, &konnectExtension); err != nil {
+		if err := r.Client.Update(ctx, konnectExtension); err != nil {
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
