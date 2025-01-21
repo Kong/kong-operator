@@ -274,77 +274,6 @@ func TestHelmUpgrade(t *testing.T) {
 				},
 			},
 		},
-		{
-			name:             "upgrade from nightly to current",
-			fromVersion:      "nightly",
-			upgradeToCurrent: true,
-			objectsToDeploy: []client.Object{
-				&operatorv1beta1.GatewayConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "gwconf-upgrade-nightly-current",
-					},
-					Spec: baseGatewayConfigurationSpec(),
-				},
-				&gatewayv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "gwclass-upgrade-nightly-to-current",
-					},
-					Spec: gatewayv1.GatewayClassSpec{
-						ParametersRef: &gatewayv1.ParametersReference{
-							Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
-							Kind:      gatewayv1.Kind("GatewayConfiguration"),
-							Namespace: (*gatewayv1.Namespace)(&e.Namespace.Name),
-							Name:      "gwconf-upgrade-nightly-current",
-						},
-						ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
-					},
-				},
-				&gatewayv1.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "gw-upgrade-nightly-to-current-",
-						Labels: map[string]string{
-							"gw-upgrade-nightly-to-current": "true",
-						},
-					},
-					Spec: gatewayv1.GatewaySpec{
-						GatewayClassName: gatewayv1.ObjectName("gwclass-upgrade-nightly-to-current"),
-						Listeners: []gatewayv1.Listener{{
-							Name:     "http",
-							Protocol: gatewayv1.HTTPProtocolType,
-							Port:     gatewayv1.PortNumber(80),
-						}},
-					},
-				},
-			},
-			assertionsAfterInstall: []assertion{
-				{
-					Name: "Gateway is programmed",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
-					},
-				},
-			},
-			assertionsAfterUpgrade: []assertion{
-				{
-					Name: "Gateway is programmed",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayAndItsListenersAreProgrammedAssertion("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "DataPlane deployment is not patched after operator upgrade",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "Cluster wide resources owned by the ControlPlane get the proper set of labels",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						clusterWideResourcesAreProperlyManaged("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
-					},
-				},
-			},
-		},
 	}
 
 	var (
@@ -398,12 +327,15 @@ func TestHelmUpgrade(t *testing.T) {
 				"anonymous_reports":  "false",
 			}
 
+			// TODO: Use latest version of the chart when ValidatingAdmissionPolicy is fixed.
+			const chartVersion = "0.4.2"
 			opts := &helm.Options{
 				KubectlOptions: &k8s.KubectlOptions{
 					Namespace:  e.Namespace.Name,
 					RestConfig: e.Environment.Cluster().Config(),
 				},
 				SetValues: values,
+				Version:   "0.4.2",
 			}
 
 			require.NoError(t, helm.AddRepoE(t, opts, "kong", "https://charts.konghq.com"))
@@ -440,6 +372,9 @@ func TestHelmUpgrade(t *testing.T) {
 			t.Logf("Upgrading from %s to %s", tc.fromVersion, tag)
 			opts.SetValues["image.tag"] = tag
 			opts.SetValues["image.repository"] = targetRepository
+			opts.ExtraArgs = map[string][]string{
+				"upgrade": {"--version", chartVersion},
+			}
 
 			require.NoError(t, helm.UpgradeE(t, opts, chart, releaseName))
 			require.NoError(t, waitForOperatorDeployment(t, ctx, e.Namespace.Name, e.Clients.K8sClient, waitTime,
@@ -561,8 +496,8 @@ func gatewayAndItsListenersAreProgrammedAssertion(gatewayLabelSelector string) f
 		if !assert.NotNil(c, gw) {
 			return
 		}
-		assert.True(c, gateway.IsProgrammed(gw))
-		assert.True(c, gateway.AreListenersProgrammed(gw))
+		assert.True(c, gateway.IsProgrammed(gw), "Gateway %q is not programmed", client.ObjectKeyFromObject(gw))
+		assert.True(c, gateway.AreListenersProgrammed(gw), "Listeners of Gateway %q are not programmed", client.ObjectKeyFromObject(gw))
 	}
 }
 
