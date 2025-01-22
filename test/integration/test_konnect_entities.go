@@ -81,8 +81,8 @@ func TestKonnectEntities(t *testing.T) {
 		func(obj client.Object) {
 			kr := obj.(*configurationv1alpha1.KongRoute)
 			kr.Spec.KongRouteAPISpec.Paths = []string{"/kr-" + testID}
-			kr.Spec.Headers = map[string]string{
-				"KongTestHeader": "example.com",
+			kr.Spec.Headers = map[string][]string{
+				"KongTestHeader": {"example.com", "example.org"},
 			}
 		},
 	)

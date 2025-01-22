@@ -327,15 +327,12 @@ func TestHelmUpgrade(t *testing.T) {
 				"anonymous_reports":  "false",
 			}
 
-			// TODO: Use latest version of the chart when ValidatingAdmissionPolicy is fixed.
-			const chartVersion = "0.4.2"
 			opts := &helm.Options{
 				KubectlOptions: &k8s.KubectlOptions{
 					Namespace:  e.Namespace.Name,
 					RestConfig: e.Environment.Cluster().Config(),
 				},
 				SetValues: values,
-				Version:   "0.4.2",
 			}
 
 			require.NoError(t, helm.AddRepoE(t, opts, "kong", "https://charts.konghq.com"))
@@ -372,9 +369,6 @@ func TestHelmUpgrade(t *testing.T) {
 			t.Logf("Upgrading from %s to %s", tc.fromVersion, tag)
 			opts.SetValues["image.tag"] = tag
 			opts.SetValues["image.repository"] = targetRepository
-			opts.ExtraArgs = map[string][]string{
-				"upgrade": {"--version", chartVersion},
-			}
 
 			require.NoError(t, helm.UpgradeE(t, opts, chart, releaseName))
 			require.NoError(t, waitForOperatorDeployment(t, ctx, e.Namespace.Name, e.Clients.K8sClient, waitTime,
