@@ -495,8 +495,8 @@ func gatewayAndItsListenersAreProgrammedAssertion(gatewayLabelSelector string) f
 		if !assert.NotNil(c, gw) {
 			return
 		}
-		assert.True(c, gateway.IsProgrammed(gw))
-		assert.True(c, gateway.AreListenersProgrammed(gw))
+		assert.True(c, gateway.IsProgrammed(gw), "Gateway %q is not programmed: %s", client.ObjectKeyFromObject(gw), pretty.Sprint(gw))
+		assert.True(c, gateway.AreListenersProgrammed(gw), "Listeners of Gateway %q are not programmed: %s", client.ObjectKeyFromObject(gw), pretty.Sprint(gw))
 	}
 }
 

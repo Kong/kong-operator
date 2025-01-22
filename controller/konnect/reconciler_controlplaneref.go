@@ -50,10 +50,7 @@ func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 		}
 		return mo.Some(*e.Spec.ControlPlaneRef)
 	case *configurationv1alpha1.KongPluginBinding:
-		if e.Spec.ControlPlaneRef == nil {
-			return none
-		}
-		return mo.Some(*e.Spec.ControlPlaneRef)
+		return mo.Some(e.Spec.ControlPlaneRef)
 	case *configurationv1alpha1.KongUpstream:
 		if e.Spec.ControlPlaneRef == nil {
 			return none
