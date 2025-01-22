@@ -40,7 +40,7 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 				Name: "plugin-1",
 				Kind: lo.ToPtr("KongPlugin"),
 			},
-			Targets: configurationv1alpha1.KongPluginBindingTargets{
+			Targets: &configurationv1alpha1.KongPluginBindingTargets{
 				ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
 					Name: "service-1",
 					Kind: "KongService",

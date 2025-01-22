@@ -34,6 +34,12 @@
 - Added support for `ControlPlaneRef`s with `type` equal to `konnectID` for
   all Konnect entities that refer to a `ControlPlane`.
   [#985](https://github.com/Kong/gateway-operator/pull/985)
+- Added support for global plugins with `KongPluginBinding`'s `scope` field.
+  The default value is `OnlyTargets` which means that the plugin will be
+  applied only to the targets specified in the `targets` field. The new
+  alternative is `GlobalInControlPlane` that will make the plugin apply
+  globally in a control plane.
+  [#1052](https://github.com/Kong/gateway-operator/pull/1052)
 
 ### Changed
 
@@ -71,6 +77,10 @@
   to CRD CEL validation expressions.
   This is relevant for `DataPlane`s with BlueGreen rollouts enabled only.
   [#1056](https://github.com/Kong/gateway-operator/pull/1056)
+- Move `DataPlane`'s rollout resource strategy validation of disallowed `DeleteOnPromotionRecreateOnRollout`
+  to CRD CEL validation expressions.
+  This is relevant for `DataPlane`s with BlueGreen rollouts enabled only.
+  [#1065](https://github.com/Kong/gateway-operator/pull/1065)
 - The `GatewayClass` Accepted Condition is set to `False` with reason `InvalidParameters`
   in case the `.spec.parametersRef` field is not a valid reference to an existing
   `GatewayConfiguration` object.
@@ -91,6 +101,9 @@
 - Fix unexpected error logs caused by passing an odd number of arguments to the logger
   in the `KongConsumer` reconciler.
   [#983](https://github.com/Kong/gateway-operator/pull/983)
+- Fix `KongRoute` Konnect entity with a non-empty `headers` field reconciliation. The
+  `headers` field is now properly mapped to the expected Konnect schema.
+  [#1044](https://github.com/Kong/gateway-operator/pull/1044)
 
 ### Added
 

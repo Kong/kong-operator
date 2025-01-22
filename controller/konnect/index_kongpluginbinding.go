@@ -75,7 +75,8 @@ func kongServiceReferencesFromKongPluginBinding(obj client.Object) []string {
 	if !ok {
 		return nil
 	}
-	if binding.Spec.Targets.ServiceReference == nil ||
+	if binding.Spec.Targets == nil ||
+		binding.Spec.Targets.ServiceReference == nil ||
 		binding.Spec.Targets.ServiceReference.Group != configurationv1alpha1.GroupVersion.Group ||
 		binding.Spec.Targets.ServiceReference.Kind != "KongService" {
 		return nil
@@ -89,7 +90,8 @@ func kongRouteReferencesFromKongPluginBinding(obj client.Object) []string {
 	if !ok {
 		return nil
 	}
-	if binding.Spec.Targets.RouteReference == nil ||
+	if binding.Spec.Targets == nil ||
+		binding.Spec.Targets.RouteReference == nil ||
 		binding.Spec.Targets.RouteReference.Group != configurationv1alpha1.GroupVersion.Group ||
 		binding.Spec.Targets.RouteReference.Kind != "KongRoute" {
 		return nil
@@ -103,7 +105,7 @@ func kongConsumerReferencesFromKongPluginBinding(obj client.Object) []string {
 	if !ok {
 		return nil
 	}
-	if binding.Spec.Targets.ConsumerReference == nil {
+	if binding.Spec.Targets == nil || binding.Spec.Targets.ConsumerReference == nil {
 		return nil
 	}
 	return []string{binding.Spec.Targets.ConsumerReference.Name}
@@ -115,7 +117,7 @@ func kongConsumerGroupReferencesFromKongPluginBinding(obj client.Object) []strin
 	if !ok {
 		return nil
 	}
-	if binding.Spec.Targets.ConsumerGroupReference == nil {
+	if binding.Spec.Targets == nil || binding.Spec.Targets.ConsumerGroupReference == nil {
 		return nil
 	}
 	return []string{binding.Spec.Targets.ConsumerGroupReference.Name}

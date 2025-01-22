@@ -18,8 +18,8 @@ github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161/go.mod h1:xomTg6
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/Kong/sdk-konnect-go v0.1.21 h1:p+As05Ixy0YDy4NDGA35jNioQ2rt7OAVUoUHC5f10xk=
-github.com/Kong/sdk-konnect-go v0.1.21/go.mod h1:xsmTIkBbmVyUh1nRFjQMOhxYIPDl+sMfmRmPuZHtwLE=
+github.com/Kong/sdk-konnect-go v0.1.24 h1:U1rOiy9TtYg/pXl7CXABaN96c1rFuHal19zVCuNpkiA=
+github.com/Kong/sdk-konnect-go v0.1.24/go.mod h1:xsmTIkBbmVyUh1nRFjQMOhxYIPDl+sMfmRmPuZHtwLE=
 github.com/Masterminds/semver v1.5.0 h1:H65muMkzWKEuNDnfl9d70GUjFniHKHRbFPGBuZ3QEww=
 github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
@@ -307,8 +307,8 @@ github.com/klauspost/compress v1.17.11 h1:In6xLpyWOi1+C7tXUUWv2ot1QvBjxevKAaI6IX
 github.com/klauspost/compress v1.17.11/go.mod h1:pMDklpSncoRMuLFrf1W9Ss9KT+0rH90U12bZKk7uwG0=
 github.com/kong/go-kong v0.63.0 h1:8ECLgkgDqON61qCMq/M0gTwZKYxg55Oy692dRDOOBiU=
 github.com/kong/go-kong v0.63.0/go.mod h1:ma9GWnhkxtrXZlLFfED955HjVzmUojYEHet3lm+PDik=
-github.com/kong/kubernetes-configuration v1.0.7-0.20250117152851-64a09d770d57 h1:lakePerOiyrrakL5KEV3zgR/UJxqSzMlZ0CXxNhfVhg=
-github.com/kong/kubernetes-configuration v1.0.7-0.20250117152851-64a09d770d57/go.mod h1:YzSyKf/Dg1TIPkVlzSHofk/RGchuDzpxBivfPDkQ2Do=
+github.com/kong/kubernetes-configuration v1.0.7-0.20250120092720-c985e30e5dd8 h1:SOex4KtF+p+D+hipv461M2Ueu4qQGBf8C5H1cuK1xfo=
+github.com/kong/kubernetes-configuration v1.0.7-0.20250120092720-c985e30e5dd8/go.mod h1:YzSyKf/Dg1TIPkVlzSHofk/RGchuDzpxBivfPDkQ2Do=
 github.com/kong/kubernetes-telemetry v0.1.8 h1:nbtUmXW9xkzRO7dgvrgVrJZiRksATk4XHrqX+78g/5k=
 github.com/kong/kubernetes-telemetry v0.1.8/go.mod h1:ZEQY/4DddKoe5XA7UTOIbdI/4d6ZRcrzh2ezRxnuyl0=
 github.com/kong/kubernetes-testing-framework v0.47.2 h1:+2Z9anTpbV/hwNeN+NFQz53BMU+g3QJydkweBp3tULo=

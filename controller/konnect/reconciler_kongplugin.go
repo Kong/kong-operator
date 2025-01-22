@@ -391,6 +391,11 @@ func deleteUnusedKongPluginBindings(
 			continue
 		}
 
+		// If there's no targets in the KongPluginBinding, skip it.
+		if pb.Spec.Targets == nil {
+			continue
+		}
+
 		// If the konghq.com/plugins annotation is not present, it doesn't contain
 		// the plugin in question or the object referring to the plugin has a non zero deletion timestamp,
 		// we need to delete all the managed KongPluginBindings that reference the object.
