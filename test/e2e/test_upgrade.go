@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	ktypes "sigs.k8s.io/kustomize/api/types"
+
+	"github.com/kong/gateway-operator/test"
 )
 
 func init() {
@@ -102,6 +104,9 @@ func testManifestsUpgrade(
 		),
 	))
 	t.Log("waiting for operator webhook service to be connective")
-	require.Eventually(t, waitForOperatorWebhookEventually(t, ctx, e.Clients.K8sClient),
-		webhookReadinessTimeout, webhookReadinessTick)
+
+	if test.IsWebhookEnabled() {
+		require.Eventually(t, waitForOperatorWebhookEventually(t, ctx, e.Clients.K8sClient),
+			webhookReadinessTimeout, webhookReadinessTick)
+	}
 }

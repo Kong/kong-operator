@@ -48,3 +48,8 @@ func KonnectAccessToken() string {
 func KonnectServerURL() string {
 	return os.Getenv("KONG_TEST_KONNECT_SERVER_URL")
 }
+
+// IsWebhookEnabled returns true if the webhook is enabled in the test environment.
+func IsWebhookEnabled() bool {
+	return strings.ToLower(os.Getenv("WEBHOOK_ENABLED")) == "true"
+}
