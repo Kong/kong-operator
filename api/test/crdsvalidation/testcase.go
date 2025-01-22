@@ -106,18 +106,24 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 
 		assert.EventuallyWithT(t,
 			func(c *assert.CollectT) {
+				toCreate := tc.TestObject.DeepCopyObject().(T)
+
 				// Create the object and set a cleanup function to delete it after the test if created successfully.
-				err = cl.Create(ctx, tc.TestObject)
+				err = cl.Create(ctx, toCreate)
 				if err == nil {
-					tCleanupObject(ctx, t, tc.TestObject)
+					tCleanupObject(ctx, t, toCreate)
 				}
 
 				// If the error message is expected, check if the error message contains the expected message and return.
 				if tc.ExpectedErrorMessage != nil {
-					if assert.NotNil(c, err) {
-						assert.Contains(c, err.Error(), *tc.ExpectedErrorMessage)
+					if !assert.NotNil(c, err) {
+						return
+					}
+					if !assert.Contains(c, err.Error(), *tc.ExpectedErrorMessage) {
+						return
 					}
 				}
+				tc.TestObject = toCreate
 			},
 			timeout, period,
 		)
