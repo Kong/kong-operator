@@ -211,22 +211,18 @@ func Run(
 		return err
 	}
 
+	keyType, err := keyTypeToX509PublicKeyAlgorithm(cfg.ClusterCAKeyType)
+	if err != nil {
+		return fmt.Errorf("unsupported cluster CA key type: %w", err)
+	}
+
 	caMgr := &caManager{
 		logger:          ctrl.Log.WithName("ca_manager"),
 		client:          mgr.GetClient(),
 		secretName:      cfg.ClusterCASecretName,
 		secretNamespace: cfg.ClusterCASecretNamespace,
 		keyConfig: secrets.KeyConfig{
-			Type: func() x509.PublicKeyAlgorithm {
-				switch cfg.ClusterCAKeyType {
-				case mgrconfig.RSA:
-					return x509.RSA
-				case mgrconfig.ECDSA:
-					return x509.ECDSA
-				default:
-					return x509.UnknownPublicKeyAlgorithm
-				}
-			}(),
+			Type: keyType,
 			Size: cfg.ClusterCAKeySize,
 		},
 	}
