@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"reflect"
 	"time"
@@ -31,6 +32,7 @@ import (
 	"github.com/kong/gateway-operator/internal/metrics"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	dataplanevalidator "github.com/kong/gateway-operator/internal/validation/dataplane"
+	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -380,7 +382,16 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 	}
 
 	clusterCAKeyConfig := secrets.KeyConfig{
-		Type: c.ClusterCAKeyType,
+		Type: func() x509.PublicKeyAlgorithm {
+			switch c.ClusterCAKeyType {
+			case mgrconfig.RSA:
+				return x509.RSA
+			case mgrconfig.ECDSA:
+				return x509.ECDSA
+			default:
+				return x509.UnknownPublicKeyAlgorithm
+			}
+		}(),
 		Size: c.ClusterCAKeySize,
 	}
 

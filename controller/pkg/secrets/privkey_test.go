@@ -7,8 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
 )
 
 func TestCreatePrivateKey(t *testing.T) {
@@ -23,7 +21,7 @@ func TestCreatePrivateKey(t *testing.T) {
 		{
 			name: "Generate ECDSA key",
 			keyConfig: KeyConfig{
-				Type: mgrconfig.ECDSA,
+				Type: x509.ECDSA,
 			},
 			expectErr:            false,
 			expectedPemBlockType: "EC PRIVATE KEY",
@@ -31,7 +29,7 @@ func TestCreatePrivateKey(t *testing.T) {
 		{
 			name: "Generate RSA key with size 2048",
 			keyConfig: KeyConfig{
-				Type: mgrconfig.RSA,
+				Type: x509.RSA,
 				Size: 2048,
 			},
 			expectErr:            false,
@@ -40,7 +38,7 @@ func TestCreatePrivateKey(t *testing.T) {
 		{
 			name: "Unsupported key type",
 			keyConfig: KeyConfig{
-				Type: "unsupported",
+				Type: x509.DSA,
 			},
 			expectErr: true,
 		},

@@ -30,7 +30,6 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/dataplane"
 	"github.com/kong/gateway-operator/controller/pkg/op"
-	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -97,35 +96,7 @@ limitations under the License.
 func signCertificate(
 	csr certificatesv1.CertificateSigningRequest,
 	ca *corev1.Secret,
-	keyType mgrconfig.KeyType,
 ) ([]byte, error) {
-	caKeyBlock, _ := pem.Decode(ca.Data["tls.key"])
-	if caKeyBlock == nil {
-		return nil, fmt.Errorf("failed decoding 'tls.key' data from secret %s", ca.Name)
-	}
-
-	var (
-		signatureAlgorithm x509.SignatureAlgorithm
-		priv               crypto.Signer
-		err                error
-	)
-	switch keyType {
-	case mgrconfig.ECDSA:
-		priv, err = x509.ParseECPrivateKey(caKeyBlock.Bytes)
-		if err != nil {
-			return nil, err
-		}
-		signatureAlgorithm = x509.ECDSAWithSHA256
-	case mgrconfig.RSA:
-		priv, err = x509.ParsePKCS1PrivateKey(caKeyBlock.Bytes)
-		if err != nil {
-			return nil, err
-		}
-		signatureAlgorithm = x509.SHA256WithRSA
-	default:
-		return nil, fmt.Errorf("unsupported key type: %s", keyType)
-	}
-
 	caCertBlock, _ := pem.Decode(ca.Data["tls.crt"])
 	if caCertBlock == nil {
 		return nil, fmt.Errorf("failed decoding 'tls.crt' data from secret %s", ca.Name)
@@ -156,6 +127,17 @@ func signCertificate(
 			ExpiryString: certExpiryDuration.String(),
 		},
 	}
+
+	caKeyBlock, _ := pem.Decode(ca.Data["tls.key"])
+	if caKeyBlock == nil {
+		return nil, fmt.Errorf("failed decoding 'tls.key' data from secret %s", ca.Name)
+	}
+
+	priv, signatureAlgorithm, err := parsePrivateKey(caKeyBlock)
+	if err != nil {
+		return nil, err
+	}
+
 	cfs, err := local.NewSigner(priv, caCert, signatureAlgorithm, policy)
 	if err != nil {
 		return nil, err
@@ -383,7 +365,7 @@ func generateTLSDataSecret(
 		return op.Noop, nil, err
 	}
 
-	signed, err := signCertificate(csr, &ca, keyConfig.Type)
+	signed, err := signCertificate(csr, &ca)
 	if err != nil {
 		return op.Noop, nil, err
 	}
@@ -453,4 +435,30 @@ func ensureContainerImageUpdated(container *corev1.Container, imageVersionStr st
 	}
 
 	return updated, nil
+}
+
+func parsePrivateKey(pemBlock *pem.Block) (crypto.Signer, x509.SignatureAlgorithm, error) {
+	var (
+		signatureAlgorithm x509.SignatureAlgorithm = x509.UnknownSignatureAlgorithm
+		priv               crypto.Signer
+		err                error
+	)
+	switch pemBlock.Type {
+	case "EC PRIVATE KEY":
+		priv, err = x509.ParseECPrivateKey(pemBlock.Bytes)
+		if err != nil {
+			return nil, signatureAlgorithm, err
+		}
+		signatureAlgorithm = x509.ECDSAWithSHA256
+	case "RSA PRIVATE KEY":
+		priv, err = x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
+		if err != nil {
+			return nil, signatureAlgorithm, err
+		}
+		signatureAlgorithm = x509.SHA256WithRSA
+	default:
+		return nil, signatureAlgorithm, fmt.Errorf("unsupported key type: %s", pemBlock.Type)
+	}
+
+	return priv, signatureAlgorithm, nil
 }

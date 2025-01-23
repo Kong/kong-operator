@@ -9,14 +9,12 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-
-	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
 )
 
 // KeyConfig is the configuration for generating a private key.
 type KeyConfig struct {
 	// Type is the type of the key to generate
-	Type mgrconfig.KeyType
+	Type x509.PublicKeyAlgorithm
 
 	// Size is the size of the key to generate in bits.
 	// This is only used for RSA keys.
@@ -33,7 +31,7 @@ func CreatePrivateKey(
 		pemBlock           *pem.Block
 	)
 	switch keyConfig.Type {
-	case mgrconfig.ECDSA:
+	case x509.ECDSA:
 		signatureAlgorithm = x509.ECDSAWithSHA256
 		ecdsa, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
@@ -48,7 +46,7 @@ func CreatePrivateKey(
 			Type:  "EC PRIVATE KEY",
 			Bytes: privDer,
 		}
-	case mgrconfig.RSA:
+	case x509.RSA:
 		signatureAlgorithm = x509.SHA256WithRSA
 		rsa, err := rsa.GenerateKey(rand.Reader, keyConfig.Size)
 		if err != nil {

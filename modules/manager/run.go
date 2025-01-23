@@ -217,7 +217,16 @@ func Run(
 		secretName:      cfg.ClusterCASecretName,
 		secretNamespace: cfg.ClusterCASecretNamespace,
 		keyConfig: secrets.KeyConfig{
-			Type: cfg.ClusterCAKeyType,
+			Type: func() x509.PublicKeyAlgorithm {
+				switch cfg.ClusterCAKeyType {
+				case mgrconfig.RSA:
+					return x509.RSA
+				case mgrconfig.ECDSA:
+					return x509.ECDSA
+				default:
+					return x509.UnknownPublicKeyAlgorithm
+				}
+			}(),
 			Size: cfg.ClusterCAKeySize,
 		},
 	}
