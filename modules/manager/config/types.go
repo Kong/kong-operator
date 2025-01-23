@@ -15,6 +15,8 @@ const (
 	ECDSA KeyType = "ecdsa"
 	// RSA is the key type for RSA keys.
 	RSA KeyType = "rsa"
+	// DefaultClusterCAKeyType is the default key type for the cluster CA.
+	DefaultClusterCAKeyType KeyType = ECDSA
 )
 
 // Set implements flag.Value.
@@ -23,8 +25,7 @@ func (kt *KeyType) Set(v string) error {
 	case string(ECDSA), string(RSA):
 		*kt = KeyType(v)
 	case "":
-		// Default to ECDSA.
-		*kt = ECDSA
+		*kt = DefaultClusterCAKeyType
 	default:
 		return fmt.Errorf("invalid value %q for key type", v)
 	}
