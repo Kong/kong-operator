@@ -25,42 +25,35 @@ type KeyConfig struct {
 func CreatePrivateKey(
 	keyConfig KeyConfig,
 ) (crypto.Signer, *pem.Block, x509.SignatureAlgorithm, error) {
-	var (
-		signatureAlgorithm x509.SignatureAlgorithm = x509.UnknownSignatureAlgorithm
-		priv               crypto.Signer
-		pemBlock           *pem.Block
-	)
 	switch keyConfig.Type {
+
 	case x509.ECDSA:
-		signatureAlgorithm = x509.ECDSAWithSHA256
 		ecdsa, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
-			return nil, nil, signatureAlgorithm, err
+			return nil, nil, x509.ECDSAWithSHA256, err
 		}
 		privDer, err := x509.MarshalECPrivateKey(ecdsa)
 		if err != nil {
-			return nil, nil, signatureAlgorithm, err
+			return nil, nil, x509.ECDSAWithSHA256, err
 		}
-		priv = ecdsa
-		pemBlock = &pem.Block{
+		pemBlock := &pem.Block{
 			Type:  "EC PRIVATE KEY",
 			Bytes: privDer,
 		}
+		return ecdsa, pemBlock, x509.ECDSAWithSHA256, nil
+
 	case x509.RSA:
-		signatureAlgorithm = x509.SHA256WithRSA
 		rsa, err := rsa.GenerateKey(rand.Reader, keyConfig.Size)
 		if err != nil {
-			return nil, nil, signatureAlgorithm, err
+			return nil, nil, x509.SHA256WithRSA, err
 		}
-		privDer := x509.MarshalPKCS1PrivateKey(rsa)
-		priv = rsa
-		pemBlock = &pem.Block{
+		pemBlock := &pem.Block{
 			Type:  "RSA PRIVATE KEY",
-			Bytes: privDer,
+			Bytes: x509.MarshalPKCS1PrivateKey(rsa),
 		}
-	default:
-		return nil, nil, signatureAlgorithm, fmt.Errorf("unsupported key type: %s", keyConfig.Type)
-	}
+		return rsa, pemBlock, x509.SHA256WithRSA, nil
 
-	return priv, pemBlock, signatureAlgorithm, nil
+	default:
+		return nil, nil, x509.UnknownSignatureAlgorithm, fmt.Errorf("unsupported key type: %s", keyConfig.Type)
+	}
 }

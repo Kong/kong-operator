@@ -444,21 +444,22 @@ func parsePrivateKey(pemBlock *pem.Block) (crypto.Signer, x509.SignatureAlgorith
 		err                error
 	)
 	switch pemBlock.Type {
+
 	case "EC PRIVATE KEY":
 		priv, err = x509.ParseECPrivateKey(pemBlock.Bytes)
 		if err != nil {
 			return nil, signatureAlgorithm, err
 		}
-		signatureAlgorithm = x509.ECDSAWithSHA256
+		return priv, x509.ECDSAWithSHA256, nil
+
 	case "RSA PRIVATE KEY":
 		priv, err = x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
 		if err != nil {
 			return nil, signatureAlgorithm, err
 		}
-		signatureAlgorithm = x509.SHA256WithRSA
+		return priv, x509.SHA256WithRSA, nil
+
 	default:
 		return nil, signatureAlgorithm, fmt.Errorf("unsupported key type: %s", pemBlock.Type)
 	}
-
-	return priv, signatureAlgorithm, nil
 }
