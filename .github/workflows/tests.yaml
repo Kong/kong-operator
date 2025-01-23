@@ -163,16 +163,16 @@ jobs:
         GOTESTSUM_JUNITFILE: "unit-tests.xml"
 
     - name: collect test coverage
-      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: coverage
-        path: coverage.unit.out
+        name: coverage-unit-tests
+        path: coverage.unit.outt
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: tests-report
+        name: tests-report-unit-tests
         path: unit-tests.xml
   
   envtest-tests:
@@ -196,16 +196,16 @@ jobs:
         GOTESTSUM_JUNITFILE: "envtest-tests.xml"
 
     - name: collect test coverage
-      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
         name: coverage-envtest
         path: coverage.envtest.out
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: tests-report
+        name: tests-report-envtest-tests
         path: envtest-tests.xml
 
   conformance-tests:
@@ -240,24 +240,24 @@ jobs:
 
     - name: upload diagnostics
       if: ${{ always() }}
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: diagnostics-conformance
+        name: diagnostics-conformance-${{ matrix.router-flavor }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: tests-report
+        name: tests-report-conformance-${{ matrix.router-flavor }}
         path: conformance-tests-${{ matrix.router-flavor }}.xml
 
     - name: collect conformance report
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
         name: conformance-report-${{ matrix.router-flavor }}
-        path: standard-*-report.yaml
+        path: standard-*-report.yamll
 
   integration-tests:
     runs-on: ubuntu-latest
@@ -295,23 +295,23 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
         name: diagnostics-integration-webhook-enabled-${{ matrix.webhook-enabled }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
-      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: coverage
+        name: coverage-integration-webhook-enabled-${{ matrix.webhook-enabled }}
         path: coverage.integration.out
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: tests-report
+        name: tests-report-integration-webhook-enabled-${{ matrix.webhook-enabled }}
         path: integration-tests-webhook-enabled-${{ matrix.webhook-enabled }}.xml
 
   integration-tests-bluegreen:
@@ -347,24 +347,24 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
         name: diagnostics-integration-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
-      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: coverage
+        name: coverage-integration-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}
         path: coverage.integration-bluegreen.out
 
     - name: collect test report
       if: always()
-      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: tests-report
-        path: integration-tests-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}.xml
+        name: tests-report-integration-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}
+        path: integration-tests-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}.xmll
   
   # Test reconciling Gateway with provisioning DataPlane failures.
   # This test introduces a wrong gateway that will have errors on validation all `DataPlane`s, so it should run isolated.
@@ -394,27 +394,27 @@ jobs:
         KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
         GOTESTSUM_JUNITFILE: integration-tests-provision-dataplane-fail.xml
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
+
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: diagnostics-integration-provision-fail-webhook-enabled-${{ matrix.webhook-enabled }}
+        name: diagnostics-integration-provision-fail
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
-      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: coverage
+        name: coverage-integration-tests-provision-fail
         path: coverage.integration-provision-dataplane-fail.out
 
     - name: collect test report
       if: always()
-      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: tests-report
-        path: integration-tests-provision-dataplane-fai.xml
+        name: tests-report-integration-tests-provision-fail
+        path: integration-tests-provision-dataplane-fail.xm
   
   e2e-tests:
     runs-on: ubuntu-latest
@@ -449,7 +449,7 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
         name: diagnostics-e2e
         path: /tmp/ktf-diag*
@@ -457,9 +457,9 @@ jobs:
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: tests-report
+        name: tests-report-e2e
         path: e2e-tests.xml
 
   buildpulse-report:
@@ -477,10 +477,11 @@ jobs:
 
       - name: download tests report
         id: download-coverage
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          name: tests-report
+          pattern: tests-report*
           path: report
+          merge-multiple: true
 
       - name: Upload test results to BuildPulse for flaky test detection
         if: ${{ !cancelled() }}
