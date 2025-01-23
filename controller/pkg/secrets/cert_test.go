@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
@@ -218,6 +219,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 		dataPlane                *operatorv1beta1.DataPlane
 		subject                  string
 		mtlsCASecretNN           NN
+		keyConfig                KeyConfig
 		additionalMatchingLabels client.MatchingLabels
 		expectedResult           op.Result
 		expectedError            error
@@ -232,8 +234,11 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 				Namespace: "ns",
 			},
 			additionalMatchingLabels: nil,
-			expectedResult:           op.Created,
-			expectedError:            nil,
+			keyConfig: KeyConfig{
+				Type: x509.ECDSA,
+			},
+			expectedResult: op.Created,
+			expectedError:  nil,
 		},
 		{
 			name:      "existing secret certificate gets deleted and re-created with it doesn't have the expected contents",
@@ -244,6 +249,9 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 				Namespace: "ns",
 			},
 			additionalMatchingLabels: nil,
+			keyConfig: KeyConfig{
+				Type: x509.ECDSA,
+			},
 			objectList: &corev1.SecretList{
 				Items: []corev1.Secret{
 					func() corev1.Secret {
@@ -279,6 +287,9 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 				Namespace: "ns",
 			},
 			additionalMatchingLabels: nil,
+			keyConfig: KeyConfig{
+				Type: x509.ECDSA,
+			},
 			objectList: &corev1.SecretList{
 				Items: []corev1.Secret{
 					func() corev1.Secret {
@@ -356,6 +367,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 				[]certificatesv1.KeyUsage{
 					certificatesv1.UsageServerAuth,
 				},
+				tc.keyConfig,
 				fakeClient,
 				tc.additionalMatchingLabels,
 			)
@@ -437,4 +449,69 @@ func generateCACert(nn types.NamespacedName) (*corev1.Secret, error) {
 	}
 
 	return signedSecret, nil
+}
+
+func Test_parsePrivateKey(t *testing.T) {
+	tests := []struct {
+		name             string
+		keyType          x509.PublicKeyAlgorithm
+		expectedAlg      x509.SignatureAlgorithm
+		expectedKeyType  interface{}
+		expectedErrorMsg string
+	}{
+		{
+			name:            "valid ECDSA private key",
+			keyType:         x509.ECDSA,
+			expectedAlg:     x509.ECDSAWithSHA256,
+			expectedKeyType: &ecdsa.PrivateKey{},
+		},
+		{
+			name:            "valid RSA private key",
+			keyType:         x509.RSA,
+			expectedAlg:     x509.SHA256WithRSA,
+			expectedKeyType: &rsa.PrivateKey{},
+		},
+		{
+			name:             "unsupported key type",
+			keyType:          x509.DSA,
+			expectedErrorMsg: "unsupported key type: DSA PRIVATE KEY",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var privKeyBytes []byte
+			var err error
+
+			switch tt.keyType {
+			case x509.ECDSA:
+				privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+				require.NoError(t, err)
+				privKeyBytes, err = x509.MarshalECPrivateKey(privKey)
+				require.NoError(t, err)
+			case x509.RSA:
+				privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+				require.NoError(t, err)
+				privKeyBytes = x509.MarshalPKCS1PrivateKey(privKey)
+			default:
+				privKeyBytes = []byte{}
+			}
+
+			pemBlock := &pem.Block{
+				Type:  tt.keyType.String() + " PRIVATE KEY",
+				Bytes: privKeyBytes,
+			}
+
+			priv, alg, err := parsePrivateKey(pemBlock)
+			if tt.expectedErrorMsg != "" {
+				require.Error(t, err)
+				assert.Equal(t, tt.expectedErrorMsg, err.Error())
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedAlg, alg)
+			assert.IsType(t, tt.expectedKeyType, priv)
+		})
+	}
 }

@@ -18,8 +18,6 @@ package manager
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -48,7 +46,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/internal/telemetry"
+	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
@@ -78,6 +78,8 @@ type Config struct {
 	KubeconfigPath           string
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
+	ClusterCAKeyType         mgrconfig.KeyType
+	ClusterCAKeySize         int
 	LoggerOpts               *zap.Options
 
 	// controllers for standard APIs and features
@@ -209,11 +211,20 @@ func Run(
 		return err
 	}
 
+	keyType, err := keyTypeToX509PublicKeyAlgorithm(cfg.ClusterCAKeyType)
+	if err != nil {
+		return fmt.Errorf("unsupported cluster CA key type: %w", err)
+	}
+
 	caMgr := &caManager{
 		logger:          ctrl.Log.WithName("ca_manager"),
 		client:          mgr.GetClient(),
 		secretName:      cfg.ClusterCASecretName,
 		secretNamespace: cfg.ClusterCASecretNamespace,
+		keyConfig: secrets.KeyConfig{
+			Type: keyType,
+			Size: cfg.ClusterCAKeySize,
+		},
 	}
 	if err = mgr.Add(caMgr); err != nil {
 		return fmt.Errorf("unable to start manager: %w", err)
@@ -303,6 +314,7 @@ type caManager struct {
 	client          client.Client
 	secretName      string
 	secretNamespace string
+	keyConfig       secrets.KeyConfig
 }
 
 // Start starts the CA manager.
@@ -319,72 +331,72 @@ func (m *caManager) Start(ctx context.Context) error {
 func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
 	// TODO https://github.com/Kong/gateway-operator/issues/199 this also needs to check if the CA is expired and
 	// managed, and needs to reissue it (and all issued certificates) if so
-	ca := &corev1.Secret{}
 	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()
-	err := m.client.Get(ctx, client.ObjectKey{Namespace: m.secretNamespace, Name: m.secretName}, ca)
-	if k8serrors.IsNotFound(err) {
-		serial, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
-		if err != nil {
-			return err
-		}
-		m.logger.Info(fmt.Sprintf("no CA certificate Secret %s found, generating CA certificate", m.secretName))
-		template := x509.Certificate{
-			Subject: pkix.Name{
-				CommonName:   "Kong Gateway Operator CA",
-				Organization: []string{"Kong, Inc."},
-				Country:      []string{"US"},
-			},
-			SerialNumber:          serial,
-			SignatureAlgorithm:    x509.ECDSAWithSHA256,
-			NotBefore:             time.Now(),
-			NotAfter:              time.Now().Add(time.Second * 315400000),
-			KeyUsage:              x509.KeyUsageCertSign + x509.KeyUsageKeyEncipherment + x509.KeyUsageDigitalSignature,
-			BasicConstraintsValid: true,
-			IsCA:                  true,
+
+	var (
+		ca        corev1.Secret
+		objectKey = client.ObjectKey{Namespace: m.secretNamespace, Name: m.secretName}
+	)
+
+	if err := m.client.Get(ctx, objectKey, &ca); err != nil {
+		if k8serrors.IsNotFound(err) {
+			m.logger.Info(fmt.Sprintf("no CA certificate Secret %s found, generating CA certificate", objectKey))
+			return m.createCACertificate(ctx)
 		}
 
-		priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-		if err != nil {
-			return err
-		}
-		privDer, err := x509.MarshalECPrivateKey(priv)
-		if err != nil {
-			return err
-		}
-
-		der, err := x509.CreateCertificate(rand.Reader, &template, &template, priv.Public(), priv)
-		if err != nil {
-			return err
-		}
-
-		signedSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: m.secretNamespace,
-				Name:      m.secretName,
-			},
-			Type: corev1.SecretTypeTLS,
-			StringData: map[string]string{
-				"tls.crt": string(pem.EncodeToMemory(&pem.Block{
-					Type:  "CERTIFICATE",
-					Bytes: der,
-				})),
-
-				"tls.key": string(pem.EncodeToMemory(&pem.Block{
-					Type:  "EC PRIVATE KEY",
-					Bytes: privDer,
-				})),
-			},
-		}
-		err = m.client.Create(ctx, signedSecret)
-		if err != nil {
-			return err
-		}
-
-	} else if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (m *caManager) createCACertificate(ctx context.Context) error {
+	serial, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+	if err != nil {
+		return err
+	}
+
+	priv, pemBlock, signatureAlgorithm, err := secrets.CreatePrivateKey(m.keyConfig)
+	if err != nil {
+		return err
+	}
+
+	template := x509.Certificate{
+		Subject: pkix.Name{
+			CommonName:   "Kong Gateway Operator CA",
+			Organization: []string{"Kong, Inc."},
+			Country:      []string{"US"},
+		},
+		SerialNumber:          serial,
+		SignatureAlgorithm:    signatureAlgorithm,
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Second * 315400000),
+		KeyUsage:              x509.KeyUsageCertSign + x509.KeyUsageKeyEncipherment + x509.KeyUsageDigitalSignature,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	der, err := x509.CreateCertificate(rand.Reader, &template, &template, priv.Public(), priv)
+	if err != nil {
+		return err
+	}
+
+	signedSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: m.secretNamespace,
+			Name:      m.secretName,
+		},
+		Type: corev1.SecretTypeTLS,
+		StringData: map[string]string{
+			"tls.crt": string(pem.EncodeToMemory(&pem.Block{
+				Type:  "CERTIFICATE",
+				Bytes: der,
+			})),
+
+			"tls.key": string(pem.EncodeToMemory(pemBlock)),
+		},
+	}
+	return m.client.Create(ctx, signedSecret)
 }
 
 // setupAnonymousReports sets up and starts the anonymous reporting and returns

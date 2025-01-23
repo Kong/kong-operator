@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"os"
@@ -27,6 +28,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/builder"
 	"github.com/kong/gateway-operator/controller/pkg/dataplane"
 	"github.com/kong/gateway-operator/controller/pkg/op"
+	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	dpv "github.com/kong/gateway-operator/internal/validation/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -351,12 +353,18 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 				Client:                   fakeClient,
 				ClusterCASecretName:      mtlsSecret.Name,
 				ClusterCASecretNamespace: mtlsSecret.Namespace,
+				ClusterCAKeyConfig: secrets.KeyConfig{
+					Type: x509.ECDSA,
+				},
 				DataPlaneController: &Reconciler{
 					Scheme:                   scheme.Scheme,
 					Client:                   fakeClient,
 					ClusterCASecretName:      mtlsSecret.Name,
 					ClusterCASecretNamespace: mtlsSecret.Namespace,
-					Validator:                dpv.NewValidator(fakeClient),
+					ClusterCAKeyConfig: secrets.KeyConfig{
+						Type: x509.ECDSA,
+					},
+					Validator: dpv.NewValidator(fakeClient),
 				},
 			}
 

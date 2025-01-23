@@ -23,6 +23,7 @@ import (
 
 	"github.com/kong/gateway-operator/config"
 	"github.com/kong/gateway-operator/modules/manager"
+	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -224,6 +225,7 @@ func DefaultControllerConfigForTests() manager.Config {
 	cfg.ValidatingWebhookEnabled = webhookEnabled
 	cfg.AnonymousReports = false
 	cfg.KonnectControllersEnabled = true
+	cfg.ClusterCAKeyType = mgrconfig.ECDSA
 
 	cfg.NewClientFunc = func(config *rest.Config, options client.Options) (client.Client, error) {
 		// always hijack and impersonate the system service account here so that the manager
