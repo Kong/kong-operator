@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	cputils "github.com/kong/gateway-operator/internal/utils/controlplane"
 	"github.com/kong/gateway-operator/internal/versions"
@@ -26,7 +27,15 @@ type DefaultsArgs struct {
 	DataPlaneAdminServiceName   string
 	OwnedByGateway              string
 	AnonymousReportsEnabled     bool
-	Konnect                     bool
+	Konnect                     *KonnectParams
+}
+
+// KonnectParams contains the parameters to customize the konnect-related env vars
+type KonnectParams struct {
+	ControlPlane string
+	Region       string
+	Server       string
+	TLSSecretRef string
 }
 
 // -----------------------------------------------------------------------------
@@ -192,6 +201,19 @@ func SetDefaults(
 	k8sutils.SetPodContainer(podSpec, container)
 
 	return changed
+}
+
+// TODO: comment
+func GetKonnectDefault(konnectExtension *operatorv1alpha1.KonnectExtension) *KonnectParams {
+	if konnectExtension == nil {
+		return nil
+	}
+	return &KonnectParams{
+		ControlPlane: *konnectExtension.Spec.ControlPlaneRef.KonnectID,
+		Region:       konnectExtension.Spec.ControlPlaneRegion,
+		Server:       konnectExtension.Spec.ServerHostname,
+		TLSSecretRef: konnectExtension.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name,
+	}
 }
 
 // GenerateImage returns the image to use for the control plane.

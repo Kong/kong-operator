@@ -328,7 +328,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
 	// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false.
-	controlplane := r.provisionControlPlane(ctx, logger, gwc.GatewayClass, &gateway, gatewayConfig, dataplane, ingressServices[0], adminServices[0])
+	controlplane := r.provisionControlPlane(ctx, logger, gwc.GatewayClass, &gateway, gatewayConfig, dataplane)
 
 	// Set the ControlPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no ControlPlaneReady condition in the gateway
@@ -521,8 +521,6 @@ func (r *Reconciler) provisionControlPlane(
 	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1beta1.GatewayConfiguration,
 	dataplane *operatorv1beta1.DataPlane,
-	ingressService corev1.Service,
-	adminService corev1.Service,
 ) *operatorv1beta1.ControlPlane {
 	logger = logger.WithName("controlplaneProvisioning")
 
@@ -542,7 +540,7 @@ func (r *Reconciler) provisionControlPlane(
 	count := len(controlplanes)
 	switch {
 	case count == 0:
-		r.setControlPlaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name, "")
+		r.setControlPlaneGatewayConfigDefaults(gatewayConfig, dataplane.Name)
 		err := r.createControlPlane(ctx, gatewayClass, gateway, gatewayConfig, dataplane.Name)
 		if err != nil {
 			log.Debug(logger, fmt.Sprintf("controlplane creation failed - error: %v", err))
@@ -569,7 +567,7 @@ func (r *Reconciler) provisionControlPlane(
 
 	// If we continue, there is only one controlplane.
 	controlPlane = controlplanes[0].DeepCopy()
-	r.setControlPlaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name, controlPlane.Name)
+	r.setControlPlaneGatewayConfigDefaults(gatewayConfig, dataplane.Name)
 
 	log.Trace(logger, "ensuring controlplane config is up to date")
 	// compare deployment option of controlplane with controlplane deployment option of gatewayconfiguration.

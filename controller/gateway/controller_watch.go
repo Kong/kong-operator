@@ -16,7 +16,6 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
-	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -301,12 +300,9 @@ func (r *Reconciler) setDataPlaneGatewayConfigDefaults(gatewayConfig *operatorv1
 	}
 }
 
-func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gateway,
+func (r *Reconciler) setControlPlaneGatewayConfigDefaults(
 	gatewayConfig *operatorv1beta1.GatewayConfiguration,
-	dataplaneName,
-	dataplaneIngressServiceName,
-	dataplaneAdminServiceName,
-	controlPlaneName string,
+	dataplaneName string,
 ) {
 	if gatewayConfig.Spec.ControlPlaneOptions == nil {
 		gatewayConfig.Spec.ControlPlaneOptions = new(operatorv1beta1.ControlPlaneOptions)
@@ -337,18 +333,6 @@ func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 		))
 		controlPlanePodTemplateSpec.Spec.Containers = append(controlPlanePodTemplateSpec.Spec.Containers, *container)
 	}
-
-	// an actual ControlPlane will have ObjectMeta populated with ownership information. this includes a stand-in to
-	// satisfy the signature
-	_ = controlplane.SetDefaults(gatewayConfig.Spec.ControlPlaneOptions,
-		controlplane.DefaultsArgs{
-			Namespace:                   gateway.Namespace,
-			DataPlaneIngressServiceName: dataplaneIngressServiceName,
-			DataPlaneAdminServiceName:   dataplaneAdminServiceName,
-			OwnedByGateway:              gateway.Name,
-			ControlPlaneName:            controlPlaneName,
-			AnonymousReportsEnabled:     controlplane.DeduceAnonymousReportsEnabled(r.DevelopmentMode, gatewayConfig.Spec.ControlPlaneOptions),
-		})
 
 	setControlPlaneOptionsDefaults(gatewayConfig.Spec.ControlPlaneOptions)
 }

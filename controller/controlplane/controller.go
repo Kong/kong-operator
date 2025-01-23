@@ -283,6 +283,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		DataPlaneIngressServiceName: dataplaneIngressServiceName,
 		DataPlaneAdminServiceName:   dataplaneAdminServiceName,
 		AnonymousReportsEnabled:     controlplane.DeduceAnonymousReportsEnabled(r.DevelopmentMode, &cp.Spec.ControlPlaneOptions),
+		Konnect:                     controlplane.GetKonnectDefault(nil), // todo: pass the actual extension
 	}
 	for _, owner := range cp.OwnerReferences {
 		if strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) && owner.Kind == "Gateway" {
