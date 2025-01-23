@@ -9,6 +9,9 @@ on:
       - 'main'
       - 'release/*'
 
+permissions:
+  contents: read
+
 jobs:
   look_for_release:
     outputs:
@@ -82,6 +85,8 @@ jobs:
         run: exit 1
 
   publish-release:
+    permissions:
+      contents: write
     needs:
       - look_for_release
       - semver
@@ -106,6 +111,8 @@ jobs:
           prerelease: ${{ needs.look_for_release.outputs.release_type == 'prerelease' }}
 
   create-release-branch:
+    permissions:
+      contents: write
     needs:
       - look_for_release
       - publish-release
@@ -127,6 +134,8 @@ jobs:
           sha: '${{ github.sha }}'
 
   create-cherry-pick-branch-to-main:
+    permissions:
+      contents: write
     needs:
       - look_for_release
       - publish-release
