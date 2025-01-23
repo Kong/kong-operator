@@ -379,6 +379,11 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		}
 	}
 
+	clusterCAKeyConfig := secrets.KeyConfig{
+		Type: c.ClusterCAKeyType,
+		Size: c.ClusterCAKeySize,
+	}
+
 	controllers := map[string]ControllerDef{
 		// GatewayClass controller
 		GatewayClassControllerName: {
@@ -407,11 +412,8 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				Scheme:                   mgr.GetScheme(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
-				ClusterCAKeyConfig: secrets.KeyConfig{
-					Type: c.ClusterCAKeyType,
-					Size: c.ClusterCAKeySize,
-				},
-				DevelopmentMode: c.DevelopmentMode,
+				ClusterCAKeyConfig:       clusterCAKeyConfig,
+				DevelopmentMode:          c.DevelopmentMode,
 			},
 		},
 		// DataPlane controller
@@ -422,12 +424,9 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				Scheme:                   mgr.GetScheme(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
-				ClusterCAKeyConfig: secrets.KeyConfig{
-					Type: c.ClusterCAKeyType,
-					Size: c.ClusterCAKeySize,
-				},
-				DevelopmentMode: c.DevelopmentMode,
-				Validator:       dataplanevalidator.NewValidator(mgr.GetClient()),
+				ClusterCAKeyConfig:       clusterCAKeyConfig,
+				DevelopmentMode:          c.DevelopmentMode,
+				Validator:                dataplanevalidator.NewValidator(mgr.GetClient()),
 				Callbacks: dataplane.DataPlaneCallbacks{
 					BeforeDeployment: dataplane.CreateCallbackManager(),
 					AfterDeployment:  dataplane.CreateCallbackManager(),
@@ -444,22 +443,16 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				DevelopmentMode:          c.DevelopmentMode,
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
-				ClusterCAKeyConfig: secrets.KeyConfig{
-					Type: c.ClusterCAKeyType,
-					Size: c.ClusterCAKeySize,
-				},
+				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				DataPlaneController: &dataplane.Reconciler{
 					Client:                   mgr.GetClient(),
 					Scheme:                   mgr.GetScheme(),
 					ClusterCASecretName:      c.ClusterCASecretName,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
-					ClusterCAKeyConfig: secrets.KeyConfig{
-						Type: c.ClusterCAKeyType,
-						Size: c.ClusterCAKeySize,
-					},
-					DevelopmentMode: c.DevelopmentMode,
-					Validator:       dataplanevalidator.NewValidator(mgr.GetClient()),
-					DefaultImage:    consts.DefaultDataPlaneImage,
+					ClusterCAKeyConfig:       clusterCAKeyConfig,
+					DevelopmentMode:          c.DevelopmentMode,
+					Validator:                dataplanevalidator.NewValidator(mgr.GetClient()),
+					DefaultImage:             consts.DefaultDataPlaneImage,
 					Callbacks: dataplane.DataPlaneCallbacks{
 						BeforeDeployment: dataplane.CreateCallbackManager(),
 						AfterDeployment:  dataplane.CreateCallbackManager(),
