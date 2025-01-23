@@ -49,7 +49,7 @@ func (b *KongPluginBindingBuilder) WithPluginRef(pluginName string) *KongPluginB
 // WithControlPlaneRef sets the control plane reference of the KongPluginBinding.
 // NOTE: Users have to ensure that the ControlPlaneRef that's set here
 // is the same across all the KongPluginBinding targets.
-func (b *KongPluginBindingBuilder) WithControlPlaneRef(ref *configurationv1alpha1.ControlPlaneRef) *KongPluginBindingBuilder {
+func (b *KongPluginBindingBuilder) WithControlPlaneRef(ref configurationv1alpha1.ControlPlaneRef) *KongPluginBindingBuilder {
 	b.binding.Spec.ControlPlaneRef = ref
 	return b
 }
@@ -58,7 +58,7 @@ func (b *KongPluginBindingBuilder) WithControlPlaneRef(ref *configurationv1alpha
 // NOTE: Users have to ensure that the ControlPlaneRef that's set here
 // is the same across all the KongPluginBinding targets.
 func (b *KongPluginBindingBuilder) WithControlPlaneRefKonnectNamespaced(name string) *KongPluginBindingBuilder {
-	b.binding.Spec.ControlPlaneRef = &configurationv1alpha1.ControlPlaneRef{
+	b.binding.Spec.ControlPlaneRef = configurationv1alpha1.ControlPlaneRef{
 		Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 		KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 			Name: name,
