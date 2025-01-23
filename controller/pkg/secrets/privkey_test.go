@@ -15,16 +15,18 @@ func TestCreatePrivateKey(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		keyConfig KeyConfig
-		expectErr bool
+		name                 string
+		keyConfig            KeyConfig
+		expectErr            bool
+		expectedPemBlockType string
 	}{
 		{
 			name: "Generate ECDSA key",
 			keyConfig: KeyConfig{
 				Type: mgrconfig.ECDSA,
 			},
-			expectErr: false,
+			expectErr:            false,
+			expectedPemBlockType: "EC PRIVATE KEY",
 		},
 		{
 			name: "Generate RSA key with size 2048",
@@ -32,7 +34,8 @@ func TestCreatePrivateKey(t *testing.T) {
 				Type: mgrconfig.RSA,
 				Size: 2048,
 			},
-			expectErr: false,
+			expectErr:            false,
+			expectedPemBlockType: "RSA PRIVATE KEY",
 		},
 		{
 			name: "Unsupported key type",
@@ -42,7 +45,7 @@ func TestCreatePrivateKey(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			name:      "Unsupported key type",
+			name:      "Empty key type",
 			keyConfig: KeyConfig{},
 			expectErr: true,
 		},
@@ -64,12 +67,7 @@ func TestCreatePrivateKey(t *testing.T) {
 			require.NotNil(t, pemBlock)
 			require.NotEqual(t, x509.UnknownSignatureAlgorithm, sigAlg)
 
-			// Check PEM block type
-			if tt.keyConfig.Type == mgrconfig.ECDSA {
-				assert.Equal(t, "EC PRIVATE KEY", pemBlock.Type)
-			} else if tt.keyConfig.Type == mgrconfig.RSA {
-				assert.Equal(t, "RSA PRIVATE KEY", pemBlock.Type)
-			}
+			assert.Equal(t, tt.expectedPemBlockType, pemBlock.Type)
 
 			// Check if PEM block can be parsed
 			p, rest := pem.Decode(pem.EncodeToMemory(pemBlock))
