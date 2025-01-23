@@ -18,10 +18,12 @@ If the troubleshooting section does not contain the answer to the problem you en
   - [ ] Make sure to add any changes to already supported resources (e.g. changing labels of managed `DataPlane`s) which might cause other resources (e.g. Pods) to be recreated.
 - [ ] Ensure that all generators have run properly (e.g. `make generate manifests`) so that updates to things like CRDs are handled for the release, double check that all manifests from `config/samples/` still work as intended.
 - [ ] Ensure GitHub PAT is still valid (see [GitHub PAT](#github-pat) below).
+- [ ] Ask on the `team-k8s` Slack channel for granting the CI DockerHub account temporary permission to push images to the `kong/gateway-operator-oss` repository.
 - [ ] From [GitHub release action][release-action], start a new workflow run:
   - Set the `Use workflow from` to the release branch: e.g. `release/1.2.x`
   - Set the `release` input set to the target version (e.g. `v1.2.0`).
 - [ ] Wait for the workflow to complete.
+- [ ] Once the workflow completes, ask for revoking the temporary permission to push images to the `kong/gateway-operator-oss` repository.
 - [ ] The CI should create a PR in the [Gateway Operator][kgo-prs] repo that bumps KGO version in VERSION file and manifests. Merge it.
 - [ ] After the PR is merged, [release-bot][release-bot-workflow] workflow will be triggered. It will create a new GH release, as well as a release branch (if not patch or prerelease):
   - [ ] Check the [releases][releases] page. The release has to be marked manually as `latest` if this is the case.

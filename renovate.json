@@ -36,6 +36,16 @@
       ]
     },
     {
+      "description": "Match dependencies in Makefile that are properly annotated with `# renovate: datasource={} depName={}.`",
+      "customType": "regex",
+      "fileMatch": [
+        "Makefile"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\n.+=\\s*(?<currentValue>.*)\\n"
+      ]
+    },
+    {
       "description": "Match versions in selected *.go files that are properly annotated with `// renovate: datasource={} depName={}.`",
       "customType": "regex",
       "datasourceTemplate": "docker",
