@@ -22,6 +22,7 @@ import (
 	"github.com/kong/gateway-operator/config"
 	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/manager"
+	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
@@ -172,6 +173,7 @@ func startControllerManager(metadata metadata.Info) <-chan struct{} {
 	cfg.DataPlaneControllerEnabled = true
 	cfg.ValidatingWebhookEnabled = false
 	cfg.AnonymousReports = false
+	cfg.ClusterCAKeyType = mgrconfig.ECDSA
 
 	cfg.NewClientFunc = func(config *rest.Config, options client.Options) (client.Client, error) {
 		// always hijack and impersonate the system service account here so that the manager

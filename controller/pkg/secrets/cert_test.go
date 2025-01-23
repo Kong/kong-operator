@@ -31,6 +31,7 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
+	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
@@ -218,6 +219,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 		dataPlane                *operatorv1beta1.DataPlane
 		subject                  string
 		mtlsCASecretNN           NN
+		keyConfig                KeyConfig
 		additionalMatchingLabels client.MatchingLabels
 		expectedResult           op.Result
 		expectedError            error
@@ -232,8 +234,11 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 				Namespace: "ns",
 			},
 			additionalMatchingLabels: nil,
-			expectedResult:           op.Created,
-			expectedError:            nil,
+			keyConfig: KeyConfig{
+				Type: mgrconfig.ECDSA,
+			},
+			expectedResult: op.Created,
+			expectedError:  nil,
 		},
 		{
 			name:      "existing secret certificate gets deleted and re-created with it doesn't have the expected contents",
@@ -244,6 +249,9 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 				Namespace: "ns",
 			},
 			additionalMatchingLabels: nil,
+			keyConfig: KeyConfig{
+				Type: mgrconfig.ECDSA,
+			},
 			objectList: &corev1.SecretList{
 				Items: []corev1.Secret{
 					func() corev1.Secret {
@@ -279,6 +287,9 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 				Namespace: "ns",
 			},
 			additionalMatchingLabels: nil,
+			keyConfig: KeyConfig{
+				Type: mgrconfig.ECDSA,
+			},
 			objectList: &corev1.SecretList{
 				Items: []corev1.Secret{
 					func() corev1.Secret {
@@ -356,6 +367,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 				[]certificatesv1.KeyUsage{
 					certificatesv1.UsageServerAuth,
 				},
+				tc.keyConfig,
 				fakeClient,
 				tc.additionalMatchingLabels,
 			)

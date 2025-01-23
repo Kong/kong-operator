@@ -435,6 +435,10 @@ func (r *Reconciler) ensureAdminMTLSCertificateSecret(
 			Name:      r.ClusterCASecretName,
 		},
 		usages,
+		secrets.KeyConfig{
+			Type: r.ClusterCAKeyConfig.Type,
+			Size: r.ClusterCAKeyConfig.Size,
+		},
 		r.Client,
 		matchingLabels,
 	)
@@ -486,6 +490,10 @@ func (r *Reconciler) ensureAdmissionWebhookCertificateSecret(
 			Name:      r.ClusterCASecretName,
 		},
 		usages,
+		secrets.KeyConfig{
+			Type: r.ClusterCAKeyConfig.Type,
+			Size: r.ClusterCAKeyConfig.Size,
+		},
 		r.Client,
 		matchingLabels,
 	)
@@ -498,7 +506,6 @@ func (r *Reconciler) ensureOwnedClusterRolesDeleted(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 ) (deletions bool, err error) {
-
 	clusterRoles, err := k8sutils.ListClusterRoles(
 		ctx,
 		r.Client,
@@ -557,7 +564,6 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 ) (deletions bool, err error) {
-
 	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
 		ctx,
 		r.Client,

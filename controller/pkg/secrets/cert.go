@@ -2,8 +2,7 @@ package secrets
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
+	"crypto"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -31,6 +30,7 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/dataplane"
 	"github.com/kong/gateway-operator/controller/pkg/op"
+	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -94,14 +94,36 @@ limitations under the License.
 
 // signCertificate takes a CertificateSigningRequest and a TLS Secret and returns a PEM x.509 certificate
 // signed by the certificate in the Secret.
-func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Secret) ([]byte, error) {
+func signCertificate(
+	csr certificatesv1.CertificateSigningRequest,
+	ca *corev1.Secret,
+	keyType mgrconfig.KeyType,
+) ([]byte, error) {
 	caKeyBlock, _ := pem.Decode(ca.Data["tls.key"])
 	if caKeyBlock == nil {
 		return nil, fmt.Errorf("failed decoding 'tls.key' data from secret %s", ca.Name)
 	}
-	priv, err := x509.ParseECPrivateKey(caKeyBlock.Bytes)
-	if err != nil {
-		return nil, err
+
+	var (
+		signatureAlgorithm x509.SignatureAlgorithm
+		priv               crypto.Signer
+		err                error
+	)
+	switch keyType {
+	case mgrconfig.ECDSA:
+		priv, err = x509.ParseECPrivateKey(caKeyBlock.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		signatureAlgorithm = x509.ECDSAWithSHA256
+	case mgrconfig.RSA:
+		priv, err = x509.ParsePKCS1PrivateKey(caKeyBlock.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		signatureAlgorithm = x509.SHA256WithRSA
+	default:
+		return nil, fmt.Errorf("unsupported key type: %s", keyType)
 	}
 
 	caCertBlock, _ := pem.Decode(ca.Data["tls.crt"])
@@ -134,7 +156,7 @@ func signCertificate(csr certificatesv1.CertificateSigningRequest, ca *corev1.Se
 			ExpiryString: certExpiryDuration.String(),
 		},
 	}
-	cfs, err := local.NewSigner(priv, caCert, x509.ECDSAWithSHA256, policy)
+	cfs, err := local.NewSigner(priv, caCert, signatureAlgorithm, policy)
 	if err != nil {
 		return nil, err
 	}
@@ -180,6 +202,7 @@ func EnsureCertificate[
 	subject string,
 	mtlsCASecretNN types.NamespacedName,
 	usages []certificatesv1.KeyUsage,
+	keyConfig KeyConfig,
 	cl client.Client,
 	additionalMatchingLabels client.MatchingLabels,
 ) (op.Result, *corev1.Secret, error) {
@@ -209,7 +232,7 @@ func EnsureCertificate[
 
 	// If there are no secrets yet, then create one.
 	if count == 0 {
-		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl)
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, keyConfig, cl)
 	}
 
 	// Otherwise there is already 1 certificate matching specified selectors.
@@ -222,7 +245,7 @@ func EnsureCertificate[
 			return op.Noop, nil, err
 		}
 
-		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl)
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, keyConfig, cl)
 	}
 
 	// Check if existing certificate is for a different subject.
@@ -236,7 +259,7 @@ func EnsureCertificate[
 			return op.Noop, nil, err
 		}
 
-		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl)
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, keyConfig, cl)
 	}
 
 	var updated bool
@@ -305,21 +328,22 @@ func generateTLSDataSecret(
 	subject string,
 	mtlsCASecret types.NamespacedName,
 	usages []certificatesv1.KeyUsage,
+	keyConfig KeyConfig,
 	k8sClient client.Client,
 ) (op.Result, *corev1.Secret, error) {
+	priv, pemBlock, signatureAlgorithm, err := CreatePrivateKey(keyConfig)
+	if err != nil {
+		return op.Noop, nil, err
+	}
+
 	template := x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:   subject,
 			Organization: []string{"Kong, Inc."},
 			Country:      []string{"US"},
 		},
-		SignatureAlgorithm: x509.ECDSAWithSHA256,
+		SignatureAlgorithm: signatureAlgorithm,
 		DNSNames:           []string{subject},
-	}
-
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return op.Noop, nil, err
 	}
 
 	der, err := x509.CreateCertificateRequest(rand.Reader, &template, priv)
@@ -353,17 +377,13 @@ func generateTLSDataSecret(
 		},
 	}
 
-	ca := &corev1.Secret{}
-	err = k8sClient.Get(ctx, mtlsCASecret, ca)
+	var ca corev1.Secret
+	err = k8sClient.Get(ctx, mtlsCASecret, &ca)
 	if err != nil {
 		return op.Noop, nil, err
 	}
 
-	signed, err := signCertificate(csr, ca)
-	if err != nil {
-		return op.Noop, nil, err
-	}
-	privDer, err := x509.MarshalECPrivateKey(priv)
+	signed, err := signCertificate(csr, &ca, keyConfig.Type)
 	if err != nil {
 		return op.Noop, nil, err
 	}
@@ -371,10 +391,7 @@ func generateTLSDataSecret(
 	generatedSecret.Data = map[string][]byte{
 		"ca.crt":  ca.Data["tls.crt"],
 		"tls.crt": signed,
-		"tls.key": pem.EncodeToMemory(&pem.Block{
-			Type:  "EC PRIVATE KEY",
-			Bytes: privDer,
-		}),
+		"tls.key": pem.EncodeToMemory(pemBlock),
 	}
 
 	err = k8sClient.Create(ctx, generatedSecret)
