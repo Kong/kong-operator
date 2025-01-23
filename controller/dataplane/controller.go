@@ -17,6 +17,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/ctxinjector"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
+	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
@@ -37,6 +38,7 @@ type Reconciler struct {
 	eventRecorder            record.EventRecorder
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
+	ClusterCAKeyConfig       secrets.KeyConfig
 	DevelopmentMode          bool
 	Validator                dataPlaneValidator
 	Callbacks                DataPlaneCallbacks
@@ -162,6 +164,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			Namespace: dataplaneAdminService.Namespace,
 			Name:      dataplaneAdminService.Name,
 		},
+		r.ClusterCAKeyConfig,
 	)
 	if err != nil {
 		return ctrl.Result{}, err

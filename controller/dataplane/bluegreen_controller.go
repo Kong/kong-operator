@@ -25,6 +25,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/dataplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
+	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
@@ -52,6 +53,7 @@ type BlueGreenReconciler struct {
 	// certificate data which will be used when generating certificates for DataPlane's
 	// Deployment.
 	ClusterCASecretNamespace string
+	ClusterCAKeyConfig       secrets.KeyConfig
 
 	// DevelopmentMode indicates if the controller should run in development mode,
 	// which causes it to e.g. perform less validations.
@@ -176,6 +178,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			Namespace: dataplaneAdminService.Namespace,
 			Name:      dataplaneAdminService.Name,
 		},
+		r.ClusterCAKeyConfig,
 	)
 	if err != nil {
 		return ctrl.Result{}, err

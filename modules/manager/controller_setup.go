@@ -26,6 +26,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/controller/specialized"
 	"github.com/kong/gateway-operator/internal/metrics"
 	"github.com/kong/gateway-operator/internal/utils/index"
@@ -378,6 +379,16 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		}
 	}
 
+	keyType, err := keyTypeToX509PublicKeyAlgorithm(c.ClusterCAKeyType)
+	if err != nil {
+		return nil, fmt.Errorf("unsupported cluster CA key type: %w", err)
+	}
+
+	clusterCAKeyConfig := secrets.KeyConfig{
+		Type: keyType,
+		Size: c.ClusterCAKeySize,
+	}
+
 	controllers := map[string]ControllerDef{
 		// GatewayClass controller
 		GatewayClassControllerName: {
@@ -406,6 +417,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				Scheme:                   mgr.GetScheme(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				DevelopmentMode:          c.DevelopmentMode,
 			},
 		},
@@ -417,6 +429,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				Scheme:                   mgr.GetScheme(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				DevelopmentMode:          c.DevelopmentMode,
 				Validator:                dataplanevalidator.NewValidator(mgr.GetClient()),
 				Callbacks: dataplane.DataPlaneCallbacks{
@@ -435,11 +448,13 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				DevelopmentMode:          c.DevelopmentMode,
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				DataPlaneController: &dataplane.Reconciler{
 					Client:                   mgr.GetClient(),
 					Scheme:                   mgr.GetScheme(),
 					ClusterCASecretName:      c.ClusterCASecretName,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+					ClusterCAKeyConfig:       clusterCAKeyConfig,
 					DevelopmentMode:          c.DevelopmentMode,
 					Validator:                dataplanevalidator.NewValidator(mgr.GetClient()),
 					DefaultImage:             consts.DefaultDataPlaneImage,

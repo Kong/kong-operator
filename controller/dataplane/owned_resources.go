@@ -35,6 +35,7 @@ func ensureDataPlaneCertificate(
 	dataplane *operatorv1beta1.DataPlane,
 	clusterCASecretNN types.NamespacedName,
 	adminServiceNN types.NamespacedName,
+	keyConfig secrets.KeyConfig,
 ) (op.Result, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
@@ -45,6 +46,7 @@ func ensureDataPlaneCertificate(
 		fmt.Sprintf("*.%s.%s.svc", adminServiceNN.Name, adminServiceNN.Namespace),
 		clusterCASecretNN,
 		usages,
+		keyConfig,
 		cl,
 		secrets.GetManagedLabelForServiceSecret(adminServiceNN),
 	)

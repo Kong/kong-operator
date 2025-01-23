@@ -41,6 +41,10 @@
   alternative is `GlobalInControlPlane` that will make the plugin apply
   globally in a control plane.
   [#1052](https://github.com/Kong/gateway-operator/pull/1052)
+- Added `-cluster-ca-key-type` and `-cluster-ca-key-size` CLI flags to allow
+  configuring cluster CA private key type and size. Currently allowed values:
+  `rsa` and `ecdsa` (default).
+  [#1081](https://github.com/Kong/gateway-operator/pull/1081)
 
 ### Changed
 

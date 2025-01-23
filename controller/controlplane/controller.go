@@ -29,6 +29,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
+	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -42,6 +43,7 @@ type Reconciler struct {
 	Scheme                   *runtime.Scheme
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
+	ClusterCAKeyConfig       secrets.KeyConfig
 	DevelopmentMode          bool
 }
 
