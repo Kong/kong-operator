@@ -164,10 +164,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			Namespace: dataplaneAdminService.Namespace,
 			Name:      dataplaneAdminService.Name,
 		},
-		secrets.KeyConfig{
-			Type: r.ClusterCAKeyConfig.Type,
-			Size: r.ClusterCAKeyConfig.Size,
-		},
+		r.ClusterCAKeyConfig,
 	)
 	if err != nil {
 		return ctrl.Result{}, err

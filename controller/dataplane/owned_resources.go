@@ -46,10 +46,7 @@ func ensureDataPlaneCertificate(
 		fmt.Sprintf("*.%s.%s.svc", adminServiceNN.Name, adminServiceNN.Namespace),
 		clusterCASecretNN,
 		usages,
-		secrets.KeyConfig{
-			Type: keyConfig.Type,
-			Size: keyConfig.Size,
-		},
+		keyConfig,
 		cl,
 		secrets.GetManagedLabelForServiceSecret(adminServiceNN),
 	)

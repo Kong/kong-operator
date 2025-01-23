@@ -435,10 +435,7 @@ func (r *Reconciler) ensureAdminMTLSCertificateSecret(
 			Name:      r.ClusterCASecretName,
 		},
 		usages,
-		secrets.KeyConfig{
-			Type: r.ClusterCAKeyConfig.Type,
-			Size: r.ClusterCAKeyConfig.Size,
-		},
+		r.ClusterCAKeyConfig,
 		r.Client,
 		matchingLabels,
 	)
@@ -490,10 +487,7 @@ func (r *Reconciler) ensureAdmissionWebhookCertificateSecret(
 			Name:      r.ClusterCASecretName,
 		},
 		usages,
-		secrets.KeyConfig{
-			Type: r.ClusterCAKeyConfig.Type,
-			Size: r.ClusterCAKeyConfig.Size,
-		},
+		r.ClusterCAKeyConfig,
 		r.Client,
 		matchingLabels,
 	)
