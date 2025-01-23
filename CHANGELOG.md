@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v1.4.2](#v142)
 - [v1.4.1](#v141)
 - [v1.4.0](#v140)
 - [v1.3.0](#v130)
@@ -101,9 +102,6 @@
 - Fix unexpected error logs caused by passing an odd number of arguments to the logger
   in the `KongConsumer` reconciler.
   [#983](https://github.com/Kong/gateway-operator/pull/983)
-- Fix `KongRoute` Konnect entity with a non-empty `headers` field reconciliation. The
-  `headers` field is now properly mapped to the expected Konnect schema.
-  [#1044](https://github.com/Kong/gateway-operator/pull/1044)
 
 ### Added
 
@@ -111,6 +109,19 @@
   - `gateway_operator_konnect_entity_operation_count` for number of operations.
   - `gateway_operator_konnect_entity_operation_duration_milliseconds` for duration of operations.
   [#953](https://github.com/Kong/gateway-operator/pull/953)
+
+## [v1.4.2]
+
+> Release date: 2025-01-23
+
+### Fixes
+
+- Bump `kong/kubernetes-configuration` dependency to v1.0.8 that fixes the issue with `spec.headers`
+  in `KongRoute` CRD by aligning to the expected schema (instead of `map[string]string`, it should be
+  `map[string][]string`).
+  Please make sure you update the KGO channel CRDs accordingly in your cluster:
+  `kustomize build github.com/Kong/kubernetes-configuration/config/crd/gateway-operator\?ref=v1.0.8 | kubectl apply -f -`
+  [#1072](https://github.com/Kong/gateway-operator/pull/1072)
 
 ## [v1.4.1]
 
@@ -902,6 +913,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v1.4.2]: https://github.com/Kong/gateway-operator/compare/v1.4.1..v1.4.2
 [v1.4.1]: https://github.com/Kong/gateway-operator/compare/v1.4.0..v1.4.1
 [v1.4.0]: https://github.com/Kong/gateway-operator/compare/v1.3.0..v1.4.0
 [v1.3.0]: https://github.com/Kong/gateway-operator/compare/v1.2.3..v1.3.0
