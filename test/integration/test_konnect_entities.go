@@ -15,7 +15,6 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
-	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
@@ -47,8 +46,8 @@ func TestKonnectEntities(t *testing.T) {
 		func(obj client.Object) {
 			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
 			authCfg.Spec.Type = konnectv1alpha1.KonnectAPIAuthTypeToken
-			authCfg.Spec.Token = test.KonnectAccessToken()
-			authCfg.Spec.ServerURL = test.KonnectServerURL()
+			//authCfg.Spec.Token = test.KonnectAccessToken()
+			//authCfg.Spec.ServerURL = test.KonnectServerURL()
 		},
 	)
 
