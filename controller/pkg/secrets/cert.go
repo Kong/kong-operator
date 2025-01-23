@@ -445,7 +445,7 @@ func parsePrivateKey(pemBlock *pem.Block) (crypto.Signer, x509.SignatureAlgorith
 	)
 	switch pemBlock.Type {
 
-	case "EC PRIVATE KEY":
+	case "EC PRIVATE KEY", "ECDSA PRIVATE KEY":
 		priv, err = x509.ParseECPrivateKey(pemBlock.Bytes)
 		if err != nil {
 			return nil, signatureAlgorithm, err
