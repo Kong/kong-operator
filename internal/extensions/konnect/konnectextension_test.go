@@ -1,4 +1,4 @@
-package dataplane
+package konnect
 
 import (
 	"context"
@@ -16,7 +16,6 @@ import (
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
-	konnectextensions "github.com/kong/gateway-operator/internal/extensions/konnect"
 	dputils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -90,7 +89,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 					ServerHostname:     "konnect.example.com",
 				},
 			},
-			expectedError: konnectextensions.ErrCrossNamespaceReference,
+			expectedError: ErrCrossNamespaceReference,
 		},
 		{
 			name: "Extension not found",
@@ -117,7 +116,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 					},
 				},
 			},
-			expectedError: konnectextensions.ErrKonnectExtensionNotFound,
+			expectedError: ErrKonnectExtensionNotFound,
 		},
 		{
 			name: "Extension properly referenced, secret not found",
@@ -162,7 +161,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 					ServerHostname:     "konnect.example.com",
 				},
 			},
-			expectedError: konnectextensions.ErrClusterCertificateNotFound,
+			expectedError: ErrClusterCertificateNotFound,
 		},
 		{
 			name: "Extension properly referenced, no deployment Options set.",
@@ -292,7 +291,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 
 			dataplane := tt.dataPlane.DeepCopy()
-			err := applyKonnectExtension(context.Background(), cl, dataplane)
+			err := ApplyDataPlaneKonnectExtension(context.Background(), cl, dataplane)
 			if tt.expectedError != nil {
 				require.ErrorIs(t, err, tt.expectedError)
 			} else {

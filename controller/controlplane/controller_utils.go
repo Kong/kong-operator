@@ -38,7 +38,7 @@ func applyExtensions(ctx context.Context, cl client.Client, logger logr.Logger, 
 	}
 
 	condition := k8sutils.NewConditionWithGeneration(consts.ResolvedRefsType, metav1.ConditionTrue, consts.ResolvedRefsReason, "", controlplane.GetGeneration())
-	err = applyKonnectExtension(ctx, cl, controlplane)
+	err = konnectextensions.ApplyControlPlaneKonnectExtension(ctx, cl, controlplane)
 	if err != nil {
 		switch {
 		case errors.Is(err, konnectextensions.ErrCrossNamespaceReference):

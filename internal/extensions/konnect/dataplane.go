@@ -1,4 +1,4 @@
-package dataplane
+package konnect
 
 import (
 	"context"
@@ -12,8 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
-	"github.com/kong/gateway-operator/api/v1beta1"
-	konnectextensions "github.com/kong/gateway-operator/internal/extensions/konnect"
+	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	dputils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -22,14 +21,14 @@ import (
 
 // applyKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it
 // fetches the referenced extension and applies the necessary changes to the DataPlane spec.
-func applyKonnectExtension(ctx context.Context, cl client.Client, dataplane *v1beta1.DataPlane) error {
+func ApplyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, dataplane *operatorv1beta1.DataPlane) error {
 	for _, extensionRef := range dataplane.Spec.Extensions {
 		if extensionRef.Group != operatorv1alpha1.SchemeGroupVersion.Group || extensionRef.Kind != operatorv1alpha1.KonnectExtensionKind {
 			continue
 		}
 		namespace := dataplane.Namespace
 		if extensionRef.Namespace != nil && *extensionRef.Namespace != namespace {
-			return errors.Join(konnectextensions.ErrCrossNamespaceReference, fmt.Errorf("the cross-namespace reference to the extension %s/%s is not permitted", *extensionRef.Namespace, extensionRef.Name))
+			return errors.Join(ErrCrossNamespaceReference, fmt.Errorf("the cross-namespace reference to the extension %s/%s is not permitted", *extensionRef.Namespace, extensionRef.Name))
 		}
 
 		konnectExt := operatorv1alpha1.KonnectExtension{}
@@ -38,7 +37,7 @@ func applyKonnectExtension(ctx context.Context, cl client.Client, dataplane *v1b
 			Name:      extensionRef.Name,
 		}, &konnectExt); err != nil {
 			if k8serrors.IsNotFound(err) {
-				return errors.Join(konnectextensions.ErrKonnectExtensionNotFound, fmt.Errorf("the extension %s/%s referenced by the DataPlane is not found", namespace, extensionRef.Name))
+				return errors.Join(ErrKonnectExtensionNotFound, fmt.Errorf("the extension %s/%s referenced by the DataPlane is not found", namespace, extensionRef.Name))
 			} else {
 				return err
 			}
@@ -50,7 +49,7 @@ func applyKonnectExtension(ctx context.Context, cl client.Client, dataplane *v1b
 			Name:      konnectExt.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name,
 		}, &secret); err != nil {
 			if k8serrors.IsNotFound(err) {
-				return errors.Join(konnectextensions.ErrClusterCertificateNotFound, fmt.Errorf("the cluster certificate secret %s/%s referenced by the extension %s/%s is not found", namespace, konnectExt.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name, namespace, extensionRef.Name))
+				return errors.Join(ErrClusterCertificateNotFound, fmt.Errorf("the cluster certificate secret %s/%s referenced by the extension %s/%s is not found", namespace, konnectExt.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name, namespace, extensionRef.Name))
 			} else {
 				return err
 			}

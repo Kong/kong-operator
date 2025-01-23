@@ -10,6 +10,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	cputils "github.com/kong/gateway-operator/internal/utils/controlplane"
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -25,6 +26,7 @@ type DefaultsArgs struct {
 	DataPlaneAdminServiceName   string
 	OwnedByGateway              string
 	AnonymousReportsEnabled     bool
+	Konnect                     bool
 }
 
 // -----------------------------------------------------------------------------
@@ -62,7 +64,7 @@ func SetDefaults(
 		dontOverride[envVar.Name] = struct{}{}
 	}
 
-	const podNamespaceEnvVarName = "POD_NAMESPACE"
+	const podNamespaceEnvVarName = cputils.PodNamespaceEnvVarName
 	if !reflect.DeepEqual(envSourceMetadataNamespace, k8sutils.EnvVarSourceByName(container.Env, podNamespaceEnvVarName)) {
 		container.Env = k8sutils.UpdateEnvSource(container.Env, podNamespaceEnvVarName, envSourceMetadataNamespace)
 		changed = true
@@ -70,9 +72,8 @@ func SetDefaults(
 
 	// due to the anonymous reports being enabled by default
 	// if the flag is set to false, we need to set the env var to false
-	const controllerAnonymousReportsEnvVarName = "CONTROLLER_ANONYMOUS_REPORTS"
-	if k8sutils.EnvValueByName(container.Env, controllerAnonymousReportsEnvVarName) != fmt.Sprintf("%t", args.AnonymousReportsEnabled) {
-		container.Env = k8sutils.UpdateEnv(container.Env, controllerAnonymousReportsEnvVarName, fmt.Sprintf("%t", args.AnonymousReportsEnabled))
+	if k8sutils.EnvValueByName(container.Env, cputils.ControllerAnonymousReportsEnvVarName) != fmt.Sprintf("%t", args.AnonymousReportsEnabled) {
+		container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerAnonymousReportsEnvVarName, fmt.Sprintf("%t", args.AnonymousReportsEnabled))
 		changed = true
 	}
 
@@ -83,50 +84,45 @@ func SetDefaults(
 			FieldPath:  "metadata.name",
 		},
 	}
-	const podNameEnvVarName = "POD_NAME"
-	if !reflect.DeepEqual(envSourceMetadataName, k8sutils.EnvVarSourceByName(container.Env, podNameEnvVarName)) {
-		container.Env = k8sutils.UpdateEnvSource(container.Env, podNameEnvVarName, envSourceMetadataName)
+	if !reflect.DeepEqual(envSourceMetadataName, k8sutils.EnvVarSourceByName(container.Env, cputils.PodNameEnvVarName)) {
+		container.Env = k8sutils.UpdateEnvSource(container.Env, cputils.PodNameEnvVarName, envSourceMetadataName)
 		changed = true
 	}
 
-	const controllerGatewayAPIControllerNameEnvVarName = "CONTROLLER_GATEWAY_API_CONTROLLER_NAME"
-	if ctrlName := vars.ControllerName(); k8sutils.EnvValueByName(container.Env, controllerGatewayAPIControllerNameEnvVarName) != ctrlName {
-		container.Env = k8sutils.UpdateEnv(container.Env, controllerGatewayAPIControllerNameEnvVarName, ctrlName)
+	if ctrlName := vars.ControllerName(); k8sutils.EnvValueByName(container.Env, cputils.ControllerGatewayAPIControllerNameEnvVarName) != ctrlName {
+		container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerGatewayAPIControllerNameEnvVarName, ctrlName)
 		changed = true
 	}
 
 	if args.Namespace != "" && args.DataPlaneIngressServiceName != "" {
-		if _, isOverrideDisabled := dontOverride["CONTROLLER_PUBLISH_SERVICE"]; !isOverrideDisabled {
+		if _, isOverrideDisabled := dontOverride[cputils.ControllerPublishServiceEnvVarName]; !isOverrideDisabled {
 			publishServiceNN := k8stypes.NamespacedName{Namespace: args.Namespace, Name: args.DataPlaneIngressServiceName}.String()
-			if k8sutils.EnvValueByName(container.Env, "CONTROLLER_PUBLISH_SERVICE") != publishServiceNN {
-				container.Env = k8sutils.UpdateEnv(container.Env, "CONTROLLER_PUBLISH_SERVICE", publishServiceNN)
+			if k8sutils.EnvValueByName(container.Env, cputils.ControllerPublishServiceEnvVarName) != publishServiceNN {
+				container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerPublishServiceEnvVarName, publishServiceNN)
 				changed = true
 			}
 		}
 	}
 
 	if args.Namespace != "" && args.DataPlaneAdminServiceName != "" {
-		const controllerKongAdminSvcEnvVarName = "CONTROLLER_KONG_ADMIN_SVC"
 		dataPlaneAdminServiceNN := k8stypes.NamespacedName{Namespace: args.Namespace, Name: args.DataPlaneAdminServiceName}.String()
-		if _, isOverrideDisabled := dontOverride[controllerKongAdminSvcEnvVarName]; !isOverrideDisabled {
-			if k8sutils.EnvValueByName(container.Env, controllerKongAdminSvcEnvVarName) != dataPlaneAdminServiceNN {
-				container.Env = k8sutils.UpdateEnv(container.Env, controllerKongAdminSvcEnvVarName, dataPlaneAdminServiceNN)
+		if _, isOverrideDisabled := dontOverride[cputils.ControllerKongAdminSVCEnvVarName]; !isOverrideDisabled {
+			if k8sutils.EnvValueByName(container.Env, cputils.ControllerKongAdminSVCEnvVarName) != dataPlaneAdminServiceNN {
+				container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerKongAdminSVCEnvVarName, dataPlaneAdminServiceNN)
 				changed = true
 			}
 		}
 
-		const controllerKongAdminSvcPortNamesEnvVarName = "CONTROLLER_KONG_ADMIN_SVC_PORT_NAMES"
-		if _, isOverrideDisabled := dontOverride[controllerKongAdminSvcPortNamesEnvVarName]; !isOverrideDisabled {
-			if k8sutils.EnvValueByName(container.Env, controllerKongAdminSvcPortNamesEnvVarName) != consts.DataPlaneAdminServicePortName {
-				container.Env = k8sutils.UpdateEnv(container.Env, controllerKongAdminSvcPortNamesEnvVarName, consts.DataPlaneAdminServicePortName)
+		if _, isOverrideDisabled := dontOverride[cputils.ControllerKongAdminSVCPortNamesEnvVarName]; !isOverrideDisabled {
+			if k8sutils.EnvValueByName(container.Env, cputils.ControllerKongAdminSVCPortNamesEnvVarName) != consts.DataPlaneAdminServicePortName {
+				container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerKongAdminSVCPortNamesEnvVarName, consts.DataPlaneAdminServicePortName)
 				changed = true
 			}
 		}
 	}
-	const controllerGatewayDiscoveryDNSStrategyEnvVarName = "CONTROLLER_GATEWAY_DISCOVERY_DNS_STRATEGY"
-	if _, isOverrideDisabled := dontOverride[controllerGatewayDiscoveryDNSStrategyEnvVarName]; !isOverrideDisabled {
-		if k8sutils.EnvValueByName(container.Env, controllerGatewayDiscoveryDNSStrategyEnvVarName) != consts.DataPlaneServiceDNSDiscoveryStrategy {
-			container.Env = k8sutils.UpdateEnv(container.Env, controllerGatewayDiscoveryDNSStrategyEnvVarName, consts.DataPlaneServiceDNSDiscoveryStrategy)
+	if _, isOverrideDisabled := dontOverride[cputils.ControllerGatewayDiscoveryDNSStrategyEnvVarName]; !isOverrideDisabled {
+		if k8sutils.EnvValueByName(container.Env, cputils.ControllerGatewayDiscoveryDNSStrategyEnvVarName) != consts.DataPlaneServiceDNSDiscoveryStrategy {
+			container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerGatewayDiscoveryDNSStrategyEnvVarName, consts.DataPlaneServiceDNSDiscoveryStrategy)
 			changed = true
 		}
 	}
@@ -137,17 +133,17 @@ func SetDefaults(
 		// to 5s (the default value is 1s) to:
 		// - reduce spamming of "retrying connection to the dataplane i/60";
 		// - avoid crash of the controlplane pod when the dataplane is particularly slow to start (it happens quite rarely).
-		if _, isOverrideDisabled := dontOverride["CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY"]; !isOverrideDisabled {
-			if k8sutils.EnvValueByName(container.Env, "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY") != consts.DataPlaneInitRetryDelay {
-				container.Env = k8sutils.UpdateEnv(container.Env, "CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY", consts.DataPlaneInitRetryDelay)
+		if _, isOverrideDisabled := dontOverride[cputils.ControllerKongAdminInitRetryDelayEnvVarName]; !isOverrideDisabled {
+			if k8sutils.EnvValueByName(container.Env, cputils.ControllerKongAdminInitRetryDelayEnvVarName) != consts.DataPlaneInitRetryDelay {
+				container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerKongAdminInitRetryDelayEnvVarName, consts.DataPlaneInitRetryDelay)
 				changed = true
 			}
 		}
 
-		if _, isOverrideDisabled := dontOverride["CONTROLLER_GATEWAY_TO_RECONCILE"]; !isOverrideDisabled {
+		if _, isOverrideDisabled := dontOverride[cputils.ControllerGatewayToReconcileEnvVarName]; !isOverrideDisabled {
 			gatewayOwner := fmt.Sprintf("%s/%s", args.Namespace, args.OwnedByGateway)
-			if k8sutils.EnvValueByName(container.Env, "CONTROLLER_GATEWAY_TO_RECONCILE") != gatewayOwner {
-				container.Env = k8sutils.UpdateEnv(container.Env, "CONTROLLER_GATEWAY_TO_RECONCILE", gatewayOwner)
+			if k8sutils.EnvValueByName(container.Env, cputils.ControllerGatewayToReconcileEnvVarName) != gatewayOwner {
+				container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerGatewayToReconcileEnvVarName, gatewayOwner)
 				changed = true
 			}
 		}
@@ -157,43 +153,38 @@ func SetDefaults(
 	// and once from the ControlPlane controller. the Gateway controller only has the spec and lacks meta, whereas the
 	// ControlPlane controller doesn't have the args.ManagedByGateway
 
-	const controllerKongAdminTLSClientCertFileEnvVarName = "CONTROLLER_KONG_ADMIN_TLS_CLIENT_CERT_FILE"
-	if _, isOverrideDisabled := dontOverride[controllerKongAdminTLSClientCertFileEnvVarName]; !isOverrideDisabled {
-		if k8sutils.EnvValueByName(container.Env, controllerKongAdminTLSClientCertFileEnvVarName) != consts.TLSCRTPath {
-			container.Env = k8sutils.UpdateEnv(container.Env, controllerKongAdminTLSClientCertFileEnvVarName, consts.TLSCRTPath)
+	if _, isOverrideDisabled := dontOverride[cputils.ControllerKongAdminTLSClientCertFileEnvVarName]; !isOverrideDisabled {
+		if k8sutils.EnvValueByName(container.Env, cputils.ControllerKongAdminTLSClientCertFileEnvVarName) != consts.TLSCRTPath {
+			container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerKongAdminTLSClientCertFileEnvVarName, consts.TLSCRTPath)
 			changed = true
 		}
 	}
-	const controllerKongAdminTLSClientKeyFileEnvVarName = "CONTROLLER_KONG_ADMIN_TLS_CLIENT_KEY_FILE"
-	if _, isOverrideDisabled := dontOverride[controllerKongAdminTLSClientKeyFileEnvVarName]; !isOverrideDisabled {
-		if k8sutils.EnvValueByName(container.Env, controllerKongAdminTLSClientKeyFileEnvVarName) != consts.TLSKeyPath {
-			container.Env = k8sutils.UpdateEnv(container.Env, controllerKongAdminTLSClientKeyFileEnvVarName, consts.TLSKeyPath)
+	if _, isOverrideDisabled := dontOverride[cputils.ControllerKongAdminTLSClientKeyFileEnvVarName]; !isOverrideDisabled {
+		if k8sutils.EnvValueByName(container.Env, cputils.ControllerKongAdminTLSClientKeyFileEnvVarName) != consts.TLSKeyPath {
+			container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerKongAdminTLSClientKeyFileEnvVarName, consts.TLSKeyPath)
 			changed = true
 		}
 	}
-	const controllerKongAdminCACertFileEnvVarName = "CONTROLLER_KONG_ADMIN_CA_CERT_FILE"
-	if _, isOverrideDisabled := dontOverride[controllerKongAdminCACertFileEnvVarName]; !isOverrideDisabled {
-		if k8sutils.EnvValueByName(container.Env, controllerKongAdminCACertFileEnvVarName) != consts.TLSCACRTPath {
-			container.Env = k8sutils.UpdateEnv(container.Env, controllerKongAdminCACertFileEnvVarName, consts.TLSCACRTPath)
+	if _, isOverrideDisabled := dontOverride[cputils.ControllerKongAdminCACertFileEnvVarName]; !isOverrideDisabled {
+		if k8sutils.EnvValueByName(container.Env, cputils.ControllerKongAdminCACertFileEnvVarName) != consts.TLSCACRTPath {
+			container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerKongAdminCACertFileEnvVarName, consts.TLSCACRTPath)
 			changed = true
 		}
 	}
 
 	if args.ControlPlaneName != "" {
-		const controllerElectionIDEnvVarName = "CONTROLLER_ELECTION_ID"
 		electionID := fmt.Sprintf("%s.konghq.com", args.ControlPlaneName)
-		if _, isOverrideDisabled := dontOverride[controllerElectionIDEnvVarName]; !isOverrideDisabled {
-			if k8sutils.EnvValueByName(container.Env, controllerElectionIDEnvVarName) != electionID {
-				container.Env = k8sutils.UpdateEnv(container.Env, controllerElectionIDEnvVarName, electionID)
+		if _, isOverrideDisabled := dontOverride[cputils.ControllerElectionIDEnvVarName]; !isOverrideDisabled {
+			if k8sutils.EnvValueByName(container.Env, cputils.ControllerElectionIDEnvVarName) != electionID {
+				container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerElectionIDEnvVarName, electionID)
 				changed = true
 			}
 		}
 	}
 
-	const controllerAdmissionWebhookListen = "CONTROLLER_ADMISSION_WEBHOOK_LISTEN"
-	if _, isOverrideDisabled := dontOverride[controllerAdmissionWebhookListen]; !isOverrideDisabled {
-		if k8sutils.EnvValueByName(container.Env, controllerAdmissionWebhookListen) != consts.ControlPlaneAdmissionWebhookEnvVarValue {
-			container.Env = k8sutils.UpdateEnv(container.Env, controllerAdmissionWebhookListen, consts.ControlPlaneAdmissionWebhookEnvVarValue)
+	if _, isOverrideDisabled := dontOverride[cputils.ControllerAdmissionWebhookListenEnvVarName]; !isOverrideDisabled {
+		if k8sutils.EnvValueByName(container.Env, cputils.ControllerAdmissionWebhookListenEnvVarName) != consts.ControlPlaneAdmissionWebhookEnvVarValue {
+			container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerAdmissionWebhookListenEnvVarName, consts.ControlPlaneAdmissionWebhookEnvVarValue)
 			changed = true
 		}
 	}
