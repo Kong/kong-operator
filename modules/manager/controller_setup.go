@@ -30,7 +30,6 @@ import (
 	"github.com/kong/gateway-operator/controller/specialized"
 	"github.com/kong/gateway-operator/internal/metrics"
 	"github.com/kong/gateway-operator/internal/utils/index"
-	dataplanevalidator "github.com/kong/gateway-operator/internal/validation/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -431,7 +430,6 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				DevelopmentMode:          c.DevelopmentMode,
-				Validator:                dataplanevalidator.NewValidator(mgr.GetClient()),
 				Callbacks: dataplane.DataPlaneCallbacks{
 					BeforeDeployment: dataplane.CreateCallbackManager(),
 					AfterDeployment:  dataplane.CreateCallbackManager(),
@@ -456,7 +454,6 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 					ClusterCAKeyConfig:       clusterCAKeyConfig,
 					DevelopmentMode:          c.DevelopmentMode,
-					Validator:                dataplanevalidator.NewValidator(mgr.GetClient()),
 					DefaultImage:             consts.DefaultDataPlaneImage,
 					Callbacks: dataplane.DataPlaneCallbacks{
 						BeforeDeployment: dataplane.CreateCallbackManager(),

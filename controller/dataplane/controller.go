@@ -27,10 +27,6 @@ import (
 // DataPlaneReconciler
 // -----------------------------------------------------------------------------
 
-type dataPlaneValidator interface {
-	Validate(*operatorv1beta1.DataPlane) error
-}
-
 // Reconciler reconciles a DataPlane object
 type Reconciler struct {
 	client.Client
@@ -40,7 +36,6 @@ type Reconciler struct {
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
 	DevelopmentMode          bool
-	Validator                dataPlaneValidator
 	Callbacks                DataPlaneCallbacks
 	ContextInjector          ctxinjector.CtxInjector
 	DefaultImage             string
@@ -82,15 +77,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if err := r.initSelectorInStatus(ctx, logger, dataplane); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed updating DataPlane with selector in Status: %w", err)
-	}
-
-	log.Trace(logger, "validating DataPlane configuration")
-	err := r.Validator.Validate(dataplane)
-	if err != nil {
-		log.Info(logger, "failed to validate dataplane: "+err.Error())
-		r.eventRecorder.Event(dataplane, "Warning", "ValidationFailed", err.Error())
-		markErr := ensureDataPlaneIsMarkedNotReady(ctx, logger, r.Client, dataplane, DataPlaneConditionValidationFailed, err.Error())
-		return ctrl.Result{}, markErr
 	}
 
 	log.Trace(logger, "applying extensions")
