@@ -125,6 +125,7 @@ func TestGatewayConformance(t *testing.T) {
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
 	)
+	opts.RestConfig.QPS = -1
 	opts.SupportedFeatures = supportedFeatures
 	opts.Implementation = conformancev1.Implementation{
 		Organization: metadata.Organization,
