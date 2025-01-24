@@ -90,6 +90,12 @@
   in case the `.spec.parametersRef` field is not a valid reference to an existing
   `GatewayConfiguration` object.
   [#1021](https://github.com/Kong/gateway-operator/pull/1021)
+- Validating webhook is now disabled by default. At this point webhook doesn't
+  perform any validations.
+  These were all moved either to CRD CEL validation expressions or to the
+  `ValidationAdmissionPolicy`.
+  Flag remains in place to not cause a breaking change for users that rely on it.
+  [#1066](https://github.com/Kong/gateway-operator/pull/1066)
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 
