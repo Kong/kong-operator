@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"sync"
@@ -48,11 +49,12 @@ const (
 )
 
 type webhookManager struct {
-	client client.Client
-	mgr    ctrl.Manager
-	logger logr.Logger
-	cfg    *Config
-	server webhook.Server
+	client  client.Client
+	mgr     ctrl.Manager
+	logger  logr.Logger
+	cfg     *Config
+	server  webhook.Server
+	started bool
 
 	setupControllers        SetupControllersFunc
 	admissionRequestHandler AdmissionRequestHandlerFunc
@@ -88,14 +90,13 @@ func (m *webhookManager) PrepareWebhookServerWithControllers(
 		Port:    m.cfg.WebhookPort,
 	})
 
-	// add readyz check for checking connection to webhook server
-	// to make the controller to be marked as ready after webhook started.
-	if err := m.mgr.AddReadyzCheck("readyz", hookServer.StartedChecker()); err != nil {
-		return fmt.Errorf("failed to add readiness probe for webhook: %w", err)
-	}
-
 	m.server = hookServer
 	m.admissionRequestHandler = newAdmissionRequestHandler
+
+	// to make the controller to be marked as ready after webhook started.
+	if err := m.mgr.AddReadyzCheck("readyz", m.readyzHandler()); err != nil {
+		return fmt.Errorf("failed to add readiness probe for webhook: %w", err)
+	}
 
 	return nil
 }
@@ -127,30 +128,15 @@ func (m *webhookManager) Start(ctx context.Context) error {
 		}
 	}
 
-	// write the webhook certificate files on the filesystem
-	{
-		p := path.Join(m.cfg.WebhookCertDir, caCertFilename)
-		if err := os.WriteFile(p, certSecret.Data[consts.CAFieldSecret], os.ModePerm); err != nil { //nolint:gosec
-			return fmt.Errorf("failed writing CA to %s: %w", p, err)
-		}
-	}
-	{
-		p := path.Join(m.cfg.WebhookCertDir, tlsCertFilename)
-		if err := os.WriteFile(p, certSecret.Data[consts.CertFieldSecret], os.ModePerm); err != nil { //nolint:gosec
-			return fmt.Errorf("failed writing certificate to %s: %w", p, err)
-		}
-	}
-	{
-		p := path.Join(m.cfg.WebhookCertDir, tlsKeyFilename)
-		if err := os.WriteFile(p, certSecret.Data[consts.KeyFieldSecret], os.ModePerm); err != nil { //nolint:gosec
-			return fmt.Errorf("failed writing key to %s: %w", p, err)
-		}
+	if err := writeWebhookCertificateFiles(m.cfg, certSecret); err != nil {
+		return err
 	}
 
-	handler := m.admissionRequestHandler(m.mgr.GetClient(), m.logger)
-	m.server.Register("/validate", handler)
-	if err := m.mgr.Add(m.server); err != nil {
-		return err
+	if !m.started {
+		if err := m.registerWebhookServer(); err != nil {
+			return err
+		}
+		m.started = true
 	}
 
 	// load the Gateway API controllers and start them only after the webhook is in place
@@ -410,5 +396,75 @@ func (m *webhookManager) setNamespaceAsOwner(ctx context.Context, object client.
 		return err
 	}
 	k8sutils.SetOwnerForObject(object, namespace)
+	return nil
+}
+
+func writeWebhookCertificateFiles(cfg *Config, certSecret *corev1.Secret) error {
+	// write the webhook certificate files on the filesystem
+	{
+		p := path.Join(cfg.WebhookCertDir, caCertFilename)
+		if err := os.WriteFile(p, certSecret.Data[consts.CAFieldSecret], os.ModePerm); err != nil { //nolint:gosec
+			return fmt.Errorf("failed writing CA to %s: %w", p, err)
+		}
+	}
+	{
+		p := path.Join(cfg.WebhookCertDir, tlsCertFilename)
+		if err := os.WriteFile(p, certSecret.Data[consts.CertFieldSecret], os.ModePerm); err != nil { //nolint:gosec
+			return fmt.Errorf("failed writing certificate to %s: %w", p, err)
+		}
+	}
+	{
+		p := path.Join(cfg.WebhookCertDir, tlsKeyFilename)
+		if err := os.WriteFile(p, certSecret.Data[consts.KeyFieldSecret], os.ModePerm); err != nil { //nolint:gosec
+			return fmt.Errorf("failed writing key to %s: %w", p, err)
+		}
+	}
+	return nil
+}
+
+var webhookManagerReadyzOnce sync.Once
+
+func (m *webhookManager) readyzHandler() func(*http.Request) error {
+	return func(req *http.Request) error {
+		select {
+
+		case <-m.mgr.Elected():
+			return m.server.StartedChecker()(req)
+
+		default:
+			var errRet error
+			webhookManagerReadyzOnce.Do(func() {
+				secretNN := types.NamespacedName{Namespace: m.cfg.ControllerNamespace, Name: consts.WebhookCertificateConfigSecretName}
+				var certSecret corev1.Secret
+				if err := m.client.Get(req.Context(), secretNN, &certSecret); err != nil {
+					errRet = fmt.Errorf("failed to get secret %s: %w", secretNN, err)
+					return
+				}
+
+				if err := writeWebhookCertificateFiles(m.cfg, &certSecret); err != nil {
+					errRet = err
+					return
+				}
+
+				if !m.started {
+					err := m.registerWebhookServer()
+					if err != nil {
+						errRet = err
+						return
+					}
+					m.started = true
+				}
+			})
+			return errRet
+		}
+	}
+}
+
+func (m *webhookManager) registerWebhookServer() error {
+	handler := m.admissionRequestHandler(m.mgr.GetClient(), m.logger)
+	m.server.Register("/validate", handler)
+	if err := m.mgr.Add(m.server); err != nil {
+		return err
+	}
 	return nil
 }

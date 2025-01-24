@@ -106,6 +106,9 @@
 - Fix unexpected error logs caused by passing an odd number of arguments to the logger
   in the `KongConsumer` reconciler.
   [#983](https://github.com/Kong/gateway-operator/pull/983)
+- Make operator instances not elected as leaders to be marked as ready to avoid
+  alerts in systems looking at the non ready status of operator Pods.
+  [#1094](https://github.com/Kong/gateway-operator/pull/1094)
 
 ### Added
 
