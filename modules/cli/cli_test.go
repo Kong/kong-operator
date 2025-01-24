@@ -193,7 +193,7 @@ func expectedDefaultCfg() manager.Config {
 		KonnectControllersEnabled:               false,
 		KonnectSyncPeriod:                       consts.DefaultKonnectSyncPeriod,
 		KongPluginInstallationControllerEnabled: false,
-		ValidatingWebhookEnabled:                true,
+		ValidatingWebhookEnabled:                false,
 		WebhookCertificateConfigBaseImage:       consts.WebhookCertificateConfigBaseImage,
 		WebhookCertificateConfigShellImage:      consts.WebhookCertificateConfigShellImage,
 		LoggerOpts:                              &zap.Options{},

@@ -26,7 +26,6 @@ import (
 	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
-	"github.com/kong/gateway-operator/internal/validation/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -919,7 +918,6 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				ClusterCAKeyConfig: secrets.KeyConfig{
 					Type: x509.ECDSA,
 				},
-				Validator: dataplane.NewValidator(fakeClient),
 			}
 
 			tc.testBody(t, reconciler, tc.dataplaneReq)
