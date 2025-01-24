@@ -6,6 +6,7 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -259,7 +260,7 @@ func TestGetRouterFlavor(t *testing.T) {
 				Build()
 
 			flavor, err := getRouterFlavor(ctx, cl, tt.gatewayConfig)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tt.expectedFlavor, flavor)
 		})
 	}

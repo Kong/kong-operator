@@ -112,16 +112,16 @@ func getRouterFlavor(ctx context.Context, cl client.Client, gatewayConfig *opera
 	if gatewayConfig == nil ||
 		gatewayConfig.Spec.DataPlaneOptions == nil ||
 		gatewayConfig.Spec.DataPlaneOptions.Deployment.PodTemplateSpec == nil {
-		return consts.RouterFlavorExpressions, nil
+		return consts.DefaultRouterFlavor, nil
 	}
 
 	container := k8sutils.GetPodContainerByName(&gatewayConfig.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 	if container == nil {
-		return consts.RouterFlavorExpressions, nil
+		return consts.DefaultRouterFlavor, nil
 	}
 	value, found, err := k8sutils.GetEnvValueFromContainer(ctx, container, gatewayConfig.Namespace, consts.RouterFlavorEnvKey, cl)
 	if !found {
-		value = string(consts.RouterFlavorExpressions)
+		value = string(consts.DefaultRouterFlavor)
 	}
 	return consts.RouterFlavor(value), err
 }
