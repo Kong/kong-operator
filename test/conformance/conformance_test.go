@@ -53,7 +53,6 @@ func TestGatewayConformance(t *testing.T) {
 		config            ConformanceConfig
 		skippedTests      []string
 		supportedFeatures sets.Set[features.FeatureName]
-		err               error
 	)
 	switch rf := KongRouterFlavor(t); rf {
 	case consts.RouterFlavorTraditionalCompatible:
@@ -66,7 +65,7 @@ func TestGatewayConformance(t *testing.T) {
 		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
 	}
 
-	supportedFeatures, err = gatewayapipkg.GetSupportedFeatures(config.KongRouterFlavor)
+	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(config.KongRouterFlavor)
 	assert.NoError(t, err)
 
 	t.Logf("using the following configuration for the conformance tests: %+v", config)
