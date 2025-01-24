@@ -393,9 +393,10 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		GatewayClassControllerName: {
 			Enabled: c.GatewayControllerEnabled,
 			Controller: &gatewayclass.Reconciler{
-				Client:          mgr.GetClient(),
-				Scheme:          mgr.GetScheme(),
-				DevelopmentMode: c.DevelopmentMode,
+				Client:                        mgr.GetClient(),
+				Scheme:                        mgr.GetScheme(),
+				DevelopmentMode:               c.DevelopmentMode,
+				GatewayAPIExperimentalEnabled: c.GatewayAPIExperimentalEnabled,
 			},
 		},
 		// Gateway controller

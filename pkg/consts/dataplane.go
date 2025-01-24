@@ -64,6 +64,23 @@ const (
 )
 
 // -----------------------------------------------------------------------------
+// Consts - Router flavor parameters
+// -----------------------------------------------------------------------------
+
+// RouterFlavor represents the flavor of the Kong router.
+// ref: https://docs.konghq.com/gateway/latest/reference/configuration/#router_flavor
+type RouterFlavor string
+
+const (
+	// RouterFlavorTraditionalCompatible is the traditional compatible router flavor.
+	RouterFlavorTraditionalCompatible RouterFlavor = "traditional_compatible"
+	// RouterFlavorExpressions is the expressions router flavor.
+	RouterFlavorExpressions RouterFlavor = "expressions"
+	// DefaultRouterFlavor is the default router flavor.
+	DefaultRouterFlavor = RouterFlavorExpressions
+)
+
+// -----------------------------------------------------------------------------
 // Consts - DataPlane Container Parameters
 // -----------------------------------------------------------------------------
 

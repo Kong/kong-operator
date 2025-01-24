@@ -93,6 +93,7 @@ type Config struct {
 	KongPluginInstallationControllerEnabled bool
 	KonnectSyncPeriod                       time.Duration
 	KonnectMaxConcurrentReconciles          uint
+	GatewayAPIExperimentalEnabled           bool
 
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool

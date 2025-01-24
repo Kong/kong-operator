@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -21,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/pkg/features"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/controlplane"
@@ -873,6 +875,20 @@ func GatewayIPAddressExist(t *testing.T, ctx context.Context, gatewayNSN types.N
 			return true
 		}
 		return false
+	}
+}
+
+// GatewayClassHasSupportedFeatures checks if a GatewayClass has the expected supported features.
+func GatewayClassHasSupportedFeatures(t *testing.T, ctx context.Context, gatewayClassName string, clients K8sClients, requiredFeatures ...features.FeatureName) func() bool {
+	return func() bool {
+		gatewayClass := MustGetGatewayClass(t, ctx, gatewayClassName, clients)
+		supportedFeatures := lo.Map(gatewayClass.Status.SupportedFeatures, func(f gatewayv1.SupportedFeature, _ int) features.FeatureName {
+			return features.FeatureName(f.Name)
+		})
+		slices.Sort(supportedFeatures)
+		slices.Sort(requiredFeatures)
+
+		return slices.Equal(supportedFeatures, requiredFeatures)
 	}
 }
 

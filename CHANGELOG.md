@@ -45,6 +45,14 @@
   configuring cluster CA private key type and size. Currently allowed values:
   `rsa` and `ecdsa` (default).
   [#1081](https://github.com/Kong/gateway-operator/pull/1081)
+- The `GatewayClass` Accepted Condition is set to `False` with reason `InvalidParameters`
+  in case the `.spec.parametersRef` field is not a valid reference to an existing
+  `GatewayConfiguration` object.
+  [#1021](https://github.com/Kong/gateway-operator/pull/1021)
+- The `SupportedFeatures` field is properly set in the `GatewayClass` status.
+  It requires the experimental version of Gateway API (as of v1.2.x) installed in
+  your cluster, and the flag `--enable-gateway-api-experimental` set.
+  [#1010](https://github.com/Kong/gateway-operator/pull/1010)
 
 ### Changed
 

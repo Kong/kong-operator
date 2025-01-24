@@ -25,6 +25,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/gateway-operator/pkg/gatewayapi"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
@@ -81,6 +82,11 @@ func TestGatewayEssentials(t *testing.T) {
 
 	t.Log("verifying connectivity to the Gateway")
 	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
+
+	t.Log("verifying GatewayClass has supportedFeatures set")
+	requiredFeatures, err := gatewayapi.GetSupportedFeatures(consts.RouterFlavorExpressions)
+	require.NoError(t, err)
+	require.Eventually(t, testutils.GatewayClassHasSupportedFeatures(t, GetCtx(), string(gateway.Spec.GatewayClassName), clients, requiredFeatures.UnsortedList()...), testutils.SubresourceReadinessWait, time.Second)
 
 	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
 	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}

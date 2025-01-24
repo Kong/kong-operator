@@ -151,6 +151,8 @@ const (
 	ClusterCertEnvKey = "KONG_CLUSTER_CERT"
 	// ClusterCertEnvKey is the environment variable name for the cluster certificate key.
 	ClusterCertKeyEnvKey = "KONG_CLUSTER_CERT_KEY"
+	// RouterFlavorEnvKey is the environment variable name for the Kong router flavor.
+	RouterFlavorEnvKey = "KONG_ROUTER_FLAVOR"
 )
 
 // -----------------------------------------------------------------------------

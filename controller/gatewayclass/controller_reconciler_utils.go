@@ -2,15 +2,19 @@ package gatewayclass
 
 import (
 	"context"
+	"slices"
 	"strings"
 
+	"github.com/samber/lo"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/pkg/features"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
+	gatewayapipkg "github.com/kong/gateway-operator/pkg/gatewayapi"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
@@ -62,4 +66,62 @@ func getAcceptedCondition(ctx context.Context, cl client.Client, gwc *gatewayv1.
 	)
 
 	return &acceptedCondition, nil
+}
+
+// setSupportedFeatures sets the supported features in the gatewayClass status.
+// The set of supported features depends on the router flavor.
+func setSupportedFeatures(ctx context.Context, cl client.Client, gwc *gatewayv1.GatewayClass, gatewayConfig *operatorv1beta1.GatewayConfiguration) error {
+	flavor, err := getRouterFlavor(ctx, cl, gatewayConfig)
+	if err != nil {
+		return err
+	}
+	feats, err := gatewayapipkg.GetSupportedFeatures(flavor)
+	if err != nil {
+		return err
+	}
+	supportedFeatures := feats.UnsortedList()
+	slices.Sort(supportedFeatures)
+	gwc.Status.SupportedFeatures = lo.Map(supportedFeatures, func(f features.FeatureName, _ int) gatewayv1.SupportedFeature {
+		return gatewayv1.SupportedFeature{
+			Name: gatewayv1.FeatureName(f),
+		}
+	})
+
+	return nil
+}
+
+// getGatewayConfiguration returns the GatewayConfiguration referenced by the GatewayClass.
+func getGatewayConfiguration(ctx context.Context, cl client.Client, gwc *gatewayv1.GatewayClass) (*operatorv1beta1.GatewayConfiguration, error) {
+	gatewayConfig := operatorv1beta1.GatewayConfiguration{}
+
+	if gwc.Spec.ParametersRef == nil {
+		return nil, nil
+	}
+
+	err := cl.Get(ctx, client.ObjectKey{Name: gwc.Spec.ParametersRef.Name, Namespace: string(*gwc.Spec.ParametersRef.Namespace)}, &gatewayConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return &gatewayConfig, nil
+}
+
+// getRouterFlavor returns the router flavor to be used by the GatewayClass. It is inferred by
+// the KONG_ROUTER_FLAVOR environment variable in the DataPlane proxy container.
+func getRouterFlavor(ctx context.Context, cl client.Client, gatewayConfig *operatorv1beta1.GatewayConfiguration) (consts.RouterFlavor, error) {
+	if gatewayConfig == nil ||
+		gatewayConfig.Spec.DataPlaneOptions == nil ||
+		gatewayConfig.Spec.DataPlaneOptions.Deployment.PodTemplateSpec == nil {
+		return consts.DefaultRouterFlavor, nil
+	}
+
+	container := k8sutils.GetPodContainerByName(&gatewayConfig.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+	if container == nil {
+		return consts.DefaultRouterFlavor, nil
+	}
+	value, found, err := k8sutils.GetEnvValueFromContainer(ctx, container, gatewayConfig.Namespace, consts.RouterFlavorEnvKey, cl)
+	if !found {
+		value = string(consts.DefaultRouterFlavor)
+	}
+	return consts.RouterFlavor(value), err
 }

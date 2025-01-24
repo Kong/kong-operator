@@ -54,6 +54,7 @@ func New(m metadata.Info) *CLI {
 	// controllers for specialized APIs and features
 	flagSet.BoolVar(&cfg.AIGatewayControllerEnabled, "enable-controller-aigateway", false, "Enable the AIGateway controller. (Experimental).")
 	flagSet.BoolVar(&cfg.KongPluginInstallationControllerEnabled, "enable-controller-kongplugininstallation", false, "Enable the KongPluginInstallation controller.")
+	flagSet.BoolVar(&cfg.GatewayAPIExperimentalEnabled, "enable-gateway-api-experimental", false, "Enable the Gateway API experimental features.")
 
 	// controllers for Konnect APIs
 	flagSet.BoolVar(&cfg.KonnectControllersEnabled, "enable-controller-konnect", false, "Enable the Konnect controllers.")
