@@ -61,7 +61,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.UintVar(&cfg.KonnectMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultKonnectMaxConcurrentReconciles, "Maximum number of concurrent reconciles for Konnect entities.")
 
 	// webhook and validation options
-	flagSet.BoolVar(&deferCfg.ValidatingWebhookEnabled, "enable-validating-webhook", true, "Enable the validating webhook.")
+	flagSet.BoolVar(&cfg.ValidatingWebhookEnabled, "enable-validating-webhook", false, "Enable the validating webhook.")
 	flagSet.StringVar(&cfg.WebhookCertificateConfigBaseImage, "webhook-certificate-config-base-image", consts.WebhookCertificateConfigBaseImage, "The base image for the certgen Jobs.")
 	flagSet.StringVar(&cfg.WebhookCertificateConfigShellImage, "webhook-certificate-config-shell-image", consts.WebhookCertificateConfigShellImage, "The shell image for the certgen Jobs.")
 
@@ -102,7 +102,6 @@ type CLI struct {
 type flagsForFurtherEvaluation struct {
 	DisableLeaderElection    bool
 	ClusterCASecretNamespace string
-	ValidatingWebhookEnabled bool
 	Version                  bool
 }
 
@@ -168,12 +167,8 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 		os.Exit(1)
 	}
 
-	validatingWebhookEnabled := c.deferFlagValues.ValidatingWebhookEnabled
 	anonymousReportsEnabled := c.cfg.AnonymousReports
 	if developmentModeEnabled {
-		// If developmentModeEnabled is true, we are running the webhook locally,
-		// therefore enabling the validatingWebhook is ineffective and might also be problematic to handle.
-		validatingWebhookEnabled = false
 		// If developmentModeEnabled is true, we want to disable `telemetry` to not pollute telemetry results.
 		// https://github.com/Kong/gateway-operator/issues/1392
 		anonymousReportsEnabled = false
@@ -225,7 +220,6 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	c.cfg.ControllerNamespace = controllerNamespace
 	c.cfg.ClusterCASecretNamespace = clusterCASecretNamespace
 	c.cfg.WebhookCertDir = webhookCertDir
-	c.cfg.ValidatingWebhookEnabled = validatingWebhookEnabled
 	c.cfg.LoggerOpts = logging.SetupLogEncoder(c.cfg.DevelopmentMode || c.loggerOpts.Development, c.loggerOpts)
 	c.cfg.WebhookPort = manager.DefaultConfig().WebhookPort
 	c.cfg.LeaderElectionNamespace = controllerNamespace

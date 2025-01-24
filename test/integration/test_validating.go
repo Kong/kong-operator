@@ -18,22 +18,7 @@ import (
 
 func TestDataPlaneValidation(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
-
-	// create a configmap containing "KONG_DATABASE" key for envFroms
-	configMap, err := GetClients().K8sClient.CoreV1().ConfigMaps(namespace.Name).Create(GetCtx(), &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "dataplane-configs",
-			Namespace: namespace.Name,
-		},
-		Data: map[string]string{
-			"KONG_DATABASE": "db_1",
-			"database1":     "off",
-			"database2":     "db_2",
-		},
-	}, metav1.CreateOptions{})
-	require.NoError(t, err, "failed to create configmap")
-	cleaner.Add(configMap)
+	namespace, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	if webhookEnabled {
 		t.Log("running tests for validation performed by admission webhook")

@@ -498,6 +498,7 @@ jobs:
       env:
         KONG_TEST_DISABLE_CERTMANAGER: "true"
         KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD: gateway-operator:e2e-${{ github.sha }}
+        WEBHOOK_ENABLED: "false"
         GOTESTSUM_JUNITFILE: "e2e-tests.xml"
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

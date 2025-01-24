@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
-	"github.com/kong/gateway-operator/internal/validation/dataplane"
 )
 
 var (
@@ -22,26 +21,14 @@ var (
 	codecs = serializer.NewCodecFactory(scheme)
 )
 
-// Validator is the interface of validating
-type Validator interface {
-	ValidateControlPlane(ctx context.Context, controlplane operatorv1beta1.ControlPlane) error
-	ValidateDataPlane(ctx context.Context, dataplane operatorv1beta1.DataPlane, old operatorv1beta1.DataPlane, op admissionv1.Operation) error
-}
-
 // RequestHandler handles the requests of validating objects.
 type RequestHandler struct {
-	// Validator validates the entities that the k8s API-server asks
-	// it the server to validate.
-	Validator Validator
-	Logger    logr.Logger
+	Logger logr.Logger
 }
 
 // NewRequestHandler create a RequestHandler to handle validation requests.
 func NewRequestHandler(c client.Client, l logr.Logger) *RequestHandler {
 	return &RequestHandler{
-		Validator: &validator{
-			dataplaneValidator: dataplane.NewValidator(c),
-		},
 		Logger: l.WithValues("component", "validation-server"),
 	}
 }
@@ -96,7 +83,7 @@ var (
 	}
 )
 
-func (h *RequestHandler) handleValidation(ctx context.Context, req *admissionv1.AdmissionRequest) (
+func (h *RequestHandler) handleValidation(_ context.Context, req *admissionv1.AdmissionRequest) (
 	*admissionv1.AdmissionResponse, error,
 ) {
 	if req == nil {
@@ -126,11 +113,6 @@ func (h *RequestHandler) handleValidation(ctx context.Context, req *admissionv1.
 			if err != nil {
 				return nil, err
 			}
-			err = h.Validator.ValidateControlPlane(ctx, controlPlane)
-			if err != nil {
-				ok = false
-				msg = err.Error()
-			}
 		}
 	case dataPlaneGVResource:
 		if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
@@ -142,11 +124,6 @@ func (h *RequestHandler) handleValidation(ctx context.Context, req *admissionv1.
 			_, _, err = deserializer.Decode(req.OldObject.Raw, nil, &old)
 			if err != nil {
 				return nil, err
-			}
-			err = h.Validator.ValidateDataPlane(ctx, dataPlane, old, req.Operation)
-			if err != nil {
-				ok = false
-				msg = err.Error()
 			}
 		}
 	}

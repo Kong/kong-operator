@@ -250,9 +250,11 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 		t.Log("waiting for operator deployment to complete")
 		require.NoError(t, waitForOperatorDeployment(t, ctx, "kong-system", clients.K8sClient, waitTime))
 
-		t.Log("waiting for operator webhook service to be connective")
-		require.Eventually(t, waitForOperatorWebhookEventually(t, ctx, clients.K8sClient),
-			webhookReadinessTimeout, webhookReadinessTick)
+		if test.IsWebhookEnabled() {
+			t.Log("waiting for operator webhook service to be connective")
+			require.Eventually(t, waitForOperatorWebhookEventually(t, ctx, clients.K8sClient),
+				webhookReadinessTimeout, webhookReadinessTick)
+		}
 	} else {
 		t.Log("not deploying operator to test cluster via kustomize")
 	}
