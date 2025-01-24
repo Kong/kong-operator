@@ -141,12 +141,31 @@ jobs:
       - publish-release
       - semver
     if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.patch != '0' && needs.semver.outputs.prerelease == '' && needs.look_for_release.outputs.release_latest == 'true' && github.ref_name != 'main' }}
+    env:
+      CHERRYPICK_BRANCH: cherry-pick/${{ github.sha }}-to-main
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-
-      - uses: carloscastrojumo/github-cherry-pick-action@503773289f4a459069c832dc628826685b75b4b3 # v1.0.10
         with:
-          branch: main
+          fetch-depth: 0
+
+      - name: Configure git user
+        run: |
+          git config --global user.name "Kong's Team k8s bot"
+          git config --global user.email "team-k8s+github-bot@konghq.com"
+
+      - name: Cherry-pick commit
+        run: |
+          git checkout -b ${{ env.CHERRYPICK_BRANCH }} main
+          git cherry-pick ${{ github.sha }}
+          # Amend the commit message to avoid infinite loop of this workflow (it's triggered by the commit message).
+          git commit --amend -m "chore: cherry-pick ${{ needs.semver.outputs.version }} commit (${{ github.sha }}) onto main"
+
+      - uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f # v7.0.6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ env.CHERRYPICK_BRANCH }}
+          base: main
+          delete-branch: true
           title: '[cherry-pick] ${{ needs.semver.outputs.version }} - ${{ github.sha }}'
           body: 'Cherry picking ${{ needs.semver.outputs.version }} commit (${{ github.sha }}) onto main'
