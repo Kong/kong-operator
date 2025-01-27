@@ -52,6 +52,9 @@ spec:
                 description: ClusterDataPlaneLabels is a set of labels that will be
                   applied to the Konnect DataPlane.
                 type: object
+              clusterID:
+                description: ClusterID is the ID of the Konnect cluster.
+                type: string
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a ControlPlane this
                   KonnectExtension is associated with.
@@ -160,6 +163,7 @@ spec:
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
             required:
+            - clusterID
             - controlPlaneRef
             - controlPlaneRegion
             - konnectControlPlaneAPIAuthConfiguration

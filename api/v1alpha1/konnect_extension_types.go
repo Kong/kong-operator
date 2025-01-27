@@ -68,6 +68,8 @@ type KonnectExtensionSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.type == 'konnectID'", message="Only konnectID type currently supported as controlPlaneRef."
 	ControlPlaneRef configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
+	ControlPlaneDNSPrefix string `json:"controlPlaneDNSPrefix"`
+
 	// ControlPlaneRegion is the region of the Konnect Control Plane.
 	//
 	// +kubebuilder:example:=us
@@ -92,6 +94,10 @@ type KonnectExtensionSpec struct {
 	// AuthConfiguration must be used to configure the Konnect API authentication.
 	// +kubebuilder:validation:Required
 	AuthConfiguration KonnectControlPlaneAPIAuthConfiguration `json:"konnectControlPlaneAPIAuthConfiguration"`
+
+	// ClusterID is the ID of the Konnect cluster.
+	// +kubebuilder:validation:Required
+	ClusterID string `json:"clusterID"`
 
 	// ClusterDataPlaneLabels is a set of labels that will be applied to the Konnect DataPlane.
 	// +optional

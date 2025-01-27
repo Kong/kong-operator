@@ -10,11 +10,35 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	konnectextensions "github.com/kong/gateway-operator/internal/extensions/konnect"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
+
+func getKonnectExtension(ctx context.Context, cl client.Client, controlplane operatorv1beta1.ControlPlane) (*operatorv1alpha1.KonnectExtension, error) {
+	var konnectExtensionRef *operatorv1alpha1.ExtensionRef
+	for _, extensionRef := range controlplane.Spec.Extensions {
+		if extensionRef.Group == operatorv1alpha1.SchemeGroupVersion.Group && extensionRef.Kind == operatorv1alpha1.KonnectExtensionKind {
+			konnectExtensionRef = &extensionRef
+			break
+		}
+	}
+	if konnectExtensionRef == nil {
+		return nil, nil
+	}
+	if konnectExtensionRef.Namespace != nil && *konnectExtensionRef.Namespace != controlplane.Namespace {
+		return nil, fmt.Errorf("cross-namespace reference to the extension %s/%s is not permitted", *konnectExtensionRef.Namespace, konnectExtensionRef.Name)
+	}
+
+	konnectExtension := &operatorv1alpha1.KonnectExtension{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: controlplane.Namespace, Name: konnectExtensionRef.Name}, konnectExtension); err != nil {
+		return nil, fmt.Errorf("failed fetching KonnectExtension %s/%s: %w", controlplane.Namespace, konnectExtension.Name, err)
+	}
+
+	return konnectExtension, nil
+}
 
 // -----------------------------------------------------------------------------
 // ControlPlane - Private Functions - extensions

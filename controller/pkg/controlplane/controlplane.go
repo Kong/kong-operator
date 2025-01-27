@@ -32,10 +32,10 @@ type DefaultsArgs struct {
 
 // KonnectParams contains the parameters to customize the konnect-related env vars
 type KonnectParams struct {
-	ControlPlane string
-	Region       string
-	Server       string
-	TLSSecretRef string
+	Region         string
+	Server         string
+	ControlPlaneID string
+	TLSSecretRef   string
 }
 
 // -----------------------------------------------------------------------------
@@ -50,13 +50,6 @@ func SetDefaults(
 ) bool {
 	changed := false
 
-	// set env POD_NAMESPACE. should be always from `metadata.namespace` of pod.
-	envSourceMetadataNamespace := &corev1.EnvVarSource{
-		FieldRef: &corev1.ObjectFieldSelector{
-			APIVersion: "v1",
-			FieldPath:  "metadata.namespace",
-		},
-	}
 	if spec.Deployment.PodTemplateSpec == nil {
 		spec.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}
@@ -73,16 +66,15 @@ func SetDefaults(
 		dontOverride[envVar.Name] = struct{}{}
 	}
 
-	const podNamespaceEnvVarName = cputils.PodNamespaceEnvVarName
-	if !reflect.DeepEqual(envSourceMetadataNamespace, k8sutils.EnvVarSourceByName(container.Env, podNamespaceEnvVarName)) {
-		container.Env = k8sutils.UpdateEnvSource(container.Env, podNamespaceEnvVarName, envSourceMetadataNamespace)
-		changed = true
+	// set env POD_NAMESPACE. should be always from `metadata.namespace` of pod.
+	envSourceMetadataNamespace := &corev1.EnvVarSource{
+		FieldRef: &corev1.ObjectFieldSelector{
+			APIVersion: "v1",
+			FieldPath:  "metadata.namespace",
+		},
 	}
-
-	// due to the anonymous reports being enabled by default
-	// if the flag is set to false, we need to set the env var to false
-	if k8sutils.EnvValueByName(container.Env, cputils.ControllerAnonymousReportsEnvVarName) != fmt.Sprintf("%t", args.AnonymousReportsEnabled) {
-		container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerAnonymousReportsEnvVarName, fmt.Sprintf("%t", args.AnonymousReportsEnabled))
+	if !reflect.DeepEqual(envSourceMetadataNamespace, k8sutils.EnvVarSourceByName(container.Env, cputils.PodNamespaceEnvVarName)) {
+		container.Env = k8sutils.UpdateEnvSource(container.Env, cputils.PodNamespaceEnvVarName, envSourceMetadataNamespace)
 		changed = true
 	}
 
@@ -95,6 +87,13 @@ func SetDefaults(
 	}
 	if !reflect.DeepEqual(envSourceMetadataName, k8sutils.EnvVarSourceByName(container.Env, cputils.PodNameEnvVarName)) {
 		container.Env = k8sutils.UpdateEnvSource(container.Env, cputils.PodNameEnvVarName, envSourceMetadataName)
+		changed = true
+	}
+
+	// due to the anonymous reports being enabled by default
+	// if the flag is set to false, we need to set the env var to false
+	if k8sutils.EnvValueByName(container.Env, cputils.ControllerAnonymousReportsEnvVarName) != fmt.Sprintf("%t", args.AnonymousReportsEnabled) {
+		container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerAnonymousReportsEnvVarName, fmt.Sprintf("%t", args.AnonymousReportsEnabled))
 		changed = true
 	}
 
@@ -198,6 +197,70 @@ func SetDefaults(
 		}
 	}
 
+	if args.Konnect != nil {
+		if _, isOverrideDisabled := dontOverride[cputils.ControllerFeatureGatesEnvVarName]; !isOverrideDisabled {
+			if k8sutils.EnvValueByName(container.Env, cputils.ControllerFeatureGatesEnvVarName) != "FillIDs=true" {
+				container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerFeatureGatesEnvVarName, "FillIDs=true")
+				changed = true
+			}
+		}
+
+		if _, isOverrideDisabled := dontOverride[cputils.ControllerKonnectAddressEnvVarName]; !isOverrideDisabled {
+			konnectAddress := "https://" + args.Konnect.Region + ".kic.api." + args.Konnect.Server
+			if k8sutils.EnvValueByName(container.Env, cputils.ControllerKonnectAddressEnvVarName) != konnectAddress {
+				container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerKonnectAddressEnvVarName, konnectAddress)
+				changed = true
+			}
+		}
+
+		if _, isOverrideDisabled := dontOverride[cputils.ControllerKonnectControlPlaneIDEnvVarName]; !isOverrideDisabled {
+			if k8sutils.EnvValueByName(container.Env, cputils.ControllerKonnectControlPlaneIDEnvVarName) != args.Konnect.ControlPlaneID {
+				container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerKonnectControlPlaneIDEnvVarName, args.Konnect.ControlPlaneID)
+				changed = true
+			}
+		}
+
+		if _, isOverrideDisabled := dontOverride[cputils.ControllerKonnectLicensingEnabledEnvVarName]; !isOverrideDisabled {
+			if k8sutils.EnvValueByName(container.Env, cputils.ControllerKonnectLicensingEnabledEnvVarName) != "true" {
+				container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerKonnectLicensingEnabledEnvVarName, "true")
+				changed = true
+			}
+		}
+
+		if _, isOverrideDisabled := dontOverride[cputils.ControllerKonnectSyncEnabledEnvVarName]; !isOverrideDisabled {
+			if k8sutils.EnvValueByName(container.Env, cputils.ControllerKonnectSyncEnabledEnvVarName) != "true" {
+				container.Env = k8sutils.UpdateEnv(container.Env, cputils.ControllerKonnectSyncEnabledEnvVarName, "true")
+				changed = true
+			}
+		}
+		envSourceKonnectTLSClientCert := &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: args.Konnect.TLSSecretRef,
+				},
+				Key: "tls.crt",
+			},
+		}
+		if !reflect.DeepEqual(envSourceKonnectTLSClientCert, k8sutils.EnvVarSourceByName(container.Env, cputils.ControllerKonnectTLSClientCertEnvVarName)) {
+			container.Env = k8sutils.UpdateEnvSource(container.Env, cputils.ControllerKonnectTLSClientCertEnvVarName, envSourceKonnectTLSClientCert)
+			changed = true
+		}
+
+		envSourceKonnectTLSClientKey := &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: args.Konnect.TLSSecretRef,
+				},
+				Key: "tls.key",
+			},
+		}
+		if !reflect.DeepEqual(envSourceKonnectTLSClientKey, k8sutils.EnvVarSourceByName(container.Env, cputils.ControllerKonnectTLSClientKeyEnvVarName)) {
+			container.Env = k8sutils.UpdateEnvSource(container.Env, cputils.ControllerKonnectTLSClientKeyEnvVarName, envSourceKonnectTLSClientKey)
+			changed = true
+		}
+
+	}
+
 	k8sutils.SetPodContainer(podSpec, container)
 
 	return changed
@@ -209,10 +272,10 @@ func GetKonnectDefault(konnectExtension *operatorv1alpha1.KonnectExtension) *Kon
 		return nil
 	}
 	return &KonnectParams{
-		ControlPlane: *konnectExtension.Spec.ControlPlaneRef.KonnectID,
-		Region:       konnectExtension.Spec.ControlPlaneRegion,
-		Server:       konnectExtension.Spec.ServerHostname,
-		TLSSecretRef: konnectExtension.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name,
+		ControlPlaneID: *konnectExtension.Spec.ControlPlaneRef.KonnectID,
+		Region:         konnectExtension.Spec.ControlPlaneRegion,
+		Server:         konnectExtension.Spec.ServerHostname,
+		TLSSecretRef:   konnectExtension.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name,
 	}
 }
 

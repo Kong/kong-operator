@@ -39,18 +39,6 @@ func ApplyControlPlaneKonnectExtension(ctx context.Context, cl client.Client, co
 			}
 		}
 
-		secret := corev1.Secret{}
-		if err := cl.Get(ctx, client.ObjectKey{
-			Namespace: namespace,
-			Name:      konnectExt.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name,
-		}, &secret); err != nil {
-			if k8serrors.IsNotFound(err) {
-				return errors.Join(ErrClusterCertificateNotFound, fmt.Errorf("the cluster certificate secret %s/%s referenced by the extension %s/%s is not found", namespace, konnectExt.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name, namespace, extensionRef.Name))
-			} else {
-				return err
-			}
-		}
-
 		if controlplane.Spec.Deployment.PodTemplateSpec == nil {
 			controlplane.Spec.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
 		}
@@ -62,7 +50,7 @@ func ApplyControlPlaneKonnectExtension(ctx context.Context, cl client.Client, co
 		})
 		if container := k8sutils.GetPodContainerByName(&d.Spec.Template.Spec, consts.ControlPlaneControllerContainerName); container == nil {
 			d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, corev1.Container{
-				Name: consts.DataPlaneProxyContainerName,
+				Name: consts.ControlPlaneControllerContainerName,
 			})
 		}
 	}

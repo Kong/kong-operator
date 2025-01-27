@@ -264,17 +264,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "applying extensions")
-	patched, requeue, err := applyExtensions(ctx, r.Client, logger, cp, r.KonnectEnabled)
+	konnectExtension, err := getKonnectExtension(ctx, r.Client, *cp)
 	if err != nil {
-		if !requeue {
-			log.Debug(logger, "failed to apply extensions", "err", err)
-			return ctrl.Result{}, nil
-		}
 		return ctrl.Result{}, err
 	}
-	if patched {
-		return ctrl.Result{}, nil
-	}
+
+	// patched, requeue, err := applyExtensions(ctx, r.Client, logger, cp, r.KonnectEnabled)
+	// if err != nil {
+	// 	if !requeue {
+	// 		log.Debug(logger, "failed to apply extensions", "err", err)
+	// 		return ctrl.Result{}, nil
+	// 	}
+	// 	return ctrl.Result{}, err
+	// }
+	// if patched {
+	// 	return ctrl.Result{}, nil
+	// }
 
 	log.Trace(logger, "configuring ControlPlane resource")
 	defaultArgs := controlplane.DefaultsArgs{
@@ -283,7 +288,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		DataPlaneIngressServiceName: dataplaneIngressServiceName,
 		DataPlaneAdminServiceName:   dataplaneAdminServiceName,
 		AnonymousReportsEnabled:     controlplane.DeduceAnonymousReportsEnabled(r.DevelopmentMode, &cp.Spec.ControlPlaneOptions),
-		Konnect:                     controlplane.GetKonnectDefault(nil), // todo: pass the actual extension
+		Konnect:                     controlplane.GetKonnectDefault(konnectExtension), // todo: pass the actual extension
 	}
 	for _, owner := range cp.OwnerReferences {
 		if strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) && owner.Kind == "Gateway" {

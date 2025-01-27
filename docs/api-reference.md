@@ -2110,6 +2110,7 @@ KonnectExtensionSpec defines the desired state of KonnectExtension.
 | `controlPlaneRegion` _string_ | ControlPlaneRegion is the region of the Konnect Control Plane. |
 | `serverHostname` _string_ | ServerHostname is the fully qualified domain name of the Konnect server. For typical operation a default value doesn't need to be adjusted. It matches the RFC 1123 definition of a hostname with 1 notable exception that numeric IP addresses are not allowed.<br /><br /> Note that as per RFC1035 and RFC1123, a *label* must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character. No other punctuation is allowed. |
 | `konnectControlPlaneAPIAuthConfiguration` _[KonnectControlPlaneAPIAuthConfiguration](#konnectcontrolplaneapiauthconfiguration)_ | AuthConfiguration must be used to configure the Konnect API authentication. |
+| `clusterID` _string_ | ClusterID is the ID of the Konnect cluster. |
 | `clusterDataPlaneLabels` _object (keys:string, values:string)_ | ClusterDataPlaneLabels is a set of labels that will be applied to the Konnect DataPlane. |
 
 
