@@ -65,7 +65,8 @@ func TestKonnectEntities(t *testing.T) {
 		assertKonnectEntityProgrammed(t, cp)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
-	ks := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
+	ks := deploy.KongService(t, ctx, clientNamespaced,
+		deploy.WithKonnectIDControlPlaneRef(cp),
 		deploy.WithTestIDLabel(testID),
 	)
 
@@ -96,7 +97,8 @@ func TestKonnectEntities(t *testing.T) {
 		assertKonnectEntityProgrammed(t, kr)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
-	kcg := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cp,
+	kcg := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced,
+		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		deploy.WithTestIDLabel(testID),
 	)
 
@@ -108,7 +110,8 @@ func TestKonnectEntities(t *testing.T) {
 		assertKonnectEntityProgrammed(t, kcg)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
-	kc := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, "kc-"+testID, cp,
+	kc := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, "kc-"+testID,
+		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		deploy.WithTestIDLabel(testID),
 		func(obj client.Object) {
 			kc := obj.(*configurationv1.KongConsumer)
@@ -162,7 +165,8 @@ func TestKonnectEntities(t *testing.T) {
 		assertKonnectEntityProgrammed(t, globalKPB)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
-	kup := deploy.KongUpstreamAttachedToCP(t, ctx, clientNamespaced, cp,
+	kup := deploy.KongUpstream(t, ctx, clientNamespaced,
+		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		deploy.WithTestIDLabel(testID),
 		func(obj client.Object) {
 			kup := obj.(*configurationv1alpha1.KongUpstream)

@@ -59,7 +59,8 @@ func TestKongPluginFinalizer(t *testing.T) {
 		})
 
 		wKongService := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 
@@ -89,7 +90,9 @@ func TestKongPluginFinalizer(t *testing.T) {
 			require.NoError(t, clientNamespaced.Delete(ctx, rateLimitingkongPlugin))
 		})
 
-		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 		wKongRoute := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService,
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
@@ -122,7 +125,8 @@ func TestKongPluginFinalizer(t *testing.T) {
 		})
 
 		wKongConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-		kongConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, "username-1", cp,
+		kongConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, "username-1",
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 
@@ -153,7 +157,8 @@ func TestKongPluginFinalizer(t *testing.T) {
 		})
 
 		wKongConsumerGroup := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-		kongConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cp,
+		kongConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 

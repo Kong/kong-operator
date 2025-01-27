@@ -109,7 +109,8 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 
-		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 		t.Cleanup(func() {
@@ -211,7 +212,9 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		})
@@ -317,7 +320,8 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 		t.Cleanup(func() {
@@ -445,7 +449,8 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 		t.Cleanup(func() {
@@ -459,7 +464,8 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))
 		})
 		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
-		kongConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, "username-1", cp,
+		kongConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, "username-1",
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 		t.Cleanup(func() {
@@ -644,7 +650,8 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 		t.Cleanup(func() {
@@ -658,7 +665,8 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))
 		})
 		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
-		kongConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cp,
+		kongConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 		t.Cleanup(func() {

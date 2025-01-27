@@ -160,11 +160,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// If a type has a ControlPlane ref, handle it.
 	res, err := handleControlPlaneRef(ctx, r.Client, ent)
 	if err != nil || !res.IsZero() {
-		// If the referenced ControlPlane is not found and the object is deleted,
-		// remove the finalizer and update the status.
+		// If the referenced ControlPlane is not found, remove the finalizer and update the status.
 		// There's no need to remove the entity on Konnect because the ControlPlane
 		// does not exist anymore.
-		if !ent.GetDeletionTimestamp().IsZero() && errors.As(err, &ReferencedControlPlaneDoesNotExistError{}) {
+		if errors.As(err, &ReferencedControlPlaneDoesNotExistError{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {
@@ -174,6 +173,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				}
 			}
 		}
+
+		if res, err := setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent); err != nil {
+			return res, err
+		} else if !res.IsZero() {
+			return res, nil
+		}
+
 		// Status update will requeue the entity.
 		return ctrl.Result{}, nil
 	}
@@ -1007,5 +1013,31 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return res, errStatus
 	}
 
+	return ctrl.Result{}, nil
+}
+
+func setProgrammedStatusConditionBasedOnOtherConditions[
+	T interface {
+		client.Object
+		k8sutils.ConditionsAware
+	},
+](
+	ctx context.Context,
+	cl client.Client,
+	ent T,
+) (ctrl.Result, error) {
+	if k8sutils.AreAllConditionsHaveTrueStatus(ent) {
+		return ctrl.Result{}, nil
+	}
+
+	if res, errStatus := patch.StatusWithCondition(
+		ctx, cl, ent,
+		konnectv1alpha1.KonnectEntityProgrammedConditionType,
+		metav1.ConditionFalse,
+		konnectv1alpha1.KonnectEntityProgrammedReasonExistsConditionWithStatusFalse,
+		"Some conditions have status set to False",
+	); errStatus != nil || !res.IsZero() {
+		return res, errStatus
+	}
 	return ctrl.Result{}, nil
 }

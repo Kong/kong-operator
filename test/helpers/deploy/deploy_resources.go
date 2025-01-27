@@ -64,22 +64,52 @@ func WithTestIDLabel(testID string) func(obj client.Object) {
 	}
 }
 
+// WithKonnectNamespacedRefControlPlaneRef returns an ObjOption that sets
+// the ControlPlaneRef on the object to a namespaced ref.
+//
+// NOTE: This only works with namespaced resources. Using it with cluster-scoped
+// resources requires additional handling ( to only set the namespace when the resource
+// is cluster-scoped).
+func WithKonnectNamespacedRefControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane) ObjOption {
+	return func(obj client.Object) {
+		o, ok := obj.(interface {
+			GetControlPlaneRef() *configurationv1alpha1.ControlPlaneRef
+			SetControlPlaneRef(*configurationv1alpha1.ControlPlaneRef)
+		})
+		if !ok {
+			// As it's only used in tests, we can panic here - it will mean test code is incorrect.
+			panic(fmt.Errorf("%T does not implement GetControlPlaneRef/SetControlPlaneRef method", obj))
+		}
+
+		cpRef := &configurationv1alpha1.ControlPlaneRef{
+			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+				Name: cp.GetName(),
+			},
+		}
+
+		o.SetControlPlaneRef(cpRef)
+	}
+}
+
 // WithKonnectIDControlPlaneRef returns an ObjOption that sets the ControlPlaneRef on the object to a KonnectID.
 func WithKonnectIDControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane) ObjOption {
 	return func(obj client.Object) {
 		o, ok := obj.(interface {
 			GetControlPlaneRef() *configurationv1alpha1.ControlPlaneRef
+			SetControlPlaneRef(*configurationv1alpha1.ControlPlaneRef)
 		})
 		if !ok {
 			// As it's only used in tests, we can panic here - it will mean test code is incorrect.
-			panic(fmt.Errorf("%T does not implement GetControlPlaneRef method", obj))
+			panic(fmt.Errorf("%T does not implement GetControlPlaneRef/SetControlPlaneRef method", obj))
 		}
 
-		objCPRef := o.GetControlPlaneRef()
-		*objCPRef = configurationv1alpha1.ControlPlaneRef{
-			Type:      configurationv1alpha1.ControlPlaneRefKonnectID,
-			KonnectID: lo.ToPtr(cp.GetKonnectStatus().GetKonnectID()),
-		}
+		o.SetControlPlaneRef(
+			&configurationv1alpha1.ControlPlaneRef{
+				Type:      configurationv1alpha1.ControlPlaneRefKonnectID,
+				KonnectID: lo.ToPtr(cp.GetKonnectStatus().GetKonnectID()),
+			},
+		)
 	}
 }
 
@@ -212,20 +242,19 @@ func KonnectGatewayControlPlaneWithID(
 	return cp
 }
 
-// KongServiceAttachedToCPWithID deploys a KongService resource and returns the resource.
+// KongServiceWithID deploys a KongService resource and returns the resource.
 // The Status ID and Programmed condition are set on the Service using status Update() call.
 // It can be useful where the reconciler for KonnectGatewayControlPlane is not started
 // and hence the status has to be filled manually.
-func KongServiceAttachedToCPWithID(
+func KongServiceWithID(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 	opts ...ObjOption,
 ) *configurationv1alpha1.KongService {
 	t.Helper()
 
-	svc := KongServiceAttachedToCP(t, ctx, cl, cp, opts...)
+	svc := KongService(t, ctx, cl, opts...)
 	svc.Status.Conditions = []metav1.Condition{
 		{
 			Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -240,12 +269,11 @@ func KongServiceAttachedToCPWithID(
 	return svc
 }
 
-// KongServiceAttachedToCP deploys a KongService resource and returns the resource.
-func KongServiceAttachedToCP(
+// KongService deploys a KongService resource and returns the resource.
+func KongService(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 	opts ...ObjOption,
 ) *configurationv1alpha1.KongService {
 	t.Helper()
@@ -260,12 +288,6 @@ func KongServiceAttachedToCP(
 				Name: lo.ToPtr(name),
 				URL:  lo.ToPtr("http://example.com"),
 				Host: "example.com",
-			},
-			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-					Name: cp.Name,
-				},
 			},
 		},
 	}
@@ -582,12 +604,11 @@ func KongCertificateAttachedToCP(
 	return cert
 }
 
-// KongUpstreamAttachedToCP deploys a KongUpstream resource attached to a Control Plane and returns the resource.
-func KongUpstreamAttachedToCP(
+// KongUpstream deploys a KongUpstream resource and returns it.
+func KongUpstream(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 	opts ...ObjOption,
 ) *configurationv1alpha1.KongUpstream {
 	t.Helper()
@@ -596,14 +617,7 @@ func KongUpstreamAttachedToCP(
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "upstream-",
 		},
-		Spec: configurationv1alpha1.KongUpstreamSpec{
-			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-					Name: cp.Name,
-				},
-			},
-		},
+		Spec: configurationv1alpha1.KongUpstreamSpec{},
 	}
 	for _, opt := range opts {
 		opt(u)
@@ -676,7 +690,6 @@ func KongConsumerAttachedToCP(
 	ctx context.Context,
 	cl client.Client,
 	username string,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 	opts ...ObjOption,
 ) *configurationv1.KongConsumer {
 	t.Helper()
@@ -684,14 +697,6 @@ func KongConsumerAttachedToCP(
 	c := &configurationv1.KongConsumer{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "consumer-",
-		},
-		Spec: configurationv1.KongConsumerSpec{
-			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-					Name: cp.Name,
-				},
-			},
 		},
 		Username: username,
 	}
@@ -710,7 +715,6 @@ func KongConsumerGroupAttachedToCP(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 	opts ...ObjOption,
 ) *configurationv1beta1.KongConsumerGroup {
 	t.Helper()
@@ -721,12 +725,6 @@ func KongConsumerGroupAttachedToCP(
 			Name: name,
 		},
 		Spec: configurationv1beta1.KongConsumerGroupSpec{
-			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-					Name: cp.Name,
-				},
-			},
 			Name: name,
 		},
 	}
@@ -783,16 +781,13 @@ func KongVaultAttachedToCP(
 	return vault
 }
 
-type kongKeyOption func(*configurationv1alpha1.KongKey)
-
-// KongKeyAttachedToCP deploys a KongKey resource attached to a CP and returns the resource.
-func KongKeyAttachedToCP(
+// KongKey deploys a KongKey resource and returns the resource.
+func KongKey(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
 	kid, name string,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-	opts ...kongKeyOption,
+	opts ...ObjOption,
 ) *configurationv1alpha1.KongKey {
 	t.Helper()
 
@@ -801,12 +796,6 @@ func KongKeyAttachedToCP(
 			GenerateName: "key-",
 		},
 		Spec: configurationv1alpha1.KongKeySpec{
-			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-					Name: cp.GetName(),
-				},
-			},
 			KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 				KID:  kid,
 				Name: lo.ToPtr(name),
@@ -868,13 +857,12 @@ func RateLimitingPlugin(
 	return plugin
 }
 
-// KongKeySetAttachedToCP deploys a KongKeySet resource attached to a CP and returns the resource.
-func KongKeySetAttachedToCP(
+// KongKeySet deploys a KongKeySet resource and returns the resource.
+func KongKeySet(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
 	name string,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 	opts ...ObjOption,
 ) *configurationv1alpha1.KongKeySet {
 	t.Helper()
@@ -884,12 +872,6 @@ func KongKeySetAttachedToCP(
 			Name: name,
 		},
 		Spec: configurationv1alpha1.KongKeySetSpec{
-			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-					Name: cp.GetName(),
-				},
-			},
 			KongKeySetAPISpec: configurationv1alpha1.KongKeySetAPISpec{
 				Name: name,
 			},
@@ -940,12 +922,11 @@ func KongSNIAttachedToCertificate(
 	return sni
 }
 
-// KongDataPlaneClientCertificateAttachedToCP deploys a KongDataPlaneClientCertificate resource attached to a CP and returns the resource.
+// KongDataPlaneClientCertificateAttachedToCP deploys a KongDataPlaneClientCertificate resource and returns the resource.
 func KongDataPlaneClientCertificateAttachedToCP(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 	opts ...ObjOption,
 ) *configurationv1alpha1.KongDataPlaneClientCertificate {
 	t.Helper()
@@ -955,12 +936,6 @@ func KongDataPlaneClientCertificateAttachedToCP(
 			GenerateName: "dp-cert-",
 		},
 		Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
-			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
-				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
-					Name: cp.GetName(),
-				},
-			},
 			KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 				Cert: TestValidCACertPEM,
 			},
