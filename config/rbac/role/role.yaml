@@ -46,7 +46,6 @@ rules:
   resources:
   - secrets
   verbs:
-  - create
   - delete
   - get
   - list
@@ -101,14 +100,6 @@ rules:
   - list
   - patch
   - watch
-- apiGroups:
-  - batch
-  resources:
-  - jobs
-  verbs:
-  - create
-  - delete
-  - get
 - apiGroups:
   - configuration.konghq.com
   resources:
@@ -462,12 +453,3 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - rolebindings
-  - roles
-  verbs:
-  - create
-  - delete
-  - get

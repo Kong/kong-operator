@@ -42,31 +42,6 @@ func GenerateNewClusterRoleBindingForControlPlane(namespace, controlplaneName, s
 	return crb
 }
 
-// GenerateNewClusterRoleBindingForCertificateConfig is a helper to generate a ClusterRoleBinding
-// to be used by the certificateConfig jobs
-func GenerateNewClusterRoleBindingForCertificateConfig(namespace, name, labelValue string) *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"app": labelValue,
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "ClusterRole",
-			Name:     name,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      name,
-				Namespace: namespace,
-			},
-		},
-	}
-}
-
 // CompareClusterRoleName compares RoleRef in ClusterRoleBinding with given cluster role name.
 // It returns true if the referenced role is the cluster role with the given name.
 func CompareClusterRoleName(existingClusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRoleName string) bool {

@@ -297,9 +297,8 @@ CONFIG_CRD_PATH = config/crd
 CONFIG_CRD_BASE_PATH = $(CONFIG_CRD_PATH)/bases
 
 .PHONY: manifests
-manifests: controller-gen manifests.versions manifests.crds ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: controller-gen manifests.versions manifests.crds ## Generate ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" rbac:roleName=manager-role output:rbac:dir=config/rbac/role
-	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" webhook
 
 .PHONY: manifests.crds
 manifests.crds: controller-gen manifests.versions ## Generate CustomResourceDefinition objects.
@@ -400,7 +399,7 @@ test.crds-validation.pretty:
 	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname ENVTEST_TEST_PATHS=./test/crdsvalidation/...
 
 .PHONY: _test.integration
-_test.integration: webhook-certs-dir gotestsum
+_test.integration: gotestsum
 	GOFLAGS=$(GOFLAGS) \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
@@ -413,7 +412,7 @@ _test.integration: webhook-certs-dir gotestsum
 .PHONY: test.integration
 test.integration:
 	@$(MAKE) _test.integration \
-		GOTESTFLAGS="-skip='BlueGreen|TestGatewayProvisionDataPlaneFail' $(GOTESTFLAGS)" \
+		GOTESTFLAGS="-skip='BlueGreen' $(GOTESTFLAGS)" \
 		COVERPROFILE="coverage.integration.out"
 
 .PHONY: test.integration_bluegreen
@@ -422,13 +421,6 @@ test.integration_bluegreen:
 		GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER="true" \
 		GOTESTFLAGS="-run='BlueGreen|TestDataPlane' $(GOTESTFLAGS)" \
 		COVERPROFILE="coverage.integration-bluegreen.out" \
-
-.PHONY: test.integration_provision_dataplane_fail
-test.integration_provision_dataplane_fail:
-	@$(MAKE) _test.integration \
-		WEBHOOK_ENABLED=true \
-		GOTESTFLAGS="-run=TestGatewayProvisionDataPlaneFail $(GOTESTFLAGS)" \
-		COVERPROFILE="coverage.integration.out"
 
 .PHONY: _test.e2e
 _test.e2e: gotestsum
@@ -521,22 +513,18 @@ ifndef ignore-not-found
   ignore-not-found = false
 endif
 
-.PHONY: webhook-certs-dir
-webhook-certs-dir:
-	@mkdir -p /tmp/k8s-webhook-server/serving-certs/
-
 .PHONY: _ensure-kong-system-namespace
 _ensure-kong-system-namespace:
 	@kubectl create ns kong-system 2>/dev/null || true
 
 # Run a controller from your host.
 .PHONY: run
-run: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace install.rbacs
+run: manifests generate install.all _ensure-kong-system-namespace install.rbacs
 	@$(MAKE) _run
 
 # Run a controller from your host and make it impersonate the controller-manager service account from kong-system namespace.
 .PHONY: run.with_impersonate
-run.with_impersonate: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace install.rbacs
+run.with_impersonate: manifests generate install.all _ensure-kong-system-namespace install.rbacs
 	@$(MAKE) _run.with-impersonate
 
 KUBECONFIG ?= $(HOME)/.kube/config
@@ -588,7 +576,7 @@ run.skaffold:
 		$(MAKE) _skaffold
 
 .PHONY: debug
-debug: webhook-certs-dir manifests generate install.all _ensure-kong-system-namespace
+debug: manifests generate install.all _ensure-kong-system-namespace
 	GATEWAY_OPERATOR_DEVELOPMENT_MODE=true dlv debug ./cmd/main.go -- \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \

@@ -104,6 +104,13 @@
   `ValidationAdmissionPolicy`.
   Flag remains in place to not cause a breaking change for users that rely on it.
   [#1066](https://github.com/Kong/gateway-operator/pull/1066)
+- Remove `ValidatingAdmissionWebhook` from the operator.
+  As of now, all the validations have been moved to CRD CEL validation expressions
+  or to the `ValidationAdmissionPolicy`.
+  All the flags that were configuring the webhook are now deprecated and do not
+  have any effect.
+  They will be removed in next major release.
+  [#1100](https://github.com/Kong/gateway-operator/pull/1100)
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 

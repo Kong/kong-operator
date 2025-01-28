@@ -2,16 +2,12 @@ package integration
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"net/http"
 	"os"
 	"path"
 	"runtime/debug"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/certmanager"
@@ -27,7 +23,6 @@ import (
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
-	"github.com/kong/gateway-operator/test/helpers/certificate"
 )
 
 // -----------------------------------------------------------------------------
@@ -38,10 +33,7 @@ var (
 	existingCluster      = os.Getenv("KONG_TEST_CLUSTER")
 	controllerManagerOut = os.Getenv("KONG_CONTROLLER_OUT")
 	skipClusterCleanup   = strings.ToLower(os.Getenv("KONG_TEST_CLUSTER_PERSIST")) == "true"
-	webhookEnabled       = strings.ToLower(os.Getenv("WEBHOOK_ENABLED")) == "true"
-	webhookServerIP      = os.Getenv("GATEWAY_OPERATOR_WEBHOOK_IP")
 	bluegreenController  = strings.ToLower(os.Getenv("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER")) == "true"
-	webhookServerPort    = 9443
 )
 
 // -----------------------------------------------------------------------------
@@ -161,12 +153,6 @@ func TestMain(
 	fmt.Println("INFO: deploying CRDs to test cluster")
 	exitOnErr(testutils.DeployCRDs(GetCtx(), path.Join(configPath, "/crd"), GetClients().OperatorClient, GetEnv().Cluster()))
 
-	var ca, cert, key []byte // Certificate generated for tests used by webhook.
-	if webhookEnabled {
-		ca, cert, key, err = prepareWebhook()
-		exitOnErr(err)
-	}
-
 	fmt.Println("INFO: starting the operator's controller manager")
 	// Spawn the controller manager based on passed config in
 	// a separate goroutine and report whether that succeeded.
@@ -179,11 +165,6 @@ func TestMain(
 	httpClient, err := helpers.CreateHTTPClient(nil, "")
 	exitOnErr(err)
 	exitOnErr(testutils.BuildMTLSCredentials(GetCtx(), GetClients().K8sClient, httpClient))
-
-	// Wait for webhook server in controller to be ready after controller started.
-	if webhookEnabled {
-		exitOnErr(waitForWebhook(GetCtx(), webhookServerIP, webhookServerPort, ca, cert, key))
-	}
 
 	fmt.Println("INFO: environment is ready, starting tests")
 	code = m.Run()
@@ -222,7 +203,6 @@ func DefaultControllerConfigForTests() manager.Config {
 	cfg.DataPlaneBlueGreenControllerEnabled = bluegreenController
 	cfg.KongPluginInstallationControllerEnabled = true
 	cfg.AIGatewayControllerEnabled = true
-	cfg.ValidatingWebhookEnabled = webhookEnabled
 	cfg.AnonymousReports = false
 	cfg.KonnectControllersEnabled = true
 	cfg.ClusterCAKeyType = mgrconfig.ECDSA
@@ -237,68 +217,4 @@ func DefaultControllerConfigForTests() manager.Config {
 		return client.New(config, options)
 	}
 	return cfg
-}
-
-// prepareWebhook prepares for running webhook if we are going to run webhook tests. includes:
-// - creating self-signed TLS certificates for webhook server
-// - creating validating webhook resource in test cluster.
-func prepareWebhook() (ca, cert, key []byte, err error) {
-	// Get IP for generating certificate and for clients to access.
-	if webhookServerIP == "" {
-		webhookServerIP = helpers.GetAdmissionWebhookListenHost()
-	}
-	// Generate certificates for webhooks.
-	// It must run before we start controller manager to start webhook server in controller.
-	cert, key = certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithIPAdresses(webhookServerIP))
-	ca = cert // Self-signed certificate is its own CA.
-
-	// Create webhook resources in k8s.
-	fmt.Println("INFO: creating a validating webhook and waiting for it to start")
-	if err = CreateValidatingWebhook(
-		GetCtx(), GetClients().K8sClient,
-		fmt.Sprintf("https://%s:%d/validate", webhookServerIP, webhookServerPort),
-		ca, cert, key,
-	); err != nil {
-		return nil, nil, nil, err
-	}
-	return ca, cert, key, nil
-}
-
-// waitForWebhook waits for webhook server being able to be accessed by HTTPS.
-func waitForWebhook(ctx context.Context, ip string, port int, ca, cert, key []byte) error {
-	certFull, err := tls.X509KeyPair(cert, key)
-	if err != nil {
-		return err
-	}
-	// Setup HTTPS client.
-	caCertPool := x509.NewCertPool()
-	if ok := caCertPool.AppendCertsFromPEM(ca); !ok {
-		return fmt.Errorf("failed to append CA certificate to pool")
-	}
-	client := http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				MinVersion:   tls.VersionTLS13,
-				Certificates: []tls.Certificate{certFull},
-				RootCAs:      caCertPool,
-			},
-		},
-	}
-	for ready := false; !ready; {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			// Any kind of response from /validate path is considered OK.
-			resp, err := client.Get(fmt.Sprintf("https://%s:%d/validate", ip, port))
-			if err == nil {
-				_ = resp.Body.Close()
-				ready = true
-			}
-		}
-		if !ready {
-			time.Sleep(time.Second)
-		}
-	}
-	return nil
 }

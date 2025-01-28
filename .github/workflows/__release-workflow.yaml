@@ -124,13 +124,7 @@ jobs:
 
   test-integration-current-kubernetes:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        webhook-enabled:
-          - "true"
-          - "false"
-    name: "test-integration-current-kubernetes (WEBHOOK_ENABLED=${{ matrix.webhook-enabled }})"
+    name: "test-integration-current-kubernetes"
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -172,7 +166,6 @@ jobs:
         run: make test.integration
         env:
           KONG_LICENSE_DATA: ${{ steps.get-license.outputs.license || '' }} # The license is optional for OSS tests.
-          WEBHOOK_ENABLED: ${{ matrix.webhook-enabled }}
           KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.konnect-pat }}
           KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
 
@@ -180,7 +173,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
-          name: diagnostics-integration-webhook-enabled-${{ matrix.webhook-enabled }}
+          name: diagnostics-integration
           path: /tmp/ktf-diag*
           if-no-files-found: ignore
 

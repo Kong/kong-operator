@@ -14,10 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	kubernetesclient "k8s.io/client-go/kubernetes"
 
-	"github.com/kong/gateway-operator/pkg/consts"
-	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
@@ -83,40 +80,6 @@ func URLForService(ctx context.Context, cluster clusters.Cluster, nsn types.Name
 	}
 
 	return nil, fmt.Errorf("service %s has not yet been provisoned", service.Name)
-}
-
-// CreateValidatingWebhook creates validating webhook for gateway operator.
-func CreateValidatingWebhook(ctx context.Context, k8sClient *kubernetesclient.Clientset, webhookURL string, ca, cert, key []byte) error {
-	if _, err := k8sClient.CoreV1().Secrets("kong-system").Create(
-		ctx,
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: consts.WebhookCertificateConfigSecretName,
-			},
-			Data: map[string][]byte{
-				consts.CAFieldSecret:   ca,
-				consts.CertFieldSecret: cert,
-				consts.KeyFieldSecret:  key,
-			},
-		},
-		metav1.CreateOptions{},
-	); err != nil {
-		return err
-	}
-
-	validationWebhook := resources.NewValidatingWebhookConfigurationBuilder(consts.WebhookName).
-		WithScopeAllNamespaces().
-		WithClientConfigURL(webhookURL).
-		WithCABundle(ca).
-		Build()
-	if _, err := k8sClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(
-		ctx,
-		validationWebhook,
-		metav1.CreateOptions{},
-	); err != nil {
-		return err
-	}
-	return nil
 }
 
 // GetEnvValueByName returns the corresponding value of LAST item with given name.

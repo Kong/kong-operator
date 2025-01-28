@@ -11,4 +11,3 @@ resources:
 
 patches:
 - path: manager_metrics_access_filter_rbac_patch.yaml
-- path: manager_webhook_certificates_patch.yaml

@@ -30,17 +30,3 @@ func GenerateNewServiceAccountForControlPlane(namespace, controlplaneName string
 
 	return sa
 }
-
-// GenerateNewServiceAccountForCertificateConfig is a helper to generate a ServiceAccount
-// to be used by the certificateConfig jobs
-func GenerateNewServiceAccountForCertificateConfig(namespace, name, labelValue string) *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				"app": labelValue,
-			},
-		},
-	}
-}

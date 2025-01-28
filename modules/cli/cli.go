@@ -62,9 +62,12 @@ func New(m metadata.Info) *CLI {
 	flagSet.UintVar(&cfg.KonnectMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultKonnectMaxConcurrentReconciles, "Maximum number of concurrent reconciles for Konnect entities.")
 
 	// webhook and validation options
-	flagSet.BoolVar(&cfg.ValidatingWebhookEnabled, "enable-validating-webhook", false, "Enable the validating webhook.")
-	flagSet.StringVar(&cfg.WebhookCertificateConfigBaseImage, "webhook-certificate-config-base-image", consts.WebhookCertificateConfigBaseImage, "The base image for the certgen Jobs.")
-	flagSet.StringVar(&cfg.WebhookCertificateConfigShellImage, "webhook-certificate-config-shell-image", consts.WebhookCertificateConfigShellImage, "The shell image for the certgen Jobs.")
+	var validatingWebhookEnabled bool
+	flagSet.BoolVar(&validatingWebhookEnabled, "enable-validating-webhook", false, "Enable the validating webhook. DEPRECATED: This flag is no-op and will be removed in a future release.")
+	var validatingWebhookConfigBaseImage string
+	flagSet.StringVar(&validatingWebhookConfigBaseImage, "webhook-certificate-config-base-image", consts.WebhookCertificateConfigBaseImage, "The base image for the certgen Jobs. DEPRECATED: This flag is no-op and will be removed in a future release.")
+	var validatingWebhookConfigShellImage string
+	flagSet.StringVar(&validatingWebhookConfigShellImage, "webhook-certificate-config-shell-image", consts.WebhookCertificateConfigShellImage, "The shell image for the certgen Jobs. DEPRECATED: This flag is no-op and will be removed in a future release.")
 
 	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information.")
 
@@ -150,11 +153,7 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 		developmentModeEnabled = true
 	}
 
-	webhookCertDir := manager.DefaultConfig().WebhookCertDir
 	// TODO: clean env handling https://github.com/Kong/gateway-operator-archive/issues/19
-	if certDir := os.Getenv("WEBHOOK_CERT_DIR"); certDir != "" {
-		webhookCertDir = certDir
-	}
 
 	// Flags take precedence over environment variables,
 	// so we bind env vars first then parse aruments to override the values from flags.
@@ -220,9 +219,7 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	c.cfg.LeaderElection = leaderElection
 	c.cfg.ControllerNamespace = controllerNamespace
 	c.cfg.ClusterCASecretNamespace = clusterCASecretNamespace
-	c.cfg.WebhookCertDir = webhookCertDir
 	c.cfg.LoggerOpts = logging.SetupLogEncoder(c.cfg.DevelopmentMode || c.loggerOpts.Development, c.loggerOpts)
-	c.cfg.WebhookPort = manager.DefaultConfig().WebhookPort
 	c.cfg.LeaderElectionNamespace = controllerNamespace
 	c.cfg.AnonymousReports = anonymousReportsEnabled
 

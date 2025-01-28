@@ -65,7 +65,6 @@ These versions should be updated to match the new release. The example consts to
 
 - `DefaultDataPlaneTag`
 - `DefaultControlPlaneVersion`
-- `WebhookCertificateConfigBaseImage`
 
 ## GitHub PAT
 

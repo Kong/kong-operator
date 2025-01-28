@@ -20,16 +20,10 @@ func TestDataPlaneValidation(t *testing.T) {
 	t.Parallel()
 	namespace, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
-	if webhookEnabled {
-		t.Log("running tests for validation performed by admission webhook")
-		testDataPlaneValidatingWebhook(t, namespace)
-	} else {
-		t.Log("running tests for validation performed during reconciling")
-		testDataPlaneReconcileValidation(t, namespace)
-	}
+	t.Log("running tests for validation performed during reconciling")
+	testDataPlaneReconcileValidation(t, namespace)
 }
 
-// could only run one of webhook validation or validation in reconciling.
 func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace) {
 	testCases := []struct {
 		name             string
@@ -131,57 +125,6 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 						return
 					}
 				}
-			}
-		})
-	}
-}
-
-func testDataPlaneValidatingWebhook(t *testing.T, namespace *corev1.Namespace) {
-	testCases := []struct {
-		name      string
-		dataplane *operatorv1beta1.DataPlane
-		// empty if expect no error,
-		errMsg string
-	}{
-		{
-			name: "webhook:validating_ok",
-			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace.Name,
-					Name:      uuid.NewString(),
-				},
-				Spec: operatorv1beta1.DataPlaneSpec{
-					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
-						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1beta1.DeploymentOptions{
-								PodTemplateSpec: &corev1.PodTemplateSpec{
-									Spec: corev1.PodSpec{
-										Containers: []corev1.Container{
-											{
-												Name:  consts.DataPlaneProxyContainerName,
-												Image: helpers.GetDefaultDataPlaneImage(),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			errMsg: "",
-		},
-	}
-
-	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := dataplaneClient.Create(GetCtx(), tc.dataplane, metav1.CreateOptions{})
-			if tc.errMsg == "" {
-				require.NoErrorf(t, err, "test case %s: should not return error", tc.name)
-			} else {
-				require.Containsf(t, err.Error(), tc.errMsg,
-					"test case %s: error message should contain expected content", tc.name)
 			}
 		})
 	}

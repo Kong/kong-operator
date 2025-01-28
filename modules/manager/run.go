@@ -44,7 +44,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/internal/telemetry"
@@ -53,19 +52,11 @@ import (
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
-const (
-	caCertFilename  = "ca.crt"
-	tlsCertFilename = "tls.crt"
-	tlsKeyFilename  = "tls.key"
-)
-
 // Config represents the configuration for the manager.
 type Config struct {
 	MetricsAddr              string
 	MetricsAccessFilter      MetricsAccessFilter
 	ProbeAddr                string
-	WebhookCertDir           string
-	WebhookPort              int
 	LeaderElection           bool
 	LeaderElectionNamespace  string
 	DevelopmentMode          bool
@@ -97,11 +88,6 @@ type Config struct {
 
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool
-
-	// webhook and validation options
-	ValidatingWebhookEnabled           bool
-	WebhookCertificateConfigBaseImage  string
-	WebhookCertificateConfigShellImage string
 }
 
 // DefaultConfig returns a default configuration for the manager.
@@ -115,8 +101,6 @@ func DefaultConfig() Config {
 		MetricsAddr:                   ":8080",
 		MetricsAccessFilter:           MetricsAccessFilterOff,
 		ProbeAddr:                     ":8081",
-		WebhookCertDir:                defaultWebhookCertDir,
-		WebhookPort:                   9443,
 		DevelopmentMode:               false,
 		LeaderElection:                true,
 		LeaderElectionNamespace:       defaultLeaderElectionNamespace,
@@ -197,11 +181,6 @@ func Run(
 				}
 			}(),
 		},
-		WebhookServer: webhook.NewServer(
-			webhook.Options{
-				Port: cfg.WebhookPort,
-			},
-		),
 		HealthProbeBindAddress:  cfg.ProbeAddr,
 		LeaderElection:          cfg.LeaderElection,
 		LeaderElectionNamespace: cfg.LeaderElectionNamespace,
@@ -237,48 +216,22 @@ func Run(
 		return err
 	}
 
-	if cfg.ValidatingWebhookEnabled {
-		// if the validatingWebhook is enabled, we don't need to setup the Gateway API controllers
-		// here, as they will be set up by the webhook manager once all the webhook resources will be created
-		// and the webhook will be in place.
-		webhookMgr := &webhookManager{
-			client: mgr.GetClient(),
-			mgr:    mgr,
-			logger: ctrl.Log.WithName("webhook_manager"),
-			cfg:    &cfg,
+	controllers, err := setupControllers(mgr, &cfg)
+	if err != nil {
+		setupLog.Error(err, "failed setting up controllers")
+		return err
+	}
+	for _, c := range controllers {
+		if err := c.MaybeSetupWithManager(ctx, mgr); err != nil {
+			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
 		}
-		if err := webhookMgr.PrepareWebhookServerWithControllers(ctx, setupControllers, admissionRequestHandler); err != nil {
-			return fmt.Errorf("unable to create webhook server: %w", err)
-		}
+	}
 
-		if err := mgr.Add(webhookMgr); err != nil {
-			return fmt.Errorf("unable to add webhook manager: %w", err)
-		}
-
-		defer func() {
-			setupLog.Info("cleaning up webhook and certificateConfig resources")
-			if err := webhookMgr.cleanup(context.Background()); err != nil {
-				setupLog.Error(err, "error while performing cleanup")
-			}
-		}()
-	} else {
-		controllers, err := setupControllers(mgr, &cfg)
-		if err != nil {
-			setupLog.Error(err, "failed setting up controllers")
-			return err
-		}
-		for _, c := range controllers {
-			if err := c.MaybeSetupWithManager(ctx, mgr); err != nil {
-				return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
-			}
-		}
-
-		// Add readyz check here only if the validating webhook is disabled.
-		// When the webhook is enabled we add a readyz check in PrepareWebhookServer
-		// to mark the controller ready only after the webhook has started.
-		if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-			return fmt.Errorf("unable to set up ready check: %w", err)
-		}
+	// Add readyz check here only if the validating webhook is disabled.
+	// When the webhook is enabled we add a readyz check in PrepareWebhookServer
+	// to mark the controller ready only after the webhook has started.
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		return fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
 	//+kubebuilder:scaffold:builder

@@ -24,7 +24,6 @@ func init() {
 		TestGatewayDataPlaneNetworkPolicy,
 		TestGatewayEssentials,
 		TestGatewayMultiple,
-		TestGatewayProvisionDataPlaneFail,
 		TestGatewayWithMultipleListeners,
 		TestHTTPRoute,
 		TestHTTPRouteWithTLS,

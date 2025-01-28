@@ -36,8 +36,6 @@ func TestParse(t *testing.T) {
 			expectedCfg: func() manager.Config {
 				cfg := expectedDefaultCfg()
 				cfg.LeaderElection = false
-				cfg.ValidatingWebhookEnabled = false
-				cfg.WebhookCertDir = "/tmp/foo"
 				return cfg
 			},
 		},
@@ -55,7 +53,6 @@ func TestParse(t *testing.T) {
 				cfg.ControllerNamespace = "test"
 				// All the below config changes are the result of GATEWAY_OPERATOR_DEVELOPMENT_MODE=true.
 				cfg.DevelopmentMode = true
-				cfg.ValidatingWebhookEnabled = false
 				loggerOpts := manager.DefaultConfig().LoggerOpts
 				loggerOpts.Development = true
 				cfg.LoggerOpts = logging.SetupLogEncoder(true, loggerOpts)
@@ -87,8 +84,6 @@ func TestParse(t *testing.T) {
 			},
 			expectedCfg: func() manager.Config {
 				cfg := expectedDefaultCfg()
-				cfg.WebhookCertificateConfigBaseImage = "mybaseimage:42"
-				cfg.WebhookCertificateConfigShellImage = "shellimg"
 				return cfg
 			},
 		},
@@ -172,8 +167,6 @@ func expectedDefaultCfg() manager.Config {
 		MetricsAddr:                             ":8080",
 		MetricsAccessFilter:                     "off",
 		ProbeAddr:                               ":8081",
-		WebhookCertDir:                          "/tmp/k8s-webhook-server/serving-certs",
-		WebhookPort:                             9443,
 		LeaderElection:                          true,
 		LeaderElectionNamespace:                 "kong-system",
 		DevelopmentMode:                         false,
@@ -193,9 +186,6 @@ func expectedDefaultCfg() manager.Config {
 		KonnectControllersEnabled:               false,
 		KonnectSyncPeriod:                       consts.DefaultKonnectSyncPeriod,
 		KongPluginInstallationControllerEnabled: false,
-		ValidatingWebhookEnabled:                false,
-		WebhookCertificateConfigBaseImage:       consts.WebhookCertificateConfigBaseImage,
-		WebhookCertificateConfigShellImage:      consts.WebhookCertificateConfigShellImage,
 		LoggerOpts:                              &zap.Options{},
 		KonnectMaxConcurrentReconciles:          consts.DefaultKonnectMaxConcurrentReconciles,
 	}

@@ -171,7 +171,6 @@ func startControllerManager(metadata metadata.Info) <-chan struct{} {
 	cfg.GatewayControllerEnabled = true
 	cfg.ControlPlaneControllerEnabled = true
 	cfg.DataPlaneControllerEnabled = true
-	cfg.ValidatingWebhookEnabled = false
 	cfg.AnonymousReports = false
 	cfg.ClusterCAKeyType = mgrconfig.ECDSA
 	cfg.GatewayAPIExperimentalEnabled = true
