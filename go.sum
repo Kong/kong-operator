@@ -18,8 +18,8 @@ github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161/go.mod h1:xomTg6
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/Kong/sdk-konnect-go v0.1.27 h1:5+EO1UwiCSWlcSr00K55BXdS6JBX68qX4k+2KoMSWvM=
-github.com/Kong/sdk-konnect-go v0.1.27/go.mod h1:xsmTIkBbmVyUh1nRFjQMOhxYIPDl+sMfmRmPuZHtwLE=
+github.com/Kong/sdk-konnect-go v0.1.28 h1:rI7jpxyLFNFSDd5+7i3BPQrdc0OKwcv8TDO95VrW5F4=
+github.com/Kong/sdk-konnect-go v0.1.28/go.mod h1:xsmTIkBbmVyUh1nRFjQMOhxYIPDl+sMfmRmPuZHtwLE=
 github.com/Masterminds/semver v1.5.0 h1:H65muMkzWKEuNDnfl9d70GUjFniHKHRbFPGBuZ3QEww=
 github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
