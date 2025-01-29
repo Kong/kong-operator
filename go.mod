@@ -26,7 +26,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/prometheus/client_golang v1.20.5
-	github.com/samber/lo v1.49.0
+	github.com/samber/lo v1.49.1
 	github.com/samber/mo v1.13.0
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.10.0
