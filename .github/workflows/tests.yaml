@@ -502,7 +502,6 @@ jobs:
       - conformance-tests
       - integration-tests
       - integration-tests-bluegreen
-      - integration-tests-provision-fail
       - e2e-tests
       - buildpulse-report
     if: always()
