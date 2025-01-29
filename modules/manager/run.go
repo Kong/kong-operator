@@ -227,9 +227,6 @@ func Run(
 		}
 	}
 
-	// Add readyz check here only if the validating webhook is disabled.
-	// When the webhook is enabled we add a readyz check in PrepareWebhookServer
-	// to mark the controller ready only after the webhook has started.
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		return fmt.Errorf("unable to set up ready check: %w", err)
 	}
