@@ -315,13 +315,7 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        webhook-enabled:
-          - "true"
-          - "false"
-    name: "integration-tests (WEBHOOK_ENABLED=${{ matrix.webhook-enabled }})"
+    name: integration-tests
     steps:
     - name: checkout repository
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -340,9 +334,8 @@ jobs:
       env:
         KONG_TEST_DISABLE_CERTMANAGER: "true"
         KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
-        WEBHOOK_ENABLED: ${{ matrix.webhook-enabled }}
         KONG_CONTROLLER_OUT: stdout
-        GOTESTSUM_JUNITFILE: integration-tests-webhook-enabled-${{ matrix.webhook-enabled }}.xml
+        GOTESTSUM_JUNITFILE: integration-tests.xml
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
@@ -351,32 +344,26 @@ jobs:
       if: always()
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: diagnostics-integration-webhook-enabled-${{ matrix.webhook-enabled }}
+        name: diagnostics-integration
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: coverage-integration-webhook-enabled-${{ matrix.webhook-enabled }}
+        name: coverage-integration
         path: coverage.integration.out
 
     - name: collect test report
       if: ${{ always() }}
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: tests-report-integration-webhook-enabled-${{ matrix.webhook-enabled }}
-        path: integration-tests-webhook-enabled-${{ matrix.webhook-enabled }}.xml
+        name: tests-report-integration
+        path: integration-tests.xml
 
   integration-tests-bluegreen:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        webhook-enabled:
-          - "true"
-          - "false"
-    name: "integration-tests-bluegreen (WEBHOOK_ENABLED=${{ matrix.webhook-enabled }})"
+    name: integration-tests-bluegreen
     steps:
     - name: checkout repository
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -394,81 +381,30 @@ jobs:
       run: make test.integration_bluegreen
       env:
         KONG_TEST_DISABLE_CERTMANAGER: "true"
-        WEBHOOK_ENABLED: ${{ matrix.webhook-enabled }}
         KONG_CONTROLLER_OUT: stdout
-        GOTESTSUM_JUNITFILE: integration-tests-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}.xml
+        GOTESTSUM_JUNITFILE: integration-tests-bluegreen.xml
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: upload diagnostics
       if: always()
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: diagnostics-integration-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}
+        name: diagnostics-integration-bluegreen
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: coverage-integration-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}
+        name: coverage-integration-bluegreen
         path: coverage.integration-bluegreen.out
 
     - name: collect test report
       if: always()
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: tests-report-integration-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}
-        path: integration-tests-bluegreen-webhook-enabled-${{ matrix.webhook-enabled }}.xml
-  
-  # Test reconciling Gateway with provisioning DataPlane failures.
-  # This test introduces a wrong gateway that will have errors on validation all `DataPlane`s, so it should run isolated.
-  integration-tests-provision-fail:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-    name: integration-tests-provision-dataplane-fail
-    steps:
-    - name: checkout repository
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-    - name: setup golang
-      uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
-      with:
-        go-version-file: go.mod
-
-    - uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # v2.1.11
-      with:
-        install: false
-
-    - name: run integration tests
-      run: make test.integration_provision_dataplane_fail
-      env:
-        KONG_TEST_DISABLE_CERTMANAGER: "true"
-        KONG_CONTROLLER_OUT: stdout
-        KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
-        GOTESTSUM_JUNITFILE: integration-tests-provision-dataplane-fail.xml
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: upload diagnostics
-      if: always()
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      with:
-        name: diagnostics-integration-provision-fail
-        path: /tmp/ktf-diag*
-        if-no-files-found: ignore
-
-    - name: collect test coverage
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      with:
-        name: coverage-integration-tests-provision-fail
-        path: coverage.integration-provision-dataplane-fail.out
-
-    - name: collect test report
-      if: always()
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      with:
-        name: tests-report-integration-tests-provision-fail
-        path: integration-tests-provision-dataplane-fail.xml
+        name: tests-report-integration-bluegreen
+        path: integration-tests-bluegreen.xml
   
   e2e-tests:
     runs-on: ubuntu-latest
@@ -498,7 +434,6 @@ jobs:
       env:
         KONG_TEST_DISABLE_CERTMANAGER: "true"
         KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD: gateway-operator:e2e-${{ github.sha }}
-        WEBHOOK_ENABLED: "false"
         GOTESTSUM_JUNITFILE: "e2e-tests.xml"
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -567,7 +502,6 @@ jobs:
       - conformance-tests
       - integration-tests
       - integration-tests-bluegreen
-      - integration-tests-provision-fail
       - e2e-tests
       - buildpulse-report
     if: always()

@@ -12,7 +12,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -833,104 +832,6 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 		t.Log("verifying networkpolicies are deleted")
 		require.Eventually(t, testutils.Not(testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients)), time.Minute, time.Second)
 	})
-}
-
-func TestGatewayProvisionDataPlaneFail(t *testing.T) {
-	t.Parallel()
-	if !webhookEnabled {
-		t.Skip("Skipping because webhook is not enabled")
-	}
-
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
-
-	t.Logf("creating another service with no endpoints for wrong webhooks")
-	serviceClient := env.Cluster().Client().CoreV1().Services(namespace.Name)
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      "fake-webhook",
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				"app": "fake",
-			},
-			Ports: []corev1.ServicePort{
-				{Port: int32(443), TargetPort: intstr.FromInt(8443)},
-			},
-		},
-	}
-	_, err := serviceClient.Create(ctx, service, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(service)
-
-	t.Log("creating a wrong webhook for DataPlane with a Service having no endpoints")
-	webhookClient := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations()
-	wrongWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "gateway-operator-wrong-validators.test.konghq.com",
-		},
-		Webhooks: []admissionregistrationv1.ValidatingWebhook{
-			{
-				Name: "wrong-dataplane-webhook.test.konghq.com",
-				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					Service: &admissionregistrationv1.ServiceReference{
-						Namespace: namespace.Name,
-						Name:      "fake-webhook",
-					},
-				},
-				Rules: []admissionregistrationv1.RuleWithOperations{
-					{
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{"gateway-operator.konghq.com"},
-							APIVersions: []string{"v1beta1"},
-							Resources:   []string{"dataplanes"},
-							Scope:       lo.ToPtr(admissionregistrationv1.NamespacedScope),
-						},
-						Operations: []admissionregistrationv1.OperationType{
-							admissionregistrationv1.Create,
-							admissionregistrationv1.Update,
-						},
-					},
-				},
-				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				SideEffects:             lo.ToPtr(admissionregistrationv1.SideEffectClassNone),
-				TimeoutSeconds:          lo.ToPtr(int32(1)),
-			},
-		},
-	}
-	_, err = webhookClient.Create(ctx, wrongWebhook, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(wrongWebhook)
-
-	t.Log("creating a Gateway and verify that it does not get Programmed")
-	t.Log("deploying a GatewayClass resource")
-	gatewayClass := helpers.MustGenerateGatewayClass(t)
-	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(gatewayClass)
-
-	t.Log("deploying Gateway resource")
-	gatewayNN := types.NamespacedName{
-		Name:      uuid.NewString(),
-		Namespace: namespace.Name,
-	}
-	gateway := helpers.GenerateGateway(gatewayNN, gatewayClass)
-	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(gateway)
-
-	t.Log("verifying Gateway gets marked as Scheduled")
-	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
-
-	t.Log("verifying Gateway does not get marked as Programmed")
-	require.Never(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
-
-	t.Log("deleting the wrong webhook for dataplane")
-	err = webhookClient.Delete(ctx, wrongWebhook.Name, metav1.DeleteOptions{})
-	require.NoError(t, err)
-
-	t.Log("verifying Gateway gets marked as Programmed")
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 }
 
 func setGatewayConfigurationEnvProxyPort(t *testing.T, gatewayConfiguration *operatorv1beta1.GatewayConfiguration, proxyPort int, proxySSLPort int) {
