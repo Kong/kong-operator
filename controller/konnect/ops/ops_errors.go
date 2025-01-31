@@ -167,7 +167,7 @@ func ErrorIsSDKError403(err error) bool {
 		return false
 	}
 
-	return errSDK.StatusCode == 403 && errSDK.Message == apiErrorOccurredMessage
+	return errSDK.StatusCode == 403
 }
 
 // ErrorIsSDKBadRequestError returns true if the provided error is a BadRequestError.

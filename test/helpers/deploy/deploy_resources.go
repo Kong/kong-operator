@@ -161,6 +161,17 @@ func KonnectGatewayControlPlane(
 	return cp
 }
 
+// KonnectGatewayControlPlaneType returns an ObjOption that sets the cluster type on the CP.
+func KonnectGatewayControlPlaneType(typ sdkkonnectcomp.CreateControlPlaneRequestClusterType) ObjOption {
+	return func(obj client.Object) {
+		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+		if !ok {
+			panic(fmt.Errorf("%T does not implement KonnectGatewayControlPlane", obj))
+		}
+		cp.Spec.CreateControlPlaneRequest.ClusterType = &typ
+	}
+}
+
 // KonnectGatewayControlPlaneWithID deploys a KonnectGatewayControlPlane resource and returns the resource.
 // The Status ID and Programmed condition are set on the CP using status Update() call.
 // It can be useful where the reconciler for KonnectGatewayControlPlane is not started
