@@ -127,6 +127,9 @@
 - Fix unexpected error logs caused by passing an odd number of arguments to the logger
   in the `KongConsumer` reconciler.
   [#983](https://github.com/Kong/gateway-operator/pull/983)
+- Fix checking status when using a `KonnectGatewayControlPlane` with KIC CP type
+  as a `ControlPlaneRef`.
+  [#1115](https://github.com/Kong/gateway-operator/pull/1115)
 - Fix setting `DataPlane`'s readiness probe using `GatewayConfiguration`.
   [#1118](https://github.com/Kong/gateway-operator/pull/1118)
 

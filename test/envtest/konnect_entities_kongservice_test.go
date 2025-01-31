@@ -6,11 +6,13 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -200,6 +202,80 @@ func TestKongService(t *testing.T) {
 			}
 			return kt.GetKonnectID() == serviceID && k8sutils.IsProgrammed(kt)
 		}, "KongService didn't get Programmed status condition or didn't get the correct (service-12345) Konnect ID assigned")
+	})
 
+	t.Run("trying to attach KongService to KonnectGatewayControlPlane of type KIC fails (due to CP being read only)", func(t *testing.T) {
+		const (
+			upstreamID = "kup-kic-12345"
+			serviceID  = "service-12345"
+			host       = "example.com"
+			port       = int64(8081)
+		)
+
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth,
+			deploy.KonnectGatewayControlPlaneType(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController),
+		)
+		t.Log("Creating a KongUpstream and setting it to programmed")
+		upstream := deploy.KongUpstreamAttachedToCP(t, ctx, clientNamespaced, cp)
+		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
+
+		t.Log("Setting up a watch for KongService events")
+		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on Service creation")
+		errBody := `{
+					"code": 7,
+					"message": "usage constraint error",
+					"details": [
+						{
+							"@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
+							"messages": [
+								"operation not permitted on KIC cluster"
+							]
+						}
+					]
+				}`
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.ServiceInput) bool {
+					return req.Host == host
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateServiceResponse{},
+				sdkkonnecterrs.NewSDKError("API error occurred", 403, errBody, nil),
+			)
+
+		t.Log("Creating a KongService with ControlPlaneRef type=konnectNamespacedRef")
+		createdService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.KongServiceAPISpec.Host = host
+			},
+		)
+		t.Log("Checking SDK KongService operations")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.ServicesSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+
+		t.Log("Waiting for Service to get the Programmed condition set to False")
+		watchFor(t, ctx, w, watch.Modified, func(kt *configurationv1alpha1.KongService) bool {
+			if kt.GetName() != createdService.GetName() {
+				return false
+			}
+			if kt.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef ||
+				kt.GetControlPlaneRef().KonnectNamespacedRef == nil ||
+				kt.GetControlPlaneRef().KonnectNamespacedRef.Name != cp.GetName() {
+				return false
+			}
+
+			c, ok := k8sutils.GetCondition("Programmed", kt)
+			if !ok {
+				return false
+			}
+			return c.Status == metav1.ConditionFalse && c.Reason == "FailedToCreate"
+		}, "KongService should get the Programmed condition set to status=False due to using invalid (KIC) ControlPlaneRef")
 	})
 }

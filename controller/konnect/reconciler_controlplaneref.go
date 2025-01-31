@@ -124,7 +124,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	// The configuration in control plane group type are read only so they are unsupported to attach entities to them:
 	// https://docs.konghq.com/konnect/gateway-manager/control-plane-groups/#limitations
 	if cp.Spec.ClusterType != nil &&
-		*cp.Spec.ClusterType != sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane {
+		*cp.Spec.ClusterType == sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
