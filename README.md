@@ -59,6 +59,26 @@ If you are eager to start with the operator, you can visit the quick start [sect
 of the documentation. Alternatively, the complete [docs][docs] provide a full and
 detailed description of how to thoroughly use this project.
 
+## Container images
+
+### Release images
+
+Release builds can be found on Docker Hub in [kong/gateway-operator-oss repository][dockerhub-kgo-oss].
+
+At the moment we're providing images for:
+
+- Linux `amd64`
+- Linux `arm64`
+
+[dockerhub-kgo-oss]: https://hub.docker.com/r/kong/gateway-operator-oss
+
+### `main` branch builds
+
+Nightly pre-release builds of the `main` branch are available from the
+[kong/nightly-gateway-operator-oss repository][dockerhub-kgo-nightly] hosted on Docker Hub.
+
+[dockerhub-kgo-nightly]: https://hub.docker.com/r/kong/nightly-gateway-operator-oss
+
 ## Development
 
 ### Prerequisites
