@@ -522,7 +522,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// Regardless of the error reported from Create(), if the Konnect ID has been
 		// set then:
 		// - add the finalizer so that the resource can be cleaned up from Konnect on deletion...
-		if ent.GetKonnectStatus().ID != "" {
+		if status != nil && status.ID != "" {
 			objWithFinalizer := ent.DeepCopyObject().(client.Object)
 			if controllerutil.AddFinalizer(objWithFinalizer, KonnectCleanupFinalizer) {
 				if errUpd := r.Client.Patch(ctx, objWithFinalizer, client.MergeFrom(ent)); errUpd != nil {
@@ -545,7 +545,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			// ...
 			// - add the Org ID and Server URL to the status so that the resource can be
 			//   cleaned up from Konnect on deletion and also so that the status can
-			//   indicate where the resource is located.
+			//   indicate where the corresponding Konnect entity is located.
 			setServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
 		}
 

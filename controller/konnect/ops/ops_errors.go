@@ -94,8 +94,9 @@ func ParseSDKErrorBody(body string) (sdkErrorBody, error) {
 }
 
 const (
-	dataConstraintMesasge  = "data constraint error"
-	validationErrorMessage = "validation error"
+	dataConstraintMesasge   = "data constraint error"
+	validationErrorMessage  = "validation error"
+	apiErrorOccurredMessage = "API error occurred"
 )
 
 // ErrorIsSDKErrorTypeField returns true if the provided error is a type field error.
@@ -130,17 +131,43 @@ func ErrorIsSDKErrorTypeField(err error) bool {
 		return false
 	}
 
-	if errSDKBody.Message != validationErrorMessage {
+	switch errSDKBody.Message {
+	case validationErrorMessage:
+		if !slices.ContainsFunc(errSDKBody.Details, func(d sdkErrorDetails) bool {
+			return d.Type == "ERROR_TYPE_FIELD"
+		}) {
+			return false
+		}
+
+		return true
+	default:
+		return false
+	}
+}
+
+// ErrorIsSDKError403 returns true if the provided error is a 403 Forbidden error.
+// This can happen when the requested operation is not permitted.
+// Example SDKError body (SDKError message is a separate field from body message):
+//
+//	{
+//		"code": 7,
+//		"message": "usage constraint error",
+//		"details": [
+//			{
+//				"@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
+//				"messages": [
+//					"operation not permitted on KIC cluster"
+//				]
+//			}
+//		]
+//	}
+func ErrorIsSDKError403(err error) bool {
+	var errSDK *sdkkonnecterrs.SDKError
+	if !errors.As(err, &errSDK) {
 		return false
 	}
 
-	if !slices.ContainsFunc(errSDKBody.Details, func(d sdkErrorDetails) bool {
-		return d.Type == "ERROR_TYPE_FIELD"
-	}) {
-		return false
-	}
-
-	return true
+	return errSDK.StatusCode == 403 && errSDK.Message == apiErrorOccurredMessage
 }
 
 // ErrorIsSDKBadRequestError returns true if the provided error is a BadRequestError.
@@ -254,7 +281,9 @@ func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 	// it to the caller.
 	// We cannot recover from this error as this requires user to change object's
 	// manifest. The entity's status is already updated with the error.
-	if ErrorIsSDKErrorTypeField(err) || ErrorIsSDKBadRequestError(err) {
+	if ErrorIsSDKErrorTypeField(err) ||
+		ErrorIsSDKBadRequestError(err) ||
+		ErrorIsSDKError403(err) {
 		log.Debug(logger, "ignoring unrecoverable API error, consult object's status for details", "err", err)
 		return nil
 	}
