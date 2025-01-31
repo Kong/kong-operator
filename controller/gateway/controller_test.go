@@ -13,6 +13,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -704,6 +705,94 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 										Name:           consts.DataPlaneProxyContainerName,
 										Image:          consts.DefaultDataPlaneImage,
 										ReadinessProbe: resources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "not providing the readiness probe sets it to default",
+			input: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{},
+			},
+			expected: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						Replicas: lo.ToPtr(int32(1)),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:           consts.DataPlaneProxyContainerName,
+										Image:          consts.DefaultDataPlaneImage,
+										ReadinessProbe: resources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "providing the readiness probe sets it as expected",
+			input: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: consts.DefaultDataPlaneImage,
+										ReadinessProbe: &corev1.Probe{
+											FailureThreshold:    6,
+											InitialDelaySeconds: 7,
+											PeriodSeconds:       8,
+											SuccessThreshold:    8,
+											TimeoutSeconds:      9,
+											ProbeHandler: corev1.ProbeHandler{
+												HTTPGet: &corev1.HTTPGetAction{
+													Path:   "/endpoint",
+													Port:   intstr.FromInt(4567),
+													Scheme: corev1.URISchemeHTTP,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						Replicas: lo.ToPtr(int32(1)),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: consts.DefaultDataPlaneImage,
+										ReadinessProbe: &corev1.Probe{
+											FailureThreshold:    6,
+											InitialDelaySeconds: 7,
+											PeriodSeconds:       8,
+											SuccessThreshold:    8,
+											TimeoutSeconds:      9,
+											ProbeHandler: corev1.ProbeHandler{
+												HTTPGet: &corev1.HTTPGetAction{
+													Path:   "/endpoint",
+													Port:   intstr.FromInt(4567),
+													Scheme: corev1.URISchemeHTTP,
+												},
+											},
+										},
 									},
 								},
 							},

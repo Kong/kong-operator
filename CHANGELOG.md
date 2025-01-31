@@ -127,6 +127,8 @@
 - Fix unexpected error logs caused by passing an odd number of arguments to the logger
   in the `KongConsumer` reconciler.
   [#983](https://github.com/Kong/gateway-operator/pull/983)
+- Fix setting `DataPlane`'s readiness probe using `GatewayConfiguration`.
+  [#1118](https://github.com/Kong/gateway-operator/pull/1118)
 
 ### Added
 
