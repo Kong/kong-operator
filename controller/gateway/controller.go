@@ -656,7 +656,11 @@ func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions, default
 		if container.Image == "" {
 			container.Image = defaultImage
 		}
-		container.ReadinessProbe = k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint)
+		if container.ReadinessProbe == nil {
+			// For Gateway we set DataPlane's readiness probe to /status/ready so that
+			// it's only marked ready when it receives the configuration from the ControlPlane.
+			container.ReadinessProbe = k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint)
+		}
 	} else {
 		// Because we currently require image to be specified for DataPlanes
 		// we need to add it here. After #20 gets resolved this won't be needed

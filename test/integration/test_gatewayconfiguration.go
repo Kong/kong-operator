@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
@@ -74,6 +75,20 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 														},
 														Key: testEnvVarFromKV,
 													},
+												},
+											},
+										},
+										ReadinessProbe: &corev1.Probe{
+											FailureThreshold:    6,
+											InitialDelaySeconds: 1,
+											PeriodSeconds:       2,
+											SuccessThreshold:    2,
+											TimeoutSeconds:      9,
+											ProbeHandler: corev1.ProbeHandler{
+												HTTPGet: &corev1.HTTPGetAction{
+													Path:   "/status/ready",
+													Port:   intstr.FromInt(4567),
+													Scheme: corev1.URISchemeHTTP,
 												},
 											},
 										},
@@ -177,6 +192,18 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 			if envVar.Name == testEnvVar && envVar.Value == testEnvVal {
 				return true
 			}
+		}
+		if container.ReadinessProbe == nil ||
+			container.ReadinessProbe.HTTPGet == nil ||
+			container.ReadinessProbe.HTTPGet.Path != "/status/ready" ||
+			container.ReadinessProbe.HTTPGet.Port.IntVal != 4567 ||
+			container.ReadinessProbe.HTTPGet.Scheme != corev1.URISchemeHTTP ||
+			container.ReadinessProbe.FailureThreshold != 6 ||
+			container.ReadinessProbe.InitialDelaySeconds != 1 ||
+			container.ReadinessProbe.PeriodSeconds != 2 ||
+			container.ReadinessProbe.SuccessThreshold != 2 ||
+			container.ReadinessProbe.TimeoutSeconds != 9 {
+			return false
 		}
 		return false
 	}, testutils.GatewayReadyTimeLimit, time.Second)
