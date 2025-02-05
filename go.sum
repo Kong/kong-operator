@@ -18,8 +18,8 @@ github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161/go.mod h1:xomTg6
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/Kong/sdk-konnect-go v0.2.0 h1:ZgPwDtl3jBm17RjzPim7oP1iyW487XYOiWn0v8exMrM=
-github.com/Kong/sdk-konnect-go v0.2.0/go.mod h1:xsmTIkBbmVyUh1nRFjQMOhxYIPDl+sMfmRmPuZHtwLE=
+github.com/Kong/sdk-konnect-go v0.2.1 h1:h5cDe7ILhNL59W1BqJ664abLOlj35e14g34lQfZIpQM=
+github.com/Kong/sdk-konnect-go v0.2.1/go.mod h1:xsmTIkBbmVyUh1nRFjQMOhxYIPDl+sMfmRmPuZHtwLE=
 github.com/Masterminds/semver v1.5.0 h1:H65muMkzWKEuNDnfl9d70GUjFniHKHRbFPGBuZ3QEww=
 github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
@@ -271,8 +271,8 @@ github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 h1:bkypFPDjIYGfCYD5mRBvpqxfYX1
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0/go.mod h1:P+Lt/0by1T8bfcF3z737NnSbmxQAppXMRziHUxPOC8k=
 github.com/gruntwork-io/go-commons v0.8.0 h1:k/yypwrPqSeYHevLlEDmvmgQzcyTwrlZGRaxEM6G0ro=
 github.com/gruntwork-io/go-commons v0.8.0/go.mod h1:gtp0yTtIBExIZp7vyIV9I0XQkVwiQZze678hvDXof78=
-github.com/gruntwork-io/terratest v0.48.1 h1:pnydDjkWbZCUYXvQkr24y21fBo8PfJC5hRGdwbl1eXM=
-github.com/gruntwork-io/terratest v0.48.1/go.mod h1:U2EQW4Odlz75XJUH16Kqkr9c93p+ZZtkpVez7GkZFa4=
+github.com/gruntwork-io/terratest v0.48.2 h1:+VwfODchq8jxZZWD+s8gBlhD1z6/C4bFLNrhpm9ONrs=
+github.com/gruntwork-io/terratest v0.48.2/go.mod h1:Y5ETyD4ZQ2MZhasPno272fWuCpKwvTPYDi8Y0tIMqTE=
 github.com/hashicorp/errwrap v1.0.0 h1:hLrqtEDnRye3+sgx6z4qVLNuviH3MR5aQ0ykNJa/UYA=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/go-multierror v1.1.1 h1:H5DkEtf6CXdFp0N0Em5UCwQpXMWke8IA0+lD48awMYo=
