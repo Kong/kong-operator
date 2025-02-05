@@ -54,13 +54,16 @@ func TestHelmUpgrade(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name                   string
-		fromVersion            string
-		toVersion              string
-		objectsToDeploy        []client.Object
-		upgradeToCurrent       bool
-		assertionsAfterInstall []assertion
-		assertionsAfterUpgrade []assertion
+		name             string
+		fromVersion      string
+		toVersion        string
+		objectsToDeploy  []client.Object
+		upgradeToCurrent bool
+		// If upgrading to an image tag that's not a valid semver, fill this to the effective semver so that charts
+		// can correctly render semver-conditional templates.
+		upgradeToEffectiveSemver string
+		assertionsAfterInstall   []assertion
+		assertionsAfterUpgrade   []assertion
 	}{
 		{
 			name:        "upgrade from one before latest to latest minor",
@@ -138,6 +141,9 @@ func TestHelmUpgrade(t *testing.T) {
 			name:             "upgrade from latest minor to current",
 			fromVersion:      "1.4.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
 			upgradeToCurrent: true,
+			// This is the effective semver of a next release. It's needed for the chart to properly render
+			// semver-conditional templates.
+			upgradeToEffectiveSemver: "1.5.0",
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -330,6 +336,10 @@ func TestHelmUpgrade(t *testing.T) {
 				// Disable leader election and anonymous reports for tests.
 				"no_leader_election": "true",
 				"anonymous_reports":  "false",
+			}
+
+			if tc.upgradeToEffectiveSemver != "" {
+				values["image.effectiveSemver"] = tc.upgradeToEffectiveSemver
 			}
 
 			opts := &helm.Options{
