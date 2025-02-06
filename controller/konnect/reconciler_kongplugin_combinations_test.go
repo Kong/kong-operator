@@ -12,6 +12,7 @@ import (
 
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -510,7 +511,7 @@ func TestGroupByControlPlane(t *testing.T) {
 								Namespace: "default",
 							},
 							Spec: configurationv1alpha1.KongServiceSpec{
-								ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp1",
@@ -530,7 +531,7 @@ func TestGroupByControlPlane(t *testing.T) {
 								Namespace: "default",
 							},
 							Spec: configurationv1alpha1.KongServiceSpec{
-								ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp1",
@@ -553,7 +554,7 @@ func TestGroupByControlPlane(t *testing.T) {
 								Namespace: "default",
 							},
 							Spec: configurationv1alpha1.KongServiceSpec{
-								ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp1",
@@ -567,7 +568,7 @@ func TestGroupByControlPlane(t *testing.T) {
 								Namespace: "default",
 							},
 							Spec: configurationv1alpha1.KongServiceSpec{
-								ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp2",
@@ -587,7 +588,7 @@ func TestGroupByControlPlane(t *testing.T) {
 								Namespace: "default",
 							},
 							Spec: configurationv1alpha1.KongServiceSpec{
-								ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp1",
@@ -605,7 +606,7 @@ func TestGroupByControlPlane(t *testing.T) {
 								Namespace: "default",
 							},
 							Spec: configurationv1alpha1.KongServiceSpec{
-								ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp2",
@@ -626,7 +627,7 @@ func TestGroupByControlPlane(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: configurationv1alpha1.KongServiceSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 								Name: "cp1",
@@ -644,7 +645,7 @@ func TestGroupByControlPlane(t *testing.T) {
 								Namespace: "default",
 							},
 							Spec: configurationv1alpha1.KongServiceSpec{
-								ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp1",
@@ -666,7 +667,7 @@ func TestGroupByControlPlane(t *testing.T) {
 										Name: "s1",
 									},
 								},
-								ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp1",
@@ -686,7 +687,7 @@ func TestGroupByControlPlane(t *testing.T) {
 								Namespace: "default",
 							},
 							Spec: configurationv1alpha1.KongServiceSpec{
-								ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp1",
@@ -708,7 +709,7 @@ func TestGroupByControlPlane(t *testing.T) {
 										Name: "s1",
 									},
 								},
-								ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp1",
@@ -731,7 +732,7 @@ func TestGroupByControlPlane(t *testing.T) {
 								Namespace: "default",
 							},
 							Spec: configurationv1.KongConsumerSpec{
-								ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp1",
@@ -751,7 +752,7 @@ func TestGroupByControlPlane(t *testing.T) {
 								Namespace: "default",
 							},
 							Spec: configurationv1.KongConsumerSpec{
-								ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp1",
@@ -774,7 +775,7 @@ func TestGroupByControlPlane(t *testing.T) {
 								Namespace: "default",
 							},
 							Spec: configurationv1beta1.KongConsumerGroupSpec{
-								ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp1",
@@ -794,7 +795,7 @@ func TestGroupByControlPlane(t *testing.T) {
 								Namespace: "default",
 							},
 							Spec: configurationv1beta1.KongConsumerGroupSpec{
-								ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp1",

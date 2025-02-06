@@ -262,7 +262,7 @@ func InstallKubernetesConfigurationCRDs(ctx context.Context, cluster clusters.Cl
 			"kubernetes-configuration@"+kongCRDVersion, "config", "crd", crdDirName,
 		)
 		fmt.Printf("INFO: deploying kubernetes-configuration CRDs: %s\n", kongCRDPath)
-		if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongCRDPath); err != nil {
+		if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongCRDPath, "--server-side"); err != nil {
 			return fmt.Errorf("failed installing kubernetes-configurations (%s) CRDs: %w", kongCRDPath, err)
 		}
 	}

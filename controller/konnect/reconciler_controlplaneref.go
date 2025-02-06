@@ -17,6 +17,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -25,8 +26,8 @@ import (
 
 func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	e TEnt,
-) mo.Option[configurationv1alpha1.ControlPlaneRef] {
-	none := mo.None[configurationv1alpha1.ControlPlaneRef]()
+) mo.Option[commonv1alpha1.ControlPlaneRef] {
+	none := mo.None[commonv1alpha1.ControlPlaneRef]()
 	switch e := any(e).(type) {
 	case *configurationv1.KongConsumer:
 		if e.Spec.ControlPlaneRef == nil {

@@ -14,6 +14,10 @@ package konnect
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumergroups,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumergroups/status,verbs=get;update;patch
 
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectcloudgatewaynetworks,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectcloudgatewaynetworks/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectcloudgatewaynetworks/finalizers,verbs=update;patch
+
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcacertificates,verbs=get;list;watch;update;patch

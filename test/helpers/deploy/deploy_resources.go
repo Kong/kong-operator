@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -73,17 +74,17 @@ func WithTestIDLabel(testID string) func(obj client.Object) {
 func WithKonnectNamespacedRefControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane) ObjOption {
 	return func(obj client.Object) {
 		o, ok := obj.(interface {
-			GetControlPlaneRef() *configurationv1alpha1.ControlPlaneRef
-			SetControlPlaneRef(*configurationv1alpha1.ControlPlaneRef)
+			GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef
+			SetControlPlaneRef(*commonv1alpha1.ControlPlaneRef)
 		})
 		if !ok {
 			// As it's only used in tests, we can panic here - it will mean test code is incorrect.
 			panic(fmt.Errorf("%T does not implement GetControlPlaneRef/SetControlPlaneRef method", obj))
 		}
 
-		cpRef := &configurationv1alpha1.ControlPlaneRef{
-			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+		cpRef := &commonv1alpha1.ControlPlaneRef{
+			Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+			KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 				Name: cp.GetName(),
 			},
 		}
@@ -96,8 +97,8 @@ func WithKonnectNamespacedRefControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayC
 func WithKonnectIDControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane) ObjOption {
 	return func(obj client.Object) {
 		o, ok := obj.(interface {
-			GetControlPlaneRef() *configurationv1alpha1.ControlPlaneRef
-			SetControlPlaneRef(*configurationv1alpha1.ControlPlaneRef)
+			GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef
+			SetControlPlaneRef(*commonv1alpha1.ControlPlaneRef)
 		})
 		if !ok {
 			// As it's only used in tests, we can panic here - it will mean test code is incorrect.
@@ -105,8 +106,8 @@ func WithKonnectIDControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane
 		}
 
 		o.SetControlPlaneRef(
-			&configurationv1alpha1.ControlPlaneRef{
-				Type:      configurationv1alpha1.ControlPlaneRefKonnectID,
+			&commonv1alpha1.ControlPlaneRef{
+				Type:      commonv1alpha1.ControlPlaneRefKonnectID,
 				KonnectID: lo.ToPtr(cp.GetKonnectStatus().GetKonnectID()),
 			},
 		)
@@ -548,7 +549,7 @@ func KongCACertificateAttachedToCP(
 			GenerateName: "cacert-",
 		},
 		Spec: configurationv1alpha1.KongCACertificateSpec{
-			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 					Name: cp.GetName(),
@@ -583,7 +584,7 @@ func KongCertificateAttachedToCP(
 			GenerateName: "cert-",
 		},
 		Spec: configurationv1alpha1.KongCertificateSpec{
-			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 					Name: cp.GetName(),
@@ -756,7 +757,7 @@ func KongVaultAttachedToCP(
 			GenerateName: "vault-",
 		},
 		Spec: configurationv1alpha1.KongVaultSpec{
-			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 					Name:      cp.Name,

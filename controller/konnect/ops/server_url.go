@@ -1,13 +1,27 @@
 package ops
 
-import "strings"
+import (
+	"strings"
+
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+)
 
 // ServerURL is a type to represent a server URL.
 type ServerURL string
 
 // NewServerURL creates a new ServerURL from a string. It accepts either a full URL or a hostname.
-func NewServerURL(u string) ServerURL {
-	// If the URL does not have an HTTPs scheme, we prepend it HTTPs.
+func NewServerURL[T any](u string) ServerURL {
+	// NOTE: Code below tries to determine if we need a global API endpoint for the given type.
+	// Thus far there's no way to determine that programmatically (easily).
+	var t T
+	switch any(t).(type) {
+	case konnectv1alpha1.KonnectCloudGatewayNetwork:
+		// TODO: add more types here that target the global API endpoint.
+		u = replaceFirstSegmentToGlobal(u)
+	default:
+	}
+
+	// If the URL does not have an HTTPs scheme, we prepend it.
 	// CRD's CEL rules ensure that if the URL has no scheme, it's a valid hostname.
 	const defaultScheme = "https://"
 	if !strings.HasPrefix(u, defaultScheme) {
@@ -18,6 +32,16 @@ func NewServerURL(u string) ServerURL {
 	return ServerURL(u)
 }
 
+// String returns the string representation of the ServerURL.
 func (s ServerURL) String() string {
 	return string(s)
+}
+
+func replaceFirstSegmentToGlobal(u string) string {
+	parts := strings.Split(u, ".")
+	if len(parts) == 0 {
+		return u
+	}
+	parts[0] = "global"
+	return strings.Join(parts, ".")
 }

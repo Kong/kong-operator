@@ -61,6 +61,9 @@
   - `gateway_operator_konnect_entity_operation_count` for number of operations.
   - `gateway_operator_konnect_entity_operation_duration_milliseconds` for duration of operations.
   [#953](https://github.com/Kong/gateway-operator/pull/953)
+- Added support for `KonnectCloudGatewayNetwork` CRD which can manage Konnect
+  Cloud Gateway Network entities.
+  [#1136](https://github.com/Kong/gateway-operator/pull/1136)
 
 ### Changed
 

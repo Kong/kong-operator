@@ -17,6 +17,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -149,7 +150,7 @@ func enqueueKongPluginBindingForKonnectAPIAuthConfiguration(
 			}
 
 			switch cpRef.Type {
-			case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
+			case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
 				nn := types.NamespacedName{
 					Name:      cpRef.KonnectNamespacedRef.Name,
 					Namespace: pb.Namespace,
@@ -180,7 +181,7 @@ func enqueueKongPluginBindingForKonnectAPIAuthConfiguration(
 					},
 				})
 
-			case configurationv1alpha1.ControlPlaneRefKonnectID:
+			case commonv1alpha1.ControlPlaneRefKonnectID:
 				ctrllog.FromContext(ctx).Error(
 					fmt.Errorf("unimplemented ControlPlaneRef type %q", cpRef.Type),
 					"unimplemented ControlPlaneRef for KongPluginBinding",

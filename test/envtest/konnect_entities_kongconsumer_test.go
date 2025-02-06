@@ -25,6 +25,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -404,7 +405,7 @@ func TestKongConsumer(t *testing.T) {
 			if c.GetName() != createdConsumer.GetName() {
 				return false
 			}
-			if c.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
+			if c.GetControlPlaneRef().Type != commonv1alpha1.ControlPlaneRefKonnectID {
 				return false
 			}
 			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
@@ -596,7 +597,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			if c.GetName() != createdConsumer.GetName() {
 				return false
 			}
-			if c.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
+			if c.GetControlPlaneRef().Type != commonv1alpha1.ControlPlaneRefKonnectID {
 				return false
 			}
 			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {

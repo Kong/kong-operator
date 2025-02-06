@@ -19,6 +19,7 @@ import (
 	"github.com/kong/gateway-operator/test/helpers"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -116,7 +117,7 @@ func TestKonnectEntities(t *testing.T) {
 		func(obj client.Object) {
 			kc := obj.(*configurationv1.KongConsumer)
 			kc.ConsumerGroups = []string{kcg.Name}
-			kc.Spec.ControlPlaneRef = &configurationv1alpha1.ControlPlaneRef{
+			kc.Spec.ControlPlaneRef = &commonv1alpha1.ControlPlaneRef{
 				Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: cp.Name},
 			}

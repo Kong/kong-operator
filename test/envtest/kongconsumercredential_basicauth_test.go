@@ -25,6 +25,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -53,7 +54,7 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 	consumer := deploy.KongConsumerWithProgrammed(t, ctx, clientNamespaced, &configurationv1.KongConsumer{
 		Username: "username1",
 		Spec: configurationv1.KongConsumerSpec{
-			ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 					Name: cp.Name,

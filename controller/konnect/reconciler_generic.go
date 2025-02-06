@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,11 +22,13 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	"github.com/kong/gateway-operator/internal/metrics"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -120,12 +123,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(ctx context.Context,
 		e              T
 		ent            = TEnt(&e)
 		entityTypeName = constraints.EntityTypeName[T]()
-		b              = ctrl.NewControllerManagedBy(mgr).
+		b              = ctrl.
+				NewControllerManagedBy(mgr).
 				Named(entityTypeName).
 				WithOptions(
-				controller.Options{
-					MaxConcurrentReconciles: MaxConcurrentReconciles,
-				})
+				controller.Options{},
+			)
 	)
 
 	for _, dep := range ReconciliationWatchOptionsForEntity(r.Client, ent) {
@@ -460,7 +463,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	// NOTE: We need to create a new SDK instance for each reconciliation
 	// because the token is retrieved in runtime through KonnectAPIAuthConfiguration.
-	serverURL := ops.NewServerURL(apiAuth.Spec.ServerURL)
+	serverURL := ops.NewServerURL[T](apiAuth.Spec.ServerURL)
 	sdk := r.sdkFactory.NewKonnectSDK(
 		serverURL.String(),
 		sdkops.SDKToken(token),
@@ -482,6 +485,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 			if err := ops.Delete[T, TEnt](ctx, sdk, r.Client, r.MetricRecoder, ent); err != nil {
+				err = clearInstanceFromError(err)
 				if res, errStatus := patch.StatusWithCondition(
 					ctx, r.Client, ent,
 					konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -551,11 +555,14 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// Regardless of the error, patch the status as it can contain the Konnect ID,
 		// Org ID, Server URL and status conditions.
 		// Konnect ID will be needed for the finalizer to work.
-		if err := r.Client.Status().Patch(ctx, ent, client.MergeFrom(obj)); err != nil {
+		if res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, any(ent).(client.Object), obj); err != nil {
+			// if err := r.Client.Status().Patch(ctx, ent, client.MergeFrom(obj)); err != nil {
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, fmt.Errorf("failed to update status after creating object: %w", err)
+		} else if res != op.Noop {
+			return ctrl.Result{}, nil
 		}
 
 		if err != nil {
@@ -619,13 +626,13 @@ type EntityWithControlPlaneRef interface {
 func getCPForRef(
 	ctx context.Context,
 	cl client.Client,
-	cpRef configurationv1alpha1.ControlPlaneRef,
+	cpRef commonv1alpha1.ControlPlaneRef,
 	namespace string,
 ) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
 	switch cpRef.Type {
-	case configurationv1alpha1.ControlPlaneRefKonnectID:
+	case commonv1alpha1.ControlPlaneRefKonnectID:
 		return getCPForKonnectID(ctx, cl, cpRef)
-	case configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
+	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
 		return getCPForNamespacedRef(ctx, cl, cpRef, namespace)
 	default:
 		return nil, ReferencedKongGatewayControlPlaneIsUnsupported{Reference: cpRef}
@@ -635,7 +642,7 @@ func getCPForRef(
 func getCPForKonnectID(
 	ctx context.Context,
 	cl client.Client,
-	cpRef configurationv1alpha1.ControlPlaneRef,
+	cpRef commonv1alpha1.ControlPlaneRef,
 ) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
 	var l konnectv1alpha1.KonnectGatewayControlPlaneList
 	if err := cl.List(ctx, &l,
@@ -658,7 +665,7 @@ func getCPForKonnectID(
 func getCPForNamespacedRef(
 	ctx context.Context,
 	cl client.Client,
-	ref configurationv1alpha1.ControlPlaneRef,
+	ref commonv1alpha1.ControlPlaneRef,
 	namespace string,
 ) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
 	// TODO(pmalek): handle cross namespace refs
@@ -692,7 +699,7 @@ func getCPForNamespacedRef(
 func getCPAuthRefForRef(
 	ctx context.Context,
 	cl client.Client,
-	cpRef configurationv1alpha1.ControlPlaneRef,
+	cpRef commonv1alpha1.ControlPlaneRef,
 	namespace string,
 ) (types.NamespacedName, error) {
 	cp, err := getCPForRef(ctx, cl, cpRef, namespace)
@@ -712,6 +719,15 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 	cl client.Client,
 	ent TEnt,
 ) (types.NamespacedName, error) {
+	// If the entity has a KonnectAPIAuthConfigurationRef, return it.
+	if ref, ok := any(ent).(constraints.EntityWithKonnectAPIAuthConfigurationRef); ok {
+		return types.NamespacedName{
+			Name: ref.GetKonnectAPIAuthConfigurationRef().Name,
+			// TODO: enable if cross namespace refs are allowed
+			Namespace: ent.GetNamespace(),
+		}, nil
+	}
+
 	// If the entity has a ControlPlaneRef, get the KonnectAPIAuthConfiguration
 	// ref from the referenced ControlPlane.
 	cpRef, ok := getControlPlaneRef(ent).Get()
@@ -794,14 +810,6 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 			return types.NamespacedName{}, fmt.Errorf("KongUpstream %s does not have a ControlPlaneRef", nn)
 		}
 		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
-	}
-
-	if ref, ok := any(ent).(constraints.EntityWithKonnectAPIAuthConfigurationRef); ok {
-		return types.NamespacedName{
-			Name: ref.GetKonnectAPIAuthConfigurationRef().Name,
-			// TODO: enable if cross namespace refs are allowed
-			Namespace: ent.GetNamespace(),
-		}, nil
 	}
 
 	// If the entity has a KongCertificateRef, get the KonnectAPIAuthConfiguration
@@ -1033,4 +1041,16 @@ func setProgrammedStatusConditionBasedOnOtherConditions[
 		return res, errStatus
 	}
 	return ctrl.Result{}, nil
+}
+
+// clearInstanceFromError clears the instance field from the error.
+// This is needed because the instance field contains the trace ID which changes
+// with each request and makes the reconciliation loop requeue the resource
+// instead of performing the backoff.
+func clearInstanceFromError(err error) error {
+	var errBadRequest *sdkkonnecterrs.BadRequestError
+	if errors.As(err, &errBadRequest) {
+		errBadRequest.Instance = ""
+	}
+	return errBadRequest
 }

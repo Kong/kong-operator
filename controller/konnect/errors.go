@@ -6,13 +6,13 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 )
 
 // ReferencedControlPlaneDoesNotExistError is an error type that is returned when
 // a Konnect entity references a KonnectGatewayControlPlane that does not exist.
 type ReferencedControlPlaneDoesNotExistError struct {
-	Reference configurationv1alpha1.ControlPlaneRef
+	Reference commonv1alpha1.ControlPlaneRef
 	Err       error
 }
 
@@ -142,7 +142,7 @@ func (e ReferencedKongKeySetIsBeingDeleted) Error() string {
 // ReferencedKongGatewayControlPlaneIsUnsupported is an error type that is returned when a given CP reference type is not
 // supported.
 type ReferencedKongGatewayControlPlaneIsUnsupported struct {
-	Reference configurationv1alpha1.ControlPlaneRef
+	Reference commonv1alpha1.ControlPlaneRef
 }
 
 func (e ReferencedKongGatewayControlPlaneIsUnsupported) Error() string {

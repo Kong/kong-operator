@@ -16,6 +16,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -38,7 +39,7 @@ var testKongCertOK = &configurationv1alpha1.KongCertificate{
 		Namespace: "default",
 	},
 	Spec: configurationv1alpha1.KongCertificateSpec{
-		ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 				Name: "cp-ok",
@@ -116,7 +117,7 @@ var testKongCertificateControlPlaneRefNotFound = &configurationv1alpha1.KongCert
 		Namespace: "default",
 	},
 	Spec: configurationv1alpha1.KongCertificateSpec{
-		ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 				Name: "cp-not-found",
@@ -145,7 +146,7 @@ var testKongCertControlPlaneRefNotProgrammed = &configurationv1alpha1.KongCertif
 		Namespace: "default",
 	},
 	Spec: configurationv1alpha1.KongCertificateSpec{
-		ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 				Name: "cp-not-programmed",
@@ -360,11 +361,11 @@ func TestHandleCertificateRef(t *testing.T) {
 	}
 
 	testHandleCertificateRef(t, testCases)
-
 }
 
 func testHandleCertificateRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
-	t *testing.T, testCases []handleCertRefTestCase[T, TEnt]) {
+	t *testing.T, testCases []handleCertRefTestCase[T, TEnt],
+) {
 	t.Helper()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
