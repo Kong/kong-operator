@@ -488,14 +488,13 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		sdk.KongCredentialsBasicAuthSDK.EXPECT().
 			CreateBasicAuthWithConsumer(
 				mock.Anything,
-				mock.Anything,
-				// mock.MatchedBy(
-				// 	func(r sdkkonnectops.CreateBasicAuthWithConsumerRequest) bool {
-				// 		return r.ControlPlaneID == cp.GetKonnectID() &&
-				// 			r.BasicAuthWithoutParents.Username == username &&
-				// 			r.BasicAuthWithoutParents.Password == "password"
-				// 	},
-				// ),
+				mock.MatchedBy(
+					func(r sdkkonnectops.CreateBasicAuthWithConsumerRequest) bool {
+						return r.ControlPlaneID == cp.GetKonnectID() &&
+							r.BasicAuthWithoutParents.Username == username &&
+							r.BasicAuthWithoutParents.Password == "password"
+					},
+				),
 			).
 			Return(
 				&sdkkonnectops.CreateBasicAuthWithConsumerResponse{
