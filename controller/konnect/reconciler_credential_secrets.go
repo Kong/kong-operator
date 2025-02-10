@@ -74,7 +74,7 @@ func (r *KongCredentialSecretReconciler) SetupWithManager(_ context.Context, mgr
 		).
 		// NOTE: We use MatchEveryOwner because we set both the KongConsumer and
 		// the Secret holding the credentials as owners.
-		// The KongConumser is set for obvious reasons, when that's deleted we want
+		// The KongConsumer is set for obvious reasons, when that's deleted we want
 		// to delete the managed credential to be deleted as well.
 		// The Secret is set as owner because we want to trigger the reconciliation
 		// of the secret (this controller) so that the managed credential is enforced
