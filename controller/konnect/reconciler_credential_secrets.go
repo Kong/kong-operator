@@ -310,6 +310,11 @@ func validateSecret(
 ) error {
 	nn := client.ObjectKeyFromObject(s)
 
+	// TODO: Add more credential types support.
+	// TODO: https://github.com/Kong/gateway-operator/issues/1123
+	// TODO: https://github.com/Kong/gateway-operator/issues/1124
+	// TODO: https://github.com/Kong/gateway-operator/issues/1125
+	// TODO: https://github.com/Kong/gateway-operator/issues/1126
 	switch credType {
 	case KongCredentialTypeBasicAuth:
 		if err := validateSecretForKongCredentialBasicAuth(s); err != nil {
