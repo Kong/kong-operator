@@ -56,11 +56,25 @@ func NewKongCredentialSecretReconciler(
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongCredentialSecretReconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
+	ls := metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{
+				Key:      SecretCredentialLabel,
+				Operator: metav1.LabelSelectorOpExists,
+			},
+		},
+	}
+	labelSelectorPredicate, err := predicate.LabelSelectorPredicate(ls)
+	if err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("KongCredentialSecret").
 		For(
 			&corev1.Secret{},
 			builder.WithPredicates(
+				labelSelectorPredicate,
 				predicate.NewPredicateFuncs(
 					secretIsUsedByConsumerAttachedToKonnectControlPlane(mgr.GetClient()),
 				),
@@ -134,9 +148,7 @@ func secretIsUsedByConsumerAttachedToKonnectControlPlane(cl client.Client) func(
 		}
 
 		for _, kongConsumer := range kongConsumerList.Items {
-			cpRef := kongConsumer.Spec.ControlPlaneRef
-			if cpRef != nil &&
-				cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef {
+			if objHasControlPlaneRef(&kongConsumer) {
 				return true
 			}
 		}
