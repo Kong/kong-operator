@@ -67,7 +67,7 @@ func (r *KongCredentialSecretReconciler) SetupWithManager(_ context.Context, mgr
 			),
 		).
 		Watches(&configurationv1.KongConsumer{},
-			handler.EnqueueRequestsFromMapFunc(enqueueSecretForKongConsumer),
+			handler.EnqueueRequestsFromMapFunc(enqueueSecretsForKongConsumer),
 			builder.WithPredicates(
 				predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1.KongConsumer]),
 			),
@@ -84,7 +84,7 @@ func (r *KongCredentialSecretReconciler) SetupWithManager(_ context.Context, mgr
 		Complete(r)
 }
 
-func enqueueSecretForKongConsumer(ctx context.Context, obj client.Object) []reconcile.Request {
+func enqueueSecretsForKongConsumer(ctx context.Context, obj client.Object) []reconcile.Request {
 	consumer, ok := obj.(*configurationv1.KongConsumer)
 	if !ok {
 		return nil
