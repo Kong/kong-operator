@@ -80,7 +80,11 @@ func (r *KongCredentialSecretReconciler) SetupWithManager(_ context.Context, mgr
 		// of the secret (this controller) so that the managed credential is enforced
 		// (e.g. recreated).
 		Owns(&configurationv1alpha1.KongCredentialBasicAuth{}, builder.MatchEveryOwner).
-		// TODO: add more credentials types support.
+		// TODO: Add more credential types support.
+		// TODO: https://github.com/Kong/gateway-operator/issues/1123
+		// TODO: https://github.com/Kong/gateway-operator/issues/1124
+		// TODO: https://github.com/Kong/gateway-operator/issues/1125
+		// TODO: https://github.com/Kong/gateway-operator/issues/1126
 		Complete(r)
 }
 
