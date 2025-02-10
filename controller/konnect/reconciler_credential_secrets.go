@@ -147,8 +147,7 @@ func (r *KongCredentialSecretReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	const entityTypeName = "Secret"
-	logger := log.GetLogger(ctx, entityTypeName, r.developmentMode)
+	logger := log.GetLogger(ctx, "Secret", r.developmentMode)
 	log.Debug(logger, "reconciling")
 
 	if !secret.GetDeletionTimestamp().IsZero() {
