@@ -39,7 +39,7 @@ func IndexOptionsForKongConsumer(cl client.Client) []ReconciliationIndexOption {
 		{
 			IndexObject:  &configurationv1.KongConsumer{},
 			IndexField:   IndexFieldKongConsumerReferencesSecrets,
-			ExtractValue: kongConsumerReferencesSecret,
+			ExtractValue: kongConsumerReferencesSecrets,
 		},
 	}
 }
@@ -61,7 +61,7 @@ func kongConsumerReferencesKongPluginsViaAnnotation(object client.Object) []stri
 }
 
 // kongConsumerReferencesSecret returns name of referenced Secrets.
-func kongConsumerReferencesSecret(obj client.Object) []string {
+func kongConsumerReferencesSecrets(obj client.Object) []string {
 	consumer, ok := obj.(*configurationv1.KongConsumer)
 	if !ok {
 		return nil
