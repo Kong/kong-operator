@@ -196,23 +196,21 @@ func (r *KongCredentialSecretReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, fmt.Errorf("failed listing KongConsumers for Secret: %w", err)
 	}
 
-	// If there are no Consumers that use the Secret then remove all the Credentials that use it.
-	if len(kongConsumerList.Items) == 0 {
-		if err := cl.DeleteAllOf(ctx, &corev1.Secret{},
-			client.MatchingFields{
-				IndexFieldKongConsumerReferencesSecrets: secret.Name,
-			},
-		); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed deleting Secret: %w", err)
-		}
-		return ctrl.Result{}, nil
-	}
-
-	for _, kongConsumer := range kongConsumerList.Items {
-		if res, err := r.handleConsumerUsingCredentialSecret(ctx, &secret, credType, &kongConsumer); err != nil || !res.IsZero() {
+	switch len(kongConsumerList.Items) {
+	case 0:
+		// If there are no Consumers that use the Secret then remove all the managed
+		// Credentials that use this Secret.
+		if err := deleteAllCredentialsUsingSecret(ctx, cl, &secret, credType); err != nil {
 			return ctrl.Result{}, err
-		} else if !res.IsZero() {
-			return res, nil
+		}
+
+	default:
+		for _, kongConsumer := range kongConsumerList.Items {
+			if res, err := r.handleConsumerUsingCredentialSecret(ctx, &secret, credType, &kongConsumer); err != nil || !res.IsZero() {
+				return ctrl.Result{}, err
+			} else if !res.IsZero() {
+				return res, nil
+			}
 		}
 	}
 
@@ -223,6 +221,42 @@ const (
 	// CredentialTypeLabel is the label key for the credential type.
 	CredentialTypeLabel = "konghq.com/credential" //nolint:gosec
 )
+
+func deleteAllCredentialsUsingSecret(
+	ctx context.Context,
+	cl client.Client,
+	secret *corev1.Secret,
+	credType string,
+) error {
+	// TODO: Add more credential types support.
+	// TODO: https://github.com/Kong/gateway-operator/issues/1123
+	// TODO: https://github.com/Kong/gateway-operator/issues/1124
+	// TODO: https://github.com/Kong/gateway-operator/issues/1125
+	// TODO: https://github.com/Kong/gateway-operator/issues/1126
+	switch credType { //nolint:gocritic
+	case KongCredentialTypeBasicAuth:
+		// NOTE: To use DeleteAllOf() we need a selectable field added to the CRD.
+		var l configurationv1alpha1.KongCredentialBasicAuthList
+		err := cl.List(ctx, &l,
+			client.MatchingFields{
+				IndexFieldKongCredentialBasicAuthReferencesSecret: secret.Name,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("failed listing unused KongCredentialBasicAuths: %w", err)
+		}
+
+		for _, cred := range l.Items {
+			if err := cl.Delete(ctx, &cred); err != nil {
+				return fmt.Errorf("failed deleting unused KongCredentialBasicAuth %s: %w",
+					client.ObjectKeyFromObject(&cred), err,
+				)
+			}
+		}
+	}
+
+	return nil
+}
 
 func ensureExistingCredential[
 	T constraints.SupportedCredentialType,
