@@ -38,7 +38,7 @@ fi
 
 # Copy the CRDs' definitions to the working directory.
 # We're copying from the local ./api directory and the one in the kubernetes-configuration module.
-${CP} -r "${SCRIPT_ROOT}/api" "${WORK_DIR}/kgo"
+# ${CP} -r "${SCRIPT_ROOT}/api" "${WORK_DIR}/kgo"
 # Using --no-preserve=mode,ownership to avoid permission issues when deleting files copied from the modules' cache.
 ${CP} --no-preserve=mode,ownership -r "${KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH}/api" "${WORK_DIR}/kong"
 

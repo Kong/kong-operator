@@ -10,11 +10,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/test/envtest"
 	"github.com/kong/gateway-operator/test/helpers/kustomize"
 
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	kcfgcrdsvalidation "github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 

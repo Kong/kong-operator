@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/dataplane"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/modules/manager/logging"
@@ -35,6 +34,8 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 // -----------------------------------------------------------------------------

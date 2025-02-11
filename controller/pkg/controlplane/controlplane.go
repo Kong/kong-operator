@@ -9,12 +9,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8scompare "github.com/kong/gateway-operator/pkg/utils/kubernetes/compare"
 	"github.com/kong/gateway-operator/pkg/vars"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 // DefaultsArgs contains the parameters to pass to setControlPlaneDefaults

@@ -48,7 +48,6 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
 
 COPY cmd/main.go cmd/main.go
 COPY modules/ modules/
-COPY api/ api/
 COPY controller/ controller/
 COPY pkg/ pkg/
 COPY internal/ internal/

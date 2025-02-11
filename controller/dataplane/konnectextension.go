@@ -11,12 +11,13 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
-	"github.com/kong/gateway-operator/api/v1beta1"
 	dputils "github.com/kong/gateway-operator/internal/utils/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	"github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 var (

@@ -15,10 +15,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 	"github.com/kong/gateway-operator/pkg/vars"
+
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 func init() {

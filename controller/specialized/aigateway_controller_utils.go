@@ -12,10 +12,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	v1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	v1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 

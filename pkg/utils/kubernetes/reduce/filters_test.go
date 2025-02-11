@@ -15,10 +15,10 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 func TestFilterSecrets(t *testing.T) {

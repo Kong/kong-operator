@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -32,6 +31,8 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 // -----------------------------------------------------------------------------

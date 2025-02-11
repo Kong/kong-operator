@@ -139,6 +139,8 @@
   do not get an owner relationship set to the `ControlPlane` anymore hence
   they are not deleted when the `ControlPlane` is deleted.
   [#1099](https://github.com/Kong/gateway-operator/pull/1099)
+- Migrate KGO CRDs to the kubernetes-configuration repo.
+  [#1148](https://github.com/Kong/gateway-operator/pull/1148)
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 

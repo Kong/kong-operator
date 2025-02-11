@@ -18,11 +18,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 const (
@@ -87,7 +88,7 @@ func TestDataPlaneEssentials(t *testing.T) {
 		},
 	}
 
-	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
@@ -230,7 +231,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
-	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	t.Log("deploying dataplane resource")
 	dataplaneName := types.NamespacedName{
 		Namespace: namespace.Name,
@@ -379,7 +380,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 		)
 
 		// Get the dataplane after it's been updated to have an up to date generation which can be used in condition predicate.
-		dataplane, err := clients.OperatorClient.ApisV1beta1().DataPlanes(dataplaneName.Namespace).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
+		dataplane, err := clients.OperatorClient.GatewayOperatorV1beta1().DataPlanes(dataplaneName.Namespace).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		isNotReady := dataPlaneConditionPredicate(t, &metav1.Condition{
@@ -417,7 +418,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 		)
 
 		// Get the dataplane after it's been updated to have an up to date generation which can be used in condition predicate.
-		dataplane, err := clients.OperatorClient.ApisV1beta1().DataPlanes(dataplaneName.Namespace).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
+		dataplane, err := clients.OperatorClient.GatewayOperatorV1beta1().DataPlanes(dataplaneName.Namespace).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
@@ -454,7 +455,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 		)
 
 		// Get the dataplane after it's been updated to have an up to date generation which can be used in condition predicate.
-		dataplane, err := clients.OperatorClient.ApisV1beta1().DataPlanes(dataplaneName.Namespace).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
+		dataplane, err := clients.OperatorClient.GatewayOperatorV1beta1().DataPlanes(dataplaneName.Namespace).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
@@ -491,7 +492,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 		)
 
 		// Get the dataplane after it's been updated to have an up to date generation which can be used in condition predicate.
-		dataplane, err := clients.OperatorClient.ApisV1beta1().DataPlanes(dataplaneName.Namespace).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
+		dataplane, err := clients.OperatorClient.GatewayOperatorV1beta1().DataPlanes(dataplaneName.Namespace).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
@@ -546,7 +547,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 		},
 	}
 
-	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -736,7 +737,7 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 			},
 		},
 	}
-	dataplane, err = GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name).Create(GetCtx(), dataplane, metav1.CreateOptions{})
+	dataplane, err = GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name).Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
@@ -876,7 +877,7 @@ func TestDataPlanePodDisruptionBudget(t *testing.T) {
 		},
 	}
 
-	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -993,7 +994,7 @@ func TestDataPlaneServiceExternalTrafficPolicy(t *testing.T) {
 		), waitTime, tickTime)
 	}
 
-	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -1083,7 +1084,7 @@ func TestDataPlaneSpecifyingServiceName(t *testing.T) {
 			},
 		},
 	}
-	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)

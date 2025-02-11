@@ -10,23 +10,21 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
-	operatorclient "github.com/kong/gateway-operator/pkg/clientset"
-
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
-	configurationclient "github.com/kong/kubernetes-configuration/pkg/clientset"
+	kcfgclient "github.com/kong/kubernetes-configuration/pkg/clientset"
 )
 
 // K8sClients is a struct that contains all the Kubernetes clients needed by the tests.
 type K8sClients struct {
 	K8sClient           *kubernetesclient.Clientset
-	OperatorClient      *operatorclient.Clientset
+	OperatorClient      *kcfgclient.Clientset
 	GatewayClient       *gatewayclient.Clientset
-	ConfigurationClient *configurationclient.Clientset
+	ConfigurationClient *kcfgclient.Clientset
 	MgrClient           ctrlruntimeclient.Client
 }
 
@@ -36,7 +34,7 @@ func NewK8sClients(env environments.Environment) (K8sClients, error) {
 	var clients K8sClients
 
 	clients.K8sClient = env.Cluster().Client()
-	clients.OperatorClient, err = operatorclient.NewForConfig(env.Cluster().Config())
+	clients.OperatorClient, err = kcfgclient.NewForConfig(env.Cluster().Config())
 	if err != nil {
 		return clients, err
 	}
@@ -44,7 +42,7 @@ func NewK8sClients(env environments.Environment) (K8sClients, error) {
 	if err != nil {
 		return clients, err
 	}
-	clients.ConfigurationClient, err = configurationclient.NewForConfig(env.Cluster().Config())
+	clients.ConfigurationClient, err = kcfgclient.NewForConfig(env.Cluster().Config())
 	if err != nil {
 		return clients, err
 	}

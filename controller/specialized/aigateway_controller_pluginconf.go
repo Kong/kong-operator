@@ -1,7 +1,7 @@
 package specialized
 
 import (
-	"github.com/kong/gateway-operator/api/v1alpha1"
+	"github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------

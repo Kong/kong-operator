@@ -32,13 +32,14 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/internal/versions"
-	"github.com/kong/gateway-operator/pkg/clientset"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
+
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
 )
 
 // -----------------------------------------------------------------------------
@@ -236,7 +237,7 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 
 		kicCRDsKustomizeURL := getCRDsKustomizeURLForKIC(t, versions.DefaultControlPlaneVersion)
 		t.Logf("deploying KIC CRDs from %s", kicCRDsKustomizeURL)
-		require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kicCRDsKustomizeURL))
+		require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kicCRDsKustomizeURL, "--server-side"))
 
 		t.Log("creating system namespaces and serviceaccounts")
 		require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))

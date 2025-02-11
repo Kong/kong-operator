@@ -24,14 +24,15 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/controlplane"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/pkg/clientset"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	"github.com/kong/kubernetes-configuration/pkg/clientset"
 )
 
 // controlPlanePredicate is a helper function for tests that returns a function
@@ -43,7 +44,7 @@ func controlPlanePredicate(
 	predicate func(controlplane *operatorv1beta1.ControlPlane) bool,
 	operatorClient *clientset.Clientset,
 ) func() bool {
-	controlplaneClient := operatorClient.ApisV1beta1().ControlPlanes(controlplaneName.Namespace)
+	controlplaneClient := operatorClient.GatewayOperatorV1beta1().ControlPlanes(controlplaneName.Namespace)
 	return func() bool {
 		controlplane, err := controlplaneClient.Get(ctx, controlplaneName.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -60,7 +61,7 @@ func DataPlanePredicate(
 	predicate func(dataplane *operatorv1beta1.DataPlane) bool,
 	operatorClient *clientset.Clientset,
 ) func() bool {
-	dataPlaneClient := operatorClient.ApisV1beta1().DataPlanes(dataplaneName.Namespace)
+	dataPlaneClient := operatorClient.GatewayOperatorV1beta1().DataPlanes(dataplaneName.Namespace)
 	return func() bool {
 		dataplane, err := dataPlaneClient.Get(ctx, dataplaneName.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -567,7 +568,7 @@ func DataPlaneHasServiceAndAddressesInStatus(t *testing.T, ctx context.Context, 
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneUpdateEventually(t *testing.T, ctx context.Context, dataplaneNN types.NamespacedName, clients K8sClients, updateFunc func(*operatorv1beta1.DataPlane)) func() bool {
 	return func() bool {
-		cl := clients.OperatorClient.ApisV1beta1().DataPlanes(dataplaneNN.Namespace)
+		cl := clients.OperatorClient.GatewayOperatorV1beta1().DataPlanes(dataplaneNN.Namespace)
 		dp, err := cl.Get(ctx, dataplaneNN.Name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting dataplane: %v", err)
@@ -613,7 +614,7 @@ func HTTPRouteUpdateEventually(t *testing.T, ctx context.Context, httpRouteNN ty
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneUpdateEventually(t *testing.T, ctx context.Context, controlplaneNN types.NamespacedName, clients K8sClients, updateFunc func(*operatorv1beta1.ControlPlane)) func() bool {
 	return func() bool {
-		cl := clients.OperatorClient.ApisV1beta1().ControlPlanes(controlplaneNN.Namespace)
+		cl := clients.OperatorClient.GatewayOperatorV1beta1().ControlPlanes(controlplaneNN.Namespace)
 		dp, err := cl.Get(ctx, controlplaneNN.Name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting controlplane: %v", err)

@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller"
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
@@ -35,6 +34,8 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 // Reconciler reconciles a ControlPlane object
