@@ -427,18 +427,24 @@ func filterKongCredentials[
 	best := 0
 	for i, cred := range creds {
 		ptr := TPtr(&cred)
-		if lo.ContainsBy(ptr.GetConditions(), func(c metav1.Condition) bool {
-			return c.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-				c.Status == metav1.ConditionTrue
-		}) {
+		containsProgrammedConditionTrue := lo.ContainsBy(ptr.GetConditions(),
+			func(c metav1.Condition) bool {
+				return c.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					c.Status == metav1.ConditionTrue
+			},
+		)
 
-			ptrProgrammed := TPtr(&creds[programmed])
-			if programmed != -1 && ptr.GetCreationTimestamp().UTC().Before(ptrProgrammed.GetCreationTimestamp().UTC()) {
+		if containsProgrammedConditionTrue {
+			switch programmed {
+			case -1:
 				best = i
 				programmed = i
-			} else if programmed == -1 {
-				best = i
-				programmed = i
+			default:
+				ptrProgrammed := TPtr(&creds[programmed])
+				if ptr.GetCreationTimestamp().UTC().Before(ptrProgrammed.GetCreationTimestamp().UTC()) {
+					best = i
+					programmed = i
+				}
 			}
 
 			continue
