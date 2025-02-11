@@ -9,7 +9,7 @@ import (
 const (
 	// IndexFieldKongCredentialBasicAuthReferencesKongConsumer is the index name for KongCredentialBasicAuth -> Consumer.
 	IndexFieldKongCredentialBasicAuthReferencesKongConsumer = "kongCredentialsBasicAuthConsumerRef"
-	// TODO
+	// IndexFieldKongCredentialBasicAuthReferencesSecret is the index name for KongCredentialBasicAuth -> Secret.
 	IndexFieldKongCredentialBasicAuthReferencesSecret = "kongCredentialsBasicAuthSecretRef"
 )
 
