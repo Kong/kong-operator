@@ -5,6 +5,7 @@
 - [configuration.konghq.com/v1alpha1](#configurationkonghqcomv1alpha1)
 - [configuration.konghq.com/v1beta1](#configurationkonghqcomv1beta1)
 - [gateway-operator.konghq.com/v1alpha1](#gateway-operatorkonghqcomv1alpha1)
+- [gateway-operator.konghq.com/v1alpha2](#gateway-operatorkonghqcomv1alpha2)
 - [gateway-operator.konghq.com/v1beta1](#gateway-operatorkonghqcomv1beta1)
 - [konnect.konghq.com/v1alpha1](#konnectkonghqcomv1alpha1)
 
@@ -2278,6 +2279,102 @@ ServiceSelectorEntry holds the name of a service to match.
 
 _Appears in:_
 - [ServiceSelector](#serviceselector)
+
+
+## gateway-operator.konghq.com/v1alpha2
+
+Package v1alpha1 contains API Schema definitions for the operator v1alpha1 API group
+
+- [KonnectExtension](#konnectextension)
+### KonnectExtension
+
+
+KonnectExtension is the Schema for the KonnectExtension API,
+and is intended to be referenced as extension by the DataPlane API.
+If a DataPlane successfully refers a KonnectExtension, the DataPlane
+deployment spec gets customized to include the konnect-related configuration.
+
+<!-- konnect_extension description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway-operator.konghq.com/v1alpha2`
+| `kind` _string_ | `KonnectExtension`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectExtensionSpec](#konnectextensionspec)_ | Spec is the specification of the KonnectExtension resource. |
+| `status` _[KonnectExtensionStatus](#konnectextensionstatus)_ | Status is the status of the KonnectExtension resource. |
+
+
+
+### Types
+
+In this section you will find types that the CRDs rely on.
+#### CertificateSecretRef
+
+
+CertificateSecretRef contains the reference to the Secret containing the Konnect Control Plane's cluster certificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the Secret containing the Konnect Control Plane's cluster certificate. |
+
+
+_Appears in:_
+- [CertificateSecret](#certificatesecret)
+- [KonnectControlPlaneAPIAuthConfiguration](#konnectcontrolplaneapiauthconfiguration)
+
+#### KonnectControlPlaneAPIAuthConfiguration
+
+
+KonnectControlPlaneAPIAuthConfiguration contains the configuration to authenticate with Konnect API ControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `clusterCertificateSecretRef` _[CertificateSecretRef](#certificatesecretref)_ | ClusterCertificateSecretRef is the reference to the Secret containing the Konnect Control Plane's cluster certificate. |
+
+
+_Appears in:_
+- [KonnectExtensionSpec](#konnectextensionspec)
+
+#### KonnectExtensionSpec
+
+
+KonnectExtensionSpec defines the desired state of KonnectExtension.
+
+
+
+| Field | Description |
+| --- | --- |
+| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KonnectExtension is associated with. |
+| `dataPlaneClientAuth` _[DataPlaneClientAuth](#dataplaneclientauth)_ | DataPlaneClientAuth is the configuration for the client certificate authentication for the DataPlane. It is required to set up the connection with the Konnect Platform. |
+| `konnect` _[KonnectConfiguration](#konnectconfiguration)_ |  |
+| `clusterDataPlaneLabels` _object (keys:string, values:string)_ | ClusterDataPlaneLabels is a set of labels that will be applied to the Konnect DataPlane. |
+| `controlPlaneRegion` _string_ | ControlPlaneRegion is the region of the Konnect Control Plane.<br /><br /> deprecated: controlPlaneRegion is deprecated and will be removed in a future release. |
+| `serverHostname` _string_ | ServerHostname is the fully qualified domain name of the Konnect server. For typical operation a default value doesn't need to be adjusted. It matches the RFC 1123 definition of a hostname with 1 notable exception that numeric IP addresses are not allowed.<br /><br /> Note that as per RFC1035 and RFC1123, a *label* must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character. No other punctuation is allowed.<br /><br /> deprecated: serverHostname is deprecated and will be removed in a future release. |
+| `konnectControlPlaneAPIAuthConfiguration` _[KonnectControlPlaneAPIAuthConfiguration](#konnectcontrolplaneapiauthconfiguration)_ | AuthConfiguration must be used to configure the Konnect API authentication.<br /><br /> deprecated: konnectControlPlaneAPIAuthConfiguration is deprecated and will be removed in a future release. |
+
+
+_Appears in:_
+- [KonnectExtension](#konnectextension)
+
+#### KonnectExtensionStatus
+
+
+KonnectExtensionStatus defines the observed state of KonnectExtension.
+
+
+
+| Field | Description |
+| --- | --- |
+| `dataPlaneRefs` _[NamespacedRef](#namespacedref) array_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
+
+
+_Appears in:_
+- [KonnectExtension](#konnectextension)
 
 
 ## gateway-operator.konghq.com/v1beta1

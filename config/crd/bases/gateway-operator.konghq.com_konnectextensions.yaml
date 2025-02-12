@@ -17,7 +17,10 @@ spec:
     singular: konnectextension
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - deprecated: true
+    deprecationWarning: The v1alpha1 version of KonnectExtension has been deprecated
+      and will be removed in a future release of the API. Please upgrade to v1alpha2.
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: |-
@@ -199,6 +202,264 @@ spec:
         x-kubernetes-validations:
         - message: spec.controlPlaneRef is immutable.
           rule: oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        description: |-
+          KonnectExtension is the Schema for the KonnectExtension API,
+          and is intended to be referenced as extension by the DataPlane API.
+          If a DataPlane successfully refers a KonnectExtension, the DataPlane
+          deployment spec gets customized to include the konnect-related configuration.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec is the specification of the KonnectExtension resource.
+            properties:
+              clusterDataPlaneLabels:
+                additionalProperties:
+                  type: string
+                description: ClusterDataPlaneLabels is a set of labels that will be
+                  applied to the Konnect DataPlane.
+                type: object
+              controlPlaneRef:
+                description: ControlPlaneRef is a reference to a ControlPlane this
+                  KonnectExtension is associated with.
+                properties:
+                  konnectID:
+                    description: |-
+                      KonnectID is the schema for the KonnectID type.
+                      This field is required when the Type is konnectID.
+                    type: string
+                  konnectNamespacedRef:
+                    description: |-
+                      KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
+                      It contains the name of the Konnect Control Plane.
+                      This field is required when the Type is konnectNamespacedRef.
+                    properties:
+                      name:
+                        description: Name is the name of the Konnect Control Plane.
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace where the Konnect Control Plane is in.
+                          Currently only cluster scoped resources (KongVault) are allowed to set `konnectNamespacedRef.namespace`.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type:
+                    default: kic
+                    description: |-
+                      Type indicates the type of the control plane being referenced. Allowed values:
+                      - konnectID
+                      - konnectNamespacedRef
+                      - kic
+
+                      The default is kic, which implies that the Control Plane is KIC.
+                    enum:
+                    - konnectID
+                    - konnectNamespacedRef
+                    - kic
+                    type: string
+                type: object
+                x-kubernetes-validations:
+                - message: kic type not supported as controlPlaneRef.
+                  rule: self.type != 'kic'
+                - message: when type is konnectNamespacedRef, konnectNamespacedRef
+                    must be set
+                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'')
+                    ? has(self.konnectNamespacedRef) : true'
+                - message: when type is konnectNamespacedRef, konnectID must not be
+                    set
+                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'')
+                    ? !has(self.konnectID) : true'
+                - message: when type is konnectID, konnectID must be set
+                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID)
+                    : true'
+                - message: when type is konnectID, konnectNamespacedRef must not be
+                    set
+                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef)
+                    : true'
+                - message: when type is kic, konnectID must not be set
+                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID)
+                    : true'
+                - message: when type is kic, konnectNamespacedRef must not be set
+                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef)
+                    : true'
+                - message: when type is unset, konnectID must not be set
+                  rule: '!has(self.type) ? !has(self.konnectID) : true'
+                - message: when type is unset, konnectNamespacedRef must not be set
+                  rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+              controlPlaneRegion:
+                description: |-
+                  ControlPlaneRegion is the region of the Konnect Control Plane.
+
+                  deprecated: controlPlaneRegion is deprecated and will be removed in a future release.
+                example: us
+                type: string
+              dataPlaneClientAuth:
+                default:
+                  certificateSecret:
+                    provisioning: Automatic
+                description: |-
+                  DataPlaneClientAuth is the configuration for the client certificate authentication for the DataPlane.
+                  It is required to set up the connection with the Konnect Platform.
+                properties:
+                  certificateSecret:
+                    description: certificateSecret is the reference to the Secret
+                      containing the client certificate.
+                    properties:
+                      provisioning:
+                        default: Automatic
+                        description: |-
+                          Provisioning is the method used to provision the certificate. It can be either Manual or Automatic.
+                          In case manual provisioning is used, the certificate must be provided by the user.
+                          In case automatic provisioning is used, the certificate will be automatically generated by the system.
+                        enum:
+                        - Manual
+                        - Automatic
+                        type: string
+                      secretRef:
+                        description: SecretRef is the reference to the Secret containing
+                          the client certificate.
+                        properties:
+                          name:
+                            description: Name is the name of the Secret containing
+                              the Konnect Control Plane's cluster certificate.
+                            type: string
+                        required:
+                        - name
+                        type: object
+                    type: object
+                    x-kubernetes-validations:
+                    - message: secretRef must be set when provisioning is set to Manual.
+                      rule: 'self.provisioning == ''Manual'' ? has(self.secretRef)
+                        : true'
+                    - message: secretRef must not be set when provisioning is set
+                        to Automatic.
+                      rule: 'self.provisioning == ''Automatic'' ? !has(self.secretRef)
+                        : true'
+                required:
+                - certificateSecret
+                type: object
+              konnect:
+                description: KonnectConfiguration is the Schema for the KonnectConfiguration
+                  API.
+                properties:
+                  authRef:
+                    description: |-
+                      APIAuthConfigurationRef is the reference to the API Auth Configuration
+                      that should be used for this Konnect Configuration.
+                    properties:
+                      name:
+                        description: Name is the name of the KonnectAPIAuthConfiguration
+                          resource.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                required:
+                - authRef
+                type: object
+              konnectControlPlaneAPIAuthConfiguration:
+                description: |-
+                  AuthConfiguration must be used to configure the Konnect API authentication.
+
+                  deprecated: konnectControlPlaneAPIAuthConfiguration is deprecated and will be removed in a future release.
+                properties:
+                  clusterCertificateSecretRef:
+                    description: ClusterCertificateSecretRef is the reference to the
+                      Secret containing the Konnect Control Plane's cluster certificate.
+                    properties:
+                      name:
+                        description: Name is the name of the Secret containing the
+                          Konnect Control Plane's cluster certificate.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                required:
+                - clusterCertificateSecretRef
+                type: object
+              serverHostname:
+                description: |-
+                  ServerHostname is the fully qualified domain name of the Konnect server.
+                  For typical operation a default value doesn't need to be adjusted.
+                  It matches the RFC 1123 definition of a hostname with 1 notable exception
+                  that numeric IP addresses are not allowed.
+
+                  Note that as per RFC1035 and RFC1123, a *label* must consist of lower case
+                  alphanumeric characters or '-', and must start and end with an alphanumeric
+                  character. No other punctuation is allowed.
+
+                  deprecated: serverHostname is deprecated and will be removed in a future release.
+                maxLength: 253
+                minLength: 1
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                type: string
+            required:
+            - controlPlaneRef
+            type: object
+          status:
+            description: Status is the status of the KonnectExtension resource.
+            properties:
+              dataPlaneRefs:
+                description: |-
+                  DataPlaneRefs is the array  of DataPlane references this is associated with.
+                  A new reference is set by the operator when this extension is associated with
+                  a DataPlane through its extensions spec.
+                items:
+                  description: NamespacedRef is a reference to a namespaced resource.
+                  properties:
+                    name:
+                      description: Name is the name of the referred resource.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    namespace:
+                      description: |-
+                        Namespace is the namespace of the referred resource.
+
+                        For namespace-scoped resources if no Namespace is provided then the
+                        namespace of the parent object MUST be used.
+
+                        This field MUST not be set when referring to cluster-scoped resources.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+            type: object
+        type: object
+        x-kubernetes-validations:
+        - message: spec.controlPlaneRef is immutable.
+          rule: oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef
+        - message: konnect must be set when ControlPlaneRef is set to KonnectID.
+          rule: 'self.spec.controlPlaneRef.type == ''konnectID'' ? has(self.spec.konnect)
+            : true'
+        - message: konnect must be unset when ControlPlaneRef is set to konnectNamespacedRef.
+          rule: 'self.spec.controlPlaneRef.type == ''konnectNamespacedRef'' ? !has(self.spec.konnect)
+            : true'
     served: true
     storage: true
     subresources:
