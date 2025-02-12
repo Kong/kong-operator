@@ -162,3 +162,7 @@ issues:
     - linters:
         - forbidigo
       text: 'use of `.*(Create|Delete)Dataplane.+` forbidden because "Please use camel case'
+    - path: .*_test\.go
+      linters:
+        - gosec
+      text: 'Use of weak random number generator'

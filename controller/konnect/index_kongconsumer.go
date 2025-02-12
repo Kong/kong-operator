@@ -14,6 +14,8 @@ const (
 	IndexFieldKongConsumerOnPlugin = "consumerPluginRef"
 	// IndexFieldKongConsumerOnKonnectGatewayControlPlane is the index field for KongConsumer -> KonnectGatewayControlPlane.
 	IndexFieldKongConsumerOnKonnectGatewayControlPlane = "consumerKonnectGatewayControlPlaneRef"
+	// IndexFieldKongConsumerReferencesSecrets is the index field for Consumer -> Secret.
+	IndexFieldKongConsumerReferencesSecrets = "kongConsumerSecretRef"
 )
 
 // IndexOptionsForKongConsumer returns required Index options for KongConsumer reconciler.
@@ -34,6 +36,11 @@ func IndexOptionsForKongConsumer(cl client.Client) []ReconciliationIndexOption {
 			IndexField:   IndexFieldKongConsumerOnKonnectGatewayControlPlane,
 			ExtractValue: indexKonnectGatewayControlPlaneRef[configurationv1.KongConsumer](cl),
 		},
+		{
+			IndexObject:  &configurationv1.KongConsumer{},
+			IndexField:   IndexFieldKongConsumerReferencesSecrets,
+			ExtractValue: kongConsumerReferencesSecrets,
+		},
 	}
 }
 
@@ -51,4 +58,13 @@ func kongConsumerReferencesKongPluginsViaAnnotation(object client.Object) []stri
 		return nil
 	}
 	return metadata.ExtractPluginsWithNamespaces(consumer)
+}
+
+// kongConsumerReferencesSecret returns name of referenced Secrets.
+func kongConsumerReferencesSecrets(obj client.Object) []string {
+	consumer, ok := obj.(*configurationv1.KongConsumer)
+	if !ok {
+		return nil
+	}
+	return consumer.Credentials
 }

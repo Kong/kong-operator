@@ -1361,7 +1361,7 @@ _Appears in:_
 #### KongServiceSpec
 
 
-KongServiceSpec defines specification of a Kong Route.
+KongServiceSpec defines specification of a Kong Service.
 
 
 

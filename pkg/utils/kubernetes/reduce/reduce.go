@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/controller/konnect/constraints"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
@@ -228,6 +229,21 @@ func ReduceKongPluginBindings(ctx context.Context, k8sClient client.Client, kpbs
 	filteredKongPluginBindings := filterKongPluginBindings(kpbs)
 	for _, kpb := range filteredKongPluginBindings {
 		if err := k8sClient.Delete(ctx, &kpb); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ReduceKongCredentials detects the best KongCredential in the set and deletes all the others.
+func ReduceKongCredentials[
+	T constraints.SupportedCredentialType,
+	TPtr constraints.KongCredential[T],
+](ctx context.Context, k8sClient client.Client, kongCredentials []T) error {
+	filtered := filterKongCredentials[T, TPtr](kongCredentials)
+	for _, cred := range filtered {
+		ptr := TPtr(&cred)
+		if err := k8sClient.Delete(ctx, ptr); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}

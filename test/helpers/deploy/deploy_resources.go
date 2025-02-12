@@ -40,6 +40,18 @@ func WithAnnotation(key, value string) ObjOption {
 	}
 }
 
+// WithLabel returns an ObjOption that sets the given key-value pair as an label on the object.
+func WithLabel(key, value string) ObjOption {
+	return func(obj client.Object) {
+		labels := obj.GetLabels()
+		if labels == nil {
+			labels = make(map[string]string)
+		}
+		labels[key] = value
+		obj.SetLabels(labels)
+	}
+}
+
 // WithTestIDLabel returns an ObjOption that sets the test ID label on the object.
 func WithTestIDLabel(testID string) func(obj client.Object) {
 	return func(obj client.Object) {
@@ -631,6 +643,31 @@ func KongTargetAttachedToUpstream(
 	logObjectCreate(t, u)
 
 	return u
+}
+
+// Secret deploys a Secret.
+func Secret(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	data map[string][]byte,
+	opts ...ObjOption,
+) *corev1.Secret {
+	t.Helper()
+
+	s := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "secret-",
+		},
+		Data: data,
+	}
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	require.NoError(t, cl.Create(ctx, s))
+
+	return s
 }
 
 // KongConsumerAttachedToCP deploys a KongConsumer resource attached to a Control Plane and returns the resource.

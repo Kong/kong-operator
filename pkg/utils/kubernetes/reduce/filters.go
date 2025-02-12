@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/pkg/consts"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -404,4 +405,56 @@ func filterKongPluginBindings(kpbs []configurationv1alpha1.KongPluginBinding) []
 	}
 
 	return append(kpbs[:best], kpbs[best+1:]...)
+}
+
+// -----------------------------------------------------------------------------
+// Filter functions - KongCredentials
+// -----------------------------------------------------------------------------
+
+// filterKongCredentials filters out the KongCredentials to be kept and returns all the KongCredentials
+// to be deleted.
+// The KongPluginBinding with Programmed status condition is kept.
+// If no such binding is found the oldest is kept.
+func filterKongCredentials[
+	T constraints.SupportedCredentialType,
+	TPtr constraints.KongCredential[T],
+](creds []T) []T {
+	if len(creds) < 2 {
+		return []T{}
+	}
+
+	programmed := -1
+	best := 0
+	for i, cred := range creds {
+		ptr := TPtr(&cred)
+		containsProgrammedConditionTrue := lo.ContainsBy(ptr.GetConditions(),
+			func(c metav1.Condition) bool {
+				return c.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					c.Status == metav1.ConditionTrue
+			},
+		)
+
+		if containsProgrammedConditionTrue {
+			switch programmed {
+			case -1:
+				best = i
+				programmed = i
+			default:
+				ptrProgrammed := TPtr(&creds[programmed])
+				if ptr.GetCreationTimestamp().UTC().Before(ptrProgrammed.GetCreationTimestamp().UTC()) {
+					best = i
+					programmed = i
+				}
+			}
+
+			continue
+		}
+
+		ptrBest := TPtr(&creds[best])
+		if ptr.GetCreationTimestamp().UTC().Before(ptrBest.GetCreationTimestamp().UTC()) && programmed == -1 {
+			best = i
+		}
+	}
+
+	return append(creds[:best], creds[best+1:]...)
 }

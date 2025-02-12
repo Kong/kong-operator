@@ -10,6 +10,24 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
+// SupportedCredentialType is a generic type constraint that all Kong credential
+// types must implement.
+type SupportedCredentialType interface {
+	configurationv1alpha1.KongCredentialBasicAuth
+	// TODO: add other credential types
+
+	GetTypeName() string
+}
+
+// KongCredential is a generic type constraint that all Kong credential types
+// must implement.
+type KongCredential[T SupportedCredentialType] interface {
+	*T
+	client.Object
+	GetConditions() []metav1.Condition
+	SetConditions([]metav1.Condition)
+}
+
 // SupportedKonnectEntityType is an interface that all Konnect entity types
 // must implement.
 type SupportedKonnectEntityType interface {

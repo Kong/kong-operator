@@ -715,3 +715,112 @@ func TestFilterKongPluginBindings(t *testing.T) {
 		})
 	}
 }
+
+func TestFilterKongCredentials(t *testing.T) {
+	t.Run("BasicAuth", func(t *testing.T) {
+		testCases := []struct {
+			name          string
+			creds         []configurationv1alpha1.KongCredentialBasicAuth
+			expectedCreds []configurationv1alpha1.KongCredentialBasicAuth
+		}{
+			{
+				name: "the Programmed credential must be filtered out regardless of the creation timestamp",
+				creds: []configurationv1alpha1.KongCredentialBasicAuth{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:              "1/1/2000",
+							CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+						},
+						Status: configurationv1alpha1.KongCredentialBasicAuthStatus{
+							Conditions: []metav1.Condition{
+								{
+									Type:   "Programmed",
+									Status: "True",
+								},
+							},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:              "12/31/1995",
+							CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
+						},
+					},
+				},
+				expectedCreds: []configurationv1alpha1.KongCredentialBasicAuth{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:              "12/31/1995",
+							CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
+						},
+					},
+				},
+			},
+			{
+				name: "the Programmed credential must be filtered out",
+				creds: []configurationv1alpha1.KongCredentialBasicAuth{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:              "1/1/2000",
+							CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:              "12/31/1995",
+							CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
+						},
+						Status: configurationv1alpha1.KongCredentialBasicAuthStatus{
+							Conditions: []metav1.Condition{
+								{
+									Type:   "Programmed",
+									Status: "True",
+								},
+							},
+						},
+					},
+				},
+				expectedCreds: []configurationv1alpha1.KongCredentialBasicAuth{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:              "1/1/2000",
+							CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+						},
+					},
+				},
+			},
+			{
+				name: "the oldest credential must be filtered out if it's not Programmed",
+				creds: []configurationv1alpha1.KongCredentialBasicAuth{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:              "1/1/2000",
+							CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:              "12/31/1995",
+							CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
+						},
+					},
+				},
+				expectedCreds: []configurationv1alpha1.KongCredentialBasicAuth{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:              "1/1/2000",
+							CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+						},
+					},
+				},
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				filteredCreds := filterKongCredentials(tc.creds)
+				require.Equal(t, tc.expectedCreds, filteredCreds)
+			})
+		}
+	})
+}
