@@ -38,11 +38,10 @@ func TestKongPluginBindings(t *testing.T) {
 						Group: "configuration.konghq.com",
 					},
 				},
-				ControlPlaneRef: validTestCPRef(),
 			},
 		}
 
-		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC).Run(t)
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC, ControlPlaneRefRequired).Run(t)
 	})
 
 	t.Run("plugin ref", func(t *testing.T) {

@@ -35,7 +35,7 @@ func (g TestCasesGroup[T]) Run(t *testing.T) {
 
 const (
 	// DefaultEventuallyTimeout is the default timeout for EventuallyConfig.
-	DefaultEventuallyTimeout = 15 * time.Second
+	DefaultEventuallyTimeout = 1 * time.Second
 	// DefaultEventuallyPeriod is the default period for EventuallyConfig.
 	DefaultEventuallyPeriod = 10 * time.Millisecond
 )
@@ -104,7 +104,7 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 			})
 		}
 
-		assert.EventuallyWithT(t,
+		if !assert.EventuallyWithT(t,
 			func(c *assert.CollectT) {
 				toCreate := tc.TestObject.DeepCopyObject().(T)
 
@@ -122,11 +122,16 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 					if !assert.Contains(c, err.Error(), *tc.ExpectedErrorMessage) {
 						return
 					}
+				} else {
+					assert.NoError(c, err)
 				}
+
 				tc.TestObject = toCreate
 			},
 			timeout, period,
-		)
+		) {
+			return
+		}
 
 		// Check with reflect if the status field is set and Update the status if so before updating the object.
 		// That's required to populate Status that is not set on Create.

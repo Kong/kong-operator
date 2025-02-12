@@ -23,7 +23,7 @@ func TestKongUpstream(t *testing.T) {
 	}
 
 	t.Run("cp ref", func(t *testing.T) {
-		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC).Run(t)
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC, ControlPlaneRefRequired).Run(t)
 	})
 
 	t.Run("cp ref, type=kic", func(t *testing.T) {

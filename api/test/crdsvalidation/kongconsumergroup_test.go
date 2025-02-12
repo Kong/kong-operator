@@ -17,7 +17,7 @@ func TestKongConsumerGroup(t *testing.T) {
 	t.Run("cp ref", func(t *testing.T) {
 		obj := &configurationv1beta1.KongConsumerGroup{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongConsumer",
+				Kind:       "KongConsumerGroup",
 				APIVersion: configurationv1beta1.GroupVersion.String(),
 			},
 			ObjectMeta: commonObjectMeta,
@@ -26,7 +26,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			},
 		}
 
-		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC).Run(t)
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj, SupportedByKIC, ControlPlaneRefNotRequired).Run(t)
 	})
 
 	t.Run("cp ref update", func(t *testing.T) {

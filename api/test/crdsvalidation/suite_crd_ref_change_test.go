@@ -44,6 +44,13 @@ const (
 	NotSupportedByKIC SupportedByKicT = false
 )
 
+type ControlPlaneRefRequiredT bool
+
+const (
+	ControlPlaneRefRequired    ControlPlaneRefRequiredT = true
+	ControlPlaneRefNotRequired ControlPlaneRefRequiredT = false
+)
+
 func NewCRDValidationTestCasesGroupCPRefChange[
 	T interface {
 		client.Object
@@ -56,6 +63,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 	t *testing.T,
 	obj T,
 	supportedByKIC SupportedByKicT,
+	controlPlaneRefRequired ControlPlaneRefRequiredT,
 ) crdsvalidation.TestCasesGroup[T] {
 	var (
 		ret = crdsvalidation.TestCasesGroup[T]{}
@@ -333,13 +341,13 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 		}
 	}
 	{
-		if supportedByKIC == NotSupportedByKIC {
+		if controlPlaneRefRequired == ControlPlaneRefRequired {
 			obj := obj.DeepCopy()
 			obj.SetControlPlaneRef(nil)
 			ret = append(ret, crdsvalidation.TestCase[T]{
-				Name:                       "cpRef is required",
-				TestObject:                 obj,
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is required"),
+				Name:                 "cpRef is required",
+				TestObject:           obj,
+				ExpectedErrorMessage: lo.ToPtr("spec.controlPlaneRef: Required value"),
 			})
 		}
 	}

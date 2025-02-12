@@ -27,7 +27,7 @@ func TestKongCertificate(t *testing.T) {
 			},
 		}
 
-		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC).Run(t)
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC, ControlPlaneRefRequired).Run(t)
 	})
 
 	t.Run("required fields", func(t *testing.T) {

@@ -27,7 +27,7 @@ func TestKongKey(t *testing.T) {
 			},
 		}
 
-		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC).Run(t)
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC, ControlPlaneRefNotRequired).Run(t)
 	})
 
 	t.Run("pem/cp ref", func(t *testing.T) {
@@ -48,27 +48,7 @@ func TestKongKey(t *testing.T) {
 			},
 		}
 
-		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC).Run(t)
-	})
-
-	t.Run("pem/cp ref, type=kic", func(t *testing.T) {
-		obj := &configurationv1alpha1.KongKey{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongKey",
-				APIVersion: configurationv1alpha1.GroupVersion.String(),
-			},
-			ObjectMeta: commonObjectMeta,
-			Spec: configurationv1alpha1.KongKeySpec{
-				KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
-					KID: "1",
-					PEM: &configurationv1alpha1.PEMKeyPair{
-						PublicKey:  "public",
-						PrivateKey: "private",
-					},
-				},
-			},
-		}
-		NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes(t, obj, EmptyControlPlaneRefAllowed).Run(t)
+		NewCRDValidationTestCasesGroupCPRefChange(t, obj, NotSupportedByKIC, ControlPlaneRefNotRequired).Run(t)
 	})
 
 	t.Run("spec", func(t *testing.T) {
