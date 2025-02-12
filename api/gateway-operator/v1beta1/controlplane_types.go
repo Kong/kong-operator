@@ -39,6 +39,7 @@ func init() {
 
 // ControlPlane is the Schema for the controlplanes API
 // +apireference:kgo:include
+// +kong:channels=gateway-operator
 type ControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

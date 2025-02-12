@@ -42,6 +42,7 @@ func init() {
 
 // DataPlane is the Schema for the dataplanes API
 // +apireference:kgo:include
+// +kong:channels=gateway-operator
 type DataPlane struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

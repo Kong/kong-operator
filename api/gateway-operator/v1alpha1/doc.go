@@ -16,5 +16,6 @@ limitations under the License.
 
 // Package v1alpha1 contains API Schema definitions for the gateway-operator.konghq.com v1alpha1 API group.
 // +kubebuilder:object:generate=true
-// +groupName=gatewayoperator.konghq.com
+// +groupName=gateway-operator.konghq.com
+// +groupGoName=GatewayOperator
 package v1alpha1

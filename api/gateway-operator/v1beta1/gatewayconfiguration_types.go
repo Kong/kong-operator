@@ -34,6 +34,7 @@ func init() {
 
 // GatewayConfiguration is the Schema for the gatewayconfigurations API
 // +apireference:kgo:include
+// +kong:channels=gateway-operator
 type GatewayConfiguration struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

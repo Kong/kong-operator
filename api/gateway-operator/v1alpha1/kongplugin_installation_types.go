@@ -37,6 +37,7 @@ func init() {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Accepted",description="The Resource is accepted",type=string,JSONPath=`.status.conditions[?(@.type=='Accepted')].status`
 // +apireference:kgo:include
+// +kong:channels=gateway-operator
 type KongPluginInstallation struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

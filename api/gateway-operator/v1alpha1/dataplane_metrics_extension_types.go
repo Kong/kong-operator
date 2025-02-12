@@ -43,6 +43,7 @@ const (
 // NOTE: This is an enterprise feature. In order to use it you need to use
 // the EE version of Kong Gateway Operator with a valid license.
 // +apireference:kgo:include
+// +kong:channels=gateway-operator
 type DataPlaneMetricsExtension struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

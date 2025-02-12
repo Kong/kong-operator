@@ -40,6 +40,7 @@ const (
 // deployment spec gets customized to include the konnect-related configuration.
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable."
 // +apireference:kgo:include
+// +kong:channels=gateway-operator
 type KonnectExtension struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
