@@ -174,14 +174,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}
 		}
 
-		if res, err := setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent); err != nil {
-			return res, err
-		} else if !res.IsZero() {
-			return res, nil
-		}
-
-		// Status update will requeue the entity.
-		return ctrl.Result{}, nil
+		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 	// If a type has a KongService ref, handle it.
 	res, err = handleKongServiceRef(ctx, r.Client, ent)
