@@ -307,8 +307,8 @@ github.com/klauspost/compress v1.17.11 h1:In6xLpyWOi1+C7tXUUWv2ot1QvBjxevKAaI6IX
 github.com/klauspost/compress v1.17.11/go.mod h1:pMDklpSncoRMuLFrf1W9Ss9KT+0rH90U12bZKk7uwG0=
 github.com/kong/go-kong v0.63.0 h1:8ECLgkgDqON61qCMq/M0gTwZKYxg55Oy692dRDOOBiU=
 github.com/kong/go-kong v0.63.0/go.mod h1:ma9GWnhkxtrXZlLFfED955HjVzmUojYEHet3lm+PDik=
-github.com/kong/kubernetes-configuration v1.1.1-0.20250131124626-916233dcfdcd h1:6tT9I12vgR6/8N6EDWYeteOgpsRB8L2ipQgDn5ChjZo=
-github.com/kong/kubernetes-configuration v1.1.1-0.20250131124626-916233dcfdcd/go.mod h1:WAf/rE3AH+y5SUrwG+DVYNCoeI82LUAjT3n4Hu+d20s=
+github.com/kong/kubernetes-configuration v1.1.1-0.20250206104619-59e9230a3a4c h1:n+/Ci/ifwlfuy/JVb95jjFSSt5c/P0AozuJreIwvIbo=
+github.com/kong/kubernetes-configuration v1.1.1-0.20250206104619-59e9230a3a4c/go.mod h1:wFSxyDrPi3o6m6n/Suj+obbb+WHp4leViuj8POcM9tA=
 github.com/kong/kubernetes-telemetry v0.1.8 h1:nbtUmXW9xkzRO7dgvrgVrJZiRksATk4XHrqX+78g/5k=
 github.com/kong/kubernetes-telemetry v0.1.8/go.mod h1:ZEQY/4DddKoe5XA7UTOIbdI/4d6ZRcrzh2ezRxnuyl0=
 github.com/kong/kubernetes-testing-framework v0.47.2 h1:+2Z9anTpbV/hwNeN+NFQz53BMU+g3QJydkweBp3tULo=
@@ -430,8 +430,9 @@ github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9yS
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
 github.com/spf13/cobra v1.8.1 h1:e5/vxKd/rZsfSJMUX1agtjeTDf+qv1/JdBF8gg5k9ZM=
 github.com/spf13/cobra v1.8.1/go.mod h1:wHxEcudfqmLYa8iTfL+OuZPbBZkmvliBWKIezN3kD9Y=
-github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
 github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
+github.com/spf13/pflag v1.0.6 h1:jFzHGLGAlb3ruxLB8MhbI6A8+AQX/2eW4qeyNZXNp2o=
+github.com/spf13/pflag v1.0.6/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/stoewer/go-strcase v1.3.0 h1:g0eASXYtp+yvN9fK8sH94oCIk0fau9uV1/ZdJ0AVEzs=
 github.com/stoewer/go-strcase v1.3.0/go.mod h1:fAH5hQ5pehh+j3nZfvwdk2RgEgQjAoM8wodgtPmh1xo=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

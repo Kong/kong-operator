@@ -29,7 +29,7 @@ func conditionsAreSetWhenReferencedControlPlaneIsMissing[
 			condCpRef.Status == "False" &&
 			condProgrammed.Status == "False" &&
 			condCpRef.Reason == konnectv1alpha1.ControlPlaneRefReasonInvalid &&
-			condProgrammed.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonExistsConditionWithStatusFalse
+			condProgrammed.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonConditionWithStatusFalseExists
 	}
 }
 

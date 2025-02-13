@@ -1027,7 +1027,7 @@ func setProgrammedStatusConditionBasedOnOtherConditions[
 		ctx, cl, ent,
 		konnectv1alpha1.KonnectEntityProgrammedConditionType,
 		metav1.ConditionFalse,
-		konnectv1alpha1.KonnectEntityProgrammedReasonExistsConditionWithStatusFalse,
+		konnectv1alpha1.KonnectEntityProgrammedReasonConditionWithStatusFalseExists,
 		"Some conditions have status set to False",
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
