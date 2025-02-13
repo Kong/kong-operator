@@ -200,11 +200,13 @@ func SetAcceptedConditionOnGateway(resource ConditionsAndListenerConditionsAndGe
 // the return value of this function.
 func AreAllConditionsHaveTrueStatus(resource ConditionsAware) bool {
 	for _, condition := range resource.GetConditions() {
-		if condition.Type == string(gatewayv1.GatewayConditionProgrammed) {
+		switch condition.Type {
+		case string(consts.ReadyType), string(gatewayv1.GatewayConditionProgrammed):
 			continue
-		}
-		if condition.Type != string(consts.ReadyType) && condition.Status != metav1.ConditionTrue {
-			return false
+		default:
+			if condition.Status != metav1.ConditionTrue {
+				return false
+			}
 		}
 	}
 	return true
