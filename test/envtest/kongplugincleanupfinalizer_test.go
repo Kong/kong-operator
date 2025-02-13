@@ -125,7 +125,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 		})
 
 		wKongConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-		kongConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, "username-1",
+		kongConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, "username-1",
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)

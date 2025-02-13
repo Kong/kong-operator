@@ -684,8 +684,8 @@ func Secret(
 	return s
 }
 
-// KongConsumerAttachedToCP deploys a KongConsumer resource attached to a Control Plane and returns the resource.
-func KongConsumerAttachedToCP(
+// KongConsumer deploys a KongConsumer resource and returns it.
+func KongConsumer(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,

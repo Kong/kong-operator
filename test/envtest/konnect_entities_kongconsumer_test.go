@@ -100,7 +100,7 @@ func TestKongConsumer(t *testing.T) {
 			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
 
 		t.Log("Creating KongConsumer")
-		createdConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username,
+		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		)
 
@@ -232,7 +232,7 @@ func TestKongConsumer(t *testing.T) {
 		)
 
 		t.Log("Creating KongConsumer and patching it with ConsumerGroup")
-		createdConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username,
+		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		)
 		consumer := createdConsumer.DeepCopy()
@@ -346,7 +346,7 @@ func TestKongConsumer(t *testing.T) {
 		}, nil)
 
 		t.Log("Creating a KongConsumer")
-		deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username,
+		deploy.KongConsumer(t, ctx, clientNamespaced, username,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		)
 
@@ -394,7 +394,7 @@ func TestKongConsumer(t *testing.T) {
 			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
 
 		t.Log("Creating KongConsumer with ControlPlaneRef type=konnectID")
-		createdConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username,
+		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithKonnectIDControlPlaneRef(cp),
 		)
@@ -458,7 +458,7 @@ func TestKongConsumer(t *testing.T) {
 				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
 			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
 
-		created := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, name,
+		created := deploy.KongConsumer(t, ctx, clientNamespaced, name,
 			deploy.WithKonnectIDControlPlaneRef(cp),
 			func(obj client.Object) {
 				cert := obj.(*configurationv1.KongConsumer)
@@ -581,7 +581,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			)
 
 		t.Log("Creating KongConsumer with ControlPlaneRef type=konnectID")
-		createdConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username,
+		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
 			deploy.WithKonnectIDControlPlaneRef(cp),
 			func(obj client.Object) {
 				consumer := obj.(*configurationv1.KongConsumer)

@@ -110,7 +110,7 @@ func TestKonnectEntities(t *testing.T) {
 		assertKonnectEntityProgrammed(t, kcg)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
-	kc := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, "kc-"+testID,
+	kc := deploy.KongConsumer(t, ctx, clientNamespaced, "kc-"+testID,
 		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		deploy.WithTestIDLabel(testID),
 		func(obj client.Object) {

@@ -303,7 +303,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			require.NoError(t, client.IgnoreNotFound(clientNamespaced.Delete(ctx, kongService)))
 		})
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username,
+		kongConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		)
 		t.Cleanup(func() {

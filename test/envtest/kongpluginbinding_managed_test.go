@@ -464,7 +464,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))
 		})
 		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
-		kongConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, "username-1",
+		kongConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, "username-1",
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
