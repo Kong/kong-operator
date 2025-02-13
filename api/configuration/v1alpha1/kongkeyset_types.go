@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-configuration/api/configuration/common"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -52,7 +52,7 @@ type KongKeySet struct {
 type KongKeySetSpec struct {
 	// ControlPlaneRef is a reference to a Konnect ControlPlane with which KongKeySet is associated.
 	// +kubebuilder:validation:Required
-	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef"`
+	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
 	// KongKeySetAPISpec are the attributes of the KongKeySet itself.
 	KongKeySetAPISpec `json:",inline"`
@@ -67,7 +67,7 @@ type KongKeySetAPISpec struct {
 
 	// Tags is an optional set of strings associated with the KeySet for grouping and filtering.
 	// +optional
-	Tags common.Tags `json:"tags,omitempty"`
+	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
 }
 
 // KongKeySetStatus defines the status for a KongKeySet.

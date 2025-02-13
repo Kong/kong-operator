@@ -19,8 +19,7 @@ package v1beta1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-configuration/api/configuration/common"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -59,10 +58,10 @@ type KongConsumerGroupSpec struct {
 
 	// ControlPlaneRef is a reference to a ControlPlane this ConsumerGroup is associated with.
 	// +optional
-	ControlPlaneRef *configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
 
 	// Tags is an optional set of tags applied to the ConsumerGroup.
-	Tags common.Tags `json:"tags,omitempty"`
+	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
 }
 
 // KongConsumerGroupList contains a list of KongConsumerGroups.

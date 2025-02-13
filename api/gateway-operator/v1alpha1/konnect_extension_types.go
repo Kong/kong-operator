@@ -16,7 +16,7 @@ limitations under the License.
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 )
 
 func init() {
@@ -67,7 +67,7 @@ type KonnectExtensionSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this KonnectExtension is associated with.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self.type == 'konnectID'", message="Only konnectID type currently supported as controlPlaneRef."
-	ControlPlaneRef configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
+	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
 	// ControlPlaneRegion is the region of the Konnect Control Plane.
 	//

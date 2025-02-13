@@ -21,7 +21,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
-	"github.com/kong/kubernetes-configuration/api/configuration/common"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -57,7 +57,7 @@ type KongService struct {
 type KongServiceSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this KongService is associated with.
 	// +kubebuilder:validation:Required
-	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef"`
+	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
 	KongServiceAPISpec `json:",inline"`
 }
@@ -99,7 +99,7 @@ type KongServiceAPISpec struct {
 	// The number of retries to execute upon failure to proxy.
 	Retries *int64 `json:"retries,omitempty"`
 	// An optional set of strings associated with the Service for grouping and filtering.
-	Tags common.Tags `json:"tags,omitempty"`
+	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
 	// Whether to enable verification of upstream server TLS certificate. If set to `null`, then the Nginx default is respected.
 	TLSVerify *bool `json:"tls_verify,omitempty"`
 	// Maximum depth of chain while verifying Upstream server's TLS certificate. If set to `null`, then the Nginx default is respected.

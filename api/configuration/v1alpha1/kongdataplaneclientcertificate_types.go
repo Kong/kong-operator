@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -53,7 +54,7 @@ type KongDataPlaneClientCertificate struct {
 type KongDataPlaneClientCertificateSpec struct {
 	// ControlPlaneRef is a reference to a Konnect ControlPlane this KongDataPlaneClientCertificate is associated with.
 	// +kubebuilder:validation:Required
-	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef"`
+	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
 	// KongDataPlaneClientCertificateAPISpec are the attributes of the KongDataPlaneClientCertificate itself.
 	KongDataPlaneClientCertificateAPISpec `json:",inline"`

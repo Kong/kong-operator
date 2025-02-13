@@ -11,3 +11,8 @@ func (obj KonnectGatewayControlPlaneList) GetItems() []KonnectGatewayControlPlan
 func (obj KonnectAPIAuthConfigurationList) GetItems() []KonnectAPIAuthConfiguration {
 	return obj.Items
 }
+
+// GetItems() returns the list of KonnectCloudGatewayNetwork items.
+func (obj KonnectCloudGatewayNetworkList) GetItems() []KonnectCloudGatewayNetwork {
+	return obj.Items
+}

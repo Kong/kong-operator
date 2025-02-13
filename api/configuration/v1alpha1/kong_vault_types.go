@@ -20,7 +20,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-configuration/api/configuration/common"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -76,10 +76,10 @@ type KongVaultSpec struct {
 	// Config is the configuration of the vault. Varies for different backends.
 	Config apiextensionsv1.JSON `json:"config,omitempty"`
 	// Tags are the tags associated to the vault for grouping and filtering.
-	Tags common.Tags `json:"tags,omitempty"`
+	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
 	// ControlPlaneRef is a reference to a Konnect ControlPlane this KongVault is associated with.
 	// +optional
-	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
 }
 
 // KongVaultStatus represents the current status of the KongVault resource.

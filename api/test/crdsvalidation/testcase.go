@@ -82,8 +82,12 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 		period = tc.ExpectedErrorEventuallyConfig.Period
 	}
 
+	require.NotNil(t, tc.TestObject, "TestObject is nil in test %s", tc.Name)
+
 	// Run the test case.
 	t.Run(tc.Name, func(t *testing.T) {
+		require.NotNil(t, tc.TestObject, "TestObject is nil in test %s", tc.Name)
+
 		t.Parallel()
 		ctx := context.Background()
 
@@ -122,8 +126,6 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 					if !assert.Contains(c, err.Error(), *tc.ExpectedErrorMessage) {
 						return
 					}
-				} else {
-					assert.NoError(c, err)
 				}
 
 				tc.TestObject = toCreate

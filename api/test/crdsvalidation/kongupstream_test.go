@@ -9,6 +9,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
@@ -37,9 +38,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -55,9 +56,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -73,9 +74,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -91,9 +92,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -109,9 +110,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -127,9 +128,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -145,9 +146,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -164,9 +165,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -183,9 +184,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -202,9 +203,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -221,9 +222,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -240,9 +241,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -259,9 +260,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -277,9 +278,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -295,9 +296,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -313,9 +314,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -331,9 +332,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -349,9 +350,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -367,9 +368,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -390,9 +391,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -415,9 +416,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -441,9 +442,9 @@ func TestKongUpstream(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongUpstream{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1alpha1.KongUpstreamSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},

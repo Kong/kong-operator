@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -97,7 +98,7 @@ type KongPluginBindingSpec struct {
 
 	// ControlPlaneRef is a reference to a ControlPlane this KongPluginBinding is associated with.
 	// +kubebuilder:validation:Required
-	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef,omitzero"`
+	ControlPlaneRef commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitzero"`
 
 	// Scope defines the scope of the plugin binding.
 	// +optional

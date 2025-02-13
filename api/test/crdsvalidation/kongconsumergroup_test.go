@@ -7,6 +7,7 @@ import (
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -36,9 +37,9 @@ func TestKongConsumerGroup(t *testing.T) {
 				TestObject: &configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1beta1.KongConsumerGroupSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -65,9 +66,9 @@ func TestKongConsumerGroup(t *testing.T) {
 				TestObject: &configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1beta1.KongConsumerGroupSpec{
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -121,9 +122,9 @@ func TestKongConsumerGroup(t *testing.T) {
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1beta1.KongConsumerGroupSpec{
 						Name: "test-consumer-group",
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -141,9 +142,9 @@ func TestKongConsumerGroup(t *testing.T) {
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1beta1.KongConsumerGroupSpec{
 						Name: "cg-1",
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -163,9 +164,9 @@ func TestKongConsumerGroup(t *testing.T) {
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1beta1.KongConsumerGroupSpec{
 						Name: "cg-1",
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},
@@ -186,9 +187,9 @@ func TestKongConsumerGroup(t *testing.T) {
 					ObjectMeta: commonObjectMeta,
 					Spec: configurationv1beta1.KongConsumerGroupSpec{
 						Name: "cg-1",
-						ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 								Name: "test-konnect-control-plane",
 							},
 						},

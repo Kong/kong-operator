@@ -22,7 +22,7 @@ package v1alpha1
 
 import (
 	"github.com/Kong/sdk-konnect-go/models/components"
-	"github.com/kong/kubernetes-configuration/api/configuration/common"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -38,7 +38,7 @@ func (in *ControlPlaneRef) DeepCopyInto(out *ControlPlaneRef) {
 	}
 	if in.KonnectNamespacedRef != nil {
 		in, out := &in.KonnectNamespacedRef, &out.KonnectNamespacedRef
-		*out = new(KonnectNamespacedRef)
+		*out = new(commonv1alpha1.KonnectNamespacedRef)
 		**out = **in
 	}
 }
@@ -228,7 +228,7 @@ func (in *KongCACertificateAPISpec) DeepCopyInto(out *KongCACertificateAPISpec) 
 	*out = *in
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -280,7 +280,7 @@ func (in *KongCACertificateSpec) DeepCopyInto(out *KongCACertificateSpec) {
 	*out = *in
 	if in.ControlPlaneRef != nil {
 		in, out := &in.ControlPlaneRef, &out.ControlPlaneRef
-		*out = new(ControlPlaneRef)
+		*out = new(commonv1alpha1.ControlPlaneRef)
 		(*in).DeepCopyInto(*out)
 	}
 	in.KongCACertificateAPISpec.DeepCopyInto(&out.KongCACertificateAPISpec)
@@ -355,7 +355,7 @@ func (in *KongCertificateAPISpec) DeepCopyInto(out *KongCertificateAPISpec) {
 	*out = *in
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -407,7 +407,7 @@ func (in *KongCertificateSpec) DeepCopyInto(out *KongCertificateSpec) {
 	*out = *in
 	if in.ControlPlaneRef != nil {
 		in, out := &in.ControlPlaneRef, &out.ControlPlaneRef
-		*out = new(ControlPlaneRef)
+		*out = new(commonv1alpha1.ControlPlaneRef)
 		(*in).DeepCopyInto(*out)
 	}
 	in.KongCertificateAPISpec.DeepCopyInto(&out.KongCertificateAPISpec)
@@ -482,7 +482,7 @@ func (in *KongCredentialACLAPISpec) DeepCopyInto(out *KongCredentialACLAPISpec) 
 	*out = *in
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -605,7 +605,7 @@ func (in *KongCredentialAPIKeyAPISpec) DeepCopyInto(out *KongCredentialAPIKeyAPI
 	*out = *in
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -728,7 +728,7 @@ func (in *KongCredentialBasicAuthAPISpec) DeepCopyInto(out *KongCredentialBasicA
 	*out = *in
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -861,7 +861,7 @@ func (in *KongCredentialHMACAPISpec) DeepCopyInto(out *KongCredentialHMACAPISpec
 	}
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 	if in.Username != nil {
@@ -1009,7 +1009,7 @@ func (in *KongCredentialJWTAPISpec) DeepCopyInto(out *KongCredentialJWTAPISpec) 
 	}
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -1281,7 +1281,7 @@ func (in *KongDataPlaneClientCertificateSpec) DeepCopyInto(out *KongDataPlaneCli
 	*out = *in
 	if in.ControlPlaneRef != nil {
 		in, out := &in.ControlPlaneRef, &out.ControlPlaneRef
-		*out = new(ControlPlaneRef)
+		*out = new(commonv1alpha1.ControlPlaneRef)
 		(*in).DeepCopyInto(*out)
 	}
 	out.KongDataPlaneClientCertificateAPISpec = in.KongDataPlaneClientCertificateAPISpec
@@ -1371,7 +1371,7 @@ func (in *KongKeyAPISpec) DeepCopyInto(out *KongKeyAPISpec) {
 	}
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -1450,7 +1450,7 @@ func (in *KongKeySetAPISpec) DeepCopyInto(out *KongKeySetAPISpec) {
 	*out = *in
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -1502,7 +1502,7 @@ func (in *KongKeySetSpec) DeepCopyInto(out *KongKeySetSpec) {
 	*out = *in
 	if in.ControlPlaneRef != nil {
 		in, out := &in.ControlPlaneRef, &out.ControlPlaneRef
-		*out = new(ControlPlaneRef)
+		*out = new(commonv1alpha1.ControlPlaneRef)
 		(*in).DeepCopyInto(*out)
 	}
 	in.KongKeySetAPISpec.DeepCopyInto(&out.KongKeySetAPISpec)
@@ -1550,7 +1550,7 @@ func (in *KongKeySpec) DeepCopyInto(out *KongKeySpec) {
 	*out = *in
 	if in.ControlPlaneRef != nil {
 		in, out := &in.ControlPlaneRef, &out.ControlPlaneRef
-		*out = new(ControlPlaneRef)
+		*out = new(commonv1alpha1.ControlPlaneRef)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.KeySetRef != nil {
@@ -1990,7 +1990,7 @@ func (in *KongRouteAPISpec) DeepCopyInto(out *KongRouteAPISpec) {
 	}
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -2042,7 +2042,7 @@ func (in *KongRouteSpec) DeepCopyInto(out *KongRouteSpec) {
 	*out = *in
 	if in.ControlPlaneRef != nil {
 		in, out := &in.ControlPlaneRef, &out.ControlPlaneRef
-		*out = new(ControlPlaneRef)
+		*out = new(commonv1alpha1.ControlPlaneRef)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.ServiceRef != nil {
@@ -2122,7 +2122,7 @@ func (in *KongSNIAPISpec) DeepCopyInto(out *KongSNIAPISpec) {
 	*out = *in
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -2280,7 +2280,7 @@ func (in *KongServiceAPISpec) DeepCopyInto(out *KongServiceAPISpec) {
 	}
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 	if in.TLSVerify != nil {
@@ -2347,7 +2347,7 @@ func (in *KongServiceSpec) DeepCopyInto(out *KongServiceSpec) {
 	*out = *in
 	if in.ControlPlaneRef != nil {
 		in, out := &in.ControlPlaneRef, &out.ControlPlaneRef
-		*out = new(ControlPlaneRef)
+		*out = new(commonv1alpha1.ControlPlaneRef)
 		(*in).DeepCopyInto(*out)
 	}
 	in.KongServiceAPISpec.DeepCopyInto(&out.KongServiceAPISpec)
@@ -2422,7 +2422,7 @@ func (in *KongTargetAPISpec) DeepCopyInto(out *KongTargetAPISpec) {
 	*out = *in
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -2620,7 +2620,7 @@ func (in *KongUpstreamAPISpec) DeepCopyInto(out *KongUpstreamAPISpec) {
 	}
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 	if in.UseSrvName != nil {
@@ -2677,7 +2677,7 @@ func (in *KongUpstreamSpec) DeepCopyInto(out *KongUpstreamSpec) {
 	*out = *in
 	if in.ControlPlaneRef != nil {
 		in, out := &in.ControlPlaneRef, &out.ControlPlaneRef
-		*out = new(ControlPlaneRef)
+		*out = new(commonv1alpha1.ControlPlaneRef)
 		(*in).DeepCopyInto(*out)
 	}
 	in.KongUpstreamAPISpec.DeepCopyInto(&out.KongUpstreamAPISpec)
@@ -2785,12 +2785,12 @@ func (in *KongVaultSpec) DeepCopyInto(out *KongVaultSpec) {
 	in.Config.DeepCopyInto(&out.Config)
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make(common.Tags, len(*in))
+		*out = make(commonv1alpha1.Tags, len(*in))
 		copy(*out, *in)
 	}
 	if in.ControlPlaneRef != nil {
 		in, out := &in.ControlPlaneRef, &out.ControlPlaneRef
-		*out = new(ControlPlaneRef)
+		*out = new(commonv1alpha1.ControlPlaneRef)
 		(*in).DeepCopyInto(*out)
 	}
 }
@@ -2828,21 +2828,6 @@ func (in *KongVaultStatus) DeepCopy() *KongVaultStatus {
 		return nil
 	}
 	out := new(KongVaultStatus)
-	in.DeepCopyInto(out)
-	return out
-}
-
-// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
-func (in *KonnectNamespacedRef) DeepCopyInto(out *KonnectNamespacedRef) {
-	*out = *in
-}
-
-// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new KonnectNamespacedRef.
-func (in *KonnectNamespacedRef) DeepCopy() *KonnectNamespacedRef {
-	if in == nil {
-		return nil
-	}
-	out := new(KonnectNamespacedRef)
 	in.DeepCopyInto(out)
 	return out
 }

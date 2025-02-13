@@ -20,7 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-configuration/api/configuration/common"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -69,7 +69,7 @@ type KongCredentialACLAPISpec struct {
 	Group string `json:"group"`
 
 	// Tags is a list of tags for the ACL credential.
-	Tags common.Tags `json:"tags,omitempty"`
+	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
 }
 
 // KongCredentialACLStatus represents the current status of the ACL credential resource.

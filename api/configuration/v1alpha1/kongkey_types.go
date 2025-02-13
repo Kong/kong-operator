@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-configuration/api/configuration/common"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -53,7 +53,7 @@ type KongKey struct {
 type KongKeySpec struct {
 	// ControlPlaneRef is a reference to a Konnect ControlPlane this KongKey is associated with.
 	// +optional
-	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
 
 	// KeySetRef is a reference to a KongKeySet this KongKey is attached to.
 	// ControlPlane referenced by a KongKeySet must be the same as the ControlPlane referenced by the KongKey.
@@ -90,7 +90,7 @@ type KongKeyAPISpec struct {
 
 	// Tags is an optional set of strings associated with the Key for grouping and filtering.
 	// +optional
-	Tags common.Tags `json:"tags,omitempty"`
+	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
 }
 
 // PEMKeyPair defines a keypair in PEM format.

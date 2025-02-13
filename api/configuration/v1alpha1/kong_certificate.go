@@ -3,7 +3,7 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-configuration/api/configuration/common"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -37,7 +37,7 @@ type KongCertificate struct {
 type KongCertificateSpec struct {
 	// ControlPlaneRef references the Konnect Control Plane that this KongCertificate should be created in.
 	// +kubebuilder:validation:Required
-	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef"`
+	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
 	KongCertificateAPISpec `json:",inline"`
 }
@@ -63,7 +63,7 @@ type KongCertificateAPISpec struct {
 	KeyAlt string `json:"key_alt,omitempty"`
 
 	// Tags is an optional set of tags applied to the certificate.
-	Tags common.Tags `json:"tags,omitempty"`
+	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
 }
 
 // KongCertificateStatus defines the observed state of KongCertificate.
