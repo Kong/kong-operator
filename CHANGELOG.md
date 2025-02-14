@@ -115,6 +115,10 @@
   have any effect.
   They will be removed in next major release.
   [#1100](https://github.com/Kong/gateway-operator/pull/1100)
+- Konnect entities that are attached to a Konnect CP through a `ControlPlaneRef`
+  do not get an owner relationship set to the `ControlPlane` anymore hence
+  they are not deleted when the `ControlPlane` is deleted.
+  [#1099](https://github.com/Kong/gateway-operator/pull/1099)
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 

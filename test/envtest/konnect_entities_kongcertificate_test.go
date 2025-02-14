@@ -2,6 +2,7 @@ package envtest
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"testing"
 
@@ -227,5 +228,63 @@ func TestKongCertificate(t *testing.T) {
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.CertificatesSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
+	})
+
+	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
+		const (
+			id = "abc-12345"
+		)
+
+		var tags []string = []string{"tag1"}
+
+		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
+		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+
+		t.Log("Setting up a watch for KongCertifcate events")
+		w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on KongCertifcate creation")
+		sdk.CertificatesSDK.EXPECT().
+			CreateCertificate(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.CertificateInput) bool {
+					return slices.Contains(req.Tags, "tag1")
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateCertificateResponse{
+					Certificate: &sdkkonnectcomp.Certificate{
+						ID: lo.ToPtr(id),
+					},
+				},
+				nil,
+			)
+
+		created := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp,
+			deploy.WithKonnectIDControlPlaneRef(cp),
+			func(obj client.Object) {
+				cert := obj.(*configurationv1alpha1.KongCertificate)
+				cert.Spec.Tags = tags
+			},
+		)
+		t.Log("Checking SDK Certificate operations")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.CACertificatesSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+
+		t.Log("Waiting for object to be programmed and get Konnect ID")
+		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),
+			fmt.Sprintf("Certificate didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
+
+		t.Log("Deleting KonnectGatewayControlPlane")
+		require.NoError(t, clientNamespaced.Delete(ctx, cp))
+
+		t.Log("Waiting for CACert to be get Programmed and ControlPlaneRefValid conditions with status=False")
+		watchFor(t, ctx, w, watch.Modified,
+			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+			"KongCACertificate didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
+		)
 	})
 }

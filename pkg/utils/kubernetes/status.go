@@ -114,7 +114,7 @@ func SetReadyWithGeneration(resource ConditionsAndGenerationAware, generation in
 		ObservedGeneration: generation,
 	}
 
-	if areAllConditionsHaveTrueStatus(resource) {
+	if AreAllConditionsHaveTrueStatus(resource) {
 		ready.Status = metav1.ConditionTrue
 		ready.Reason = string(consts.ResourceReadyReason)
 	} else {
@@ -138,7 +138,7 @@ func SetProgrammed(resource ConditionsAndGenerationAware) {
 		ObservedGeneration: resource.GetGeneration(),
 	}
 
-	if areAllConditionsHaveTrueStatus(resource) {
+	if AreAllConditionsHaveTrueStatus(resource) {
 		programmed.Status = metav1.ConditionTrue
 		programmed.Reason = string(gatewayv1.GatewayReasonProgrammed)
 	} else {
@@ -195,13 +195,18 @@ func SetAcceptedConditionOnGateway(resource ConditionsAndListenerConditionsAndGe
 	}
 }
 
-func areAllConditionsHaveTrueStatus(resource ConditionsAware) bool {
+// AreAllConditionsHaveTrueStatus checks if all the conditions on the resource are in the True state.
+// It skips the Programmed condition as that particular condition will be set based on
+// the return value of this function.
+func AreAllConditionsHaveTrueStatus(resource ConditionsAware) bool {
 	for _, condition := range resource.GetConditions() {
-		if condition.Type == string(gatewayv1.GatewayConditionProgrammed) {
+		switch condition.Type {
+		case string(consts.ReadyType), string(gatewayv1.GatewayConditionProgrammed):
 			continue
-		}
-		if condition.Type != string(consts.ReadyType) && condition.Status != metav1.ConditionTrue {
-			return false
+		default:
+			if condition.Status != metav1.ConditionTrue {
+				return false
+			}
 		}
 	}
 	return true

@@ -100,7 +100,9 @@ func TestKongConsumer(t *testing.T) {
 			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
 
 		t.Log("Creating KongConsumer")
-		createdConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username, cp)
+		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
 		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1.KongConsumer) bool {
@@ -221,7 +223,8 @@ func TestKongConsumer(t *testing.T) {
 			}).Return(&sdkkonnectops.AddConsumerToGroupResponse{}, nil)
 
 		t.Log("Creating KongConsumerGroup")
-		createdConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cp,
+		createdConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				cg := obj.(*configurationv1beta1.KongConsumerGroup)
 				cg.Spec.Name = consumerGroupName
@@ -229,7 +232,9 @@ func TestKongConsumer(t *testing.T) {
 		)
 
 		t.Log("Creating KongConsumer and patching it with ConsumerGroup")
-		createdConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username, cp)
+		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 		consumer := createdConsumer.DeepCopy()
 		consumer.ConsumerGroups = []string{createdConsumerGroup.GetName()}
 		require.NoError(t, clientNamespaced.Patch(ctx, consumer, client.MergeFrom(createdConsumer)))
@@ -341,7 +346,9 @@ func TestKongConsumer(t *testing.T) {
 		}, nil)
 
 		t.Log("Creating a KongConsumer")
-		deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username, cp)
+		deploy.KongConsumer(t, ctx, clientNamespaced, username,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 
 		t.Log("Watching for KongConsumers to verify the created KongConsumer programmed")
 		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1.KongConsumer) bool {
@@ -387,7 +394,10 @@ func TestKongConsumer(t *testing.T) {
 			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
 
 		t.Log("Creating KongConsumer with ControlPlaneRef type=konnectID")
-		createdConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username, cp, deploy.WithKonnectIDControlPlaneRef(cp))
+		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			deploy.WithKonnectIDControlPlaneRef(cp),
+		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
 		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1.KongConsumer) bool {
@@ -407,6 +417,71 @@ func TestKongConsumer(t *testing.T) {
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
+	})
+
+	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
+		const (
+			id   = "abc-12345"
+			name = "name-1"
+		)
+
+		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
+		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+
+		t.Log("Setting up a watch for KongConsumer events")
+		w := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on KongConsumer creation")
+		sdk.ConsumersSDK.EXPECT().
+			CreateConsumer(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.ConsumerInput) bool {
+					return req.Username != nil && *req.Username == name
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateConsumerResponse{
+					Consumer: &sdkkonnectcomp.Consumer{
+						ID:       lo.ToPtr(id),
+						Username: lo.ToPtr(name),
+					},
+				},
+				nil,
+			)
+
+		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
+		sdk.ConsumerGroupSDK.EXPECT().
+			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
+				ConsumerID:     id,
+				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
+			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
+
+		created := deploy.KongConsumer(t, ctx, clientNamespaced, name,
+			deploy.WithKonnectIDControlPlaneRef(cp),
+			func(obj client.Object) {
+				cert := obj.(*configurationv1.KongConsumer)
+				cert.Username = name
+			},
+		)
+		t.Log("Checking SDK Consumer operations")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+
+		t.Log("Waiting for object to be programmed and get Konnect ID")
+		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),
+			fmt.Sprintf("Consumer didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
+
+		t.Log("Deleting KonnectGatewayControlPlane")
+		require.NoError(t, clientNamespaced.Delete(ctx, cp))
+
+		t.Log("Waiting for KongConsumer to be get Programmed and ControlPlaneRefValid conditions with status=False")
+		watchFor(t, ctx, w, watch.Modified,
+			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+			"KongConsumer didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
+		)
 	})
 }
 
@@ -506,7 +581,8 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			)
 
 		t.Log("Creating KongConsumer with ControlPlaneRef type=konnectID")
-		createdConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username, cp, deploy.WithKonnectIDControlPlaneRef(cp),
+		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
+			deploy.WithKonnectIDControlPlaneRef(cp),
 			func(obj client.Object) {
 				consumer := obj.(*configurationv1.KongConsumer)
 				consumer.Credentials = []string{

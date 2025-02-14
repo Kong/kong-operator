@@ -59,7 +59,9 @@ func TestKongTarget(t *testing.T) {
 		)
 
 		t.Log("Creating a KongUpstream and setting it to programmed")
-		upstream := deploy.KongUpstreamAttachedToCP(t, ctx, clientNamespaced, cp)
+		upstream := deploy.KongUpstream(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
 
 		t.Log("Setting up a watch for KongTarget events")

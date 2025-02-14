@@ -181,9 +181,8 @@ func TestHandleControlPlaneRef(t *testing.T) {
 					}), "service should get control plane ID"
 				},
 				func(svc *configurationv1alpha1.KongService) (bool, string) {
-					return lo.ContainsBy(svc.OwnerReferences, func(o metav1.OwnerReference) bool {
-						return o.Kind == "KonnectGatewayControlPlane" && o.Name == "cp-ok"
-					}), "service should have owner reference set to CP"
+					return len(svc.OwnerReferences) == 0,
+						"service should have 0 owner references"
 				},
 				func(svc *configurationv1alpha1.KongService) (bool, string) {
 					return lo.ContainsBy(svc.Status.Conditions, func(c metav1.Condition) bool {
