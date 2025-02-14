@@ -2,6 +2,7 @@ package envtest
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -61,7 +62,9 @@ func TestKongService(t *testing.T) {
 		)
 
 		t.Log("Creating a KongUpstream and setting it to programmed")
-		upstream := deploy.KongUpstreamAttachedToCP(t, ctx, clientNamespaced, cp)
+		upstream := deploy.KongUpstream(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
 
 		t.Log("Setting up a watch for KongService events")
@@ -86,7 +89,8 @@ func TestKongService(t *testing.T) {
 			)
 
 		t.Log("Creating a KongService")
-		createdService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
+		createdService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongService)
 				s.Spec.KongServiceAPISpec.Host = host
@@ -155,7 +159,9 @@ func TestKongService(t *testing.T) {
 		)
 
 		t.Log("Creating a KongUpstream and setting it to programmed")
-		upstream := deploy.KongUpstreamAttachedToCP(t, ctx, clientNamespaced, cp)
+		upstream := deploy.KongUpstream(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
 
 		t.Log("Setting up a watch for KongService events")
@@ -180,7 +186,8 @@ func TestKongService(t *testing.T) {
 			)
 
 		t.Log("Creating a KongService with ControlPlaneRef type=konnectID")
-		createdService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
+		createdService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongService)
 				s.Spec.KongServiceAPISpec.Host = host
@@ -216,7 +223,9 @@ func TestKongService(t *testing.T) {
 			deploy.KonnectGatewayControlPlaneType(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController),
 		)
 		t.Log("Creating a KongUpstream and setting it to programmed")
-		upstream := deploy.KongUpstreamAttachedToCP(t, ctx, clientNamespaced, cp)
+		upstream := deploy.KongUpstream(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
 
 		t.Log("Setting up a watch for KongService events")
@@ -249,7 +258,8 @@ func TestKongService(t *testing.T) {
 			)
 
 		t.Log("Creating a KongService with ControlPlaneRef type=konnectNamespacedRef")
-		createdService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp,
+		createdService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongService)
 				s.Spec.KongServiceAPISpec.Host = host
@@ -277,5 +287,63 @@ func TestKongService(t *testing.T) {
 			}
 			return c.Status == metav1.ConditionFalse && c.Reason == "FailedToCreate"
 		}, "KongService should get the Programmed condition set to status=False due to using invalid (KIC) ControlPlaneRef")
+	})
+
+	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
+		const (
+			id   = "service-12345"
+			host = "example.com"
+			port = int64(8081)
+		)
+
+		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
+		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+
+		t.Log("Setting up a watch for KongService events")
+		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on Service creation")
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.ServiceInput) bool {
+					return req.Host == host
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateServiceResponse{
+					Service: &sdkkonnectcomp.Service{
+						ID: lo.ToPtr(id),
+					},
+				},
+				nil,
+			)
+
+		t.Log("Creating a KongService with ControlPlaneRef type=konnectID")
+		created := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectIDControlPlaneRef(cp),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.KongServiceAPISpec.Host = host
+			},
+		)
+		t.Log("Checking SDK KongService operations")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.ServicesSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+
+		t.Log("Waiting for object to be programmed and get Konnect ID")
+		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),
+			fmt.Sprintf("KongService didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
+
+		t.Log("Deleting KonnectGatewayControlPlane")
+		require.NoError(t, clientNamespaced.Delete(ctx, cp))
+
+		t.Log("Waiting for Service to be get Programmed and ControlPlaneRefValid conditions with status=False")
+		watchFor(t, ctx, w, watch.Modified,
+			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+			"KongService didn't get Programmed and/or ControlPlaneRefValid status condition set to False")
 	})
 }

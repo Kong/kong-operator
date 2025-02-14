@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
@@ -150,30 +149,6 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		}
 
 		return ctrl.Result{Requeue: true}, nil
-	}
-
-	var (
-		old = ent.DeepCopyObject().(TEnt)
-
-		// A cluster scoped object cannot set a namespaced object as its owner, and also we cannot set cross namespaced owner reference.
-		// So we skip setting owner reference for cluster scoped resources (KongVault).
-		// TODO: handle cross namespace refs
-		isNamespaceScoped = ent.GetNamespace() != ""
-
-		// If an entity has another owner, we should not set the owner reference as that would prevent the entity from being deleted.
-		hasNoOwners = len(ent.GetOwnerReferences()) == 0
-	)
-	if isNamespaceScoped && hasNoOwners {
-		if err := controllerutil.SetOwnerReference(cp, ent, cl.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
-		}
-	}
-
-	if err := cl.Patch(ctx, ent, client.MergeFrom(old)); err != nil {
-		if k8serrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
 	}
 
 	if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {

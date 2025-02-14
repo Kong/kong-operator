@@ -2,6 +2,8 @@ package envtest
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -73,7 +75,9 @@ func TestKongKeySet(t *testing.T) {
 	w := setupWatch[configurationv1alpha1.KongKeySetList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Log("Creating KongKeySet")
-	createdKeySet := deploy.KongKeySetAttachedToCP(t, ctx, clientNamespaced, keySetName, cp)
+	createdKeySet := deploy.KongKeySet(t, ctx, clientNamespaced, keySetName,
+		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+	)
 
 	t.Log("Waiting for KongKeySet to be programmed")
 	watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongKeySet) bool {
@@ -151,7 +155,9 @@ func TestKongKeySet(t *testing.T) {
 		}, nil)
 
 		t.Log("Creating a KeySet")
-		deploy.KongKeySetAttachedToCP(t, ctx, clientNamespaced, keySetName, cp)
+		deploy.KongKeySet(t, ctx, clientNamespaced, keySetName,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 		t.Log("Watching for KeySet to verify the created KeySet programmed")
 		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongKeySet) bool {
 			return c.GetKonnectID() == keySetID && k8sutils.IsProgrammed(c)
@@ -179,7 +185,7 @@ func TestKongKeySet(t *testing.T) {
 		w := setupWatch[configurationv1alpha1.KongKeySetList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Creating KongKeySet with ControlPlaneRef type=konnectID")
-		createdKeySet := deploy.KongKeySetAttachedToCP(t, ctx, clientNamespaced, keySetName, cp,
+		createdKeySet := deploy.KongKeySet(t, ctx, clientNamespaced, keySetName,
 			deploy.WithKonnectIDControlPlaneRef(cp),
 		)
 
@@ -201,5 +207,62 @@ func TestKongKeySet(t *testing.T) {
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.KeySetsSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
+	})
+
+	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
+		const (
+			id = "abc-12345"
+		)
+
+		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
+		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+
+		t.Log("Setting up a watch for KongKeySet events")
+		w := setupWatch[configurationv1alpha1.KongKeySetList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on KongKeySet creation")
+		sdk.KeySetsSDK.EXPECT().
+			CreateKeySet(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.KeySetInput) bool {
+					return slices.Contains(req.Tags, "test-1")
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateKeySetResponse{
+					KeySet: &sdkkonnectcomp.KeySet{
+						ID:   lo.ToPtr(id),
+						Tags: []string{"test-1"},
+					},
+				},
+				nil,
+			)
+
+		created := deploy.KongKeySet(t, ctx, clientNamespaced, "keyset-1",
+			deploy.WithKonnectIDControlPlaneRef(cp),
+			func(obj client.Object) {
+				cg := obj.(*configurationv1alpha1.KongKeySet)
+				cg.Spec.Tags = append(cg.Spec.Tags, "test-1")
+			},
+		)
+		t.Log("Checking SDK Key operations")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+
+		t.Log("Waiting for object to be programmed and get Konnect ID")
+		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),
+			fmt.Sprintf("Key didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
+
+		t.Log("Deleting KonnectGatewayControlPlane")
+		require.NoError(t, clientNamespaced.Delete(ctx, cp))
+
+		t.Log("Waiting for KongKeySet to be get Programmed and ControlPlaneRefValid conditions with status=False")
+		watchFor(t, ctx, w, watch.Modified,
+			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+			"KongKeySet didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
+		)
 	})
 }
