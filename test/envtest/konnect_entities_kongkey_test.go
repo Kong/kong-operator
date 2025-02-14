@@ -2,6 +2,8 @@ package envtest
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -77,7 +79,9 @@ func TestKongKey(t *testing.T) {
 
 	t.Run("without KongKeySet", func(t *testing.T) {
 		t.Log("Creating KongKey")
-		createdKey := deploy.KongKeyAttachedToCP(t, ctx, clientNamespaced, keyKid, keyName, cp)
+		createdKey := deploy.KongKey(t, ctx, clientNamespaced, keyKid, keyName,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 
 		t.Log("Waiting for KongKey to be programmed")
 		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongKey) bool {
@@ -159,7 +163,9 @@ func TestKongKey(t *testing.T) {
 		}, nil)
 
 		t.Log("Creating KongKey")
-		createdKey := deploy.KongKeyAttachedToCP(t, ctx, clientNamespaced, keyKid, keyName, cp)
+		createdKey := deploy.KongKey(t, ctx, clientNamespaced, keyKid, keyName,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 
 		t.Log("Waiting for KongKey to be programmed")
 		watchFor(t, ctx, w, watch.Modified, func(k *configurationv1alpha1.KongKey) bool {
@@ -180,15 +186,18 @@ func TestKongKey(t *testing.T) {
 
 	t.Run("with KongKeySet", func(t *testing.T) {
 		t.Log("Creating KongKey")
-		withKeySetRef := func(key *configurationv1alpha1.KongKey) {
-			key.Spec.KeySetRef = &configurationv1alpha1.KeySetRef{
-				Type: configurationv1alpha1.KeySetRefNamespacedRef,
-				NamespacedRef: lo.ToPtr(configurationv1alpha1.KeySetNamespacedRef{
-					Name: keySetName,
-				}),
-			}
-		}
-		createdKey := deploy.KongKeyAttachedToCP(t, ctx, clientNamespaced, keyKid, keyName, cp, withKeySetRef)
+		createdKey := deploy.KongKey(t, ctx, clientNamespaced, keyKid, keyName,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				key := obj.(*configurationv1alpha1.KongKey)
+				key.Spec.KeySetRef = &configurationv1alpha1.KeySetRef{
+					Type: configurationv1alpha1.KeySetRefNamespacedRef,
+					NamespacedRef: lo.ToPtr(configurationv1alpha1.KeySetNamespacedRef{
+						Name: keySetName,
+					}),
+				}
+			},
+		)
 
 		t.Log("Waiting for KeySetRefValid condition to be false")
 		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongKey) bool {
@@ -215,7 +224,9 @@ func TestKongKey(t *testing.T) {
 		}, nil)
 
 		t.Log("Creating KongKeySet")
-		keySet := deploy.KongKeySetAttachedToCP(t, ctx, clientNamespaced, keySetName, cp)
+		keySet := deploy.KongKeySet(t, ctx, clientNamespaced, keySetName,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 		updateKongKeySetStatusWithProgrammed(t, ctx, clientNamespaced, keySet, keySetID, cp.GetKonnectStatus().GetKonnectID())
 
 		t.Log("Waiting for KongKey to be programmed and associated with KongKeySet")
@@ -233,9 +244,12 @@ func TestKongKey(t *testing.T) {
 			})
 			keySetIDPopulated := c.Status.Konnect != nil && c.Status.Konnect.KeySetID != ""
 			exactlyOneOwnerReference := len(c.GetOwnerReferences()) == 1
-			hasOwnerRefToKeySet := c.GetOwnerReferences()[0].Name == keySet.GetName()
+			if !exactlyOneOwnerReference {
+				return false
+			}
 
-			return programmed && associated && keySetIDPopulated && exactlyOneOwnerReference && hasOwnerRefToKeySet
+			hasOwnerRefToKeySet := c.GetOwnerReferences()[0].Name == keySet.GetName()
+			return programmed && associated && keySetIDPopulated && hasOwnerRefToKeySet
 		}, "KongKey's Programmed and KeySetRefValid conditions should be true eventually")
 
 		t.Log("Waiting for KongKey to be created in the SDK")
@@ -285,8 +299,8 @@ func TestKongKey(t *testing.T) {
 		}, nil)
 
 		t.Log("Creating KongKey with ControlPlaneRef type=konnectID")
-		createdKey := deploy.KongKeyAttachedToCP(t, ctx, clientNamespaced, keyKid, keyName, cp,
-			func(k *configurationv1alpha1.KongKey) { deploy.WithKonnectIDControlPlaneRef(cp)(k) },
+		createdKey := deploy.KongKey(t, ctx, clientNamespaced, keyKid, keyName,
+			deploy.WithKonnectIDControlPlaneRef(cp),
 		)
 
 		t.Log("Waiting for KongKey to be programmed")
@@ -307,5 +321,62 @@ func TestKongKey(t *testing.T) {
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
+	})
+
+	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
+		const (
+			id = "abc-12345"
+		)
+
+		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
+		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+
+		t.Log("Setting up a watch for KongKey events")
+		w := setupWatch[configurationv1alpha1.KongKeyList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on KongKey creation")
+		sdk.KeysSDK.EXPECT().
+			CreateKey(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.KeyInput) bool {
+					return slices.Contains(req.Tags, "test-1")
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateKeyResponse{
+					Key: &sdkkonnectcomp.Key{
+						ID:   lo.ToPtr(id),
+						Tags: []string{"test-1"},
+					},
+				},
+				nil,
+			)
+
+		created := deploy.KongKey(t, ctx, clientNamespaced, "key-kid", "key-name",
+			deploy.WithKonnectIDControlPlaneRef(cp),
+			func(obj client.Object) {
+				cg := obj.(*configurationv1alpha1.KongKey)
+				cg.Spec.Tags = append(cg.Spec.Tags, "test-1")
+			},
+		)
+		t.Log("Checking SDK Key operations")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+
+		t.Log("Waiting for object to be programmed and get Konnect ID")
+		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),
+			fmt.Sprintf("Key didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
+
+		t.Log("Deleting KonnectGatewayControlPlane")
+		require.NoError(t, clientNamespaced.Delete(ctx, cp))
+
+		t.Log("Waiting for KongKey to be get Programmed and ControlPlaneRefValid conditions with status=False")
+		watchFor(t, ctx, w, watch.Modified,
+			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+			"KongKey didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
+		)
 	})
 }

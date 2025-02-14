@@ -68,7 +68,9 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			)
 		defer createCall.Unset()
 
-		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
 
 		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
@@ -141,7 +143,10 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			)
 		defer createCall.Unset()
 
-		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
+
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
 		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService)
 		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
@@ -205,7 +210,10 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		routeID := uuid.NewString()
 		pluginID := uuid.NewString()
 
-		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
+
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
 		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService)
 		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
@@ -287,12 +295,17 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		pluginID := uuid.NewString()
 		username := "test-user" + uuid.NewString()
 
-		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
+
 		t.Cleanup(func() {
 			require.NoError(t, client.IgnoreNotFound(clientNamespaced.Delete(ctx, kongService)))
 		})
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongConsumer := deploy.KongConsumerAttachedToCP(t, ctx, clientNamespaced, username, cp)
+		kongConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 		t.Cleanup(func() {
 			require.NoError(t, client.IgnoreNotFound(clientNamespaced.Delete(ctx, kongConsumer)))
 		})
@@ -374,9 +387,14 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		consumerGroupID := uuid.NewString()
 		pluginID := uuid.NewString()
 
-		kongService := deploy.KongServiceAttachedToCP(t, ctx, clientNamespaced, cp)
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
+
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced, cp)
+		kongConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
 		updateKongConsumerGroupStatusWithKonnectID(t, ctx, clientNamespaced, kongConsumerGroup, consumerGroupID, cp.GetKonnectStatus().GetKonnectID())
 
 		sdk.PluginSDK.EXPECT().

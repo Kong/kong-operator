@@ -2,6 +2,7 @@ package envtest
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -69,7 +70,9 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	w := setupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Log("Creating KongDataPlaneClientCertificate")
-	createdCert := deploy.KongDataPlaneClientCertificateAttachedToCP(t, ctx, clientNamespaced, cp)
+	createdCert := deploy.KongDataPlaneClientCertificateAttachedToCP(t, ctx, clientNamespaced,
+		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+	)
 
 	t.Log("Waiting for KongDataPlaneClientCertificate to be programmed")
 	watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
@@ -116,7 +119,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		}, nil)
 
 		t.Log("Creating KongDataPlaneClientCertificate with ControlPlaneRef type=konnectID")
-		createdCert := deploy.KongDataPlaneClientCertificateAttachedToCP(t, ctx, clientNamespaced, cp,
+		createdCert := deploy.KongDataPlaneClientCertificateAttachedToCP(t, ctx, clientNamespaced,
 			deploy.WithKonnectIDControlPlaneRef(cp),
 		)
 
@@ -138,6 +141,57 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.CACertificatesSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
+	})
 
+	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
+		const (
+			id = "abc-12345"
+		)
+
+		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
+		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+
+		t.Log("Setting up a watch for KongDataPlaneClientCertificate events")
+		w := setupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on KongDataPlaneClientCertificate creation")
+		sdk.DataPlaneCertificatesSDK.EXPECT().
+			CreateDataplaneCertificate(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.Anything,
+			).
+			Return(
+				&sdkkonnectops.CreateDataplaneCertificateResponse{
+					DataPlaneClientCertificate: &sdkkonnectcomp.DataPlaneClientCertificate{
+						Item: &sdkkonnectcomp.DataPlaneClientCertificateItem{
+							ID: lo.ToPtr(id),
+						},
+					},
+				},
+				nil,
+			)
+
+		created := deploy.KongDataPlaneClientCertificateAttachedToCP(t, ctx, clientNamespaced,
+			deploy.WithKonnectIDControlPlaneRef(cp),
+		)
+		t.Log("Checking SDK DataPlaneClientCertificate operations")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.DataPlaneCertificatesSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+
+		t.Log("Waiting for object to be programmed and get Konnect ID")
+		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),
+			fmt.Sprintf("DataPlaneClientCertificate didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
+
+		t.Log("Deleting KonnectGatewayControlPlane")
+		require.NoError(t, clientNamespaced.Delete(ctx, cp))
+
+		t.Log("Waiting for DataPlaneClientCertificate to be get Programmed and ControlPlaneRefValid conditions with status=False")
+		watchFor(t, ctx, w, watch.Modified,
+			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+			"KongDataPlaneClientCertificate didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
+		)
 	})
 }
