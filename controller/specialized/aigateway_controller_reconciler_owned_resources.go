@@ -5,13 +5,16 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
@@ -194,6 +197,14 @@ func (r *AIGatewayReconciler) configurePlugins(
 	if aiGateway.Spec.CloudProviderCredentials.Namespace != nil {
 		credentialSecretNamespace = *aiGateway.Spec.CloudProviderCredentials.Namespace
 	}
+
+	if !r.secretReferenceAllowedByReferenceGrants(ctx, logger, aiGateway, credentialSecretNamespace, credentialSecretName) {
+		log.Info(logger, "Referencing Secret is not allowed by ReferenceGrants",
+			"secret_namespace", credentialSecretNamespace, "secret_name", credentialSecretName)
+		return false, fmt.Errorf("Referencing Secret %s/%s is not allowed by ReferenceGrants",
+			credentialSecretNamespace, credentialSecretName)
+	}
+
 	credentialSecret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: credentialSecretNamespace, Name: credentialSecretName}, credentialSecret); err != nil {
 		if k8serrors.IsNotFound(err) {
@@ -262,4 +273,38 @@ func (r *AIGatewayReconciler) configurePlugins(
 	}
 
 	return changes, nil
+}
+
+func (r *AIGatewayReconciler) secretReferenceAllowedByReferenceGrants(
+	ctx context.Context,
+	logger logr.Logger,
+	aigateway *v1alpha1.AIGateway,
+	secretNamespace string,
+	secretName string,
+) bool {
+	// Same namespace is always allowed.
+	if aigateway.Namespace == secretNamespace {
+		return true
+	}
+
+	// list referencegrants and check if the reference is allowed.
+	from := gatewayv1beta1.ReferenceGrantFrom{
+		Group:     gatewayv1beta1.Group(v1alpha1.AIGatewayGVR().Group),
+		Kind:      gatewayv1beta1.Kind(aigateway.Kind),
+		Namespace: gatewayv1beta1.Namespace(aigateway.Namespace),
+	}
+	to := gatewayv1beta1.ReferenceGrantTo{
+		Group: gatewayv1.Group(corev1.GroupName),
+		Kind:  gatewayv1.Kind("Secret"),
+		Name:  lo.ToPtr(gatewayv1beta1.ObjectName(secretName)),
+	}
+	allowed, err := kubernetes.AllowedByReferenceGrants(ctx, r.Client, from, secretNamespace, to)
+	if err != nil {
+		log.Error(logger, err, "failed to check reference grant from aigateway to secret",
+			"secret_namespace", secretNamespace,
+			"secret_name", secretName,
+		)
+		return false
+	}
+	return allowed
 }
