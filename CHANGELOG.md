@@ -57,6 +57,10 @@
   Users can now specify credentials for `KongConsumer`s in `Secret`s and reference
   them in `KongConsumer`s' `credentials` field.
   - `basic-auth` [#1120](https://github.com/Kong/gateway-operator/pull/1120)
+- Added prometheus metrics for Konnect entity operations in the metrics server:
+  - `gateway_operator_konnect_entity_operation_count` for number of operations.
+  - `gateway_operator_konnect_entity_operation_duration_milliseconds` for duration of operations.
+  [#953](https://github.com/Kong/gateway-operator/pull/953)
 
 ### Changed
 
@@ -140,13 +144,6 @@
   [#1115](https://github.com/Kong/gateway-operator/pull/1115)
 - Fix setting `DataPlane`'s readiness probe using `GatewayConfiguration`.
   [#1118](https://github.com/Kong/gateway-operator/pull/1118)
-
-### Added
-
-- Added prometheus metrics for Konnect entity operations in the metrics server:
-  - `gateway_operator_konnect_entity_operation_count` for number of operations.
-  - `gateway_operator_konnect_entity_operation_duration_milliseconds` for duration of operations.
-  [#953](https://github.com/Kong/gateway-operator/pull/953)
 
 ## [v1.4.2]
 
