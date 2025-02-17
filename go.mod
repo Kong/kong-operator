@@ -41,7 +41,7 @@ require (
 	// TODO: Use official release when
 	// https://github.com/oras-project/oras-go/pull/850 becomes part of it.
 	oras.land/oras-go/v2 v2.5.1-0.20250115103459-a15da41d19be
-	sigs.k8s.io/controller-runtime v0.20.1
+	sigs.k8s.io/controller-runtime v0.20.2
 	sigs.k8s.io/gateway-api v1.2.1
 	sigs.k8s.io/kustomize/api v0.19.0
 )
@@ -107,7 +107,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731 // indirect
-	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
+	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
