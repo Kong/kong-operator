@@ -14,9 +14,9 @@ func NewServerURL[T any](u string) ServerURL {
 	// NOTE: Code below tries to determine if we need a global API endpoint for the given type.
 	// Thus far there's no way to determine that programmatically (easily).
 	var t T
+	// TODO: add more types here that target the global API endpoint.
 	switch any(t).(type) {
 	case konnectv1alpha1.KonnectCloudGatewayNetwork:
-		// TODO: add more types here that target the global API endpoint.
 		u = replaceFirstSegmentToGlobal(u)
 	default:
 	}
@@ -37,6 +37,10 @@ func (s ServerURL) String() string {
 	return string(s)
 }
 
+// replaceFirstSegmentToGlobal replaces the first segment of the hostname to "global".
+// For example:
+// - "us.api.konghq.com" -> "global.api.konghq.com"
+// - "eu.api.konghq.com" -> "global.api.konghq.com"
 func replaceFirstSegmentToGlobal(u string) string {
 	parts := strings.Split(u, ".")
 	if len(parts) == 0 {
