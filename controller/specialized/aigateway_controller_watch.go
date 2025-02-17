@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -15,7 +16,6 @@ import (
 	"github.com/kong/gateway-operator/api/v1alpha1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
-	"github.com/samber/lo"
 )
 
 // -----------------------------------------------------------------------------
@@ -81,6 +81,8 @@ func (r *AIGatewayReconciler) listAIGatewaysForGatewayClass(ctx context.Context,
 	return
 }
 
+// listAIGatewaysForReferenceGrants lists AIGateways whose group, kind and namespace appeared in `spec.from` of ReferenceGrants.
+// The listed AIGateways in are allowed to reference the resources in the `spec.to` of the ReferenceGrant.
 func (r *AIGatewayReconciler) listAIGatewaysForReferenceGrants(ctx context.Context, obj client.Object) []reconcile.Request {
 	referenceGrant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
 	if !ok {
@@ -122,6 +124,8 @@ func (r *AIGatewayReconciler) listAIGatewaysForReferenceGrants(ctx context.Conte
 	return reqs
 }
 
+// referenceGrantReferencesAIGateway is the predicate function for watching ReferenceGrants.
+// It returns true if `AIGateway` type is included in the `spec.from`.
 func referenceGrantReferencesAIGateway(obj client.Object) bool {
 	referenceGrant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
 	if !ok {

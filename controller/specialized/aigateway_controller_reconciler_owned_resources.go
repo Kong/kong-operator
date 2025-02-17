@@ -198,6 +198,7 @@ func (r *AIGatewayReconciler) configurePlugins(
 		credentialSecretNamespace = *aiGateway.Spec.CloudProviderCredentials.Namespace
 	}
 
+	// check if referencing the credential secret is allowed by referencegrants.
 	if !r.secretReferenceAllowedByReferenceGrants(ctx, logger, aiGateway, credentialSecretNamespace, credentialSecretName) {
 		log.Info(logger, "Referencing Secret is not allowed by ReferenceGrants",
 			"secret_namespace", credentialSecretNamespace, "secret_name", credentialSecretName)
@@ -275,6 +276,8 @@ func (r *AIGatewayReconciler) configurePlugins(
 	return changes, nil
 }
 
+// secretReferenceAllowedByReferenceGrants returns true if the AIGateway is allowed to references the Secret `secretNamespace/secretName`.
+// Returns true if they are in the same namespace, or there is any RefernceGrant allowing it.
 func (r *AIGatewayReconciler) secretReferenceAllowedByReferenceGrants(
 	ctx context.Context,
 	logger logr.Logger,

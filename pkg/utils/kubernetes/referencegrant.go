@@ -32,7 +32,7 @@ func AllowedByReferenceGrants(
 	}
 	for _, referenceGrant := range referenceGrantList.Items {
 		// If the `spec.from` does not contain the input `from`, we skip the ReferenceGrant
-		// becuase it is impossible to grant the reference to the input `from`.
+		// because it is impossible to grant the reference to the input `from`.
 		if !lo.ContainsBy(referenceGrant.Spec.From, func(refGrantFrom gatewayv1beta1.ReferenceGrantFrom) bool {
 			return isSameGroup(refGrantFrom.Group, from.Group) &&
 				refGrantFrom.Kind == from.Kind &&
@@ -45,6 +45,7 @@ func AllowedByReferenceGrants(
 		if lo.ContainsBy(referenceGrant.Spec.To, func(refGrantTo gatewayv1beta1.ReferenceGrantTo) bool {
 			return isSameGroup(refGrantTo.Group, to.Group) &&
 				refGrantTo.Kind == to.Kind &&
+				// check if the name matches: allow if `spec.to` has no name, or they both have name and equal.
 				(refGrantTo.Name == nil || (to.Name != nil && *refGrantTo.Name == *to.Name))
 		}) {
 			return true, nil
@@ -54,6 +55,7 @@ func AllowedByReferenceGrants(
 	return false, nil
 }
 
+// isSameGroup returns true if the two `Group`s are the same. `core` and empty are equivalent.
 func isSameGroup(group1, group2 gatewayv1beta1.Group) bool {
 	if group1 == gatewayv1beta1.Group("core") {
 		group1 = gatewayv1beta1.Group("")
