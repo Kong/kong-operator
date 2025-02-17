@@ -24,7 +24,7 @@ func IndexOptionsForCredentialsBasicAuth() []ReconciliationIndexOption {
 		{
 			IndexObject:  &configurationv1alpha1.KongCredentialBasicAuth{},
 			IndexField:   IndexFieldKongCredentialBasicAuthReferencesSecret,
-			ExtractValue: kongCredentialBasicAuthReferencesSecret,
+			ExtractValue: kongCredentialReferencesSecret[configurationv1alpha1.KongCredentialBasicAuth],
 		},
 	}
 }
@@ -36,21 +36,4 @@ func kongCredentialBasicAuthReferencesConsumer(obj client.Object) []string {
 		return nil
 	}
 	return []string{cred.Spec.ConsumerRef.Name}
-}
-
-// kongCredentialBasicAuthReferencesSecret returns the name of Secret which was
-// used to populate this (managed) credential resource.
-func kongCredentialBasicAuthReferencesSecret(obj client.Object) []string {
-	cred, ok := obj.(*configurationv1alpha1.KongCredentialBasicAuth)
-	if !ok {
-		return nil
-	}
-
-	var ret []string
-	for _, or := range cred.OwnerReferences {
-		if or.Kind == "Secret" {
-			ret = append(ret, or.Name)
-		}
-	}
-	return ret
 }

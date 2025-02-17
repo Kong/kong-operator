@@ -13,8 +13,12 @@ import (
 // SupportedCredentialType is a generic type constraint that all Kong credential
 // types must implement.
 type SupportedCredentialType interface {
-	configurationv1alpha1.KongCredentialBasicAuth
+	configurationv1alpha1.KongCredentialBasicAuth |
+		configurationv1alpha1.KongCredentialAPIKey
 	// TODO: add other credential types
+	// TODO: https://github.com/Kong/gateway-operator/issues/1124
+	// TODO: https://github.com/Kong/gateway-operator/issues/1125
+	// TODO: https://github.com/Kong/gateway-operator/issues/1126
 
 	GetTypeName() string
 }
