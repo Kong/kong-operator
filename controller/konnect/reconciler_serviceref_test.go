@@ -19,7 +19,10 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-type handleServiceRefTestCase[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]] struct {
+type handleServiceRefTestCase[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+] struct {
 	name                string
 	ent                 TEnt
 	objects             []client.Object
@@ -149,9 +152,8 @@ func TestHandleServiceRef(t *testing.T) {
 					}), "KongRoute does not have KongServiceRefValid condition set to True"
 				},
 				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
-					return lo.ContainsBy(ks.OwnerReferences, func(o metav1.OwnerReference) bool {
-						return o.Kind == "KongService" && o.Name == "svc-ok"
-					}), "OwnerReference of KongRoute is not set"
+					return len(ks.OwnerReferences) == 0,
+						"OwnerReference of KongRoute is set but shouldn't be"
 				},
 				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
 					return ks.Status.Konnect.ServiceID == "12345",
@@ -280,7 +282,8 @@ func testHandleServiceRef[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](
-	t *testing.T, testCases []handleServiceRefTestCase[T, TEnt],
+	t *testing.T,
+	testCases []handleServiceRefTestCase[T, TEnt],
 ) {
 	t.Helper()
 

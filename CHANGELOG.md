@@ -164,6 +164,8 @@
   do not get an owner relationship set to the `ControlPlane` anymore hence
   they are not deleted when the `ControlPlane` is deleted.
   [#1099](https://github.com/Kong/gateway-operator/pull/1099)
+- Remove the owner relationship between `KongService` and `KongRoute`.
+  [#1178](https://github.com/Kong/gateway-operator/pull/1178)
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 

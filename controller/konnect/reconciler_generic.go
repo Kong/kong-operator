@@ -179,18 +179,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	res, err = handleKongServiceRef(ctx, r.Client, ent)
 	if err != nil {
 		if !errors.As(err, &ReferencedKongServiceIsBeingDeleted{}) {
-			return ctrl.Result{}, err
-		}
-
-		// If the referenced KongService is being deleted (has a non zero deletion timestamp)
-		// then we remove the entity if it has not been deleted yet (deletion timestamp is zero).
-		// We do this because Konnect blocks deletion of entities like Services
-		// if they contain entities like Routes.
-		if ent.GetDeletionTimestamp().IsZero() {
-			if err := r.Client.Delete(ctx, ent); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to delete %s: %w", client.ObjectKeyFromObject(ent), err)
-			}
-			return ctrl.Result{}, nil
+			log.Error(logger, err, "error handling KongService ref")
 		}
 	} else if !res.IsZero() {
 		return res, nil
@@ -491,26 +480,14 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if res, err := ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecoder, ent); err != nil {
-		setServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
-		if errUpd := r.Client.Status().Update(ctx, ent); errUpd != nil {
-			if k8serrors.IsConflict(errUpd) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-			return ctrl.Result{}, fmt.Errorf("failed to update in cluster resource after Konnect update: %w %w", errUpd, err)
-		}
-
+	res, err = ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecoder, ent)
+	if res, errHandleStatus := handleStatusUpdate(ctx, ent, r.Client, serverURL, apiAuth.Status.OrganizationID, err); errHandleStatus != nil || !res.IsZero() {
+		return res, errHandleStatus
+	}
+	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update object: %w", err)
 	} else if !res.IsZero() {
 		return res, nil
-	}
-
-	setServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
-	if err := r.Client.Status().Update(ctx, ent); err != nil {
-		if k8serrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("failed to update in cluster resource after Konnect update: %w", err)
 	}
 
 	// NOTE: We requeue here to keep enforcing the state of the resource in Konnect.
@@ -519,6 +496,27 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	return ctrl.Result{
 		RequeueAfter: r.SyncPeriod,
 	}, nil
+}
+
+func handleStatusUpdate[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	ctx context.Context,
+	ent TEnt,
+	cl client.StatusClient,
+	serverURL ops.ServerURL,
+	orgID string,
+	err error,
+) (ctrl.Result, error) {
+	setServerURLAndOrgID(ent, serverURL, orgID)
+	if errUpd := cl.Status().Update(ctx, ent); errUpd != nil {
+		if k8serrors.IsConflict(errUpd) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("failed to update in cluster resource after Konnect update: %w %w", errUpd, err)
+	}
+	return ctrl.Result{}, nil
 }
 
 func setServerURLAndOrgID(
@@ -966,6 +964,8 @@ func clearInstanceFromError(err error) error {
 	var errBadRequest *sdkkonnecterrs.BadRequestError
 	if errors.As(err, &errBadRequest) {
 		errBadRequest.Instance = ""
+		return errBadRequest
 	}
-	return errBadRequest
+
+	return err
 }

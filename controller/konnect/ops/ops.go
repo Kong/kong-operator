@@ -113,6 +113,7 @@ func Create[
 	var (
 		errRelationsFailed KonnectEntityCreatedButRelationsFailedError
 		errSDK             *sdkkonnecterrs.SDKError
+		errGet             error
 	)
 	switch {
 	case ErrorIsCreateConflict(err):
@@ -121,7 +122,7 @@ func Create[
 		var id string
 		switch ent := any(e).(type) {
 		case *konnectv1alpha1.KonnectGatewayControlPlane:
-			id, err = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+			id, errGet = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 			// NOTE: since Cloud Gateways resource do not support labels/tags,
 			// we can't reliably get the Konnect ID for a Cloud Gateway Network
@@ -132,41 +133,41 @@ func Create[
 			// TODO: can't get the ID for a DataPlaneGroupConfiguration
 			// as this resource type does not support labels/tags.
 		case *configurationv1alpha1.KongService:
-			id, err = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
+			id, errGet = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
 		case *configurationv1alpha1.KongRoute:
-			id, err = getKongRouteForUID(ctx, sdk.GetRoutesSDK(), ent)
+			id, errGet = getKongRouteForUID(ctx, sdk.GetRoutesSDK(), ent)
 		case *configurationv1alpha1.KongSNI:
-			id, err = getKongSNIForUID(ctx, sdk.GetSNIsSDK(), ent)
+			id, errGet = getKongSNIForUID(ctx, sdk.GetSNIsSDK(), ent)
 		case *configurationv1.KongConsumer:
-			id, err = getKongConsumerForUID(ctx, sdk.GetConsumersSDK(), ent)
+			id, errGet = getKongConsumerForUID(ctx, sdk.GetConsumersSDK(), ent)
 		case *configurationv1beta1.KongConsumerGroup:
-			id, err = getKongConsumerGroupForUID(ctx, sdk.GetConsumerGroupsSDK(), ent)
+			id, errGet = getKongConsumerGroupForUID(ctx, sdk.GetConsumerGroupsSDK(), ent)
 		case *configurationv1alpha1.KongKeySet:
-			id, err = getKongKeySetForUID(ctx, sdk.GetKeySetsSDK(), ent)
+			id, errGet = getKongKeySetForUID(ctx, sdk.GetKeySetsSDK(), ent)
 		case *configurationv1alpha1.KongKey:
-			id, err = getKongKeyForUID(ctx, sdk.GetKeysSDK(), ent)
+			id, errGet = getKongKeyForUID(ctx, sdk.GetKeysSDK(), ent)
 		case *configurationv1alpha1.KongUpstream:
-			id, err = getKongUpstreamForUID(ctx, sdk.GetUpstreamsSDK(), ent)
+			id, errGet = getKongUpstreamForUID(ctx, sdk.GetUpstreamsSDK(), ent)
 		case *configurationv1alpha1.KongTarget:
-			id, err = getKongTargetForUID(ctx, sdk.GetTargetsSDK(), ent)
+			id, errGet = getKongTargetForUID(ctx, sdk.GetTargetsSDK(), ent)
 		case *configurationv1alpha1.KongPluginBinding:
-			id, err = getPluginForUID(ctx, sdk.GetPluginSDK(), ent)
+			id, errGet = getPluginForUID(ctx, sdk.GetPluginSDK(), ent)
 		case *configurationv1alpha1.KongVault:
-			id, err = getKongVaultForUID(ctx, sdk.GetVaultSDK(), ent)
+			id, errGet = getKongVaultForUID(ctx, sdk.GetVaultSDK(), ent)
 		case *configurationv1alpha1.KongCredentialHMAC:
-			id, err = getKongCredentialHMACForUID(ctx, sdk.GetHMACCredentialsSDK(), ent)
+			id, errGet = getKongCredentialHMACForUID(ctx, sdk.GetHMACCredentialsSDK(), ent)
 		case *configurationv1alpha1.KongCredentialJWT:
-			id, err = getKongCredentialJWTForUID(ctx, sdk.GetJWTCredentialsSDK(), ent)
+			id, errGet = getKongCredentialJWTForUID(ctx, sdk.GetJWTCredentialsSDK(), ent)
 		case *configurationv1alpha1.KongCredentialBasicAuth:
-			id, err = getKongCredentialBasicAuthForUID(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
+			id, errGet = getKongCredentialBasicAuthForUID(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
 		case *configurationv1alpha1.KongCredentialAPIKey:
-			id, err = getKongCredentialAPIKeyForUID(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
+			id, errGet = getKongCredentialAPIKeyForUID(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
 		case *configurationv1alpha1.KongCredentialACL:
-			id, err = getKongCredentialACLForUID(ctx, sdk.GetACLCredentialsSDK(), ent)
+			id, errGet = getKongCredentialACLForUID(ctx, sdk.GetACLCredentialsSDK(), ent)
 		case *configurationv1alpha1.KongCertificate:
-			id, err = getKongCertificateForUID(ctx, sdk.GetCertificatesSDK(), ent)
+			id, errGet = getKongCertificateForUID(ctx, sdk.GetCertificatesSDK(), ent)
 		case *configurationv1alpha1.KongCACertificate:
-			id, err = getKongCACertificateForUID(ctx, sdk.GetCACertificatesSDK(), ent)
+			id, errGet = getKongCACertificateForUID(ctx, sdk.GetCACertificatesSDK(), ent)
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:
@@ -175,10 +176,13 @@ func Create[
 			)
 		}
 
-		if err == nil && id != "" {
+		if errGet == nil && id != "" {
 			e.SetKonnectID(id)
 			SetKonnectEntityProgrammedCondition(e)
 		} else {
+			if errGet != nil {
+				err = fmt.Errorf("trying to find a matching Konnect entity matching the ID failed: %w, %w", errGet, err)
+			}
 			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
 		}
 
