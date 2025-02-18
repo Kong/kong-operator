@@ -11,6 +11,7 @@ packages:
   github.com/kong/gateway-operator/controller/konnect/ops/sdk:
     interfaces:
       ControlPlaneSDK:
+      CloudGatewaysSDK:
       ControlPlaneGroupSDK:
       ServicesSDK:
       RoutesSDK:

@@ -15,6 +15,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -105,7 +106,7 @@ func TestHandleControlPlaneRef(t *testing.T) {
 				Name:      "svc-cp-ok",
 			},
 			Spec: configurationv1alpha1.KongServiceSpec{
-				ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 						Name: "cp-ok",
@@ -120,7 +121,7 @@ func TestHandleControlPlaneRef(t *testing.T) {
 				Name:      "svc-cp-not-found",
 			},
 			Spec: configurationv1alpha1.KongServiceSpec{
-				ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 						Name: "cp-not-found",
@@ -135,7 +136,7 @@ func TestHandleControlPlaneRef(t *testing.T) {
 				Name:      "svc-cp-incompatible",
 			},
 			Spec: configurationv1alpha1.KongServiceSpec{
-				ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 						Name: "cp-group",
@@ -150,7 +151,7 @@ func TestHandleControlPlaneRef(t *testing.T) {
 				Name:      "svc-cp-not-programmed",
 			},
 			Spec: configurationv1alpha1.KongServiceSpec{
-				ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 						Name: "cp-not-programmed",

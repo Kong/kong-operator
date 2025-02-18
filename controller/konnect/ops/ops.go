@@ -32,6 +32,8 @@ type Op string
 const (
 	// CreateOp is the operation type for creating a Konnect entity.
 	CreateOp Op = "create"
+	// GetOp is the operation type for getting a Konnect entity.
+	GetOp Op = "get"
 	// UpdateOp is the operation type for updating a Konnect entity.
 	UpdateOp Op = "update"
 	// DeleteOp is the operation type for deleting a Konnect entity.
@@ -59,6 +61,8 @@ func Create[
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		err = createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
+		err = createKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -115,6 +119,8 @@ func Create[
 		switch ent := any(e).(type) {
 		case *konnectv1alpha1.KonnectGatewayControlPlane:
 			id, err = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
+			id, err = getKonnectNetworkForUID(ctx, sdk.GetCloudGatewaysSDK(), ent)
 		case *configurationv1alpha1.KongService:
 			id, err = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
 		case *configurationv1alpha1.KongRoute:
@@ -226,6 +232,8 @@ func Delete[
 	switch ent := any(ent).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		err = deleteControlPlane(ctx, sdk.GetControlPlaneSDK(), ent)
+	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
+		err = deleteKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = deleteService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -368,6 +376,8 @@ func Update[
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
+		err = updateKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -490,6 +500,12 @@ func wrapErrIfKonnectOpFailed[
 	TEnt constraints.EntityType[T],
 ](err error, op Op, e TEnt) error {
 	if err != nil {
+		var errBadRequest *sdkkonnecterrs.BadRequestError
+		if errors.As(err, &errBadRequest) {
+			errBadRequest.Instance = ""
+			err = errBadRequest
+		}
+
 		entityTypeName := constraints.EntityTypeName[T]()
 		if e == nil {
 			return fmt.Errorf("failed to %s %s: %w",

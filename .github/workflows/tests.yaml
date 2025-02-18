@@ -117,7 +117,7 @@ jobs:
       run: make test.samples
 
     - name: Verify that uninstalling operator CRDs via kustomize works
-      run: make uninstall.all
+      run: make ignore-not-found=true uninstall.all
 
   install-with-kustomize:
     runs-on: ubuntu-latest

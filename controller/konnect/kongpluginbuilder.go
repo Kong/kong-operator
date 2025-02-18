@@ -7,6 +7,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
@@ -49,7 +50,7 @@ func (b *KongPluginBindingBuilder) WithPluginRef(pluginName string) *KongPluginB
 // WithControlPlaneRef sets the control plane reference of the KongPluginBinding.
 // NOTE: Users have to ensure that the ControlPlaneRef that's set here
 // is the same across all the KongPluginBinding targets.
-func (b *KongPluginBindingBuilder) WithControlPlaneRef(ref configurationv1alpha1.ControlPlaneRef) *KongPluginBindingBuilder {
+func (b *KongPluginBindingBuilder) WithControlPlaneRef(ref commonv1alpha1.ControlPlaneRef) *KongPluginBindingBuilder {
 	b.binding.Spec.ControlPlaneRef = ref
 	return b
 }
@@ -58,8 +59,8 @@ func (b *KongPluginBindingBuilder) WithControlPlaneRef(ref configurationv1alpha1
 // NOTE: Users have to ensure that the ControlPlaneRef that's set here
 // is the same across all the KongPluginBinding targets.
 func (b *KongPluginBindingBuilder) WithControlPlaneRefKonnectNamespaced(name string) *KongPluginBindingBuilder {
-	b.binding.Spec.ControlPlaneRef = configurationv1alpha1.ControlPlaneRef{
-		Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+	b.binding.Spec.ControlPlaneRef = commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 		KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 			Name: name,
 		},

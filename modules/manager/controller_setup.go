@@ -66,6 +66,8 @@ const (
 	KonnectAPIAuthConfigurationControllerName = "KonnectAPIAuthConfiguration"
 	// KonnectGatewayControlPlaneControllerName is the name of the KonnectGatewayControlPlane controller.
 	KonnectGatewayControlPlaneControllerName = "KonnectGatewayControlPlane"
+	// KonnectCloudGatewayNetworkControllerName is the name of the KonnectCloudGatewayNetwork controller.
+	KonnectCloudGatewayNetworkControllerName = "KonnectCloudGatewayNetwork"
 	// KongServiceControllerName is the name of the KongService controller.
 	KongServiceControllerName = "KongService"
 	// KongRouteControllerName is the name of the KongRoute controller.
@@ -571,6 +573,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 
 			// Controllers responsible for creating, updating and deleting Konnect entities.
 			KonnectGatewayControlPlaneControllerName:     newKonnectEntityController[konnectv1alpha1.KonnectGatewayControlPlane](controllerFactory),
+			KonnectCloudGatewayNetworkControllerName:     newKonnectEntityController[konnectv1alpha1.KonnectCloudGatewayNetwork](controllerFactory),
 			KongServiceControllerName:                    newKonnectEntityController[configurationv1alpha1.KongService](controllerFactory),
 			KongRouteControllerName:                      newKonnectEntityController[configurationv1alpha1.KongRoute](controllerFactory),
 			KongConsumerControllerName:                   newKonnectEntityController[configurationv1.KongConsumer](controllerFactory),
@@ -697,6 +700,10 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 		{
 			Object:       &konnectv1alpha1.KonnectGatewayControlPlane{},
 			IndexOptions: konnect.IndexOptionsForKonnectGatewayControlPlane(),
+		},
+		{
+			Object:       &konnectv1alpha1.KonnectCloudGatewayNetwork{},
+			IndexOptions: konnect.IndexOptionsForKonnectCloudGatewayNetwork(),
 		},
 	}
 

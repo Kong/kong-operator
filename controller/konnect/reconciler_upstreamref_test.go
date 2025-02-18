@@ -16,6 +16,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -38,7 +39,7 @@ var testKongUpstreamOK = &configurationv1alpha1.KongUpstream{
 		Namespace: "default",
 	},
 	Spec: configurationv1alpha1.KongUpstreamSpec{
-		ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 				Name: "cp-ok",
@@ -109,7 +110,7 @@ var testKongUpstreamControlPlaneRefNotFound = &configurationv1alpha1.KongUpstrea
 		Namespace: "default",
 	},
 	Spec: configurationv1alpha1.KongUpstreamSpec{
-		ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 				Name: "cp-not-found",
@@ -141,7 +142,7 @@ var testKongUpstreamControlPlaneRefNotProgrammed = &configurationv1alpha1.KongUp
 		Namespace: "default",
 	},
 	Spec: configurationv1alpha1.KongUpstreamSpec{
-		ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 				Name: "cp-not-programmed",
@@ -390,7 +391,8 @@ func TestHandleUpstreamRef(t *testing.T) {
 }
 
 func testHandleUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
-	t *testing.T, testCases []handleUpstreamRefTestCase[T, TEnt]) {
+	t *testing.T, testCases []handleUpstreamRefTestCase[T, TEnt],
+) {
 	t.Helper()
 
 	for _, tc := range testCases {

@@ -10,6 +10,7 @@ import (
 
 type MockSDKWrapper struct {
 	ControlPlaneSDK             *MockControlPlaneSDK
+	CloudGatewaysSDK            *MockCloudGatewaysSDK
 	ControlPlaneGroupSDK        *MockControlPlaneGroupSDK
 	ServicesSDK                 *MockServicesSDK
 	RoutesSDK                   *MockRoutesSDK
@@ -156,6 +157,10 @@ func (m MockSDKWrapper) GetSNIsSDK() sdkops.SNIsSDK {
 
 func (m MockSDKWrapper) GetDataPlaneCertificatesSDK() sdkops.DataPlaneClientCertificatesSDK {
 	return m.DataPlaneCertificatesSDK
+}
+
+func (m MockSDKWrapper) GetCloudGatewaysSDK() sdkops.CloudGatewaysSDK {
+	return m.CloudGatewaysSDK
 }
 
 type MockSDKFactory struct {

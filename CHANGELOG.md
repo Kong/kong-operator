@@ -26,6 +26,17 @@
 
 ## Unreleased
 
+### Breaking Changes
+
+- Added check of whether using `Secret` in another namespace in `AIGateway`'s
+  `spec.cloudProviderCredentials` is allowed. If the `AIGateway` and the `Secret`
+  referenced in `spec.cloudProviderCredentials` are not in the same namespace,
+  there MUST be a `ReferenceGrant` in the namespace of the `Secret` that allows
+  the `AIGateway`s to reference the `Secret`.
+  This may break usage of `AIGateway`s that is already using `Secret` in
+  other namespaces as AI cloud provider credentials.
+  [#1161](https://github.com/Kong/gateway-operator/pull/1161)
+
 ### Added
 
 - Added `Name` field in `ServiceOptions` to allow specifying name of the
@@ -62,6 +73,9 @@
   - `gateway_operator_konnect_entity_operation_count` for number of operations.
   - `gateway_operator_konnect_entity_operation_duration_milliseconds` for duration of operations.
   [#953](https://github.com/Kong/gateway-operator/pull/953)
+- Added support for `KonnectCloudGatewayNetwork` CRD which can manage Konnect
+  Cloud Gateway Network entities.
+  [#1136](https://github.com/Kong/gateway-operator/pull/1136)
 
 ### Changed
 

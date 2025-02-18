@@ -15,6 +15,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -37,7 +38,7 @@ var testKongServiceOK = &configurationv1alpha1.KongService{
 		Namespace: "default",
 	},
 	Spec: configurationv1alpha1.KongServiceSpec{
-		ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 				Name: "cp-ok",
@@ -66,7 +67,7 @@ var testKongServiceWithCPRefUnprogrammed = &configurationv1alpha1.KongService{
 		Namespace: "default",
 	},
 	Spec: configurationv1alpha1.KongServiceSpec{
-		ControlPlaneRef: &configurationv1alpha1.ControlPlaneRef{
+		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 				Name: "cp-not-programmed",

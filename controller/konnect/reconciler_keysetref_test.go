@@ -16,6 +16,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -45,7 +46,7 @@ func TestHandleKeySetRef(t *testing.T) {
 				Namespace: "ns",
 			},
 		}
-		cpRef = &configurationv1alpha1.ControlPlaneRef{
+		cpRef = &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 				Name: "cp-1",
