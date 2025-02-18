@@ -111,12 +111,6 @@ func NewKonnectEntityReconciler[
 	return r
 }
 
-const (
-	// MaxConcurrentReconciles is the maximum number of concurrent reconciles
-	// that the controller will allow.
-	MaxConcurrentReconciles = 8
-)
-
 // SetupWithManager sets up the controller with the given manager.
 func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	var (
@@ -127,7 +121,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(ctx context.Context,
 				NewControllerManagedBy(mgr).
 				Named(entityTypeName).
 				WithOptions(
-				controller.Options{},
+				controller.Options{
+					MaxConcurrentReconciles: int(r.MaxConcurrentReconciles), //nolint:gosec
+				},
 			)
 	)
 
