@@ -9,7 +9,7 @@ go 1.24.0
 retract v1.2.2
 
 require (
-	github.com/Kong/sdk-konnect-go v0.2.10
+	github.com/Kong/sdk-konnect-go v0.2.12
 	github.com/Masterminds/semver v1.5.0
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/go-logr/logr v1.4.2
