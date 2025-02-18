@@ -5,11 +5,13 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/gateway-operator/api/v1alpha1"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -77,4 +79,59 @@ func (r *AIGatewayReconciler) listAIGatewaysForGatewayClass(ctx context.Context,
 	}
 
 	return
+}
+
+// listAIGatewaysForReferenceGrants lists AIGateways whose group, kind and namespace appeared in `spec.from` of ReferenceGrants.
+// The listed AIGateways in are allowed to reference the resources in the `spec.to` of the ReferenceGrant.
+func (r *AIGatewayReconciler) listAIGatewaysForReferenceGrants(ctx context.Context, obj client.Object) []reconcile.Request {
+	referenceGrant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+	if !ok {
+		ctrllog.FromContext(ctx).Error(
+			operatorerrors.ErrUnexpectedObject,
+			"failed to run map funcs",
+			"expected", "ReferenceGrant", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+
+	namespaces := []string{}
+	for _, from := range referenceGrant.Spec.From {
+		if from.Group != gatewayv1beta1.Group(v1alpha1.SchemeGroupVersion.Group) || from.Kind != gatewayv1beta1.Kind("AIGateway") {
+			continue
+		}
+		ns := string(from.Namespace)
+		namespaces = append(namespaces, ns)
+	}
+
+	namespaces = lo.Uniq(namespaces)
+	reqs := []reconcile.Request{}
+	for _, ns := range namespaces {
+		aigateways := new(v1alpha1.AIGatewayList)
+		namespacedClient := client.NewNamespacedClient(r.Client, ns)
+		if err := namespacedClient.List(ctx, aigateways); err != nil {
+			ctrllog.FromContext(ctx).Error(err, "could not list aigateways in namespace", "namespace", ns)
+			return nil
+		}
+		for _, aigateway := range aigateways.Items {
+			reqs = append(reqs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: aigateway.Namespace,
+					Name:      aigateway.Name,
+				},
+			})
+		}
+	}
+	return reqs
+}
+
+// referenceGrantReferencesAIGateway is the predicate function for watching ReferenceGrants.
+// It returns true if `AIGateway` type is included in the `spec.from`.
+func referenceGrantReferencesAIGateway(obj client.Object) bool {
+	referenceGrant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+	if !ok {
+		return false
+	}
+	return lo.ContainsBy(referenceGrant.Spec.From, func(from gatewayv1beta1.ReferenceGrantFrom) bool {
+		return from.Group == gatewayv1beta1.Group(v1alpha1.SchemeGroupVersion.Group) && from.Kind == gatewayv1beta1.Kind("AIGateway")
+	})
 }

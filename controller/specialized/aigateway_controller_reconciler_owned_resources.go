@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	secretref "github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
@@ -194,6 +196,19 @@ func (r *AIGatewayReconciler) configurePlugins(
 	if aiGateway.Spec.CloudProviderCredentials.Namespace != nil {
 		credentialSecretNamespace = *aiGateway.Spec.CloudProviderCredentials.Namespace
 	}
+
+	// check if referencing the credential secret is allowed by referencegrants.
+	msg, allowed, err := secretref.CheckReferenceGrantForSecret(ctx, r.Client, aiGateway, gatewayv1.SecretObjectReference{
+		Name:      gatewayv1.ObjectName(credentialSecretName),
+		Namespace: lo.ToPtr(gatewayv1.Namespace(credentialSecretNamespace)),
+	})
+	if err != nil {
+		return false, err
+	}
+	if !allowed {
+		return false, fmt.Errorf("Referencing Secret %s/%s is not allowed: %s", credentialSecretNamespace, credentialSecretName, msg)
+	}
+
 	credentialSecret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: credentialSecretNamespace, Name: credentialSecretName}, credentialSecret); err != nil {
 		if k8serrors.IsNotFound(err) {
