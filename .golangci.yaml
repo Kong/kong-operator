@@ -51,19 +51,25 @@ linters-settings:
     alias:
       - pkg: k8s.io/api/([a-z])/(v[\w\d]+)
         alias: ${1}${2}
-
       - pkg: k8s.io/apimachinery/pkg/apis/meta/v1
         alias: metav1
+
       - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
         alias: gateway${1}
 
       - pkg: sigs.k8s.io/controller-runtime/pkg/log
         alias: ctrllog
-
-      - pkg: github.com/kong/gateway-operator/internal/types
-        alias: gwtypes
-      - pkg: github.com/kong/kubernetes-configuration/api/configuration/([\w\d]+)
+      
+      - pkg: github.com/kong/kubernetes-configuration/api/common/(v[\w\d]+)
+        alias: common${1}
+      - pkg: github.com/kong/kubernetes-configuration/api/gateway-operator/(v[\w\d]+)
+        alias: operator${1}
+      - pkg: github.com/kong/kubernetes-configuration/api/configuration/(v[\w\d]+)
         alias: configuration${1}
+      - pkg: github.com/kong/kubernetes-configuration/api/incubator/(v[\w\d]+)
+        alias: incubator${1}
+      - pkg: github.com/kong/kubernetes-configuration/api/konnect/(v[\w\d]+)
+        alias: konnect${1}
 
       - pkg: github.com/Kong/sdk-konnect-go/models/components
         alias: sdkkonnectcomp
@@ -71,10 +77,17 @@ linters-settings:
         alias: sdkkonnectops
       - pkg: github.com/Kong/sdk-konnect-go/models/sdkerrors
         alias: sdkkonnecterrs
+
       - pkg: github.com/kong/gateway-operator/controller/konnect/ops/sdk
         alias: sdkops
       - pkg: github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks
         alias: sdkmocks
+      - pkg: github.com/kong/gateway-operator/internal/types
+        alias: gwtypes
+      - pkg: "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+        alias: k8sutils
+      - pkg: "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+        alias: k8sresources
 
   revive:
     rules:

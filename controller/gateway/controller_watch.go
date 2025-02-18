@@ -24,7 +24,7 @@ import (
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -330,8 +330,8 @@ func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 		// This change will not be saved in the API server (i.e. user applied resource
 		// will not be changed) - which is the desired behavior - since the caller
 		// only uses the changed GatewayConfiguration to generate ControlPlane resource.
-		container = lo.ToPtr[corev1.Container](resources.GenerateControlPlaneContainer(
-			resources.GenerateContainerForControlPlaneParams{
+		container = lo.ToPtr[corev1.Container](k8sresources.GenerateControlPlaneContainer(
+			k8sresources.GenerateContainerForControlPlaneParams{
 				Image: consts.DefaultControlPlaneImage,
 			},
 		))
