@@ -4,12 +4,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	"github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 )
 
 // Install is a callback from client-gen to add the scheme to the client
 // and needs to be here because current client-gen versions (at the time
 // of writing) required it as part of their templates.
 func Install(scheme *runtime.Scheme) {
-	utilruntime.Must(v1alpha1.AddToScheme(scheme))
+	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
 }

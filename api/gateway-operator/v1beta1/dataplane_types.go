@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 )
 
 func init() {
@@ -87,7 +87,7 @@ type DataPlaneOptions struct {
 	// +optional
 	// +kubebuilder:validation:MinItems=0
 	// +kubebuilder:validation:MaxItems=1
-	Extensions []v1alpha1.ExtensionRef `json:"extensions,omitempty"`
+	Extensions []operatorv1alpha1.ExtensionRef `json:"extensions,omitempty"`
 	// PluginsToInstall is a list of KongPluginInstallation resources that
 	// will be installed and available in the DataPlane.
 	// +optional
