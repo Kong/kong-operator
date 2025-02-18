@@ -175,17 +175,6 @@ func GenerateNewClusterRoleForControlPlane_ge3_4(controlplaneName string) *rbacv
 
 			{
 				APIGroups: []string{
-					"",
-				},
-				Resources: []string{
-					"configmaps",
-				},
-				Verbs: []string{
-					"get", "list", "watch", "create", "update", "patch", "delete",
-				},
-			},
-			{
-				APIGroups: []string{
 					"coordination.k8s.io",
 				},
 				Resources: []string{
