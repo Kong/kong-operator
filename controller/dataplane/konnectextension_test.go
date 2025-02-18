@@ -20,7 +20,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 )
 
 func TestApplyKonnectExtension(t *testing.T) {
@@ -82,7 +82,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 							Name: "cluster-cert-secret",
 						},
 					},
-					ControlPlaneRef: configurationv1alpha1.ControlPlaneRef{
+					ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
 						KonnectID: lo.ToPtr("konnect-id"),
 					},
 					ControlPlaneRegion: "us-west",
@@ -154,7 +154,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 							Name: "cluster-cert-secret",
 						},
 					},
-					ControlPlaneRef: configurationv1alpha1.ControlPlaneRef{
+					ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
 						KonnectID: lo.ToPtr("konnect-id"),
 					},
 					ControlPlaneRegion: "us-west",
@@ -199,7 +199,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 							Name: "cluster-cert-secret",
 						},
 					},
-					ControlPlaneRef: configurationv1alpha1.ControlPlaneRef{
+					ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
 						KonnectID: lo.ToPtr("konnect-id"),
 					},
 					ControlPlaneRegion: "us-west",
@@ -263,7 +263,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 							Name: "cluster-cert-secret",
 						},
 					},
-					ControlPlaneRef: configurationv1alpha1.ControlPlaneRef{
+					ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
 						KonnectID: lo.ToPtr("konnect-id"),
 					},
 					ControlPlaneRegion: "us-west",

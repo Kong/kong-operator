@@ -1,0 +1,25 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  serverURL: us.api.konghq.com
+---
+kind: KonnectCloudGatewayNetwork
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-network-1
+  namespace: default
+spec:
+  name: network1
+  cloud_gateway_provider_account_id: "1234"
+  availability_zones:
+  - us-west-1
+  cidr_block: "10.0.0.1/24"
+  region: us-west
+  konnect:
+    authRef:
+      name: konnect-api-auth

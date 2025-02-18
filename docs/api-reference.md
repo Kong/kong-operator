@@ -468,33 +468,6 @@ See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 ### Types
 
 In this section you will find types that the CRDs rely on.
-#### ControlPlaneRef
-
-
-ControlPlaneRef is the schema for the ControlPlaneRef type.
-It is used to reference a Control Plane entity.
-
-
-
-| Field | Description |
-| --- | --- |
-| `type` _string_ | Type indicates the type of the control plane being referenced. Allowed values: - konnectID - konnectNamespacedRef - kic<br /><br /> The default is kic, which implies that the Control Plane is KIC. |
-| `konnectID` _string_ | KonnectID is the schema for the KonnectID type. This field is required when the Type is konnectID. |
-| `konnectNamespacedRef` _[KonnectNamespacedRef](#konnectnamespacedref)_ | KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster. It contains the name of the Konnect Control Plane. This field is required when the Type is konnectNamespacedRef. |
-
-
-_Appears in:_
-- [KongCACertificateSpec](#kongcacertificatespec)
-- [KongCertificateSpec](#kongcertificatespec)
-- [KongDataPlaneClientCertificateSpec](#kongdataplaneclientcertificatespec)
-- [KongKeySetSpec](#kongkeysetspec)
-- [KongKeySpec](#kongkeyspec)
-- [KongPluginBindingSpec](#kongpluginbindingspec)
-- [KongRouteSpec](#kongroutespec)
-- [KongServiceSpec](#kongservicespec)
-- [KongUpstreamSpec](#kongupstreamspec)
-- [KongVaultSpec](#kongvaultspec)
-
 #### ControllerReference
 
 
@@ -2797,6 +2770,7 @@ GatewayConfigurationSpec defines the desired state of GatewayConfiguration
 | --- | --- |
 | `dataPlaneOptions` _[GatewayConfigDataPlaneOptions](#gatewayconfigdataplaneoptions)_ | DataPlaneOptions is the specification for configuration overrides for DataPlane resources that will be created for the Gateway. |
 | `controlPlaneOptions` _[ControlPlaneOptions](#controlplaneoptions)_ | ControlPlaneOptions is the specification for configuration overrides for ControlPlane resources that will be created for the Gateway. |
+| `extensions` _ExtensionRef array_ | Extensions provide additional or replacement features for the Gateway resource to influence or enhance functionality. NOTE: currently, there's only 1 extension that can be attached at the Gateway level (KonnectExtension), so the amount of extensions is limited to 1. |
 
 
 _Appears in:_
@@ -3081,6 +3055,7 @@ _Appears in:_
 Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1alpha1 API group.
 
 - [KonnectAPIAuthConfiguration](#konnectapiauthconfiguration)
+- [KonnectCloudGatewayNetwork](#konnectcloudgatewaynetwork)
 - [KonnectGatewayControlPlane](#konnectgatewaycontrolplane)
 ### KonnectAPIAuthConfiguration
 
@@ -3096,6 +3071,23 @@ KonnectAPIAuthConfiguration is the Schema for the Konnect configuration type.
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectAPIAuthConfigurationSpec](#konnectapiauthconfigurationspec)_ | Spec is the specification of the KonnectAPIAuthConfiguration resource. |
 | `status` _[KonnectAPIAuthConfigurationStatus](#konnectapiauthconfigurationstatus)_ | Status is the status of the KonnectAPIAuthConfiguration resource. |
+
+
+
+### KonnectCloudGatewayNetwork
+
+
+KonnectCloudGatewayNetwork is the Schema for the Konnect Network API.
+
+<!-- konnect_cloud_gateway_network description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `KonnectCloudGatewayNetwork`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectCloudGatewayNetworkSpec](#konnectcloudgatewaynetworkspec)_ | Spec defines the desired state of KonnectCloudGatewayNetwork. |
+| `status` _[KonnectCloudGatewayNetworkStatus](#konnectcloudgatewaynetworkstatus)_ | Status defines the observed state of KonnectCloudGatewayNetwork. |
 
 
 
@@ -3181,6 +3173,46 @@ KonnectAPIAuthType is the type of authentication used to authenticate with the K
 _Appears in:_
 - [KonnectAPIAuthConfigurationSpec](#konnectapiauthconfigurationspec)
 
+#### KonnectCloudGatewayNetworkSpec
+
+
+KonnectCloudGatewayNetworkSpec defines the desired state of KonnectCloudGatewayNetwork.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Specifies the name of the network on Konnect. |
+| `cloud_gateway_provider_account_id` _string_ | Specifies the provider Account ID. |
+| `region` _string_ | Region ID for cloud provider region. |
+| `availability_zones` _string array_ | List of availability zones that the network is attached to. |
+| `cidr_block` _string_ | CIDR block configuration for the network. |
+| `state` _[NetworkCreateState](#networkcreatestate)_ | Initial state for creating a network. |
+| `konnect` _[KonnectConfiguration](#konnectconfiguration)_ |  |
+
+
+_Appears in:_
+- [KonnectCloudGatewayNetwork](#konnectcloudgatewaynetwork)
+
+#### KonnectCloudGatewayNetworkStatus
+
+
+KonnectCloudGatewayNetworkStatus defines the observed state of KonnectCloudGatewayNetwork.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `state` _string_ | State is the current state of the network. Can be e.g. initializing, ready, terminating. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectCloudGatewayNetwork.<br /><br /> Known condition types are:<br /><br /> * "Programmed" |
+
+
+_Appears in:_
+- [KonnectCloudGatewayNetwork](#konnectcloudgatewaynetwork)
+
 #### KonnectConfiguration
 
 
@@ -3194,6 +3226,7 @@ KonnectConfiguration is the Schema for the KonnectConfiguration API.
 
 
 _Appears in:_
+- [KonnectCloudGatewayNetworkSpec](#konnectcloudgatewaynetworkspec)
 - [KonnectGatewayControlPlaneSpec](#konnectgatewaycontrolplanespec)
 
 #### KonnectEntityStatus
@@ -3211,6 +3244,7 @@ KonnectEntityStatus represents the status of a Konnect entity.
 
 
 _Appears in:_
+- [KonnectCloudGatewayNetworkStatus](#konnectcloudgatewaynetworkstatus)
 - [KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnectentitystatuswithcontrolplaneandcertificaterefs)
 - [KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)
 - [KonnectEntityStatusWithControlPlaneAndKeySetRef](#konnectentitystatuswithcontrolplaneandkeysetref)

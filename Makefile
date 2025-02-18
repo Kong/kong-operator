@@ -503,7 +503,7 @@ install-gateway-api-crds: go-mod-download-gateway-api kustomize
 
 .PHONY: uninstall-gateway-api-crds
 uninstall-gateway-api-crds: go-mod-download-gateway-api kustomize
-	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH) | kubectl delete -f -
+	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH) | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 # ------------------------------------------------------------------------------
 # Debug
@@ -608,7 +608,7 @@ KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$
 # Install kubernetes-configuration CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.kubernetes-configuration-crds
 install.kubernetes-configuration-crds: kustomize
-	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH) | kubectl apply -f -
+	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH) | kubectl apply --server-side -f -
 
 # Install RBACs from config/rbac into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.rbacs
@@ -629,7 +629,7 @@ uninstall: manifests kustomize uninstall-gateway-api-crds
 
 .PHONY: uninstall.kubernetes-configuration-crds
 uninstall.kubernetes-configuration-crds: kustomize
-	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH) | kubectl delete -f -
+	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH) | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 # Uninstall standard and experimental CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.

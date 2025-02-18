@@ -14,6 +14,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -40,6 +41,8 @@ func ReconciliationWatchOptionsForEntity[
 		return KongServiceReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		return KonnectGatewayControlPlaneReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
+		return KonnectCloudGatewayNetworkReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.KongPluginBinding:
 		return KongPluginBindingReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.KongUpstream:
@@ -103,7 +106,7 @@ func objHasControlPlaneRef[
 		return false
 	}
 	switch cpRef.Type {
-	case configurationv1alpha1.ControlPlaneRefKonnectID, configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef:
+	case commonv1alpha1.ControlPlaneRefKonnectID, commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
 		return true
 	default:
 		return false
@@ -116,13 +119,13 @@ func objHasControlPlaneRef[
 func controlPlaneRefIsKonnectNamespacedRef[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
-](ent TEnt) (configurationv1alpha1.ControlPlaneRef, bool) {
+](ent TEnt) (commonv1alpha1.ControlPlaneRef, bool) {
 	cpRef, ok := getControlPlaneRef(ent).Get()
 	if !ok {
-		return configurationv1alpha1.ControlPlaneRef{}, false
+		return commonv1alpha1.ControlPlaneRef{}, false
 	}
 	return cpRef, cpRef.KonnectNamespacedRef != nil &&
-		cpRef.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
+		cpRef.Type == commonv1alpha1.ControlPlaneRefKonnectNamespacedRef
 }
 
 // objectListToReconcileRequests converts a list of objects to a list of reconcile requests.

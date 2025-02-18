@@ -32,6 +32,7 @@ type KongCredential[T SupportedCredentialType] interface {
 // must implement.
 type SupportedKonnectEntityType interface {
 	konnectv1alpha1.KonnectGatewayControlPlane |
+		konnectv1alpha1.KonnectCloudGatewayNetwork |
 		configurationv1alpha1.KongService |
 		configurationv1alpha1.KongRoute |
 		configurationv1.KongConsumer |

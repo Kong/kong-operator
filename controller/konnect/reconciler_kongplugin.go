@@ -23,6 +23,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -149,8 +150,8 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				WithGenerateName(kongPlugin.Name + "-").
 				WithNamespace(kongPlugin.Namespace).
 				WithPluginRef(kongPlugin.Name).
-				WithControlPlaneRef(configurationv1alpha1.ControlPlaneRef{
-					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				WithControlPlaneRef(commonv1alpha1.ControlPlaneRef{
+					Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 						Name: cpNN.Name,
 					},
