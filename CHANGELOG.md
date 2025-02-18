@@ -29,7 +29,7 @@
 ### Breaking Changes
 
 - Added check of whether using `Secret` in another namespace in `AIGateway`'s
-  `spec.cloudProviderCredentials`. If the `AIGateway` and the `Secret`
+  `spec.cloudProviderCredentials` is allowed. If the `AIGateway` and the `Secret`
   referenced in `spec.cloudProviderCredentials` are not in the same namespace,
   there MUST be a `ReferenceGrant` in the namespace of the `Secret` that allows
   the `AIGateway`s to reference the `Secret`.

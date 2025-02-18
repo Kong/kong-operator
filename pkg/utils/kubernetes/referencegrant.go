@@ -26,6 +26,7 @@ func AllowedByReferenceGrants(
 	err := namespacedClient.List(
 		ctx,
 		&referenceGrantList,
+		// TODO: Add field selector to filter ReferenceGrants having given `from` to limit the listing scope here.
 	)
 	if err != nil {
 		return false, err

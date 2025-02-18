@@ -12,6 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 // Predicates to filter only the ReferenceGrants that allow a Gateway cross-namespace reference.
@@ -82,44 +84,25 @@ func CheckReferenceGrantForSecret(
 		return "", true, nil
 	}
 
-	referenceGrantList := &gatewayv1beta1.ReferenceGrantList{}
-	if err := c.List(ctx, referenceGrantList, client.InNamespace(*secretRef.Namespace)); err != nil {
-		return "", false, fmt.Errorf("failed to list ReferenceGrants: %w", err)
+	allowed, err := kubernetes.AllowedByReferenceGrants(
+		ctx, c,
+		gatewayv1beta1.ReferenceGrantFrom{
+			Group:     gatewayv1.Group(fromObj.GetObjectKind().GroupVersionKind().Group),
+			Kind:      gatewayv1.Kind(fromObj.GetObjectKind().GroupVersionKind().Kind),
+			Namespace: gatewayv1.Namespace(fromObj.GetNamespace()),
+		},
+		string(*secretRef.Namespace),
+		gatewayv1beta1.ReferenceGrantTo{
+			Kind: "Secret",
+			Name: lo.ToPtr(secretRef.Name),
+		},
+	)
+	if err != nil {
+		return "", false, fmt.Errorf("Failed to check if Secret  %s/%s is allowed by ReferenceGrants: %w",
+			*secretRef.Namespace, secretRef.Name, err)
 	}
-	if !isSecretCrossReferenceGranted(fromObj, secretRef.Name, referenceGrantList.Items) {
+	if !allowed {
 		return fmt.Sprintf("Secret %s/%s reference not allowed by any ReferenceGrant", *secretRef.Namespace, secretRef.Name), false, nil
 	}
 	return "", true, nil
-}
-
-func isSecretCrossReferenceGranted(
-	fromObj client.Object, secretName gatewayv1.ObjectName, referenceGrants []gatewayv1beta1.ReferenceGrant,
-) bool {
-	fromObjGroup := gatewayv1.Group(fromObj.GetObjectKind().GroupVersionKind().Group)
-	fromObjKind := gatewayv1.Kind(fromObj.GetObjectKind().GroupVersionKind().Kind)
-	fromObjNamespace := gatewayv1.Namespace(fromObj.GetNamespace())
-	for _, rg := range referenceGrants {
-		var fromFound bool
-		for _, from := range rg.Spec.From {
-			if from.Group == fromObjGroup && from.Kind == fromObjKind && from.Namespace == fromObjNamespace {
-				fromFound = true
-				break
-			}
-		}
-		if fromFound {
-			for _, to := range rg.Spec.To {
-				if to.Group != "" && to.Group != "core" {
-					continue
-				}
-				if to.Kind != "Secret" {
-					continue
-				}
-				if to.Name != nil && secretName != *to.Name {
-					continue
-				}
-				return true
-			}
-		}
-	}
-	return false
 }
