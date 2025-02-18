@@ -98,7 +98,7 @@ func CheckReferenceGrantForSecret(
 		},
 	)
 	if err != nil {
-		return "", false, fmt.Errorf("Failed to check if Secret  %s/%s is allowed by ReferenceGrants: %w",
+		return "", false, fmt.Errorf("failed to check if Secret %s/%s is allowed by ReferenceGrants: %w",
 			*secretRef.Namespace, secretRef.Name, err)
 	}
 	if !allowed {
