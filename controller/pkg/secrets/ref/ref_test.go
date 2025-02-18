@@ -1,12 +1,15 @@
 package ref
 
 import (
+	"context"
 	"testing"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -14,7 +17,7 @@ import (
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 )
 
-func TestIsSecretCrossReferenceGranted(t *testing.T) {
+func TestCheckReferenceGrantForSecret(t *testing.T) {
 	customizeReferenceGrant := func(rg gatewayv1beta1.ReferenceGrant, opts ...func(rg *gatewayv1beta1.ReferenceGrant)) gatewayv1beta1.ReferenceGrant {
 		rg = *rg.DeepCopy()
 		for _, opt := range opts {
@@ -30,6 +33,10 @@ func TestIsSecretCrossReferenceGranted(t *testing.T) {
 	)
 	referenceGrantForObj := func(obj client.Object) gatewayv1beta1.ReferenceGrant {
 		return gatewayv1beta1.ReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ref-grant-gateway",
+				Namespace: "default",
+			},
 			Spec: gatewayv1beta1.ReferenceGrantSpec{
 				From: []gatewayv1beta1.ReferenceGrantFrom{
 					{
@@ -119,6 +126,7 @@ func TestIsSecretCrossReferenceGranted(t *testing.T) {
 			forObj: objKPI,
 			referenceGrants: []gatewayv1beta1.ReferenceGrant{
 				customizeReferenceGrant(referenceGrantForObj(objGateway), func(rg *gatewayv1beta1.ReferenceGrant) {
+					rg.Name = "wrong-group"
 					rg.Spec.From[0].Group = "wrong-group"
 				}),
 				referenceGrantForObj(objKPI),
@@ -189,7 +197,20 @@ func TestIsSecretCrossReferenceGranted(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.isGranted, isSecretCrossReferenceGranted(tc.forObj, goodSecretName, tc.referenceGrants))
+			cl := fake.NewFakeClient(lo.Map(tc.referenceGrants, func(rg gatewayv1beta1.ReferenceGrant, _ int) runtime.Object {
+				return &rg
+			})...)
+			assert.NoError(t, gatewayv1beta1.Install(cl.Scheme()))
+			_, granted, err := CheckReferenceGrantForSecret(
+				context.Background(), cl,
+				tc.forObj,
+				gatewayv1.SecretObjectReference{
+					Namespace: lo.ToPtr(gatewayv1.Namespace("default")),
+					Name:      "good-secret",
+				},
+			)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.isGranted, granted)
 		})
 	}
 }
