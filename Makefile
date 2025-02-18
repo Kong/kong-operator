@@ -164,6 +164,10 @@ download.govulncheck: mise yq ## Download govulncheck locally if necessary.
 	@$(MISE) plugin install --yes -q govulncheck https://github.com/wizzardich/asdf-govulncheck.git
 	@$(MISE) install -q govulncheck@$(GOVULNCHECK_VERSION)
 
+.PHONY: download.telepresence
+download.telepresence:  ## Download telepresence locally if necessary.
+	./hack/install-telepresence.sh
+
 .PHONY: use-setup-envtest
 use-setup-envtest:
 	$(SETUP_ENVTEST) use
@@ -409,7 +413,8 @@ test.crds-validation.pretty:
 	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname ENVTEST_TEST_PATHS=./test/crdsvalidation/...
 
 .PHONY: _test.integration
-_test.integration: gotestsum
+_test.integration: gotestsum download.telepresence
+	PATH=$(PROJECT_DIR)/bin:$(PATH) \
 	GOFLAGS=$(GOFLAGS) \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
@@ -450,7 +455,8 @@ NCPU := $(shell getconf _NPROCESSORS_ONLN)
 PARALLEL := $(if $(PARALLEL),$(PARALLEL),$(NCPU))
 
 .PHONY: _test.conformance
-_test.conformance: gotestsum
+_test.conformance: gotestsum download.telepresence
+		PATH=$(PROJECT_DIR)/bin:$(PATH) \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-timeout $(CONFORMANCE_TEST_TIMEOUT) \
