@@ -13,7 +13,7 @@ const (
 	// and those tests create KIC's URLs for things like roles or CRDs.
 	// Since KIC only defines the full tags in its repo (as expected) we cannot use
 	// a partial version here, as it would not match KIC's tag.
-	DefaultControlPlaneVersion = "3.4.1" // renovate: datasource=docker depName=kong/kubernetes-ingress-controller
+	DefaultControlPlaneVersion = "3.4.2" // renovate: datasource=docker depName=kong/kubernetes-ingress-controller
 )
 
 // minimumControlPlaneVersion indicates the bare minimum version of the
@@ -34,7 +34,7 @@ var minimumControlPlaneVersion = semver.MustParse("3.1.2")
 // the release 5.0, a new entry '">=5.0": "5.0"' should be added to this map, and the previous most
 // updated entry should be limited to "<5.0".
 var ManifestsVersionsForKICVersions = map[string]semver.Version{
-	">=3.4":       semver.MustParse("3.4.1"),
+	">=3.4":       semver.MustParse("3.4.2"),
 	">=3.3, <3.4": semver.MustParse("3.3.1"),
 	">=3.2, <3.3": semver.MustParse("3.2.4"),
 	">=3.1, <3.2": semver.MustParse("3.1.6"),
