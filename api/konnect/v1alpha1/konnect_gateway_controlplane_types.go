@@ -61,6 +61,13 @@ type KonnectGatewayControlPlaneSpec struct {
 type KonnectGatewayControlPlaneStatus struct {
 	KonnectEntityStatus `json:",inline"`
 
+	// Endpoints defines the Konnect endpoints for the control plane.
+	// They are required by the DataPlane to be properly configured in
+	// Konnect and connect to the control plane.
+	//
+	// +kubebuilder:validation:Optional
+	Endpoints *KonnectEndpoints `json:"konnectEndpoints,omitempty"`
+
 	// Conditions describe the current conditions of the KonnectGatewayControlPlane.
 	//
 	// Known condition types are:
@@ -72,6 +79,19 @@ type KonnectGatewayControlPlaneStatus struct {
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+// KonnectEndpoints defines the Konnect endpoints for the control plane.
+type KonnectEndpoints struct {
+	// TelemetryEndpoint is the endpoint for telemetry.
+	//
+	// +kubebuilder:validation:Required
+	TelemetryEndpoint string `json:"telemetry"`
+
+	// ControlPlaneEndpoint is the endpoint for the control plane.
+	//
+	// +kubebuilder:validation:Required
+	ControlPlaneEndpoint string `json:"controlPlane"`
 }
 
 // GetKonnectLabels gets the Konnect Labels from object's spec.
