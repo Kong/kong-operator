@@ -13,7 +13,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
 // Predicates to filter only the ReferenceGrants that allow a Gateway cross-namespace reference.
@@ -84,7 +84,7 @@ func CheckReferenceGrantForSecret(
 		return "", true, nil
 	}
 
-	allowed, err := kubernetes.AllowedByReferenceGrants(
+	allowed, err := k8sutils.AllowedByReferenceGrants(
 		ctx, c,
 		gatewayv1beta1.ReferenceGrantFrom{
 			Group:     gatewayv1.Group(fromObj.GetObjectKind().GroupVersionKind().Group),
