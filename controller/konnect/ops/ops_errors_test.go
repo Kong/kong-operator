@@ -140,3 +140,81 @@ func TestErrorIsCreateConflict(t *testing.T) {
 		})
 	}
 }
+
+func TestSDKErrorIsConflict(t *testing.T) {
+	tests := []struct {
+		name string
+		err  *sdkkonnecterrs.SDKError
+		want bool
+	}{
+		{
+			name: "SDKError with data constraint error message and code 3",
+			err: &sdkkonnecterrs.SDKError{
+				Body: `{
+					"code": 3,
+					"message": "data constraint error",
+					"details": []
+				}`,
+			},
+			want: true,
+		},
+		{
+			name: "SDKError with data constraint error message and code 6",
+			err: &sdkkonnecterrs.SDKError{
+				Body: `{
+					"code": 6,
+					"message": "data constraint error",
+					"details": []
+				}`,
+			},
+			want: true,
+		},
+		{
+			name: "SDKError with unique constraint failed message",
+			err: &sdkkonnecterrs.SDKError{
+				Body: `{
+					"code": 3,
+					"message": "name (type: unique) constraint failed",
+					"details": []
+				}`,
+			},
+			want: true,
+		},
+		{
+			name: "SDKError with non-conflict message",
+			err: &sdkkonnecterrs.SDKError{
+				Body: `{
+					"code": 3,
+					"message": "some other error",
+					"details": []
+				}`,
+			},
+			want: false,
+		},
+		{
+			name: "SDKError with conflict message but different code",
+			err: &sdkkonnecterrs.SDKError{
+				Body: `{
+					"code": 4,
+					"message": "data constraint error",
+					"details": []
+				}`,
+			},
+			want: false,
+		},
+		{
+			name: "SDKError with invalid JSON body",
+			err: &sdkkonnecterrs.SDKError{
+				Body: `invalid json`,
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := SDKErrorIsConflict(tt.err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}

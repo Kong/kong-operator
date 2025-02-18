@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/go-logr/logr"
@@ -94,7 +95,6 @@ func ParseSDKErrorBody(body string) (sdkErrorBody, error) {
 }
 
 const (
-	dataConstraintMesasge   = "data constraint error"
 	validationErrorMessage  = "validation error"
 	apiErrorOccurredMessage = "API error occurred"
 )
@@ -202,14 +202,20 @@ func SDKErrorIsConflict(sdkError *sdkkonnecterrs.SDKError) bool {
 		return false
 	}
 
-	if sdkErrorBody.Message != dataConstraintMesasge {
-		return false
+	const (
+		dataConstraintMesasge      = "data constraint error"
+		typeUniqueConstraintFailed = "(type: unique) constraint failed"
+	)
+
+	if sdkErrorBody.Message == dataConstraintMesasge ||
+		strings.Contains(sdkErrorBody.Message, typeUniqueConstraintFailed) {
+
+		switch sdkErrorBody.Code {
+		case 3, 6:
+			return true
+		}
 	}
 
-	switch sdkErrorBody.Code {
-	case 3, 6:
-		return true
-	}
 	return false
 }
 
