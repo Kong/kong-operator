@@ -58,6 +58,7 @@ func Create[
 		entityType = e.GetTypeName()
 		statusCode int
 	)
+
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
 		err = createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)

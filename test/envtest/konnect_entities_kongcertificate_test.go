@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
+	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -52,102 +53,116 @@ func TestKongCertificate(t *testing.T) {
 
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-	t.Log("Setting up SDK expectations on KongCertificate creation")
-	sdk.CertificatesSDK.EXPECT().CreateCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-		mock.MatchedBy(func(input sdkkonnectcomp.CertificateInput) bool {
-			return input.Cert == deploy.TestValidCertPEM &&
-				input.Key == deploy.TestValidCertKeyPEM &&
-				slices.Contains(input.Tags, "tag1")
-		}),
-	).Return(&sdkkonnectops.CreateCertificateResponse{
-		Certificate: &sdkkonnectcomp.Certificate{
-			ID: lo.ToPtr("cert-12345"),
-		},
-	}, nil)
-
-	t.Log("Setting up a watch for KongCertificate events")
-	w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
-
-	t.Log("Creating KongCertificate")
-	createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp,
-		func(obj client.Object) {
-			cert := obj.(*configurationv1alpha1.KongCertificate)
-			cert.Spec.Tags = []string{"tag1"}
-		},
-	)
-
-	t.Log("Waiting for KongCertificate to be programmed")
-	watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongCertificate) bool {
-		if c.GetName() != createdCert.GetName() {
-			return false
-		}
-		return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-			return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-				condition.Status == metav1.ConditionTrue
-		})
-	}, "KongCertificate's Programmed condition should be true eventually")
-
-	t.Log("Waiting for KongCertificate to be created in the SDK")
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, factory.SDK.CertificatesSDK.AssertExpectations(t))
-	}, waitTime, tickTime)
-
-	t.Log("Setting up SDK expectations on KongCertificate update")
-	sdk.CertificatesSDK.EXPECT().UpsertCertificate(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertCertificateRequest) bool {
-		return r.CertificateID == "cert-12345" &&
-			lo.Contains(r.Certificate.Tags, "addedTag")
-	})).Return(&sdkkonnectops.UpsertCertificateResponse{}, nil)
-
-	t.Log("Patching KongCertificate")
-	certToPatch := createdCert.DeepCopy()
-	certToPatch.Spec.Tags = append(certToPatch.Spec.Tags, "addedTag")
-	require.NoError(t, clientNamespaced.Patch(ctx, certToPatch, client.MergeFrom(createdCert)))
-
-	t.Log("Waiting for KongCertificate to be updated in the SDK")
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, factory.SDK.CertificatesSDK.AssertExpectations(t))
-	}, waitTime, tickTime)
-
-	t.Log("Setting up SDK expectations on KongCertificate deletion")
-	sdk.CertificatesSDK.EXPECT().DeleteCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), "cert-12345").
-		Return(&sdkkonnectops.DeleteCertificateResponse{}, nil)
-
-	t.Log("Deleting KongCertificate")
-	require.NoError(t, cl.Delete(ctx, createdCert))
-
-	t.Log("Waiting for KongCertificate to be deleted in the SDK")
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, factory.SDK.CertificatesSDK.AssertExpectations(t))
-	}, waitTime, tickTime)
-
-	t.Run("should handle conflict in creation correctly", func(t *testing.T) {
-		const (
-			certID = "id-conflict"
-		)
-		t.Log("Setup mock SDK for creating certificate and listing certificates by UID")
+	t.Run("base", func(t *testing.T) {
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 		cpID := cp.GetKonnectStatus().GetKonnectID()
+
+		t.Log("Setting up SDK expectations on KongCertificate creation")
 		sdk.CertificatesSDK.EXPECT().
 			CreateCertificate(mock.Anything, cpID,
 				mock.MatchedBy(func(input sdkkonnectcomp.CertificateInput) bool {
 					return input.Cert == deploy.TestValidCertPEM &&
 						input.Key == deploy.TestValidCertKeyPEM &&
-						slices.Contains(input.Tags, "xconflictx")
+						slices.Contains(input.Tags, "tag1")
 				}),
 			).
-			Return(nil,
-				&sdkkonnecterrs.SDKError{
-					StatusCode: 400,
-					Body:       ErrBodyDataConstraintError,
+			Return(&sdkkonnectops.CreateCertificateResponse{
+				Certificate: &sdkkonnectcomp.Certificate{
+					ID: lo.ToPtr("cert-12345"),
 				},
-			)
+			}, nil)
 
+		sdk.CertificatesSDK.EXPECT().
+			ListCertificate(mock.Anything,
+				mock.MatchedBy(func(input sdkkonnectops.ListCertificateRequest) bool {
+					return input.ControlPlaneID == cpID
+				}),
+			).
+			Return(&sdkkonnectops.ListCertificateResponse{
+				Object: &sdkkonnectops.ListCertificateResponseBody{},
+			}, nil)
+
+		t.Log("Setting up a watch for KongCertificate events")
+		w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Creating KongCertificate")
+		createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp,
+			func(obj client.Object) {
+				cert := obj.(*configurationv1alpha1.KongCertificate)
+				cert.Spec.Tags = []string{"tag1", ops.KubernetesUIDLabelKey + ":12345"}
+				cert.UID = "12345"
+			},
+		)
+
+		t.Log("Waiting for KongCertificate to be programmed")
+		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongCertificate) bool {
+			if c.GetName() != createdCert.GetName() {
+				return false
+			}
+			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					condition.Status == metav1.ConditionTrue
+			})
+		}, "KongCertificate's Programmed condition should be true eventually")
+
+		t.Log("Waiting for KongCertificate to be created in the SDK")
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.CertificatesSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+
+		t.Log("Setting up SDK expectations on KongCertificate update")
+		sdk.CertificatesSDK.EXPECT().UpsertCertificate(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertCertificateRequest) bool {
+			return r.CertificateID == "cert-12345" &&
+				lo.Contains(r.Certificate.Tags, "addedTag")
+		})).Return(&sdkkonnectops.UpsertCertificateResponse{}, nil)
+
+		t.Log("Patching KongCertificate")
+		certToPatch := createdCert.DeepCopy()
+		certToPatch.Spec.Tags = append(certToPatch.Spec.Tags, "addedTag")
+		require.NoError(t, clientNamespaced.Patch(ctx, certToPatch, client.MergeFrom(createdCert)))
+
+		t.Log("Waiting for KongCertificate to be updated in the SDK")
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.CertificatesSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+
+		t.Log("Setting up SDK expectations on KongCertificate deletion")
+		sdk.CertificatesSDK.EXPECT().DeleteCertificate(mock.Anything, cpID, "cert-12345").
+			Return(&sdkkonnectops.DeleteCertificateResponse{}, nil)
+
+		t.Log("Deleting KongCertificate")
+		require.NoError(t, cl.Delete(ctx, createdCert))
+
+		t.Log("Waiting for KongCertificate to be deleted in the SDK")
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, factory.SDK.CertificatesSDK.AssertExpectations(t))
+		}, waitTime, tickTime)
+	})
+
+	t.Run("should handle conflict in creation correctly", func(t *testing.T) {
+		const (
+			certID = "id-conflict"
+		)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cpID := cp.GetKonnectStatus().GetKonnectID()
+
+		t.Log("Setup mock SDK for creating certificate and listing certificates by UID")
+
+		w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+		t.Log("Creating a KongCertificate")
+		createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp,
+			func(obj client.Object) {
+				cert := obj.(*configurationv1alpha1.KongCertificate)
+				cert.Spec.Tags = []string{"xconflictx"}
+			},
+		)
 		sdk.CertificatesSDK.EXPECT().
 			ListCertificate(
 				mock.Anything,
 				mock.MatchedBy(func(req sdkkonnectops.ListCertificateRequest) bool {
-					return req.ControlPlaneID == cpID
+					return req.ControlPlaneID == cpID &&
+						strings.Contains(*req.Tags, "xconflictx")
 				}),
 			).
 			Return(
@@ -161,14 +176,6 @@ func TestKongCertificate(t *testing.T) {
 					},
 				}, nil,
 			)
-
-		t.Log("Creating a KongCertificate")
-		createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp,
-			func(obj client.Object) {
-				cert := obj.(*configurationv1alpha1.KongCertificate)
-				cert.Spec.Tags = []string{"xconflictx"}
-			},
-		)
 
 		t.Log("Watching for KongCertificates to verify the created KongCertificate gets programmed")
 		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongCertificate) bool {
@@ -188,12 +195,28 @@ func TestKongCertificate(t *testing.T) {
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cpID := cp.GetKonnectStatus().GetKonnectID()
+
 		t.Log("Setting up SDK expectations on KongCertificate creation")
-		sdk.CertificatesSDK.EXPECT().CreateCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
+
+		sdk.CertificatesSDK.EXPECT().
+			ListCertificate(
+				mock.Anything,
+				mock.MatchedBy(func(req sdkkonnectops.ListCertificateRequest) bool {
+					return req.ControlPlaneID == cpID &&
+						strings.Contains(*req.Tags, "tag2")
+				}),
+			).
+			Return(
+				&sdkkonnectops.ListCertificateResponse{}, nil,
+			)
+
+		sdk.CertificatesSDK.EXPECT().CreateCertificate(mock.Anything, cpID,
 			mock.MatchedBy(func(input sdkkonnectcomp.CertificateInput) bool {
 				return input.Cert == deploy.TestValidCertPEM &&
 					input.Key == deploy.TestValidCertKeyPEM &&
-					slices.Contains(input.Tags, "tag1")
+					slices.Contains(input.Tags, "tag2")
 			}),
 		).Return(&sdkkonnectops.CreateCertificateResponse{
 			Certificate: &sdkkonnectcomp.Certificate{
@@ -201,11 +224,12 @@ func TestKongCertificate(t *testing.T) {
 			},
 		}, nil)
 
+		w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 		t.Log("Creating KongCertificate with ControlPlaneRef type=konnectID")
 		createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp,
 			func(obj client.Object) {
 				cert := obj.(*configurationv1alpha1.KongCertificate)
-				cert.Spec.Tags = []string{"tag1"}
+				cert.Spec.Tags = []string{"tag2"}
 			},
 			deploy.WithKonnectIDControlPlaneRef(cp),
 		)
@@ -235,22 +259,31 @@ func TestKongCertificate(t *testing.T) {
 			id = "abc-12345"
 		)
 
-		var tags []string = []string{"tag1"}
-
-		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
-		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cpID := cp.GetKonnectStatus().GetKonnectID()
 
 		t.Log("Setting up a watch for KongCertifcate events")
 		w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on KongCertifcate creation")
 		sdk.CertificatesSDK.EXPECT().
+			ListCertificate(
+				mock.Anything,
+				mock.MatchedBy(func(req sdkkonnectops.ListCertificateRequest) bool {
+					return req.ControlPlaneID == cpID &&
+						strings.Contains(*req.Tags, "tag3")
+				}),
+			).
+			Return(
+				&sdkkonnectops.ListCertificateResponse{}, nil,
+			)
+
+		sdk.CertificatesSDK.EXPECT().
 			CreateCertificate(
 				mock.Anything,
 				cp.GetKonnectID(),
 				mock.MatchedBy(func(req sdkkonnectcomp.CertificateInput) bool {
-					return slices.Contains(req.Tags, "tag1")
+					return slices.Contains(req.Tags, "tag3")
 				}),
 			).
 			Return(
@@ -266,7 +299,7 @@ func TestKongCertificate(t *testing.T) {
 			deploy.WithKonnectIDControlPlaneRef(cp),
 			func(obj client.Object) {
 				cert := obj.(*configurationv1alpha1.KongCertificate)
-				cert.Spec.Tags = tags
+				cert.Spec.Tags = []string{"tag3"}
 			},
 		)
 		t.Log("Checking SDK Certificate operations")
