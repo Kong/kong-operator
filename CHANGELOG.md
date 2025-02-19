@@ -36,6 +36,11 @@
   This may break usage of `AIGateway`s that is already using `Secret` in
   other namespaces as AI cloud provider credentials.
   [#1161](https://github.com/Kong/gateway-operator/pull/1161)
+- Migrate KGO CRDs to the kubernetes-configuration repo.
+  With this migration process, we have removed the `api` and `pkg/clientset` from the KOG repo.
+  If other projects import them, it will be a breaking change,
+  plase import them from the `kong/kubernetes-configuration` repo instead.
+  [#1148](https://github.com/Kong/gateway-operator/pull/1148)
 
 ### Added
 
@@ -139,8 +144,6 @@
   do not get an owner relationship set to the `ControlPlane` anymore hence
   they are not deleted when the `ControlPlane` is deleted.
   [#1099](https://github.com/Kong/gateway-operator/pull/1099)
-- Migrate KGO CRDs to the kubernetes-configuration repo.
-  [#1148](https://github.com/Kong/gateway-operator/pull/1148)
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 

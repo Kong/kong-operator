@@ -233,7 +233,11 @@ verify.generators: verify.repo generate verify.diff
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config generate.mocks
+generate: generate.rbacs generate.gateway-api-urls generate.docs generate.crd-kustomize generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config generate.mocks
+
+.PHONY: generate.crd-kustomize
+generate.crd-kustomize:
+	./scripts/generate-crd-kustomize.sh
 
 .PHONY: generate.api
 generate.api: controller-gen
