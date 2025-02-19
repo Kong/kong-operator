@@ -159,6 +159,8 @@
   [#1115](https://github.com/Kong/gateway-operator/pull/1115)
 - Fix setting `DataPlane`'s readiness probe using `GatewayConfiguration`.
   [#1118](https://github.com/Kong/gateway-operator/pull/1118)
+- Fix handling Konnect API conflicts.
+  [#1176](https://github.com/Kong/gateway-operator/pull/1176)
 
 ## [v1.4.2]
 

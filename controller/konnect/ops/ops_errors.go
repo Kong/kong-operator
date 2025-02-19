@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/go-logr/logr"
@@ -94,7 +95,6 @@ func ParseSDKErrorBody(body string) (sdkErrorBody, error) {
 }
 
 const (
-	dataConstraintMesasge   = "data constraint error"
 	validationErrorMessage  = "validation error"
 	apiErrorOccurredMessage = "API error occurred"
 )
@@ -196,20 +196,50 @@ func ErrorIsCreateConflict(err error) bool {
 }
 
 // SDKErrorIsConflict returns true if the provided SDKError indicates a conflict.
+// We currently handle two codes (as mapped in
+// https://grpc.io/docs/guides/status-codes/#the-full-list-of-status-codes)
+// from SDK error:
+// - 3: INVALID_ARGUMENT
+// - 6: ALREADY_EXISTS
+//
+// Exemplary body:
+//
+//	{
+//	"code": 3,
+//	"message": "name (type: unique) constraint failed",
+//	"details": [
+//	  {
+//	  "@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
+//	  "type": "ERROR_TYPE_REFERENCE",
+//	  "field": "name",
+//	  "messages": [
+//	    "name (type: unique) constraint failed"
+//	  ]
+//	  }
+//	]
+//	}
 func SDKErrorIsConflict(sdkError *sdkkonnecterrs.SDKError) bool {
 	sdkErrorBody, err := ParseSDKErrorBody(sdkError.Body)
 	if err != nil {
 		return false
 	}
 
-	if sdkErrorBody.Message != dataConstraintMesasge {
-		return false
-	}
-
 	switch sdkErrorBody.Code {
-	case 3, 6:
+	case 3: // INVALID_ARGUMENT
+		const (
+			dataConstraintMesasge      = "data constraint error"
+			typeUniqueConstraintFailed = "(type: unique) constraint failed"
+		)
+
+		if sdkErrorBody.Message == dataConstraintMesasge ||
+			strings.Contains(sdkErrorBody.Message, typeUniqueConstraintFailed) {
+			return true
+		}
+
+	case 6: // ALREADY_EXISTS
 		return true
 	}
+
 	return false
 }
 
