@@ -16,7 +16,11 @@ limitations under the License.
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+)
 
 func init() {
 	SchemeBuilder.Register(&DataPlaneMetricsExtension{}, &DataPlaneMetricsExtensionList{})
@@ -123,7 +127,7 @@ type DataPlaneMetricsExtensionStatus struct {
 	// When this is unset it means that the association has been removed.
 	//
 	// +kube:validation:Optional
-	ControlPlaneRef *NamespacedRef `json:"controlPlaneRef,omitempty"`
+	ControlPlaneRef *commonv1alpha1.NamespacedRef `json:"controlPlaneRef,omitempty"`
 }
 
 // ServiceSelector holds the service selector specification.

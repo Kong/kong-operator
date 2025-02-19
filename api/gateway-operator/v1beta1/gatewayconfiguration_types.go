@@ -19,7 +19,7 @@ package v1beta1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 )
 
 func init() {
@@ -67,7 +67,7 @@ type GatewayConfigurationSpec struct {
 	// +optional
 	// +kubebuilder:validation:MinItems=0
 	// +kubebuilder:validation:MaxItems=1
-	Extensions []operatorv1alpha1.ExtensionRef `json:"extensions,omitempty"`
+	Extensions []commonv1alpha1.ExtensionRef `json:"extensions,omitempty"`
 }
 
 // GatewayConfigDataPlaneOptions indicates the specific information needed to
@@ -87,8 +87,7 @@ type GatewayConfigDataPlaneOptions struct {
 	// +optional
 	// +kubebuilder:validation:MinItems=0
 	// +kubebuilder:validation:MaxItems=1
-	Extensions []operatorv1alpha1.ExtensionRef `json:"extensions,omitempty"`
-
+	Extensions []commonv1alpha1.ExtensionRef `json:"extensions,omitempty"`
 	// PluginsToInstall is a list of KongPluginInstallation resources that
 	// will be installed and available in the Gateways (DataPlanes) that
 	// use this GatewayConfig.

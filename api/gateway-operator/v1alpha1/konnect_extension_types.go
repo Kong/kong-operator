@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func init() {
@@ -28,16 +29,17 @@ const (
 	KonnectExtensionKind = "KonnectExtension"
 )
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:categories=kong;all
-// +kubebuilder:subresource:status
-
 // KonnectExtension is the Schema for the KonnectExtension API,
 // and is intended to be referenced as extension by the DataPlane API.
 // If a DataPlane successfully refers a KonnectExtension, the DataPlane
 // deployment spec gets customized to include the konnect-related configuration.
+//
+// +genclient
+// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:object:root=true
+// +kubebuilder:object:generate=true
+// +kubebuilder:subresource:status
+// +kubebuilder:deprecatedversion:warning="The v1alpha1 version of KonnectExtension in the gateway-operator.konghq.com API group has been deprecated and will be removed in a future release of the API. Please use the version from the konnect.konghq.com API group."
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable."
 // +apireference:kgo:include
 // +kong:channels=gateway-operator
@@ -67,7 +69,7 @@ type KonnectExtensionSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this KonnectExtension is associated with.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self.type == 'konnectID'", message="Only konnectID type currently supported as controlPlaneRef."
-	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
+	ControlPlaneRef configurationv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
 	// ControlPlaneRegion is the region of the Konnect Control Plane.
 	//
@@ -91,6 +93,7 @@ type KonnectExtensionSpec struct {
 	ServerHostname string `json:"serverHostname"`
 
 	// AuthConfiguration must be used to configure the Konnect API authentication.
+	//
 	// +kubebuilder:validation:Required
 	AuthConfiguration KonnectControlPlaneAPIAuthConfiguration `json:"konnectControlPlaneAPIAuthConfiguration"`
 
@@ -123,5 +126,5 @@ type KonnectExtensionStatus struct {
 	// a DataPlane through its extensions spec.
 	//
 	// +kube:validation:Optional
-	DataPlaneRefs []NamespacedRef `json:"dataPlaneRefs,omitempty"`
+	DataPlaneRefs []commonv1alpha1.NamespacedRef `json:"dataPlaneRefs,omitempty"`
 }

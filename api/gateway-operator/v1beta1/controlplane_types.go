@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 )
 
 func init() {
@@ -104,7 +104,7 @@ type ControlPlaneOptions struct {
 	// resources to influence or enhance functionality.
 	//
 	// +optional
-	Extensions []operatorv1alpha1.ExtensionRef `json:"extensions,omitempty"`
+	Extensions []commonv1alpha1.ExtensionRef `json:"extensions,omitempty"`
 }
 
 // ControlPlaneDeploymentOptions is a shared type used on objects to indicate that their
