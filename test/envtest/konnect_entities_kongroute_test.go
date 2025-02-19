@@ -66,13 +66,15 @@ func TestKongRoute(t *testing.T) {
 				mock.Anything,
 				cp.GetKonnectID(),
 				mock.MatchedBy(func(req sdkkonnectcomp.RouteInput) bool {
-					return slices.Equal(req.Paths, []string{"/path"})
+					return slices.Equal(req.RouteJSONInput.Paths, []string{"/path"})
 				}),
 			).
 			Return(
 				&sdkkonnectops.CreateRouteResponse{
 					Route: &sdkkonnectcomp.Route{
-						ID: lo.ToPtr(routeID),
+						RouteJSON: &sdkkonnectcomp.RouteJSON{
+							ID: lo.ToPtr(routeID),
+						},
 					},
 				},
 				nil,
@@ -105,8 +107,8 @@ func TestKongRoute(t *testing.T) {
 				mock.Anything,
 				mock.MatchedBy(func(req sdkkonnectops.UpsertRouteRequest) bool {
 					return req.RouteID == routeID &&
-						slices.Equal(req.Route.Paths, []string{"/path"}) &&
-						req.Route.PreserveHost != nil && *req.Route.PreserveHost == true
+						slices.Equal(req.Route.RouteJSONInput.Paths, []string{"/path"}) &&
+						req.Route.RouteJSONInput.PreserveHost != nil && *req.Route.RouteJSONInput.PreserveHost == true
 				}),
 			).
 			Return(&sdkkonnectops.UpsertRouteResponse{}, nil)
