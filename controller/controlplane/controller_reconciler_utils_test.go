@@ -15,7 +15,7 @@ import (
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/pkg/consts"
-	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
 func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
@@ -49,8 +49,8 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 								Spec: corev1.PodSpec{
 									Containers: []corev1.Container{
 										func() corev1.Container {
-											c := resources.GenerateControlPlaneContainer(
-												resources.GenerateContainerForControlPlaneParams{
+											c := k8sresources.GenerateControlPlaneContainer(
+												k8sresources.GenerateContainerForControlPlaneParams{
 													Image:                          consts.DefaultControlPlaneImage,
 													AdmissionWebhookCertSecretName: lo.ToPtr("cert-secret"),
 												})
@@ -115,8 +115,8 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 								Spec: corev1.PodSpec{
 									Containers: []corev1.Container{
 										func() corev1.Container {
-											c := resources.GenerateControlPlaneContainer(
-												resources.GenerateContainerForControlPlaneParams{
+											c := k8sresources.GenerateControlPlaneContainer(
+												k8sresources.GenerateContainerForControlPlaneParams{
 													Image:                          consts.DefaultControlPlaneImage,
 													AdmissionWebhookCertSecretName: lo.ToPtr("cert-secret"),
 												})

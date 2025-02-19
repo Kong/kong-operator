@@ -26,7 +26,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
@@ -574,7 +574,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 									{
 										Name:           consts.DataPlaneProxyContainerName,
 										Image:          consts.DefaultDataPlaneImage,
-										ReadinessProbe: resources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
+										ReadinessProbe: k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 									},
 								},
 							},
@@ -602,7 +602,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 									{
 										Name:           consts.DataPlaneProxyContainerName,
 										Image:          consts.DefaultDataPlaneImage,
-										ReadinessProbe: resources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
+										ReadinessProbe: k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 									},
 								},
 							},
@@ -630,7 +630,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 									{
 										Name:           consts.DataPlaneProxyContainerName,
 										Image:          consts.DefaultDataPlaneImage,
-										ReadinessProbe: resources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
+										ReadinessProbe: k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 									},
 								},
 							},
@@ -668,7 +668,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 									{
 										Name:           consts.DataPlaneProxyContainerName,
 										Image:          "image:v1",
-										ReadinessProbe: resources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
+										ReadinessProbe: k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 									},
 								},
 							},
@@ -704,7 +704,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 									{
 										Name:           consts.DataPlaneProxyContainerName,
 										Image:          consts.DefaultDataPlaneImage,
-										ReadinessProbe: resources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
+										ReadinessProbe: k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 									},
 								},
 							},
@@ -728,7 +728,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 									{
 										Name:           consts.DataPlaneProxyContainerName,
 										Image:          consts.DefaultDataPlaneImage,
-										ReadinessProbe: resources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
+										ReadinessProbe: k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 									},
 								},
 							},

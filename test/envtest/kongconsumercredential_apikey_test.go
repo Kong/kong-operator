@@ -28,7 +28,7 @@ import (
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 func TestKongConsumerCredential_APIKey(t *testing.T) {
@@ -62,9 +62,9 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 			},
 		},
 	})
-	consumer.Status.Konnect = &v1alpha1.KonnectEntityStatusWithControlPlaneRef{
+	consumer.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
 		ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
-		KonnectEntityStatus: v1alpha1.KonnectEntityStatus{
+		KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
 			ID:        consumerID,
 			ServerURL: cp.GetKonnectStatus().GetServerURL(),
 			OrgID:     cp.GetKonnectStatus().GetOrgID(),

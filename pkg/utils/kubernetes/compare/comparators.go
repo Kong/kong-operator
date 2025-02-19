@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
-	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
 // ControlPlaneDeploymentOptionsDeepEqual checks if DeploymentOptions are equal, ignoring some envvars.
@@ -26,7 +26,7 @@ func ControlPlaneDeploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.ControlPlane
 	}
 
 	opts := []cmp.Option{
-		cmp.Comparer(resources.ResourceRequirementsEqual),
+		cmp.Comparer(k8sresources.ResourceRequirementsEqual),
 		cmp.Comparer(func(a, b []corev1.EnvVar) bool {
 			// Throw out env vars that we ignore.
 			a = lo.Filter(a, func(e corev1.EnvVar, _ int) bool {

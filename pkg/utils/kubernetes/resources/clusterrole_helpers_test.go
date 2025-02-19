@@ -7,7 +7,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 
 	kgoerrors "github.com/kong/gateway-operator/internal/errors"
-	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources/clusterroles"
 )
 
@@ -24,7 +24,7 @@ func TestClusterroleHelpers(t *testing.T) {
 			image:        "kong/kubernetes-ingress-controller:3.1.2",
 			expectedClusterRole: func() *rbacv1.ClusterRole {
 				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_1_lt3_2("test_3.1.2")
-				resources.LabelObjectAsControlPlaneManaged(cr)
+				k8sresources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
 		},
@@ -34,14 +34,14 @@ func TestClusterroleHelpers(t *testing.T) {
 			devMode:      true,
 			expectedClusterRole: func() *rbacv1.ClusterRole {
 				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_4("test_3.1_dev")
-				resources.LabelObjectAsControlPlaneManaged(cr)
+				k8sresources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
 		},
 		{
 			controlplane:  "test_3.0",
 			image:         "kong/kubernetes-ingress-controller:3.0.0",
-			expectedError: resources.ErrControlPlaneVersionNotSupported,
+			expectedError: k8sresources.ErrControlPlaneVersionNotSupported,
 		},
 		{
 			controlplane: "test_3.0_dev",
@@ -49,14 +49,14 @@ func TestClusterroleHelpers(t *testing.T) {
 			devMode:      true,
 			expectedClusterRole: func() *rbacv1.ClusterRole {
 				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_4("test_3.0_dev")
-				resources.LabelObjectAsControlPlaneManaged(cr)
+				k8sresources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
 		},
 		{
 			controlplane:  "test_unsupported",
 			image:         "kong/kubernetes-ingress-controller:1.0",
-			expectedError: resources.ErrControlPlaneVersionNotSupported,
+			expectedError: k8sresources.ErrControlPlaneVersionNotSupported,
 		},
 		{
 			controlplane: "test_unsupported_dev",
@@ -64,7 +64,7 @@ func TestClusterroleHelpers(t *testing.T) {
 			devMode:      true,
 			expectedClusterRole: func() *rbacv1.ClusterRole {
 				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_4("test_unsupported_dev")
-				resources.LabelObjectAsControlPlaneManaged(cr)
+				k8sresources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
 		},
@@ -79,7 +79,7 @@ func TestClusterroleHelpers(t *testing.T) {
 			devMode:      true,
 			expectedClusterRole: func() *rbacv1.ClusterRole {
 				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_4("test_invalid_tag_dev")
-				resources.LabelObjectAsControlPlaneManaged(cr)
+				k8sresources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
 		},
@@ -89,7 +89,7 @@ func TestClusterroleHelpers(t *testing.T) {
 			devMode:      false,
 			expectedClusterRole: func() *rbacv1.ClusterRole {
 				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_2_lt3_3("cp-3-2-0")
-				resources.LabelObjectAsControlPlaneManaged(cr)
+				k8sresources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
 		},
@@ -99,7 +99,7 @@ func TestClusterroleHelpers(t *testing.T) {
 			devMode:      false,
 			expectedClusterRole: func() *rbacv1.ClusterRole {
 				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_3_lt3_4("cp-3-3-0")
-				resources.LabelObjectAsControlPlaneManaged(cr)
+				k8sresources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
 		},
@@ -109,7 +109,7 @@ func TestClusterroleHelpers(t *testing.T) {
 			devMode:      false,
 			expectedClusterRole: func() *rbacv1.ClusterRole {
 				cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_4("cp-3-4-1")
-				resources.LabelObjectAsControlPlaneManaged(cr)
+				k8sresources.LabelObjectAsControlPlaneManaged(cr)
 				return cr
 			},
 		},
@@ -117,7 +117,7 @@ func TestClusterroleHelpers(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.controlplane, func(t *testing.T) {
-			clusterRole, err := resources.GenerateNewClusterRoleForControlPlane(tc.controlplane, tc.image, tc.devMode)
+			clusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane(tc.controlplane, tc.image, tc.devMode)
 			if tc.expectedError != nil {
 				require.Error(t, err)
 				require.ErrorIs(t, err, tc.expectedError)

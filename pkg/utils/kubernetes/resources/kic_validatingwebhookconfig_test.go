@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 
-	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
 func TestGenerateValidatingWebhookConfigurationForControlPlane(t *testing.T) {
@@ -25,7 +25,7 @@ func TestGenerateValidatingWebhookConfigurationForControlPlane(t *testing.T) {
 		},
 		{
 			image:         "kong/kubernetes-ingress-controller:3.0.0",
-			expectedError: resources.ErrControlPlaneVersionNotSupported,
+			expectedError: k8sresources.ErrControlPlaneVersionNotSupported,
 		},
 		{
 			image:   "kong/kubernetes-ingress-controller:febecdfe",
@@ -38,7 +38,7 @@ func TestGenerateValidatingWebhookConfigurationForControlPlane(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.image, func(t *testing.T) {
-			cfg, err := resources.GenerateValidatingWebhookConfigurationForControlPlane(
+			cfg, err := k8sresources.GenerateValidatingWebhookConfigurationForControlPlane(
 				"webhook",
 				tc.image,
 				tc.devMode,

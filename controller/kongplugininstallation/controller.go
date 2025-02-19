@@ -27,8 +27,8 @@ import (
 	"github.com/kong/gateway-operator/controller/kongplugininstallation/image"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
-	"github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
 
 const kindKongPluginInstallation = gatewayv1.Kind("KongPluginInstallation")
@@ -154,7 +154,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, &kpi, fmt.Sprintf("problem with the image: %q error: %s", kpi.Spec.Image, err))
 	}
 
-	cms, err := kubernetes.ListConfigMapsForOwner(ctx, r.Client, kpi.GetUID())
+	cms, err := k8sutils.ListConfigMapsForOwner(ctx, r.Client, kpi.GetUID())
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -166,8 +166,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		} else {
 			cm.GenerateName = kpi.Name + "-"
 		}
-		resources.LabelObjectAsKongPluginInstallationManaged(&cm)
-		resources.AnnotateConfigMapWithKongPluginInstallation(&cm, kpi)
+		k8sresources.LabelObjectAsKongPluginInstallationManaged(&cm)
+		k8sresources.AnnotateConfigMapWithKongPluginInstallation(&cm, kpi)
 		cm.Namespace = kpi.Namespace
 		cm.Data = plugin
 		if err := ctrl.SetControllerReference(&kpi, &cm, r.Scheme); err != nil {
