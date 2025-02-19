@@ -181,7 +181,13 @@ type KonnectExtensionStatus struct {
 	DataPlaneClientAuth *DataPlaneClientAuthStatus `json:"dataPlaneClientAuth,omitempty"`
 
 	// Conditions describe the current conditions of the KonnectExtensionStatus.
+	// Known condition types are:
 	//
+	// * "Accepted"
+	// * "SecretProvisioned"
+	// * "ControlPlaneRefValid"
+	//
+	// +optional
 	// +listType=map
 	// +listMapKey=type
 	// +kubebuilder:validation:MaxItems=8
