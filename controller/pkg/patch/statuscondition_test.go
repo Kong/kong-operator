@@ -49,7 +49,7 @@ func TestPatchStatusWithCondition(t *testing.T) {
 						{
 							Type:               string(consts.ReadyType),
 							Status:             metav1.ConditionTrue,
-							Reason:             string(consts.ResolvedRefsReason),
+							Reason:             string(consts.KonnectExtensionAppliedReason),
 							Message:            "Resource is available",
 							ObservedGeneration: 1,
 						},
@@ -58,14 +58,14 @@ func TestPatchStatusWithCondition(t *testing.T) {
 			},
 			conditionType:    consts.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
-			conditionReason:  consts.ResolvedRefsReason,
+			conditionReason:  consts.KonnectExtensionAppliedReason,
 			conditionMessage: "Resource is available",
 			expectedResult:   ctrl.Result{},
 			expectedConditions: []metav1.Condition{
 				{
 					Type:               string(consts.ReadyType),
 					Status:             metav1.ConditionTrue,
-					Reason:             string(consts.ResolvedRefsReason),
+					Reason:             string(consts.KonnectExtensionAppliedReason),
 					Message:            "Resource is available",
 					ObservedGeneration: 1,
 				},
@@ -83,7 +83,7 @@ func TestPatchStatusWithCondition(t *testing.T) {
 						{
 							Type:               string(consts.ReadyType),
 							Status:             metav1.ConditionFalse,
-							Reason:             string(consts.ResolvedRefsReason),
+							Reason:             string(consts.KonnectExtensionAppliedReason),
 							Message:            "",
 							ObservedGeneration: 1,
 						},
@@ -92,14 +92,14 @@ func TestPatchStatusWithCondition(t *testing.T) {
 			},
 			conditionType:    consts.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
-			conditionReason:  consts.ResolvedRefsReason,
+			conditionReason:  consts.KonnectExtensionAppliedReason,
 			conditionMessage: "",
 			expectedResult:   ctrl.Result{},
 			expectedConditions: []metav1.Condition{
 				{
 					Type:               string(consts.ReadyType),
 					Status:             metav1.ConditionTrue,
-					Reason:             string(consts.ResolvedRefsReason),
+					Reason:             string(consts.KonnectExtensionAppliedReason),
 					Message:            "",
 					ObservedGeneration: 1,
 				},
@@ -117,7 +117,7 @@ func TestPatchStatusWithCondition(t *testing.T) {
 						{
 							Type:               string(consts.ReadyType),
 							Status:             metav1.ConditionTrue,
-							Reason:             string(consts.ResolvedRefsReason),
+							Reason:             string(consts.KonnectExtensionAppliedReason),
 							Message:            "",
 							ObservedGeneration: 1,
 						},
@@ -126,14 +126,14 @@ func TestPatchStatusWithCondition(t *testing.T) {
 			},
 			conditionType:    consts.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
-			conditionReason:  consts.ResolvedRefsReason,
+			conditionReason:  consts.KonnectExtensionAppliedReason,
 			conditionMessage: "",
 			expectedResult:   ctrl.Result{},
 			expectedConditions: []metav1.Condition{
 				{
 					Type:               string(consts.ReadyType),
 					Status:             metav1.ConditionTrue,
-					Reason:             string(consts.ResolvedRefsReason),
+					Reason:             string(consts.KonnectExtensionAppliedReason),
 					Message:            "",
 					ObservedGeneration: 2,
 				},
@@ -184,14 +184,14 @@ func TestPatchStatusWithCondition(t *testing.T) {
 			},
 			conditionType:    consts.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
-			conditionReason:  consts.ResolvedRefsReason,
+			conditionReason:  consts.KonnectExtensionAppliedReason,
 			conditionMessage: "Resource is available",
 			expectedResult:   ctrl.Result{},
 			expectedConditions: []metav1.Condition{
 				{
 					Type:               string(consts.ReadyType),
 					Status:             metav1.ConditionTrue,
-					Reason:             string(consts.ResolvedRefsReason),
+					Reason:             string(consts.KonnectExtensionAppliedReason),
 					Message:            "Resource is available",
 					ObservedGeneration: 1,
 				},
@@ -208,7 +208,7 @@ func TestPatchStatusWithCondition(t *testing.T) {
 			},
 			conditionType:    consts.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
-			conditionReason:  consts.ResolvedRefsReason,
+			conditionReason:  consts.KonnectExtensionAppliedReason,
 			conditionMessage: "Resource is available",
 			expectedResult: ctrl.Result{
 				Requeue: true,
@@ -235,7 +235,7 @@ func TestPatchStatusWithCondition(t *testing.T) {
 			},
 			conditionType:    consts.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
-			conditionReason:  consts.ResolvedRefsReason,
+			conditionReason:  consts.KonnectExtensionAppliedReason,
 			conditionMessage: "Resource is available",
 			expectedError:    true,
 			interceptorFunc: interceptor.Funcs{

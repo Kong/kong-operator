@@ -15,6 +15,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/gateway-operator/controller/pkg/extensions"
+	konnectextension "github.com/kong/gateway-operator/controller/pkg/extensions/konnect"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -323,41 +325,58 @@ func isDeploymentReady(deploymentStatus appsv1.DeploymentStatus) (metav1.Conditi
 //   - requeue: a boolean indicating if the dataplane should be requeued. If the error was unexpected (e.g., because of API server error), the dataplane should be requeued.
 //     In case the error is related to a misconfiguration, the dataplane does not need to be requeued, and feedback is provided into the dataplane status.
 //   - err: an error in case of failure.
-func applyExtensions(ctx context.Context, cl client.Client, logger logr.Logger, dataplane *operatorv1beta1.DataPlane, konnectEnabled bool) (patched bool, requeue bool, err error) {
-	if len(dataplane.Spec.Extensions) == 0 {
+func applyExtensions(ctx context.Context, cl client.Client, logger logr.Logger, dataplane *operatorv1beta1.DataPlane, konnectEnabled bool) (stop bool, requeue bool, err error) {
+	var condition metav1.Condition
+
+	stop = true
+	// extensionsCondition can be nil. In that case, no extensions are referenced by the DataPlane.
+	extensionsCondition := extensions.ValidateExtensions(dataplane)
+	if extensionsCondition == nil {
 		return false, false, nil
 	}
 
-	// the konnect extension is the only one implemented at the moment. In case konnect is not enabled, we return early.
-	if !konnectEnabled {
-		return false, false, nil
-	}
-
-	condition := k8sutils.NewConditionWithGeneration(consts.ResolvedRefsType, metav1.ConditionTrue, consts.ResolvedRefsReason, "", dataplane.GetGeneration())
-	err = applyKonnectExtension(ctx, cl, dataplane)
-	if err != nil {
-		switch {
-		case errors.Is(err, ErrCrossNamespaceReference):
-			condition.Status = metav1.ConditionFalse
-			condition.Reason = string(consts.RefNotPermittedReason)
-			condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
-		case errors.Is(err, ErrKonnectExtensionNotFound):
-			condition.Status = metav1.ConditionFalse
-			condition.Reason = string(consts.InvalidExtensionRefReason)
-			condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
-		case errors.Is(err, ErrClusterCertificateNotFound):
-			condition.Status = metav1.ConditionFalse
-			condition.Reason = string(consts.InvalidSecretRefReason)
-			condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
-		default:
-			return patched, true, err
-		}
-	}
 	newDataPlane := dataplane.DeepCopy()
-	k8sutils.SetCondition(condition, newDataPlane)
+	k8sutils.SetCondition(*extensionsCondition, newDataPlane)
+
+	// in case the extensionsCondition is true, let's apply the extensions.
+	if extensionsCondition.Status == metav1.ConditionTrue {
+		// the konnect extension is the only one implemented at the moment. In case konnect is not enabled, we return early.
+		if !konnectEnabled {
+			return false, false, nil
+		}
+
+		condition = k8sutils.NewConditionWithGeneration(consts.KonnectExtensionAppliedType, metav1.ConditionTrue, consts.KonnectExtensionAppliedReason, "", dataplane.GetGeneration())
+		err = konnectextension.ApplyKonnectExtension(ctx, cl, dataplane)
+		if err != nil {
+			switch {
+			case errors.Is(err, konnectextension.ErrCrossNamespaceReference):
+				condition.Status = metav1.ConditionFalse
+				condition.Reason = string(consts.RefNotPermittedReason)
+				condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
+			case errors.Is(err, konnectextension.ErrKonnectExtensionNotFound):
+				condition.Status = metav1.ConditionFalse
+				condition.Reason = string(consts.InvalidExtensionRefReason)
+				condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
+			case errors.Is(err, konnectextension.ErrClusterCertificateNotFound):
+				condition.Status = metav1.ConditionFalse
+				condition.Reason = string(consts.InvalidSecretRefReason)
+				condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
+			case errors.Is(err, konnectextension.ErrKonnectExtensionNotReady):
+				condition.Status = metav1.ConditionFalse
+				condition.Reason = string(consts.KonnectExtensionNotReadyReason)
+				condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
+			default:
+				return stop, true, err
+			}
+		} else {
+			stop = false
+		}
+		k8sutils.SetCondition(condition, newDataPlane)
+	}
+
 	patched, patchErr := patchDataPlaneStatus(ctx, cl, logger, newDataPlane)
 	if patchErr != nil {
 		return false, true, fmt.Errorf("failed patching status for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, patchErr)
 	}
-	return patched, false, err
+	return (patched || stop), false, err
 }
