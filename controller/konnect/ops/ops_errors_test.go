@@ -127,6 +127,28 @@ func TestErrorIsCreateConflict(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "error is SDKError with code 6",
+			err: &sdkkonnecterrs.SDKError{
+				Body: `{
+					"code": 6,
+					"message": "already exists",
+					"details": []
+				}`,
+			},
+			want: true,
+		},
+		{
+			name: "error is SDKError with code 7",
+			err: &sdkkonnecterrs.SDKError{
+				Body: `{
+					"code": 7,
+					"message": "other error",
+					"details": []
+				}`,
+			},
+			want: false,
+		},
+		{
 			name: "error is not ConflictError or SDKError",
 			err:  errors.New("some other error"),
 			want: false,
