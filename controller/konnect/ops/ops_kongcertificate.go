@@ -3,6 +3,7 @@ package ops
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -23,6 +24,33 @@ func createCertificate(
 	cpID := cert.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cert, Op: CreateOp}
+	}
+
+	// NOTE: This is a workaround for the fact that the Konnect SDK does not
+	// return a conflict error when creating a Certificate as there are no criteria
+	// that would prevent the creation of a Certificate with the same spec fields.
+	// This can be expanded to other entities by changing the order of get -> list
+	// to list -> get in ops.go's Create() function.
+
+	// Check if the Certificate already exists in Konnect: it is possible that
+	// the Certificate was already created and cache the controller is using
+	// is outdated, so we can't rely on the status.konnect.id.
+	// If it does, set the KonnectID in the KongCertificate status and return.
+
+	respList, err := sdk.ListCertificate(ctx, sdkkonnectops.ListCertificateRequest{
+		ControlPlaneID: cpID,
+		Tags:           lo.ToPtr(strings.Join(GenerateTagsForObject(cert, cert.Spec.Tags...), ",")),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list: %w", err)
+	}
+	if respList.Object != nil && len(respList.Object.Data) > 0 {
+		certList := respList.Object.Data[0]
+		if certList.ID == nil {
+			return fmt.Errorf("failed listing: found a cert without ID")
+		}
+		cert.SetKonnectID(*certList.ID)
+		return nil
 	}
 
 	resp, err := sdk.CreateCertificate(ctx,

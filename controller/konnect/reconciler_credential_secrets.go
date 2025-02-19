@@ -32,6 +32,14 @@ const (
 	// KongCredentialTypeBasicAuth is the type of basic-auth credential, it's used
 	// as the value for konghq.com/credential label.
 	KongCredentialTypeBasicAuth = "basic-auth"
+	// KongCredentialTypeAPIKey is the type of api-key credential, it's used
+	// as the value for konghq.com/credential label.
+	KongCredentialTypeAPIKey = "key-auth"
+)
+
+const (
+	// CredentialSecretKeyNameAPIKeyKey is the credential secret key name for API key type.
+	CredentialSecretKeyNameAPIKeyKey = "key"
 )
 
 // KongCredentialSecretReconciler reconciles a KongPlugin object.
@@ -94,8 +102,8 @@ func (r *KongCredentialSecretReconciler) SetupWithManager(_ context.Context, mgr
 		// of the secret (this controller) so that the managed credential is enforced
 		// (e.g. recreated).
 		Owns(&configurationv1alpha1.KongCredentialBasicAuth{}, builder.MatchEveryOwner).
+		Owns(&configurationv1alpha1.KongCredentialAPIKey{}, builder.MatchEveryOwner).
 		// TODO: Add more credential types support.
-		// TODO: https://github.com/Kong/gateway-operator/issues/1123
 		// TODO: https://github.com/Kong/gateway-operator/issues/1124
 		// TODO: https://github.com/Kong/gateway-operator/issues/1125
 		// TODO: https://github.com/Kong/gateway-operator/issues/1126
@@ -229,13 +237,14 @@ func deleteAllCredentialsUsingSecret(
 	credType string,
 ) error {
 	// TODO: Add more credential types support.
-	// TODO: https://github.com/Kong/gateway-operator/issues/1123
 	// TODO: https://github.com/Kong/gateway-operator/issues/1124
 	// TODO: https://github.com/Kong/gateway-operator/issues/1125
 	// TODO: https://github.com/Kong/gateway-operator/issues/1126
-	switch credType { //nolint:gocritic
+	switch credType {
+
+	// NOTE: To use DeleteAllOf() we need a selectable field added to the CRD.
+
 	case KongCredentialTypeBasicAuth:
-		// NOTE: To use DeleteAllOf() we need a selectable field added to the CRD.
 		var l configurationv1alpha1.KongCredentialBasicAuthList
 		err := cl.List(ctx, &l,
 			client.MatchingFields{
@@ -249,6 +258,25 @@ func deleteAllCredentialsUsingSecret(
 		for _, cred := range l.Items {
 			if err := cl.Delete(ctx, &cred); err != nil {
 				return fmt.Errorf("failed deleting unused KongCredentialBasicAuth %s: %w",
+					client.ObjectKeyFromObject(&cred), err,
+				)
+			}
+		}
+
+	case KongCredentialTypeAPIKey:
+		var l configurationv1alpha1.KongCredentialAPIKeyList
+		err := cl.List(ctx, &l,
+			client.MatchingFields{
+				IndexFieldKongCredentialAPIKeyReferencesSecret: secret.Name,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("failed listing unused KongCredentialAPIKeys: %w", err)
+		}
+
+		for _, cred := range l.Items {
+			if err := cl.Delete(ctx, &cred); err != nil {
+				return fmt.Errorf("failed deleting unused KongCredentialAPIKey %s: %w",
 					client.ObjectKeyFromObject(&cred), err,
 				)
 			}
@@ -281,6 +309,15 @@ func ensureExistingCredential[
 			update = true
 		}
 
+	case *configurationv1alpha1.KongCredentialAPIKey:
+		if cred.Spec.ConsumerRef.Name != consumer.Name ||
+			cred.Spec.Key != string(secret.Data[CredentialSecretKeyNameAPIKeyKey]) {
+
+			cred.Spec.ConsumerRef.Name = consumer.Name
+			setKongCredentialAPIKeySpec(&cred.Spec, secret)
+			update = true
+		}
+
 	default:
 		// NOTE: Shouldn't happen.
 		panic(fmt.Sprintf("unsupported credential type %T", cred))
@@ -302,11 +339,13 @@ func ensureExistingCredential[
 
 // ensureCredentialExists creates the credential based on the provided secret
 // and credType.
-func (r *KongCredentialSecretReconciler) ensureCredentialExists(
+func ensureCredentialExists(
 	ctx context.Context,
+	cl client.Client,
 	secret *corev1.Secret,
 	credType string,
 	kongConsumer *configurationv1.KongConsumer,
+	scheme *runtime.Scheme,
 ) error {
 	nn := types.NamespacedName{
 		Namespace: secret.Namespace,
@@ -315,8 +354,12 @@ func (r *KongCredentialSecretReconciler) ensureCredentialExists(
 
 	var cred client.Object
 	switch credType {
+
 	case KongCredentialTypeBasicAuth:
 		cred = secretToKongCredentialBasicAuth(secret, kongConsumer)
+
+	case KongCredentialTypeAPIKey:
+		cred = secretToKongCredentialAPIKey(secret, kongConsumer)
 
 	default:
 		return fmt.Errorf("Secret %s used as credential, but has unsupported type %s",
@@ -324,17 +367,17 @@ func (r *KongCredentialSecretReconciler) ensureCredentialExists(
 		)
 	}
 
-	err := controllerutil.SetControllerReference(kongConsumer, cred, r.scheme)
+	err := controllerutil.SetControllerReference(kongConsumer, cred, scheme)
 	if err != nil {
 		return err
 	}
 	// Set the secret as owner too so that deletion (or changes) of the credential
 	// triggers the reconciliation of the secret in this controller.
-	err = controllerutil.SetOwnerReference(secret, cred, r.scheme)
+	err = controllerutil.SetOwnerReference(secret, cred, scheme)
 	if err != nil {
 		return err
 	}
-	if err := r.client.Create(ctx, cred); err != nil {
+	if err := cl.Create(ctx, cred); err != nil {
 		return err
 	}
 
@@ -361,13 +404,16 @@ func validateSecret(
 	nn := client.ObjectKeyFromObject(s)
 
 	// TODO: Add more credential types support.
-	// TODO: https://github.com/Kong/gateway-operator/issues/1123
 	// TODO: https://github.com/Kong/gateway-operator/issues/1124
 	// TODO: https://github.com/Kong/gateway-operator/issues/1125
 	// TODO: https://github.com/Kong/gateway-operator/issues/1126
 	switch credType {
 	case KongCredentialTypeBasicAuth:
 		if err := validateSecretForKongCredentialBasicAuth(s); err != nil {
+			return err
+		}
+	case KongCredentialTypeAPIKey:
+		if err := validateSecretForKongCredentialAPIKey(s); err != nil {
 			return err
 		}
 	default:
@@ -392,21 +438,49 @@ func validateSecretForKongCredentialBasicAuth(s *corev1.Secret) error {
 	return nil
 }
 
+func validateSecretForKongCredentialAPIKey(s *corev1.Secret) error {
+	if _, ok := s.Data[CredentialSecretKeyNameAPIKeyKey]; !ok {
+		return fmt.Errorf("Secret %s used as key-auth credential, but lacks %s key",
+			client.ObjectKeyFromObject(s), CredentialSecretKeyNameAPIKeyKey,
+		)
+	}
+	return nil
+}
+
+func secretObjectMetaForConsumer(consumer *configurationv1.KongConsumer) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		GenerateName: consumer.Name + "-",
+		Namespace:    consumer.Namespace,
+	}
+}
+
 func secretToKongCredentialBasicAuth(
-	s *corev1.Secret, k *configurationv1.KongConsumer,
+	s *corev1.Secret, c *configurationv1.KongConsumer,
 ) *configurationv1alpha1.KongCredentialBasicAuth {
 	cred := &configurationv1alpha1.KongCredentialBasicAuth{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: k.Name + "-",
-			Namespace:    k.Namespace,
-		},
+		ObjectMeta: secretObjectMetaForConsumer(c),
 		Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
+			ConsumerRef: corev1.LocalObjectReference{
+				Name: c.Name,
+			},
+		},
+	}
+	setKongCredentialBasicAuthSpec(&cred.Spec, s)
+	return cred
+}
+
+func secretToKongCredentialAPIKey(
+	s *corev1.Secret, k *configurationv1.KongConsumer,
+) *configurationv1alpha1.KongCredentialAPIKey {
+	cred := &configurationv1alpha1.KongCredentialAPIKey{
+		ObjectMeta: secretObjectMetaForConsumer(k),
+		Spec: configurationv1alpha1.KongCredentialAPIKeySpec{
 			ConsumerRef: corev1.LocalObjectReference{
 				Name: k.Name,
 			},
 		},
 	}
-	setKongCredentialBasicAuthSpec(&cred.Spec, s)
+	setKongCredentialAPIKeySpec(&cred.Spec, s)
 	return cred
 }
 
@@ -417,6 +491,12 @@ func setKongCredentialBasicAuthSpec(
 	spec.Password = string(s.Data[corev1.BasicAuthPasswordKey])
 }
 
+func setKongCredentialAPIKeySpec(
+	spec *configurationv1alpha1.KongCredentialAPIKeySpec, s *corev1.Secret,
+) {
+	spec.Key = string(s.Data[CredentialSecretKeyNameAPIKeyKey])
+}
+
 func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 	ctx context.Context,
 	s *corev1.Secret,
@@ -424,12 +504,16 @@ func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 	consumer *configurationv1.KongConsumer,
 ) (ctrl.Result, error) {
 	// TODO: add more credentials types support.
-	switch credType { //nolint:gocritic
+	// TODO: https://github.com/Kong/gateway-operator/issues/1124
+	// TODO: https://github.com/Kong/gateway-operator/issues/1125
+	// TODO: https://github.com/Kong/gateway-operator/issues/1126
+
+	switch credType {
 	case KongCredentialTypeBasicAuth:
-		var kongCredentialsBasicAuthList configurationv1alpha1.KongCredentialBasicAuthList
+		var l configurationv1alpha1.KongCredentialBasicAuthList
 		err := r.client.List(
 			ctx,
-			&kongCredentialsBasicAuthList,
+			&l,
 			client.MatchingFields{
 				IndexFieldKongCredentialBasicAuthReferencesKongConsumer: consumer.Name,
 			},
@@ -438,34 +522,79 @@ func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 			return ctrl.Result{}, fmt.Errorf("failed listing KongCredentialBasicAuth: %w", err)
 		}
 
-		switch len(kongCredentialsBasicAuthList.Items) {
-		case 0:
-			if err := r.ensureCredentialExists(ctx, s, credType, consumer); err != nil {
-				return ctrl.Result{}, err
-			}
-
-		case 1:
-			credentialBasicAuth := kongCredentialsBasicAuthList.Items[0]
-			if !credentialBasicAuth.DeletionTimestamp.IsZero() {
-				return ctrl.Result{}, nil
-			}
-
-			res, err := ensureExistingCredential(ctx, r.client, &credentialBasicAuth, s, consumer)
-			if err != nil || !res.IsZero() {
-				return res, err
-			}
-
-		default:
-			if err := k8sreduce.ReduceKongCredentials(ctx, r.client, kongCredentialsBasicAuthList.Items); err != nil {
-				return ctrl.Result{}, err
-			}
-			// NOTE: requeue just in case we didn't perform any deletes.
-			// Even if we'd check it here, we could still be running against stale cache.
-			return ctrl.Result{
-				Requeue: true,
-			}, nil
-
+		if res, err := handleCreds(ctx, r.client, s, credType, consumer, l.Items, r.scheme); err != nil || !res.IsZero() {
+			return res, err
 		}
+
+	case KongCredentialTypeAPIKey:
+		var l configurationv1alpha1.KongCredentialAPIKeyList
+		err := r.client.List(
+			ctx,
+			&l,
+			client.MatchingFields{
+				IndexFieldKongCredentialAPIKeyReferencesKongConsumer: consumer.Name,
+			},
+		)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed listing KongCredentialAPIKey: %w", err)
+		}
+
+		if res, err := handleCreds(ctx, r.client, s, credType, consumer, l.Items, r.scheme); err != nil || !res.IsZero() {
+			return res, err
+		}
+
+	default:
+		return ctrl.Result{}, fmt.Errorf("Secret %s used as credential, but has unsupported type %s",
+			client.ObjectKeyFromObject(s), credType,
+		)
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func handleCreds[
+	T constraints.SupportedCredentialType,
+	TPtr constraints.KongCredential[T],
+](
+	ctx context.Context,
+	cl client.Client,
+	s *corev1.Secret,
+	credType string,
+	consumer *configurationv1.KongConsumer,
+	creds []T,
+	scheme *runtime.Scheme,
+) (ctrl.Result, error) {
+	switch len(creds) {
+	case 0:
+		if err := ensureCredentialExists(ctx, cl, s, credType, consumer, scheme); err != nil {
+			return ctrl.Result{}, err
+		}
+
+	case 1:
+		cred, ok := any(&creds[0]).(TPtr)
+		if !ok {
+			return ctrl.Result{}, fmt.Errorf("failed to cast Kong credential %T", creds[0])
+		}
+
+		if !cred.GetDeletionTimestamp().IsZero() {
+			return ctrl.Result{}, nil
+		}
+
+		res, err := ensureExistingCredential(ctx, cl, cred, s, consumer)
+		if err != nil || !res.IsZero() {
+			return res, err
+		}
+
+	default:
+		if err := k8sreduce.ReduceKongCredentials[T, TPtr](ctx, cl, creds); err != nil {
+			return ctrl.Result{}, err
+		}
+		// NOTE: requeue just in case we didn't perform any deletes.
+		// Even if we'd check it here, we could still be running against stale cache.
+		return ctrl.Result{
+			Requeue: true,
+		}, nil
+
 	}
 
 	return ctrl.Result{}, nil
