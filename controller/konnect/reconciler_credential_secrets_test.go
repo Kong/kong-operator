@@ -84,6 +84,48 @@ func TestValidateSecretForKongCredentialBasicAuth(t *testing.T) {
 	}
 }
 
+func TestValidateSecretForKongCredentialAPIKey(t *testing.T) {
+	tests := []struct {
+		name      string
+		secret    *corev1.Secret
+		wantError bool
+	}{
+		{
+			name: "valid secret",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "valid-secret",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"key": []byte("api-key"),
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "missing key",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "missing-key",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{},
+			},
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateSecretForKongCredentialAPIKey(tt.secret)
+			if (err != nil) != tt.wantError {
+				t.Errorf("validateSecretForKongCredentialAPIKey() error = %v, wantError %v", err, tt.wantError)
+			}
+		})
+	}
+}
+
 func TestEnsureExistingCredential(t *testing.T) {
 	t.Run("KongCredentialBasicAuth", func(t *testing.T) {
 		tests := []struct {
@@ -159,6 +201,101 @@ func TestEnsureExistingCredential(t *testing.T) {
 					Data: map[string][]byte{
 						corev1.BasicAuthUsernameKey: []byte("username"),
 						corev1.BasicAuthPasswordKey: []byte("password"),
+					},
+				},
+				consumer: &configurationv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "consumer",
+						Namespace: "default",
+					},
+				},
+				wantError: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				client := clientfake.NewClientBuilder().
+					WithScheme(scheme.Get()).
+					WithObjects(tt.cred).
+					Build()
+				_, err := ensureExistingCredential(context.Background(), client, tt.cred, tt.secret, tt.consumer)
+				if (err != nil) != tt.wantError {
+					t.Errorf("ensureExistingCredential() error = %v, wantError %v", err, tt.wantError)
+				}
+				if tt.assert != nil {
+					tt.assert(t, tt.cred)
+				}
+			})
+		}
+	})
+
+	t.Run("KongCredentialAPIKey", func(t *testing.T) {
+		tests := []struct {
+			name      string
+			cred      *configurationv1alpha1.KongCredentialAPIKey
+			secret    *corev1.Secret
+			consumer  *configurationv1.KongConsumer
+			assert    func(t *testing.T, cred *configurationv1alpha1.KongCredentialAPIKey)
+			wantError bool
+		}{
+			{
+				name: "credential needs update",
+				cred: &configurationv1alpha1.KongCredentialAPIKey{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cred",
+						Namespace: "default",
+					},
+					Spec: configurationv1alpha1.KongCredentialAPIKeySpec{
+						ConsumerRef: corev1.LocalObjectReference{
+							Name: "consumer",
+						},
+						KongCredentialAPIKeyAPISpec: configurationv1alpha1.KongCredentialAPIKeyAPISpec{
+							Key: "old-api-key",
+						},
+					},
+				},
+				secret: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"key": []byte("new-api-key"),
+					},
+				},
+				consumer: &configurationv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "consumer",
+						Namespace: "default",
+					},
+				},
+				assert: func(t *testing.T, cred *configurationv1alpha1.KongCredentialAPIKey) {
+					require.NotNil(t, cred)
+					require.Equal(t, "new-api-key", cred.Spec.Key)
+				},
+				wantError: false,
+			},
+			{
+				name: "credential does not need update",
+				cred: &configurationv1alpha1.KongCredentialAPIKey{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cred",
+						Namespace: "default",
+					},
+					Spec: configurationv1alpha1.KongCredentialAPIKeySpec{
+						ConsumerRef: corev1.LocalObjectReference{
+							Name: "consumer",
+						},
+					},
+				},
+				secret: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"key": []byte("api-key"),
 					},
 				},
 				consumer: &configurationv1.KongConsumer{
