@@ -14,7 +14,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/vars"
 
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -863,9 +863,9 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 						},
 					},
 				},
-				Extensions: []operatorv1alpha1.ExtensionRef{
+				Extensions: []commonv1alpha1.ExtensionRef{
 					{
-						NamespacedRef: operatorv1alpha1.NamespacedRef{
+						NamespacedRef: commonv1alpha1.NamespacedRef{
 							Name: "test",
 						},
 					},
@@ -887,9 +887,9 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 						},
 					},
 				},
-				Extensions: []operatorv1alpha1.ExtensionRef{
+				Extensions: []commonv1alpha1.ExtensionRef{
 					{
-						NamespacedRef: operatorv1alpha1.NamespacedRef{
+						NamespacedRef: commonv1alpha1.NamespacedRef{
 							Name: "test",
 						},
 					},
@@ -907,9 +907,9 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 						},
 					},
 				},
-				Extensions: []operatorv1alpha1.ExtensionRef{
+				Extensions: []commonv1alpha1.ExtensionRef{
 					{
-						NamespacedRef: operatorv1alpha1.NamespacedRef{
+						NamespacedRef: commonv1alpha1.NamespacedRef{
 							Name: "test",
 						},
 					},

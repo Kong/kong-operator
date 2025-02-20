@@ -2023,8 +2023,6 @@ _Appears in:_
 
 
 
-
-
 #### KongPluginInstallationSpec
 
 
@@ -2205,24 +2203,6 @@ MetricsConfig holds the configuration for the DataPlane metrics.
 
 _Appears in:_
 - [DataPlaneMetricsExtensionSpec](#dataplanemetricsextensionspec)
-
-#### NamespacedRef
-
-
-NamespacedRef is a reference to a namespaced resource.
-
-
-
-| Field | Description |
-| --- | --- |
-| `name` _string_ | Name is the name of the referred resource. |
-| `namespace` _string_ | Namespace is the namespace of the referred resource.<br /><br /> For namespace-scoped resources if no Namespace is provided then the namespace of the parent object MUST be used.<br /><br /> This field MUST not be set when referring to cluster-scoped resources. |
-
-
-_Appears in:_
-- [DataPlaneMetricsExtensionStatus](#dataplanemetricsextensionstatus)
-- [ExtensionRef](#extensionref)
-- [KonnectExtensionStatus](#konnectextensionstatus)
 
 #### ServiceSelector
 
