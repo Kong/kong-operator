@@ -64,6 +64,8 @@ func Create[
 		err = createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = createKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
+	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
+		err = createKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -121,7 +123,14 @@ func Create[
 		case *konnectv1alpha1.KonnectGatewayControlPlane:
 			id, err = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
-			id, err = getKonnectNetworkForUID(ctx, sdk.GetCloudGatewaysSDK(), ent)
+			// NOTE: since Cloud Gateways resource do not support labels/tags,
+			// we can't reliably get the Konnect ID for a Cloud Gateway Network
+			// given a k8s object UID.
+			// For now this code uses a list, using a name filter, to get the Konnect ID.
+			id, err = getKonnectNetworkMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), ent)
+		case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
+			// TODO: can't get the ID for a DataPlaneGroupConfiguration
+			// as this resource type does not support labels/tags.
 		case *configurationv1alpha1.KongService:
 			id, err = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
 		case *configurationv1alpha1.KongRoute:
@@ -235,6 +244,8 @@ func Delete[
 		err = deleteControlPlane(ctx, sdk.GetControlPlaneSDK(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = deleteKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
+	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
+		err = deleteKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = deleteService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -379,6 +390,8 @@ func Update[
 		err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = updateKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
+	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
+		err = updateKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:

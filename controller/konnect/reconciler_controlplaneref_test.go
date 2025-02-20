@@ -5,6 +5,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -282,6 +283,96 @@ func testHandleControlPlaenRef[
 
 			require.NoError(t, err)
 			require.Equal(t, tc.expectResult, res)
+		})
+	}
+}
+
+func TestGetControlPlaneRef(t *testing.T) {
+	testCases := []func(t *testing.T){
+		testGetControlPlaneRef(
+			"no control plane ref for KongService",
+			&configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "svc-no-cp-ref",
+				},
+			},
+			mo.None[commonv1alpha1.ControlPlaneRef](),
+		),
+		testGetControlPlaneRef(
+			"control plane ref for KongService",
+			&configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "svc-cp-ok",
+				},
+				Spec: configurationv1alpha1.KongServiceSpec{
+					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+							Name: "cp-ok",
+						},
+					},
+				},
+			},
+			mo.Some(commonv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: "cp-ok",
+				},
+			}),
+		),
+		testGetControlPlaneRef(
+			"no control plane ref for KonnectCloudGatewayDataPlaneGroupConfiguration",
+			&konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-group-config",
+				},
+				Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{},
+			},
+			mo.None[commonv1alpha1.ControlPlaneRef](),
+		),
+		testGetControlPlaneRef(
+			"control plane ref for KonnectCloudGatewayDataPlaneGroupConfiguration",
+			&konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-group-config",
+				},
+				Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
+					ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "cp-ok",
+						},
+					},
+				},
+			},
+			mo.Some(commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+					Name: "cp-ok",
+				},
+			}),
+		),
+	}
+
+	for _, tc := range testCases {
+		tc(t)
+	}
+}
+
+func testGetControlPlaneRef[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	name string, obj TEnt, expected mo.Option[commonv1alpha1.ControlPlaneRef],
+) func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
+			result := getControlPlaneRef(obj)
+			require.Equal(t, expected, result)
 		})
 	}
 }

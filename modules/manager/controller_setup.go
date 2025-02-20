@@ -68,6 +68,8 @@ const (
 	KonnectGatewayControlPlaneControllerName = "KonnectGatewayControlPlane"
 	// KonnectCloudGatewayNetworkControllerName is the name of the KonnectCloudGatewayNetwork controller.
 	KonnectCloudGatewayNetworkControllerName = "KonnectCloudGatewayNetwork"
+	// KonnectCloudGatewayDataPlaneGroupConfigurationControllerName is the name of the KonnectCloudGatewayDataPlaneGroupConfiguration controller.
+	KonnectCloudGatewayDataPlaneGroupConfigurationControllerName = "KonnectCloudGatewayDataPlaneGroupConfiguration"
 	// KongServiceControllerName is the name of the KongService controller.
 	KongServiceControllerName = "KongService"
 	// KongRouteControllerName is the name of the KongRoute controller.
@@ -580,27 +582,28 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			KongConsumerGroupPluginBindingFinalizerControllerName: newKonnectPluginController[configurationv1beta1.KongConsumerGroup](controllerFactory),
 
 			// Controllers responsible for creating, updating and deleting Konnect entities.
-			KonnectGatewayControlPlaneControllerName:     newKonnectEntityController[konnectv1alpha1.KonnectGatewayControlPlane](controllerFactory),
-			KonnectCloudGatewayNetworkControllerName:     newKonnectEntityController[konnectv1alpha1.KonnectCloudGatewayNetwork](controllerFactory),
-			KongServiceControllerName:                    newKonnectEntityController[configurationv1alpha1.KongService](controllerFactory),
-			KongRouteControllerName:                      newKonnectEntityController[configurationv1alpha1.KongRoute](controllerFactory),
-			KongConsumerControllerName:                   newKonnectEntityController[configurationv1.KongConsumer](controllerFactory),
-			KongConsumerGroupControllerName:              newKonnectEntityController[configurationv1beta1.KongConsumerGroup](controllerFactory),
-			KongUpstreamControllerName:                   newKonnectEntityController[configurationv1alpha1.KongUpstream](controllerFactory),
-			KongCACertificateControllerName:              newKonnectEntityController[configurationv1alpha1.KongCACertificate](controllerFactory),
-			KongCertificateControllerName:                newKonnectEntityController[configurationv1alpha1.KongCertificate](controllerFactory),
-			KongTargetControllerName:                     newKonnectEntityController[configurationv1alpha1.KongTarget](controllerFactory),
-			KongPluginBindingControllerName:              newKonnectEntityController[configurationv1alpha1.KongPluginBinding](controllerFactory),
-			KongCredentialBasicAuthControllerName:        newKonnectEntityController[configurationv1alpha1.KongCredentialBasicAuth](controllerFactory),
-			KongCredentialAPIKeyControllerName:           newKonnectEntityController[configurationv1alpha1.KongCredentialAPIKey](controllerFactory),
-			KongCredentialACLControllerName:              newKonnectEntityController[configurationv1alpha1.KongCredentialACL](controllerFactory),
-			KongCredentialHMACControllerName:             newKonnectEntityController[configurationv1alpha1.KongCredentialHMAC](controllerFactory),
-			KongCredentialJWTControllerName:              newKonnectEntityController[configurationv1alpha1.KongCredentialJWT](controllerFactory),
-			KongKeyControllerName:                        newKonnectEntityController[configurationv1alpha1.KongKey](controllerFactory),
-			KongKeySetControllerName:                     newKonnectEntityController[configurationv1alpha1.KongKeySet](controllerFactory),
-			KongDataPlaneClientCertificateControllerName: newKonnectEntityController[configurationv1alpha1.KongDataPlaneClientCertificate](controllerFactory),
-			KongVaultControllerName:                      newKonnectEntityController[configurationv1alpha1.KongVault](controllerFactory),
-			KongSNIControllerName:                        newKonnectEntityController[configurationv1alpha1.KongSNI](controllerFactory),
+			KonnectGatewayControlPlaneControllerName:                     newKonnectEntityController[konnectv1alpha1.KonnectGatewayControlPlane](controllerFactory),
+			KonnectCloudGatewayNetworkControllerName:                     newKonnectEntityController[konnectv1alpha1.KonnectCloudGatewayNetwork](controllerFactory),
+			KonnectCloudGatewayDataPlaneGroupConfigurationControllerName: newKonnectEntityController[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration](controllerFactory),
+			KongServiceControllerName:                                    newKonnectEntityController[configurationv1alpha1.KongService](controllerFactory),
+			KongRouteControllerName:                                      newKonnectEntityController[configurationv1alpha1.KongRoute](controllerFactory),
+			KongConsumerControllerName:                                   newKonnectEntityController[configurationv1.KongConsumer](controllerFactory),
+			KongConsumerGroupControllerName:                              newKonnectEntityController[configurationv1beta1.KongConsumerGroup](controllerFactory),
+			KongUpstreamControllerName:                                   newKonnectEntityController[configurationv1alpha1.KongUpstream](controllerFactory),
+			KongCACertificateControllerName:                              newKonnectEntityController[configurationv1alpha1.KongCACertificate](controllerFactory),
+			KongCertificateControllerName:                                newKonnectEntityController[configurationv1alpha1.KongCertificate](controllerFactory),
+			KongTargetControllerName:                                     newKonnectEntityController[configurationv1alpha1.KongTarget](controllerFactory),
+			KongPluginBindingControllerName:                              newKonnectEntityController[configurationv1alpha1.KongPluginBinding](controllerFactory),
+			KongCredentialBasicAuthControllerName:                        newKonnectEntityController[configurationv1alpha1.KongCredentialBasicAuth](controllerFactory),
+			KongCredentialAPIKeyControllerName:                           newKonnectEntityController[configurationv1alpha1.KongCredentialAPIKey](controllerFactory),
+			KongCredentialACLControllerName:                              newKonnectEntityController[configurationv1alpha1.KongCredentialACL](controllerFactory),
+			KongCredentialHMACControllerName:                             newKonnectEntityController[configurationv1alpha1.KongCredentialHMAC](controllerFactory),
+			KongCredentialJWTControllerName:                              newKonnectEntityController[configurationv1alpha1.KongCredentialJWT](controllerFactory),
+			KongKeyControllerName:                                        newKonnectEntityController[configurationv1alpha1.KongKey](controllerFactory),
+			KongKeySetControllerName:                                     newKonnectEntityController[configurationv1alpha1.KongKeySet](controllerFactory),
+			KongDataPlaneClientCertificateControllerName:                 newKonnectEntityController[configurationv1alpha1.KongDataPlaneClientCertificate](controllerFactory),
+			KongVaultControllerName:                                      newKonnectEntityController[configurationv1alpha1.KongVault](controllerFactory),
+			KongSNIControllerName:                                        newKonnectEntityController[configurationv1alpha1.KongSNI](controllerFactory),
 			// NOTE: Reconcilers for new supported entities should be added here.
 		}
 
@@ -716,6 +719,10 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 		{
 			Object:       &konnectv1alpha1.KonnectExtension{},
 			IndexOptions: konnect.IndexOptionsForKonnectExtension(),
+		},
+		{
+			Object:       &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{},
+			IndexOptions: konnect.IndexOptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
 		},
 	}
 

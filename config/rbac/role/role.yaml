@@ -382,6 +382,7 @@ rules:
   - konnect.konghq.com
   resources:
   - konnectapiauthconfigurations
+  - konnectcloudgatewaydataplanegroupconfigurations
   - konnectcloudgatewaynetworks
   - konnectgatewaycontrolplanes
   verbs:
@@ -395,6 +396,8 @@ rules:
   resources:
   - konnectapiauthconfigurations/finalizers
   - konnectapiauthconfigurations/status
+  - konnectcloudgatewaydataplanegroupconfigurations/finalizers
+  - konnectcloudgatewaydataplanegroupconfigurations/status
   - konnectcloudgatewaynetworks/finalizers
   - konnectcloudgatewaynetworks/status
   - konnectgatewaycontrolplanes/finalizers

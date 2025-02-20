@@ -25,6 +25,80 @@ func (_m *MockCloudGatewaysSDK) EXPECT() *MockCloudGatewaysSDK_Expecter {
 	return &MockCloudGatewaysSDK_Expecter{mock: &_m.Mock}
 }
 
+// CreateConfiguration provides a mock function with given fields: ctx, request, opts
+func (_m *MockCloudGatewaysSDK) CreateConfiguration(ctx context.Context, request components.CreateConfigurationRequest, opts ...operations.Option) (*operations.CreateConfigurationResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, request)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateConfiguration")
+	}
+
+	var r0 *operations.CreateConfigurationResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, components.CreateConfigurationRequest, ...operations.Option) (*operations.CreateConfigurationResponse, error)); ok {
+		return rf(ctx, request, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, components.CreateConfigurationRequest, ...operations.Option) *operations.CreateConfigurationResponse); ok {
+		r0 = rf(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.CreateConfigurationResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, components.CreateConfigurationRequest, ...operations.Option) error); ok {
+		r1 = rf(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockCloudGatewaysSDK_CreateConfiguration_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateConfiguration'
+type MockCloudGatewaysSDK_CreateConfiguration_Call struct {
+	*mock.Call
+}
+
+// CreateConfiguration is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request components.CreateConfigurationRequest
+//   - opts ...operations.Option
+func (_e *MockCloudGatewaysSDK_Expecter) CreateConfiguration(ctx interface{}, request interface{}, opts ...interface{}) *MockCloudGatewaysSDK_CreateConfiguration_Call {
+	return &MockCloudGatewaysSDK_CreateConfiguration_Call{Call: _e.mock.On("CreateConfiguration",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockCloudGatewaysSDK_CreateConfiguration_Call) Run(run func(ctx context.Context, request components.CreateConfigurationRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_CreateConfiguration_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(components.CreateConfigurationRequest), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockCloudGatewaysSDK_CreateConfiguration_Call) Return(_a0 *operations.CreateConfigurationResponse, _a1 error) *MockCloudGatewaysSDK_CreateConfiguration_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockCloudGatewaysSDK_CreateConfiguration_Call) RunAndReturn(run func(context.Context, components.CreateConfigurationRequest, ...operations.Option) (*operations.CreateConfigurationResponse, error)) *MockCloudGatewaysSDK_CreateConfiguration_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateNetwork provides a mock function with given fields: ctx, request, opts
 func (_m *MockCloudGatewaysSDK) CreateNetwork(ctx context.Context, request components.CreateNetworkRequest, opts ...operations.Option) (*operations.CreateNetworkResponse, error) {
 	_va := make([]interface{}, len(opts))
@@ -173,6 +247,80 @@ func (_c *MockCloudGatewaysSDK_DeleteNetwork_Call) RunAndReturn(run func(context
 	return _c
 }
 
+// GetConfiguration provides a mock function with given fields: ctx, configurationID, opts
+func (_m *MockCloudGatewaysSDK) GetConfiguration(ctx context.Context, configurationID string, opts ...operations.Option) (*operations.GetConfigurationResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, configurationID)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetConfiguration")
+	}
+
+	var r0 *operations.GetConfigurationResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) (*operations.GetConfigurationResponse, error)); ok {
+		return rf(ctx, configurationID, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) *operations.GetConfigurationResponse); ok {
+		r0 = rf(ctx, configurationID, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.GetConfigurationResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, ...operations.Option) error); ok {
+		r1 = rf(ctx, configurationID, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockCloudGatewaysSDK_GetConfiguration_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetConfiguration'
+type MockCloudGatewaysSDK_GetConfiguration_Call struct {
+	*mock.Call
+}
+
+// GetConfiguration is a helper method to define mock.On call
+//   - ctx context.Context
+//   - configurationID string
+//   - opts ...operations.Option
+func (_e *MockCloudGatewaysSDK_Expecter) GetConfiguration(ctx interface{}, configurationID interface{}, opts ...interface{}) *MockCloudGatewaysSDK_GetConfiguration_Call {
+	return &MockCloudGatewaysSDK_GetConfiguration_Call{Call: _e.mock.On("GetConfiguration",
+		append([]interface{}{ctx, configurationID}, opts...)...)}
+}
+
+func (_c *MockCloudGatewaysSDK_GetConfiguration_Call) Run(run func(ctx context.Context, configurationID string, opts ...operations.Option)) *MockCloudGatewaysSDK_GetConfiguration_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(string), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockCloudGatewaysSDK_GetConfiguration_Call) Return(_a0 *operations.GetConfigurationResponse, _a1 error) *MockCloudGatewaysSDK_GetConfiguration_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockCloudGatewaysSDK_GetConfiguration_Call) RunAndReturn(run func(context.Context, string, ...operations.Option) (*operations.GetConfigurationResponse, error)) *MockCloudGatewaysSDK_GetConfiguration_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetNetwork provides a mock function with given fields: ctx, networkID, opts
 func (_m *MockCloudGatewaysSDK) GetNetwork(ctx context.Context, networkID string, opts ...operations.Option) (*operations.GetNetworkResponse, error) {
 	_va := make([]interface{}, len(opts))
@@ -243,6 +391,80 @@ func (_c *MockCloudGatewaysSDK_GetNetwork_Call) Return(_a0 *operations.GetNetwor
 }
 
 func (_c *MockCloudGatewaysSDK_GetNetwork_Call) RunAndReturn(run func(context.Context, string, ...operations.Option) (*operations.GetNetworkResponse, error)) *MockCloudGatewaysSDK_GetNetwork_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListConfigurations provides a mock function with given fields: ctx, request, opts
+func (_m *MockCloudGatewaysSDK) ListConfigurations(ctx context.Context, request operations.ListConfigurationsRequest, opts ...operations.Option) (*operations.ListConfigurationsResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, request)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListConfigurations")
+	}
+
+	var r0 *operations.ListConfigurationsResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, operations.ListConfigurationsRequest, ...operations.Option) (*operations.ListConfigurationsResponse, error)); ok {
+		return rf(ctx, request, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, operations.ListConfigurationsRequest, ...operations.Option) *operations.ListConfigurationsResponse); ok {
+		r0 = rf(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.ListConfigurationsResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, operations.ListConfigurationsRequest, ...operations.Option) error); ok {
+		r1 = rf(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockCloudGatewaysSDK_ListConfigurations_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListConfigurations'
+type MockCloudGatewaysSDK_ListConfigurations_Call struct {
+	*mock.Call
+}
+
+// ListConfigurations is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request operations.ListConfigurationsRequest
+//   - opts ...operations.Option
+func (_e *MockCloudGatewaysSDK_Expecter) ListConfigurations(ctx interface{}, request interface{}, opts ...interface{}) *MockCloudGatewaysSDK_ListConfigurations_Call {
+	return &MockCloudGatewaysSDK_ListConfigurations_Call{Call: _e.mock.On("ListConfigurations",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockCloudGatewaysSDK_ListConfigurations_Call) Run(run func(ctx context.Context, request operations.ListConfigurationsRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_ListConfigurations_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(operations.ListConfigurationsRequest), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockCloudGatewaysSDK_ListConfigurations_Call) Return(_a0 *operations.ListConfigurationsResponse, _a1 error) *MockCloudGatewaysSDK_ListConfigurations_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockCloudGatewaysSDK_ListConfigurations_Call) RunAndReturn(run func(context.Context, operations.ListConfigurationsRequest, ...operations.Option) (*operations.ListConfigurationsResponse, error)) *MockCloudGatewaysSDK_ListConfigurations_Call {
 	_c.Call.Return(run)
 	return _c
 }

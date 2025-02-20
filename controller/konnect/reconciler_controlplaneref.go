@@ -18,9 +18,6 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -28,67 +25,16 @@ func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 	e TEnt,
 ) mo.Option[commonv1alpha1.ControlPlaneRef] {
 	none := mo.None[commonv1alpha1.ControlPlaneRef]()
-	switch e := any(e).(type) {
-	case *configurationv1.KongConsumer:
-		if e.Spec.ControlPlaneRef == nil {
-			return none
-		}
-		return mo.Some(*e.Spec.ControlPlaneRef)
-	case *configurationv1beta1.KongConsumerGroup:
-		if e.Spec.ControlPlaneRef == nil {
-			return none
-		}
-		return mo.Some(*e.Spec.ControlPlaneRef)
-	case *configurationv1alpha1.KongRoute:
-		if e.Spec.ControlPlaneRef == nil {
-			return none
-		}
-		return mo.Some(*e.Spec.ControlPlaneRef)
-	case *configurationv1alpha1.KongService:
-		if e.Spec.ControlPlaneRef == nil {
-			return none
-		}
-		return mo.Some(*e.Spec.ControlPlaneRef)
-	case *configurationv1alpha1.KongPluginBinding:
-		return mo.Some(e.Spec.ControlPlaneRef)
-	case *configurationv1alpha1.KongUpstream:
-		if e.Spec.ControlPlaneRef == nil {
-			return none
-		}
-		return mo.Some(*e.Spec.ControlPlaneRef)
-	case *configurationv1alpha1.KongCACertificate:
-		if e.Spec.ControlPlaneRef == nil {
-			return none
-		}
-		return mo.Some(*e.Spec.ControlPlaneRef)
-	case *configurationv1alpha1.KongCertificate:
-		if e.Spec.ControlPlaneRef == nil {
-			return none
-		}
-		return mo.Some(*e.Spec.ControlPlaneRef)
-	case *configurationv1alpha1.KongVault:
-		if e.Spec.ControlPlaneRef == nil {
-			return none
-		}
-		return mo.Some(*e.Spec.ControlPlaneRef)
-	case *configurationv1alpha1.KongKey:
-		if e.Spec.ControlPlaneRef == nil {
-			return none
-		}
-		return mo.Some(*e.Spec.ControlPlaneRef)
-	case *configurationv1alpha1.KongKeySet:
-		if e.Spec.ControlPlaneRef == nil {
-			return none
-		}
-		return mo.Some(*e.Spec.ControlPlaneRef)
-	case *configurationv1alpha1.KongDataPlaneClientCertificate:
-		if e.Spec.ControlPlaneRef == nil {
-			return none
-		}
-		return mo.Some(*e.Spec.ControlPlaneRef)
-	default:
-		return none
+	type GetControlPlaneRef interface {
+		GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef
 	}
+	var empty commonv1alpha1.ControlPlaneRef
+	if eGetter, ok := any(e).(GetControlPlaneRef); ok {
+		if cpRef := eGetter.GetControlPlaneRef(); cpRef != nil && *cpRef != empty {
+			return mo.Some(*cpRef)
+		}
+	}
+	return none
 }
 
 // handleControlPlaneRef handles the ControlPlaneRef for the given entity.

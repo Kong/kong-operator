@@ -1,0 +1,66 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For complete list of available API URLs see: https://docs.konghq.com/konnect/network/
+  serverURL: eu.api.konghq.com
+---
+kind: KonnectGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: cp-cloud-gateway-test1
+  namespace: default
+spec:
+  cloud_gateway: true
+  cluster_type: CLUSTER_TYPE_CONTROL_PLANE
+  name: cp-cloud-gateway-test1
+  labels:
+    app: test1
+    key1: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+# NOTE:
+# Data Plane Group Configuration will override any other configuration
+# that is applied outside of this configuration.
+# Using more than 1 configuration will result in configurations overriding each other.
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectCloudGatewayDataPlaneGroupConfiguration
+metadata:
+  name: eu-central-1
+spec:
+  api_access: private+public
+  version: "3.9"
+  dataplane_groups:
+    - provider: aws
+      region: eu-central-1
+      networkRef:
+        type: konnectID
+        konnectID: "222222222222222222222222222222222222"
+      autoscale:
+        type: ConfigurationDataPlaneGroupAutoscaleStatic
+        static:
+          instance_type: small
+          requested_instances: 2
+      environment:
+        - name: KONG_LOG_LEVEL
+          value: debug
+    - provider: aws
+      region: ap-northeast-1
+      networkRef:
+        type: konnectID
+        konnectID: "111111111111111111111111111111111111"
+      autoscale:
+        type: ConfigurationDataPlaneGroupAutoscaleStatic
+        static:
+          instance_type: small
+          requested_instances: 2
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: cp-cloud-gateway-test1
