@@ -16,8 +16,8 @@ import (
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
 
-	"github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
-	"github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 func TestAIGatewayCreation(t *testing.T) {
@@ -26,15 +26,15 @@ func TestAIGatewayCreation(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying a GatewayConfiguration resource")
-	gatewayConfiguration := &v1beta1.GatewayConfiguration{
+	gatewayConfiguration := &operatorv1beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.New().String(),
 			Namespace: namespace.Name,
 		},
-		Spec: v1beta1.GatewayConfigurationSpec{
-			DataPlaneOptions: &v1beta1.GatewayConfigDataPlaneOptions{
-				Deployment: v1beta1.DataPlaneDeploymentOptions{
-					DeploymentOptions: v1beta1.DeploymentOptions{
+		Spec: operatorv1beta1.GatewayConfigurationSpec{
+			DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{{
@@ -61,8 +61,8 @@ func TestAIGatewayCreation(t *testing.T) {
 					},
 				},
 			},
-			ControlPlaneOptions: &v1beta1.ControlPlaneOptions{
-				Deployment: v1beta1.ControlPlaneDeploymentOptions{
+			ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{{
@@ -125,38 +125,38 @@ func TestAIGatewayCreation(t *testing.T) {
 
 	aigatewayName := "aigateway-test"
 	t.Log("deploying an AIGateway, [", aigatewayName, "]")
-	aigateway := &v1alpha1.AIGateway{
+	aigateway := &operatorv1alpha1.AIGateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      aigatewayName,
 		},
-		Spec: v1alpha1.AIGatewaySpec{
+		Spec: operatorv1alpha1.AIGatewaySpec{
 			GatewayClassName: gatewayClass.Name,
-			LargeLanguageModels: &v1alpha1.LargeLanguageModels{
-				CloudHosted: []v1alpha1.CloudHostedLargeLanguageModel{
+			LargeLanguageModels: &operatorv1alpha1.LargeLanguageModels{
+				CloudHosted: []operatorv1alpha1.CloudHostedLargeLanguageModel{
 					{
 						Identifier: identifierOpenAI,
 						Model:      &modelOpenAI,
-						PromptType: (*v1alpha1.LLMPromptType)(&promptTypeChat),
-						AICloudProvider: v1alpha1.AICloudProvider{
-							Name: v1alpha1.AICloudProviderOpenAI,
+						PromptType: (*operatorv1alpha1.LLMPromptType)(&promptTypeChat),
+						AICloudProvider: operatorv1alpha1.AICloudProvider{
+							Name: operatorv1alpha1.AICloudProviderOpenAI,
 						},
-						DefaultPromptParams: &v1alpha1.LLMPromptParams{
+						DefaultPromptParams: &operatorv1alpha1.LLMPromptParams{
 							MaxTokens: &maxTokens,
 						},
 					},
 					{
 						Identifier: identifierCohere,
 						Model:      &modelCohere,
-						PromptType: (*v1alpha1.LLMPromptType)(&promptTypeCompletions),
-						AICloudProvider: v1alpha1.AICloudProvider{
-							Name: v1alpha1.AICloudProviderCohere,
+						PromptType: (*operatorv1alpha1.LLMPromptType)(&promptTypeCompletions),
+						AICloudProvider: operatorv1alpha1.AICloudProvider{
+							Name: operatorv1alpha1.AICloudProviderCohere,
 						},
 						// Deliberately no Default Params, to test nil checks
 					},
 				},
 			},
-			CloudProviderCredentials: &v1alpha1.AICloudProviderAPITokenRef{
+			CloudProviderCredentials: &operatorv1alpha1.AICloudProviderAPITokenRef{
 				Name:      credSecretName,
 				Namespace: &namespace.Name,
 			},
@@ -230,7 +230,7 @@ func TestAIGatewayCreation(t *testing.T) {
 // See: https://github.com/Kong/gateway-operator/issues/137
 func eventuallyDetermineGatewayForAIGateway(
 	t *testing.T,
-	aigateway *v1alpha1.AIGateway,
+	aigateway *operatorv1alpha1.AIGateway,
 	clients testutils.K8sClients,
 ) (gateway *gatewayv1.Gateway) {
 	require.Eventually(t, func() bool {

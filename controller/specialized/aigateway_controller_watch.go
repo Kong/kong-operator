@@ -16,7 +16,7 @@ import (
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 
-	"github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -24,7 +24,7 @@ import (
 // -----------------------------------------------------------------------------
 
 func (r *AIGatewayReconciler) aiGatewayHasMatchingGatewayClass(obj client.Object) bool {
-	aigateway, ok := obj.(*v1alpha1.AIGateway)
+	aigateway, ok := obj.(*operatorv1alpha1.AIGateway)
 	if !ok {
 		ctrllog.FromContext(context.Background()).Error(
 			operatorerrors.ErrUnexpectedObject,
@@ -62,7 +62,7 @@ func (r *AIGatewayReconciler) listAIGatewaysForGatewayClass(ctx context.Context,
 		return
 	}
 
-	aigateways := new(v1alpha1.AIGatewayList)
+	aigateways := new(operatorv1alpha1.AIGatewayList)
 	if err := r.Client.List(ctx, aigateways); err != nil {
 		ctrllog.FromContext(ctx).Error(err, "could not list aigateways in map func")
 		return
@@ -97,7 +97,7 @@ func (r *AIGatewayReconciler) listAIGatewaysForReferenceGrants(ctx context.Conte
 
 	namespaces := []string{}
 	for _, from := range referenceGrant.Spec.From {
-		if from.Group != gatewayv1beta1.Group(v1alpha1.SchemeGroupVersion.Group) || from.Kind != gatewayv1beta1.Kind("AIGateway") {
+		if from.Group != gatewayv1beta1.Group(operatorv1alpha1.SchemeGroupVersion.Group) || from.Kind != gatewayv1beta1.Kind("AIGateway") {
 			continue
 		}
 		ns := string(from.Namespace)
@@ -107,7 +107,7 @@ func (r *AIGatewayReconciler) listAIGatewaysForReferenceGrants(ctx context.Conte
 	namespaces = lo.Uniq(namespaces)
 	reqs := []reconcile.Request{}
 	for _, ns := range namespaces {
-		aigateways := new(v1alpha1.AIGatewayList)
+		aigateways := new(operatorv1alpha1.AIGatewayList)
 		namespacedClient := client.NewNamespacedClient(r.Client, ns)
 		if err := namespacedClient.List(ctx, aigateways); err != nil {
 			ctrllog.FromContext(ctx).Error(err, "could not list aigateways in namespace", "namespace", ns)
@@ -133,6 +133,6 @@ func referenceGrantReferencesAIGateway(obj client.Object) bool {
 		return false
 	}
 	return lo.ContainsBy(referenceGrant.Spec.From, func(from gatewayv1beta1.ReferenceGrantFrom) bool {
-		return from.Group == gatewayv1beta1.Group(v1alpha1.SchemeGroupVersion.Group) && from.Kind == gatewayv1beta1.Kind("AIGateway")
+		return from.Group == gatewayv1beta1.Group(operatorv1alpha1.SchemeGroupVersion.Group) && from.Kind == gatewayv1beta1.Kind("AIGateway")
 	})
 }

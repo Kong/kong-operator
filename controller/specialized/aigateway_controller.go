@@ -21,7 +21,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/vars"
 
-	"github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 )
 
 // ----------------------------------------------------------------------------
@@ -41,7 +41,7 @@ func (r *AIGatewayReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 	return ctrl.NewControllerManagedBy(mgr).
 		// watch AIGateway objects, filtering out any Gateways which are not
 		// configured with a supported GatewayClass controller name.
-		For(&v1alpha1.AIGateway{},
+		For(&operatorv1alpha1.AIGateway{},
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.aiGatewayHasMatchingGatewayClass))).
 		Watches(
 			&gatewayv1.GatewayClass{},
@@ -63,7 +63,7 @@ func (r *AIGatewayReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "aigateway", r.DevelopmentMode)
 
-	var aigateway v1alpha1.AIGateway
+	var aigateway operatorv1alpha1.AIGateway
 	if err := r.Client.Get(ctx, req.NamespacedName, &aigateway); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}

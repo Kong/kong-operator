@@ -15,7 +15,7 @@ import (
 
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 
-	"github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 )
 
 func TestCheckReferenceGrantForSecret(t *testing.T) {
@@ -66,10 +66,10 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 				Namespace: "goodNamespace",
 			},
 		}
-		objKPI = &v1alpha1.KongPluginInstallation{
+		objKPI = &operatorv1alpha1.KongPluginInstallation{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "KongPluginInstallation",
-				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				APIVersion: operatorv1alpha1.SchemeGroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "goodNamespace",

@@ -15,7 +15,7 @@ import (
 	secretref "github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	"github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -151,7 +151,7 @@ func (r *AIGatewayReconciler) createOrUpdateSvc(
 func (r *AIGatewayReconciler) manageGateway(
 	ctx context.Context,
 	logger logr.Logger,
-	aiGateway *v1alpha1.AIGateway,
+	aiGateway *operatorv1alpha1.AIGateway,
 ) (
 	bool, // whether any changes were made
 	error,
@@ -170,7 +170,7 @@ func (r *AIGatewayReconciler) manageGateway(
 func (r *AIGatewayReconciler) configurePlugins(
 	ctx context.Context,
 	logger logr.Logger,
-	aiGateway *v1alpha1.AIGateway,
+	aiGateway *operatorv1alpha1.AIGateway,
 ) (
 	bool, // whether any changes were made
 	error,

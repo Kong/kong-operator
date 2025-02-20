@@ -17,7 +17,7 @@ import (
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
-	"github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 var (
@@ -31,7 +31,7 @@ var (
 
 // applyKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it
 // fetches the referenced extension and applies the necessary changes to the DataPlane spec.
-func applyKonnectExtension(ctx context.Context, cl client.Client, dataplane *v1beta1.DataPlane) error {
+func applyKonnectExtension(ctx context.Context, cl client.Client, dataplane *operatorv1beta1.DataPlane) error {
 	for _, extensionRef := range dataplane.Spec.Extensions {
 		if extensionRef.Group != operatorv1alpha1.SchemeGroupVersion.Group || extensionRef.Kind != operatorv1alpha1.KonnectExtensionKind {
 			continue
