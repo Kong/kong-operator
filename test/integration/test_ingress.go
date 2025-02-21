@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/controlplane"
 	"github.com/kong/gateway-operator/internal/annotations"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -30,6 +29,8 @@ import (
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 	"github.com/kong/gateway-operator/test/helpers"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 const (

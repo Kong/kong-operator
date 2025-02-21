@@ -19,13 +19,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 	"github.com/kong/gateway-operator/test/helpers"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 func init() {

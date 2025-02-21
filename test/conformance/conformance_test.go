@@ -21,13 +21,14 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	"github.com/kong/gateway-operator/api/v1beta1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayapipkg "github.com/kong/gateway-operator/pkg/gatewayapi"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 var skippedTestsForExpressionsRouter = []string{}
@@ -117,16 +118,16 @@ func TestGatewayConformance(t *testing.T) {
 	conformance.RunConformanceWithOptions(t, opts)
 }
 
-func createGatewayConfiguration(ctx context.Context, t *testing.T, c ConformanceConfig) *v1beta1.GatewayConfiguration {
-	gwconf := v1beta1.GatewayConfiguration{
+func createGatewayConfiguration(ctx context.Context, t *testing.T, c ConformanceConfig) *operatorv1beta1.GatewayConfiguration {
+	gwconf := operatorv1beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "kgo-gwconf-conformance-",
 			Namespace:    "default",
 		},
-		Spec: v1beta1.GatewayConfigurationSpec{
-			DataPlaneOptions: &v1beta1.GatewayConfigDataPlaneOptions{
-				Deployment: v1beta1.DataPlaneDeploymentOptions{
-					DeploymentOptions: v1beta1.DeploymentOptions{
+		Spec: operatorv1beta1.GatewayConfigurationSpec{
+			DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -159,8 +160,8 @@ func createGatewayConfiguration(ctx context.Context, t *testing.T, c Conformance
 					},
 				},
 			},
-			ControlPlaneOptions: &v1beta1.ControlPlaneOptions{
-				Deployment: v1beta1.ControlPlaneDeploymentOptions{
+			ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -209,7 +210,7 @@ func createGatewayConfiguration(ctx context.Context, t *testing.T, c Conformance
 	return &gwconf
 }
 
-func createGatewayClass(ctx context.Context, t *testing.T, gwconf *v1beta1.GatewayConfiguration) *gatewayv1.GatewayClass {
+func createGatewayClass(ctx context.Context, t *testing.T, gwconf *operatorv1beta1.GatewayConfiguration) *gatewayv1.GatewayClass {
 	gwc := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "kgo-gwclass-conformance-",

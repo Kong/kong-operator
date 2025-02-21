@@ -233,7 +233,11 @@ verify.generators: verify.repo generate verify.diff
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.api generate.clientsets generate.rbacs generate.gateway-api-urls generate.docs generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config generate.mocks
+generate: generate.rbacs generate.gateway-api-urls generate.docs generate.crd-kustomize generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config generate.mocks
+
+.PHONY: generate.crd-kustomize
+generate.crd-kustomize:
+	./scripts/generate-crd-kustomize.sh
 
 .PHONY: generate.api
 generate.api: controller-gen
@@ -291,7 +295,7 @@ check.rbacs: kic-role-generator
 # ------------------------------------------------------------------------------
 
 CONTROLLER_GEN_CRD_OPTIONS ?= "+crd:generateEmbeddedObjectMeta=true"
-CONTROLLER_GEN_PATHS_RAW := ./pkg/utils/kubernetes/resources/clusterroles/ ./pkg/utils/kubernetes/reduce/ ./controller/... ./$(API_DIR)/...
+CONTROLLER_GEN_PATHS_RAW := ./pkg/utils/kubernetes/resources/clusterroles/ ./pkg/utils/kubernetes/reduce/ ./controller/...
 CONTROLLER_GEN_PATHS := $(patsubst %,%;,$(strip $(CONTROLLER_GEN_PATHS_RAW)))
 CONFIG_CRD_PATH = config/crd
 CONFIG_CRD_BASE_PATH = $(CONFIG_CRD_PATH)/bases
@@ -303,7 +307,6 @@ manifests: controller-gen manifests.versions manifests.crds ## Generate ClusterR
 .PHONY: manifests.crds
 manifests.crds: controller-gen manifests.versions ## Generate CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" $(CONTROLLER_GEN_CRD_OPTIONS) +output:crd:artifacts:config=$(CONFIG_CRD_BASE_PATH)
-	cp $(CONFIG_CRD_BASE_PATH)/gateway-operator.konghq.com_dataplanes.yaml $(CONFIG_CRD_PATH)/dataplane/
 
 # manifests.versions ensures that image versions are set in the manifests according to the current version.
 .PHONY: manifests.versions
@@ -618,7 +621,6 @@ install.rbacs: kustomize
 # Install standard and experimental CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.all
 install.all: manifests kustomize install-gateway-api-crds install.kubernetes-configuration-crds
-	kubectl apply --server-side -f $(PROJECT_DIR)/config/crd/bases/
 	kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
 
 # Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
@@ -635,7 +637,6 @@ uninstall.kubernetes-configuration-crds: kustomize
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall.all
 uninstall.all: manifests kustomize uninstall-gateway-api-crds uninstall.kubernetes-configuration-crds
-	kubectl delete --ignore-not-found=$(ignore-not-found) -f $(PROJECT_DIR)/config/crd/bases/
 
 # Deploy controller to the K8s cluster specified in ~/.kube/config.
 # This will wait for operator's Deployment to get Available.
@@ -646,7 +647,7 @@ deploy: manifests kustomize
 	$(eval TMP := $(shell mktemp -d))
 	cp -R config $(TMP)
 	cd $(TMP)/config/components/manager-image/ && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
-	cd $(TMP)/config/default && $(KUSTOMIZE) build . | kubectl apply -f -
+	cd $(TMP)/config/default && $(KUSTOMIZE) build . | kubectl apply --server-side -f -
 	kubectl wait --timeout=1m deploy -n kong-system gateway-operator-controller-manager --for=condition=Available=true
 
 # Undeploy controller from the K8s cluster specified in ~/.kube/config.

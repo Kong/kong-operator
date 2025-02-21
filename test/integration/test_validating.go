@@ -11,9 +11,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/test/helpers"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 func TestDataPlaneValidation(t *testing.T) {
@@ -45,7 +46,7 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 		},
 	}
 
-	dataplaneClient := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dataplane, err := dataplaneClient.Create(GetCtx(), tc.dataplane, metav1.CreateOptions{})

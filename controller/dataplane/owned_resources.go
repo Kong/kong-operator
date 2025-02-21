@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/pkg/dataplane"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
@@ -25,6 +24,8 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 // ensureDataPlaneCertificate ensures that a certificate exists for the given dataplane.

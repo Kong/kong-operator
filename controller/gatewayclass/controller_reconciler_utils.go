@@ -12,10 +12,11 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayapipkg "github.com/kong/gateway-operator/pkg/gatewayapi"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 // getAcceptedCondition returns the accepted condition for the GatewayClass, with

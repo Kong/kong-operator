@@ -1,7 +1,7 @@
 package specialized
 
 import (
-	"github.com/kong/gateway-operator/api/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -17,8 +17,8 @@ type AICloudPromptDecoratorConfig struct {
 // AICloudPromptDecoratorPrompts is a Golang-conversion of the 'Prompts' configuration
 // for the AI family of Kong plugins.
 type AICloudPromptDecoratorPrompts struct {
-	Prepend []v1alpha1.LLMPrompt `json:"prepend,omitempty"`
-	Append  []v1alpha1.LLMPrompt `json:"append,omitempty"`
+	Prepend []operatorv1alpha1.LLMPrompt `json:"prepend,omitempty"`
+	Append  []operatorv1alpha1.LLMPrompt `json:"append,omitempty"`
 }
 
 // AICloudProviderLLMConfig is a Golang-conversion of the 'LLM' configuration

@@ -6,7 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 type testDataPlaneBuilder struct {

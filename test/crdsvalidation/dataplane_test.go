@@ -8,11 +8,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/test/envtest"
 
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	kcfgcrdsvalidation "github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
@@ -34,7 +34,8 @@ func TestDataPlane(t *testing.T) {
 					ObjectMeta: commonObjectMeta,
 					Spec:       operatorv1beta1.DataPlaneSpec{},
 				},
-				ExpectedErrorMessage: lo.ToPtr("DataPlane requires an image to be set on proxy container"),
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorMessage:          lo.ToPtr("DataPlane requires an image to be set on proxy container"),
 			},
 			{
 				Name: "providing image succeeds",
@@ -59,6 +60,7 @@ func TestDataPlane(t *testing.T) {
 						},
 					},
 				},
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
 			},
 			{
 				Name: "dbmode '' is supported",
@@ -89,6 +91,7 @@ func TestDataPlane(t *testing.T) {
 						},
 					},
 				},
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
 			},
 			{
 				Name: "dbmode off is supported",
@@ -119,6 +122,7 @@ func TestDataPlane(t *testing.T) {
 						},
 					},
 				},
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
 			},
 			{
 				Name: "dbmode postgres is not supported",
@@ -149,7 +153,8 @@ func TestDataPlane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("DataPlane supports only db mode 'off'"),
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorMessage:          lo.ToPtr("DataPlane supports only db mode 'off'"),
 			},
 			{
 				Name: "can't update DataPlane when rollout in progress",
@@ -195,7 +200,8 @@ func TestDataPlane(t *testing.T) {
 						},
 					}
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("DataPlane spec cannot be updated when promotion is in progress"),
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedUpdateErrorMessage:    lo.ToPtr("DataPlane spec cannot be updated when promotion is in progress"),
 			},
 			{
 				Name: "can update DataPlane when rollout not in progress",
@@ -241,6 +247,7 @@ func TestDataPlane(t *testing.T) {
 						},
 					}
 				},
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
 			},
 			{
 				Name: "BlueGreen promotion strategy AutomaticPromotion is not supported",
@@ -280,7 +287,8 @@ func TestDataPlane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Unsupported value: \"AutomaticPromotion\": supported values: \"BreakBeforePromotion\""),
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorMessage:          lo.ToPtr("Unsupported value: \"AutomaticPromotion\": supported values: \"BreakBeforePromotion\""),
 			},
 			{
 				Name: "BlueGreen promotion strategy BreakBeforePromotion is supported",
@@ -320,6 +328,7 @@ func TestDataPlane(t *testing.T) {
 						},
 					},
 				},
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
 			},
 			{
 				Name: "BlueGreen rollout resource plan DeleteOnPromotionRecreateOnRollout in unsupported",
@@ -358,7 +367,8 @@ func TestDataPlane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.deployment.rollout.strategy.blueGreen.resources.plan.deployment: Unsupported value: \"DeleteOnPromotionRecreateOnRollout\": supported values: \"ScaleDownOnPromotionScaleUpOnRollout\""),
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorMessage:          lo.ToPtr("spec.deployment.rollout.strategy.blueGreen.resources.plan.deployment: Unsupported value: \"DeleteOnPromotionRecreateOnRollout\": supported values: \"ScaleDownOnPromotionScaleUpOnRollout\""),
 			},
 			{
 				Name: "BlueGreen rollout resource plan ScaleDownOnPromotionScaleUpOnRollout in supported",
@@ -397,6 +407,7 @@ func TestDataPlane(t *testing.T) {
 						},
 					},
 				},
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
 			},
 		}.RunWithConfig(t, cfg, scheme.Get())
 	})

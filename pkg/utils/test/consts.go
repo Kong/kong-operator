@@ -91,8 +91,4 @@ const (
 
 	// DefaultHTTPPort is the default HTTP port.
 	DefaultHTTPPort = 80
-
-	// AIGatewayCRDPath points to the CRD descriptor for AI Gateways, for use
-	// throughout tests.
-	AIGatewayCRDPath = "/bases/gateway-operator.konghq.com_aigateways.yaml"
 )
