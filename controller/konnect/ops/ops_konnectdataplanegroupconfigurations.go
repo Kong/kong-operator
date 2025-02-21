@@ -105,13 +105,6 @@ func updateKonnectDataPlaneGroupConfiguration(
 	n.SetKonnectID(id)
 	n.Status.DataPlaneGroups = dataPlaneGroupsResponseToStatus(resp.ConfigurationManifest.GetDataplaneGroups())
 
-	// sdk.ListConfigurations(ctx, sdkkonnectops.ListConfigurationsRequest{
-	// 	Filter: &sdkkonnectcomp.ConfigurationsFilterParameters{
-	// 		ControlPlaneID:  *sdkkonnectcomp.IDFieldFilter,
-	// 		ControlPlaneGeo: *sdkkonnectcomp.ControlPlaneGeoFieldFilter,
-	// 	},
-	// })
-
 	return nil
 }
 
