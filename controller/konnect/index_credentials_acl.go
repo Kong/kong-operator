@@ -9,6 +9,8 @@ import (
 const (
 	// IndexFieldKongCredentialACLReferencesKongConsumer is the index name for KongCredentialACL -> Consumer.
 	IndexFieldKongCredentialACLReferencesKongConsumer = "kongCredentialsACLConsumerRef"
+	// IndexFieldKongCredentialACLReferencesKongSecret is the index name for KongCredentialACL -> Secret.
+	IndexFieldKongCredentialACLReferencesKongSecret = "kongCredentialsACLSecretRef"
 )
 
 // IndexOptionsForCredentialsACL returns required Index options for KongCredentialACL.
@@ -18,6 +20,11 @@ func IndexOptionsForCredentialsACL() []ReconciliationIndexOption {
 			IndexObject:  &configurationv1alpha1.KongCredentialACL{},
 			IndexField:   IndexFieldKongCredentialACLReferencesKongConsumer,
 			ExtractValue: kongCredentialACLReferencesConsumer,
+		},
+		{
+			IndexObject:  &configurationv1alpha1.KongCredentialACL{},
+			IndexField:   IndexFieldKongCredentialACLReferencesKongSecret,
+			ExtractValue: kongCredentialReferencesSecret[configurationv1alpha1.KongCredentialACL],
 		},
 	}
 }
