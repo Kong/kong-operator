@@ -31,7 +31,8 @@ func TestControlPlane(t *testing.T) {
 					},
 					Spec: operatorv1beta1.ControlPlaneSpec{},
 				},
-				ExpectedErrorMessage: lo.ToPtr("ControlPlane requires an image to be set on controller container"),
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorMessage:          lo.ToPtr("ControlPlane requires an image to be set on controller container"),
 			},
 			{
 				Name: "providing image succeeds",
@@ -57,6 +58,7 @@ func TestControlPlane(t *testing.T) {
 						},
 					},
 				},
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
 			},
 		}.RunWithConfig(t, cfg, scheme.Get())
 	})
