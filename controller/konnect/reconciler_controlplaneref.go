@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"github.com/samber/lo"
 	"github.com/samber/mo"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,9 +29,9 @@ func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constrain
 	type GetControlPlaneRef interface {
 		GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef
 	}
-	var empty commonv1alpha1.ControlPlaneRef
+
 	if eGetter, ok := any(e).(GetControlPlaneRef); ok {
-		if cpRef := eGetter.GetControlPlaneRef(); cpRef != nil && *cpRef != empty {
+		if cpRef := eGetter.GetControlPlaneRef(); lo.IsNotEmpty(cpRef) {
 			return mo.Some(*cpRef)
 		}
 	}
