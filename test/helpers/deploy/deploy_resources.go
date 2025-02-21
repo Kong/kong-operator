@@ -19,6 +19,8 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+
+	"github.com/kong/gateway-operator/pkg/consts"
 )
 
 const (
@@ -269,7 +271,7 @@ func KonnectCloudGatewayDataPlaneGroupConfiguration(
 			Name: "data-plane-group-configuration-" + uuid.NewString()[:8],
 		},
 		Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
-			Version:   "3.9",
+			Version:   consts.DefaultDataPlaneTag,
 			APIAccess: lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 			DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 				{
