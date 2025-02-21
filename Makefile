@@ -157,6 +157,13 @@ download.shellcheck: mise yq ## Download shellcheck locally if necessary.
 	@$(MISE) plugin install --yes -q shellcheck
 	@$(MISE) install -q shellcheck@$(SHELLCHECK_VERSION)
 
+GOVULNCHECK_VERSION = $(shell $(YQ) -r '.govulncheck' < $(TOOLS_VERSIONS_FILE))
+GOVULNCHECK = $(PROJECT_DIR)/bin/installs/govulncheck/$(GOVULNCHECK_VERSION)/bin/govulncheck
+.PHONY: download.govulncheck
+download.govulncheck: mise yq ## Download govulncheck locally if necessary.
+	@$(MISE) plugin install --yes -q govulncheck https://github.com/wizzardich/asdf-govulncheck.git
+	@$(MISE) install -q govulncheck@$(GOVULNCHECK_VERSION)
+
 .PHONY: use-setup-envtest
 use-setup-envtest:
 	$(SETUP_ENVTEST) use
@@ -196,6 +203,10 @@ _build.operator:
 .PHONY: build
 build: generate
 	$(MAKE) build.operator
+
+.PHONY: govulncheck
+govulncheck: download.govulncheck
+	$(GOVULNCHECK) -scan symbol -show color,verbose ./...
 
 GOLANGCI_LINT_CONFIG ?= $(PROJECT_DIR)/.golangci.yaml
 .PHONY: lint
