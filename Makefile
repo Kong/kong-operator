@@ -616,7 +616,7 @@ install.kubernetes-configuration-crds: kustomize
 # Install RBACs from config/rbac into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.rbacs
 install.rbacs: kustomize
-	$(KUSTOMIZE) build config/rbac | kubectl apply --server-side -f -
+	$(KUSTOMIZE) build config/rbac | kubectl apply -f -
 
 # Install standard and experimental CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.all

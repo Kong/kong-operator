@@ -37,10 +37,12 @@
   other namespaces as AI cloud provider credentials.
   [#1161](https://github.com/Kong/gateway-operator/pull/1161)
 - Migrate KGO CRDs to the kubernetes-configuration repo.
-  With this migration process, we have removed the `api` and `pkg/clientset` from the KOG repo.
-  If other projects import them, it will be a breaking change,
-  plase import them from the `kong/kubernetes-configuration` repo instead.
+  With this migration process, we have removed the `api` and `pkg/clientset` from the KGO repo.
+  It will break if other projects import the packages from this repo.
+  plase import them from the [kong/kubernetes-configuration](kubernetes-configuraion) repo instead.
   [#1148](https://github.com/Kong/gateway-operator/pull/1148)
+
+[kubernetes-configuration]: https://github.com/Kong/kubernetes-configuration
 
 ### Added
 

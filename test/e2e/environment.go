@@ -39,7 +39,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	"github.com/kong/kubernetes-configuration/pkg/clientset"
+	configurationclient "github.com/kong/kubernetes-configuration/pkg/clientset"
 )
 
 // -----------------------------------------------------------------------------
@@ -208,7 +208,7 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 	t.Log("initializing Kubernetes API clients")
 	clients := &testutils.K8sClients{}
 	clients.K8sClient = env.Cluster().Client()
-	clients.OperatorClient, err = clientset.NewForConfig(env.Cluster().Config())
+	clients.OperatorClient, err = configurationclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 	clients.GatewayClient, err = gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
