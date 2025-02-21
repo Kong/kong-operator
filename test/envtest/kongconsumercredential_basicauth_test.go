@@ -136,9 +136,7 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 		"KongCredentialBasicAuth wasn't created",
 	)
 
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, sdk.AssertExpectations(t))
-	}, waitTime, tickTime)
+	eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
 
 	sdk.EXPECT().
 		DeleteBasicAuthWithConsumer(
@@ -166,9 +164,7 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 		"KongCredentialBasicAuth wasn't deleted but it should have been",
 	)
 
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, factory.SDK.KongCredentialsBasicAuthSDK.AssertExpectations(t))
-	}, waitTime, tickTime)
+	eventuallyAssertSDKExpectations(t, factory.SDK.KongCredentialsBasicAuthSDK, waitTime, tickTime)
 
 	t.Run("conflict on creation should be handled successfully", func(t *testing.T) {
 		t.Log("Setting up SDK expectations on creation with conflict")
@@ -222,9 +218,6 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 			return k.GetName() == created.GetName() && k8sutils.IsProgrammed(k)
 		}, "KongCredentialBasicAuth's Programmed condition should be true eventually")
 
-		t.Log("Checking SDK KongCredentialBasicAuth operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
 	})
 }

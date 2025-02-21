@@ -10,7 +10,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -105,10 +104,7 @@ func TestKongCertificate(t *testing.T) {
 			})
 		}, "KongCertificate's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongCertificate to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.CertificatesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.CertificatesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongCertificate update")
 		sdk.CertificatesSDK.EXPECT().UpsertCertificate(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertCertificateRequest) bool {
@@ -122,9 +118,7 @@ func TestKongCertificate(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, certToPatch, client.MergeFrom(createdCert)))
 
 		t.Log("Waiting for KongCertificate to be updated in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.CertificatesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.CertificatesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongCertificate deletion")
 		sdk.CertificatesSDK.EXPECT().DeleteCertificate(mock.Anything, cpID, "cert-12345").
@@ -133,10 +127,7 @@ func TestKongCertificate(t *testing.T) {
 		t.Log("Deleting KongCertificate")
 		require.NoError(t, cl.Delete(ctx, createdCert))
 
-		t.Log("Waiting for KongCertificate to be deleted in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.CertificatesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.CertificatesSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle conflict in creation correctly", func(t *testing.T) {
@@ -187,9 +178,7 @@ func TestKongCertificate(t *testing.T) {
 		}, "KongCertificate should be programmed and have ID in status after handling conflict")
 
 		t.Log("Ensuring that the SDK's create and list methods are called")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.CertificatesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.CertificatesSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
@@ -246,10 +235,7 @@ func TestKongCertificate(t *testing.T) {
 			})
 		}, "KongCertificate's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongCertificate to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.CertificatesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.CertificatesSDK, waitTime, tickTime)
 	})
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
@@ -299,10 +285,7 @@ func TestKongCertificate(t *testing.T) {
 				cert.Spec.Tags = []string{"tag3"}
 			},
 		)
-		t.Log("Checking SDK Certificate operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.CACertificatesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),

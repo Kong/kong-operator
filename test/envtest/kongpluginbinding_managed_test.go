@@ -152,9 +152,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"KongPluginBinding wasn't recreated",
 		)
 
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
 
 		t.Logf(
 			"remove annotation from KongService %s and check that managed KongPluginBinding %s gets deleted, "+
@@ -201,9 +199,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"KongPluginBinding wasn't deleted after removing annotation from KongService",
 		)
 
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
 	})
 
 	t.Run("binding to KongRoute", func(t *testing.T) {
@@ -261,9 +257,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"KongPluginBinding wasn't recreated",
 		)
 
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
 
 		t.Logf(
 			"remove annotation from KongRoute %s and check that managed KongPluginBinding %s gets deleted, "+
@@ -309,9 +303,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"KongPluginBinding wasn't deleted after removing annotation from KongRoute",
 		)
 
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
 	})
 
 	t.Run("binding to KongService and KongRoute", func(t *testing.T) {
@@ -437,9 +429,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"KongPluginBinding bound to Service wasn't deleted after removing annotation from KongService",
 		)
 
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
 	})
 
 	t.Run("binding to KongConsumer, KongService and KongRoute", func(t *testing.T) {
@@ -638,9 +628,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"KongConsumer bound KongPluginBinding wasn't deleted",
 		)
 
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
 	})
 
 	t.Run("binding to KongConsumerGroup, KongService and KongRoute", func(t *testing.T) {
@@ -839,8 +827,6 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"KongConsumerGroup bound KongPluginBinding wasn't deleted",
 		)
 
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
 	})
 }

@@ -176,10 +176,7 @@ func TestKongCACertificate(t *testing.T) {
 			return c.GetKonnectID() == certID && k8sutils.IsProgrammed(c)
 		}, "KongCACertificate should be programmed and have ID in status after handling conflict")
 
-		t.Log("Ensuring that the SDK's create and list methods are called")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.CACertificatesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.CACertificatesSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
@@ -218,10 +215,7 @@ func TestKongCACertificate(t *testing.T) {
 			})
 		}, "KongCACertificate's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongCACertificate to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.CACertificatesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
 	})
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
@@ -262,10 +256,7 @@ func TestKongCACertificate(t *testing.T) {
 				cert.Spec.Tags = tags
 			},
 		)
-		t.Log("Checking SDK CACertificate operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.CACertificatesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),

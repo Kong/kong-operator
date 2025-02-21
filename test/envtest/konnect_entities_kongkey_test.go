@@ -11,7 +11,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -93,10 +92,7 @@ func TestKongKey(t *testing.T) {
 			})
 		}, "KongKey's Programmed condition should be true eventually")
 
-		t.Log("Checking SDK KongKey operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongKey update")
 		sdk.KeysSDK.EXPECT().UpsertKey(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertKeyRequest) bool {
@@ -109,10 +105,7 @@ func TestKongKey(t *testing.T) {
 		certToPatch.Spec.Tags = append(certToPatch.Spec.Tags, "addedTag")
 		require.NoError(t, clientNamespaced.Patch(ctx, certToPatch, client.MergeFrom(createdKey)))
 
-		t.Log("Waiting for KongKey to be updated in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongKey deletion")
 		sdk.KeysSDK.EXPECT().DeleteKey(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), keyID).
@@ -121,10 +114,7 @@ func TestKongKey(t *testing.T) {
 		t.Log("Deleting KongKey")
 		require.NoError(t, cl.Delete(ctx, createdKey))
 
-		t.Log("Waiting for KongKey to be deleted in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
 	})
 
 	t.Run("without KongKeySet but with conflict response", func(t *testing.T) {
@@ -177,10 +167,7 @@ func TestKongKey(t *testing.T) {
 			})
 		}, "KongKey's Programmed condition should be true eventually")
 
-		t.Log("Checking SDK KongKey operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
 	})
 
 	t.Run("with KongKeySet", func(t *testing.T) {
@@ -251,10 +238,7 @@ func TestKongKey(t *testing.T) {
 			return programmed && associated && keySetIDPopulated && hasOwnerRefToKeySet
 		}, "KongKey's Programmed and KeySetRefValid conditions should be true eventually")
 
-		t.Log("Waiting for KongKey to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongKeySet deattachment")
 		sdk.KeysSDK.EXPECT().UpsertKey(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertKeyRequest) bool {
@@ -278,10 +262,7 @@ func TestKongKey(t *testing.T) {
 			return exactlyOneOwnerReference && hasOwnerReferenceToCP
 		}, "KongKey should be deattached from KongKeySet eventually")
 
-		t.Log("Waiting for KongKey to be deattached from KongKeySet in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
@@ -316,10 +297,7 @@ func TestKongKey(t *testing.T) {
 			})
 		}, "KongKey's Programmed condition should be true eventually")
 
-		t.Log("Checking SDK KongKey operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
 	})
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
@@ -359,10 +337,7 @@ func TestKongKey(t *testing.T) {
 				cg.Spec.Tags = append(cg.Spec.Tags, "test-1")
 			},
 		)
-		t.Log("Checking SDK Key operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),

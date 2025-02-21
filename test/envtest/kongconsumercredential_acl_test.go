@@ -133,9 +133,7 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 		"KongCredentialACL wasn't created",
 	)
 
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, sdk.AssertExpectations(t))
-	}, waitTime, tickTime)
+	eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
 
 	sdk.EXPECT().
 		DeleteACLWithConsumer(
@@ -163,9 +161,7 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 		"KongCredentialACL wasn't deleted but it should have been",
 	)
 
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, sdk.AssertExpectations(t))
-	}, waitTime, tickTime)
+	eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
 
 	t.Run("conflict on creation should be handled successfully", func(t *testing.T) {
 		t.Log("Setting up SDK expectations on creation with conflict")
@@ -221,8 +217,6 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 		}, "KongCredentialACL's Programmed condition should be true eventually")
 
 		t.Log("Checking SDK KongCredentialACL operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
 	})
 }

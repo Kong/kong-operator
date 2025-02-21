@@ -162,10 +162,7 @@ func TestKongKeySet(t *testing.T) {
 			return c.GetKonnectID() == keySetID && k8sutils.IsProgrammed(c)
 		}, "KeySet should be programmed and have ID in status after handling conflict")
 
-		t.Log("Ensuring that the SDK's create and list methods are called")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
@@ -201,10 +198,7 @@ func TestKongKeySet(t *testing.T) {
 			})
 		}, "KongKeySet's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongKeySet to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.KeySetsSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.KeySetsSDK, waitTime, tickTime)
 	})
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
@@ -244,10 +238,7 @@ func TestKongKeySet(t *testing.T) {
 				cg.Spec.Tags = append(cg.Spec.Tags, "test-1")
 			},
 		)
-		t.Log("Checking SDK Key operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.KeysSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),
