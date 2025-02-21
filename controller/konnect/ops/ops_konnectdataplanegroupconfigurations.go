@@ -161,8 +161,8 @@ func cloudGatewayDataPlaneGroupConfigurationToAPIRequest(
 	spec konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec,
 	cpID string,
 ) sdkkonnectcomp.CreateConfigurationRequest {
-	ret := cloudGatewayDataPlaneGroupConfigurationInit(spec, cpID)
-	ret.DataplaneGroups = func() []sdkkonnectcomp.CreateConfigurationDataPlaneGroup {
+	cfgReq := cloudGatewayDataPlaneGroupConfigurationInit(spec, cpID)
+	cfgReq.DataplaneGroups = func() []sdkkonnectcomp.CreateConfigurationDataPlaneGroup {
 		ret := make([]sdkkonnectcomp.CreateConfigurationDataPlaneGroup, 0, len(spec.DataplaneGroups))
 		for _, g := range spec.DataplaneGroups {
 			ret = append(ret, konnectConfigurationDataPlaneGroupToAPIRequest(g))
@@ -170,7 +170,7 @@ func cloudGatewayDataPlaneGroupConfigurationToAPIRequest(
 		return ret
 	}()
 
-	return ret
+	return cfgReq
 }
 
 func konnectConfigurationDataPlaneGroupToAPIRequest(
