@@ -3,12 +3,10 @@ package konnect
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -42,7 +40,9 @@ func KongConsumerReconciliationWatchOptions(
 			return b.Watches(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueKongConsumerForKonnectAPIAuthConfiguration(cl),
+					enqueueObjectForAPIAuthThroughControlPlaneRef[configurationv1.KongConsumerList](
+						cl, IndexFieldKongConsumerOnKonnectGatewayControlPlane,
+					),
 				),
 			)
 		},
@@ -67,56 +67,6 @@ func KongConsumerReconciliationWatchOptions(
 				),
 			)
 		},
-	}
-}
-
-func enqueueKongConsumerForKonnectAPIAuthConfiguration(
-	cl client.Client,
-) func(ctx context.Context, obj client.Object) []reconcile.Request {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		auth, ok := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
-		if !ok {
-			return nil
-		}
-		var l configurationv1.KongConsumerList
-		if err := cl.List(ctx, &l, &client.ListOptions{
-			// TODO: change this when cross namespace refs are allowed.
-			Namespace: auth.GetNamespace(),
-		}); err != nil {
-			return nil
-		}
-
-		var ret []reconcile.Request
-		for _, consumer := range l.Items {
-			cpRef, ok := getControlPlaneRef(&consumer).Get()
-			if !ok {
-				continue
-			}
-
-			cp, err := getCPForRef(ctx, cl, cpRef, consumer.GetNamespace())
-			if err != nil {
-				ctrllog.FromContext(ctx).Error(
-					err,
-					"failed to get KonnectGatewayControlPlane",
-					"KonnectGatewayControlPlane", cpRef,
-				)
-				continue
-			}
-
-			// TODO: change this when cross namespace refs are allowed.
-			if cp.GetKonnectAPIAuthConfigurationRef().Name != auth.Name {
-				continue
-			}
-
-			ret = append(ret, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: consumer.Namespace,
-					Name:      consumer.Name,
-				},
-			})
-		}
-
-		return ret
 	}
 }
 
