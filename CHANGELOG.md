@@ -69,6 +69,7 @@
   them in `KongConsumer`s' `credentials` field.
   - `basic-auth` [#1120](https://github.com/Kong/gateway-operator/pull/1120)
   - `key-auth` [#1168](https://github.com/Kong/gateway-operator/pull/1168)
+  - `acl` [#1187](https://github.com/Kong/gateway-operator/pull/1187)
 - Added prometheus metrics for Konnect entity operations in the metrics server:
   - `gateway_operator_konnect_entity_operation_count` for number of operations.
   - `gateway_operator_konnect_entity_operation_duration_milliseconds` for duration of operations.

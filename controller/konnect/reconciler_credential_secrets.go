@@ -35,11 +35,16 @@ const (
 	// KongCredentialTypeAPIKey is the type of api-key credential, it's used
 	// as the value for konghq.com/credential label.
 	KongCredentialTypeAPIKey = "key-auth"
+	// KongCredentialTypeACL is the type of Access Control Lists(ACLs) managed similar as credentials.
+	// It's used as the value for konghq.com/credential label.
+	KongCredentialTypeACL = "acl"
 )
 
 const (
 	// CredentialSecretKeyNameAPIKeyKey is the credential secret key name for API key type.
 	CredentialSecretKeyNameAPIKeyKey = "key"
+	// CredentialSecretKeyNameACLGroupKey is the credential secret key name for ACL group type.
+	CredentialSecretKeyNameACLGroupKey = "group"
 )
 
 // KongCredentialSecretReconciler reconciles a KongPlugin object.
@@ -103,8 +108,8 @@ func (r *KongCredentialSecretReconciler) SetupWithManager(_ context.Context, mgr
 		// (e.g. recreated).
 		Owns(&configurationv1alpha1.KongCredentialBasicAuth{}, builder.MatchEveryOwner).
 		Owns(&configurationv1alpha1.KongCredentialAPIKey{}, builder.MatchEveryOwner).
+		Owns(&configurationv1alpha1.KongCredentialACL{}, builder.MatchEveryOwner).
 		// TODO: Add more credential types support.
-		// TODO: https://github.com/Kong/gateway-operator/issues/1124
 		// TODO: https://github.com/Kong/gateway-operator/issues/1125
 		// TODO: https://github.com/Kong/gateway-operator/issues/1126
 		Complete(r)
@@ -237,7 +242,6 @@ func deleteAllCredentialsUsingSecret(
 	credType string,
 ) error {
 	// TODO: Add more credential types support.
-	// TODO: https://github.com/Kong/gateway-operator/issues/1124
 	// TODO: https://github.com/Kong/gateway-operator/issues/1125
 	// TODO: https://github.com/Kong/gateway-operator/issues/1126
 	switch credType {
@@ -281,6 +285,26 @@ func deleteAllCredentialsUsingSecret(
 				)
 			}
 		}
+	case KongCredentialTypeACL:
+		var l configurationv1alpha1.KongCredentialACLList
+		err := cl.List(
+			ctx, &l,
+			client.MatchingFields{
+				IndexFieldKongCredentialACLReferencesKongSecret: secret.Name,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("failed listing unused KongCredentialACLs: %w", err)
+		}
+
+		for _, cred := range l.Items {
+			if err := cl.Delete(ctx, &cred); err != nil {
+				return fmt.Errorf("failed deleting unused KongCredentialACLs %s: %w",
+					client.ObjectKeyFromObject(&cred), err,
+				)
+			}
+		}
+
 	}
 
 	return nil
@@ -315,6 +339,15 @@ func ensureExistingCredential[
 
 			cred.Spec.ConsumerRef.Name = consumer.Name
 			setKongCredentialAPIKeySpec(&cred.Spec, secret)
+			update = true
+		}
+
+	case *configurationv1alpha1.KongCredentialACL:
+		if cred.Spec.ConsumerRef.Name != consumer.Name ||
+			cred.Spec.Group != string(secret.Data[CredentialSecretKeyNameACLGroupKey]) {
+
+			cred.Spec.ConsumerRef.Name = consumer.Name
+			setKongCredentialACLSpec(&cred.Spec, secret)
 			update = true
 		}
 
@@ -361,6 +394,9 @@ func ensureCredentialExists(
 	case KongCredentialTypeAPIKey:
 		cred = secretToKongCredentialAPIKey(secret, kongConsumer)
 
+	case KongCredentialTypeACL:
+		cred = secretToKongCredentialACL(secret, kongConsumer)
+
 	default:
 		return fmt.Errorf("Secret %s used as credential, but has unsupported type %s",
 			nn, credType,
@@ -404,7 +440,6 @@ func validateSecret(
 	nn := client.ObjectKeyFromObject(s)
 
 	// TODO: Add more credential types support.
-	// TODO: https://github.com/Kong/gateway-operator/issues/1124
 	// TODO: https://github.com/Kong/gateway-operator/issues/1125
 	// TODO: https://github.com/Kong/gateway-operator/issues/1126
 	switch credType {
@@ -414,6 +449,10 @@ func validateSecret(
 		}
 	case KongCredentialTypeAPIKey:
 		if err := validateSecretForKongCredentialAPIKey(s); err != nil {
+			return err
+		}
+	case KongCredentialTypeACL:
+		if err := validateSecretForKongCredentialACL(s); err != nil {
 			return err
 		}
 	default:
@@ -442,6 +481,16 @@ func validateSecretForKongCredentialAPIKey(s *corev1.Secret) error {
 	if _, ok := s.Data[CredentialSecretKeyNameAPIKeyKey]; !ok {
 		return fmt.Errorf("Secret %s used as key-auth credential, but lacks %s key",
 			client.ObjectKeyFromObject(s), CredentialSecretKeyNameAPIKeyKey,
+		)
+	}
+	return nil
+}
+
+func validateSecretForKongCredentialACL(s *corev1.Secret) error {
+	if _, ok := s.Data[CredentialSecretKeyNameACLGroupKey]; !ok {
+		return fmt.Errorf(
+			"Secret %s used as ACL credential, but lacks %s key",
+			client.ObjectKeyFromObject(s), CredentialSecretKeyNameACLGroupKey,
 		)
 	}
 	return nil
@@ -484,6 +533,22 @@ func secretToKongCredentialAPIKey(
 	return cred
 }
 
+func secretToKongCredentialACL(
+	s *corev1.Secret, c *configurationv1.KongConsumer,
+) *configurationv1alpha1.KongCredentialACL {
+	cred := &configurationv1alpha1.KongCredentialACL{
+		ObjectMeta: secretObjectMetaForConsumer(c),
+		Spec: configurationv1alpha1.KongCredentialACLSpec{
+			ConsumerRef: corev1.LocalObjectReference{
+				Name: c.Name,
+			},
+		},
+	}
+
+	setKongCredentialACLSpec(&cred.Spec, s)
+	return cred
+}
+
 func setKongCredentialBasicAuthSpec(
 	spec *configurationv1alpha1.KongCredentialBasicAuthSpec, s *corev1.Secret,
 ) {
@@ -497,6 +562,12 @@ func setKongCredentialAPIKeySpec(
 	spec.Key = string(s.Data[CredentialSecretKeyNameAPIKeyKey])
 }
 
+func setKongCredentialACLSpec(
+	spec *configurationv1alpha1.KongCredentialACLSpec, s *corev1.Secret,
+) {
+	spec.Group = string(s.Data[CredentialSecretKeyNameACLGroupKey])
+}
+
 func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 	ctx context.Context,
 	s *corev1.Secret,
@@ -504,7 +575,6 @@ func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 	consumer *configurationv1.KongConsumer,
 ) (ctrl.Result, error) {
 	// TODO: add more credentials types support.
-	// TODO: https://github.com/Kong/gateway-operator/issues/1124
 	// TODO: https://github.com/Kong/gateway-operator/issues/1125
 	// TODO: https://github.com/Kong/gateway-operator/issues/1126
 
@@ -539,6 +609,22 @@ func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 			return ctrl.Result{}, fmt.Errorf("failed listing KongCredentialAPIKey: %w", err)
 		}
 
+		if res, err := handleCreds(ctx, r.client, s, credType, consumer, l.Items, r.scheme); err != nil || !res.IsZero() {
+			return res, err
+		}
+
+	case KongCredentialTypeACL:
+		var l configurationv1alpha1.KongCredentialACLList
+		err := r.client.List(
+			ctx,
+			&l,
+			client.MatchingFields{
+				IndexFieldKongCredentialACLReferencesKongConsumer: consumer.Name,
+			},
+		)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed listing KongCredentialACL: %w", err)
+		}
 		if res, err := handleCreds(ctx, r.client, s, credType, consumer, l.Items, r.scheme); err != nil || !res.IsZero() {
 			return res, err
 		}

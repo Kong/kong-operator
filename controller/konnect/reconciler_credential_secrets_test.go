@@ -126,6 +126,48 @@ func TestValidateSecretForKongCredentialAPIKey(t *testing.T) {
 	}
 }
 
+func TestValidateSecertForKongCredentialACL(t *testing.T) {
+	tests := []struct {
+		name      string
+		secret    *corev1.Secret
+		wantError bool
+	}{
+		{
+			name: "valid secret",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "valid-secret",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"group": []byte("acl-group"),
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "missing key",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "missing-key",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{},
+			},
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateSecretForKongCredentialACL(tt.secret)
+			if (err != nil) != tt.wantError {
+				t.Errorf("validateSecretForKongCredentialACL() error = %v, wantError %v", err, tt.wantError)
+			}
+		})
+	}
+}
+
 func TestEnsureExistingCredential(t *testing.T) {
 	t.Run("KongCredentialBasicAuth", func(t *testing.T) {
 		tests := []struct {
@@ -309,6 +351,102 @@ func TestEnsureExistingCredential(t *testing.T) {
 		}
 
 		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				client := clientfake.NewClientBuilder().
+					WithScheme(scheme.Get()).
+					WithObjects(tt.cred).
+					Build()
+				_, err := ensureExistingCredential(context.Background(), client, tt.cred, tt.secret, tt.consumer)
+				if (err != nil) != tt.wantError {
+					t.Errorf("ensureExistingCredential() error = %v, wantError %v", err, tt.wantError)
+				}
+				if tt.assert != nil {
+					tt.assert(t, tt.cred)
+				}
+			})
+		}
+	})
+
+	t.Run("KongCredentialACL", func(t *testing.T) {
+		testCases := []struct {
+			name      string
+			cred      *configurationv1alpha1.KongCredentialACL
+			secret    *corev1.Secret
+			consumer  *configurationv1.KongConsumer
+			assert    func(t *testing.T, cred *configurationv1alpha1.KongCredentialACL)
+			wantError bool
+		}{
+
+			{
+				name: "credential needs update",
+				cred: &configurationv1alpha1.KongCredentialACL{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cred",
+						Namespace: "default",
+					},
+					Spec: configurationv1alpha1.KongCredentialACLSpec{
+						ConsumerRef: corev1.LocalObjectReference{
+							Name: "consumer",
+						},
+						KongCredentialACLAPISpec: configurationv1alpha1.KongCredentialACLAPISpec{
+							Group: "old-acl-group",
+						},
+					},
+				},
+				secret: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"group": []byte("new-acl-group"),
+					},
+				},
+				consumer: &configurationv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "consumer",
+						Namespace: "default",
+					},
+				},
+				assert: func(t *testing.T, cred *configurationv1alpha1.KongCredentialACL) {
+					require.NotNil(t, cred)
+					require.Equal(t, "new-acl-group", cred.Spec.Group)
+				},
+				wantError: false,
+			},
+			{
+				name: "credential does not need update",
+				cred: &configurationv1alpha1.KongCredentialACL{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cred",
+						Namespace: "default",
+					},
+					Spec: configurationv1alpha1.KongCredentialACLSpec{
+						ConsumerRef: corev1.LocalObjectReference{
+							Name: "consumer",
+						},
+					},
+				},
+				secret: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"group": []byte("acl-group"),
+					},
+				},
+				consumer: &configurationv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "consumer",
+						Namespace: "default",
+					},
+				},
+				wantError: false,
+			},
+		}
+
+		for _, tt := range testCases {
 			t.Run(tt.name, func(t *testing.T) {
 				client := clientfake.NewClientBuilder().
 					WithScheme(scheme.Get()).
