@@ -2,6 +2,8 @@ package envtest
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -31,8 +33,15 @@ func setupWatch[
 	cl client.WithWatch,
 	opts ...client.ListOption,
 ) watch.Interface {
-	var tlist TList
-	var list TObjectList = &tlist
+	t.Helper()
+	var (
+		tlist   TList
+		list    TObjectList = &tlist
+		strType             = strings.TrimSuffix(fmt.Sprintf("%T", list), "List")
+	)
+
+	t.Logf("Setting up a watch for %s events", strType)
+
 	w, err := cl.Watch(ctx, list, opts...)
 	require.NoError(t, err)
 	t.Cleanup(func() { w.Stop() })

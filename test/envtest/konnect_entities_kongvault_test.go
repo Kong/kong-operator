@@ -54,7 +54,6 @@ func TestKongVault(t *testing.T) {
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-	t.Log("Setting up a watch for KongVault events")
 	vaultWatch := setupWatch[configurationv1alpha1.KongVaultList](t, ctx, cl)
 
 	t.Run("should create, update and delete vault successfully", func(t *testing.T) {

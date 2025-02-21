@@ -66,7 +66,6 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		},
 	}, nil)
 
-	t.Log("Setting up a watch for KongDataPlaneClientCertificate events")
 	w := setupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Log("Creating KongDataPlaneClientCertificate")
@@ -152,7 +151,6 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-		t.Log("Setting up a watch for KongDataPlaneClientCertificate events")
 		w := setupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on KongDataPlaneClientCertificate creation")

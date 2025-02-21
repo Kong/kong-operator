@@ -64,7 +64,6 @@ func TestKongConsumer(t *testing.T) {
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-	t.Log("Setting up a watch for KongConsumer events")
 	cWatch := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Run("should create, update and delete Consumer without ConsumerGroups successfully", func(t *testing.T) {
@@ -162,7 +161,6 @@ func TestKongConsumer(t *testing.T) {
 		}, waitTime, tickTime)
 	})
 
-	t.Log("Setting up a watch for KongConsumerGroup events")
 	cgWatch := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Run("should create, update and delete Consumer with ConsumerGroups successfully", func(t *testing.T) {
@@ -430,7 +428,6 @@ func TestKongConsumer(t *testing.T) {
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-		t.Log("Setting up a watch for KongConsumer events")
 		w := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on KongConsumer creation")
@@ -523,7 +520,6 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 
-	t.Log("Setting up a watch for KongConsumer events")
 	cWatch := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Run("BasicAuth", func(t *testing.T) {
@@ -809,6 +805,5 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.KongCredentialsACLSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
-
 	})
 }

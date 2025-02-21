@@ -71,7 +71,6 @@ func TestKongKeySet(t *testing.T) {
 		},
 	}, nil)
 
-	t.Log("Setting up a watch for KongKeySet events")
 	w := setupWatch[configurationv1alpha1.KongKeySetList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Log("Creating KongKeySet")
@@ -181,7 +180,6 @@ func TestKongKeySet(t *testing.T) {
 			},
 		}, nil)
 
-		t.Log("Setting up a watch for KongKeySet events")
 		w := setupWatch[configurationv1alpha1.KongKeySetList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Creating KongKeySet with ControlPlaneRef type=konnectID")
@@ -218,7 +216,6 @@ func TestKongKeySet(t *testing.T) {
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-		t.Log("Setting up a watch for KongKeySet events")
 		w := setupWatch[configurationv1alpha1.KongKeySetList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on KongKeySet creation")

@@ -57,7 +57,6 @@ func TestKongRoute(t *testing.T) {
 	t.Run("adding, patching and deleting KongRoute", func(t *testing.T) {
 		const routeID = "route-12345"
 
-		t.Log("Setting up a watch for KongRoute events")
 		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on Route creation")

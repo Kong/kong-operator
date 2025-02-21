@@ -64,7 +64,6 @@ func TestKongTarget(t *testing.T) {
 		)
 		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
 
-		t.Log("Setting up a watch for KongTarget events")
 		w := setupWatch[configurationv1alpha1.KongTargetList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on Target creation")
