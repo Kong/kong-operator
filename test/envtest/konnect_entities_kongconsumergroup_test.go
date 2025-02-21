@@ -58,7 +58,6 @@ func TestKongConsumerGroup(t *testing.T) {
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-	t.Log("Setting up a watch for KongConsumerGroup events")
 	cWatch := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Run("should create, update and delete ConsumerGroup successfully", func(t *testing.T) {
@@ -261,7 +260,6 @@ func TestKongConsumerGroup(t *testing.T) {
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-		t.Log("Setting up a watch for KongConsumerGroup events")
 		w := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on KongConsumerGroup creation")

@@ -72,7 +72,6 @@ func TestKongSNI(t *testing.T) {
 		}
 		require.NoError(t, clientNamespaced.Status().Update(ctx, createdCert))
 
-		t.Log("Setting up a watch for KongSNI events")
 		w := setupWatch[configurationv1alpha1.KongSNIList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK for creating SNI")

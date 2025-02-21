@@ -74,7 +74,6 @@ func TestKongKey(t *testing.T) {
 		},
 	}, nil)
 
-	t.Log("Setting up a watch for KongKey events")
 	w := setupWatch[configurationv1alpha1.KongKeyList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Run("without KongKeySet", func(t *testing.T) {
@@ -332,7 +331,6 @@ func TestKongKey(t *testing.T) {
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-		t.Log("Setting up a watch for KongKey events")
 		w := setupWatch[configurationv1alpha1.KongKeyList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on KongKey creation")

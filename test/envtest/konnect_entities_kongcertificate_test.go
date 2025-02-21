@@ -83,7 +83,6 @@ func TestKongCertificate(t *testing.T) {
 				Object: &sdkkonnectops.ListCertificateResponseBody{},
 			}, nil)
 
-		t.Log("Setting up a watch for KongCertificate events")
 		w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Creating KongCertificate")
@@ -147,8 +146,6 @@ func TestKongCertificate(t *testing.T) {
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 		cpID := cp.GetKonnectStatus().GetKonnectID()
 
-		t.Log("Setup mock SDK for creating certificate and listing certificates by UID")
-
 		w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 		t.Log("Creating a KongCertificate")
 		createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp,
@@ -157,6 +154,7 @@ func TestKongCertificate(t *testing.T) {
 				cert.Spec.Tags = []string{"xconflictx"}
 			},
 		)
+		t.Log("Setup mock SDK for listing certificates by UID")
 		sdk.CertificatesSDK.EXPECT().
 			ListCertificate(
 				mock.Anything,
@@ -262,7 +260,6 @@ func TestKongCertificate(t *testing.T) {
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 		cpID := cp.GetKonnectStatus().GetKonnectID()
 
-		t.Log("Setting up a watch for KongCertifcate events")
 		w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on KongCertifcate creation")
