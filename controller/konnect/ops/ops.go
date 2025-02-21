@@ -125,7 +125,7 @@ func Create[
 		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 			// NOTE: since Cloud Gateways resource do not support labels/tags,
 			// we can't reliably get the Konnect ID for a Cloud Gateway Network
-			// given a k8s object UID.
+			// given a K8s object UID.
 			// For now this code uses a list, using a name filter, to get the Konnect ID.
 			id, err = getKonnectNetworkMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), ent)
 		case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:

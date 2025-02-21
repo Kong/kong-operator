@@ -6,7 +6,7 @@ metadata:
 spec:
   type: token
   token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-  # For complete list of available API URLs see: https://docs.konghq.com/konnect/network/
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
   serverURL: eu.api.konghq.com
 ---
 kind: KonnectGatewayControlPlane

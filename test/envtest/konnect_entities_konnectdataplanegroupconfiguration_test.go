@@ -52,9 +52,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			deploy.KonnectGatewayControlPlaneTypeWithCloudGatewaysEnabled(),
 		)
 
-		const (
-			id = "12345"
-		)
+		const id = "12345"
 
 		t.Log("Setting up a watch for KonnectCloudGatewayDataPlaneGroupConfiguration events")
 		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
@@ -113,7 +111,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		}, waitTime, tickTime)
 
 		t.Log("Waiting for object to be deleted in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, factory.SDK.CloudGatewaysSDK.AssertExpectations(t))
 		}, waitTime, tickTime)
 	})
