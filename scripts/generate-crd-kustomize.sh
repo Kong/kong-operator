@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# This script extracts the commit SHA from go.mod for the kong/kubernetes-configuration
+# dependency and uses it to generate a kustomization.yaml file. The SHA is appended 
+# as a query parameter to the CRD resource URL to ensure versioning consistency.
+
 set -o errexit
 set -o nounset
 set -o pipefail
