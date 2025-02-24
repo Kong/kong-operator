@@ -244,7 +244,7 @@ verify.generators: verify.repo generate verify.diff
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.rbacs generate.gateway-api-urls generate.docs generate.crd-kustomize generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config generate.mocks
+generate: generate.rbacs generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config generate.mocks
 
 .PHONY: generate.crd-kustomize
 generate.crd-kustomize:
@@ -276,10 +276,6 @@ generate.clientsets: client-gen
 .PHONY: generate.rbacs
 generate.rbacs: kic-role-generator
 	$(KIC_ROLE_GENERATOR) --force
-
-.PHONY: generate.docs
-generate.docs: crd-ref-docs
-	./scripts/apidocs-gen/generate.sh $(CRD_REF_DOCS)
 
 .PHONY: generate.k8sio-gomod-replace
 generate.k8sio-gomod-replace:
