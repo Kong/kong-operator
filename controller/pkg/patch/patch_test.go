@@ -1,7 +1,6 @@
 package patch
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -183,7 +182,7 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 				WithObjects(tc.dataPlane, hpa).
 				Build()
 
-			result, _, err := ApplyPatchIfNotEmpty(context.Background(), fakeClient, log, hpa, old, tc.updated)
+			result, _, err := ApplyPatchIfNotEmpty(t.Context(), fakeClient, log, hpa, old, tc.updated)
 			if tc.wantErr {
 				require.Error(t, err)
 				return

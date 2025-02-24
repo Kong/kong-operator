@@ -41,7 +41,7 @@ func TestHelmUpgrade(t *testing.T) {
 		waitTime = 3 * time.Minute
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	// createEnvironment will queue up environment cleanup if necessary

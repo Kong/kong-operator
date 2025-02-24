@@ -1,7 +1,6 @@
 package envtest
 
 import (
-	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -35,7 +34,7 @@ func TestKongKeySet(t *testing.T) {
 	)
 
 	t.Parallel()
-	ctx, cancel := Context(t, context.Background())
+	ctx, cancel := Context(t, t.Context())
 	defer cancel()
 	cfg, ns := Setup(t, ctx, scheme.Get())
 

@@ -1,7 +1,6 @@
 package gateway
 
 import (
-	"context"
 	"testing"
 
 	"github.com/samber/lo"
@@ -258,7 +257,7 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 				WithObjects(tc.gateway).
 				WithObjects(tc.httpRoutes...).
 				Build()
-			routes, err := ListHTTPRoutesForGateway(context.Background(), cl, tc.gateway)
+			routes, err := ListHTTPRoutesForGateway(t.Context(), cl, tc.gateway)
 			if tc.expectedErr {
 				require.Error(t, err)
 			} else {

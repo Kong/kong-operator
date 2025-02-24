@@ -1,7 +1,6 @@
 package konnect
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -205,7 +204,7 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 				require.NotNil(t, cl)
 
 				f := enqueueObjectForKonnectGatewayControlPlane[configurationv1.KongConsumerList](cl, tt.index)
-				requests := f(context.Background(), cp)
+				requests := f(t.Context(), cp)
 				require.Len(t, requests, len(tt.expected))
 				require.Equal(t, tt.expected, requests)
 			})

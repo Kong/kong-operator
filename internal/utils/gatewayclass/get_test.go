@@ -1,7 +1,6 @@
 package gatewayclass_test
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -124,7 +123,7 @@ func TestGet(t *testing.T) {
 				WithObjects(tc.objectsToAdd...).
 				Build()
 
-			gwc, err := gatewayclass.Get(context.Background(), fakeClient, tc.gatewayClassName)
+			gwc, err := gatewayclass.Get(t.Context(), fakeClient, tc.gatewayClassName)
 			if tc.expectedError != nil {
 				require.ErrorContains(t, err, tc.expectedError.Error())
 				require.IsType(t, tc.expectedError, err)

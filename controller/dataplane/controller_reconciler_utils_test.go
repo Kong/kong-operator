@@ -1,7 +1,6 @@
 package dataplane
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -79,7 +78,7 @@ func TestDeploymentBuilder(t *testing.T) {
 			},
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
-				ctx := context.Background()
+				ctx := t.Context()
 				deploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
 					WithAdditionalLabels(deploymentLiveLabels)
@@ -144,7 +143,7 @@ func TestDeploymentBuilder(t *testing.T) {
 			},
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
-				ctx := context.Background()
+				ctx := t.Context()
 
 				deploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
@@ -215,7 +214,7 @@ func TestDeploymentBuilder(t *testing.T) {
 			},
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
-				ctx := context.Background()
+				ctx := t.Context()
 				dataplaneImage, err := generateDataPlaneImage(dataPlane, consts.DefaultDataPlaneImage, versions.IsDataPlaneImageVersionSupported)
 				require.NoError(t, err)
 				// generate the DataPlane as it is supposed to be, change the .spec.strategy field, and create it.
@@ -276,7 +275,7 @@ func TestDeploymentBuilder(t *testing.T) {
 			},
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
-				ctx := context.Background()
+				ctx := t.Context()
 				dataplaneImage, err := generateDataPlaneImage(dataPlane, consts.DefaultDataPlaneImage, versions.IsDataPlaneImageVersionSupported)
 				require.NoError(t, err)
 				// generate the DataPlane as it is expected to be and create it.
@@ -347,7 +346,7 @@ func TestDeploymentBuilder(t *testing.T) {
 			},
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
-				ctx := context.Background()
+				ctx := t.Context()
 				dataplaneImage, err := generateDataPlaneImage(dataPlane, consts.DefaultDataPlaneImage, versions.IsDataPlaneImageVersionSupported)
 				// generateDataPlaneImage will set deployment's containers resources
 				// to the ones set in dataplane spec so we set it here to get the
@@ -397,7 +396,7 @@ func TestDeploymentBuilder(t *testing.T) {
 			},
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
-				ctx := context.Background()
+				ctx := t.Context()
 
 				firstDeploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
@@ -461,7 +460,7 @@ func TestDeploymentBuilder(t *testing.T) {
 			},
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
-				ctx := context.Background()
+				ctx := t.Context()
 
 				firstDeploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).

@@ -509,7 +509,7 @@ func TestCreateManager(t *testing.T) {
 
 			t.Log("trigger a report...")
 			require.NoError(t, m.Start())
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 			defer cancel()
 			require.NoError(t, m.TriggerExecute(ctx, "test-signal"), "failed triggering signal execution")
 
@@ -662,14 +662,14 @@ func TestTelemetryUpdates(t *testing.T) {
 
 			t.Log("trigger a report...")
 			require.NoError(t, m.Start())
-			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
 			defer cancel()
 			require.NoError(t, m.TriggerExecute(ctx, "test-signal"), "failed triggering signal execution")
 
 			t.Log("checking received report...")
 			requireReportContainsValuesEventually(t, ch, tc.expectedReportParts...)
 
-			tc.action(t, context.Background(), dyn)
+			tc.action(t, t.Context(), dyn)
 
 			require.NoError(t, m.TriggerExecute(ctx, "test-signal"), "failed triggering signal execution")
 

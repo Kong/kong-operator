@@ -1,7 +1,6 @@
 package gatewayclass
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -60,7 +59,7 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			testBody: func(t *testing.T, reconciler Reconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1.GatewayClass) {
-				ctx := context.Background()
+				ctx := t.Context()
 				_, err := reconciler.Reconcile(ctx, gatewayClassReq)
 				require.NoError(t, err)
 				gwc := gatewayclass.NewDecorator()
@@ -85,7 +84,7 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			testBody: func(t *testing.T, reconciler Reconciler, gatewayClassReq reconcile.Request, gatewayClass *gatewayv1.GatewayClass) {
-				ctx := context.Background()
+				ctx := t.Context()
 				_, err := reconciler.Reconcile(ctx, gatewayClassReq)
 				require.NoError(t, err)
 				gwc := gatewayclass.NewDecorator()

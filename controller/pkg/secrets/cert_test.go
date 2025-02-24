@@ -2,7 +2,6 @@ package secrets
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -340,7 +339,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 
 			scheme := runtime.NewScheme()
 			require.NoError(t, corev1.AddToScheme(scheme))

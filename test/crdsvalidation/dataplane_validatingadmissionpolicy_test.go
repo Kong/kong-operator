@@ -1,7 +1,6 @@
 package crdsvalidation
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -32,7 +31,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 	t.Parallel()
 
 	var (
-		ctx              = context.Background()
+		ctx              = t.Context()
 		scheme           = scheme.Get()
 		cfg, ns          = envtest.Setup(t, ctx, scheme)
 		commonObjectMeta = metav1.ObjectMeta{

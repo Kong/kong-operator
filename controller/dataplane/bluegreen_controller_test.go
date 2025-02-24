@@ -186,7 +186,7 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			testBody: func(t *testing.T, reconciler BlueGreenReconciler, dataplaneReq reconcile.Request) {
-				ctx := context.Background()
+				ctx := t.Context()
 
 				_, err := reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
@@ -563,7 +563,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			fakeClient := fakectrlruntimeclient.
 				NewClientBuilder().
 				WithScheme(scheme.Scheme).

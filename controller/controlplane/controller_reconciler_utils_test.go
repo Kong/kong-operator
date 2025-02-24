@@ -1,7 +1,6 @@
 package controlplane
 
 import (
-	"context"
 	"testing"
 
 	"github.com/samber/lo"
@@ -72,7 +71,7 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 			},
 			testBody: func(t *testing.T, r *Reconciler, cp *operatorv1beta1.ControlPlane) {
 				var (
-					ctx      = context.Background()
+					ctx      = t.Context()
 					webhooks admregv1.ValidatingWebhookConfigurationList
 				)
 				require.NoError(t, r.Client.List(ctx, &webhooks))
@@ -138,7 +137,7 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 			},
 			testBody: func(t *testing.T, r *Reconciler, cp *operatorv1beta1.ControlPlane) {
 				var (
-					ctx      = context.Background()
+					ctx      = t.Context()
 					webhooks admregv1.ValidatingWebhookConfigurationList
 				)
 				require.NoError(t, r.Client.List(ctx, &webhooks))
