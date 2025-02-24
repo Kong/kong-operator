@@ -37,21 +37,6 @@ func (obj *KongConsumer) SetKonnectID(id string) {
 	obj.Status.Konnect.ID = id
 }
 
-// GetTypeName returns the KongConsumer Kind name
-func (obj KongConsumer) GetTypeName() string {
-	return "KongConsumer"
-}
-
-// GetConditions returns the Status Conditions
-func (obj *KongConsumer) GetConditions() []metav1.Condition {
-	return obj.Status.Conditions
-}
-
-// SetConditions sets the Status Conditions
-func (obj *KongConsumer) SetConditions(conditions []metav1.Condition) {
-	obj.Status.Conditions = conditions
-}
-
 // GetControlPlaneID returns the ControlPlane ID in the KongConsumer status.
 func (obj *KongConsumer) GetControlPlaneID() string {
 	if obj.Status.Konnect == nil {
@@ -68,10 +53,41 @@ func (obj *KongConsumer) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+// GetTypeName returns the KongConsumer Kind name
+func (obj KongConsumer) GetTypeName() string {
+	return "KongConsumer"
+}
+
+// GetConditions returns the Status Conditions
+func (obj *KongConsumer) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions
+func (obj *KongConsumer) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
+}
+
 func (obj *KongConsumer) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
 	obj.Spec.ControlPlaneRef = ref
 }
 
 func (obj *KongConsumer) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
+}
+
+
+// GetTypeName returns the KongPlugin Kind name
+func (obj KongPlugin) GetTypeName() string {
+	return "KongPlugin"
+}
+
+// GetConditions returns the Status Conditions
+func (obj *KongPlugin) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions
+func (obj *KongPlugin) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
 }

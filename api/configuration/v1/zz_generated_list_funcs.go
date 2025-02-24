@@ -6,3 +6,8 @@ package v1
 func (obj KongConsumerList) GetItems() []KongConsumer {
 	return obj.Items
 }
+
+// GetItems() returns the list of KongPlugin items.
+func (obj KongPluginList) GetItems() []KongPlugin {
+	return obj.Items
+}

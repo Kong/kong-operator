@@ -283,6 +283,12 @@ func TestCredentialTypes(t *testing.T) {
 }
 
 func TestLists(t *testing.T) {
+	testKonnectEntityList(t, &configurationv1.KongPluginList{}, 0)
+	testKonnectEntityList(t, &configurationv1.KongPluginList{
+		Items: []configurationv1.KongPlugin{
+			{},
+		},
+	}, 1)
 	testKonnectEntityList(t, &configurationv1.KongConsumerList{}, 0)
 	testKonnectEntityList(t, &configurationv1.KongConsumerList{
 		Items: []configurationv1.KongConsumer{
