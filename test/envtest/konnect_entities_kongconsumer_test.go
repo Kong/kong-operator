@@ -64,7 +64,7 @@ func TestKongConsumer(t *testing.T) {
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-	cWatch := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+	wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Run("should create, update and delete Consumer without ConsumerGroups successfully", func(t *testing.T) {
 		const (
@@ -105,15 +105,13 @@ func TestKongConsumer(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1.KongConsumer) bool {
-			if c.GetName() != createdConsumer.GetName() {
-				return false
-			}
-			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
-		}, "KongConsumer's Programmed condition should be true eventually")
+		watchFor(t, ctx, wConsumer, watch.Modified,
+			assertsAnd(
+				objectMatchesName(createdConsumer),
+				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+			),
+			"KongConsumer's Programmed condition should be true eventually",
+		)
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 
@@ -148,8 +146,6 @@ func TestKongConsumer(t *testing.T) {
 				))
 			}, waitTime, tickTime,
 		)
-
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 	})
 
 	cgWatch := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
@@ -230,15 +226,13 @@ func TestKongConsumer(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, consumer, client.MergeFrom(createdConsumer)))
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1.KongConsumer) bool {
-			if c.GetName() != createdConsumer.GetName() {
-				return false
-			}
-			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
-		}, "KongConsumer's Programmed condition should be true eventually")
+		watchFor(t, ctx, wConsumer, watch.Modified,
+			assertsAnd(
+				objectMatchesName(createdConsumer),
+				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+			),
+			"KongConsumer's Programmed condition should be true eventually",
+		)
 
 		t.Log("Waiting for KongConsumerGroup to be programmed")
 		watchFor(t, ctx, cgWatch, watch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
@@ -336,7 +330,7 @@ func TestKongConsumer(t *testing.T) {
 		)
 
 		t.Log("Watching for KongConsumers to verify the created KongConsumer programmed")
-		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1.KongConsumer) bool {
+		watchFor(t, ctx, wConsumer, watch.Modified, func(c *configurationv1.KongConsumer) bool {
 			return c.GetKonnectID() == consumerID && k8sutils.IsProgrammed(c)
 		}, "KongConsumer should be programmed and have ID in status after handling conflict")
 
@@ -382,7 +376,7 @@ func TestKongConsumer(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1.KongConsumer) bool {
+		watchFor(t, ctx, wConsumer, watch.Modified, func(c *configurationv1.KongConsumer) bool {
 			if c.GetName() != createdConsumer.GetName() {
 				return false
 			}
@@ -446,7 +440,7 @@ func TestKongConsumer(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),
+		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
 			fmt.Sprintf("Consumer didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
@@ -496,8 +490,6 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-
-	cWatch := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Run("BasicAuth", func(t *testing.T) {
 		consumerID := fmt.Sprintf("consumer-%d", rand.Int31n(1000))
@@ -561,6 +553,8 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			)
 
 		t.Log("Creating KongConsumer with ControlPlaneRef type=konnectID")
+		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+		wBasicAuth := setupWatch[configurationv1alpha1.KongCredentialBasicAuthList](t, ctx, cl, client.InNamespace(ns.Name))
 		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
 			deploy.WithKonnectIDControlPlaneRef(cp),
 			func(obj client.Object) {
@@ -572,21 +566,20 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1.KongConsumer) bool {
-			if c.GetName() != createdConsumer.GetName() {
-				return false
-			}
-			if c.GetControlPlaneRef().Type != commonv1alpha1.ControlPlaneRefKonnectID {
-				return false
-			}
-			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
-		}, "KongConsumer's Programmed condition should be true eventually")
+		watchFor(t, ctx, wConsumer, watch.Modified,
+			assertsAnd(
+				objectMatchesName(createdConsumer),
+				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+				objectHasCPRefKonnectID[*configurationv1.KongConsumer](),
+			),
+			"KongConsumer's Programmed condition should be true eventually",
+		)
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
-		eventuallyAssertSDKExpectations(t, factory.SDK.KongCredentialsBasicAuthSDK, waitTime, tickTime)
+		t.Log("Waiting for KongCredentialBasicAuth to be programmed")
+		watchFor(t, ctx, wBasicAuth, watch.Modified,
+			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialBasicAuth](),
+			"BasicAuth credential should get the Programmed condition",
+		)
 	})
 
 	t.Run("APIKey", func(t *testing.T) {
@@ -660,21 +653,22 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1.KongConsumer) bool {
-			if c.GetName() != createdConsumer.GetName() {
-				return false
-			}
-			if c.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
-				return false
-			}
-			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
-		}, "KongConsumer's Programmed condition should be true eventually")
+		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+		wKeyCredential := setupWatch[configurationv1alpha1.KongCredentialAPIKeyList](t, ctx, cl, client.InNamespace(ns.Name))
+		watchFor(t, ctx, wConsumer, watch.Modified,
+			assertsAnd(
+				objectMatchesName(createdConsumer),
+				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+				objectHasCPRefKonnectID[*configurationv1.KongConsumer](),
+			),
+			"KongConsumer's Programmed condition should be true eventually",
+		)
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
-		eventuallyAssertSDKExpectations(t, factory.SDK.KongCredentialsAPIKeySDK, waitTime, tickTime)
+		t.Log("Waiting for KongCredentialAPIKey to be programmed")
+		watchFor(t, ctx, wKeyCredential, watch.Modified,
+			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialAPIKey](),
+			"APIKey credential should get the Programmed condition",
+		)
 	})
 
 	t.Run("ACL", func(t *testing.T) {
@@ -748,20 +742,21 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1.KongConsumer) bool {
-			if c.GetName() != createdConsumer.GetName() {
-				return false
-			}
-			if c.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
-				return false
-			}
-			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
-		}, "KongConsumer's Programmed condition should be true eventually")
+		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+		wACL := setupWatch[configurationv1alpha1.KongCredentialACLList](t, ctx, cl, client.InNamespace(ns.Name))
+		watchFor(t, ctx, wConsumer, watch.Modified,
+			assertsAnd(
+				objectMatchesName(createdConsumer),
+				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+				objectHasCPRefKonnectID[*configurationv1.KongConsumer](),
+			),
+			"KongConsumer's Programmed condition should be true eventually",
+		)
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
-		eventuallyAssertSDKExpectations(t, factory.SDK.KongCredentialsACLSDK, waitTime, tickTime)
+		t.Log("Waiting for KongCredentialACL to be programmed")
+		watchFor(t, ctx, wACL, watch.Modified,
+			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialACL](),
+			"ACL credential should get the Programmed condition",
+		)
 	})
 }

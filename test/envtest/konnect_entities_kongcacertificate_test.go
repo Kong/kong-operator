@@ -259,7 +259,7 @@ func TestKongCACertificate(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),
+		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
 			fmt.Sprintf("CACertificate didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
