@@ -1,7 +1,6 @@
 package ops
 
 import (
-	"context"
 	"net/http"
 	"testing"
 
@@ -139,7 +138,7 @@ func TestCreateKongVault(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			sdk, vault := tc.mockVaultPair(t)
-			err := createVault(context.Background(), sdk, vault)
+			err := createVault(t.Context(), sdk, vault)
 			tc.assertions(t, vault)
 
 			if tc.expectedErr {
@@ -251,7 +250,7 @@ func TestUpdateKongVault(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			sdk, vault := tc.mockVaultPair(t)
-			err := updateVault(context.Background(), sdk, vault)
+			err := updateVault(t.Context(), sdk, vault)
 			tc.assertions(t, vault)
 
 			if tc.expectedErr {
@@ -352,7 +351,7 @@ func TestDeleteKongVault(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			sdk, vault := tc.mockVaultPair(t)
-			err := deleteVault(context.Background(), sdk, vault)
+			err := deleteVault(t.Context(), sdk, vault)
 			if tc.expectedErr {
 				assert.Error(t, err)
 				return

@@ -1,7 +1,6 @@
 package konnect
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -351,12 +350,12 @@ func testHandleKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 				// WithStatusSubresource is required for updating status of handled entity.
 				WithStatusSubresource(tc.ent).
 				Build()
-			require.NoError(t, fakeClient.Status().Update(context.Background(), tc.ent))
+			require.NoError(t, fakeClient.Status().Update(t.Context(), tc.ent))
 
-			res, err := handleKongKeySetRef(context.Background(), fakeClient, tc.ent)
+			res, err := handleKongKeySetRef(t.Context(), fakeClient, tc.ent)
 
 			updatedEnt := tc.ent.DeepCopyObject().(TEnt)
-			require.NoError(t, fakeClient.Get(context.Background(), client.ObjectKeyFromObject(tc.ent), updatedEnt))
+			require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(tc.ent), updatedEnt))
 			for _, assertion := range tc.updatedEntAssertions {
 				ok, msg := assertion(updatedEnt)
 				require.True(t, ok, msg)

@@ -1,7 +1,6 @@
 package gateway
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -76,7 +75,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			testBody: func(t *testing.T, r Reconciler, gatewayReq reconcile.Request) {
-				ctx := context.Background()
+				ctx := t.Context()
 				_, err := r.Reconcile(ctx, gatewayReq)
 				require.Error(t, err)
 			},
@@ -124,7 +123,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			testBody: func(t *testing.T, r Reconciler, gatewayReq reconcile.Request) {
-				ctx := context.Background()
+				ctx := t.Context()
 				res, err := r.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation should not return an error")
 				require.Equal(t, res, reconcile.Result{}, "reconciliation should not return a requeue")
@@ -240,7 +239,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			testBody: func(t *testing.T, reconciler Reconciler, gatewayReq reconcile.Request) {
-				ctx := context.Background()
+				ctx := t.Context()
 
 				// These addresses are just placeholders, their value doesn't matter. No check is performed in the Gateway-controller,
 				// apart from the existence of an address.
@@ -868,7 +867,7 @@ func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := reconciler.Reconcile(context.Background(), gatewayReq)
+		_, err := reconciler.Reconcile(b.Context(), gatewayReq)
 		if err != nil {
 			b.Error(err)
 		}

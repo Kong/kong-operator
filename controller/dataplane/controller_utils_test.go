@@ -1,7 +1,6 @@
 package dataplane
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -390,7 +389,7 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 				WithLists(tc.objectLists...).
 				Build()
 
-			res, err := ensureDataPlaneReadyStatus(context.Background(), fakeClient, logr.Discard(), tc.dataPlane, tc.dataPlane.Generation)
+			res, err := ensureDataPlaneReadyStatus(t.Context(), fakeClient, logr.Discard(), tc.dataPlane, tc.dataPlane.Generation)
 			if tc.expectedError {
 				assert.Error(t, err)
 				return

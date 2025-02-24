@@ -1,7 +1,6 @@
 package ops
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"testing"
@@ -238,7 +237,7 @@ func testCreate[
 				sdk = tc.sdkFunc(t, sdk)
 			}
 
-			_, err := Create(context.Background(), sdk, fakeClient, &metrics.MockRecorder{}, tc.entity)
+			_, err := Create(t.Context(), sdk, fakeClient, &metrics.MockRecorder{}, tc.entity)
 			if tc.expectedErrorContains != "" {
 				require.ErrorContains(t, err, tc.expectedErrorContains)
 			} else {
@@ -346,7 +345,7 @@ func testDelete[
 				sdk = tc.sdkFunc(t, sdk)
 			}
 
-			err := Delete(context.Background(), sdk, fakeClient, &metrics.MockRecorder{}, tc.entity)
+			err := Delete(t.Context(), sdk, fakeClient, &metrics.MockRecorder{}, tc.entity)
 			if tc.expectedError != "" {
 				require.ErrorContains(t, err, tc.expectedError)
 				return

@@ -1,7 +1,6 @@
 package envtest
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -34,7 +33,7 @@ import (
 
 func TestKongConsumer(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, context.Background())
+	ctx, cancel := Context(t, t.Context())
 	defer cancel()
 	cfg, ns := Setup(t, ctx, scheme.Get())
 
@@ -462,7 +461,7 @@ func TestKongConsumer(t *testing.T) {
 
 func TestKongConsumerSecretCredentials(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, context.Background())
+	ctx, cancel := Context(t, t.Context())
 	defer cancel()
 	cfg, ns := Setup(t, ctx, scheme.Get())
 

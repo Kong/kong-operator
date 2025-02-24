@@ -1,7 +1,6 @@
 package ops
 
 import (
-	"context"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -22,7 +21,7 @@ import (
 )
 
 func TestCreateKongService(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	testCases := []struct {
 		name                string
 		mockServicePair     func(*testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService)
@@ -200,7 +199,7 @@ func TestCreateKongService(t *testing.T) {
 }
 
 func TestDeleteKongService(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	testCases := []struct {
 		name            string
 		mockServicePair func(*testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService)
@@ -329,7 +328,7 @@ func TestDeleteKongService(t *testing.T) {
 }
 
 func TestUpdateKongService(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	testCases := []struct {
 		name            string
 		mockServicePair func(*testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService)
