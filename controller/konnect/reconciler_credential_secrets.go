@@ -781,7 +781,7 @@ func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 			ctx,
 			&l,
 			client.MatchingFields{
-				IndexFieldKongCredentialACLReferencesKongConsumer: consumer.Name,
+				IndexFieldKongCredentialJWTReferencesKongConsumer: consumer.Name,
 			},
 		)
 		if err != nil {
