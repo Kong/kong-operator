@@ -1,21 +1,12 @@
 package konnect
 
 import (
-	"context"
-	"fmt"
-
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/gateway-operator/modules/manager/logging"
-
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -45,7 +36,9 @@ func KongConsumerGroupReconciliationWatchOptions(
 			return b.Watches(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueKongConsumerGroupForKonnectAPIAuthConfiguration(cl),
+					enqueueObjectForAPIAuthThroughControlPlaneRef[configurationv1beta1.KongConsumerGroupList](
+						cl, IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane,
+					),
 				),
 			)
 		},
@@ -59,80 +52,5 @@ func KongConsumerGroupReconciliationWatchOptions(
 				),
 			)
 		},
-	}
-}
-
-func enqueueKongConsumerGroupForKonnectAPIAuthConfiguration(
-	cl client.Client,
-) func(ctx context.Context, obj client.Object) []reconcile.Request {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		auth, ok := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
-		if !ok {
-			return nil
-		}
-		var l configurationv1beta1.KongConsumerGroupList
-		if err := cl.List(ctx, &l, &client.ListOptions{
-			// TODO: change this when cross namespace refs are allowed.
-			Namespace: auth.GetNamespace(),
-		}); err != nil {
-			return nil
-		}
-
-		var ret []reconcile.Request
-		for _, group := range l.Items {
-			cpRef, ok := getControlPlaneRef(&group).Get()
-			if !ok {
-				continue
-			}
-
-			switch cpRef.Type {
-			case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-				nn := types.NamespacedName{
-					Name:      cpRef.KonnectNamespacedRef.Name,
-					Namespace: group.Namespace,
-				}
-				// TODO: change this when cross namespace refs are allowed.
-				if nn.Namespace != auth.Namespace {
-					continue
-				}
-				var cp konnectv1alpha1.KonnectGatewayControlPlane
-				if err := cl.Get(ctx, nn, &cp); err != nil {
-					ctrllog.FromContext(ctx).Error(
-						err,
-						"failed to get KonnectGatewayControlPlane",
-						"KonnectGatewayControlPlane", nn,
-					)
-					continue
-				}
-
-				// TODO: change this when cross namespace refs are allowed.
-				if cp.GetKonnectAPIAuthConfigurationRef().Name != auth.Name {
-					continue
-				}
-
-				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: group.Namespace,
-						Name:      group.Name,
-					},
-				})
-
-			case commonv1alpha1.ControlPlaneRefKonnectID:
-				ctrllog.FromContext(ctx).Error(
-					fmt.Errorf("unimplemented ControlPlaneRef type %q", cpRef.Type),
-					"unimplemented ControlPlaneRef for KongConsumerGroup",
-					"KongConsumerGroup", group, "refType", cpRef.Type,
-				)
-				continue
-
-			default:
-				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(
-					"unsupported ControlPlaneRef for KongConsumerGroup",
-					"KongConsumerGroup", group, "refType", cpRef.Type,
-				)
-				continue
-			}
-		}
-		return ret
 	}
 }

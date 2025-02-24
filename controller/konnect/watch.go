@@ -201,3 +201,65 @@ func enqueueObjectForKonnectGatewayControlPlane[
 		return objectListToReconcileRequests[T, TT](l.GetItems())
 	}
 }
+
+// enqueueObjectForAPIAuthThroughControlPlaneRef returns a function that enqueues
+// reconcile requests for objects matching the provided list type for the given
+// KonnectAPIAuthConfiguration, based on the KonnectGatewayControlPlanes that
+// refer to the KonnectAPIAuthConfiguration.
+//
+// For example: providing KongConsumerList, this function will return reconcile
+// requests for KongConsumers that refer to the KonnectGatewayControlPlanes that
+// refer to the provided KonnectAPIAuthConfiguration.
+func enqueueObjectForAPIAuthThroughControlPlaneRef[
+	TList interface {
+		GetItems() []T
+	},
+	TListPtr interface {
+		*TList
+		client.ObjectList
+		GetItems() []T
+	},
+	T constraints.SupportedKonnectEntityType,
+	TT constraints.EntityType[T],
+](
+	cl client.Client,
+	index string,
+) func(context.Context, client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		auth, ok := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
+		if !ok {
+			return nil
+		}
+
+		var cpList konnectv1alpha1.KonnectGatewayControlPlaneList
+		if err := cl.List(ctx, &cpList,
+			// TODO: change this when cross namespace refs are allowed.
+			client.InNamespace(auth.GetNamespace()),
+			client.MatchingFields{
+				IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration: auth.Name,
+			},
+		); err != nil {
+			return nil
+		}
+
+		var (
+			items = make([]T, 0)
+			l     TList
+			lPtr  TListPtr = &l
+		)
+		for _, cp := range cpList.Items {
+			if err := cl.List(ctx, lPtr,
+				// TODO: change this when cross namespace refs are allowed.
+				client.InNamespace(auth.GetNamespace()),
+				client.MatchingFields{
+					index: client.ObjectKeyFromObject(&cp).String(),
+				},
+			); err != nil {
+				return nil
+			}
+			items = append(items, l.GetItems()...)
+		}
+
+		return objectListToReconcileRequests[T, TT](items)
+	}
+}
