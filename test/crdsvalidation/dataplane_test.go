@@ -1,7 +1,6 @@
 package crdsvalidation
 
 import (
-	"context"
 	"testing"
 
 	"github.com/samber/lo"
@@ -18,7 +17,7 @@ import (
 
 func TestDataPlane(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get())
 
 	commonObjectMeta := metav1.ObjectMeta{

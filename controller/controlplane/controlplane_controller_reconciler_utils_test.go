@@ -1,7 +1,6 @@
 package controlplane
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -126,7 +125,7 @@ func TestEnsureClusterRole(t *testing.T) {
 		}
 
 		t.Run(tc.Name, func(t *testing.T) {
-			createdOrUpdated, generatedClusterRole, err := r.ensureClusterRole(context.Background(), &tc.controlplane)
+			createdOrUpdated, generatedClusterRole, err := r.ensureClusterRole(t.Context(), &tc.controlplane)
 			require.Equal(t, tc.err, err)
 			require.Equal(t, tc.createdorUpdated, createdOrUpdated)
 			require.Equal(t, tc.expectedClusterRole.Rules, generatedClusterRole.Rules)
@@ -264,7 +263,7 @@ func TestEnsureClusterRoleBinding(t *testing.T) {
 		}
 
 		t.Run(tc.name, func(t *testing.T) {
-			createdOrUpdated, generatedCRB, err := r.ensureClusterRoleBinding(context.Background(), controlPlane, testServiceAccount, testClusterRole)
+			createdOrUpdated, generatedCRB, err := r.ensureClusterRoleBinding(t.Context(), controlPlane, testServiceAccount, testClusterRole)
 			require.Equal(t, tc.err, err)
 			require.Equal(t, tc.createdOrUpdated, createdOrUpdated)
 			// when err == nil, ensureClusterRoleBinding should return a non-nil ClusterRoleBinding with the same metadata, RoleRef

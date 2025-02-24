@@ -1,7 +1,6 @@
 package gatewayclass
 
 import (
-	"context"
 	"testing"
 
 	"github.com/samber/lo"
@@ -118,7 +117,7 @@ func TestGetAcceptedCondition(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			cl := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithRuntimeObjects(tt.existingObjs...).
@@ -254,7 +253,7 @@ func TestGetRouterFlavor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			cl := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithRuntimeObjects(tt.existingObjs...).

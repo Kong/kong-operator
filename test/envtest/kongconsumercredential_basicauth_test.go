@@ -1,7 +1,6 @@
 package envtest
 
 import (
-	"context"
 	"slices"
 	"strings"
 	"testing"
@@ -33,7 +32,7 @@ import (
 
 func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, context.Background())
+	ctx, cancel := Context(t, t.Context())
 	defer cancel()
 
 	// Setup up the envtest environment.

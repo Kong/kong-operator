@@ -1,7 +1,6 @@
 package envtest
 
 import (
-	"context"
 	"fmt"
 	"slices"
 	"testing"
@@ -24,7 +23,7 @@ import (
 
 func TestKongPluginFinalizer(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, context.Background())
+	ctx, cancel := Context(t, t.Context())
 	defer cancel()
 
 	// Setup up the envtest environment.

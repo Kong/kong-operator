@@ -710,7 +710,7 @@ func GatewayClassIsAccepted(t *testing.T, ctx context.Context, gatewayClassName 
 	gatewayClasses := clients.GatewayClient.GatewayV1().GatewayClasses()
 
 	return func() bool {
-		gwc, err := gatewayClasses.Get(context.Background(), gatewayClassName, metav1.GetOptions{})
+		gwc, err := gatewayClasses.Get(t.Context(), gatewayClassName, metav1.GetOptions{})
 		if err != nil {
 			return false
 		}

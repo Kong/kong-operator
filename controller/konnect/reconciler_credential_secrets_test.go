@@ -1,7 +1,6 @@
 package konnect
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -261,7 +260,7 @@ func TestEnsureExistingCredential(t *testing.T) {
 					WithScheme(scheme.Get()).
 					WithObjects(tt.cred).
 					Build()
-				_, err := ensureExistingCredential(context.Background(), client, tt.cred, tt.secret, tt.consumer)
+				_, err := ensureExistingCredential(t.Context(), client, tt.cred, tt.secret, tt.consumer)
 				if (err != nil) != tt.wantError {
 					t.Errorf("ensureExistingCredential() error = %v, wantError %v", err, tt.wantError)
 				}
@@ -356,7 +355,7 @@ func TestEnsureExistingCredential(t *testing.T) {
 					WithScheme(scheme.Get()).
 					WithObjects(tt.cred).
 					Build()
-				_, err := ensureExistingCredential(context.Background(), client, tt.cred, tt.secret, tt.consumer)
+				_, err := ensureExistingCredential(t.Context(), client, tt.cred, tt.secret, tt.consumer)
 				if (err != nil) != tt.wantError {
 					t.Errorf("ensureExistingCredential() error = %v, wantError %v", err, tt.wantError)
 				}
@@ -452,7 +451,7 @@ func TestEnsureExistingCredential(t *testing.T) {
 					WithScheme(scheme.Get()).
 					WithObjects(tt.cred).
 					Build()
-				_, err := ensureExistingCredential(context.Background(), client, tt.cred, tt.secret, tt.consumer)
+				_, err := ensureExistingCredential(t.Context(), client, tt.cred, tt.secret, tt.consumer)
 				if (err != nil) != tt.wantError {
 					t.Errorf("ensureExistingCredential() error = %v, wantError %v", err, tt.wantError)
 				}

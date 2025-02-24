@@ -1,7 +1,6 @@
 package ops
 
 import (
-	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -20,7 +19,7 @@ import (
 )
 
 func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	pb := &configurationv1alpha1.KongPluginBinding{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "KongPluginBinding",

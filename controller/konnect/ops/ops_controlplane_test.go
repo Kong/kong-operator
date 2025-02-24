@@ -1,7 +1,6 @@
 package ops
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -33,7 +32,7 @@ func TestCreateControlPlane(t *testing.T) {
 		cpID  = "cp-id"
 		cpgID = "cpg-id"
 	)
-	ctx := context.Background()
+	ctx := t.Context()
 	testCases := []struct {
 		name                string
 		mockCPTuple         func(*testing.T) (*sdkmocks.MockControlPlaneSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
@@ -275,7 +274,7 @@ func TestCreateControlPlane(t *testing.T) {
 }
 
 func TestDeleteControlPlane(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	testCases := []struct {
 		name        string
 		mockCPPair  func(*testing.T) (*sdkmocks.MockControlPlaneSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
@@ -403,7 +402,7 @@ func TestDeleteControlPlane(t *testing.T) {
 }
 
 func TestUpdateControlPlane(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	testCases := []struct {
 		name        string
 		mockCPTuple func(*testing.T) (*sdkmocks.MockControlPlaneSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha1.KonnectGatewayControlPlane)
@@ -577,7 +576,7 @@ func TestUpdateControlPlane(t *testing.T) {
 
 func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T) {
 	var (
-		ctx = context.Background()
+		ctx = t.Context()
 		cp  = &konnectv1alpha1.KonnectGatewayControlPlane{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "KonnectGatewayControlPlane",
@@ -901,7 +900,7 @@ func TestSetGroupMembers(t *testing.T) {
 				Build()
 
 			sdk := tc.sdk(t)
-			err := setGroupMembers(context.Background(), fakeClient, tc.group, "cpg-12345", sdk)
+			err := setGroupMembers(t.Context(), fakeClient, tc.group, "cpg-12345", sdk)
 			if tc.expectedErr {
 				assert.Error(t, err)
 				return

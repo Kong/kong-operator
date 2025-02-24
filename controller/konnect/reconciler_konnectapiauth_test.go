@@ -1,7 +1,6 @@
 package konnect
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -149,7 +148,7 @@ func TestGetTokenFromKonnectAPIAuthConfiguration(t *testing.T) {
 			cl := clientBuilder.Build()
 
 			// Call the function under test
-			token, err := getTokenFromKonnectAPIAuthConfiguration(context.Background(), cl, tt.apiAuth)
+			token, err := getTokenFromKonnectAPIAuthConfiguration(t.Context(), cl, tt.apiAuth)
 			if tt.expectedError {
 				assert.NotNil(t, err)
 				return

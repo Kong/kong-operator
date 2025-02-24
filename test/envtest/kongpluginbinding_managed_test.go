@@ -38,7 +38,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	// KongPluginBindings.
 
 	t.Parallel()
-	ctx, cancel := Context(t, context.Background())
+	ctx, cancel := Context(t, t.Context())
 	defer cancel()
 
 	// Setup up the envtest environment.

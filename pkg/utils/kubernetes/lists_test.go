@@ -1,7 +1,6 @@
 package kubernetes_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,7 +15,7 @@ import (
 )
 
 func TestListValidatingWebhookConfigurationsForOwner(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	testCases := []struct {
 		name          string
 		objects       []runtime.Object
