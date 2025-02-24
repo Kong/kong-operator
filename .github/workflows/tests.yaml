@@ -65,6 +65,18 @@ jobs:
         GOLANGCI_LINT_FLAGS: "--fix=false"
       run: make lint
 
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - id: govulncheck
+      uses: golang/govulncheck-action@b625fbe08f3bccbe446d94fbf87fcc875a4f50ee # v1.0.4
+      with:
+        # Let the actions/checkout above perform the checkout as this action
+        # cannot checkout on custom ref.
+        repo-checkout: false
+
   verify:
     runs-on: ubuntu-latest
     steps:
@@ -492,6 +504,7 @@ jobs:
       - ensure-actions-sha-pin
       - ossf-scorecard
       - lint
+      - govulncheck
       - verify
       - install-with-kustomize
       - build

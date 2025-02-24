@@ -22,3 +22,17 @@ setup-envtest: "0.20.2"
 actionlint: "1.7.7"
 # renovate: datasource=github-releases depName=koalaman/shellcheck
 shellcheck: "0.10.0"
+# NOTE: This does not work and requires further investigation.
+# Perhaps it's possible to use a git url but https://go.googlesource.com/vuln/ 
+# does not seem to provide one.
+#
+#  WARN: Custom registries are not allowed for this datasource and will be ignored (repository=local)
+#        "datasource": "git-tags",
+#        "registryUrls": ["https://go.googlesource.com/"],
+#        "defaultRegistryUrls": null,
+#        "additionalRegistryUrls": undefined
+#  WARN: Attempting to use non-git url for git operations (repository=local)
+#        "url": "vuln"
+#
+# renovate: datasource=git-tags depName=vuln registryUrl=https://go.googlesource.com
+govulncheck: "1.1.4"
