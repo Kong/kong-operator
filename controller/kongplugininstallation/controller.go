@@ -23,12 +23,13 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/gateway-operator/api/v1alpha1"
 	"github.com/kong/gateway-operator/controller/kongplugininstallation/image"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 )
 
 const kindKongPluginInstallation = gatewayv1.Kind("KongPluginInstallation")
@@ -43,7 +44,7 @@ type Reconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.KongPluginInstallation{}).
+		For(&operatorv1alpha1.KongPluginInstallation{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Owns(&corev1.ConfigMap{}, builder.WithPredicates(
 			predicate.Funcs{
@@ -76,7 +77,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForKongPluginInstallation),
 			builder.WithPredicates(
 				ref.ReferenceGrantForSecretFrom(
-					gatewayv1.Group(v1alpha1.SchemeGroupVersion.Group), kindKongPluginInstallation,
+					gatewayv1.Group(operatorv1alpha1.SchemeGroupVersion.Group), kindKongPluginInstallation,
 				),
 			),
 		).
@@ -88,12 +89,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger := log.GetLogger(ctx, "kongplugininstallation", r.DevelopmentMode)
 
 	log.Trace(logger, "reconciling KongPluginInstallation resource")
-	var kpi v1alpha1.KongPluginInstallation
+	var kpi operatorv1alpha1.KongPluginInstallation
 	if err := r.Client.Get(ctx, req.NamespacedName, &kpi); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	if err := setStatusConditionForKongPluginInstallation(
-		ctx, r.Client, &kpi, metav1.ConditionFalse, v1alpha1.KongPluginInstallationReasonPending, "fetching plugin is in progress",
+		ctx, r.Client, &kpi, metav1.ConditionFalse, operatorv1alpha1.KongPluginInstallationReasonPending, "fetching plugin is in progress",
 	); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -189,14 +190,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	return ctrl.Result{}, setStatusConditionForKongPluginInstallation(
-		ctx, r.Client, &kpi, metav1.ConditionTrue, v1alpha1.KongPluginInstallationReasonReady, "plugin successfully saved in cluster as ConfigMap",
+		ctx, r.Client, &kpi, metav1.ConditionTrue, operatorv1alpha1.KongPluginInstallationReasonReady, "plugin successfully saved in cluster as ConfigMap",
 	)
 }
 
 func (r *Reconciler) listKongPluginInstallationsForSecret(ctx context.Context, obj client.Object) []reconcile.Request {
 	name, namespace := obj.GetName(), obj.GetNamespace()
 
-	var kpiList v1alpha1.KongPluginInstallationList
+	var kpiList operatorv1alpha1.KongPluginInstallationList
 	if err := r.List(ctx, &kpiList); err != nil {
 		ctrllog.FromContext(ctx).Error(
 			err,
@@ -235,7 +236,7 @@ func (r *Reconciler) listReferenceGrantsForKongPluginInstallation(ctx context.Co
 		)
 		return nil
 	}
-	var kpiList v1alpha1.KongPluginInstallationList
+	var kpiList operatorv1alpha1.KongPluginInstallationList
 	if err := r.Client.List(ctx, &kpiList); err != nil {
 		logger.Error(err, "Failed to list KongPluginInstallations in watch", "referencegrant", grant.Name)
 		return nil
@@ -252,16 +253,16 @@ func (r *Reconciler) listReferenceGrantsForKongPluginInstallation(ctx context.Co
 }
 
 func setStatusConditionFailedForKongPluginInstallation(
-	ctx context.Context, client client.Client, kpi *v1alpha1.KongPluginInstallation, msg string,
+	ctx context.Context, client client.Client, kpi *operatorv1alpha1.KongPluginInstallation, msg string,
 ) error {
-	return setStatusConditionForKongPluginInstallation(ctx, client, kpi, metav1.ConditionFalse, v1alpha1.KongPluginInstallationReasonFailed, msg)
+	return setStatusConditionForKongPluginInstallation(ctx, client, kpi, metav1.ConditionFalse, operatorv1alpha1.KongPluginInstallationReasonFailed, msg)
 }
 
 func setStatusConditionForKongPluginInstallation(
-	ctx context.Context, client client.Client, kpi *v1alpha1.KongPluginInstallation, conditionStatus metav1.ConditionStatus, reason v1alpha1.KongPluginInstallationConditionReason, msg string,
+	ctx context.Context, client client.Client, kpi *operatorv1alpha1.KongPluginInstallation, conditionStatus metav1.ConditionStatus, reason operatorv1alpha1.KongPluginInstallationConditionReason, msg string,
 ) error {
 	status := metav1.Condition{
-		Type:               string(v1alpha1.KongPluginInstallationConditionStatusAccepted),
+		Type:               string(operatorv1alpha1.KongPluginInstallationConditionStatusAccepted),
 		Status:             conditionStatus,
 		ObservedGeneration: kpi.Generation,
 		LastTransitionTime: metav1.Now(),
@@ -269,7 +270,7 @@ func setStatusConditionForKongPluginInstallation(
 		Message:            msg,
 	}
 	_, index, found := lo.FindIndexOf(kpi.Status.Conditions, func(c metav1.Condition) bool {
-		return c.Type == string(v1alpha1.KongPluginInstallationConditionStatusAccepted)
+		return c.Type == string(operatorv1alpha1.KongPluginInstallationConditionStatusAccepted)
 	})
 	if found {
 		// Nothing changed, condition doesn't need to be updated.

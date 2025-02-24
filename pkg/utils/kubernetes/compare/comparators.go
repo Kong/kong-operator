@@ -7,8 +7,9 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 // ControlPlaneDeploymentOptionsDeepEqual checks if DeploymentOptions are equal, ignoring some envvars.

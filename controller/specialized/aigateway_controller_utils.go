@@ -12,10 +12,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	v1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
@@ -25,25 +25,25 @@ import (
 
 var (
 	aiCloudPRoviderAuthHeaderMapInitializer sync.Once
-	aiCloudProviderAuthHeaders              map[v1alpha1.AICloudProviderName]map[string]string
+	aiCloudProviderAuthHeaders              map[operatorv1alpha1.AICloudProviderName]map[string]string
 )
 
-func getAuthHeaderForInference(provider v1alpha1.AICloudProvider) (map[string]string, error) {
+func getAuthHeaderForInference(provider operatorv1alpha1.AICloudProvider) (map[string]string, error) {
 	aiCloudPRoviderAuthHeaderMapInitializer.Do(func() {
-		aiCloudProviderAuthHeaders = map[v1alpha1.AICloudProviderName]map[string]string{
-			v1alpha1.AICloudProviderOpenAI: {
+		aiCloudProviderAuthHeaders = map[operatorv1alpha1.AICloudProviderName]map[string]string{
+			operatorv1alpha1.AICloudProviderOpenAI: {
 				"HeaderName":    "Authorization",
 				"HeaderPattern": "Bearer %s",
 			},
-			v1alpha1.AICloudProviderCohere: {
+			operatorv1alpha1.AICloudProviderCohere: {
 				"HeaderName":    "Authorization",
 				"HeaderPattern": "Bearer %s",
 			},
-			v1alpha1.AICloudProviderAzure: {
+			operatorv1alpha1.AICloudProviderAzure: {
 				"HeaderName":    "api-key",
 				"HeaderPattern": "%s",
 			},
-			v1alpha1.AICloudProviderMistral: {
+			operatorv1alpha1.AICloudProviderMistral: {
 				"HeaderName":    "Authorization",
 				"HeaderPattern": "Bearer %s",
 			},
@@ -70,7 +70,7 @@ func getAuthHeaderForInference(provider v1alpha1.AICloudProvider) (map[string]st
 // aiGatewayToGateway takes an accepted/validated v1alpha1.AIGateway struct and produces a v1.Gateway (k8sig resources)
 // and a v1beta1.GatewayConfiguration (kong extensions) that will host the Large Language Model deployments
 func aiGatewayToGateway(
-	aigateway *v1alpha1.AIGateway,
+	aigateway *operatorv1alpha1.AIGateway,
 ) *gatewayv1.Gateway {
 	gateway := &gatewayv1.Gateway{
 		TypeMeta: metav1.TypeMeta{
@@ -102,8 +102,8 @@ func aiGatewayToGateway(
 // aiCloudGatewayToDecoratorPlugin take an accepted/validated vXalphaY.CloudHostedLargeLanguageModel struct
 // and produces an ai-prompt-decorator vX.KongPlugin if required
 func aiCloudGatewayToKongPromptDecoratorPlugin(
-	aiCloudGateway *v1alpha1.CloudHostedLargeLanguageModel,
-	aigateway *v1alpha1.AIGateway,
+	aiCloudGateway *operatorv1alpha1.CloudHostedLargeLanguageModel,
+	aigateway *operatorv1alpha1.AIGateway,
 ) (*configurationv1.KongPlugin, error) {
 	var thisDecoratorPlugin *configurationv1.KongPlugin
 
@@ -152,7 +152,7 @@ func aiCloudGatewayToKongPromptDecoratorPlugin(
 // and produces a Kubernetes Service, used for a "sink" to ensure all HttpRoutes and KongPlugins
 // actually get created in the Kong gateway.
 // A later revision of the whole stack, will probably remove this necessity.
-func aiCloudGatewayToKubeSvc(aiGateway *v1alpha1.AIGateway) *corev1.Service {
+func aiCloudGatewayToKubeSvc(aiGateway *operatorv1alpha1.AIGateway) *corev1.Service {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-ai-sink", aiGateway.Name),
@@ -184,8 +184,8 @@ func aiCloudGatewayToKubeSvc(aiGateway *v1alpha1.AIGateway) *corev1.Service {
 // aiCloudGatewayToHTTPRoute takes an AIGateway, and a CloudHostedLargeLanguageModel,
 // and produces an HTTPRoute that will become the egress point for this provider/model combo.
 func aiCloudGatewayToHTTPRoute(
-	aiCloudLLM *v1alpha1.CloudHostedLargeLanguageModel,
-	aigateway *v1alpha1.AIGateway,
+	aiCloudLLM *operatorv1alpha1.CloudHostedLargeLanguageModel,
+	aigateway *operatorv1alpha1.AIGateway,
 	kubeSvc *corev1.Service,
 	plugins []string,
 ) *gatewayv1.HTTPRoute {
@@ -245,17 +245,17 @@ func aiCloudGatewayToHTTPRoute(
 // aiCloudGatewayToKongPlugin takes an accepted/validated vXalphaY.CloudHostedLargeLanguageModel struct
 // and transforms it into a vX.KongPlugin from Kong Kubernetes-Ingress-Controller
 func aiCloudGatewayToKongPlugin(
-	aiCloudLLM *v1alpha1.CloudHostedLargeLanguageModel,
-	aigateway *v1alpha1.AIGateway,
+	aiCloudLLM *operatorv1alpha1.CloudHostedLargeLanguageModel,
+	aigateway *operatorv1alpha1.AIGateway,
 	credentialData *[]byte,
 ) (*configurationv1.KongPlugin, error) {
 	providerName := string(aiCloudLLM.AICloudProvider.Name)
 	routeType := ""
 	switch *aiCloudLLM.PromptType {
-	case v1alpha1.LLMPromptTypeChat:
+	case operatorv1alpha1.LLMPromptTypeChat:
 		routeType = "llm/v1/chat"
 
-	case v1alpha1.LLMPromptTypeCompletion:
+	case operatorv1alpha1.LLMPromptTypeCompletion:
 		routeType = "llm/v1/completions"
 
 	default:

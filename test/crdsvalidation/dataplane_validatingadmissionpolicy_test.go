@@ -10,11 +10,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/test/envtest"
 	"github.com/kong/gateway-operator/test/helpers/kustomize"
 
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	kcfgcrdsvalidation "github.com/kong/kubernetes-configuration/test/crdsvalidation"
 )
 
@@ -22,6 +22,11 @@ const (
 	// KustomizePathValidatingPolicies is the path to the Kustomize directory containing the validation policies.
 	KustomizePathValidatingPolicies = "config/default/validating_policies/"
 )
+
+var sharedEventuallyConfig = kcfgcrdsvalidation.EventuallyConfig{
+	Timeout: 15 * time.Second,
+	Period:  100 * time.Millisecond,
+}
 
 func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 	t.Parallel()
@@ -33,10 +38,6 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 		commonObjectMeta = metav1.ObjectMeta{
 			GenerateName: "dp-",
 			Namespace:    ns.Name,
-		}
-		sharedEventuallyConfig = kcfgcrdsvalidation.EventuallyConfig{
-			Timeout: 15 * time.Second,
-			Period:  100 * time.Millisecond,
 		}
 	)
 
@@ -50,7 +51,8 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 					ObjectMeta: commonObjectMeta,
 					Spec:       operatorv1beta1.DataPlaneSpec{},
 				},
-				ExpectedErrorMessage: lo.ToPtr("DataPlane requires an image to be set on proxy container"),
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorMessage:          lo.ToPtr("DataPlane requires an image to be set on proxy container"),
 			},
 			{
 				Name: "providing correct ingress service ports and KONG_PORT_MAPS env succeeds",
@@ -103,6 +105,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 						},
 					},
 				},
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
 			},
 			{
 				Name: "providing incorrect ingress service ports and KONG_PORT_MAPS env fails",
@@ -205,6 +208,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 						},
 					},
 				},
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
 			},
 			{
 				Name: "providing incorrect ingress service ports and KONG_PROXY_LISTEN env fails",
@@ -290,6 +294,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 						},
 					},
 				},
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
 			},
 			{
 				Name: "providing network services ingress ports without matching envs does not fail (legacy webhook behavior)",
@@ -328,6 +333,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 						},
 					},
 				},
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})

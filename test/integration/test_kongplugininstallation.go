@@ -21,14 +21,14 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	operatorv1alpha1 "github.com/kong/gateway-operator/api/v1alpha1"
-	operatorv1beta1 "github.com/kong/gateway-operator/api/v1beta1"
 	"github.com/kong/gateway-operator/controller/dataplane"
 	"github.com/kong/gateway-operator/pkg/consts"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
@@ -61,7 +61,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 			Image: pluginInvalidLayersImage,
 		},
 	}
-	kpiPublic, err := GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(namespace.Name).Create(GetCtx(), kpiPublic, metav1.CreateOptions{})
+	kpiPublic, err := GetClients().OperatorClient.GatewayOperatorV1alpha1().KongPluginInstallations(namespace.Name).Create(GetCtx(), kpiPublic, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(kpiPublic)
 
@@ -82,10 +82,10 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 	)
 
 	t.Log("updating KongPluginInstallation resource to a valid image")
-	kpiPublic, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiPublicNN.Namespace).Get(GetCtx(), kpiPublicNN.Name, metav1.GetOptions{})
+	kpiPublic, err = GetClients().OperatorClient.GatewayOperatorV1alpha1().KongPluginInstallations(kpiPublicNN.Namespace).Get(GetCtx(), kpiPublicNN.Name, metav1.GetOptions{})
 	kpiPublic.Spec.Image = pluginMyHeaderImage
 	require.NoError(t, err)
-	_, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiPublicNN.Namespace).Update(GetCtx(), kpiPublic, metav1.UpdateOptions{})
+	_, err = GetClients().OperatorClient.GatewayOperatorV1alpha1().KongPluginInstallations(kpiPublicNN.Namespace).Update(GetCtx(), kpiPublic, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	t.Log("waiting for the KongPluginInstallation resource to be accepted")
 	checkKongPluginInstallationConditions(t, kpiPublicNN, metav1.ConditionTrue, "plugin successfully saved in cluster as ConfigMap")
@@ -115,7 +115,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 			},
 		}
 		require.NoError(t, err)
-		_, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiPrivateNN.Namespace).Create(GetCtx(), kpiPrivate, metav1.CreateOptions{})
+		_, err = GetClients().OperatorClient.GatewayOperatorV1alpha1().KongPluginInstallations(kpiPrivateNN.Namespace).Create(GetCtx(), kpiPrivate, metav1.CreateOptions{})
 		require.NoError(t, err)
 		t.Log("waiting for the KongPluginInstallation resource to be reconciled and report unauthenticated request")
 		checkKongPluginInstallationConditions(
@@ -124,7 +124,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 
 		t.Log("update KongPluginInstallation resource with credentials reference in other namespace than KongPluginInstallation")
 		namespaceForSecret := createRandomNamespace(t)
-		kpiPrivate, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiPrivateNN.Namespace).Get(GetCtx(), kpiPrivateNN.Name, metav1.GetOptions{})
+		kpiPrivate, err = GetClients().OperatorClient.GatewayOperatorV1alpha1().KongPluginInstallations(kpiPrivateNN.Namespace).Get(GetCtx(), kpiPrivateNN.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		const kindSecret = gatewayv1.Kind("Secret")
 		secretRef := gatewayv1.SecretObjectReference{
@@ -133,7 +133,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 			Name:      "kong-plugin-image-registry-credentials",
 		}
 		kpiPrivate.Spec.ImagePullSecretRef = &secretRef
-		_, err = GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(kpiPrivateNN.Namespace).Update(GetCtx(), kpiPrivate, metav1.UpdateOptions{})
+		_, err = GetClients().OperatorClient.GatewayOperatorV1alpha1().KongPluginInstallations(kpiPrivateNN.Namespace).Update(GetCtx(), kpiPrivate, metav1.UpdateOptions{})
 		require.NoError(t, err)
 		t.Log("waiting for the KongPluginInstallation resource to be reconciled and report missing ReferenceGrant for the Secret with credentials")
 		checkKongPluginInstallationConditions(
@@ -215,7 +215,7 @@ func deployGatewayWithKPI(
 	// thus it requires strict order of deployment which is not guaranteed.
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace, helpers.WithControlPlaneWebhookDisabled())
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
-	gatewayConfig, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(namespace).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -281,7 +281,7 @@ func checkKongPluginInstallationConditions(
 ) {
 	t.Helper()
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		kpi, err := GetClients().OperatorClient.ApisV1alpha1().KongPluginInstallations(namespacedName.Namespace).Get(GetCtx(), namespacedName.Name, metav1.GetOptions{})
+		kpi, err := GetClients().OperatorClient.GatewayOperatorV1alpha1().KongPluginInstallations(namespacedName.Namespace).Get(GetCtx(), namespacedName.Name, metav1.GetOptions{})
 		if !assert.NoError(c, err) {
 			return
 		}
@@ -302,10 +302,10 @@ func checkKongPluginInstallationConditions(
 
 func attachKPI(t *testing.T, gatewayConfigNN k8stypes.NamespacedName, kpiNN k8stypes.NamespacedName) {
 	t.Helper()
-	gatewayConfig, err := GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(gatewayConfigNN.Namespace).Get(GetCtx(), gatewayConfigNN.Name, metav1.GetOptions{})
+	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(gatewayConfigNN.Namespace).Get(GetCtx(), gatewayConfigNN.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	gatewayConfig.Spec.DataPlaneOptions.PluginsToInstall = append(gatewayConfig.Spec.DataPlaneOptions.PluginsToInstall, operatorv1beta1.NamespacedName(kpiNN))
-	_, err = GetClients().OperatorClient.ApisV1beta1().GatewayConfigurations(gatewayConfigNN.Namespace).Update(GetCtx(), gatewayConfig, metav1.UpdateOptions{})
+	_, err = GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(gatewayConfigNN.Namespace).Update(GetCtx(), gatewayConfig, metav1.UpdateOptions{})
 	require.NoError(t, err)
 }
 
@@ -347,7 +347,7 @@ func checkDataPlaneStatus(
 	t.Helper()
 	var dp operatorv1beta1.DataPlane
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		dps, err := GetClients().OperatorClient.ApisV1beta1().DataPlanes(namespace).List(GetCtx(), metav1.ListOptions{})
+		dps, err := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace).List(GetCtx(), metav1.ListOptions{})
 		if !assert.NoError(c, err) {
 			return
 		}

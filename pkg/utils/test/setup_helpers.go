@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -27,7 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kong/gateway-operator/modules/manager"
-	operatorclient "github.com/kong/gateway-operator/pkg/clientset"
+
+	operatorclient "github.com/kong/kubernetes-configuration/pkg/clientset"
 )
 
 const (
@@ -230,12 +230,6 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 		return err
 	}
 
-	// CRDs for alpha/experimental features.
-	fmt.Printf("INFO: deploying KGO AIGateway CRD: %s\n", crdPath)
-	if err := clusters.ApplyManifestByURL(ctx, cluster, path.Join(crdPath, AIGatewayCRDPath)); err != nil {
-		return err
-	}
-
 	// NOTE: this check is not ideal, because we don't know if CRDs were deployed, it assumes that all for KGO are deployed
 	// and checks it by waiting for a single arbitrary chosen CRDs for each API group.
 	if err := waitForOperatorCRDs(ctx, operatorClient); err != nil {
@@ -253,6 +247,8 @@ func InstallKubernetesConfigurationCRDs(ctx context.Context, cluster clusters.Cl
 		return fmt.Errorf("failed to extract Kong CRDs (%s) module's version: %w", KubernetesConfigurationModuleName, err)
 	}
 
+	kubectlFlags := []string{"--server-side", "-v5"}
+
 	// NOTE: this installs CRDs from https://github.com/Kong/kubernetes-configuration/tree/f1475e539fa92eb5318a8b0550c6012cfc945893/config/crd
 	kubernetesConfigurationCRDsDirs := []string{"gateway-operator", "ingress-controller"}
 	for _, crdDirName := range kubernetesConfigurationCRDsDirs {
@@ -262,7 +258,7 @@ func InstallKubernetesConfigurationCRDs(ctx context.Context, cluster clusters.Cl
 			"kubernetes-configuration@"+kongCRDVersion, "config", "crd", crdDirName,
 		)
 		fmt.Printf("INFO: deploying kubernetes-configuration CRDs: %s\n", kongCRDPath)
-		if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongCRDPath, "--server-side"); err != nil {
+		if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongCRDPath, kubectlFlags...); err != nil {
 			return fmt.Errorf("failed installing kubernetes-configurations (%s) CRDs: %w", kongCRDPath, err)
 		}
 	}
@@ -278,15 +274,15 @@ func waitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Cli
 			return ctx.Err()
 		default:
 			fmt.Printf("INFO: checking KGO DataPlane CRD\n")
-			if _, err := operatorClient.ApisV1beta1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
+			if _, err := operatorClient.GatewayOperatorV1beta1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
 				continue
 			}
 			fmt.Printf("INFO: checking KGO ControlPlane CRD\n")
-			if _, err := operatorClient.ApisV1beta1().ControlPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
+			if _, err := operatorClient.GatewayOperatorV1beta1().ControlPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
 				continue
 			}
 			fmt.Printf("INFO: checking KGO AIGateway CRD\n")
-			if _, err := operatorClient.ApisV1alpha1().AIGateways(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
+			if _, err := operatorClient.GatewayOperatorV1alpha1().AIGateways(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
 				continue
 			}
 			ready = true

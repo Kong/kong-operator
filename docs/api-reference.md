@@ -1700,6 +1700,8 @@ In this section you will find types that the CRDs rely on.
 
 ## gateway-operator.konghq.com/v1alpha1
 
+Package v1alpha1 contains API Schema definitions for the gateway-operator.konghq.com v1alpha1 API group.
+
 Package v1alpha1 contains API Schema definitions for the operator v1alpha1 API group
 
 - [AIGateway](#aigateway)
@@ -2021,8 +2023,6 @@ _Appears in:_
 
 
 
-
-
 #### KongPluginInstallationSpec
 
 
@@ -2204,24 +2204,6 @@ MetricsConfig holds the configuration for the DataPlane metrics.
 _Appears in:_
 - [DataPlaneMetricsExtensionSpec](#dataplanemetricsextensionspec)
 
-#### NamespacedRef
-
-
-NamespacedRef is a reference to a namespaced resource.
-
-
-
-| Field | Description |
-| --- | --- |
-| `name` _string_ | Name is the name of the referred resource. |
-| `namespace` _string_ | Namespace is the namespace of the referred resource.<br /><br /> For namespace-scoped resources if no Namespace is provided then the namespace of the parent object MUST be used.<br /><br /> This field MUST not be set when referring to cluster-scoped resources. |
-
-
-_Appears in:_
-- [DataPlaneMetricsExtensionStatus](#dataplanemetricsextensionstatus)
-- [ExtensionRef](#extensionref)
-- [KonnectExtensionStatus](#konnectextensionstatus)
-
 #### ServiceSelector
 
 
@@ -2254,6 +2236,8 @@ _Appears in:_
 
 
 ## gateway-operator.konghq.com/v1beta1
+
+Package v1beta1 contains API Schema definitions for the gateway-operator.konghq.com v1beta1 API group.
 
 Package v1beta1 contains API Schema definitions for the gateway-operator.konghq.com v1beta1 API group
 

@@ -13,8 +13,9 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/gateway-operator/api/v1alpha1"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
+
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 )
 
 func TestCheckReferenceGrantForSecret(t *testing.T) {
@@ -65,10 +66,10 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 				Namespace: "goodNamespace",
 			},
 		}
-		objKPI = &v1alpha1.KongPluginInstallation{
+		objKPI = &operatorv1alpha1.KongPluginInstallation{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "KongPluginInstallation",
-				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				APIVersion: operatorv1alpha1.SchemeGroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "goodNamespace",
