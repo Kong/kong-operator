@@ -18,18 +18,33 @@
 #     WSK9kndNKpFI4vPvuw6j2JJl
 #     -----END PRIVATE KEY-----
 # ---
-apiVersion: gateway-operator.konghq.com/v1alpha1
 kind: KonnectExtension
+apiVersion: konnect.konghq.com/v1alpha1
 metadata:
   name: my-konnect-config
+  namespace: default
 spec:
   controlPlaneRef:
     type: konnectID
-    konnectID: <YOUR-CP-KONNECT-ID>
-  controlPlaneRegion: eu
-  konnectControlPlaneAPIAuthConfiguration:
-    clusterCertificateSecretRef:
-      name: konnect-client-tls
+    konnectID: a6554c4c-79a6-4db7-b7a4-201c0cf746ba 
+  dataPlaneClientAuth:
+    certificateSecret:
+      provisioning: Manual
+      secretRef:
+        name: konnect-client-tls
+  konnect:
+    authRef:
+      name: konnect-api-auth-dev-1
+---
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-dev-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  serverURL: us.api.konghq.com
 ---
 apiVersion: gateway-operator.konghq.com/v1beta1
 kind: DataPlane
