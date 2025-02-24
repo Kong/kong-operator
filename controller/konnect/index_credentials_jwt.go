@@ -9,6 +9,8 @@ import (
 const (
 	// IndexFieldKongCredentialJWTReferencesKongConsumer is the index name for KongCredentialJWT -> Consumer.
 	IndexFieldKongCredentialJWTReferencesKongConsumer = "kongCredentialsJWTConsumerRef"
+	// IndexFieldKongCredentialAPIKeyReferencesSecret is the index name for KongCredentialJWT -> Secret.
+	IndexFieldKongCredentialJWTReferencesSecret = "kongCredentialsJWTSecretRef"
 )
 
 // IndexOptionsForCredentialsJWT returns required Index options for KongCredentialJWT.
@@ -18,6 +20,11 @@ func IndexOptionsForCredentialsJWT() []ReconciliationIndexOption {
 			IndexObject:  &configurationv1alpha1.KongCredentialJWT{},
 			IndexField:   IndexFieldKongCredentialJWTReferencesKongConsumer,
 			ExtractValue: kongCredentialJWTReferencesConsumer,
+		},
+		{
+			IndexObject:  &configurationv1alpha1.KongCredentialJWT{},
+			IndexField:   IndexFieldKongCredentialJWTReferencesSecret,
+			ExtractValue: kongCredentialReferencesSecret[configurationv1alpha1.KongCredentialJWT],
 		},
 	}
 }
