@@ -14,7 +14,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -119,7 +119,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
 
 		t.Logf("waiting for KongPluginBinding to be created")
-		kongPluginBinding := watchFor(t, ctx, wKongPluginBinding, watch.Added,
+		kongPluginBinding := watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				targets := kpb.Spec.Targets
 				return targets.ServiceReference != nil &&
@@ -132,7 +132,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
-		_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
+		_ = watchFor(t, ctx, wKongPlugin, apiwatch.Modified,
 			func(kp *configurationv1.KongPlugin) bool {
 				return kp.Name == rateLimitingkongPlugin.Name &&
 					controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
@@ -142,7 +142,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		t.Logf("delete managed kongPluginBinding %s, then check it gets recreated", client.ObjectKeyFromObject(kongPluginBinding))
 		require.NoError(t, clientNamespaced.Delete(ctx, kongPluginBinding))
-		kongPluginBinding = watchFor(t, ctx, wKongPluginBinding, watch.Added,
+		kongPluginBinding = watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				svcRef := kpb.Spec.Targets.ServiceReference
 				return svcRef != nil &&
@@ -178,7 +178,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		wKongPlugin = setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		delete(kongService.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongService))
-		_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
+		_ = watchFor(t, ctx, wKongPlugin, apiwatch.Modified,
 			func(kp *configurationv1.KongPlugin) bool {
 				return kp.Name == rateLimitingkongPlugin.Name &&
 					!controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
@@ -224,7 +224,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
 
 		t.Logf("waiting for KongPluginBinding to be created")
-		kongPluginBinding := watchFor(t, ctx, wKongPluginBinding, watch.Added,
+		kongPluginBinding := watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				rRef := kpb.Spec.Targets.RouteReference
 				return rRef != nil &&
@@ -237,7 +237,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
-		_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
+		_ = watchFor(t, ctx, wKongPlugin, apiwatch.Modified,
 			func(kp *configurationv1.KongPlugin) bool {
 				return kp.Name == rateLimitingkongPlugin.Name &&
 					controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
@@ -247,7 +247,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		t.Logf("delete managed kongPluginBinding %s, then check it gets recreated", client.ObjectKeyFromObject(kongPluginBinding))
 		require.NoError(t, clientNamespaced.Delete(ctx, kongPluginBinding))
-		kongPluginBinding = watchFor(t, ctx, wKongPluginBinding, watch.Added,
+		kongPluginBinding = watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				rRef := kpb.Spec.Targets.RouteReference
 				return rRef != nil &&
@@ -282,7 +282,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		)
 		delete(kongRoute.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongRoute))
-		_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
+		_ = watchFor(t, ctx, wKongPlugin, apiwatch.Modified,
 			func(kp *configurationv1.KongPlugin) bool {
 				return kp.Name == rateLimitingkongPlugin.Name &&
 					!controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
@@ -330,7 +330,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		t.Logf("waiting for 2 KongPluginBindings to be created")
 		var kpbRoute, kpbService *configurationv1alpha1.KongPluginBinding
-		watchFor(t, ctx, wKongPluginBinding, watch.Added,
+		watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -354,7 +354,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
-		_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
+		_ = watchFor(t, ctx, wKongPlugin, apiwatch.Modified,
 			func(kp *configurationv1.KongPlugin) bool {
 				return kp.Name == rateLimitingkongPlugin.Name &&
 					controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
@@ -365,7 +365,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbRoute, kongRoute)
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbService, kongService)
 
-		watchFor(t, ctx, wKongPluginBinding, watch.Added,
+		watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -465,7 +465,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		t.Logf("waiting for 2 KongPluginBindings to be created")
 		var kpbRoute, kpbService *configurationv1alpha1.KongPluginBinding
-		watchFor(t, ctx, wKongPluginBinding, watch.Added,
+		watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -493,7 +493,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
-		_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
+		_ = watchFor(t, ctx, wKongPlugin, apiwatch.Modified,
 			func(kp *configurationv1.KongPlugin) bool {
 				return kp.Name == rateLimitingkongPlugin.Name &&
 					controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
@@ -504,7 +504,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbRoute, kongRoute)
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbService, kongService)
 
-		watchFor(t, ctx, wKongPluginBinding, watch.Added,
+		watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -581,7 +581,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		delete(kongService.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongService))
 
-		watchFor(t, ctx, wKongPluginBinding, watch.Added,
+		watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -613,7 +613,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		delete(kongConsumer.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongConsumer))
 
-		watchFor(t, ctx, wKongPluginBinding, watch.Deleted,
+		watchFor(t, ctx, wKongPluginBinding, apiwatch.Deleted,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -664,7 +664,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		t.Logf("waiting for 2 KongPluginBindings to be created")
 		var kpbRoute, kpbService *configurationv1alpha1.KongPluginBinding
-		watchFor(t, ctx, wKongPluginBinding, watch.Added,
+		watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -692,7 +692,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
-		_ = watchFor(t, ctx, wKongPlugin, watch.Modified,
+		_ = watchFor(t, ctx, wKongPlugin, apiwatch.Modified,
 			func(kp *configurationv1.KongPlugin) bool {
 				return kp.Name == rateLimitingkongPlugin.Name &&
 					controllerutil.ContainsFinalizer(kp, consts.PluginInUseFinalizer)
@@ -703,7 +703,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbRoute, kongRoute)
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbService, kongService)
 
-		watchFor(t, ctx, wKongPluginBinding, watch.Added,
+		watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -780,7 +780,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		delete(kongService.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongService))
 
-		watchFor(t, ctx, wKongPluginBinding, watch.Added,
+		watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -812,7 +812,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		delete(kongConsumerGroup.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongConsumerGroup))
 
-		watchFor(t, ctx, wKongPluginBinding, watch.Deleted,
+		watchFor(t, ctx, wKongPluginBinding, apiwatch.Deleted,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false

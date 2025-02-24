@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
@@ -87,7 +87,7 @@ func TestKongTarget(t *testing.T) {
 		)
 
 		t.Log("Waiting for Target to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, func(kt *configurationv1alpha1.KongTarget) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongTarget) bool {
 			return kt.GetKonnectID() == targetID && k8sutils.IsProgrammed(kt)
 		}, "KongTarget didn't get Programmed status condition or didn't get the correct (target-12345) Konnect ID assigned")
 

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
@@ -76,7 +76,7 @@ func TestKongVault(t *testing.T) {
 		vault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, []byte(vaultRawConfig), cp)
 
 		t.Log("Waiting for KongVault to be programmed")
-		watchFor(t, ctx, vaultWatch, watch.Modified, func(v *configurationv1alpha1.KongVault) bool {
+		watchFor(t, ctx, vaultWatch, apiwatch.Modified, func(v *configurationv1alpha1.KongVault) bool {
 			return v.GetKonnectID() == vaultID && k8sutils.IsProgrammed(v)
 		}, "KongVault didn't get Programmed status condition or didn't get the correct (vault-12345) Konnect ID assigned")
 
@@ -154,7 +154,7 @@ func TestKongVault(t *testing.T) {
 		vault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, []byte(vaultRawConfig), cp)
 
 		t.Log("Waiting for KongVault to be programmed")
-		watchFor(t, ctx, vaultWatch, watch.Modified, func(v *configurationv1alpha1.KongVault) bool {
+		watchFor(t, ctx, vaultWatch, apiwatch.Modified, func(v *configurationv1alpha1.KongVault) bool {
 			if v.GetName() != vault.GetName() {
 				return false
 			}
@@ -191,7 +191,7 @@ func TestKongVault(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongVault to be programmed")
-		watchFor(t, ctx, vaultWatch, watch.Modified, func(v *configurationv1alpha1.KongVault) bool {
+		watchFor(t, ctx, vaultWatch, apiwatch.Modified, func(v *configurationv1alpha1.KongVault) bool {
 			if vault.GetName() != v.GetName() {
 				return false
 			}

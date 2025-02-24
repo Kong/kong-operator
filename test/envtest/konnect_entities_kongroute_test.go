@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
@@ -87,7 +87,7 @@ func TestKongRoute(t *testing.T) {
 		)
 
 		t.Log("Waiting for Route to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
 			if r.GetName() != createdRoute.GetName() {
 				return false
 			}

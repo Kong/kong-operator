@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
@@ -62,7 +62,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 		t.Cleanup(func() { assert.NoError(t, cl.Delete(ctx, apiAuth)) })
 
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=true")
-		watchFor(t, ctx, w, watch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
 				r.Status.OrganizationID == "12345" &&
 				k8sutils.HasConditionTrue("APIAuthValid", r)
@@ -87,7 +87,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 		t.Cleanup(func() { assert.NoError(t, cl.Delete(ctx, apiAuth)) })
 
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=true")
-		watchFor(t, ctx, w, watch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
 				k8sutils.HasConditionFalse("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")
@@ -109,7 +109,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 		t.Cleanup(func() { assert.NoError(t, cl.Delete(ctx, apiAuth)) })
 
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=false")
-		watchFor(t, ctx, w, watch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
 				k8sutils.HasConditionFalse("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")
@@ -131,7 +131,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 		t.Cleanup(func() { assert.NoError(t, cl.Delete(ctx, apiAuth)) })
 
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=false")
-		watchFor(t, ctx, w, watch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
 				k8sutils.HasConditionFalse("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")
@@ -151,7 +151,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 		t.Cleanup(func() { assert.NoError(t, cl.Delete(ctx, apiAuth)) })
 
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=false")
-		watchFor(t, ctx, w, watch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
 				k8sutils.HasConditionFalse("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")

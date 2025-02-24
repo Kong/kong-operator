@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
@@ -78,7 +78,7 @@ func TestKongKeySet(t *testing.T) {
 	)
 
 	t.Log("Waiting for KongKeySet to be programmed")
-	watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongKeySet) bool {
+	watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongKeySet) bool {
 		if c.GetName() != createdKeySet.GetName() {
 			return false
 		}
@@ -157,7 +157,7 @@ func TestKongKeySet(t *testing.T) {
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		)
 		t.Log("Watching for KeySet to verify the created KeySet programmed")
-		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongKeySet) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongKeySet) bool {
 			return c.GetKonnectID() == keySetID && k8sutils.IsProgrammed(c)
 		}, "KeySet should be programmed and have ID in status after handling conflict")
 
@@ -184,7 +184,7 @@ func TestKongKeySet(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongKeySet to be programmed")
-		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongKeySet) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongKeySet) bool {
 			if c.GetName() != createdKeySet.GetName() {
 				return false
 			}
@@ -240,14 +240,14 @@ func TestKongKeySet(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
+		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
 			fmt.Sprintf("Key didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for KongKeySet to be get Programmed and ControlPlaneRefValid conditions with status=False")
-		watchFor(t, ctx, w, watch.Modified,
+		watchFor(t, ctx, w, apiwatch.Modified,
 			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongKeySet didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)

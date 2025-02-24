@@ -54,6 +54,8 @@ linters-settings:
         alias: ${1}${2}
       - pkg: k8s.io/apimachinery/pkg/apis/meta/v1
         alias: metav1
+      - pkg: k8s.io/apimachinery/pkg/watch
+        alias: apiwatch
 
       - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
         alias: gateway${1}

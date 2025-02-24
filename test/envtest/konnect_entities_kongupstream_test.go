@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -84,7 +84,7 @@ func TestKongUpstream(t *testing.T) {
 		)
 
 		t.Log("Waiting for Upstream to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, func(r *configurationv1alpha1.KongUpstream) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongUpstream) bool {
 			return r.GetKonnectID() == upstreamID && k8sutils.IsProgrammed(r)
 		}, "KongUpstream didn't get Programmed status condition or didn't get the correct (upstream-12345) Konnect ID assigned")
 
@@ -162,7 +162,7 @@ func TestKongUpstream(t *testing.T) {
 		)
 
 		t.Log("Waiting for Upstream to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, func(r *configurationv1alpha1.KongUpstream) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongUpstream) bool {
 			if r.GetName() != createdUpstream.GetName() {
 				return false
 			}
@@ -215,14 +215,14 @@ func TestKongUpstream(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
+		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
 			fmt.Sprintf("KongUpstream didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for Service to be get Programmed and ControlPlaneRefValid conditions with status=False")
-		watchFor(t, ctx, w, watch.Modified,
+		watchFor(t, ctx, w, apiwatch.Modified,
 			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongUpstream didn't get Programmed and/or ControlPlaneRefValid status condition set to False")
 	})

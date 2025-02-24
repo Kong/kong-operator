@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
@@ -63,7 +63,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 
-		_ = watchFor(t, ctx, wKongService, watch.Modified,
+		_ = watchFor(t, ctx, wKongService, apiwatch.Modified,
 			func(svc *configurationv1alpha1.KongService) bool {
 				return svc.Name == kongService.Name &&
 					slices.Contains(svc.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
@@ -74,7 +74,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 		old := kongService.DeepCopy()
 		kongService.Annotations = nil
 		require.NoError(t, clientNamespaced.Patch(ctx, kongService, client.MergeFrom(old)))
-		_ = watchFor(t, ctx, wKongService, watch.Modified,
+		_ = watchFor(t, ctx, wKongService, apiwatch.Modified,
 			func(svc *configurationv1alpha1.KongService) bool {
 				return svc.Name == kongService.Name &&
 					!slices.Contains(svc.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
@@ -97,7 +97,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 
-		_ = watchFor(t, ctx, wKongRoute, watch.Modified,
+		_ = watchFor(t, ctx, wKongRoute, apiwatch.Modified,
 			func(route *configurationv1alpha1.KongRoute) bool {
 				return route.Name == kongRoute.Name &&
 					slices.Contains(route.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
@@ -108,7 +108,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 		old := kongRoute.DeepCopy()
 		kongRoute.Annotations = nil
 		require.NoError(t, clientNamespaced.Patch(ctx, kongRoute, client.MergeFrom(old)))
-		_ = watchFor(t, ctx, wKongRoute, watch.Modified,
+		_ = watchFor(t, ctx, wKongRoute, apiwatch.Modified,
 			func(route *configurationv1alpha1.KongRoute) bool {
 				return route.Name == kongRoute.Name &&
 					!slices.Contains(route.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
@@ -129,7 +129,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 
-		_ = watchFor(t, ctx, wKongConsumer, watch.Modified,
+		_ = watchFor(t, ctx, wKongConsumer, apiwatch.Modified,
 			func(c *configurationv1.KongConsumer) bool {
 				return c.Name == kongConsumer.Name &&
 					slices.Contains(c.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
@@ -140,7 +140,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 		old := kongConsumer.DeepCopy()
 		kongConsumer.Annotations = nil
 		require.NoError(t, clientNamespaced.Patch(ctx, kongConsumer, client.MergeFrom(old)))
-		_ = watchFor(t, ctx, wKongConsumer, watch.Modified,
+		_ = watchFor(t, ctx, wKongConsumer, apiwatch.Modified,
 			func(c *configurationv1.KongConsumer) bool {
 				return c.Name == kongConsumer.Name &&
 					!slices.Contains(c.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
@@ -161,7 +161,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 
-		_ = watchFor(t, ctx, wKongConsumerGroup, watch.Modified,
+		_ = watchFor(t, ctx, wKongConsumerGroup, apiwatch.Modified,
 			func(cg *configurationv1beta1.KongConsumerGroup) bool {
 				return cg.Name == kongConsumerGroup.Name &&
 					slices.Contains(cg.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
@@ -172,7 +172,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 		old := kongConsumerGroup.DeepCopy()
 		kongConsumerGroup.Annotations = nil
 		require.NoError(t, clientNamespaced.Patch(ctx, kongConsumerGroup, client.MergeFrom(old)))
-		_ = watchFor(t, ctx, wKongConsumerGroup, watch.Modified,
+		_ = watchFor(t, ctx, wKongConsumerGroup, apiwatch.Modified,
 			func(cg *configurationv1beta1.KongConsumerGroup) bool {
 				return cg.Name == kongConsumerGroup.Name &&
 					!slices.Contains(cg.GetFinalizers(), consts.CleanupPluginBindingFinalizer)

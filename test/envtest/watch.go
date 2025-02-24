@@ -9,7 +9,7 @@ import (
 
 	"github.com/kr/pretty"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -17,22 +17,41 @@ const (
 	clientWatchTimeout = 30 * time.Second
 )
 
+// watch is a wrapper around watch.Interface.
+// It is useful to provide a type-safe way to access the watch.Interface so that
+// the callers do not use an invalid watches when using watchFor().
+type watch[T any] struct {
+	w apiwatch.Interface
+}
+
+// WatchI returns the wrapped watch.Interface.
+func (w watch[T]) WatchI() apiwatch.Interface {
+	return w.w
+}
+
 // setupWatch sets up a watch.Interface for the provided client.ObjectList.
 // It is useful if an action needs to be performed between setting up the watch
 // and starting to watch for actual events on that watch.
 // It returns the watch.Interface and registers its cleanup using t.Cleanup.
 func setupWatch[
-	TList any,
+	TList interface {
+		GetItems() []T
+	},
 	TObjectList interface {
 		*TList
 		client.ObjectList
+	},
+	T any,
+	TPtr interface {
+		*T
+		client.Object
 	},
 ](
 	t *testing.T,
 	ctx context.Context,
 	cl client.WithWatch,
 	opts ...client.ListOption,
-) watch.Interface {
+) watch[TPtr] {
 	t.Helper()
 	var (
 		tlist   TList
@@ -45,7 +64,9 @@ func setupWatch[
 	w, err := cl.Watch(ctx, list, opts...)
 	require.NoError(t, err)
 	t.Cleanup(func() { w.Stop() })
-	return w
+	return watch[TPtr]{
+		w: w,
+	}
 }
 
 // watchFor watches for an event of type eventType using the provided watch.Interface.
@@ -56,8 +77,8 @@ func watchFor[
 ](
 	t *testing.T,
 	ctx context.Context,
-	w watch.Interface,
-	eventType watch.EventType,
+	w watch[T],
+	eventType apiwatch.EventType,
 	predicate func(T) bool,
 	failMsg string,
 ) T {
@@ -78,7 +99,7 @@ func watchFor[
 			} else {
 				require.Fail(t, failMsg)
 			}
-		case e := <-w.ResultChan():
+		case e := <-w.WatchI().ResultChan():
 			if e.Type != eventType {
 				continue
 			}
