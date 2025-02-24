@@ -33,7 +33,7 @@ func conditionsAreSetWhenReferencedControlPlaneIsMissing[
 	}
 }
 
-func conditionProgrammedIsSetToTrue[
+func conditionProgrammedIsSetToTrueAndCPRefIsKonnectID[
 	T interface {
 		client.Object
 		k8sutils.ConditionsAware
@@ -48,6 +48,18 @@ func conditionProgrammedIsSetToTrue[
 		if obj.GetControlPlaneRef().Type != commonv1alpha1.ControlPlaneRefKonnectID {
 			return false
 		}
-		return obj.GetKonnectID() == id && k8sutils.IsProgrammed(obj)
+		if obj.GetKonnectID() != id {
+			return false
+		}
+
+		return k8sutils.IsProgrammed(obj)
+	}
+}
+
+func objectHasConditionProgrammedSetToTrue[
+	T k8sutils.ConditionsAware,
+]() func(T) bool {
+	return func(obj T) bool {
+		return k8sutils.IsProgrammed(obj)
 	}
 }
