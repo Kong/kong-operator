@@ -95,10 +95,7 @@ func TestKongRoute(t *testing.T) {
 			return r.GetKonnectID() == routeID && k8sutils.IsProgrammed(r)
 		}, "KongRoute didn't get Programmed status condition or didn't get the correct (route-12345) Konnect ID assigned")
 
-		t.Log("Checking SDK KongRoute operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.RoutesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Route update")
 		sdk.RoutesSDK.EXPECT().
@@ -117,10 +114,7 @@ func TestKongRoute(t *testing.T) {
 		routeToPatch.Spec.PreserveHost = lo.ToPtr(true)
 		require.NoError(t, clientNamespaced.Patch(ctx, routeToPatch, client.MergeFrom(createdRoute)))
 
-		t.Log("Waiting for Route to be updated in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.RoutesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Route deletion")
 		sdk.RoutesSDK.EXPECT().
@@ -140,9 +134,6 @@ func TestKongRoute(t *testing.T) {
 			assert.True(c, err != nil && k8serrors.IsNotFound(err))
 		}, waitTime, tickTime)
 
-		t.Log("Waiting for Route to be deleted in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.RoutesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
 	})
 }

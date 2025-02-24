@@ -120,9 +120,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			))
 		}, waitTime, tickTime)
 
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
 	})
 	t.Run("binding to KongRoute", func(t *testing.T) {
 		proxyCacheKongPlugin := deploy.ProxyCachePlugin(t, ctx, clientNamespaced)
@@ -198,9 +196,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			))
 		}, waitTime, tickTime)
 
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
 	})
 
 	t.Run("binding to KongService and KongRoute", func(t *testing.T) {
@@ -282,9 +278,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			))
 		}, waitTime, tickTime)
 
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
 	})
 
 	t.Run("binding to KongService and KongConsumer", func(t *testing.T) {
@@ -375,9 +369,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			))
 		}, waitTime, tickTime)
 
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
 	})
 
 	t.Run("binding to KongService and KongConsumerGroup", func(t *testing.T) {
@@ -461,9 +453,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			))
 		}, waitTime, tickTime)
 
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
 	})
 
 	t.Run("binding globally", func(t *testing.T) {
@@ -521,8 +511,6 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			))
 		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
 
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.PluginSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
 	})
 }

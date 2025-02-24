@@ -136,10 +136,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 			})
 		}, "KongDataPlaneClientCertificate's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongDataPlaneClientCertificate to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.CACertificatesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
 	})
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
@@ -174,10 +171,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		created := deploy.KongDataPlaneClientCertificateAttachedToCP(t, ctx, clientNamespaced,
 			deploy.WithKonnectIDControlPlaneRef(cp),
 		)
-		t.Log("Checking SDK DataPlaneClientCertificate operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.DataPlaneCertificatesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.DataPlaneCertificatesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),

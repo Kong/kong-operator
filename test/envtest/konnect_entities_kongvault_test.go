@@ -9,7 +9,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,10 +81,7 @@ func TestKongVault(t *testing.T) {
 			return v.GetKonnectID() == vaultID && k8sutils.IsProgrammed(v)
 		}, "KongVault didn't get Programmed status condition or didn't get the correct (vault-12345) Konnect ID assigned")
 
-		t.Log("Waiting for KongVault to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.VaultSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
 
 		t.Log("Setting up mock SDK for vault update")
 		sdk.VaultSDK.EXPECT().UpsertVault(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertVaultRequest) bool {
@@ -99,10 +95,7 @@ func TestKongVault(t *testing.T) {
 		vaultToPatch.Spec.Description = vaultDespription
 		require.NoError(t, clientNamespaced.Patch(ctx, vaultToPatch, client.MergeFrom(vault)))
 
-		t.Log("Waiting for KongVault to be updated in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 
 		t.Log("Setting up mock SDK for vault deletion")
 		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), vaultID).
@@ -111,10 +104,7 @@ func TestKongVault(t *testing.T) {
 		t.Log("Deleting KongVault")
 		require.NoError(t, cl.Delete(ctx, vault))
 
-		t.Log("Waiting for vault to be deleted in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.VaultSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
 	})
 
 	t.Run("should correctly handle conflict on create", func(t *testing.T) {
@@ -176,10 +166,7 @@ func TestKongVault(t *testing.T) {
 			})
 		}, "KongVault's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongVault to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.VaultSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
@@ -215,9 +202,6 @@ func TestKongVault(t *testing.T) {
 			return v.GetKonnectID() == vaultID && k8sutils.IsProgrammed(v)
 		}, "KongVault didn't get Programmed status condition or didn't get the correct (vault-12345) Konnect ID assigned")
 
-		t.Log("Waiting for KongVault to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.VaultSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
 	})
 }

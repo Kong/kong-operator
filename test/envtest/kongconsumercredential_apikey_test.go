@@ -133,9 +133,7 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 		"KongCredentialAPIKey wasn't created",
 	)
 
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, sdk.AssertExpectations(t))
-	}, waitTime, tickTime)
+	eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
 
 	sdk.EXPECT().
 		DeleteKeyAuthWithConsumer(
@@ -164,9 +162,7 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 		"KongCredentialAPIKey wasn't deleted but it should have been",
 	)
 
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, sdk.AssertExpectations(t))
-	}, waitTime, tickTime)
+	eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
 
 	t.Run("conflict on creation should be handled successfully", func(t *testing.T) {
 		t.Log("Setting up SDK expectations on creation with conflict")
@@ -220,9 +216,6 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 			return k.GetName() == created.GetName() && k8sutils.IsProgrammed(k)
 		}, "KongCredentialAPIKey's Programmed condition should be true eventually")
 
-		t.Log("Checking SDK KongCredentialAPIKey operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, sdk.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
 	})
 }

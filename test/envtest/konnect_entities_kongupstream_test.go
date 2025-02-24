@@ -89,10 +89,7 @@ func TestKongUpstream(t *testing.T) {
 			return r.GetKonnectID() == upstreamID && k8sutils.IsProgrammed(r)
 		}, "KongUpstream didn't get Programmed status condition or didn't get the correct (upstream-12345) Konnect ID assigned")
 
-		t.Log("Checking SDK KongUpstream operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.UpstreamsSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Upstream update")
 		sdk.UpstreamsSDK.EXPECT().
@@ -112,10 +109,7 @@ func TestKongUpstream(t *testing.T) {
 		upstreamToPatch.Spec.HashFallbackHeader = lo.ToPtr("X-Hash-Header")
 		require.NoError(t, clientNamespaced.Patch(ctx, upstreamToPatch, client.MergeFrom(createdUpstream)))
 
-		t.Log("Waiting for Upstream to be updated in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.UpstreamsSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Upstream deletion")
 		sdk.UpstreamsSDK.EXPECT().
@@ -135,10 +129,7 @@ func TestKongUpstream(t *testing.T) {
 			assert.True(c, err != nil && k8serrors.IsNotFound(err))
 		}, waitTime, tickTime)
 
-		t.Log("Waiting for Upstream to be deleted in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.UpstreamsSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
@@ -182,10 +173,7 @@ func TestKongUpstream(t *testing.T) {
 			return r.GetKonnectID() == upstreamID && k8sutils.IsProgrammed(r)
 		}, "KongUpstream didn't get Programmed status condition or didn't get the correct (upstream-12345) Konnect ID assigned")
 
-		t.Log("Checking SDK KongUpstream operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.UpstreamsSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
 	})
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
@@ -225,10 +213,7 @@ func TestKongUpstream(t *testing.T) {
 				s.Spec.Tags = append(s.Spec.Tags, "test-1")
 			},
 		)
-		t.Log("Checking SDK KongUpstream operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.UpstreamsSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),

@@ -115,10 +115,7 @@ func TestKongConsumer(t *testing.T) {
 			})
 		}, "KongConsumer's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongConsumer to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongConsumer update")
 		sdk.ConsumersSDK.EXPECT().
@@ -134,10 +131,7 @@ func TestKongConsumer(t *testing.T) {
 		consumerToPatch.Username = updatedUsername
 		require.NoError(t, clientNamespaced.Patch(ctx, consumerToPatch, client.MergeFrom(createdConsumer)))
 
-		t.Log("Waiting for KongConsumer to be updated in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongConsumer deletion")
 		sdk.ConsumersSDK.EXPECT().
@@ -155,10 +149,7 @@ func TestKongConsumer(t *testing.T) {
 			}, waitTime, tickTime,
 		)
 
-		t.Log("Waiting for KongConsumer to be deleted in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 	})
 
 	cgWatch := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
@@ -260,10 +251,7 @@ func TestKongConsumer(t *testing.T) {
 			})
 		}, "KongConsumerGroup's Programmed condition should be true eventually")
 
-		t.Log("Waiting for SDK expectations to be met")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongConsumer update with ConsumerGroup")
 		sdk.ConsumersSDK.EXPECT().
@@ -308,9 +296,7 @@ func TestKongConsumer(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, consumerToPatch, client.MergeFrom(createdConsumer)))
 
 		t.Log("Waiting for SDK expectations to be met")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumerGroupSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle conflict in creation correctly", func(t *testing.T) {
@@ -354,10 +340,7 @@ func TestKongConsumer(t *testing.T) {
 			return c.GetKonnectID() == consumerID && k8sutils.IsProgrammed(c)
 		}, "KongConsumer should be programmed and have ID in status after handling conflict")
 
-		t.Log("Ensuring that the SDK's create and list methods are called")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
@@ -412,10 +395,7 @@ func TestKongConsumer(t *testing.T) {
 			})
 		}, "KongConsumer's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongConsumer to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 	})
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
@@ -463,10 +443,7 @@ func TestKongConsumer(t *testing.T) {
 				cert.Username = name
 			},
 		)
-		t.Log("Checking SDK Consumer operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),
@@ -608,14 +585,8 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			})
 		}, "KongConsumer's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongConsumer to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
-		t.Log("Waiting for KongCredentialBasicAuth to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.KongCredentialsBasicAuthSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.KongCredentialsBasicAuthSDK, waitTime, tickTime)
 	})
 
 	t.Run("APIKey", func(t *testing.T) {
@@ -702,14 +673,8 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			})
 		}, "KongConsumer's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongConsumer to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
-		t.Log("Waiting for KongCredentialAPIKey to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.KongCredentialsAPIKeySDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.KongCredentialsAPIKeySDK, waitTime, tickTime)
 	})
 
 	t.Run("ACL", func(t *testing.T) {
@@ -796,14 +761,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			})
 		}, "KongConsumer's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongConsumer to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumersSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
-
-		t.Log("Waiting for KongCredentialACL to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.KongCredentialsACLSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.KongCredentialsACLSDK, waitTime, tickTime)
 	})
 }

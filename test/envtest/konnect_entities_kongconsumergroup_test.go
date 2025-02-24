@@ -99,10 +99,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			})
 		}, "KongConsumerGroup's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongConsumerGroup to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumerGroupSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongConsumerGroup update")
 		sdk.ConsumerGroupSDK.EXPECT().
@@ -116,10 +113,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		cgToPatch.Spec.Name = updatedCGName
 		require.NoError(t, clientNamespaced.Patch(ctx, cgToPatch, client.MergeFrom(cg)))
 
-		t.Log("Waiting for KongConsumerGroup to be updated in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumerGroupSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongConsumerGroup deletion")
 		sdk.ConsumerGroupSDK.EXPECT().
@@ -137,10 +131,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			}, waitTime, tickTime,
 		)
 
-		t.Log("Waiting for KongConsumerGroup to be deleted in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumerGroupSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 	})
 
 	t.Run("should create ConsumerGroup successfully on conflict when ConsumerGroup with matching uid tag exists", func(t *testing.T) {
@@ -196,10 +187,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			return c.GetKonnectID() == cgID && k8sutils.IsProgrammed(c)
 		}, "KongConsumerGroup's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongConsumerGroup to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumerGroupSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
@@ -244,10 +232,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			})
 		}, "KongConsumerGroup's Programmed condition should be true eventually")
 
-		t.Log("Waiting for KongConsumerGroup to be created in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumerGroupSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 	})
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
@@ -288,10 +273,7 @@ func TestKongConsumerGroup(t *testing.T) {
 				cg.Spec.Name = name
 			},
 		)
-		t.Log("Checking SDK ConsumerGroup operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ConsumerGroupSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),

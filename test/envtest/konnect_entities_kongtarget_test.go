@@ -92,10 +92,7 @@ func TestKongTarget(t *testing.T) {
 			return kt.GetKonnectID() == targetID && k8sutils.IsProgrammed(kt)
 		}, "KongTarget didn't get Programmed status condition or didn't get the correct (target-12345) Konnect ID assigned")
 
-		t.Log("Checking SDK KongTarget operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.TargetsSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Target update")
 		sdk.TargetsSDK.EXPECT().UpsertTargetWithUpstream(
@@ -110,10 +107,7 @@ func TestKongTarget(t *testing.T) {
 		targetToPatch.Spec.Weight = 200
 		require.NoError(t, clientNamespaced.Patch(ctx, targetToPatch, client.MergeFrom(createdTarget)))
 
-		t.Log("Waiting for Target to be updated in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.TargetsSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Target deletion")
 		sdk.TargetsSDK.EXPECT().DeleteTargetWithUpstream(
@@ -132,9 +126,6 @@ func TestKongTarget(t *testing.T) {
 			assert.True(c, err != nil && k8serrors.IsNotFound(err))
 		}, waitTime, tickTime)
 
-		t.Log("Waiting for Target to be deleted in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.TargetsSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
 	})
 }

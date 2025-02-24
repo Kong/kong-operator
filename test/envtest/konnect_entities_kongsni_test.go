@@ -115,10 +115,7 @@ func TestKongSNI(t *testing.T) {
 		sniToPatch.Spec.KongSNIAPISpec.Name = "test2.kong-sni.example.com"
 		require.NoError(t, clientNamespaced.Patch(ctx, sniToPatch, client.MergeFrom(createdSNI)))
 
-		t.Log("Waiting for KongSNI to be updated in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.SNIsSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.SNIsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK for deleting SNI")
 		sdk.SNIsSDK.EXPECT().DeleteSniWithCertificate(
@@ -141,9 +138,6 @@ func TestKongSNI(t *testing.T) {
 			"KongSNI was not deleted",
 		)
 
-		t.Log("Waiting for SNI to be deleted in SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.SNIsSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.SNIsSDK, waitTime, tickTime)
 	})
 }

@@ -95,10 +95,7 @@ func TestKongService(t *testing.T) {
 				s.Spec.KongServiceAPISpec.Host = host
 			},
 		)
-		t.Log("Checking SDK KongService operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ServicesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for Service to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, watch.Modified, func(kt *configurationv1alpha1.KongService) bool {
@@ -120,10 +117,7 @@ func TestKongService(t *testing.T) {
 		serviceToPatch.Spec.Port = port
 		require.NoError(t, clientNamespaced.Patch(ctx, serviceToPatch, client.MergeFrom(createdService)))
 
-		t.Log("Waiting for Service to be updated in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ServicesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Service deletion")
 		sdk.ServicesSDK.EXPECT().
@@ -143,10 +137,7 @@ func TestKongService(t *testing.T) {
 			assert.True(c, err != nil && k8serrors.IsNotFound(err))
 		}, waitTime, tickTime)
 
-		t.Log("Waiting for Service to be deleted in the SDK")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ServicesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle konnectID control plane references", func(t *testing.T) {
@@ -192,10 +183,7 @@ func TestKongService(t *testing.T) {
 			},
 			deploy.WithKonnectIDControlPlaneRef(cp),
 		)
-		t.Log("Checking SDK KongService operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ServicesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for Service to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, watch.Modified, func(kt *configurationv1alpha1.KongService) bool {
@@ -262,10 +250,7 @@ func TestKongService(t *testing.T) {
 				s.Spec.KongServiceAPISpec.Host = host
 			},
 		)
-		t.Log("Checking SDK KongService operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ServicesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for Service to get the Programmed condition set to False")
 		watchFor(t, ctx, w, watch.Modified, func(kt *configurationv1alpha1.KongService) bool {
@@ -325,10 +310,7 @@ func TestKongService(t *testing.T) {
 				s.Spec.KongServiceAPISpec.Host = host
 			},
 		)
-		t.Log("Checking SDK KongService operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.ServicesSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrue(created, id),
