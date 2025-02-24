@@ -484,6 +484,9 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		konnect.NewKonnectEntityReconciler(factory, false, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialJWT](konnectInfiniteSyncTime),
 		),
+		konnect.NewKonnectEntityReconciler(factory, false, mgr.GetClient(),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](konnectInfiniteSyncTime),
+		),
 		konnect.NewKongCredentialSecretReconciler(false, mgr.GetClient(), mgr.GetScheme()),
 	}
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
@@ -837,7 +840,6 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				},
 				nil,
 			)
-
 		t.Log("Creating KongConsumer with ControlPlaneRef type=konnectID")
 		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
 			deploy.WithKonnectIDControlPlaneRef(cp),
@@ -865,6 +867,96 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		watchFor(t, ctx, wJWT, apiwatch.Modified,
 			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialJWT](),
 			"JWT credential should get the Programmed condition",
+		)
+	})
+
+	t.Run("HMAC", func(t *testing.T) {
+		consumerID := fmt.Sprintf("consumer-%d", rand.Int31n(1000))
+		username := fmt.Sprintf("user-secret-credentials-%d", rand.Int31n(1000))
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+
+		t.Log("Setting up SDK expectations on KongConsumer creation")
+		sdk.ConsumersSDK.EXPECT().
+			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
+				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
+					return input.Username != nil && *input.Username == username
+				}),
+			).Return(&sdkkonnectops.CreateConsumerResponse{
+			Consumer: &sdkkonnectcomp.Consumer{
+				ID: lo.ToPtr(consumerID),
+			},
+		}, nil)
+
+		t.Log("Setting up SDK expectation on possibly updating KongConsumer ( due to asynchronous nature of updates between KongConsumer and KongConsumerGroup)")
+		sdk.ConsumersSDK.EXPECT().
+			UpsertConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertConsumerRequest) bool {
+				return r.ConsumerID == consumerID
+			})).
+			Return(&sdkkonnectops.UpsertConsumerResponse{}, nil).
+			Maybe()
+
+		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
+		sdk.ConsumerGroupSDK.EXPECT().
+			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
+				ConsumerID:     consumerID,
+				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
+			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
+
+		s := deploy.Secret(t, ctx, clientNamespaced,
+			map[string][]byte{
+				"username": []byte(username),
+				"secret":   []byte("hmac-secret"),
+			},
+			deploy.WithLabel("konghq.com/credential", konnect.KongCredentialTypeHMAC),
+		)
+
+		t.Log("Setting up SDK expectation on (managed) HMAC credentials creation")
+		sdk.KongCredentialsHMACSDK.EXPECT().
+			CreateHmacAuthWithConsumer(
+				mock.Anything,
+				mock.MatchedBy(
+					func(r sdkkonnectops.CreateHmacAuthWithConsumerRequest) bool {
+						return r.ControlPlaneID == cp.GetKonnectID() &&
+							r.HMACAuthWithoutParents.Username == username &&
+							*r.HMACAuthWithoutParents.Secret == "hmac-secret"
+					},
+				),
+			).
+			Return(
+				&sdkkonnectops.CreateHmacAuthWithConsumerResponse{
+					HMACAuth: &sdkkonnectcomp.HMACAuth{
+						ID: lo.ToPtr("hmac-auth-id"),
+					},
+				},
+				nil,
+			)
+		t.Log("Creating KongConsumer with ControlPlaneRef type=konnectID")
+		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
+			deploy.WithKonnectIDControlPlaneRef(cp),
+			func(obj client.Object) {
+				consumer := obj.(*configurationv1.KongConsumer)
+				consumer.Credentials = []string{
+					s.Name,
+				}
+			},
+		)
+		t.Log("Waiting for KongConsumer to be programmed")
+		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+		wHMAC := setupWatch[configurationv1alpha1.KongCredentialHMACList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		watchFor(t, ctx, wConsumer, apiwatch.Modified,
+			assertsAnd(
+				objectMatchesName(createdConsumer),
+				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+				objectHasCPRefKonnectID[*configurationv1.KongConsumer](),
+			),
+			"KongConsumer's Programmed condition should be true eventually",
+		)
+
+		t.Log("Waiting for KongCredentialHMAC to be programmed")
+		watchFor(t, ctx, wHMAC, apiwatch.Modified,
+			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialHMAC](),
+			"HMAC credential should get the Programmed condition",
 		)
 	})
 }
