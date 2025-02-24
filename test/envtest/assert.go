@@ -58,3 +58,22 @@ func eventuallyAssertSDKExpectations(
 		waitTime, tickTime,
 	)
 }
+
+// assertsAnd returns a function that performs a logical AND of the given asserts.
+func assertsAnd[
+	T interface {
+		client.Object
+	},
+](
+	asserts ...func(T) bool,
+) func(objToMatch T) bool {
+	return func(objToMatch T) bool {
+		for _, f := range asserts {
+			if !f(objToMatch) {
+				return false
+			}
+		}
+
+		return true
+	}
+}
