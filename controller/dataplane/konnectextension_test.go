@@ -1,7 +1,6 @@
 package dataplane
 
 import (
-	"context"
 	"sort"
 	"testing"
 
@@ -292,7 +291,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 
 			dataplane := tt.dataPlane.DeepCopy()
-			err := applyKonnectExtension(context.Background(), cl, dataplane)
+			err := applyKonnectExtension(t.Context(), cl, dataplane)
 			if tt.expectedError != nil {
 				require.ErrorIs(t, err, tt.expectedError)
 			} else {

@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"context"
 	"encoding/base64"
 	"testing"
 
@@ -291,7 +290,7 @@ func TestGetEnvValueFromContainer(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			c := b.Build()
-			value, found, err := GetEnvValueFromContainer(context.Background(), tc.container, "default", tc.key, c)
+			value, found, err := GetEnvValueFromContainer(t.Context(), tc.container, "default", tc.key, c)
 			if tc.hasError {
 				require.Error(t, err)
 				return

@@ -1,7 +1,6 @@
 package konnect
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -816,7 +815,7 @@ func TestGroupByControlPlane(t *testing.T) {
 				WithScheme(scheme.Get()).
 				WithObjects(objects...).
 				Build()
-			got, err := tt.args.relations.GroupByControlPlane(context.Background(), cl)
+			got, err := tt.args.relations.GroupByControlPlane(t.Context(), cl)
 			require.NoError(t, err)
 			require.Equal(t, tt.want, got)
 		})

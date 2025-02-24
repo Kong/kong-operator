@@ -1,7 +1,6 @@
 package crdsvalidation
 
 import (
-	"context"
 	"testing"
 
 	"github.com/samber/lo"
@@ -17,7 +16,7 @@ import (
 
 func TestControlPlane(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get())
 
 	t.Run("spec", func(t *testing.T) {

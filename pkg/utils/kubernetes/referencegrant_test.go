@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"context"
 	"testing"
 
 	"github.com/samber/lo"
@@ -288,7 +287,7 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cl := fake.NewFakeClient(tc.objs...)
 			require.NoError(t, gatewayv1beta1.Install(cl.Scheme()))
-			allow, err := AllowedByReferenceGrants(context.Background(), cl, tc.from, tc.targetNamespace, tc.to)
+			allow, err := AllowedByReferenceGrants(t.Context(), cl, tc.from, tc.targetNamespace, tc.to)
 			require.NoError(t, err)
 			require.Equal(t, tc.allow, allow)
 		})

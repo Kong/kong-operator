@@ -253,7 +253,7 @@ func TestPatchStatusWithCondition(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			cl := fake.NewClientBuilder().
 				WithObjects(tt.obj).
 				WithStatusSubresource(tt.obj).

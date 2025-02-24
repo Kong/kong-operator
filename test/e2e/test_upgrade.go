@@ -68,7 +68,7 @@ func TestDeployAndUpgradeFromLatestTagToOverride(t *testing.T) {
 	fromImage := fmt.Sprintf("%s:%s", ktests.Images[0].NewName, ktests.Images[0].NewTag)
 
 	t.Logf("got latest tag %q from %q", fromImage, kustomizeTests)
-	testManifestsUpgrade(t, context.Background(), upgradeTestParams{
+	testManifestsUpgrade(t, t.Context(), upgradeTestParams{
 		fromImage: fromImage,
 		toImage:   image,
 	})

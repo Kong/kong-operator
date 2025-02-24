@@ -1,7 +1,6 @@
 package gateway
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -1124,7 +1123,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 
 	for _, tc := range testCases {
 
-		ctx := context.Background()
+		ctx := t.Context()
 		client := fakectrlruntimeclient.
 			NewClientBuilder().
 			WithScheme(scheme.Get()).
@@ -1584,7 +1583,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 				WithObjects(tc.Objects...).
 				Build()
 
-			ctx := context.Background()
+			ctx := t.Context()
 			for i, listener := range tc.Gateway.Spec.Listeners {
 				routes, err := countAttachedRoutesForGatewayListener(ctx, &tc.Gateway, listener, client)
 				assert.Equal(t, tc.ExpectedRoutes[i], routes, "#%d", i)

@@ -405,7 +405,7 @@ func TestCallbackRun(t *testing.T) {
 			for _, cb := range tc.callbacks {
 				require.NoError(t, manager.Register(cb.Callback, cb.Name))
 			}
-			errs := runner.For(tc.dataplane).Modifies(tc.modifies).Runs(manager).Do(context.Background(), tc.subject)
+			errs := runner.For(tc.dataplane).Modifies(tc.modifies).Runs(manager).Do(t.Context(), tc.subject)
 			errSort := func(a, b error) int {
 				A := a.Error()
 				B := b.Error()
