@@ -32,6 +32,7 @@ linters:
   - unconvert
   - unparam
   - unused
+  - usetesting
   - wastedassign
   - loggercheck
 linters-settings:
@@ -143,6 +144,8 @@ linters-settings:
         msg: "Please use camel case 'DataPlane' instead of 'Dataplane'"
       - p: ^.*Controlplane.*$
         msg: "Please use camel case 'ControlPlane' instead of 'Controlplane'"
+  usetesting:
+    os-temp-dir: true
 issues:
   max-same-issues: 0
   fix: true

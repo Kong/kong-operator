@@ -1,7 +1,6 @@
 package ops
 
 import (
-	"context"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -22,7 +21,7 @@ import (
 )
 
 func TestCreateKongUpstream(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	testCases := []struct {
 		name             string
 		mockUpstreamPair func(*testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream)
@@ -153,7 +152,7 @@ func TestCreateKongUpstream(t *testing.T) {
 }
 
 func TestDeleteKongUpstream(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	testCases := []struct {
 		name             string
 		mockUpstreamPair func(*testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream)
@@ -282,7 +281,7 @@ func TestDeleteKongUpstream(t *testing.T) {
 }
 
 func TestUpdateKongUpstream(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	testCases := []struct {
 		name             string
 		mockUpstreamPair func(*testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream)

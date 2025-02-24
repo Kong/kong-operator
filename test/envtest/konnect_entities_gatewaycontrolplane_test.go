@@ -393,7 +393,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					mock.Anything,
 					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
 						var cp konnectv1alpha1.KonnectGatewayControlPlane
-						require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: "cp-4"}, &cp))
+						require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Name: "cp-4"}, &cp))
 						// On conflict, we list cps by UID and check if there is already one created.
 						return r.Labels != nil && *r.Labels == ops.KubernetesUIDLabelKey+":"+string(cp.UID)
 					}),
@@ -491,7 +491,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					mock.Anything,
 					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
 						var cp konnectv1alpha1.KonnectGatewayControlPlane
-						require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: "cp-group-1"}, &cp))
+						require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Name: "cp-group-1"}, &cp))
 						// On conflict, we list cps by UID and check if there is already one created.
 						return r.Labels != nil && *r.Labels == ops.KubernetesUIDLabelKey+":"+string(cp.UID)
 					}),

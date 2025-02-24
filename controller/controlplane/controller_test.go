@@ -1,7 +1,6 @@
 package controlplane
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -232,7 +231,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			testBody: func(t *testing.T, reconciler Reconciler, controlplaneReq reconcile.Request) {
-				ctx := context.Background()
+				ctx := t.Context()
 
 				// first reconcile loop to allow the reconciler to set the controlplane defaults
 				_, err := reconciler.Reconcile(ctx, controlplaneReq)
@@ -414,7 +413,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			testBody: func(t *testing.T, reconciler Reconciler, controlplaneReq reconcile.Request) {
-				ctx := context.Background()
+				ctx := t.Context()
 
 				_, err := reconciler.Reconcile(ctx, controlplaneReq)
 				require.EqualError(t, err, "unsupported ControlPlane image kong/kubernetes-ingress-controller:1.0")

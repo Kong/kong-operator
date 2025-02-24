@@ -1,7 +1,6 @@
 package konnect
 
 import (
-	"context"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -264,12 +263,12 @@ func testHandleControlPlaenRef[
 				// WithStatusSubresource is required for updating status of handled entity.
 				WithStatusSubresource(tc.ent).
 				Build()
-			require.NoError(t, fakeClient.SubResource("status").Update(context.Background(), tc.ent))
+			require.NoError(t, fakeClient.SubResource("status").Update(t.Context(), tc.ent))
 
-			res, err := handleControlPlaneRef(context.Background(), fakeClient, tc.ent)
+			res, err := handleControlPlaneRef(t.Context(), fakeClient, tc.ent)
 
 			var updatedEnt TEnt = tc.ent.DeepCopyObject().(TEnt)
-			require.NoError(t, fakeClient.Get(context.Background(), client.ObjectKeyFromObject(tc.ent), updatedEnt))
+			require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(tc.ent), updatedEnt))
 			for _, assertion := range tc.updatedEntAssertions {
 				ok, msg := assertion(updatedEnt)
 				require.True(t, ok, msg)

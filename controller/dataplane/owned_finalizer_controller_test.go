@@ -1,7 +1,6 @@
 package dataplane
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -57,7 +56,7 @@ func TestRequestsForDataPlaneOwnedObjects(t *testing.T) {
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "not-owned-diff-ns-secret", Namespace: otherNs}},
 	)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	expectedRequest := func(name string) ctrl.Request {
 		return ctrl.Request{
 			NamespacedName: k8stypes.NamespacedName{

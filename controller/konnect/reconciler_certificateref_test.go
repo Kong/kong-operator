@@ -1,7 +1,6 @@
 package konnect
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -376,12 +375,12 @@ func testHandleCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 				WithObjects(tc.ent).WithObjects(tc.objects...).
 				// WithStatusSubresource is required for updating status of handled entity.
 				WithStatusSubresource(tc.ent).Build()
-			require.NoError(t, fakeClient.SubResource("status").Update(context.Background(), tc.ent))
+			require.NoError(t, fakeClient.SubResource("status").Update(t.Context(), tc.ent))
 
-			res, err := handleKongCertificateRef(context.Background(), fakeClient, tc.ent)
+			res, err := handleKongCertificateRef(t.Context(), fakeClient, tc.ent)
 
 			var updatedEnt TEnt = tc.ent.DeepCopyObject().(TEnt)
-			require.NoError(t, fakeClient.Get(context.Background(), client.ObjectKeyFromObject(tc.ent), updatedEnt))
+			require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(tc.ent), updatedEnt))
 			for _, assertion := range tc.updatedEntAssertions {
 				ok, msg := assertion(updatedEnt)
 				require.True(t, ok, msg)

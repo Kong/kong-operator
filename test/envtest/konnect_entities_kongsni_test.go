@@ -1,7 +1,6 @@
 package envtest
 
 import (
-	"context"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -27,7 +26,7 @@ import (
 
 func TestKongSNI(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, context.Background())
+	ctx, cancel := Context(t, t.Context())
 	defer cancel()
 	cfg, ns := Setup(t, ctx, scheme.Get())
 

@@ -196,7 +196,7 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 
 	t.Cleanup(func() {
 		if opt.InstallViaKustomize {
-			cleanupEnvironment(t, context.Background(), env, kustomizeDir.Tests())
+			cleanupEnvironment(t, t.Context(), env, kustomizeDir.Tests())
 		}
 	})
 
@@ -341,7 +341,7 @@ func waitForOperatorDeployment(
 			logOperatorPodLogs(t, ctx, k8sClient, ns)
 			return fmt.Errorf("timed out waiting for operator deployment in namespace %s", ns)
 		case <-ctx.Done():
-			logOperatorPodLogs(t, context.Background(), k8sClient, ns)
+			logOperatorPodLogs(t, t.Context(), k8sClient, ns)
 			return ctx.Err()
 		case <-pollTimer.C:
 			listOpts := metav1.ListOptions{

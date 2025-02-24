@@ -1,7 +1,6 @@
 package ref
 
 import (
-	"context"
 	"testing"
 
 	"github.com/samber/lo"
@@ -203,7 +202,7 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 			})...)
 			assert.NoError(t, gatewayv1beta1.Install(cl.Scheme()))
 			_, granted, err := CheckReferenceGrantForSecret(
-				context.Background(), cl,
+				t.Context(), cl,
 				tc.forObj,
 				gatewayv1.SecretObjectReference{
 					Namespace: lo.ToPtr(gatewayv1.Namespace("default")),
