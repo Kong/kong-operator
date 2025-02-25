@@ -77,7 +77,7 @@ type KonnectCloudGatewayNetworkSpec struct {
 
 	// Initial state for creating a network.
 	//
-	// +optional
+	// +kubebuilder:validation:Optional
 	State *sdkkonnectcomp.NetworkCreateState `json:"state"`
 
 	// +kubebuilder:validation:Required
