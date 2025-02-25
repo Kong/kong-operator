@@ -130,7 +130,7 @@ const (
 //
 //	{
 //		"code": 3,
-//		"message": "validation error",
+//		"message": "validation error: length must be <= 128, but got 138",
 //		"details": [
 //			{
 //				"@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
@@ -148,23 +148,15 @@ func ErrorIsSDKErrorTypeField(err error) bool {
 		return false
 	}
 
-	errSDKBody, err := ParseSDKErrorBody(errSDK.Body)
-	if err != nil {
+	errSDKBody, parseErr := ParseSDKErrorBody(errSDK.Body)
+	if parseErr != nil {
 		return false
 	}
-
-	switch errSDKBody.Message {
-	case validationErrorMessage:
-		if !slices.ContainsFunc(errSDKBody.Details, func(d sdkErrorDetails) bool {
+	// body.message includes the reason why the validation fails, so we match the message by `HasPrefix`.
+	return strings.HasPrefix(errSDKBody.Message, validationErrorMessage) &&
+		slices.ContainsFunc(errSDKBody.Details, func(d sdkErrorDetails) bool {
 			return d.Type == "ERROR_TYPE_FIELD"
-		}) {
-			return false
-		}
-
-		return true
-	default:
-		return false
-	}
+		})
 }
 
 // ErrorIsSDKError403 returns true if the provided error is a 403 Forbidden error.
