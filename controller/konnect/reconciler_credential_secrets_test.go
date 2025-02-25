@@ -3,6 +3,7 @@ package konnect
 import (
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -125,7 +126,7 @@ func TestValidateSecretForKongCredentialAPIKey(t *testing.T) {
 	}
 }
 
-func TestValidateSecertForKongCredentialACL(t *testing.T) {
+func TestValidateSecretForKongCredentialACL(t *testing.T) {
 	tests := []struct {
 		name      string
 		secret    *corev1.Secret
@@ -162,6 +163,93 @@ func TestValidateSecertForKongCredentialACL(t *testing.T) {
 			err := validateSecretForKongCredentialACL(tt.secret)
 			if (err != nil) != tt.wantError {
 				t.Errorf("validateSecretForKongCredentialACL() error = %v, wantError %v", err, tt.wantError)
+			}
+		})
+	}
+}
+
+func TestValidateSecretForCredentialJWT(t *testing.T) {
+	tests := []struct {
+		name      string
+		secret    *corev1.Secret
+		wantError bool
+	}{
+		{
+			name: "valid secret",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "valid-secret",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"algorithm":      []byte("RS256"),
+					"key":            []byte("jwt-key"),
+					"rsa_public_key": []byte("rsa-public-key"),
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "missing key",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "missing-key",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{},
+			},
+			wantError: true,
+		},
+		{
+			name: "invalid algorithm",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "invalid-algorithm",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"algorithm":      []byte("INVALID"),
+					"key":            []byte("jwt-key"),
+					"rsa_public_key": []byte("rsa-public-key"),
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "missing RSA public key",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "missing-public-key",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"algorithm": []byte("RS256"),
+					"key":       []byte("jwt-key"),
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "algorithm not requiring RSA public key",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "missing-public-key",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"algorithm": []byte("HS512"),
+					"key":       []byte("jwt-key"),
+				},
+			},
+			wantError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateSecretForKongCredentialJWT(tt.secret)
+			if (err != nil) != tt.wantError {
+				t.Errorf("validateSecretForKongCredentialJWT() error = %v, wantError %v", err, tt.wantError)
 			}
 		})
 	}
@@ -433,6 +521,115 @@ func TestEnsureExistingCredential(t *testing.T) {
 					},
 					Data: map[string][]byte{
 						"group": []byte("acl-group"),
+					},
+				},
+				consumer: &configurationv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "consumer",
+						Namespace: "default",
+					},
+				},
+				wantError: false,
+			},
+		}
+
+		for _, tt := range testCases {
+			t.Run(tt.name, func(t *testing.T) {
+				client := clientfake.NewClientBuilder().
+					WithScheme(scheme.Get()).
+					WithObjects(tt.cred).
+					Build()
+				_, err := ensureExistingCredential(t.Context(), client, tt.cred, tt.secret, tt.consumer)
+				if (err != nil) != tt.wantError {
+					t.Errorf("ensureExistingCredential() error = %v, wantError %v", err, tt.wantError)
+				}
+				if tt.assert != nil {
+					tt.assert(t, tt.cred)
+				}
+			})
+		}
+	})
+
+	t.Run("KongCredentialJWT", func(t *testing.T) {
+		testCases := []struct {
+			name      string
+			cred      *configurationv1alpha1.KongCredentialJWT
+			secret    *corev1.Secret
+			consumer  *configurationv1.KongConsumer
+			assert    func(t *testing.T, cred *configurationv1alpha1.KongCredentialJWT)
+			wantError bool
+		}{
+			{
+				name: "credential needs update",
+				cred: &configurationv1alpha1.KongCredentialJWT{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cred",
+						Namespace: "default",
+					},
+					Spec: configurationv1alpha1.KongCredentialJWTSpec{
+						ConsumerRef: corev1.LocalObjectReference{
+							Name: "consumer",
+						},
+						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
+							Algorithm:    "RS256",
+							Key:          lo.ToPtr("old-key"),
+							RSAPublicKey: lo.ToPtr("old-public-key"),
+						},
+					},
+				},
+				secret: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"algorithm":      []byte("RS256"),
+						"key":            []byte("new-key"),
+						"rsa_public_key": []byte("new-public-key"),
+						"secret":         []byte("jwt-secret"),
+					},
+				},
+				consumer: &configurationv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "consumer",
+						Namespace: "default",
+					},
+				},
+				assert: func(t *testing.T, cred *configurationv1alpha1.KongCredentialJWT) {
+					require.NotNil(t, cred)
+					require.Equal(t, "new-key", *cred.Spec.Key)
+					require.Equal(t, "new-public-key", *cred.Spec.RSAPublicKey)
+					require.Equal(t, "jwt-secret", *cred.Spec.Secret)
+				},
+				wantError: false,
+			},
+			{
+				name: "credential does not need update",
+				cred: &configurationv1alpha1.KongCredentialJWT{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cred",
+						Namespace: "default",
+					},
+					Spec: configurationv1alpha1.KongCredentialJWTSpec{
+						ConsumerRef: corev1.LocalObjectReference{
+							Name: "consumer",
+						},
+						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
+							Algorithm:    "RS256",
+							Key:          lo.ToPtr("new-key"),
+							RSAPublicKey: lo.ToPtr("new-public-key"),
+						},
+					},
+				},
+				secret: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"algorithm":      []byte("RS256"),
+						"key":            []byte("new-key"),
+						"rsa_public_key": []byte("new-public-key"),
 					},
 				},
 				consumer: &configurationv1.KongConsumer{

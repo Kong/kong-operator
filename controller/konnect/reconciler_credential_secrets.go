@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +36,9 @@ const (
 	// KongCredentialTypeAPIKey is the type of api-key credential, it's used
 	// as the value for konghq.com/credential label.
 	KongCredentialTypeAPIKey = "key-auth"
+	// KongCredentialTypeJWT is the type of jwt-auth credential.
+	// It's used as the values of konghq.com/credential label.
+	KongCredentialTypeJWT = "jwt"
 	// KongCredentialTypeACL is the type of Access Control Lists(ACLs) managed similar as credentials.
 	// It's used as the value for konghq.com/credential label.
 	KongCredentialTypeACL = "acl"
@@ -45,6 +49,14 @@ const (
 	CredentialSecretKeyNameAPIKeyKey = "key"
 	// CredentialSecretKeyNameACLGroupKey is the credential secret key name for ACL group type.
 	CredentialSecretKeyNameACLGroupKey = "group"
+	// CredentialSecretKeyNameJwtAlgorithmKey is the credential secret key name for JWT algorithm.
+	CredentialSecretKeyNameJwtAlgorithmKey = "algorithm"
+	// CredentualSecretKeyNameJwtKeyKey is the credential secret key name for JWT key.
+	CredentialSecretKeyNameJwtKeyKey = "key"
+	// CredentialSecretKeyNameJwtRSAPublicKeyKey is the credential secret key name for JWT RSA public key.
+	CredentialSecretKeyNameJwtRSAPublicKeyKey = "rsa_public_key" //nolint:gosec
+	// CredentialSecretKeyNameJwtSecretKey is the credentail secret ley name for JWT secret.
+	CredentialSecretKeyNameJwtSecretKey = "secret"
 )
 
 // KongCredentialSecretReconciler reconciles a KongPlugin object.
@@ -109,9 +121,9 @@ func (r *KongCredentialSecretReconciler) SetupWithManager(_ context.Context, mgr
 		Owns(&configurationv1alpha1.KongCredentialBasicAuth{}, builder.MatchEveryOwner).
 		Owns(&configurationv1alpha1.KongCredentialAPIKey{}, builder.MatchEveryOwner).
 		Owns(&configurationv1alpha1.KongCredentialACL{}, builder.MatchEveryOwner).
+		Owns(&configurationv1alpha1.KongCredentialJWT{}, builder.MatchEveryOwner).
 		// TODO: Add more credential types support.
 		// TODO: https://github.com/Kong/gateway-operator/issues/1125
-		// TODO: https://github.com/Kong/gateway-operator/issues/1126
 		Complete(r)
 }
 
@@ -243,7 +255,6 @@ func deleteAllCredentialsUsingSecret(
 ) error {
 	// TODO: Add more credential types support.
 	// TODO: https://github.com/Kong/gateway-operator/issues/1125
-	// TODO: https://github.com/Kong/gateway-operator/issues/1126
 	switch credType {
 
 	// NOTE: To use DeleteAllOf() we need a selectable field added to the CRD.
@@ -285,6 +296,7 @@ func deleteAllCredentialsUsingSecret(
 				)
 			}
 		}
+
 	case KongCredentialTypeACL:
 		var l configurationv1alpha1.KongCredentialACLList
 		err := cl.List(
@@ -300,6 +312,26 @@ func deleteAllCredentialsUsingSecret(
 		for _, cred := range l.Items {
 			if err := cl.Delete(ctx, &cred); err != nil {
 				return fmt.Errorf("failed deleting unused KongCredentialACLs %s: %w",
+					client.ObjectKeyFromObject(&cred), err,
+				)
+			}
+		}
+
+	case KongCredentialTypeJWT:
+		var l configurationv1alpha1.KongCredentialJWTList
+		err := cl.List(
+			ctx, &l,
+			client.MatchingFields{
+				IndexFieldKongCredentialJWTReferencesSecret: secret.Name,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("failed listing unused KongCredentialJWTs: %w", err)
+		}
+
+		for _, cred := range l.Items {
+			if err := cl.Delete(ctx, &cred); err != nil {
+				return fmt.Errorf("failed deleting unused KongCredentialJWTs %s: %w",
 					client.ObjectKeyFromObject(&cred), err,
 				)
 			}
@@ -351,6 +383,15 @@ func ensureExistingCredential[
 			update = true
 		}
 
+	case *configurationv1alpha1.KongCredentialJWT:
+		if cred.Spec.ConsumerRef.Name != consumer.Name ||
+			(cred.Spec.Key != nil && *cred.Spec.Key != string(secret.Data[CredentialSecretKeyNameJwtKeyKey])) {
+
+			cred.Spec.ConsumerRef.Name = consumer.Name
+			setKongCredentialJWTSpec(&cred.Spec, secret)
+			update = true
+		}
+
 	default:
 		// NOTE: Shouldn't happen.
 		panic(fmt.Sprintf("unsupported credential type %T", cred))
@@ -397,6 +438,9 @@ func ensureCredentialExists(
 	case KongCredentialTypeACL:
 		cred = secretToKongCredentialACL(secret, kongConsumer)
 
+	case KongCredentialTypeJWT:
+		cred = secretToKongCredentialJWT(secret, kongConsumer)
+
 	default:
 		return fmt.Errorf("Secret %s used as credential, but has unsupported type %s",
 			nn, credType,
@@ -441,7 +485,6 @@ func validateSecret(
 
 	// TODO: Add more credential types support.
 	// TODO: https://github.com/Kong/gateway-operator/issues/1125
-	// TODO: https://github.com/Kong/gateway-operator/issues/1126
 	switch credType {
 	case KongCredentialTypeBasicAuth:
 		if err := validateSecretForKongCredentialBasicAuth(s); err != nil {
@@ -453,6 +496,10 @@ func validateSecret(
 		}
 	case KongCredentialTypeACL:
 		if err := validateSecretForKongCredentialACL(s); err != nil {
+			return err
+		}
+	case KongCredentialTypeJWT:
+		if err := validateSecretForKongCredentialJWT(s); err != nil {
 			return err
 		}
 	default:
@@ -493,6 +540,75 @@ func validateSecretForKongCredentialACL(s *corev1.Secret) error {
 			client.ObjectKeyFromObject(s), CredentialSecretKeyNameACLGroupKey,
 		)
 	}
+	return nil
+}
+
+// credentialJWTAllowedAlgorithms is the list of Allowed algorithms for JWT.
+var credentialJWTAllowedAlgorithms = lo.SliceToMap(
+	[]string{
+		"HS256",
+		"HS384",
+		"HS512",
+		"RS256",
+		"RS384",
+		"RS512",
+		"ES256",
+		"ES384",
+		"ES512",
+		"PS256",
+		"PS384",
+		"PS512",
+		"EdDSA",
+	},
+	func(s string) (string, struct{}) { return s, struct{}{} },
+)
+
+var credentialJWTAlgorithmsRequiringRSAPublicKey = lo.SliceToMap(
+	[]string{
+		"RS256",
+		"RS384",
+		"RS512",
+		"PS256",
+		"PS384",
+		"PS512",
+		"EdDSA",
+	},
+	func(s string) (string, struct{}) { return s, struct{}{} },
+)
+
+func validateSecretForKongCredentialJWT(s *corev1.Secret) error {
+	// check if 'key' exists.
+	if _, ok := s.Data[CredentialSecretKeyNameJwtKeyKey]; !ok {
+		return fmt.Errorf(
+			"Secret %s used as JWT credential, but lacks %s key",
+			client.ObjectKeyFromObject(s), CredentialSecretKeyNameJwtKeyKey,
+		)
+	}
+	// validate algorithm.
+	algorithm, ok := s.Data[CredentialSecretKeyNameJwtAlgorithmKey]
+	if !ok {
+		return fmt.Errorf(
+			"Secret %s used as JWT credential, but lacks %s key",
+			client.ObjectKeyFromObject(s), CredentialSecretKeyNameJwtAlgorithmKey,
+		)
+	}
+	// check if algorithm is supported.
+	if _, ok := credentialJWTAllowedAlgorithms[string(algorithm)]; !ok {
+		return fmt.Errorf(
+			"Secret %s used as JWT credential, but algorithm '%s' is invalid or not supported",
+			client.ObjectKeyFromObject(s), algorithm,
+		)
+	}
+	// check rsa_public_key if the algorithm requires.
+	if _, ok := credentialJWTAlgorithmsRequiringRSAPublicKey[string(algorithm)]; ok {
+		if _, hasRSAPublicKey := s.Data[CredentialSecretKeyNameJwtRSAPublicKeyKey]; !hasRSAPublicKey {
+			return fmt.Errorf("Secret %s used as JWT credential, but lacks %s key which is required when algorithm is %s",
+				client.ObjectKeyFromObject(s),
+				CredentialSecretKeyNameJwtRSAPublicKeyKey, algorithm,
+			)
+		}
+	}
+
 	return nil
 }
 
@@ -549,6 +665,22 @@ func secretToKongCredentialACL(
 	return cred
 }
 
+func secretToKongCredentialJWT(
+	s *corev1.Secret, c *configurationv1.KongConsumer,
+) *configurationv1alpha1.KongCredentialJWT {
+	cred := &configurationv1alpha1.KongCredentialJWT{
+		ObjectMeta: secretObjectMetaForConsumer(c),
+		Spec: configurationv1alpha1.KongCredentialJWTSpec{
+			ConsumerRef: corev1.LocalObjectReference{
+				Name: c.Name,
+			},
+		},
+	}
+
+	setKongCredentialJWTSpec(&cred.Spec, s)
+	return cred
+}
+
 func setKongCredentialBasicAuthSpec(
 	spec *configurationv1alpha1.KongCredentialBasicAuthSpec, s *corev1.Secret,
 ) {
@@ -568,6 +700,21 @@ func setKongCredentialACLSpec(
 	spec.Group = string(s.Data[CredentialSecretKeyNameACLGroupKey])
 }
 
+func setKongCredentialJWTSpec(
+	spec *configurationv1alpha1.KongCredentialJWTSpec, s *corev1.Secret,
+) {
+	spec.Algorithm = string(s.Data[CredentialSecretKeyNameJwtAlgorithmKey])
+	spec.Key = lo.ToPtr(string(s.Data[CredentialSecretKeyNameJwtKeyKey]))
+
+	if rsaPublicKey, ok := s.Data[CredentialSecretKeyNameJwtRSAPublicKeyKey]; ok {
+		spec.RSAPublicKey = lo.ToPtr(string(rsaPublicKey))
+	}
+
+	if jwtSecret, ok := s.Data[CredentialSecretKeyNameJwtSecretKey]; ok {
+		spec.Secret = lo.ToPtr(string(jwtSecret))
+	}
+}
+
 func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 	ctx context.Context,
 	s *corev1.Secret,
@@ -576,7 +723,6 @@ func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 ) (ctrl.Result, error) {
 	// TODO: add more credentials types support.
 	// TODO: https://github.com/Kong/gateway-operator/issues/1125
-	// TODO: https://github.com/Kong/gateway-operator/issues/1126
 
 	switch credType {
 	case KongCredentialTypeBasicAuth:
@@ -624,6 +770,22 @@ func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 		)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed listing KongCredentialACL: %w", err)
+		}
+		if res, err := handleCreds(ctx, r.client, s, credType, consumer, l.Items, r.scheme); err != nil || !res.IsZero() {
+			return res, err
+		}
+
+	case KongCredentialTypeJWT:
+		var l configurationv1alpha1.KongCredentialJWTList
+		err := r.client.List(
+			ctx,
+			&l,
+			client.MatchingFields{
+				IndexFieldKongCredentialJWTReferencesKongConsumer: consumer.Name,
+			},
+		)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed listing KongCrenentialJWT: %w", err)
 		}
 		if res, err := handleCreds(ctx, r.client, s, credType, consumer, l.Items, r.scheme); err != nil || !res.IsZero() {
 			return res, err
