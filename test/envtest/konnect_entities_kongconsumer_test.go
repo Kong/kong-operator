@@ -845,20 +845,21 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1.KongConsumer) bool {
-			if c.GetName() != createdConsumer.GetName() {
-				return false
-			}
-			if c.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
-				return false
-			}
-			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
-		}, "KongConsumer's Programmed condition should be true eventually")
+		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+		wJWT := setupWatch[configurationv1alpha1.KongCredentialJWTList](t, ctx, cl, client.InNamespace(ns.Name))
+		watchFor(t, ctx, wConsumer, apiwatch.Modified,
+			assertsAnd(
+				objectMatchesName(createdConsumer),
+				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+				objectHasCPRefKonnectID[*configurationv1.KongConsumer](),
+			),
+			"KongConsumer's Programmed condition should be true eventually",
+		)
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
-		eventuallyAssertSDKExpectations(t, factory.SDK.KongCredentialsJWTSDK, waitTime, tickTime)
+		t.Log("Waiting for KongCredentialJWT to be programmed")
+		watchFor(t, ctx, wJWT, apiwatch.Modified,
+			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialJWT](),
+			"JWT credential should get the Programmed condition",
+		)
 	})
 }
