@@ -30,9 +30,9 @@ func TestApplyKonnectExtension(t *testing.T) {
 	require.NoError(t, konnectv1alpha1.AddToScheme(s))
 
 	konnectExtensionStatus := konnectv1alpha1.KonnectExtensionStatus{
-		Konnect: &konnectv1alpha1.KonnectControlPlaneStatus{
+		Konnect: &konnectv1alpha1.KonnectExtensionControlPlaneStatus{
 			ControlPlaneID: "konnect-id",
-			KonnectEndpoints: konnectv1alpha1.KonnectEndpoints{
+			Endpoints: konnectv1alpha1.KonnectEndpoints{
 				ControlPlaneEndpoint: "7078163243.us.cp0.konghq.com",
 				TelemetryEndpoint:    "7078163243.us.tp0.konghq.com",
 			},

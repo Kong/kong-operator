@@ -181,8 +181,10 @@ func setupIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 				return fmt.Errorf("failed to setup index for KongPluginInstallations on DataPlane: %w", err)
 			}
 		}
-		if err := index.DataPlaneOnDataPlaneKonnecExtension(ctx, mgr.GetCache()); err != nil {
-			return fmt.Errorf("failed to setup index for DataPlanes on KonnectExtensions: %w", err)
+		if cfg.KonnectControllersEnabled {
+			if err := index.DataPlaneOnDataPlaneKonnecExtension(ctx, mgr.GetCache()); err != nil {
+				return fmt.Errorf("failed to setup index for DataPlanes on KonnectExtensions: %w", err)
+			}
 		}
 	}
 	return nil

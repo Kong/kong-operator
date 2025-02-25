@@ -47,7 +47,7 @@ type Reconciler struct {
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	r.eventRecorder = mgr.GetEventRecorderFor("dataplane")
 
-	return DataPlaneWatchBuilder(mgr).
+	return DataPlaneWatchBuilder(mgr, r.KonnectEnabled).
 		Complete(r)
 }
 

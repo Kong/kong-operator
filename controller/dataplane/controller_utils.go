@@ -338,13 +338,13 @@ func applyExtensions(ctx context.Context, cl client.Client, logger logr.Logger, 
 	newDataPlane := dataplane.DeepCopy()
 	k8sutils.SetCondition(*extensionsCondition, newDataPlane)
 
+	// the konnect extension is the only one implemented at the moment. In case konnect is not enabled, we return early.
+	if !konnectEnabled {
+		return false, false, nil
+	}
+
 	// in case the extensionsCondition is true, let's apply the extensions.
 	if extensionsCondition.Status == metav1.ConditionTrue {
-		// the konnect extension is the only one implemented at the moment. In case konnect is not enabled, we return early.
-		if !konnectEnabled {
-			return false, false, nil
-		}
-
 		condition = k8sutils.NewConditionWithGeneration(consts.KonnectExtensionAppliedType, metav1.ConditionTrue, consts.KonnectExtensionAppliedReason, "", dataplane.GetGeneration())
 		err = konnectextension.ApplyKonnectExtension(ctx, cl, dataplane)
 		if err != nil {

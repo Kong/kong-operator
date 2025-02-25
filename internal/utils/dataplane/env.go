@@ -82,8 +82,8 @@ func KongInKonnectDefaults(konnectExtensionStatus konnectv1alpha1.KonnectExtensi
 	}
 
 	for k, v := range template {
-		v = strings.ReplaceAll(v, "<CONTROL-PLANE-ENDPOINT>", sanitizeEndpoint(konnectExtensionStatus.Konnect.KonnectEndpoints.ControlPlaneEndpoint))
-		v = strings.ReplaceAll(v, "<TELEMETRY-ENDPOINT>", sanitizeEndpoint(konnectExtensionStatus.Konnect.KonnectEndpoints.TelemetryEndpoint))
+		v = strings.ReplaceAll(v, "<CONTROL-PLANE-ENDPOINT>", sanitizeEndpoint(konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint))
+		v = strings.ReplaceAll(v, "<TELEMETRY-ENDPOINT>", sanitizeEndpoint(konnectExtensionStatus.Konnect.Endpoints.TelemetryEndpoint))
 		newEnvSet[k] = v
 	}
 	return newEnvSet

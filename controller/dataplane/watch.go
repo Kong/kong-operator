@@ -26,8 +26,8 @@ import (
 // DataPlaneWatchBuilder creates a controller builder pre-configured with
 // the necessary watches for DataPlane resources that are managed by
 // the operator.
-func DataPlaneWatchBuilder(mgr ctrl.Manager) *builder.Builder {
-	return ctrl.NewControllerManagedBy(mgr).
+func DataPlaneWatchBuilder(mgr ctrl.Manager, konnectEnabled bool) *builder.Builder {
+	controller := ctrl.NewControllerManagedBy(mgr).
 		// Watch DataPlane objects.
 		For(&operatorv1beta1.DataPlane{}).
 		// Watch for changes in Secrets created by the dataplane controller.
@@ -50,16 +50,20 @@ func DataPlaneWatchBuilder(mgr ctrl.Manager) *builder.Builder {
 				&corev1.ConfigMap{},
 				handler.TypedEnqueueRequestsFromMapFunc(listDataPlanesReferencingKongPluginInstallation(mgr.GetClient())),
 			),
-		).
+		)
+
+	if konnectEnabled {
 		// Watch for changes in KonnectExtension objects that are referenced by DataPlane objects.
 		// They may trigger reconciliation of DataPlane resources.
-		WatchesRawSource(
+		controller.WatchesRawSource(
 			source.Kind(
 				mgr.GetCache(),
 				&konnectv1alpha1.KonnectExtension{},
 				handler.TypedEnqueueRequestsFromMapFunc(listDataPlanesReferencingKonnectExtension(mgr.GetClient())),
 			),
 		)
+	}
+	return controller
 }
 
 func listDataPlanesReferencingKongPluginInstallation(

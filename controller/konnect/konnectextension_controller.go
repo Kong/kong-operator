@@ -229,10 +229,10 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	if ext.Status.Konnect == nil {
-		ext.Status.Konnect = &konnectv1alpha1.KonnectControlPlaneStatus{
+		ext.Status.Konnect = &konnectv1alpha1.KonnectExtensionControlPlaneStatus{
 			ControlPlaneID: cp.ID,
 			ClusterType:    konnectClusterTypeToCRDClusterType(cp.Config.ClusterType),
-			KonnectEndpoints: konnectv1alpha1.KonnectEndpoints{
+			Endpoints: konnectv1alpha1.KonnectEndpoints{
 				ControlPlaneEndpoint: cp.Config.ControlPlaneEndpoint,
 				TelemetryEndpoint:    cp.Config.TelemetryEndpoint,
 			},
