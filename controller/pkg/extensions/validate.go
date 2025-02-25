@@ -27,25 +27,35 @@ func ValidateExtensions(dataplane *operatorv1beta1.DataPlane) *metav1.Condition 
 		ObservedGeneration: dataplane.Generation,
 		LastTransitionTime: metav1.Now(),
 	}
-	var message strings.Builder
+	var messageBuilder strings.Builder
 	for i, ext := range dataplane.Spec.Extensions {
 		if ext.Group != konnectv1alpha1.SchemeGroupVersion.Group || ext.Kind != konnectv1alpha1.KonnectExtensionKind {
-			message.WriteString(fmt.Sprintf("Extension %s/%s is not supported.", ext.Group, ext.Kind))
+			buildMessage(&messageBuilder, fmt.Sprintf("Extension %s/%s is not supported", ext.Group, ext.Kind))
 			continue
 		}
 		for j, ext2 := range dataplane.Spec.Extensions {
 			if i != j {
 				if ext.Group == ext2.Group && ext.Kind == ext2.Kind {
-					message.WriteString(fmt.Sprintf("Extension %s/%s is duplicated.", ext.Group, ext.Kind))
+					message := fmt.Sprintf("Extension %s/%s is duplicated", ext.Group, ext.Kind)
+					if !strings.Contains(messageBuilder.String(), message) {
+						buildMessage(&messageBuilder, message)
+					}
 				}
 			}
 		}
 	}
-	if message.Len() > 0 {
+	if messageBuilder.Len() > 0 {
 		condition.Status = metav1.ConditionFalse
 		condition.Reason = string(consts.NotSupportedExtensionsReason)
-		condition.Message = message.String()
+		condition.Message = messageBuilder.String()
 	}
 
 	return &condition
+}
+
+func buildMessage(messageBuilder *strings.Builder, message string) {
+	if messageBuilder.Len() > 0 {
+		messageBuilder.WriteString(" - ")
+	}
+	messageBuilder.WriteString(message)
 }
