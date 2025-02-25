@@ -152,7 +152,7 @@ jobs:
     - name: Create k8s KinD Cluster
       uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
       with:
-        cluster_name:  ${{ env.CLUSTER_NAME }}
+        cluster_name: ${{ env.CLUSTER_NAME }}
 
     - uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # v2.1.11
       with:
