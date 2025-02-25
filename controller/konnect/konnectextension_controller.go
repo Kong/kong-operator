@@ -31,10 +31,6 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// -----------------------------------------------------------------------------
-// DataKonnectExtensionReconciler
-// -----------------------------------------------------------------------------
-
 // KonnectExtensionReconciler reconciles a KonnectExtension object.
 type KonnectExtensionReconciler struct {
 	client.Client
@@ -86,11 +82,11 @@ func (r *KonnectExtensionReconciler) listDataPlaneExtensionsReferenced(ctx conte
 	recs := []reconcile.Request{}
 
 	for _, ext := range dataPlane.Spec.Extensions {
-		namespace := dataPlane.Namespace
 		if ext.Group != operatorv1alpha1.SchemeGroupVersion.Group ||
 			ext.Kind != konnectv1alpha1.KonnectExtensionKind {
 			continue
 		}
+		namespace := dataPlane.Namespace
 		if ext.Namespace != nil && *ext.Namespace != namespace {
 			continue
 		}
@@ -114,7 +110,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	logger := log.GetLogger(ctx, konnectv1alpha1.KonnectExtensionKind, r.developmentMode)
 	var dataPlaneList operatorv1beta1.DataPlaneList
 	if err := r.List(ctx, &dataPlaneList, client.MatchingFields{
-		index.KonnectExtensionIndex: ext.Namespace + "/" + ext.Name,
+		index.KonnectExtensionIndex: client.ObjectKeyFromObject(&ext).String(),
 	}); err != nil {
 		return ctrl.Result{}, err
 	}

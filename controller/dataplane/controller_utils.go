@@ -321,7 +321,7 @@ func isDeploymentReady(deploymentStatus appsv1.DeploymentStatus) (metav1.Conditi
 // applyExtensions patches the dataplane spec by taking into account customizations from the referenced extensions.
 // In case any extension is referenced, it adds a resolvedRefs condition to the dataplane, indicating the status of the
 // extension reference. it returns 3 values:
-//   - patched: a boolean indicating if the dataplane was patched. If the dataplane was patched, a reconciliation loop will be automatically re-triggered.
+//   - stop: a boolean indicating if the caller must return. It's true when the dataplane status has been patched.
 //   - requeue: a boolean indicating if the dataplane should be requeued. If the error was unexpected (e.g., because of API server error), the dataplane should be requeued.
 //     In case the error is related to a misconfiguration, the dataplane does not need to be requeued, and feedback is provided into the dataplane status.
 //   - err: an error in case of failure.
