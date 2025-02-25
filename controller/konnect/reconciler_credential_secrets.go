@@ -23,6 +23,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	"github.com/kong/gateway-operator/pkg/clientops"
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -273,13 +274,8 @@ func deleteAllCredentialsUsingSecret(
 		if err != nil {
 			return fmt.Errorf("failed listing unused KongCredentialBasicAuths: %w", err)
 		}
-
-		for _, cred := range l.Items {
-			if err := cl.Delete(ctx, &cred); err != nil {
-				return fmt.Errorf("failed deleting unused KongCredentialBasicAuth %s: %w",
-					client.ObjectKeyFromObject(&cred), err,
-				)
-			}
+		if err := clientops.DeleteAllFromList(ctx, cl, &l); err != nil {
+			return fmt.Errorf("failed deleting unused KongCredentialBasicAuths: %w", err)
 		}
 
 	case KongCredentialTypeAPIKey:
@@ -292,13 +288,8 @@ func deleteAllCredentialsUsingSecret(
 		if err != nil {
 			return fmt.Errorf("failed listing unused KongCredentialAPIKeys: %w", err)
 		}
-
-		for _, cred := range l.Items {
-			if err := cl.Delete(ctx, &cred); err != nil {
-				return fmt.Errorf("failed deleting unused KongCredentialAPIKey %s: %w",
-					client.ObjectKeyFromObject(&cred), err,
-				)
-			}
+		if err := clientops.DeleteAllFromList(ctx, cl, &l); err != nil {
+			return fmt.Errorf("failed deleting unused KongCredentialAPIKeys: %w", err)
 		}
 
 	case KongCredentialTypeACL:
@@ -312,13 +303,8 @@ func deleteAllCredentialsUsingSecret(
 		if err != nil {
 			return fmt.Errorf("failed listing unused KongCredentialACLs: %w", err)
 		}
-
-		for _, cred := range l.Items {
-			if err := cl.Delete(ctx, &cred); err != nil {
-				return fmt.Errorf("failed deleting unused KongCredentialACLs %s: %w",
-					client.ObjectKeyFromObject(&cred), err,
-				)
-			}
+		if err := clientops.DeleteAllFromList(ctx, cl, &l); err != nil {
+			return fmt.Errorf("failed deleting unused KongCredentialACLs: %w", err)
 		}
 
 	case KongCredentialTypeJWT:
@@ -332,14 +318,10 @@ func deleteAllCredentialsUsingSecret(
 		if err != nil {
 			return fmt.Errorf("failed listing unused KongCredentialJWTs: %w", err)
 		}
-
-		for _, cred := range l.Items {
-			if err := cl.Delete(ctx, &cred); err != nil {
-				return fmt.Errorf("failed deleting unused KongCredentialJWTs %s: %w",
-					client.ObjectKeyFromObject(&cred), err,
-				)
-			}
+		if err := clientops.DeleteAllFromList(ctx, cl, &l); err != nil {
+			return fmt.Errorf("failed deleting unused KongCredentialJWTs: %w", err)
 		}
+
 	case KongCredentialTypeHMAC:
 		var l configurationv1alpha1.KongCredentialHMACList
 		err := cl.List(
@@ -351,12 +333,8 @@ func deleteAllCredentialsUsingSecret(
 		if err != nil {
 			return fmt.Errorf("failed listing unused KongCredentialHMACs: %w", err)
 		}
-		for _, cred := range l.Items {
-			if err := cl.Delete(ctx, &cred); err != nil {
-				return fmt.Errorf("failed deleting unused KongCredentialHMAC %s: %w",
-					client.ObjectKeyFromObject(&cred), err,
-				)
-			}
+		if err := clientops.DeleteAllFromList(ctx, cl, &l); err != nil {
+			return fmt.Errorf("failed deleting unused KongCredentialHMACs: %w", err)
 		}
 	}
 
@@ -902,10 +880,7 @@ func handleCreds[
 		}
 
 	case 1:
-		cred, ok := any(&creds[0]).(TPtr)
-		if !ok {
-			return ctrl.Result{}, fmt.Errorf("failed to cast Kong credential %T", creds[0])
-		}
+		var cred TPtr = &creds[0]
 
 		if !cred.GetDeletionTimestamp().IsZero() {
 			return ctrl.Result{}, nil

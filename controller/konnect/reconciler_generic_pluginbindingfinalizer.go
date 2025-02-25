@@ -17,6 +17,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/pkg/clientops"
 	"github.com/kong/gateway-operator/pkg/consts"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -178,14 +179,8 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) Reconcile(
 	var finalizersChangedAction string
 	// if the entity is marked for deletion, we need to delete all the PluginBindings that reference it.
 	if !ent.GetDeletionTimestamp().IsZero() {
-		for _, kpb := range kongPluginBindingList.Items {
-			if err := cl.Delete(ctx, &kpb); err != nil {
-				if k8serrors.IsNotFound(err) {
-					continue
-				}
-				return ctrl.Result{}, err
-			}
-			log.Debug(logger, "KongPluginBinding deleted")
+		if err := clientops.DeleteAllFromList(ctx, cl, &kongPluginBindingList); err != nil {
+			return ctrl.Result{}, err
 		}
 		// in case no KongPluginBindings are referencing the entity, but it has the finalizer,
 		// we need to remove the finalizer.
