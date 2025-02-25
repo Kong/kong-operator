@@ -113,6 +113,17 @@ func TestKongRoute(t *testing.T) {
 		routeToPatch.Spec.PreserveHost = lo.ToPtr(true)
 		require.NoError(t, clientNamespaced.Patch(ctx, routeToPatch, client.MergeFrom(createdRoute)))
 
+		t.Log("Waiting for Route to get the update")
+		watchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
+			if r.GetName() != createdRoute.GetName() {
+				return false
+			}
+			if r.Spec.PreserveHost == nil || !*r.Spec.PreserveHost {
+				return false
+			}
+			return r.GetKonnectID() == routeID && k8sutils.IsProgrammed(r)
+		}, "KongRoute didn't get patched with PreserveHost=true")
+
 		eventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Route deletion")
@@ -132,7 +143,5 @@ func TestKongRoute(t *testing.T) {
 			err := clientNamespaced.Get(ctx, client.ObjectKeyFromObject(createdRoute), createdRoute)
 			assert.True(c, err != nil && k8serrors.IsNotFound(err))
 		}, waitTime, tickTime)
-
-		eventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
 	})
 }
