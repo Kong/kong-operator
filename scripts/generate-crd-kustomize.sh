@@ -15,7 +15,8 @@ RAW_VERSION=$(go list -m -f '{{ .Version }}' ${KCONF_PACKAGE})
 if [[ $(echo "${RAW_VERSION}" | tr -cd '-' | wc -c) -ge 2 ]]; then
     # If there are 2 or more hyphens, extract the part after the last hyphen as 
     # that's a git commit hash (e.g. `v1.1.1-0.20250217181409-44e5ddce290d`).
-    KCONF_VERSION=$(echo "${RAW_VERSION}" | rev | cut -d'-' -f1 | rev)
+    SHA_SHORT="$(echo "${RAW_VERSION}" | rev | cut -d'-' -f1 | rev)"
+    KCONF_VERSION="ref=$(curl -s https://api.github.com/repos/Kong/kubernetes-configuration/commits/${SHA_SHORT} | jq -r .sha)"
 else
     KCONF_VERSION="ref=${RAW_VERSION}"
 fi
