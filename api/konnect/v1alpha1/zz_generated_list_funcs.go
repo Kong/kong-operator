@@ -16,3 +16,8 @@ func (obj KonnectAPIAuthConfigurationList) GetItems() []KonnectAPIAuthConfigurat
 func (obj KonnectCloudGatewayNetworkList) GetItems() []KonnectCloudGatewayNetwork {
 	return obj.Items
 }
+
+// GetItems() returns the list of KonnectExtension items.
+func (obj KonnectExtensionList) GetItems() []KonnectExtension {
+	return obj.Items
+}

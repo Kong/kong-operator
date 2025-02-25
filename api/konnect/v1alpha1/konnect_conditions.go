@@ -161,44 +161,39 @@ const (
 )
 
 const (
-	// KonnectExtensionAcceptedConditionType is the type of the condition that indicates
-	// whether the Konnect extension has been accepted.
-	KonnectExtensionAcceptedConditionType = "Accepted"
+	// KonnectExtensionReadyConditionType is the type of the condition that indicates
+	// whether the Konnect extension is ready to be used.
+	KonnectExtensionReadyConditionType = "Ready"
 
-	// KonnectExtensionAcceptedReasonAccepted is the reason used with the
-	// KonnectExtensionAccepted condition type indicating that the Konnect extension
-	// has been accepted.
-	KonnectExtensionAcceptedReasonAccepted = "Accepted"
-	// KonnectExtensionAcceptedReasonPending is the reason used with the
-	// KonnectExtensionAccepted condition type indicating that the Konnect extension
+	// KonnectExtensionReadyReasonReady is the reason used with the
+	// KonnectExtensionReady condition type indicating that the Konnect extension
+	// is Ready.
+	KonnectExtensionReadyReasonReady = "Ready"
+	// KonnectExtensionReadyReasonPending is the reason used with the
+	// KonnectExtensionReady condition type indicating that the Konnect extension
 	// is pending.
-	KonnectExtensionAcceptedReasonPending = "Pending"
-	// KonnectExtensionAcceptedReasonInvalidControlPlaneRef is the reason used with the
-	// KonnectExtensionAccepted condition type indicating that the ControlPlane reference
-	// is invalid. Further details can be found in the ControlPlaneRef condition.
-	KonnectExtensionAcceptedReasonInvalidControlPlaneRef = "InvalidControlPlaneRef"
-	// KonnectExtensionAcceptedReasonFailedDataPlaneClientAuthSecretProvisioning is the reason used with the
-	// KonnectExtensionAccepted condition type indicating that the DataPlaneClientAuth secret
-	// reference provisioning has failed. Further details can be found in the DataPlaneClientAuthSecretProvisioning condition.
-	KonnectExtensionAcceptedReasonFailedDataPlaneClientAuthSecretProvisioning = "FailedDataPlaneClientAuthSecretProvisioning"
+	KonnectExtensionReadyReasonPending = "Pending"
+	// KonnectExtensionReadyReasonProvisioning is the reason used with the
+	// KonnectExtensionReady condition type indicating that the Konnect extension
+	// is provisioning.
+	KonnectExtensionReadyReasonProvisioning = "provisioning"
 )
 
 const (
-	// DataPlaneClientAuthSecretProvisioningConditionType is the type of the
-	// condition that indicates whether the DataPlaneClientAuth secret reference is
-	// valid and points to an existing Kubernetes secret.
-	DataPlaneClientAuthSecretProvisioningConditionType = "SecretProvisioned"
+	// DataPlaneCertificateProvisionedConditionType is the type of the condition that indicates
+	// whether the DataPlane certificate has been properly provisioned in Konnect.
+	DataPlaneCertificateProvisionedConditionType = "DataPlaneCertificateProvisioned"
 
-	// DataPlaneClientAuthSecretProvisioningReasonProvisioned is the reason
-	// used with the DataPlaneClientAuthSecretProvisioning condition type indicating that the
-	// DataPlaneClientAuth secret has been properly provisioned in Konnect.
-	DataPlaneClientAuthSecretProvisioningReasonProvisioned = "Provisioned"
-	// DataPlaneClientAuthSecretProvisioningReasonRefNotFound is the reason
-	// used with the DataPlaneClientAuthSecretProvisioning condition type indicating that the
-	// DataPlaneClientAuth secret reference could not be resolved.
-	DataPlaneClientAuthSecretProvisioningReasonRefNotFound = "RefNotFound"
-	// DataPlaneClientAuthSecretProvisionedKonnectAPIOpFailed is the reason
-	// used with the DataPlaneClientAuthSecretProvisioning condition type indicating that the
-	// the DP certificate entity has failed to be programmed in Konnect.
-	DataPlaneClientAuthSecretProvisionedKonnectAPIOpFailed = "KonnectAPIOpFailed" //nolint:gosec
+	// DataPlaneCertificateProvisionedReasonProvisioned is the reason
+	// used with the DataPlaneCertificateProvisioned condition type indicating that the
+	// referenced DataPlane client certificate has been provisioned in Konnect.
+	DataPlaneCertificateProvisionedReasonProvisioned = "Provisioned"
+	// DataPlaneCertificateProvisionedReasonRefNotFound is the reason
+	// used with the DataPlaneCertificateProvisioned condition type indicating that the
+	// the referenced DataPlane client certificate is not found.
+	DataPlaneCertificateProvisionedReasonRefNotFound = "RefNotFound"
+	// DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed is the reason
+	// used with the DataPlaneCertificateProvisioned condition type indicating that the
+	// the DataPlane client certificate creation in Konnect has failed.
+	DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed = "KonnectAPIOpFailed"
 )
