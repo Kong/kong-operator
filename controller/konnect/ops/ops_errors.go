@@ -40,6 +40,26 @@ func (e EntityWithMatchingUIDNotFoundError) Error() string {
 	)
 }
 
+// EntityWithMatchingIDNotFoundError is an error indicating that an entity with the matching ID was not found on Konnect.
+type EntityWithMatchingIDNotFoundError struct {
+	ID string
+}
+
+// Error implements the error interface.
+func (e EntityWithMatchingIDNotFoundError) Error() string {
+	return fmt.Sprintf("entity with ID %s not found on Konnect", e.ID)
+}
+
+// MultipleEntitiesWithMatchingIDFoundError is an error indicating that multiple entities with the same ID were found on Konnect.
+type MultipleEntitiesWithMatchingIDFoundError struct {
+	ID string
+}
+
+// Error implements the error interface.
+func (e MultipleEntitiesWithMatchingIDFoundError) Error() string {
+	return fmt.Sprintf("multiple entities with ID %s found on Konnect", e.ID)
+}
+
 // CantPerformOperationWithoutControlPlaneIDError is an error indicating that an
 // operation cannot be performed without a ControlPlane ID.
 type CantPerformOperationWithoutControlPlaneIDError struct {

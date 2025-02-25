@@ -181,8 +181,10 @@ func setupIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 				return fmt.Errorf("failed to setup index for KongPluginInstallations on DataPlane: %w", err)
 			}
 		}
-		if err := index.DataPlaneOnDataPlaneKonnecExtension(ctx, mgr.GetCache()); err != nil {
-			return fmt.Errorf("failed to setup index for DataPlanes on KonnectExtensions: %w", err)
+		if cfg.KonnectControllersEnabled {
+			if err := index.DataPlaneOnDataPlaneKonnecExtension(ctx, mgr.GetCache()); err != nil {
+				return fmt.Errorf("failed to setup index for DataPlanes on KonnectExtensions: %w", err)
+			}
 		}
 	}
 	return nil
@@ -250,7 +252,11 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		{
 			Condition: c.KonnectControllersEnabled,
 			GVRs: []schema.GroupVersionResource{
-				operatorv1alpha1.KonnectExtensionGVR(),
+				{
+					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
+					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
+					Resource: "konnectextensions",
+				},
 				{
 					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
 					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
@@ -493,13 +499,6 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				c.DevelopmentMode,
 			),
 		},
-		KonnectExtensionControllerName: {
-			Enabled: (c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled) && c.KonnectControllersEnabled,
-			Controller: &dataplane.KonnectExtensionReconciler{
-				Client:          mgr.GetClient(),
-				DevelopmentMode: c.DevelopmentMode,
-			},
-		},
 		// AIGateway Controller
 		AIGatewayControllerName: {
 			Enabled: c.AIGatewayControllerEnabled,
@@ -562,6 +561,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					c.DevelopmentMode,
 					mgr.GetClient(),
 					mgr.GetScheme(),
+				),
+			},
+
+			KonnectExtensionControllerName: {
+				Enabled: (c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled) && c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectExtensionReconciler(
+					sdkFactory,
+					c.DevelopmentMode,
+					mgr.GetClient(),
 				),
 			},
 

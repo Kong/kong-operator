@@ -1,4 +1,4 @@
-package dataplane
+package konnect
 
 import (
 	"context"
@@ -16,8 +16,8 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 var (
@@ -27,13 +27,15 @@ var (
 	ErrKonnectExtensionNotFound = errors.New("konnect extension not found")
 	// ErrClusterCertificateNotFound is returned when a cluster certificate secret referenced in the KonnectExtension is not found.
 	ErrClusterCertificateNotFound = errors.New("cluster certificate not found")
+	// ErrKonnectExtensionNotReady is returned when a Konnect extension is not ready.
+	ErrKonnectExtensionNotReady = errors.New("konnect extension is not ready")
 )
 
-// applyKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it
+// ApplyKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it
 // fetches the referenced extension and applies the necessary changes to the DataPlane spec.
-func applyKonnectExtension(ctx context.Context, cl client.Client, dataplane *operatorv1beta1.DataPlane) error {
+func ApplyKonnectExtension(ctx context.Context, cl client.Client, dataplane *operatorv1beta1.DataPlane) error {
 	for _, extensionRef := range dataplane.Spec.Extensions {
-		if extensionRef.Group != operatorv1alpha1.SchemeGroupVersion.Group || extensionRef.Kind != operatorv1alpha1.KonnectExtensionKind {
+		if extensionRef.Group != konnectv1alpha1.SchemeGroupVersion.Group || extensionRef.Kind != konnectv1alpha1.KonnectExtensionKind {
 			continue
 		}
 		namespace := dataplane.Namespace
@@ -41,7 +43,7 @@ func applyKonnectExtension(ctx context.Context, cl client.Client, dataplane *ope
 			return errors.Join(ErrCrossNamespaceReference, fmt.Errorf("the cross-namespace reference to the extension %s/%s is not permitted", *extensionRef.Namespace, extensionRef.Name))
 		}
 
-		konnectExt := operatorv1alpha1.KonnectExtension{}
+		konnectExt := konnectv1alpha1.KonnectExtension{}
 		if err := cl.Get(ctx, client.ObjectKey{
 			Namespace: namespace,
 			Name:      extensionRef.Name,
@@ -53,16 +55,8 @@ func applyKonnectExtension(ctx context.Context, cl client.Client, dataplane *ope
 			}
 		}
 
-		secret := corev1.Secret{}
-		if err := cl.Get(ctx, client.ObjectKey{
-			Namespace: namespace,
-			Name:      konnectExt.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name,
-		}, &secret); err != nil {
-			if k8serrors.IsNotFound(err) {
-				return errors.Join(ErrClusterCertificateNotFound, fmt.Errorf("the cluster certificate secret %s/%s referenced by the extension %s/%s is not found", namespace, konnectExt.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name, namespace, extensionRef.Name))
-			} else {
-				return err
-			}
+		if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectExtensionReadyConditionType, &konnectExt) {
+			return errors.Join(ErrKonnectExtensionNotReady, fmt.Errorf("the extension %s/%s referenced by the DataPlane is not ready", namespace, extensionRef.Name))
 		}
 
 		if dataplane.Spec.Deployment.PodTemplateSpec == nil {
@@ -82,15 +76,11 @@ func applyKonnectExtension(ctx context.Context, cl client.Client, dataplane *ope
 
 		d.WithVolume(kongInKonnectClusterCertificateVolume())
 		d.WithVolumeMount(kongInKonnectClusterCertificateVolumeMount(), consts.DataPlaneProxyContainerName)
-		d.WithVolume(kongInKonnectClusterCertVolume(konnectExt.Spec.AuthConfiguration.ClusterCertificateSecretRef.Name))
+		d.WithVolume(kongInKonnectClusterCertVolume(konnectExt.Status.DataPlaneClientAuth.CertificateSecretRef.Name))
 		d.WithVolumeMount(kongInKonnectClusterVolumeMount(), consts.DataPlaneProxyContainerName)
 
 		// KonnectID is the only supported type for now, and its presence is guaranteed by a proper CEL rule.
-		envSet := dputils.KongInKonnectDefaults(dputils.KongInKonnectParams{
-			ControlPlane: *konnectExt.Spec.ControlPlaneRef.KonnectID,
-			Region:       konnectExt.Spec.ControlPlaneRegion,
-			Server:       konnectExt.Spec.ServerHostname,
-		})
+		envSet := dputils.KongInKonnectDefaults(konnectExt.Status)
 
 		dputils.FillDataPlaneProxyContainerEnvs(nil, &d.Spec.Template, envSet)
 		dataplane.Spec.Deployment.PodTemplateSpec = &d.Spec.Template

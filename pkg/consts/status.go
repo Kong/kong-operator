@@ -36,21 +36,33 @@ const (
 )
 
 // -----------------------------------------------------------------------------
-// DataPlane - ResolvedRefs Condition Constants
+// DataPlane - Extensions conditions Constants
 // -----------------------------------------------------------------------------
 
 const (
-	// ResolvedRefsType indicates if the resource has all the dependent references resolved
-	ResolvedRefsType ConditionType = "ResolvedRefs"
+	// KonnectExtensionAppliedType indicates that the KonnectExtension has been applied
+	KonnectExtensionAppliedType ConditionType = "KonnectExtensionApplied"
 
-	// ResolvedRefsReason is a generic reason describing that the references are resolved. It must be used when the ResolvedRefs condition is set to True.
-	ResolvedRefsReason ConditionReason = "ResolvedRefs"
-	// RefNotPermittedReason is a generic reason describing that the reference is not permitted. It must be used when the ResolvedRefs condition is set to False.
+	// KonnectExtensionAppliedReason is a reason describing that the Konnect extension has been applied. It must be used when the KonnectExtensionApplied condition is set to True.
+	KonnectExtensionAppliedReason ConditionReason = "KonnectExtensionApplied"
+	// RefNotPermittedReason is a reason describing that the cross-namespace reference is not permitted. It must be used when the KonnectExtensionApplied condition is set to False.
 	RefNotPermittedReason ConditionReason = "RefNotPermitted"
-	// InvalidExtensionRefReason is a generic reason describing that the extension reference is invalid. It must be used when the ResolvedRefs condition is set to False.
+	// InvalidExtensionRefReason is a reason describing that the extension reference is invalid. It must be used when the KonnectExtensionApplied condition is set to False.
 	InvalidExtensionRefReason ConditionReason = "InvalidExtension"
-	// InvalidSecretRefReason is a generic reason describing that the secret reference is invalid. It must be used when the ResolvedRefs condition is set to False.
+	// InvalidSecretRefReason is a reason describing that the secret reference in the KonnectExtension is invalid. It must be used when the KonnectExtensionApplied condition is set to False.
 	InvalidSecretRefReason ConditionReason = "InvalidSecret"
+	// KonnectExtensionNotReadyReason is a reason describing that the Konnect extension is not ready. It must be used when the KonnectExtensionApplied condition is set to False.
+	KonnectExtensionNotReadyReason ConditionReason = "KonnectExtensionNotReady"
+)
+
+const (
+	// AcceptedExtensionsType inditicates if the resource has all the dependent extensions accepted
+	AcceptedExtensionsType ConditionType = "AcceptedExtensions"
+
+	// AcceptedExtensionsReason is a reason describing that the extensions are accepted. It must be used when the AcceptedExtensions condition is set to True.
+	AcceptedExtensionsReason ConditionReason = "AcceptedExtensions"
+	// NotSupportedExtensionsReason is a reason describing that the extensions are not supported. It must be used when the AcceptedExtensions condition is set to False.
+	NotSupportedExtensionsReason ConditionReason = "NotSupportedExtensions"
 )
 
 // -----------------------------------------------------------------------------

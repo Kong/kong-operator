@@ -8,8 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 const (
@@ -99,8 +99,8 @@ func DataPlaneOnDataPlaneKonnecExtension(ctx context.Context, c cache.Cache) err
 			if len(dp.Spec.Extensions) > 0 {
 				for _, ext := range dp.Spec.Extensions {
 					namespace := dp.Namespace
-					if ext.Group != operatorv1alpha1.SchemeGroupVersion.Group ||
-						ext.Kind != operatorv1alpha1.KonnectExtensionKind {
+					if ext.Group != konnectv1alpha1.SchemeGroupVersion.Group ||
+						ext.Kind != konnectv1alpha1.KonnectExtensionKind {
 						continue
 					}
 					if ext.Namespace != nil && *ext.Namespace != namespace {

@@ -47,7 +47,7 @@ type Reconciler struct {
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	r.eventRecorder = mgr.GetEventRecorderFor("dataplane")
 
-	return DataPlaneWatchBuilder(mgr).
+	return DataPlaneWatchBuilder(mgr, r.KonnectEnabled).
 		Complete(r)
 }
 
@@ -81,7 +81,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "applying extensions")
-	patched, requeue, err := applyExtensions(ctx, r.Client, logger, dataplane, r.KonnectEnabled)
+	stop, requeue, err := applyExtensions(ctx, r.Client, logger, dataplane, r.KonnectEnabled)
 	if err != nil {
 		if !requeue {
 			log.Debug(logger, "failed to apply extensions", "err", err)
@@ -89,7 +89,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		return ctrl.Result{}, err
 	}
-	if patched {
+	if stop {
 		return ctrl.Result{}, nil
 	}
 

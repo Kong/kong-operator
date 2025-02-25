@@ -239,3 +239,34 @@ func getControlPlaneForUID(
 
 	return id, nil
 }
+
+// GetControlPlaneByUID returns the Konnect ControlPlane that matches the provided ID.
+func GetControlPlaneByID(
+	ctx context.Context,
+	sdk sdkops.ControlPlaneSDK,
+	id string,
+) (*sdkkonnectcomp.ControlPlane, error) {
+	reqList := sdkkonnectops.ListControlPlanesRequest{
+		Filter: &sdkkonnectcomp.ControlPlaneFilterParameters{
+			ID: lo.ToPtr(sdkkonnectcomp.CreateIDStringFieldEqualsFilter(
+				sdkkonnectcomp.CreateStringFieldEqualsFilterStr(id),
+			)),
+		},
+	}
+
+	resp, err := sdk.ListControlPlanes(ctx, reqList)
+	if err != nil || resp == nil || resp.ListControlPlanesResponse == nil {
+		return nil, fmt.Errorf("failed listing for controlPlane with id %s: %w", id, err)
+	}
+
+	if len(resp.ListControlPlanesResponse.Data) == 0 {
+		return nil, fmt.Errorf("failed listing controlPlanes by id: %w", EntityWithMatchingIDNotFoundError{ID: id})
+	}
+
+	// This should never happen, as ID is unique.
+	if len(resp.ListControlPlanesResponse.Data) > 1 {
+		return nil, fmt.Errorf("failed listing controlPlanes by id: %w", MultipleEntitiesWithMatchingIDFoundError{ID: id})
+	}
+
+	return &resp.ListControlPlanesResponse.Data[0], nil
+}

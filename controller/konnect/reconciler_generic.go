@@ -357,90 +357,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 
 	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
-	if err := r.Client.Get(ctx, apiAuthRef, &apiAuth); err != nil {
-		if k8serrors.IsNotFound(err) {
-			if res, err := patch.StatusWithCondition(
-				ctx, r.Client, ent,
-				konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
-				metav1.ConditionFalse,
-				konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound,
-				fmt.Sprintf("Referenced KonnectAPIAuthConfiguration %s not found", apiAuthRef),
-			); err != nil || !res.IsZero() {
-				return ctrl.Result{}, err
-			}
-
-			return ctrl.Result{}, nil
-		}
-
-		if res, err := patch.StatusWithCondition(
-			ctx, r.Client, ent,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
-			metav1.ConditionFalse,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefInvalid,
-			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is invalid: %v", apiAuthRef, err),
-		); err != nil || !res.IsZero() {
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{}, fmt.Errorf("failed to get KonnectAPIAuthConfiguration: %w", err)
-	}
-
-	// Update the status if the reference is resolved and it's not as expected.
-	if cond, present := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType, ent); !present ||
-		cond.Status != metav1.ConditionTrue ||
-		cond.ObservedGeneration != ent.GetGeneration() ||
-		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef {
-		if res, err := patch.StatusWithCondition(
-			ctx, r.Client, ent,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
-			metav1.ConditionTrue,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef,
-			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is resolved", apiAuthRef),
-		); err != nil || !res.IsZero() {
-			return res, err
-		}
-		return ctrl.Result{}, nil
-	}
-
-	// Check if the referenced APIAuthConfiguration is valid.
-	if cond, present := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !present ||
-		cond.Status != metav1.ConditionTrue ||
-		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid {
-
-		// If it's invalid then set the "APIAuthValid" status condition on
-		// the entity to False with "Invalid" reason.
-		if res, err := patch.StatusWithCondition(
-			ctx, r.Client, ent,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
-			metav1.ConditionFalse,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
-			conditionMessageReferenceKonnectAPIAuthConfigurationInvalid(apiAuthRef),
-		); err != nil || !res.IsZero() {
-			return res, err
-		}
-
-		return ctrl.Result{}, nil
-	}
-
-	// If the referenced APIAuthConfiguration is valid, set the "APIAuthValid"
-	// condition to True with "Valid" reason.
-	// Only perform the update if the condition is not as expected.
-	if cond, present := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, ent); !present ||
-		cond.Status != metav1.ConditionTrue ||
-		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid ||
-		cond.ObservedGeneration != ent.GetGeneration() ||
-		cond.Message != conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef) {
-
-		if res, err := patch.StatusWithCondition(
-			ctx, r.Client, ent,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
-			metav1.ConditionTrue,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
-			conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef),
-		); err != nil || !res.IsZero() {
-			return res, err
-		}
-		return ctrl.Result{}, nil
+	err = r.Client.Get(ctx, apiAuthRef, &apiAuth)
+	if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, apiAuth, err); requeue {
+		return res, retErr
 	}
 
 	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, &apiAuth)

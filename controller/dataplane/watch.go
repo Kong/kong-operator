@@ -19,15 +19,15 @@ import (
 	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/consts"
 
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // DataPlaneWatchBuilder creates a controller builder pre-configured with
 // the necessary watches for DataPlane resources that are managed by
 // the operator.
-func DataPlaneWatchBuilder(mgr ctrl.Manager) *builder.Builder {
-	return ctrl.NewControllerManagedBy(mgr).
+func DataPlaneWatchBuilder(mgr ctrl.Manager, konnectEnabled bool) *builder.Builder {
+	controller := ctrl.NewControllerManagedBy(mgr).
 		// Watch DataPlane objects.
 		For(&operatorv1beta1.DataPlane{}).
 		// Watch for changes in Secrets created by the dataplane controller.
@@ -50,14 +50,20 @@ func DataPlaneWatchBuilder(mgr ctrl.Manager) *builder.Builder {
 				&corev1.ConfigMap{},
 				handler.TypedEnqueueRequestsFromMapFunc(listDataPlanesReferencingKongPluginInstallation(mgr.GetClient())),
 			),
-		).
-		WatchesRawSource(
+		)
+
+	if konnectEnabled {
+		// Watch for changes in KonnectExtension objects that are referenced by DataPlane objects.
+		// They may trigger reconciliation of DataPlane resources.
+		controller.WatchesRawSource(
 			source.Kind(
 				mgr.GetCache(),
-				&operatorv1alpha1.KonnectExtension{},
+				&konnectv1alpha1.KonnectExtension{},
 				handler.TypedEnqueueRequestsFromMapFunc(listDataPlanesReferencingKonnectExtension(mgr.GetClient())),
 			),
 		)
+	}
+	return controller
 }
 
 func listDataPlanesReferencingKongPluginInstallation(
@@ -91,9 +97,9 @@ func listDataPlanesReferencingKongPluginInstallation(
 
 func listDataPlanesReferencingKonnectExtension(
 	c client.Client,
-) handler.TypedMapFunc[*operatorv1alpha1.KonnectExtension, reconcile.Request] {
+) handler.TypedMapFunc[*konnectv1alpha1.KonnectExtension, reconcile.Request] {
 	return func(
-		ctx context.Context, ext *operatorv1alpha1.KonnectExtension,
+		ctx context.Context, ext *konnectv1alpha1.KonnectExtension,
 	) []reconcile.Request {
 		logger := ctrllog.FromContext(ctx)
 
@@ -103,7 +109,7 @@ func listDataPlanesReferencingKonnectExtension(
 		if err := c.List(ctx, &dataPlaneList, client.MatchingFields{
 			index.KonnectExtensionIndex: ext.Namespace + "/" + ext.Name,
 		}); err != nil {
-			logger.Error(err, "Failed to list DataPlanes in watch", "extensionKind", operatorv1alpha1.KonnectExtensionKind)
+			logger.Error(err, "Failed to list DataPlanes in watch", "extensionKind", konnectv1alpha1.KonnectExtensionKind)
 			return nil
 		}
 		return lo.Map(dataPlaneList.Items, func(dp operatorv1beta1.DataPlane, _ int) reconcile.Request {

@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/kong/gateway-operator/pkg/consts"
+
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // KongDefaults are the baseline Kong proxy configuration options needed for
@@ -38,13 +40,13 @@ var KongDefaults = map[string]string{
 
 // KongInKonnectDefaults are the baseline Kong proxy configuration options needed for
 // the proxy to function when configured in Konnect.
-var kongInKonnectDefaultsTemplate = map[string]string{
+var kongInKonnectClusterTypeControlPlaneDefaults = map[string]string{
 	"KONG_ROLE":                          "data_plane",
 	"KONG_CLUSTER_MTLS":                  "pki",
-	"KONG_CLUSTER_CONTROL_PLANE":         "<CP-ID>.<REGION>.cp0.<SERVER>:443",
-	"KONG_CLUSTER_SERVER_NAME":           "<CP-ID>.<REGION>.cp0.<SERVER>",
-	"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "<CP-ID>.<REGION>.tp0.<SERVER>:443",
-	"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "<CP-ID>.<REGION>.tp0.<SERVER>",
+	"KONG_CLUSTER_CONTROL_PLANE":         "<CONTROL-PLANE-ENDPOINT>:443",
+	"KONG_CLUSTER_SERVER_NAME":           "<CONTROL-PLANE-ENDPOINT>",
+	"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "<TELEMETRY-ENDPOINT>:443",
+	"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "<TELEMETRY-ENDPOINT>",
 	"KONG_CLUSTER_CERT":                  "/etc/secrets/kong-cluster-cert/tls.crt",
 	"KONG_CLUSTER_CERT_KEY":              "/etc/secrets/kong-cluster-cert/tls.key",
 	"KONG_LUA_SSL_TRUSTED_CERTIFICATE":   "system",
@@ -52,22 +54,41 @@ var kongInKonnectDefaultsTemplate = map[string]string{
 	"KONG_VITALS":                        "off",
 }
 
-// KongInKonnectParams is a struct that holds the parameters needed to customize
-// the KongInKonnectDefaultsTemplate map.
-type KongInKonnectParams struct {
-	ControlPlane string
-	Region       string
-	Server       string
+var kongInKonnectClusterTypeIngressController = map[string]string{
+	"KONG_ROLE":                          "data_plane",
+	"KONG_CLUSTER_MTLS":                  "pki",
+	"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "<TELEMETRY-ENDPOINT>:443",
+	"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "<TELEMETRY-ENDPOINT>",
+	"KONG_CLUSTER_CERT":                  "/etc/secrets/kong-cluster-cert/tls.crt",
+	"KONG_CLUSTER_CERT_KEY":              "/etc/secrets/kong-cluster-cert/tls.key",
+	"KONG_LUA_SSL_TRUSTED_CERTIFICATE":   "system",
+	"KONG_KONNECT_MODE":                  "on",
+	"KONG_VITALS":                        "off",
 }
 
 // KongInKonnectDefaults returns the map of Konnect-related env vars properly configured.
-func KongInKonnectDefaults(params KongInKonnectParams) map[string]string {
-	newEnvSet := make(map[string]string, len(kongInKonnectDefaultsTemplate))
-	for k, v := range kongInKonnectDefaultsTemplate {
-		v = strings.ReplaceAll(v, "<CP-ID>", params.ControlPlane)
-		v = strings.ReplaceAll(v, "<REGION>", params.Region)
-		v = strings.ReplaceAll(v, "<SERVER>", params.Server)
+func KongInKonnectDefaults(konnectExtensionStatus konnectv1alpha1.KonnectExtensionStatus) map[string]string {
+	newEnvSet := make(map[string]string, len(kongInKonnectClusterTypeControlPlaneDefaults))
+	var template map[string]string
+
+	switch konnectExtensionStatus.Konnect.ClusterType {
+	case konnectv1alpha1.ClusterTypeControlPlane:
+		template = kongInKonnectClusterTypeControlPlaneDefaults
+	case konnectv1alpha1.ClusterTypeK8sIngressController:
+		template = kongInKonnectClusterTypeIngressController
+	default:
+		// default never happens as the validation is at the CRD level
+		panic(fmt.Sprintf("unsupported Konnect cluster type: %s", konnectExtensionStatus.Konnect.ClusterType))
+	}
+
+	for k, v := range template {
+		v = strings.ReplaceAll(v, "<CONTROL-PLANE-ENDPOINT>", sanitizeEndpoint(konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint))
+		v = strings.ReplaceAll(v, "<TELEMETRY-ENDPOINT>", sanitizeEndpoint(konnectExtensionStatus.Konnect.Endpoints.TelemetryEndpoint))
 		newEnvSet[k] = v
 	}
 	return newEnvSet
+}
+
+func sanitizeEndpoint(endpoint string) string {
+	return strings.TrimPrefix(endpoint, "https://")
 }
