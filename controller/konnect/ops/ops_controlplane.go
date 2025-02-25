@@ -239,3 +239,13 @@ func getControlPlaneForUID(
 
 	return id, nil
 }
+
+// getControlPlaneByID gets Konnect gateway control plane by ID and returns the error in getting.
+func getControlPlaneByID(
+	ctx context.Context,
+	sdk sdkops.ControlPlaneSDK,
+	id string,
+) error {
+	_, err := sdk.GetControlPlane(ctx, id)
+	return err
+}

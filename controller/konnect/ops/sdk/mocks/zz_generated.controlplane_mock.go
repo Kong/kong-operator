@@ -173,6 +173,80 @@ func (_c *MockControlPlaneSDK_DeleteControlPlane_Call) RunAndReturn(run func(con
 	return _c
 }
 
+// GetControlPlane provides a mock function with given fields: ctx, id, opts
+func (_m *MockControlPlaneSDK) GetControlPlane(ctx context.Context, id string, opts ...operations.Option) (*operations.GetControlPlaneResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, id)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetControlPlane")
+	}
+
+	var r0 *operations.GetControlPlaneResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) (*operations.GetControlPlaneResponse, error)); ok {
+		return rf(ctx, id, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) *operations.GetControlPlaneResponse); ok {
+		r0 = rf(ctx, id, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.GetControlPlaneResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, ...operations.Option) error); ok {
+		r1 = rf(ctx, id, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockControlPlaneSDK_GetControlPlane_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetControlPlane'
+type MockControlPlaneSDK_GetControlPlane_Call struct {
+	*mock.Call
+}
+
+// GetControlPlane is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id string
+//   - opts ...operations.Option
+func (_e *MockControlPlaneSDK_Expecter) GetControlPlane(ctx interface{}, id interface{}, opts ...interface{}) *MockControlPlaneSDK_GetControlPlane_Call {
+	return &MockControlPlaneSDK_GetControlPlane_Call{Call: _e.mock.On("GetControlPlane",
+		append([]interface{}{ctx, id}, opts...)...)}
+}
+
+func (_c *MockControlPlaneSDK_GetControlPlane_Call) Run(run func(ctx context.Context, id string, opts ...operations.Option)) *MockControlPlaneSDK_GetControlPlane_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(string), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockControlPlaneSDK_GetControlPlane_Call) Return(_a0 *operations.GetControlPlaneResponse, _a1 error) *MockControlPlaneSDK_GetControlPlane_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockControlPlaneSDK_GetControlPlane_Call) RunAndReturn(run func(context.Context, string, ...operations.Option) (*operations.GetControlPlaneResponse, error)) *MockControlPlaneSDK_GetControlPlane_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListControlPlanes provides a mock function with given fields: ctx, request, opts
 func (_m *MockControlPlaneSDK) ListControlPlanes(ctx context.Context, request operations.ListControlPlanesRequest, opts ...operations.Option) (*operations.ListControlPlanesResponse, error) {
 	_va := make([]interface{}, len(opts))

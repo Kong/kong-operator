@@ -21,10 +21,11 @@ type KonnectEntityOperation string
 const (
 	// KonnectServerURLKey is the key for the Konnect server URL which accepts the requests of entity opertions.
 	KonnectServerURLKey = "server_url"
-	// KonnectEntityOperationTypeKey is the key for the opertion type:  `create`, `update`, or `delete`.
+	// KonnectEntityOperationTypeKey is the key for the opertion type:  `create`, `update`, `get`, or `delete`.
 	KonnectEntityOperationTypeKey                        = "operation_type"
 	KonnectEntityOperationCreate  KonnectEntityOperation = "create"
 	KonnectEntityOperationUpdate  KonnectEntityOperation = "update"
+	KonnectEntityOpertionGet      KonnectEntityOperation = "get"
 	KonnectEntityOperationDelete  KonnectEntityOperation = "delete"
 	// KonnectEntityTypeKey indicates the type of the operated Konnect entity.
 	KonnectEntityTypeKey = "entity_type"
