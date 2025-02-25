@@ -13,3 +13,13 @@ func objectHasCPRefKonnectID[
 		return obj.GetControlPlaneRef().Type == commonv1alpha1.ControlPlaneRefKonnectID
 	}
 }
+
+func objectMatchesKonnectID[
+	T interface {
+		GetKonnectID() string
+	},
+](id string) func(T) bool {
+	return func(obj T) bool {
+		return obj.GetKonnectID() == id
+	}
+}
