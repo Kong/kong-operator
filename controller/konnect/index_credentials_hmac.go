@@ -9,6 +9,8 @@ import (
 const (
 	// IndexFieldKongCredentialHMACReferencesKongConsumer is the index name for KongCredentialHMAC -> Consumer.
 	IndexFieldKongCredentialHMACReferencesKongConsumer = "kongCredentialsHMACConsumerRef"
+	// IndexFieldKongCredentialHMACReferencesSecret is the index name for KongCredentialHMAC -> Secret.
+	IndexFieldKongCredentialHMACReferencesSecret = "kongCredentialsHMACSecretRef"
 )
 
 // IndexOptionsForCredentialsHMAC returns required Index options for KongCredentialHMAC.
@@ -18,6 +20,11 @@ func IndexOptionsForCredentialsHMAC() []ReconciliationIndexOption {
 			IndexObject:  &configurationv1alpha1.KongCredentialHMAC{},
 			IndexField:   IndexFieldKongCredentialHMACReferencesKongConsumer,
 			ExtractValue: kongCredentialHMACReferencesConsumer,
+		},
+		{
+			IndexObject:  &configurationv1alpha1.KongCredentialHMAC{},
+			IndexField:   IndexFieldKongCredentialHMACReferencesSecret,
+			ExtractValue: kongCredentialReferencesSecret[configurationv1alpha1.KongCredentialHMAC],
 		},
 	}
 }

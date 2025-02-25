@@ -255,6 +255,75 @@ func TestValidateSecretForCredentialJWT(t *testing.T) {
 	}
 }
 
+func TestValidateSecertForKongCredentialHMAC(t *testing.T) {
+	tests := []struct {
+		name      string
+		secret    *corev1.Secret
+		wantError bool
+	}{
+		{
+			name: "valid secret",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "valid-secret",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"username": []byte("hmac-username"),
+					"secret":   []byte("hmac-secret"),
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "missing username",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "missing-username",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"secret": []byte("hmac-secret"),
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "missing secret",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "missing-secret",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"username": []byte("hmac-username"),
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "missing username and secret",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "missing-both-username-and-secret",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{},
+			},
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateSecretForKongCredentialHMAC(tt.secret)
+			if (err != nil) != tt.wantError {
+				t.Errorf("validateSecretForKongCredentialHMAC() error = %v, wantError %v", err, tt.wantError)
+			}
+		})
+	}
+}
+
 func TestEnsureExistingCredential(t *testing.T) {
 	t.Run("KongCredentialBasicAuth", func(t *testing.T) {
 		tests := []struct {
@@ -641,7 +710,108 @@ func TestEnsureExistingCredential(t *testing.T) {
 				wantError: false,
 			},
 		}
+		for _, tt := range testCases {
+			t.Run(tt.name, func(t *testing.T) {
+				client := clientfake.NewClientBuilder().
+					WithScheme(scheme.Get()).
+					WithObjects(tt.cred).
+					Build()
+				_, err := ensureExistingCredential(t.Context(), client, tt.cred, tt.secret, tt.consumer)
+				if (err != nil) != tt.wantError {
+					t.Errorf("ensureExistingCredential() error = %v, wantError %v", err, tt.wantError)
+				}
+				if tt.assert != nil {
+					tt.assert(t, tt.cred)
+				}
+			})
+		}
+	})
 
+	t.Run("KongCredentialHMAC", func(t *testing.T) {
+		testCases := []struct {
+			name      string
+			cred      *configurationv1alpha1.KongCredentialHMAC
+			secret    *corev1.Secret
+			consumer  *configurationv1.KongConsumer
+			assert    func(t *testing.T, cred *configurationv1alpha1.KongCredentialHMAC)
+			wantError bool
+		}{
+			{
+				name: "credential needs update",
+				cred: &configurationv1alpha1.KongCredentialHMAC{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cred",
+						Namespace: "default",
+					},
+					Spec: configurationv1alpha1.KongCredentialHMACSpec{
+						ConsumerRef: corev1.LocalObjectReference{
+							Name: "consumer",
+						},
+						KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
+							Username: lo.ToPtr("old-hmac-username"),
+							Secret:   lo.ToPtr("old-hmac-secret"),
+						},
+					},
+				},
+				secret: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"username": []byte("new-hmac-username"),
+						"secret":   []byte("new-hmac-secret"),
+					},
+				},
+				consumer: &configurationv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "consumer",
+						Namespace: "default",
+					},
+				},
+				assert: func(t *testing.T, cred *configurationv1alpha1.KongCredentialHMAC) {
+					require.NotNil(t, cred)
+					require.Equal(t, lo.ToPtr("new-hmac-username"), cred.Spec.Username)
+					require.Equal(t, lo.ToPtr("new-hmac-secret"), cred.Spec.Secret)
+				},
+				wantError: false,
+			},
+			{
+				name: "credential does not need update",
+				cred: &configurationv1alpha1.KongCredentialHMAC{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cred",
+						Namespace: "default",
+					},
+					Spec: configurationv1alpha1.KongCredentialHMACSpec{
+						KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
+							Username: lo.ToPtr("hmac-username"),
+							Secret:   lo.ToPtr("hmac-secret"),
+						},
+						ConsumerRef: corev1.LocalObjectReference{
+							Name: "consumer",
+						},
+					},
+				},
+				secret: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"username": []byte("hmac-username"),
+						"secret":   []byte("hmac-secret"),
+					},
+				},
+				consumer: &configurationv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "consumer",
+						Namespace: "default",
+					},
+				},
+				wantError: false,
+			},
+		}
 		for _, tt := range testCases {
 			t.Run(tt.name, func(t *testing.T) {
 				client := clientfake.NewClientBuilder().

@@ -85,6 +85,7 @@
   - `key-auth` [#1168](https://github.com/Kong/gateway-operator/pull/1168)
   - `acl` [#1187](https://github.com/Kong/gateway-operator/pull/1187)
   - `jwt` [#1208](https://github.com/Kong/gateway-operator/pull/1208)
+  - `hmac` [#1222](https://github.com/Kong/gateway-operator/pull/1222)
 - Added prometheus metrics for Konnect entity operations in the metrics server:
   - `gateway_operator_konnect_entity_operation_count` for number of operations.
   - `gateway_operator_konnect_entity_operation_duration_milliseconds` for duration of operations.

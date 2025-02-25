@@ -122,7 +122,6 @@ rules:
   - kongcertificates
   - kongconsumergroups
   - kongconsumers
-  - kongcredentialhmacs
   - kongdataplaneclientcertificates
   - kongkeys
   - kongkeysets
@@ -201,6 +200,7 @@ rules:
   - kongcredentialacls
   - kongcredentialapikeys
   - kongcredentialbasicauths
+  - kongcredentialhmacs
   - kongcredentialjwts
   - kongpluginbindings
   - kongplugins

@@ -42,6 +42,9 @@ const (
 	// KongCredentialTypeACL is the type of Access Control Lists(ACLs) managed similar as credentials.
 	// It's used as the value for konghq.com/credential label.
 	KongCredentialTypeACL = "acl"
+	// KongCredentialTypeHMAC is the type of HMAC credential, it's used
+	// as the value for konghq.com/credential label.
+	KongCredentialTypeHMAC = "hmac"
 )
 
 const (
@@ -57,6 +60,10 @@ const (
 	CredentialSecretKeyNameJwtRSAPublicKeyKey = "rsa_public_key" //nolint:gosec
 	// CredentialSecretKeyNameJwtSecretKey is the credentail secret ley name for JWT secret.
 	CredentialSecretKeyNameJwtSecretKey = "secret"
+	// CredentialSecretKeyNameHMACUsername is the credential secret key name for HMAC username type.
+	CredentialSecretKeyNameHMACUsername = "username"
+	// CredentialSecretKeyNameHMACSecret is the credential secret key name for HMAC secret type.
+	CredentialSecretKeyNameHMACSecret = "secret"
 )
 
 // KongCredentialSecretReconciler reconciles a KongPlugin object.
@@ -122,8 +129,7 @@ func (r *KongCredentialSecretReconciler) SetupWithManager(_ context.Context, mgr
 		Owns(&configurationv1alpha1.KongCredentialAPIKey{}, builder.MatchEveryOwner).
 		Owns(&configurationv1alpha1.KongCredentialACL{}, builder.MatchEveryOwner).
 		Owns(&configurationv1alpha1.KongCredentialJWT{}, builder.MatchEveryOwner).
-		// TODO: Add more credential types support.
-		// TODO: https://github.com/Kong/gateway-operator/issues/1125
+		Owns(&configurationv1alpha1.KongCredentialHMAC{}, builder.MatchEveryOwner).
 		Complete(r)
 }
 
@@ -253,8 +259,6 @@ func deleteAllCredentialsUsingSecret(
 	secret *corev1.Secret,
 	credType string,
 ) error {
-	// TODO: Add more credential types support.
-	// TODO: https://github.com/Kong/gateway-operator/issues/1125
 	switch credType {
 
 	// NOTE: To use DeleteAllOf() we need a selectable field added to the CRD.
@@ -336,7 +340,24 @@ func deleteAllCredentialsUsingSecret(
 				)
 			}
 		}
-
+	case KongCredentialTypeHMAC:
+		var l configurationv1alpha1.KongCredentialHMACList
+		err := cl.List(
+			ctx, &l,
+			client.MatchingFields{
+				IndexFieldKongCredentialHMACReferencesSecret: secret.Name,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("failed listing unused KongCredentialHMACs: %w", err)
+		}
+		for _, cred := range l.Items {
+			if err := cl.Delete(ctx, &cred); err != nil {
+				return fmt.Errorf("failed deleting unused KongCredentialHMAC %s: %w",
+					client.ObjectKeyFromObject(&cred), err,
+				)
+			}
+		}
 	}
 
 	return nil
@@ -391,6 +412,14 @@ func ensureExistingCredential[
 			setKongCredentialJWTSpec(&cred.Spec, secret)
 			update = true
 		}
+	case *configurationv1alpha1.KongCredentialHMAC:
+		if cred.Spec.ConsumerRef.Name != consumer.Name ||
+			*cred.Spec.Username != string(secret.Data[CredentialSecretKeyNameHMACUsername]) ||
+			*cred.Spec.Secret != string(secret.Data[CredentialSecretKeyNameHMACSecret]) {
+			cred.Spec.ConsumerRef.Name = consumer.Name
+			setKongCredentialHMACSpec(&cred.Spec, secret)
+			update = true
+		}
 
 	default:
 		// NOTE: Shouldn't happen.
@@ -441,6 +470,9 @@ func ensureCredentialExists(
 	case KongCredentialTypeJWT:
 		cred = secretToKongCredentialJWT(secret, kongConsumer)
 
+	case KongCredentialTypeHMAC:
+		cred = secretToKongCredentialHMAC(secret, kongConsumer)
+
 	default:
 		return fmt.Errorf("Secret %s used as credential, but has unsupported type %s",
 			nn, credType,
@@ -483,8 +515,6 @@ func validateSecret(
 ) error {
 	nn := client.ObjectKeyFromObject(s)
 
-	// TODO: Add more credential types support.
-	// TODO: https://github.com/Kong/gateway-operator/issues/1125
 	switch credType {
 	case KongCredentialTypeBasicAuth:
 		if err := validateSecretForKongCredentialBasicAuth(s); err != nil {
@@ -500,6 +530,10 @@ func validateSecret(
 		}
 	case KongCredentialTypeJWT:
 		if err := validateSecretForKongCredentialJWT(s); err != nil {
+			return err
+		}
+	case KongCredentialTypeHMAC:
+		if err := validateSecretForKongCredentialHMAC(s); err != nil {
 			return err
 		}
 	default:
@@ -608,7 +642,20 @@ func validateSecretForKongCredentialJWT(s *corev1.Secret) error {
 			)
 		}
 	}
+	return nil
+}
 
+func validateSecretForKongCredentialHMAC(s *corev1.Secret) error {
+	if _, ok := s.Data[CredentialSecretKeyNameHMACUsername]; !ok {
+		return fmt.Errorf("Secret %s used as HMAC credential, but lacks %s key",
+			client.ObjectKeyFromObject(s), CredentialSecretKeyNameHMACUsername,
+		)
+	}
+	if _, ok := s.Data[CredentialSecretKeyNameHMACSecret]; !ok {
+		return fmt.Errorf("Secret %s used as HMAC credential, but lacks %s key",
+			client.ObjectKeyFromObject(s), CredentialSecretKeyNameHMACSecret,
+		)
+	}
 	return nil
 }
 
@@ -681,6 +728,22 @@ func secretToKongCredentialJWT(
 	return cred
 }
 
+func secretToKongCredentialHMAC(
+	s *corev1.Secret, c *configurationv1.KongConsumer,
+) *configurationv1alpha1.KongCredentialHMAC {
+	cred := &configurationv1alpha1.KongCredentialHMAC{
+		ObjectMeta: secretObjectMetaForConsumer(c),
+		Spec: configurationv1alpha1.KongCredentialHMACSpec{
+			ConsumerRef: corev1.LocalObjectReference{
+				Name: c.Name,
+			},
+		},
+	}
+
+	setKongCredentialHMACSpec(&cred.Spec, s)
+	return cred
+}
+
 func setKongCredentialBasicAuthSpec(
 	spec *configurationv1alpha1.KongCredentialBasicAuthSpec, s *corev1.Secret,
 ) {
@@ -715,15 +778,19 @@ func setKongCredentialJWTSpec(
 	}
 }
 
+func setKongCredentialHMACSpec(
+	spec *configurationv1alpha1.KongCredentialHMACSpec, s *corev1.Secret,
+) {
+	spec.Username = lo.ToPtr(string(s.Data[CredentialSecretKeyNameHMACUsername]))
+	spec.Secret = lo.ToPtr(string(s.Data[CredentialSecretKeyNameHMACSecret]))
+}
+
 func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 	ctx context.Context,
 	s *corev1.Secret,
 	credType string,
 	consumer *configurationv1.KongConsumer,
 ) (ctrl.Result, error) {
-	// TODO: add more credentials types support.
-	// TODO: https://github.com/Kong/gateway-operator/issues/1125
-
 	switch credType {
 	case KongCredentialTypeBasicAuth:
 		var l configurationv1alpha1.KongCredentialBasicAuthList
@@ -786,6 +853,22 @@ func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 		)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed listing KongCrenentialJWT: %w", err)
+		}
+		if res, err := handleCreds(ctx, r.client, s, credType, consumer, l.Items, r.scheme); err != nil || !res.IsZero() {
+			return res, err
+		}
+
+	case KongCredentialTypeHMAC:
+		var l configurationv1alpha1.KongCredentialHMACList
+		err := r.client.List(
+			ctx,
+			&l,
+			client.MatchingFields{
+				IndexFieldKongCredentialHMACReferencesKongConsumer: consumer.Name,
+			},
+		)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed listing KongCredentialHMAC: %w", err)
 		}
 		if res, err := handleCreds(ctx, r.client, s, credType, consumer, l.Items, r.scheme); err != nil || !res.IsZero() {
 			return res, err
