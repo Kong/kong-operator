@@ -931,6 +931,8 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				nil,
 			)
 		t.Log("Creating KongConsumer with ControlPlaneRef type=konnectID")
+		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+		wHMAC := setupWatch[configurationv1alpha1.KongCredentialHMACList](t, ctx, cl, client.InNamespace(ns.Name))
 		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
 			deploy.WithKonnectIDControlPlaneRef(cp),
 			func(obj client.Object) {
@@ -941,8 +943,6 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			},
 		)
 		t.Log("Waiting for KongConsumer to be programmed")
-		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
-		wHMAC := setupWatch[configurationv1alpha1.KongCredentialHMACList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		watchFor(t, ctx, wConsumer, apiwatch.Modified,
 			assertsAnd(
