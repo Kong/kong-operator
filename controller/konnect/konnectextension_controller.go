@@ -293,7 +293,7 @@ func getCertificateSecretRef(ctx context.Context, cl client.Client, ext konnectv
 	return client.ObjectKeyFromObject(&certificateSecret), nil
 }
 
-func konnectClusterTypeToCRDClusterType(clusterType sdkkonnectcomp.ControlPlaneClusterType) konnectv1alpha1.ClusterType {
+func konnectClusterTypeToCRDClusterType(clusterType sdkkonnectcomp.ControlPlaneClusterType) konnectv1alpha1.KonnectExtensionClusterType {
 	switch clusterType {
 	case sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane:
 		return konnectv1alpha1.ClusterTypeControlPlane
