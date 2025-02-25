@@ -32,7 +32,10 @@ func KonnectGatewayControlPlaneReconciliationWatchOptions(
 			return b.Watches(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueKonnectGatewayControlPlaneForKonnectAPIAuthConfiguration(cl),
+					enqueueObjectsForKonnectAPIAuthConfiguration[konnectv1alpha1.KonnectGatewayControlPlaneList](
+						cl,
+						IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration,
+					),
 				),
 			)
 		},
@@ -67,28 +70,6 @@ func enqueueKonnectGatewayControlPlaneGroupForMembers(
 			return nil
 		}
 
-		return objectListToReconcileRequests(l.Items)
-	}
-}
-
-func enqueueKonnectGatewayControlPlaneForKonnectAPIAuthConfiguration(
-	cl client.Client,
-) func(ctx context.Context, obj client.Object) []reconcile.Request {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		auth, ok := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
-		if !ok {
-			return nil
-		}
-		var l konnectv1alpha1.KonnectGatewayControlPlaneList
-		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(auth.GetNamespace()),
-			client.MatchingFields{
-				IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration: auth.Name,
-			},
-		); err != nil {
-			return nil
-		}
 		return objectListToReconcileRequests(l.Items)
 	}
 }
