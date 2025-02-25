@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
@@ -97,7 +97,7 @@ func TestKongService(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for Service to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, func(kt *configurationv1alpha1.KongService) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongService) bool {
 			return kt.GetKonnectID() == serviceID && k8sutils.IsProgrammed(kt)
 		}, "KongService didn't get Programmed status condition or didn't get the correct (service-12345) Konnect ID assigned")
 
@@ -185,7 +185,7 @@ func TestKongService(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for Service to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, func(kt *configurationv1alpha1.KongService) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongService) bool {
 			if kt.GetName() != createdService.GetName() {
 				return false
 			}
@@ -252,7 +252,7 @@ func TestKongService(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for Service to get the Programmed condition set to False")
-		watchFor(t, ctx, w, watch.Modified, func(kt *configurationv1alpha1.KongService) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongService) bool {
 			if kt.GetName() != createdService.GetName() {
 				return false
 			}
@@ -312,14 +312,14 @@ func TestKongService(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
+		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
 			fmt.Sprintf("KongService didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for Service to be get Programmed and ControlPlaneRefValid conditions with status=False")
-		watchFor(t, ctx, w, watch.Modified,
+		watchFor(t, ctx, w, apiwatch.Modified,
 			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongService didn't get Programmed and/or ControlPlaneRefValid status condition set to False")
 	})

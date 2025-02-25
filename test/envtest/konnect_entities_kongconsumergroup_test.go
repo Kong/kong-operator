@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
@@ -88,7 +88,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumerGroup to be programmed")
-		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
+		watchFor(t, ctx, cWatch, apiwatch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
 			if c.GetName() != cg.GetName() {
 				return false
 			}
@@ -182,7 +182,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumerGroup to be programmed")
-		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
+		watchFor(t, ctx, cWatch, apiwatch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
 			return c.GetKonnectID() == cgID && k8sutils.IsProgrammed(c)
 		}, "KongConsumerGroup's Programmed condition should be true eventually")
 
@@ -218,7 +218,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumerGroup to be programmed")
-		watchFor(t, ctx, cWatch, watch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
+		watchFor(t, ctx, cWatch, apiwatch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
 			if c.GetName() != cg.GetName() {
 				return false
 			}
@@ -275,14 +275,14 @@ func TestKongConsumerGroup(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
+		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
 			fmt.Sprintf("ConsumerGroup didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for KongConsumerGroup to be get Programmed and ControlPlaneRefValid conditions with status=False")
-		watchFor(t, ctx, w, watch.Modified,
+		watchFor(t, ctx, w, apiwatch.Modified,
 			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongConsumerGroup didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)

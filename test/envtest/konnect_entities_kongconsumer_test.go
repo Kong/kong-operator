@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
@@ -104,7 +104,7 @@ func TestKongConsumer(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, wConsumer, watch.Modified,
+		watchFor(t, ctx, wConsumer, apiwatch.Modified,
 			assertsAnd(
 				objectMatchesName(createdConsumer),
 				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
@@ -225,7 +225,7 @@ func TestKongConsumer(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, consumer, client.MergeFrom(createdConsumer)))
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, wConsumer, watch.Modified,
+		watchFor(t, ctx, wConsumer, apiwatch.Modified,
 			assertsAnd(
 				objectMatchesName(createdConsumer),
 				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
@@ -234,7 +234,7 @@ func TestKongConsumer(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumerGroup to be programmed")
-		watchFor(t, ctx, cgWatch, watch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
+		watchFor(t, ctx, cgWatch, apiwatch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
 			if c.GetName() != createdConsumerGroup.GetName() {
 				return false
 			}
@@ -329,7 +329,7 @@ func TestKongConsumer(t *testing.T) {
 		)
 
 		t.Log("Watching for KongConsumers to verify the created KongConsumer programmed")
-		watchFor(t, ctx, wConsumer, watch.Modified, func(c *configurationv1.KongConsumer) bool {
+		watchFor(t, ctx, wConsumer, apiwatch.Modified, func(c *configurationv1.KongConsumer) bool {
 			return c.GetKonnectID() == consumerID && k8sutils.IsProgrammed(c)
 		}, "KongConsumer should be programmed and have ID in status after handling conflict")
 
@@ -375,7 +375,7 @@ func TestKongConsumer(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, wConsumer, watch.Modified, func(c *configurationv1.KongConsumer) bool {
+		watchFor(t, ctx, wConsumer, apiwatch.Modified, func(c *configurationv1.KongConsumer) bool {
 			if c.GetName() != createdConsumer.GetName() {
 				return false
 			}
@@ -439,14 +439,14 @@ func TestKongConsumer(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
+		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
 			fmt.Sprintf("Consumer didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for KongConsumer to be get Programmed and ControlPlaneRefValid conditions with status=False")
-		watchFor(t, ctx, w, watch.Modified,
+		watchFor(t, ctx, w, apiwatch.Modified,
 			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongConsumer didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)
@@ -565,7 +565,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, wConsumer, watch.Modified,
+		watchFor(t, ctx, wConsumer, apiwatch.Modified,
 			assertsAnd(
 				objectMatchesName(createdConsumer),
 				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
@@ -575,7 +575,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongCredentialBasicAuth to be programmed")
-		watchFor(t, ctx, wBasicAuth, watch.Modified,
+		watchFor(t, ctx, wBasicAuth, apiwatch.Modified,
 			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialBasicAuth](),
 			"BasicAuth credential should get the Programmed condition",
 		)
@@ -654,7 +654,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		t.Log("Waiting for KongConsumer to be programmed")
 		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
 		wKeyCredential := setupWatch[configurationv1alpha1.KongCredentialAPIKeyList](t, ctx, cl, client.InNamespace(ns.Name))
-		watchFor(t, ctx, wConsumer, watch.Modified,
+		watchFor(t, ctx, wConsumer, apiwatch.Modified,
 			assertsAnd(
 				objectMatchesName(createdConsumer),
 				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
@@ -664,7 +664,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongCredentialAPIKey to be programmed")
-		watchFor(t, ctx, wKeyCredential, watch.Modified,
+		watchFor(t, ctx, wKeyCredential, apiwatch.Modified,
 			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialAPIKey](),
 			"APIKey credential should get the Programmed condition",
 		)
@@ -739,11 +739,19 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				}
 			},
 		)
+		var l configurationv1alpha1.KongCredentialACLList
+		l.GetItems()
 
 		t.Log("Waiting for KongConsumer to be programmed")
 		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
 		wACL := setupWatch[configurationv1alpha1.KongCredentialACLList](t, ctx, cl, client.InNamespace(ns.Name))
-		watchFor(t, ctx, wConsumer, watch.Modified,
+
+		watchFor(t, ctx, wConsumer, apiwatch.Modified,
+			objectHasCPRefKonnectID[*configurationv1.KongConsumer](),
+			"KongConsumer's Programmed condition should be true eventually",
+		)
+
+		watchFor(t, ctx, wConsumer, apiwatch.Modified,
 			assertsAnd(
 				objectMatchesName(createdConsumer),
 				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
@@ -753,7 +761,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongCredentialACL to be programmed")
-		watchFor(t, ctx, wACL, watch.Modified,
+		watchFor(t, ctx, wACL, apiwatch.Modified,
 			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialACL](),
 			"ACL credential should get the Programmed condition",
 		)

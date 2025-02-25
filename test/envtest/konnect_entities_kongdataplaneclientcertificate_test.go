@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
@@ -73,7 +73,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	)
 
 	t.Log("Waiting for KongDataPlaneClientCertificate to be programmed")
-	watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
+	watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
 		if c.GetName() != createdCert.GetName() {
 			return false
 		}
@@ -122,7 +122,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongDataPlaneClientCertificate to be programmed")
-		watchFor(t, ctx, w, watch.Modified, func(c *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
 			if c.GetName() != createdCert.GetName() {
 				return false
 			}
@@ -173,14 +173,14 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.DataPlaneCertificatesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
+		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
 			fmt.Sprintf("DataPlaneClientCertificate didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for DataPlaneClientCertificate to be get Programmed and ControlPlaneRefValid conditions with status=False")
-		watchFor(t, ctx, w, watch.Modified,
+		watchFor(t, ctx, w, apiwatch.Modified,
 			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongDataPlaneClientCertificate didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
@@ -95,7 +95,7 @@ func TestKongSNI(t *testing.T) {
 		)
 
 		t.Log("Waiting for SNI to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, watch.Modified, func(s *configurationv1alpha1.KongSNI) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(s *configurationv1alpha1.KongSNI) bool {
 			return s.GetKonnectID() == "sni-12345" && k8sutils.IsProgrammed(s)
 		}, "SNI didn't get Programmed status condition or didn't get the correct (sni-12345) Konnect ID assigned")
 

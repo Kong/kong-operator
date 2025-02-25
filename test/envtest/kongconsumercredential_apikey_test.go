@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/watch"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
@@ -211,7 +211,7 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 		created := deploy.KongCredentialAPIKey(t, ctx, clientNamespaced, consumer.Name)
 
 		t.Log("Waiting for KongCredentialAPIKey to be programmed")
-		watchFor(t, ctx, w, watch.Modified, func(k *configurationv1alpha1.KongCredentialAPIKey) bool {
+		watchFor(t, ctx, w, apiwatch.Modified, func(k *configurationv1alpha1.KongCredentialAPIKey) bool {
 			return k.GetName() == created.GetName() && k8sutils.IsProgrammed(k)
 		}, "KongCredentialAPIKey's Programmed condition should be true eventually")
 
