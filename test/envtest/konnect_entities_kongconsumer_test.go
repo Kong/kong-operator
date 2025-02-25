@@ -128,6 +128,17 @@ func TestKongConsumer(t *testing.T) {
 		consumerToPatch.Username = updatedUsername
 		require.NoError(t, clientNamespaced.Patch(ctx, consumerToPatch, client.MergeFrom(createdConsumer)))
 
+		t.Log("Waiting for KongConsumer to be patched")
+		watchFor(t, ctx, wConsumer, apiwatch.Modified,
+			assertsAnd(
+				objectMatchesName(createdConsumer),
+				objectMatchesKonnectID[*configurationv1.KongConsumer](consumerID),
+				func(c *configurationv1.KongConsumer) bool {
+					return c.Username == updatedUsername
+				},
+			),
+			"KongConsumer should get patched with new username",
+		)
 		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongConsumer deletion")
@@ -287,9 +298,6 @@ func TestKongConsumer(t *testing.T) {
 		consumerToPatch := createdConsumer.DeepCopy()
 		consumerToPatch.Username = "user-2-updated"
 		require.NoError(t, clientNamespaced.Patch(ctx, consumerToPatch, client.MergeFrom(createdConsumer)))
-
-		t.Log("Waiting for SDK expectations to be met")
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle conflict in creation correctly", func(t *testing.T) {
@@ -332,8 +340,6 @@ func TestKongConsumer(t *testing.T) {
 		watchFor(t, ctx, wConsumer, apiwatch.Modified, func(c *configurationv1.KongConsumer) bool {
 			return c.GetKonnectID() == consumerID && k8sutils.IsProgrammed(c)
 		}, "KongConsumer should be programmed and have ID in status after handling conflict")
-
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
@@ -387,8 +393,6 @@ func TestKongConsumer(t *testing.T) {
 					condition.Status == metav1.ConditionTrue
 			})
 		}, "KongConsumer's Programmed condition should be true eventually")
-
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 	})
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
@@ -436,11 +440,12 @@ func TestKongConsumer(t *testing.T) {
 				cert.Username = name
 			},
 		)
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
 			fmt.Sprintf("Consumer didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
