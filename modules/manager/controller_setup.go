@@ -58,6 +58,8 @@ const (
 	DataPlaneOwnedDeploymentFinalizerControllerName = "DataPlaneOwnedDeploymentFinalizer"
 	// KonnectExtensionControllerName is the name of the KonnectExtension controller.
 	KonnectExtensionControllerName = "KonnectExtension"
+	// KonnectExtensionDataPlaneSecretControllerName is the name of the KonnectExtensionDataPlaneSecret controller.
+	KonnectExtensionDataPlaneSecretControllerName = "KonnectExtensionDataPlaneSecret"
 	// AIGatewayControllerName is the name of the AIGateway controller.
 	AIGatewayControllerName = "AIGateway"
 	// KongPluginInstallationControllerName is the name of the KongPluginInstallation controller.
@@ -184,6 +186,9 @@ func setupIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 		if cfg.KonnectControllersEnabled {
 			if err := index.DataPlaneOnDataPlaneKonnecExtension(ctx, mgr.GetCache()); err != nil {
 				return fmt.Errorf("failed to setup index for DataPlanes on KonnectExtensions: %w", err)
+			}
+			if err := index.KonnectExtensionOnSecret(ctx, mgr.GetCache()); err != nil {
+				return fmt.Errorf("failed to setup index for KonnectExtensions on Secrets: %w", err)
 			}
 		}
 	}
@@ -570,6 +575,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					sdkFactory,
 					c.DevelopmentMode,
 					mgr.GetClient(),
+				),
+			},
+
+			KonnectExtensionDataPlaneSecretControllerName: {
+				Enabled: (c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled) && c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectExtensionDataplaneSecretReconciler(
+					mgr.GetClient(),
+					c.DevelopmentMode,
+					sdkFactory,
 				),
 			},
 

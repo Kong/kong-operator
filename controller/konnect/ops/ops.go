@@ -101,7 +101,7 @@ func Create[
 	case *configurationv1alpha1.KongSNI:
 		err = createSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
-		err = createKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
+		err = CreateKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 	default:

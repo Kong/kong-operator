@@ -10,9 +10,9 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
-// createKongDataPlaneClientCertificate creates a KongDataPlaneClientCertificate in Konnect.
+// CreateKongDataPlaneClientCertificate creates a KongDataPlaneClientCertificate in Konnect.
 // It sets the KonnectID in the KongDataPlaneClientCertificate status.
-func createKongDataPlaneClientCertificate(
+func CreateKongDataPlaneClientCertificate(
 	ctx context.Context,
 	sdk sdkops.DataPlaneClientCertificatesSDK,
 	cert *configurationv1alpha1.KongDataPlaneClientCertificate,

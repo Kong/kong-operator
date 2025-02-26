@@ -1,6 +1,7 @@
 package resources
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -55,6 +56,10 @@ func GetManagedLabelForOwner(owner metav1.Object) client.MatchingLabels {
 	case *operatorv1beta1.DataPlane:
 		return client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		}
+	case *corev1.Secret:
+		return client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.SecretManagedLabelValue,
 		}
 	}
 	return client.MatchingLabels{}

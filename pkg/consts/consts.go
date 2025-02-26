@@ -67,8 +67,8 @@ const (
 	// that is used to indicate that a Service is a webhook service.
 	ControlPlaneServiceKindWebhook = "webhook"
 
-	// CertPurposeLabel indicates the purpose of a certificate.
-	CertPurposeLabel = OperatorLabelPrefix + "cert-purpose"
+	// SecretPurposeLabel indicates the purpose of a secret.
+	SecretPurposeLabel = OperatorLabelPrefix + "secret-purpose"
 )
 
 // -----------------------------------------------------------------------------

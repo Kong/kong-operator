@@ -23,6 +23,9 @@ const (
 	// KonnectExtensionIndex is the key to be used to access the .spec.extensions indexed values,
 	// in a form of list of namespace/name strings.
 	KonnectExtensionIndex = "KonnectExtension"
+
+	// TODO: comment
+	KonnectExtensionsSecretIndex = "konnectExtensionSecretRef"
 )
 
 // DataPlaneNameOnControlPlane indexes the ControlPlane .spec.dataplaneName field
@@ -84,7 +87,7 @@ func DataPlaneOnDataPlaneKonnecExtension(ctx context.Context, c cache.Cache) err
 		if meta.IsNoMatchError(err) {
 			return nil
 		}
-		return fmt.Errorf("failed to get informer for v1alpha1 KonnectExtension: %w, disabling indexing KonnectExtensions for DataPlanes' .spec.extensions", err)
+		return fmt.Errorf("failed to get informer for v1beta1 DataPlane: %w, disabling indexing KonnectExtensions for DataPlanes' .spec.extensions", err)
 	}
 	return c.IndexField(
 		ctx,
@@ -110,6 +113,32 @@ func DataPlaneOnDataPlaneKonnecExtension(ctx context.Context, c cache.Cache) err
 				}
 			}
 			return result
+		},
+	)
+}
+
+func KonnectExtensionOnSecret(ctx context.Context, c cache.Cache) error {
+	if _, err := c.GetInformer(ctx, &konnectv1alpha1.KonnectExtension{}); err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to get informer for v1alpha1 KonnectExtension: %w, disabling indexing KonnectExtensions for Secrets' .spec.extensions", err)
+	}
+	return c.IndexField(
+		ctx,
+		&konnectv1alpha1.KonnectExtension{},
+		KonnectExtensionsSecretIndex,
+		func(o client.Object) []string {
+			ext, ok := o.(*konnectv1alpha1.KonnectExtension)
+			if !ok {
+				return nil
+			}
+
+			if ext.Status.DataPlaneClientAuth == nil || ext.Status.DataPlaneClientAuth.CertificateSecretRef == nil {
+				return []string{}
+			}
+
+			return []string{ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name}
 		},
 	)
 }

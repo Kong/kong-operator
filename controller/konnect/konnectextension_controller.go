@@ -117,8 +117,10 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if err := r.Client.Get(ctx, req.NamespacedName, &ext); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-
 	logger := log.GetLogger(ctx, konnectv1alpha1.KonnectExtensionKind, r.developmentMode)
+	ctx = ctrllog.IntoContext(ctx, logger)
+	log.Debug(logger, "reconciling")
+
 	var dataPlaneList operatorv1beta1.DataPlaneList
 	if err := r.List(ctx, &dataPlaneList, client.MatchingFields{
 		index.KonnectExtensionIndex: client.ObjectKeyFromObject(&ext).String(),
@@ -193,7 +195,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		sdkops.SDKToken(token),
 	)
 
-	cp, err := ops.GetControlPlaneByID(ctx, sdk.GetControlPlaneSDK(), *ext.Spec.ControlPlaneRef.KonnectID)
+	cp, err := ops.GetControlPlaneByID(ctx, sdk.GetControlPlaneSDK(), *ext.Spec.KonnectControlPlane.ControlPlaneRef.KonnectID)
 	if err != nil {
 		_, err := patch.StatusWithCondition(
 			ctx, r.Client, &ext,
@@ -264,6 +266,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return res, err
 	}
 
+	log.Debug(logger, "reconciled")
 	return ctrl.Result{}, nil
 }
 

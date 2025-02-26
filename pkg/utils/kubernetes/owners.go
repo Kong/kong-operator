@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,7 +53,8 @@ type managingObjectT interface {
 
 	*gatewayv1.Gateway |
 		*operatorv1beta1.ControlPlane |
-		*operatorv1beta1.DataPlane
+		*operatorv1beta1.DataPlane |
+		*corev1.Secret
 }
 
 // SetOwnerForObjectThroughLabels sets the owner of the provided object through a label.

@@ -19,7 +19,7 @@ require (
 	github.com/google/go-containerregistry v0.20.3
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.48.2
-	github.com/kong/kubernetes-configuration v1.2.0-rc.1.0.20250225175646-4662c505b8e7
+	github.com/kong/kubernetes-configuration v1.2.0-rc.1.0.20250226124621-148cbaed8d99
 	github.com/kong/kubernetes-telemetry v0.1.8
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
@@ -234,6 +234,8 @@ require (
 	sigs.k8s.io/kind v0.24.0 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.19.0
 )
+
+require gotest.tools/v3 v3.5.1
 
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
