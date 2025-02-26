@@ -23,6 +23,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/internal/versions"
+	"github.com/kong/gateway-operator/pkg/clientops"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
@@ -469,13 +470,11 @@ func (r *Reconciler) ensureAdmissionWebhookCertificateSecret(
 		if err != nil {
 			return op.Noop, nil, fmt.Errorf("failed listing Secrets for ControlPlane %s/: %w", client.ObjectKeyFromObject(cp), err)
 		}
-		for _, svc := range secrets {
-			if err := r.Client.Delete(ctx, &svc); err != nil {
-				return op.Noop, nil, fmt.Errorf("failed deleting ControlPlane admission webhook Secret %s: %w", svc.Name, err)
-			}
-		}
 		if len(secrets) == 0 {
 			return op.Noop, nil, nil
+		}
+		if err := clientops.DeleteAll(ctx, r.Client, secrets); err != nil {
+			return op.Noop, nil, fmt.Errorf("failed deleting ControlPlane admission webhook Secret: %w", err)
 		}
 		return op.Deleted, nil, nil
 	}
@@ -603,13 +602,11 @@ func (r *Reconciler) ensureAdmissionWebhookService(
 	}
 
 	if !isAdmissionWebhookEnabled(ctx, cl, logger, cp) {
-		for _, svc := range services {
-			if err := cl.Delete(ctx, &svc); client.IgnoreNotFound(err) != nil {
-				return op.Noop, nil, fmt.Errorf("failed deleting ControlPlane admission webhook Service %s: %w", svc.Name, err)
-			}
-		}
 		if len(services) == 0 {
 			return op.Noop, nil, nil
+		}
+		if err := clientops.DeleteAll(ctx, r.Client, services); err != nil {
+			return op.Noop, nil, fmt.Errorf("failed deleting ControlPlane admission webhook Service: %w", err)
 		}
 		return op.Deleted, nil, nil
 	}
@@ -683,13 +680,11 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	}
 
 	if !isAdmissionWebhookEnabled(ctx, r.Client, logger, cp) {
-		for _, webhookConfiguration := range validatingWebhookConfigurations {
-			if err := r.Client.Delete(ctx, &webhookConfiguration); client.IgnoreNotFound(err) != nil {
-				return op.Noop, fmt.Errorf("failed deleting ControlPlane admission webhook ValidatingWebhookConfiguration %s: %w", webhookConfiguration.Name, err)
-			}
-		}
 		if len(validatingWebhookConfigurations) == 0 {
 			return op.Noop, nil
+		}
+		if err := clientops.DeleteAll(ctx, r.Client, validatingWebhookConfigurations); err != nil {
+			return op.Noop, fmt.Errorf("failed deleting ControlPlane admission webhook ValidatingWebhookConfiguration: %w", err)
 		}
 		return op.Deleted, nil
 	}

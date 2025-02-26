@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/pkg/clientops"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -48,12 +49,7 @@ func ReduceSecrets(ctx context.Context, k8sClient client.Client, secrets []corev
 // ReduceServiceAccounts detects the best serviceAccount in the set and deletes all the others.
 func ReduceServiceAccounts(ctx context.Context, k8sClient client.Client, serviceAccounts []corev1.ServiceAccount) error {
 	filteredServiceAccounts := filterServiceAccounts(serviceAccounts)
-	for _, serviceAccount := range filteredServiceAccounts {
-		if err := k8sClient.Delete(ctx, &serviceAccount); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return nil
+	return clientops.DeleteAll(ctx, k8sClient, filteredServiceAccounts)
 }
 
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=delete
@@ -61,12 +57,7 @@ func ReduceServiceAccounts(ctx context.Context, k8sClient client.Client, service
 // ReduceClusterRoles detects the best ClusterRole in the set and deletes all the others.
 func ReduceClusterRoles(ctx context.Context, k8sClient client.Client, clusterRoles []rbacv1.ClusterRole) error {
 	filteredClusterRoles := filterClusterRoles(clusterRoles)
-	for _, clusterRole := range filteredClusterRoles {
-		if err := k8sClient.Delete(ctx, &clusterRole); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return nil
+	return clientops.DeleteAll(ctx, k8sClient, filteredClusterRoles)
 }
 
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=delete
@@ -74,12 +65,7 @@ func ReduceClusterRoles(ctx context.Context, k8sClient client.Client, clusterRol
 // ReduceClusterRoleBindings detects the best ClusterRoleBinding in the set and deletes all the others.
 func ReduceClusterRoleBindings(ctx context.Context, k8sClient client.Client, clusterRoleBindings []rbacv1.ClusterRoleBinding) error {
 	filteredCLusterRoleBindings := filterClusterRoleBindings(clusterRoleBindings)
-	for _, clusterRoleBinding := range filteredCLusterRoleBindings {
-		if err := k8sClient.Delete(ctx, &clusterRoleBinding); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return nil
+	return clientops.DeleteAll(ctx, k8sClient, filteredCLusterRoleBindings)
 }
 
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=delete
@@ -158,12 +144,7 @@ func ReduceServicesByName(ctx context.Context, k8sClient client.Client, services
 // ReduceNetworkPolicies detects the best NetworkPolicy in the set and deletes all the others.
 func ReduceNetworkPolicies(ctx context.Context, k8sClient client.Client, networkPolicies []networkingv1.NetworkPolicy) error {
 	filteredNetworkPolicies := filterNetworkPolicies(networkPolicies)
-	for _, networkPolicy := range filteredNetworkPolicies {
-		if err := k8sClient.Delete(ctx, &networkPolicy); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return nil
+	return clientops.DeleteAll(ctx, k8sClient, filteredNetworkPolicies)
 }
 
 // +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=delete
@@ -173,12 +154,8 @@ type HPAFilterFunc func([]autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2
 
 // ReduceHPAs detects the best HorizontalPodAutoscaler in the set and deletes all the others.
 func ReduceHPAs(ctx context.Context, k8sClient client.Client, hpas []autoscalingv2.HorizontalPodAutoscaler, filter HPAFilterFunc) error {
-	for _, hpa := range filter(hpas) {
-		if err := k8sClient.Delete(ctx, &hpa); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return nil
+	filtered := filter(hpas)
+	return clientops.DeleteAll(ctx, k8sClient, filtered)
 }
 
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=delete
@@ -188,12 +165,7 @@ type PDBFilterFunc func([]policyv1.PodDisruptionBudget) []policyv1.PodDisruption
 
 // ReducePodDisruptionBudgets detects the best PodDisruptionBudget in the set and deletes all the others.
 func ReducePodDisruptionBudgets(ctx context.Context, k8sClient client.Client, pdbs []policyv1.PodDisruptionBudget, filter PDBFilterFunc) error {
-	for _, pdb := range filter(pdbs) {
-		if err := k8sClient.Delete(ctx, &pdb); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return nil
+	return clientops.DeleteAll(ctx, k8sClient, pdbs)
 }
 
 // +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=delete
@@ -201,12 +173,7 @@ func ReducePodDisruptionBudgets(ctx context.Context, k8sClient client.Client, pd
 // ReduceValidatingWebhookConfigurations detects the best ValidatingWebhookConfiguration in the set and deletes all the others.
 func ReduceValidatingWebhookConfigurations(ctx context.Context, k8sClient client.Client, webhookConfigurations []admregv1.ValidatingWebhookConfiguration) error {
 	filteredWebhookConfigurations := filterValidatingWebhookConfigurations(webhookConfigurations)
-	for _, webhookConfiguration := range filteredWebhookConfigurations {
-		if err := k8sClient.Delete(ctx, &webhookConfiguration); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return nil
+	return clientops.DeleteAll(ctx, k8sClient, filteredWebhookConfigurations)
 }
 
 // +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=dataplanes,verbs=delete
@@ -214,12 +181,7 @@ func ReduceValidatingWebhookConfigurations(ctx context.Context, k8sClient client
 // ReduceDataPlanes detects the best DataPlane in the set and deletes all the others.
 func ReduceDataPlanes(ctx context.Context, k8sClient client.Client, dataplanes []operatorv1beta1.DataPlane) error {
 	filteredDataPlanes := filterDataPlanes(dataplanes)
-	for _, dataplane := range filteredDataPlanes {
-		if err := k8sClient.Delete(ctx, &dataplane); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return nil
+	return clientops.DeleteAll(ctx, k8sClient, filteredDataPlanes)
 }
 
 // +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongpluginbindings,verbs=delete
@@ -227,12 +189,7 @@ func ReduceDataPlanes(ctx context.Context, k8sClient client.Client, dataplanes [
 // ReduceKongPluginBindings detects the best KongPluginBinding in the set and deletes all the others.
 func ReduceKongPluginBindings(ctx context.Context, k8sClient client.Client, kpbs []configurationv1alpha1.KongPluginBinding) error {
 	filteredKongPluginBindings := filterKongPluginBindings(kpbs)
-	for _, kpb := range filteredKongPluginBindings {
-		if err := k8sClient.Delete(ctx, &kpb); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return nil
+	return clientops.DeleteAll(ctx, k8sClient, filteredKongPluginBindings)
 }
 
 // ReduceKongCredentials detects the best KongCredential in the set and deletes all the others.
@@ -241,11 +198,5 @@ func ReduceKongCredentials[
 	TPtr constraints.KongCredential[T],
 ](ctx context.Context, k8sClient client.Client, kongCredentials []T) error {
 	filtered := filterKongCredentials[T, TPtr](kongCredentials)
-	for _, cred := range filtered {
-		ptr := TPtr(&cred)
-		if err := k8sClient.Delete(ctx, ptr); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return nil
+	return clientops.DeleteAll[T, TPtr](ctx, k8sClient, filtered)
 }
