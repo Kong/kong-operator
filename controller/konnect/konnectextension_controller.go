@@ -11,10 +11,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/gateway-operator/controller/konnect/ops"
@@ -53,6 +55,21 @@ func NewKonnectExtensionReconciler(
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	ls := metav1.LabelSelector{
+		// A secret must has `konghq.com/konnect-dp-cert` label to be watched by the controller.
+		// This constraint is added to prevent from watching all secrets which may cause high resource consumption.
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{
+				Key:      SecretKonnectDataPlaneCertificateLabel,
+				Operator: metav1.LabelSelectorOpExists,
+			},
+		},
+	}
+	labelSelectorPredicate, err := predicate.LabelSelectorPredicate(ls)
+	if err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&konnectv1alpha1.KonnectExtension{}).
 		Watches(
@@ -68,7 +85,16 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 				),
 			),
 		).
-		// TODO: watch secrets https://github.com/Kong/gateway-operator/issues/1210
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(
+				konnectExtensionReconcileRequestsForSecret(mgr.GetClient()),
+			),
+			builder.WithPredicates(
+				labelSelectorPredicate,
+				predicate.NewPredicateFuncs(secretUsedByKonnectExtension(mgr.GetClient())),
+			),
+		).
 		Complete(r)
 }
 
