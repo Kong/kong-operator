@@ -188,11 +188,8 @@ func TestKonnectExtension(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						DataPlaneLabels: []konnectv1alpha1.DataPlaneLabel{
-							{
-								Key:   "valid-key",
-								Value: "valid.value",
-							},
+						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+							"valid-key": "valid.value",
 						},
 					},
 				},
@@ -208,15 +205,12 @@ func TestKonnectExtension(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						DataPlaneLabels: []konnectv1alpha1.DataPlaneLabel{
-							{
-								Key:   "valid-key",
-								Value: ".invalid.value",
-							},
+						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+							"valid-key": ".invalid.value",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("should match '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$"),
+				ExpectedErrorMessage: lo.ToPtr("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
 			},
 			{
 				Name: "invalid label value 2",
@@ -229,15 +223,12 @@ func TestKonnectExtension(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						DataPlaneLabels: []konnectv1alpha1.DataPlaneLabel{
-							{
-								Key:   "valid-key",
-								Value: "invalid.value.",
-							},
+						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+							"valid-key": "invalid.value.",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("should match '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$"),
+				ExpectedErrorMessage: lo.ToPtr("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
 			},
 			{
 				Name: "invalid label value 3",
@@ -250,15 +241,12 @@ func TestKonnectExtension(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						DataPlaneLabels: []konnectv1alpha1.DataPlaneLabel{
-							{
-								Key:   "valid-key",
-								Value: "invalid$value.",
-							},
+						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+							"valid-key": "invalid$value.",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("should match '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$"),
+				ExpectedErrorMessage: lo.ToPtr("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
 			},
 			{
 				Name: "invalid label value 4",
@@ -271,11 +259,8 @@ func TestKonnectExtension(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						DataPlaneLabels: []konnectv1alpha1.DataPlaneLabel{
-							{
-								Key:   "valid-key",
-								Value: "Xv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqIXv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqI.",
-							},
+						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+							"valid-key": "Xv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqIXv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqI",
 						},
 					},
 				},
@@ -292,15 +277,12 @@ func TestKonnectExtension(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						DataPlaneLabels: []konnectv1alpha1.DataPlaneLabel{
-							{
-								Key:   ".invalid.key",
-								Value: "valid.value",
-							},
+						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+							".invalid.key": "valid.value",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("should match '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$"),
+				ExpectedErrorMessage: lo.ToPtr("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
 			},
 			{
 				Name: "invalid label value 2",
@@ -313,15 +295,12 @@ func TestKonnectExtension(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						DataPlaneLabels: []konnectv1alpha1.DataPlaneLabel{
-							{
-								Key:   "invalid.key.",
-								Value: "valid.value",
-							},
+						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+							"invalid.key.": "valid.value",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("should match '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$"),
+				ExpectedErrorMessage: lo.ToPtr("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
 			},
 			{
 				Name: "invalid label value 3",
@@ -334,15 +313,12 @@ func TestKonnectExtension(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						DataPlaneLabels: []konnectv1alpha1.DataPlaneLabel{
-							{
-								Key:   "invalid$key",
-								Value: "valid.value",
-							},
+						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+							"invalid$key": "valid.value",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("should match '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$"),
+				ExpectedErrorMessage: lo.ToPtr("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
 			},
 			{
 				Name: "invalid label value 4",
@@ -355,11 +331,8 @@ func TestKonnectExtension(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						DataPlaneLabels: []konnectv1alpha1.DataPlaneLabel{
-							{
-								Key:   "Xv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqIXv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqI",
-								Value: "valid.value",
-							},
+						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+							"Xv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqIXv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqI": "valid.value",
 						},
 					},
 				},
