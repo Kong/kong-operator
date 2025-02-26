@@ -19,7 +19,7 @@ require (
 	github.com/google/go-containerregistry v0.20.3
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.48.2
-	github.com/kong/kubernetes-configuration v1.2.0-rc.1.0.20250225124224-bc1371ef1d13
+	github.com/kong/kubernetes-configuration v1.2.0-rc.1.0.20250225175646-4662c505b8e7
 	github.com/kong/kubernetes-telemetry v0.1.8
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
@@ -213,7 +213,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
-	golang.org/x/crypto v0.33.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/tools v0.30.0 // indirect

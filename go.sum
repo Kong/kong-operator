@@ -307,8 +307,8 @@ github.com/klauspost/compress v1.17.11 h1:In6xLpyWOi1+C7tXUUWv2ot1QvBjxevKAaI6IX
 github.com/klauspost/compress v1.17.11/go.mod h1:pMDklpSncoRMuLFrf1W9Ss9KT+0rH90U12bZKk7uwG0=
 github.com/kong/go-kong v0.63.0 h1:8ECLgkgDqON61qCMq/M0gTwZKYxg55Oy692dRDOOBiU=
 github.com/kong/go-kong v0.63.0/go.mod h1:ma9GWnhkxtrXZlLFfED955HjVzmUojYEHet3lm+PDik=
-github.com/kong/kubernetes-configuration v1.2.0-rc.1.0.20250225124224-bc1371ef1d13 h1:7rJiOBvrYIMxLKwmWaCPiJ36UYlcw0r8M+dWkbZrPs4=
-github.com/kong/kubernetes-configuration v1.2.0-rc.1.0.20250225124224-bc1371ef1d13/go.mod h1:ktUCDIijOS9qfjTLfGXMEJmQPQrqCU/0so88d3/Dj5Q=
+github.com/kong/kubernetes-configuration v1.2.0-rc.1.0.20250225175646-4662c505b8e7 h1:Hikm5zpGG7qjJEhbzw31yBz03hYG/8lsmvhT9jzKzIc=
+github.com/kong/kubernetes-configuration v1.2.0-rc.1.0.20250225175646-4662c505b8e7/go.mod h1:ktUCDIijOS9qfjTLfGXMEJmQPQrqCU/0so88d3/Dj5Q=
 github.com/kong/kubernetes-telemetry v0.1.8 h1:nbtUmXW9xkzRO7dgvrgVrJZiRksATk4XHrqX+78g/5k=
 github.com/kong/kubernetes-telemetry v0.1.8/go.mod h1:ZEQY/4DddKoe5XA7UTOIbdI/4d6ZRcrzh2ezRxnuyl0=
 github.com/kong/kubernetes-testing-framework v0.47.2 h1:+2Z9anTpbV/hwNeN+NFQz53BMU+g3QJydkweBp3tULo=
@@ -531,8 +531,8 @@ golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392/go.mod h1:jdWPYTVW3xRLrWP
 golang.org/x/crypto v0.0.0-20201208171446-5f87f3452ae9/go.mod h1:jdWPYTVW3xRLrWPugEBEK3UY2ZEsg3UU495nc5E+M+I=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 golang.org/x/crypto v0.7.0/go.mod h1:pYwdfH91IfpZVANVyUOhSIPZaFoJGxTFbZhFTx+dXZU=
-golang.org/x/crypto v0.33.0 h1:IOBPskki6Lysi0lo9qQvbxiQ+FvsCC/YWOecCHAixus=
-golang.org/x/crypto v0.33.0/go.mod h1:bVdXmD7IV/4GdElGPozy6U7lWdRXA4qyRVGJV57uQ5M=
+golang.org/x/crypto v0.35.0 h1:b15kiHdrGCHrP6LvwaQ3c03kgNhhiMgvlhxHQhmg2Xs=
+golang.org/x/crypto v0.35.0/go.mod h1:dy7dXNW32cAb/6/PRuTNsix8T+vJAqvuIy5Bli/x0YQ=
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac h1:l5+whBCLH3iH2ZNHYLbAe58bo7yrN4mVcnkHDYz5vvs=
 golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac/go.mod h1:hH+7mtFmImwwcMvScyxUhjuVHR3HGaDPMn9rMSUUbxo=

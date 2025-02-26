@@ -60,22 +60,34 @@ type SupportedKonnectEntityType interface {
 	GetTypeName() string
 }
 
+// EntityTypeObject is an interface that allows non Konnect types to be used
+// in the Konnect reconciler and its helper functions.
+type EntityTypeObject[T any] interface {
+	*T
+
+	// Kubernetes Object methods
+
+	GetObjectMeta() metav1.Object
+	client.Object
+
+	// Additional methods
+
+	GetConditions() []metav1.Condition
+	SetConditions([]metav1.Condition)
+	GetTypeName() string
+}
+
 // EntityType is an interface that all Konnect entity types must implement.
 // Separating this from constraints.SupportedKonnectEntityType allows us to use EntityType
 // where client.Object is required, since it embeds client.Object and uses pointer
 // to refer to the constraints.SupportedKonnectEntityType.
-type EntityType[T SupportedKonnectEntityType] interface {
-	*T
-	// Kubernetes Object methods
-	GetObjectMeta() metav1.Object
-	client.Object
+type EntityType[T any] interface {
+	EntityTypeObject[T]
 
 	// Additional methods which are used in reconciling Konnect entities.
-	GetConditions() []metav1.Condition
-	SetConditions([]metav1.Condition)
-	GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
+
 	SetKonnectID(string)
-	GetTypeName() string
+	GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
 }
 
 // SupportedKonnectEntityPluginReferenceableType is an interface that all Konnect
