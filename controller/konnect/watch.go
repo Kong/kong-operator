@@ -130,8 +130,8 @@ func controlPlaneRefIsKonnectNamespacedRef[
 
 // objectListToReconcileRequests converts a list of objects to a list of reconcile requests.
 func objectListToReconcileRequests[
-	T constraints.SupportedKonnectEntityType,
-	TPtr constraints.EntityType[T],
+	T any,
+	TPtr constraints.EntityTypeObject[T],
 ](
 	items []T,
 	filters ...func(TPtr) bool,
@@ -198,7 +198,7 @@ func enqueueObjectForKonnectGatewayControlPlane[
 			return nil
 		}
 
-		return objectListToReconcileRequests[T, TT](l.GetItems())
+		return objectListToReconcileRequests[T, TT](lPtr.GetItems())
 	}
 }
 
@@ -261,5 +261,44 @@ func enqueueObjectForAPIAuthThroughControlPlaneRef[
 		}
 
 		return objectListToReconcileRequests[T, TT](items)
+	}
+}
+
+func enqueueObjectsForKonnectAPIAuthConfiguration[
+	TList interface {
+		GetItems() []T
+	},
+	TListPtr interface {
+		*TList
+		client.ObjectList
+		GetItems() []T
+	},
+	T interface {
+		GetTypeName() string
+	},
+	TT constraints.EntityTypeObject[T],
+](
+	cl client.Client,
+	index string,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		auth, ok := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
+		if !ok {
+			return nil
+		}
+		var (
+			l    TList
+			lPtr TListPtr = &l
+		)
+		if err := cl.List(ctx, lPtr,
+			// TODO: change this when cross namespace refs are allowed.
+			client.InNamespace(auth.GetNamespace()),
+			client.MatchingFields{
+				index: auth.Name,
+			},
+		); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests[T, TT](lPtr.GetItems())
 	}
 }

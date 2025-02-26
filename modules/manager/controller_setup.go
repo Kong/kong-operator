@@ -713,6 +713,10 @@ func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, 
 			Object:       &konnectv1alpha1.KonnectCloudGatewayNetwork{},
 			IndexOptions: konnect.IndexOptionsForKonnectCloudGatewayNetwork(),
 		},
+		{
+			Object:       &konnectv1alpha1.KonnectExtension{},
+			IndexOptions: konnect.IndexOptionsForKonnectExtension(),
+		},
 	}
 
 	for _, t := range types {

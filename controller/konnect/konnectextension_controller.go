@@ -55,9 +55,20 @@ func NewKonnectExtensionReconciler(
 func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&konnectv1alpha1.KonnectExtension{}).
-		Watches(&operatorv1beta1.DataPlane{}, handler.EnqueueRequestsFromMapFunc(r.listDataPlaneExtensionsReferenced)).
+		Watches(
+			&operatorv1beta1.DataPlane{},
+			handler.EnqueueRequestsFromMapFunc(r.listDataPlaneExtensionsReferenced),
+		).
+		Watches(
+			&konnectv1alpha1.KonnectAPIAuthConfiguration{},
+			handler.EnqueueRequestsFromMapFunc(
+				enqueueObjectsForKonnectAPIAuthConfiguration[konnectv1alpha1.KonnectExtensionList](
+					mgr.GetClient(),
+					IndexFieldKonnectExtensionOnAPIAuthConfiguration,
+				),
+			),
+		).
 		// TODO: watch secrets https://github.com/Kong/gateway-operator/issues/1210
-		// TODO: watch KonnectAPIAuthConfiguration https://github.com/Kong/gateway-operator/issues/1211
 		Complete(r)
 }
 
