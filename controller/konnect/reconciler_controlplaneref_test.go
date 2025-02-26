@@ -331,7 +331,7 @@ func TestGetControlPlaneRef(t *testing.T) {
 				},
 				Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{},
 			},
-			mo.None[commonv1alpha1.ControlPlaneRef](),
+			mo.Some(commonv1alpha1.ControlPlaneRef{}),
 		),
 		testGetControlPlaneRef(
 			"control plane ref for KonnectCloudGatewayDataPlaneGroupConfiguration",

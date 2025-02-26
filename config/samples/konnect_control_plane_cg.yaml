@@ -43,7 +43,7 @@ spec:
         type: konnectID
         konnectID: "222222222222222222222222222222222222"
       autoscale:
-        type: ConfigurationDataPlaneGroupAutoscaleStatic
+        type: static
         static:
           instance_type: small
           requested_instances: 2
@@ -56,7 +56,7 @@ spec:
         type: konnectID
         konnectID: "111111111111111111111111111111111111"
       autoscale:
-        type: ConfigurationDataPlaneGroupAutoscaleStatic
+        type: static
         static:
           instance_type: small
           requested_instances: 2
