@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
 	"strings"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -116,49 +115,6 @@ func ParseSDKErrorBody(body string) (sdkErrorBody, error) {
 	return sdkErr, nil
 }
 
-const (
-	validationErrorMessage  = "validation error"
-	apiErrorOccurredMessage = "API error occurred"
-)
-
-// ErrorIsSDKErrorTypeField returns true if the provided error is a type field error.
-// These types of errors are unrecoverable and should be covered by CEL validation
-// rules on CRDs but just in case some of those are left unhandled we can handle
-// them by reacting to SDKErrors of type ERROR_TYPE_FIELD.
-//
-// Exemplary body:
-//
-//	{
-//		"code": 3,
-//		"message": "validation error: length must be <= 128, but got 138",
-//		"details": [
-//			{
-//				"@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
-//				"type": "ERROR_TYPE_FIELD",
-//				"field": "tags[0]",
-//				"messages": [
-//					"length must be <= 128, but got 138"
-//				]
-//			}
-//		]
-//	}
-func ErrorIsSDKErrorTypeField(err error) bool {
-	var errSDK *sdkkonnecterrs.SDKError
-	if !errors.As(err, &errSDK) {
-		return false
-	}
-
-	errSDKBody, parseErr := ParseSDKErrorBody(errSDK.Body)
-	if parseErr != nil {
-		return false
-	}
-	// body.message includes the reason why the validation fails, so we match the message by `HasPrefix`.
-	return strings.HasPrefix(errSDKBody.Message, validationErrorMessage) &&
-		slices.ContainsFunc(errSDKBody.Details, func(d sdkErrorDetails) bool {
-			return d.Type == "ERROR_TYPE_FIELD"
-		})
-}
-
 // ErrorIsSDKError403 returns true if the provided error is a 403 Forbidden error.
 // This can happen when the requested operation is not permitted.
 // Example SDKError body (SDKError message is a separate field from body message):
@@ -182,6 +138,17 @@ func ErrorIsSDKError403(err error) bool {
 	}
 
 	return errSDK.StatusCode == 403
+}
+
+// ErrorIsSDKError400 returns true if the provided error is a 400 BadRequestError.
+// This can happen when the requested entity fails the validation.
+func ErrorIsSDKError400(err error) bool {
+	var errSDK *sdkkonnecterrs.SDKError
+	if !errors.As(err, &errSDK) {
+		return false
+	}
+
+	return errSDK.StatusCode == 400
 }
 
 // ErrorIsSDKBadRequestError returns true if the provided error is a BadRequestError.
@@ -325,8 +292,8 @@ func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 	// it to the caller.
 	// We cannot recover from this error as this requires user to change object's
 	// manifest. The entity's status is already updated with the error.
-	if ErrorIsSDKErrorTypeField(err) ||
-		ErrorIsSDKBadRequestError(err) ||
+	if ErrorIsSDKBadRequestError(err) ||
+		ErrorIsSDKError400(err) ||
 		ErrorIsSDKError403(err) {
 		log.Debug(logger, "ignoring unrecoverable API error, consult object's status for details", "err", err)
 		return nil
