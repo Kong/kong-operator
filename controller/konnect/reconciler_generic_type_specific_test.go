@@ -25,7 +25,7 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 			wantCondition   metav1.Condition
 		}{
 			{
-				name: "no credentials and outdated status",
+				name: "no credentials",
 				consumer: &configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-consumer",

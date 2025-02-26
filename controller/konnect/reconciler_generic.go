@@ -213,11 +213,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 						"finalizer", KonnectCleanupFinalizer,
 					)
 				}
+				return ctrl.Result{}, nil
 			}
-			return ctrl.Result{}, nil
 		}
 
-		return ctrl.Result{}, err
+		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if !res.IsZero() {
 		return res, nil
 	}
