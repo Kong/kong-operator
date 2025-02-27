@@ -24,9 +24,10 @@ metadata:
   name: my-konnect-config
   namespace: default
 spec:
-  controlPlaneRef:
-    type: konnectID
-    konnectID: a6554c4c-79a6-4db7-b7a4-201c0cf746ba 
+  konnectControlPlane:
+    controlPlaneRef:
+      type: konnectID
+      konnectID: a6554c4c-79a6-4db7-b7a4-201c0cf746ba 
   dataPlaneClientAuth:
     certificateSecret:
       provisioning: Manual

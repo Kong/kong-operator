@@ -57,6 +57,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 		konnectExt    *konnectv1alpha1.KonnectExtension
 		secret        *corev1.Secret
 		expectedError error
+		expectedEnvs  []corev1.EnvVar
 	}{
 		{
 			name: "no extensions",
@@ -243,6 +244,113 @@ func TestApplyKonnectExtension(t *testing.T) {
 				Status: konnectExtensionStatus,
 			},
 		},
+		{
+			name: "Extension with DataPlane labels",
+			dataPlane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Extensions: []commonv1alpha1.ExtensionRef{
+							{
+								Group: konnectv1alpha1.SchemeGroupVersion.Group,
+								Kind:  konnectv1alpha1.KonnectExtensionKind,
+								NamespacedRef: commonv1alpha1.NamespacedRef{
+									Name: "konnect-ext",
+								},
+							},
+						},
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name: "proxy",
+												Env: []corev1.EnvVar{
+													{
+														Name:  "KONG_TEST",
+														Value: "test",
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			konnectExt: &konnectv1alpha1.KonnectExtension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "konnect-ext",
+					Namespace: "default",
+				},
+				Spec: konnectv1alpha1.KonnectExtensionSpec{
+					DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+						"environment": "prod",
+						"region":      "us-west",
+					},
+				},
+				Status: konnectExtensionStatus,
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_CLUSTER_CERT",
+					Value: "/etc/secrets/kong-cluster-cert/tls.crt",
+				},
+				{
+					Name:  "KONG_CLUSTER_CERT_KEY",
+					Value: "/etc/secrets/kong-cluster-cert/tls.key",
+				},
+				{
+					Name:  "KONG_CLUSTER_CONTROL_PLANE",
+					Value: "7078163243.us.cp0.konghq.com:443",
+				},
+				{
+					Name:  "KONG_CLUSTER_DP_LABELS",
+					Value: "environment:prod,region:us-west",
+				},
+				{
+					Name:  "KONG_CLUSTER_MTLS",
+					Value: "pki",
+				},
+				{
+					Name:  "KONG_CLUSTER_SERVER_NAME",
+					Value: "7078163243.us.cp0.konghq.com",
+				},
+				{
+					Name:  "KONG_CLUSTER_TELEMETRY_ENDPOINT",
+					Value: "7078163243.us.tp0.konghq.com:443",
+				},
+				{
+					Name:  "KONG_CLUSTER_TELEMETRY_SERVER_NAME",
+					Value: "7078163243.us.tp0.konghq.com",
+				},
+				{
+					Name:  "KONG_KONNECT_MODE",
+					Value: "on",
+				},
+				{
+					Name:  "KONG_LUA_SSL_TRUSTED_CERTIFICATE",
+					Value: "system",
+				},
+				{
+					Name:  "KONG_ROLE",
+					Value: "data_plane",
+				},
+				{
+					Name:  "KONG_TEST",
+					Value: "test",
+				},
+				{
+					Name:  "KONG_VITALS",
+					Value: "off",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -260,29 +368,36 @@ func TestApplyKonnectExtension(t *testing.T) {
 			err := ApplyKonnectExtension(t.Context(), cl, dataplane)
 			if tt.expectedError != nil {
 				require.ErrorIs(t, err, tt.expectedError)
-			} else {
-				require.NoError(t, err)
-				requiredEnv := []corev1.EnvVar{}
-				if tt.dataPlane.Spec.Deployment.PodTemplateSpec != nil {
-					if container := k8sutils.GetPodContainerByName(&tt.dataPlane.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName); container != nil {
-						requiredEnv = container.Env
-					}
-				}
+				return
+			}
 
-				if tt.konnectExt != nil {
-					requiredEnv = append(requiredEnv, getKongInKonnectEnvVars(*tt.konnectExt)...)
-					sort.Sort(k8sutils.SortableEnvVars(requiredEnv))
-					assert.NotNil(t, dataplane.Spec.Deployment.PodTemplateSpec)
-					assert.Equal(t, requiredEnv, dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Env)
+			require.NoError(t, err)
+			requiredEnv := []corev1.EnvVar{}
+			if tt.dataPlane.Spec.Deployment.PodTemplateSpec != nil {
+				if container := k8sutils.GetPodContainerByName(&tt.dataPlane.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName); container != nil {
+					requiredEnv = container.Env
 				}
+			}
+
+			if tt.konnectExt != nil {
+				requiredEnv = append(requiredEnv, getKongInKonnectEnvVars(*tt.konnectExt)...)
+				sort.Sort(k8sutils.SortableEnvVars(requiredEnv))
+				require.NotNil(t, dataplane.Spec.Deployment.PodTemplateSpec)
+				assert.Equal(t, requiredEnv, dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Env)
+			}
+
+			if len(tt.expectedEnvs) > 0 {
+				assert.Equal(t, tt.expectedEnvs, requiredEnv)
 			}
 		})
 	}
 }
 
-func getKongInKonnectEnvVars(konnectExt konnectv1alpha1.KonnectExtension) []corev1.EnvVar {
+func getKongInKonnectEnvVars(
+	konnectExt konnectv1alpha1.KonnectExtension,
+) []corev1.EnvVar {
 	envSet := []corev1.EnvVar{}
-	for k, v := range dputils.KongInKonnectDefaults(konnectExt.Status) {
+	for k, v := range dputils.KongInKonnectDefaults(konnectExt.Spec.DataPlaneLabels, konnectExt.Status) {
 		envSet = append(envSet, corev1.EnvVar{
 			Name:  k,
 			Value: v,

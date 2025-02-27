@@ -193,7 +193,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		sdkops.SDKToken(token),
 	)
 
-	cp, err := ops.GetControlPlaneByID(ctx, sdk.GetControlPlaneSDK(), *ext.Spec.ControlPlaneRef.KonnectID)
+	cp, err := ops.GetControlPlaneByID(ctx, sdk.GetControlPlaneSDK(), *ext.Spec.KonnectControlPlane.ControlPlaneRef.KonnectID)
 	if err != nil {
 		_, err := patch.StatusWithCondition(
 			ctx, r.Client, &ext,
