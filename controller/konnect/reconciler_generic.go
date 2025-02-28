@@ -194,13 +194,14 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		// If the referenced KongConsumer is not found or is being deleted
-		// and the object is being deleted, remove the finalizer and let the
-		// deletion proceed without trying to delete the entity from Konnect
+		// then remove the finalizer and let the deletion proceed without trying to delete the entity from Konnect
 		// as the KongConsumer deletion will (or already has - in case of the consumer being gone)
 		// take care of it on the Konnect side.
 		if errors.As(err, &ReferencedKongConsumerDoesNotExist{}) ||
 			errors.As(err, &ReferencedKongConsumerIsBeingDeleted{}) {
-			if !ent.GetDeletionTimestamp().IsZero() {
+			if ok, errRef := objectHasDeletedKongConsumerOwner(ent, r.Client.Scheme(), err); errRef != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to check if object has KongConsumer owner: %w", errRef)
+			} else if ok {
 				if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 					if err := r.Client.Update(ctx, ent); err != nil {
 						if k8serrors.IsConflict(err) {

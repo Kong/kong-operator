@@ -12,6 +12,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
+	"github.com/kong/gateway-operator/pkg/consts"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
@@ -31,13 +32,14 @@ func handleTypeSpecific[
 	switch e := any(ent).(type) {
 	case *configurationv1.KongConsumer:
 		updated, isProblem = handleKongConsumerSpecific(ctx, cl, e)
+		var (
+			res ctrl.Result
+			err error
+		)
 		if updated {
-			res, err := setProgrammedStatusConditionBasedOnOtherConditions(ctx, cl, e)
-			return true, res, err
+			res, err = setProgrammedStatusConditionBasedOnOtherConditions(ctx, cl, e)
 		}
-		if isProblem {
-			return true, ctrl.Result{}, nil
-		}
+		return isProblem, res, err
 	default:
 	}
 
@@ -65,14 +67,22 @@ func handleKongConsumerSpecific(
 		}
 	}
 	if len(errs) == 0 {
-		return false, false
+		updated := patch.SetStatusWithConditionIfDifferent(
+			c,
+			configurationv1.ConditionKongConsumerCredentialSecretRefsValid,
+			metav1.ConditionTrue,
+			consts.ConditionReason(configurationv1.ReasonKongConsumerCredentialSecretRefsValid),
+			"",
+		)
+
+		return updated, false
 	}
 
 	updated := patch.SetStatusWithConditionIfDifferent(
 		c,
-		"CredentialSecretRefValid",
+		configurationv1.ConditionKongConsumerCredentialSecretRefsValid,
 		metav1.ConditionFalse,
-		"CredentialSecretRefInvalid",
+		consts.ConditionReason(configurationv1.ReasonKongConsumerCredentialSecretRefInvalid),
 		errors.Join(errs...).Error(),
 	)
 

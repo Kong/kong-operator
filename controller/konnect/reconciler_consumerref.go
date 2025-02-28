@@ -2,12 +2,14 @@ package konnect
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -199,4 +201,41 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func objectHasDeletedKongConsumerOwner(
+	obj client.Object,
+	scheme *runtime.Scheme,
+	err error,
+) (bool, error) {
+	var (
+		nn                types.NamespacedName
+		errDoesNotExist   ReferencedKongConsumerDoesNotExist
+		errIsBeingDeleted ReferencedKongConsumerIsBeingDeleted
+	)
+
+	switch {
+	case errors.As(err, &errDoesNotExist):
+		nn = errDoesNotExist.Reference
+	case errors.As(err, &errIsBeingDeleted):
+		nn = errIsBeingDeleted.Reference
+	default:
+		return false, nil
+	}
+
+	c := configurationv1.KongConsumer{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "KongConsumer",
+			APIVersion: "configuration.konghq.com/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nn.Name,
+			Namespace: nn.Namespace,
+		},
+	}
+	ok, err := controllerutil.HasOwnerReference(obj.GetOwnerReferences(), &c, scheme)
+	if err != nil {
+		return false, err
+	}
+	return ok, nil
 }

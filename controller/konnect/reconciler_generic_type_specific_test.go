@@ -25,7 +25,7 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 			wantCondition   metav1.Condition
 		}{
 			{
-				name: "no credentials",
+				name: "no credentials and outdated status",
 				consumer: &configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-consumer",
@@ -33,17 +33,77 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 					},
 					Credentials: []string{},
 				},
+				wantStop:      true,
+				wantIsProblem: false,
+			},
+			{
+				name: "no credentials and outdated status",
+				consumer: &configurationv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-consumer",
+						Namespace:  "test",
+						Generation: 1,
+					},
+					Credentials: []string{},
+					Status: configurationv1.KongConsumerStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:               configurationv1.ConditionKongConsumerCredentialSecretRefsValid,
+								Status:             metav1.ConditionTrue,
+								Reason:             configurationv1.ReasonKongConsumerCredentialSecretRefsValid,
+								ObservedGeneration: 1,
+							},
+						},
+					},
+				},
 				wantStop:      false,
 				wantIsProblem: false,
 			},
 			{
-				name: "all credentials exist",
+				name: "all credentials exist, status needs an update",
 				consumer: &configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-consumer",
 						Namespace: "test",
 					},
 					Credentials: []string{"secret1", "secret2"},
+				},
+				existingSecrets: []client.Object{
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "secret1",
+							Namespace: "test",
+						},
+					},
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "secret2",
+							Namespace: "test",
+						},
+					},
+				},
+				wantStop:      true,
+				wantIsProblem: false,
+			},
+			{
+				name: "all credentials exist, status is up to date",
+				consumer: &configurationv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-consumer",
+						Namespace:  "test",
+						Generation: 1,
+					},
+					Credentials: []string{"secret1", "secret2"},
+					Status: configurationv1.KongConsumerStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:               configurationv1.ConditionKongConsumerCredentialSecretRefsValid,
+								Status:             metav1.ConditionTrue,
+								Reason:             configurationv1.ReasonKongConsumerCredentialSecretRefsValid,
+								ObservedGeneration: 1,
+							},
+						},
+					},
 				},
 				existingSecrets: []client.Object{
 					&corev1.Secret{
@@ -88,9 +148,9 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 				wantStop:      true,
 				wantIsProblem: true,
 				wantCondition: metav1.Condition{
-					Type:    "CredentialSecretRefValid",
+					Type:    configurationv1.ConditionKongConsumerCredentialSecretRefsValid,
 					Status:  metav1.ConditionFalse,
-					Reason:  "CredentialSecretRefInvalid",
+					Reason:  configurationv1.ReasonKongConsumerCredentialSecretRefInvalid,
 					Message: "secrets \"missing-secret\" not found",
 				},
 			},
@@ -106,9 +166,9 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 				wantStop:      true,
 				wantIsProblem: true,
 				wantCondition: metav1.Condition{
-					Type:    "CredentialSecretRefValid",
+					Type:    configurationv1.ConditionKongConsumerCredentialSecretRefsValid,
 					Status:  metav1.ConditionFalse,
-					Reason:  "CredentialSecretRefInvalid",
+					Reason:  configurationv1.ReasonKongConsumerCredentialSecretRefInvalid,
 					Message: "secrets \"missing-secret1\" not found\nsecrets \"missing-secret2\" not found",
 				},
 			},
@@ -137,7 +197,7 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 							assert.Equal(t, tc.wantCondition.Message, cond.Message)
 						}
 					}
-					assert.True(t, hasCondition, "Expected condition not found")
+					assert.Truef(t, hasCondition, "Expected condition not found, conditions %v", tc.consumer.Status.Conditions)
 				}
 			})
 		}
