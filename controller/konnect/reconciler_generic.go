@@ -453,7 +453,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			// - add the Org ID and Server URL to the status so that the resource can be
 			//   cleaned up from Konnect on deletion and also so that the status can
 			//   indicate where the corresponding Konnect entity is located.
-			setServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
+			setStatusServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
 		}
 
 		// Regardless of the error, patch the status as it can contain the Konnect ID,
@@ -481,11 +481,17 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 
 	res, err = ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecoder, ent)
-	if res, errHandleStatus := handleStatusUpdate(ctx, ent, r.Client, serverURL, apiAuth.Status.OrganizationID, err); errHandleStatus != nil || !res.IsZero() {
-		return res, errHandleStatus
+	// Set the server URL and org ID regardless of the error.
+	setStatusServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
+	// Update the status of the object regardless of the error.
+	if errUpd := r.Client.Status().Update(ctx, ent); errUpd != nil {
+		if k8serrors.IsConflict(errUpd) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("failed to update in cluster resource after Konnect update: %w %w", errUpd, err)
 	}
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to update object: %w", err)
+		logger.Error(err, "failed to update")
 	} else if !res.IsZero() {
 		return res, nil
 	}
@@ -498,28 +504,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}, nil
 }
 
-func handleStatusUpdate[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
-](
-	ctx context.Context,
-	ent TEnt,
-	cl client.StatusClient,
-	serverURL ops.ServerURL,
-	orgID string,
-	err error,
-) (ctrl.Result, error) {
-	setServerURLAndOrgID(ent, serverURL, orgID)
-	if errUpd := cl.Status().Update(ctx, ent); errUpd != nil {
-		if k8serrors.IsConflict(errUpd) {
-			return ctrl.Result{Requeue: true}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("failed to update in cluster resource after Konnect update: %w %w", errUpd, err)
-	}
-	return ctrl.Result{}, nil
-}
-
-func setServerURLAndOrgID(
+func setStatusServerURLAndOrgID(
 	ent interface {
 		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
 	},
