@@ -117,6 +117,18 @@ func TestKongService(t *testing.T) {
 		serviceToPatch.Spec.Port = port
 		require.NoError(t, clientNamespaced.Patch(ctx, serviceToPatch, client.MergeFrom(createdService)))
 
+		t.Log("Waiting for Service to be patched")
+		watchFor(t, ctx, w, apiwatch.Modified,
+			assertsAnd(
+				objectMatchesName(createdService),
+				objectMatchesKonnectID[*configurationv1alpha1.KongService](serviceID),
+				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongService](),
+				func(s *configurationv1alpha1.KongService) bool {
+					return s.Spec.Port == port
+				},
+			),
+			"KongService didn't get patched",
+		)
 		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Service deletion")
@@ -183,7 +195,6 @@ func TestKongService(t *testing.T) {
 			},
 			deploy.WithKonnectIDControlPlaneRef(cp),
 		)
-		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for Service to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongService) bool {
@@ -195,6 +206,8 @@ func TestKongService(t *testing.T) {
 			}
 			return kt.GetKonnectID() == serviceID && k8sutils.IsProgrammed(kt)
 		}, "KongService didn't get Programmed status condition or didn't get the correct (service-12345) Konnect ID assigned")
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 	})
 
 	t.Run("trying to attach KongService to KonnectGatewayControlPlane of type KIC fails (due to CP being read only)", func(t *testing.T) {

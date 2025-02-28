@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
@@ -70,15 +69,29 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 			return ctrl.Result{}, fmt.Errorf("can't get the referenced KongService %s: %w", nn, err)
 		}
 
+		old := ent.DeepCopyObject().(TEnt)
+
 		// If referenced KongService is being deleted, return an error so that we
 		// can remove the entity from Konnect first.
 		if delTimestamp := svc.GetDeletionTimestamp(); !delTimestamp.IsZero() {
+			_ = patch.SetStatusWithConditionIfDifferent(ent,
+				konnectv1alpha1.KongServiceRefValidConditionType,
+				metav1.ConditionFalse,
+				konnectv1alpha1.KongServiceRefReasonInvalid,
+				fmt.Sprintf("Referenced KongService %s is being deleted", nn),
+			)
+			_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
+			if err != nil {
+				if k8serrors.IsConflict(err) {
+					return ctrl.Result{Requeue: true}, nil
+				}
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{}, ReferencedKongServiceIsBeingDeleted{
 				Reference: nn,
 			}
 		}
 
-		old := ent.DeepCopyObject().(TEnt)
 		cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &svc)
 		if !ok || cond.Status != metav1.ConditionTrue {
 			ent.SetKonnectID("")
@@ -98,16 +111,6 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 			}
 
 			return ctrl.Result{Requeue: true}, nil
-		}
-
-		if err := controllerutil.SetOwnerReference(&svc, ent, cl.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
-		}
-		if err := cl.Patch(ctx, ent, client.MergeFrom(old)); err != nil {
-			if k8serrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-			return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
 		}
 
 		// TODO(pmalek): make this generic.

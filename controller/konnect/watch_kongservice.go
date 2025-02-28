@@ -1,11 +1,15 @@
 package konnect
 
 import (
+	"context"
+
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -52,5 +56,45 @@ func KongServiceReconciliationWatchOptions(
 				),
 			)
 		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongRoute{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKongServiceForKongRoute(),
+				),
+			)
+		},
+	}
+}
+
+// enqueueKongServiceForKongRoute returns a function that enqueues
+// a reconcile.Request for the KongService referenced by the KongRoute.
+// This is useful for situations like KongRoute deletion where we need
+// to reconcile the KongService to unblock its deletion (Konnect API will block
+// service deletion that has routes referencing it).
+func enqueueKongServiceForKongRoute() func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		kongRoute, ok := obj.(*configurationv1alpha1.KongRoute)
+		if !ok {
+			return nil
+		}
+
+		serviceRef, ok := getServiceRef(kongRoute).Get()
+		if !ok {
+			return nil
+		}
+
+		if serviceRef.Type != configurationv1alpha1.ServiceRefNamespacedRef {
+			return nil
+		}
+
+		return []reconcile.Request{
+			{
+				NamespacedName: types.NamespacedName{
+					Namespace: kongRoute.Namespace,
+					Name:      serviceRef.NamespacedRef.Name,
+				},
+			},
+		}
 	}
 }
