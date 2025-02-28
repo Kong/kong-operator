@@ -58,6 +58,7 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 	ls := metav1.LabelSelector{
 		// A secret ust have `konghq.com/konnect-dp-cert` label to be watched by the controller.
 		// This constraint is added to prevent from watching all secrets which may cause high resource consumption.
+		// TODO: https://github.com/Kong/gateway-operator/issues/1255 set label constraints of `Secret`s on manager level if possible.
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			{
 				Key:      SecretKonnectDataPlaneCertificateLabel,
