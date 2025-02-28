@@ -192,6 +192,10 @@ const (
 	// used with the DataPlaneCertificateProvisioned condition type indicating that the
 	// the referenced DataPlane client certificate is not found.
 	DataPlaneCertificateProvisionedReasonRefNotFound = "RefNotFound"
+	// DataPlaneCertificateProvisionedReasonInvalidSecret is the reason
+	// used with the DataPlaneCertificateProvisioned condition type indicating that the
+	// the referenced DataPlane client certificate secret is invalid.
+	DataPlaneCertificateProvisionedReasonInvalidSecret = "InvalidSecret"
 	// DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed is the reason
 	// used with the DataPlaneCertificateProvisioned condition type indicating that the
 	// the DataPlane client certificate creation in Konnect has failed.
