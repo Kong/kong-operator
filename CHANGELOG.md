@@ -93,8 +93,8 @@
   Cloud Gateway Network entities.
   [#1136](https://github.com/Kong/gateway-operator/pull/1136)
 - Reconcile affected `KonnectExtension`s when the `Secret` used as Dataplane
-  certificate is modified. A secret must has `konghq.com/konnect-dp-cert` label
-  to trigger the reconciliation.
+  certificate is modified. A secret must have the `konghq.com/konnect-dp-cert`
+  label to trigger the reconciliation.
   [#1250](https://github.com/Kong/gateway-operator/pull/1250)
 
 ### Changed

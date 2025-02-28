@@ -15,7 +15,7 @@ import (
 
 const (
 	// SecretKonnectDataPlaneCertificateLabel is the label to mark that the secret is used as a Konnect DP certificate.
-	// A secret must has the label to be watched by the KonnectExtension reconciler.
+	// A secret must have the label to be watched by the KonnectExtension reconciler.
 	SecretKonnectDataPlaneCertificateLabel = "konghq.com/konnect-dp-cert" //nolint:gosec
 )
 

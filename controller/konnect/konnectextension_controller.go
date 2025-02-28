@@ -56,7 +56,7 @@ func NewKonnectExtensionReconciler(
 // SetupWithManager sets up the controller with the Manager.
 func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	ls := metav1.LabelSelector{
-		// A secret must has `konghq.com/konnect-dp-cert` label to be watched by the controller.
+		// A secret ust have `konghq.com/konnect-dp-cert` label to be watched by the controller.
 		// This constraint is added to prevent from watching all secrets which may cause high resource consumption.
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			{

@@ -24,7 +24,7 @@ func IndexOptionsForKonnectExtension() []ReconciliationIndexOption {
 		{
 			IndexObject:  &konnectv1alpha1.KonnectExtension{},
 			IndexField:   IndexFieldKonnectExtensionOnSecrets,
-			ExtractValue: konnectExensionSecertRef,
+			ExtractValue: konnectExtensionSecretRef,
 		},
 	}
 }
@@ -38,7 +38,7 @@ func konnectExtensionAPIAuthConfigurationRef(object client.Object) []string {
 	return []string{ext.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
 }
 
-func konnectExensionSecertRef(obj client.Object) []string {
+func konnectExtensionSecretRef(obj client.Object) []string {
 	ext, ok := obj.(*konnectv1alpha1.KonnectExtension)
 	if !ok {
 		return nil
