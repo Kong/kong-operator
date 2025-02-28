@@ -515,6 +515,11 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 	deploymentLabels := client.MatchingLabels{
 		consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,
 	}
+	// if the dataplane is configured with Konnect, the status/ready endpoint should be set as the readiness probe.
+	if _, konnectApplied := k8sutils.GetCondition(consts.KonnectExtensionAppliedType, dataplane); konnectApplied {
+		deploymentOpts = append(deploymentOpts, statusReadyEndpointDeploymentOpt(dataplane))
+	}
+
 	deploymentBuilder := NewDeploymentBuilder(logger.WithName("deployment_builder"), r.Client).
 		WithBeforeCallbacks(r.Callbacks.BeforeDeployment).
 		WithAfterCallbacks(r.Callbacks.AfterDeployment).
