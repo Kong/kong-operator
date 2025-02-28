@@ -181,6 +181,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),
 	}
 
+	// if the dataplane is configured with Konnect, the status/ready endpoint should be set as the readiness probe.
+	if _, konnectApplied := k8sutils.GetCondition(consts.KonnectExtensionAppliedType, dataplane); konnectApplied {
+		deploymentOpts = append(deploymentOpts, statusReadyEndpointDeploymentOpt(dataplane))
+	}
+
 	log.Trace(logger, "ensuring generation of deployment configuration for KongPluginInstallations configured for DataPlane")
 	kpisForDeployment, requeue, err := ensureMappedConfigMapToKongPluginInstallationForDataPlane(ctx, logger, r.Client, dataplane)
 	if err != nil {
@@ -253,6 +258,14 @@ func labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane *operatorv1
 			d.Labels[consts.OperatorLabelSelector] = dataplane.Status.Selector
 			d.Spec.Selector.MatchLabels[consts.OperatorLabelSelector] = dataplane.Status.Selector
 			d.Spec.Template.Labels[consts.OperatorLabelSelector] = dataplane.Status.Selector
+		}
+	}
+}
+
+func statusReadyEndpointDeploymentOpt(_ *operatorv1beta1.DataPlane) func(s *appsv1.Deployment) {
+	return func(d *appsv1.Deployment) {
+		if container := k8sutils.GetPodContainerByName(&d.Spec.Template.Spec, consts.DataPlaneProxyContainerName); container != nil {
+			container.ReadinessProbe = k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint)
 		}
 	}
 }
