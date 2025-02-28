@@ -40,14 +40,13 @@
   With this migration process, we have removed the `api` and `pkg/clientset` from the KGO repo.
   This is a breaking change which requires manual action for projects that use operator's Go APIs.
   In order to migrate please use the import paths from the [kong/kubernetes-configuration](kubernetes-configuration) repo instead.
-- Support for the `konnect-extension.gateway-operator.konghq.com` CRD has been interrupted. The new
-  API `konnect-extension.konnect.konghq.com` must be used instead.
-  [#1183](https://github.com/Kong/gateway-operator/pull/1183)
-  
   For example:
   `github.com/kong/gateway-operator/api/v1beta1` becomes 
   `github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1`.
   [#1148](https://github.com/Kong/gateway-operator/pull/1148)
+- Support for the `konnect-extension.gateway-operator.konghq.com` CRD has been interrupted. The new
+  API `konnect-extension.konnect.konghq.com` must be used instead.
+  [#1183](https://github.com/Kong/gateway-operator/pull/1183)
 
 [kubernetes-configuration]: https://github.com/Kong/kubernetes-configuration
 
