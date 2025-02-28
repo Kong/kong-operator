@@ -142,7 +142,9 @@ linters-settings:
           - go.uber.org/zap/zapcore
   forbidigo:
     forbid:
-      - p: ^.*Dataplane.*$
+      # Add DataplaneG (for DataplaneGroup since there's no lookahead support here)
+      # exception as that's coming from the sdk and we have no control over it.
+      - p: ^.*Dataplane[^G].*$
         msg: "Please use camel case 'DataPlane' instead of 'Dataplane'"
       - p: ^.*Controlplane.*$
         msg: "Please use camel case 'ControlPlane' instead of 'Controlplane'"

@@ -78,9 +78,9 @@ func deleteKonnectNetwork(
 	return nil
 }
 
-// getKonnectNetworkForUID returns the Konnect ID of the Konnect Network
-// that matches the UID of the provided Konnect Network.
-func getKonnectNetworkForUID(
+// getKonnectNetworkMatchingSpecName returns the Konnect ID of the Konnect Network
+// that matches the name of the provided Konnect Network.
+func getKonnectNetworkMatchingSpecName(
 	ctx context.Context,
 	sdk sdkops.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayNetwork,

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/stretchr/testify/require"
 )
@@ -236,6 +237,181 @@ func TestSDKErrorIsConflict(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := SDKErrorIsConflict(tt.err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestErrorIsDataPlaneGroupConflictProposedConfigIsTheSame(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "not a ConflictError",
+			err:  errors.New("not a conflict error"),
+			want: false,
+		},
+		{
+			name: "ConflictError with non-int code type",
+			err: &sdkkonnecterrs.ConflictError{
+				Status: 409.0,
+				Detail: "Proposed configuration and current configuration are identical",
+			},
+			want: true,
+		},
+		{
+			name: "ConflictError with wrong code",
+			err: &sdkkonnecterrs.ConflictError{
+				Status: 400,
+				Detail: "Proposed configuration and current configuration are identical",
+			},
+			want: false,
+		},
+		{
+			name: "ConflictError with non-string message",
+			err: &sdkkonnecterrs.ConflictError{
+				Status: 409,
+				Detail: 12345,
+			},
+			want: false,
+		},
+		{
+			name: "ConflictError with message missing expected substring",
+			err: &sdkkonnecterrs.ConflictError{
+				Status: 409,
+				Detail: "Some other conflict detail",
+			},
+			want: false,
+		},
+		{
+			name: "Valid ConflictError with matching float code and message",
+			err: &sdkkonnecterrs.ConflictError{
+				Status: 409.0,
+				Detail: "Error: Proposed configuration and current configuration are identical, no changes required",
+			},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := errorIsDataPlaneGroupConflictProposedConfigIsTheSame(tt.err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestErrorIsDataPlaneGroupBadRequestPreviousConfigNotFinishedProvisioning(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "error is not BadRequestError",
+			err:  errors.New("not a bad request error"),
+			want: false,
+		},
+		{
+			name: "BadRequestError with empty invalid parameters",
+			err:  &sdkkonnecterrs.BadRequestError{InvalidParameters: []sdkkonnectcomp.InvalidParameters{}},
+			want: false,
+		},
+		{
+			name: "BadRequestError with invalid parameter of wrong type",
+			err: &sdkkonnecterrs.BadRequestError{
+				InvalidParameters: []sdkkonnectcomp.InvalidParameters{
+					{
+						Type: "some_wrong_type",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "BadRequestError with matching type but nil InvalidParameterStandard",
+			err: &sdkkonnecterrs.BadRequestError{
+				InvalidParameters: []sdkkonnectcomp.InvalidParameters{
+					{
+						Type: sdkkonnectcomp.InvalidParametersTypeInvalidParameterStandard,
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "BadRequestError with matching type, but non-matching field",
+			err: &sdkkonnecterrs.BadRequestError{
+				InvalidParameters: []sdkkonnectcomp.InvalidParameters{
+					{
+						Type: sdkkonnectcomp.InvalidParametersTypeInvalidParameterStandard,
+						InvalidParameterStandard: &sdkkonnectcomp.InvalidParameterStandard{
+							Field:  "wrong_field",
+							Reason: "Data-plane groups in the previous configuration have not finished provisioning",
+						},
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "BadRequestError with matching type and field but non-matching reason",
+			err: &sdkkonnecterrs.BadRequestError{
+				InvalidParameters: []sdkkonnectcomp.InvalidParameters{
+					{
+						Type: sdkkonnectcomp.InvalidParametersTypeInvalidParameterStandard,
+						InvalidParameterStandard: &sdkkonnectcomp.InvalidParameterStandard{
+							Field:  "dataplane_groups",
+							Reason: "some other reason",
+						},
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "BadRequestError with valid matching invalid parameter",
+			err: &sdkkonnecterrs.BadRequestError{
+				InvalidParameters: []sdkkonnectcomp.InvalidParameters{
+					{
+						Type: sdkkonnectcomp.InvalidParametersTypeInvalidParameterStandard,
+						InvalidParameterStandard: &sdkkonnectcomp.InvalidParameterStandard{
+							Field:  "dataplane_groups",
+							Reason: "Error: Data-plane groups in the previous configuration have not finished provisioning",
+						},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "BadRequestError with multiple parameters where one matches",
+			err: &sdkkonnecterrs.BadRequestError{
+				InvalidParameters: []sdkkonnectcomp.InvalidParameters{
+					{
+						Type: sdkkonnectcomp.InvalidParametersTypeInvalidParameterStandard,
+						InvalidParameterStandard: &sdkkonnectcomp.InvalidParameterStandard{
+							Field:  "some_field",
+							Reason: "irrelevant reason",
+						},
+					},
+					{
+						Type: sdkkonnectcomp.InvalidParametersTypeInvalidParameterStandard,
+						InvalidParameterStandard: &sdkkonnectcomp.InvalidParameterStandard{
+							Field:  "dataplane_groups",
+							Reason: "Data-plane groups in the previous configuration have not finished provisioning fully",
+						},
+					},
+				},
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := errorIsDataPlaneGroupBadRequestPreviousConfigNotFinishedProvisioning(tt.err)
 			require.Equal(t, tt.want, got)
 		})
 	}

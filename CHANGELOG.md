@@ -99,6 +99,9 @@
 - When the `DataPlane` is configured in Konnect, the `/status/ready` endpoint
   is set as the readiness probe.
   [#1235](https://github.com/Kong/gateway-operator/pull/1253)
+- Added support for `KonnectDataPlaneGroupConfiguration` CRD which can manage Konnect
+  Cloud Gateway DataPlane Group configurations entities.
+  [#1186](https://github.com/Kong/gateway-operator/pull/1186)
 
 ### Changed
 

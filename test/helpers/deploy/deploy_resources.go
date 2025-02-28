@@ -14,6 +14,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/gateway-operator/pkg/consts"
+
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -215,6 +217,18 @@ func KonnectGatewayControlPlaneType(typ sdkkonnectcomp.CreateControlPlaneRequest
 	}
 }
 
+// KonnectGatewayControlPlaneTypeWithCloudGatewaysEnabled returns an ObjOption
+// that enabled cloud gateways on the CP.
+func KonnectGatewayControlPlaneTypeWithCloudGatewaysEnabled() ObjOption {
+	return func(obj client.Object) {
+		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+		if !ok {
+			panic(fmt.Errorf("%T does not implement KonnectGatewayControlPlane", obj))
+		}
+		cp.Spec.CloudGateway = lo.ToPtr(true)
+	}
+}
+
 // KonnectGatewayControlPlaneWithID deploys a KonnectGatewayControlPlane resource and returns the resource.
 // The Status ID and Programmed condition are set on the CP using status Update() call.
 // It can be useful where the reconciler for KonnectGatewayControlPlane is not started
@@ -241,6 +255,49 @@ func KonnectGatewayControlPlaneWithID(
 	cp.Status.ID = uuid.NewString()[:8]
 	require.NoError(t, cl.Status().Update(ctx, cp))
 	return cp
+}
+
+// KonnectCloudGatewayDataPlaneGroupConfiguration deploys a
+// KonnectCloudGatewayDataPlaneGroupConfiguration resource and returns the resource.
+func KonnectCloudGatewayDataPlaneGroupConfiguration(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	opts ...ObjOption,
+) *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration {
+	t.Helper()
+	obj := konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "data-plane-group-configuration-" + uuid.NewString()[:8],
+		},
+		Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
+			Version:   consts.DefaultDataPlaneTag,
+			APIAccess: lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+			DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
+				{
+					Provider: sdkkonnectcomp.ProviderNameAws,
+					Region:   "us-west-2",
+					NetworkRef: konnectv1alpha1.NetworkRef{
+						Type:      konnectv1alpha1.NetworkRefKonnectID,
+						KonnectID: lo.ToPtr("network-12345"),
+					},
+					Autoscale: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
+						Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeAutopilot,
+						Autopilot: &konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleAutopilot{
+							BaseRps: 10,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	return &obj
 }
 
 // KongServiceWithID deploys a KongService resource and returns the resource.

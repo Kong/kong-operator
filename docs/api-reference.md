@@ -3039,6 +3039,7 @@ _Appears in:_
 Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1alpha1 API group.
 
 - [KonnectAPIAuthConfiguration](#konnectapiauthconfiguration)
+- [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnectcloudgatewaydataplanegroupconfiguration)
 - [KonnectCloudGatewayNetwork](#konnectcloudgatewaynetwork)
 - [KonnectExtension](#konnectextension)
 - [KonnectGatewayControlPlane](#konnectgatewaycontrolplane)
@@ -3056,6 +3057,23 @@ KonnectAPIAuthConfiguration is the Schema for the Konnect configuration type.
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectAPIAuthConfigurationSpec](#konnectapiauthconfigurationspec)_ | Spec is the specification of the KonnectAPIAuthConfiguration resource. |
 | `status` _[KonnectAPIAuthConfigurationStatus](#konnectapiauthconfigurationstatus)_ | Status is the status of the KonnectAPIAuthConfiguration resource. |
+
+
+
+### KonnectCloudGatewayDataPlaneGroupConfiguration
+
+
+KonnectCloudGatewayDataPlaneGroupConfiguration is the Schema for the Konnect Network API.
+
+<!-- konnect_cloud_gateway_data_plane_group_configuration description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `KonnectCloudGatewayDataPlaneGroupConfiguration`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectCloudGatewayDataPlaneGroupConfigurationSpec](#konnectcloudgatewaydataplanegroupconfigurationspec)_ | Spec defines the desired state of KonnectCloudGatewayDataPlaneGroupConfiguration. |
+| `status` _[KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnectcloudgatewaydataplanegroupconfigurationstatus)_ | Status defines the observed state of KonnectCloudGatewayDataPlaneGroupConfiguration. |
 
 
 
@@ -3178,6 +3196,44 @@ KonnectAPIAuthType is the type of authentication used to authenticate with the K
 _Appears in:_
 - [KonnectAPIAuthConfigurationSpec](#konnectapiauthconfigurationspec)
 
+#### KonnectCloudGatewayDataPlaneGroupConfigurationSpec
+
+
+KonnectCloudGatewayDataPlaneGroupConfigurationSpec defines the desired state of KonnectCloudGatewayDataPlaneGroupConfiguration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `version` _string_ | Version specifies the desired Kong Gateway version. |
+| `dataplane_groups` _[KonnectConfigurationDataPlaneGroup](#konnectconfigurationdataplanegroup) array_ | DataplaneGroups is a list of desired data-plane groups that describe where to deploy instances, along with how many instances. |
+| `api_access` _[APIAccess](#apiaccess)_ | APIAccess is the desired type of API access for data-plane groups. |
+| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane which DataPlanes from this configuration will connect to. |
+
+
+_Appears in:_
+- [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnectcloudgatewaydataplanegroupconfiguration)
+
+#### KonnectCloudGatewayDataPlaneGroupConfigurationStatus
+
+
+KonnectCloudGatewayDataPlaneGroupConfigurationStatus defines the observed state of KonnectCloudGatewayDataPlaneGroupConfiguration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
+| `dataplane_groups` _[KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup](#konnectcloudgatewaydataplanegroupconfigurationstatusgroup) array_ | DataPlaneGroups is a list of deployed data-plane groups. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.<br /><br /> Known condition types are:<br /><br /> * "Programmed" |
+
+
+_Appears in:_
+- [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnectcloudgatewaydataplanegroupconfiguration)
+
 #### KonnectCloudGatewayNetworkSpec
 
 
@@ -3250,6 +3306,7 @@ KonnectEntityStatus represents the status of a Konnect entity.
 
 
 _Appears in:_
+- [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnectcloudgatewaydataplanegroupconfigurationstatus)
 - [KonnectCloudGatewayNetworkStatus](#konnectcloudgatewaynetworkstatus)
 - [KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnectentitystatuswithcontrolplaneandcertificaterefs)
 - [KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)
@@ -3269,7 +3326,23 @@ _Appears in:_
 
 
 
+#### KonnectEntityStatusWithControlPlaneRef
 
+
+KonnectEntityStatusWithControlPlaneRef represents the status of a Konnect entity with a reference to a ControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
+
+
+_Appears in:_
+- [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnectcloudgatewaydataplanegroupconfigurationstatus)
 
 #### KonnectGatewayControlPlaneSpec
 
@@ -3312,4 +3385,21 @@ KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayCon
 
 _Appears in:_
 - [KonnectGatewayControlPlane](#konnectgatewaycontrolplane)
+
+#### NetworkRef
+
+
+NetworkRef is the schema for the NetworkRef type.
+It is used to reference a Network entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | Type indicates the type of the control plane being referenced. |
+| `konnectID` _string_ | KonnectID is the schema for the KonnectID type. This field is required when the Type is konnectID. |
+
+
+_Appears in:_
+- [KonnectConfigurationDataPlaneGroup](#konnectconfigurationdataplanegroup)
 
