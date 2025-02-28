@@ -9,8 +9,10 @@ import (
 	"slices"
 	"strings"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -339,4 +341,48 @@ func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 	}
 
 	return err
+}
+
+func errorIsDataPlaneGroupConflictProposedConfigIsTheSame(err error) bool {
+	var errConflict *sdkkonnecterrs.ConflictError
+	if !errors.As(err, &errConflict) {
+		return false
+	}
+
+	// NOTE: Status contains a float64 value, so we need to cast it to int to deterministically compare.
+	floatStatus, okStatus := (errConflict.Status).(float64)
+	if !okStatus || int(floatStatus) != 409 {
+		return false
+	}
+
+	strDetail, okDetail := errConflict.Detail.(string)
+	if !okDetail ||
+		!strings.Contains(
+			strDetail, "Proposed configuration and current configuration are identical",
+		) {
+		return false
+	}
+
+	return true
+}
+
+func errorIsDataPlaneGroupBadRequestPreviousConfigNotFinishedProvisioning(err error) bool {
+	var errBadRequest *sdkkonnecterrs.BadRequestError
+	if !errors.As(err, &errBadRequest) {
+		return false
+	}
+
+	const (
+		errMsgConfigSameAsPrevious = "Data-plane groups in the previous configuration have not finished provisioning"
+		errInvalidParameterField   = "dataplane_groups"
+	)
+
+	return lo.ContainsBy(
+		errBadRequest.InvalidParameters,
+		func(p sdkkonnectcomp.InvalidParameters) bool {
+			return p.Type == sdkkonnectcomp.InvalidParametersTypeInvalidParameterStandard &&
+				p.InvalidParameterStandard != nil &&
+				p.InvalidParameterStandard.Field == errInvalidParameterField &&
+				strings.Contains(p.InvalidParameterStandard.Reason, errMsgConfigSameAsPrevious)
+		})
 }

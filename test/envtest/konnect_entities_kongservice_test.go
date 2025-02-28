@@ -94,12 +94,13 @@ func TestKongService(t *testing.T) {
 				s.Spec.KongServiceAPISpec.Host = host
 			},
 		)
-		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for Service to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongService) bool {
 			return kt.GetKonnectID() == serviceID && k8sutils.IsProgrammed(kt)
 		}, "KongService didn't get Programmed status condition or didn't get the correct (service-12345) Konnect ID assigned")
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Service update")
 		sdk.ServicesSDK.EXPECT().

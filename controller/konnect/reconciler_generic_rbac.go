@@ -8,6 +8,10 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectgatewaycontrolplanes/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectgatewaycontrolplanes/finalizers,verbs=update;patch
 
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectcloudgatewaydataplanegroupconfigurations,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectcloudgatewaydataplanegroupconfigurations/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectcloudgatewaydataplanegroupconfigurations/finalizers,verbs=update;patch
+
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers/status,verbs=get;update;patch
 

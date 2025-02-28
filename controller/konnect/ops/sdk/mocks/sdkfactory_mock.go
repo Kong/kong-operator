@@ -40,6 +40,7 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 	return &MockSDKWrapper{
 		ControlPlaneSDK:             NewMockControlPlaneSDK(t),
 		ControlPlaneGroupSDK:        NewMockControlPlaneGroupSDK(t),
+		CloudGatewaysSDK:            NewMockCloudGatewaysSDK(t),
 		ServicesSDK:                 NewMockServicesSDK(t),
 		RoutesSDK:                   NewMockRoutesSDK(t),
 		ConsumersSDK:                NewMockConsumersSDK(t),
