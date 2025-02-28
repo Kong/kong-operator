@@ -22,6 +22,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/address"
 	"github.com/kong/gateway-operator/controller/pkg/ctxinjector"
 	"github.com/kong/gateway-operator/controller/pkg/dataplane"
+	"github.com/kong/gateway-operator/controller/pkg/extensions"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
@@ -142,7 +143,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// customize the dataplane with the extensions field
 	log.Trace(logger, "applying extensions")
-	patched, requeue, err := applyExtensions(ctx, r.Client, logger, &dataplane, r.KonnectEnabled)
+	patched, requeue, err := extensions.ApplyExtensions(ctx, r.Client, logger, &dataplane, r.KonnectEnabled)
 	if err != nil {
 		if !requeue {
 			log.Debug(logger, "failed to apply extensions", "err", err)

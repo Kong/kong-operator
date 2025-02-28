@@ -1,4 +1,4 @@
-package dataplane
+package config
 
 import (
 	"fmt"

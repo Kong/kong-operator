@@ -13,7 +13,8 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	dputils "github.com/kong/gateway-operator/internal/utils/dataplane"
+	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
+	"github.com/kong/gateway-operator/internal/utils/config"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -23,7 +24,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-func TestApplyKonnectExtension(t *testing.T) {
+func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 	s := scheme.Scheme
 	require.NoError(t, operatorv1alpha1.AddToScheme(s))
 	require.NoError(t, operatorv1beta1.AddToScheme(s))
@@ -58,6 +59,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 		secret        *corev1.Secret
 		expectedError error
 		expectedEnvs  []corev1.EnvVar
+		applied       bool
 	}{
 		{
 			name: "no extensions",
@@ -68,6 +70,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 					},
 				},
 			},
+			applied: false,
 		},
 		{
 			name: "cross-namespace reference",
@@ -102,7 +105,8 @@ func TestApplyKonnectExtension(t *testing.T) {
 				},
 				Status: konnectExtensionStatus,
 			},
-			expectedError: ErrCrossNamespaceReference,
+			expectedError: extensionserrors.ErrCrossNamespaceReference,
+			applied:       false,
 		},
 		{
 			name: "Extension not found",
@@ -129,7 +133,8 @@ func TestApplyKonnectExtension(t *testing.T) {
 					},
 				},
 			},
-			expectedError: ErrKonnectExtensionNotFound,
+			expectedError: extensionserrors.ErrKonnectExtensionNotFound,
+			applied:       false,
 		},
 		{
 			name: "Extension properly referenced, controlplane type, no deployment Options set.",
@@ -163,6 +168,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 				},
 				Status: konnectExtensionStatus,
 			},
+			applied: true,
 		},
 		{
 			name: "Extension properly referenced, ingress controller type, no deployment Options set.",
@@ -196,6 +202,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 				},
 				Status: konnectExtensionStatus,
 			},
+			applied: true,
 		},
 		{
 			name: "Extension properly referenced, controlplane type, with deployment Options set.",
@@ -243,6 +250,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 				},
 				Status: konnectExtensionStatus,
 			},
+			applied: true,
 		},
 		{
 			name: "Extension with DataPlane labels",
@@ -296,6 +304,7 @@ func TestApplyKonnectExtension(t *testing.T) {
 				},
 				Status: konnectExtensionStatus,
 			},
+			applied: true,
 			expectedEnvs: []corev1.EnvVar{
 				{
 					Name:  "KONG_CLUSTER_CERT",
@@ -365,7 +374,8 @@ func TestApplyKonnectExtension(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 
 			dataplane := tt.dataPlane.DeepCopy()
-			err := ApplyKonnectExtension(t.Context(), cl, dataplane)
+			applied, err := ApplyDataPlaneKonnectExtension(t.Context(), cl, dataplane)
+			require.Equal(t, tt.applied, applied)
 			if tt.expectedError != nil {
 				require.ErrorIs(t, err, tt.expectedError)
 				return
@@ -397,7 +407,7 @@ func getKongInKonnectEnvVars(
 	konnectExt konnectv1alpha1.KonnectExtension,
 ) []corev1.EnvVar {
 	envSet := []corev1.EnvVar{}
-	for k, v := range dputils.KongInKonnectDefaults(konnectExt.Spec.DataPlaneLabels, konnectExt.Status) {
+	for k, v := range config.KongInKonnectDefaults(konnectExt.Spec.DataPlaneLabels, konnectExt.Status) {
 		envSet = append(envSet, corev1.EnvVar{
 			Name:  k,
 			Value: v,

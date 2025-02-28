@@ -429,6 +429,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				DevelopmentMode:          c.DevelopmentMode,
+				KonnectEnabled:           c.KonnectControllersEnabled,
 			},
 		},
 		// DataPlane controller

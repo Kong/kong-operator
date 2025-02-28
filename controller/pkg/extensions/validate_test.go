@@ -98,7 +98,7 @@ func TestValidateExtensions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			condition := ValidateExtensions(tt.dataplane)
+			condition := validateExtensions(tt.dataplane)
 			if tt.expected == nil {
 				assert.Nil(t, condition)
 			} else {
