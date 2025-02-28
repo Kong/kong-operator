@@ -96,6 +96,9 @@
   certificate is modified. A secret must have the `konghq.com/konnect-dp-cert`
   label to trigger the reconciliation.
   [#1250](https://github.com/Kong/gateway-operator/pull/1250)
+- When the `DataPlane` is configured in Konnect, the `/status/ready` endpoint
+  is set as the readiness probe.
+  [#1235](https://github.com/Kong/gateway-operator/pull/1253)
 
 ### Changed
 
