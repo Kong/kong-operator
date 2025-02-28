@@ -2,7 +2,6 @@ package konnect
 
 import (
 	"context"
-	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -18,11 +17,7 @@ const (
 	SecretKonnectDataPlaneCertificateLabel = "konghq.com/konnect-dp-cert" //nolint:gosec
 )
 
-func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, obj client.Object) ([]konnectv1alpha1.KonnectExtension, error) {
-	s, ok := obj.(*corev1.Secret)
-	if !ok {
-		return nil, fmt.Errorf("expect object to be secret, actually %T", obj)
-	}
+func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *corev1.Secret) ([]konnectv1alpha1.KonnectExtension, error) {
 	l := &konnectv1alpha1.KonnectExtensionList{}
 	err := cl.List(
 		ctx, l,
@@ -41,11 +36,11 @@ func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, obj cl
 
 func enqueueKonnectExtensionsForSecret(cl client.Client) func(context.Context, client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		_, ok := obj.(*corev1.Secret)
+		s, ok := obj.(*corev1.Secret)
 		if !ok {
 			return nil
 		}
-		konnectExtensions, err := listKonnectExtensionsBySecret(ctx, cl, obj)
+		konnectExtensions, err := listKonnectExtensionsBySecret(ctx, cl, s)
 		if err != nil {
 			return nil
 		}
