@@ -56,3 +56,18 @@ const (
 	// ReasonPending is used with the ConditionProgrammed when the status is "Unknown".
 	ReasonPending ConditionReason = "Pending"
 )
+
+const (
+	// ConditionKongConsumerCredentialSecretRefsValid is the condition type used on KongConsumer
+	// to indicate whether the credential secret references are valid.
+	ConditionKongConsumerCredentialSecretRefsValid = "CredentialSecretRefsValid"
+
+	// ReasonKongConsumerCredentialSecretRefsValid is the condition reason used on KongConsumer
+	// with CredentialSecretRefsValid condition when the condition is true.
+	ReasonKongConsumerCredentialSecretRefsValid = "Valid"
+
+	// ReasonKongConsumerCredentialSecretRefInvalid is the condition reason used on KongConsumer
+	// with CredentialSecretRefsValid condition when the condition is false.
+	// This can happen when the secret reference is invalid or the secret does not exist.
+	ReasonKongConsumerCredentialSecretRefInvalid = "Invalid"
+)
