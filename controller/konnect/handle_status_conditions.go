@@ -16,6 +16,11 @@ import (
 )
 
 // handleAPIAuthStatusCondition handles the status conditions for the APIAuthConfiguration reference.
+// The last variadic parameter is related to the optional depending conditions, which is set only in case
+// some check fails and the related condition gets marked as False.
+// Example: The KonnectExtension resource has a ready condition that must be set to False if any of the
+// conditions set here are false. Passing it as a depending condition will ensure that the ready condition
+// is set to False if any of the conditions set here are false.
 func handleAPIAuthStatusCondition[T interface {
 	client.Object
 	k8sutils.ConditionsAware
@@ -25,32 +30,40 @@ func handleAPIAuthStatusCondition[T interface {
 	ent T,
 	apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration,
 	err error,
+	dependingConditions ...metav1.Condition,
 ) (requeue bool, res ctrl.Result, retErr error) {
+	resolvedRefCondition := metav1.Condition{
+		Type:    konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
+		Status:  metav1.ConditionTrue,
+		Reason:  konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef,
+		Message: fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is resolved", client.ObjectKeyFromObject(&apiAuth)),
+	}
 	if err != nil {
+		resolvedRefCondition.Status = metav1.ConditionFalse
 		if k8serrors.IsNotFound(err) {
-			if res, err := patch.StatusWithCondition(
-				ctx, cl, ent,
-				konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
-				metav1.ConditionFalse,
-				konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound,
-				fmt.Sprintf("Referenced KonnectAPIAuthConfiguration %s not found", client.ObjectKeyFromObject(&apiAuth)),
+			resolvedRefCondition.Reason = konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound
+			resolvedRefCondition.Message = fmt.Sprintf("Referenced KonnectAPIAuthConfiguration %s not found", client.ObjectKeyFromObject(&apiAuth))
+			if res, _, err := patch.StatusWithConditions(
+				ctx,
+				cl,
+				ent,
+				append(dependingConditions, resolvedRefCondition)...,
 			); err != nil || !res.IsZero() {
 				return true, ctrl.Result{}, err
 			}
-
 			return true, ctrl.Result{}, nil
 		}
 
-		if res, err := patch.StatusWithCondition(
-			ctx, cl, ent,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
-			metav1.ConditionFalse,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefInvalid,
-			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is invalid: %v", client.ObjectKeyFromObject(&apiAuth), err),
+		resolvedRefCondition.Reason = konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefInvalid
+		resolvedRefCondition.Message = fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is invalid: %v", client.ObjectKeyFromObject(&apiAuth), err)
+		if res, _, err := patch.StatusWithConditions(
+			ctx,
+			cl,
+			ent,
+			append(dependingConditions, resolvedRefCondition)...,
 		); err != nil || !res.IsZero() {
 			return true, ctrl.Result{}, err
 		}
-
 		return true, ctrl.Result{}, fmt.Errorf("failed to get KonnectAPIAuthConfiguration: %w", err)
 	}
 
@@ -59,16 +72,22 @@ func handleAPIAuthStatusCondition[T interface {
 		cond.Status != metav1.ConditionTrue ||
 		cond.ObservedGeneration != ent.GetGeneration() ||
 		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef {
-		if res, err := patch.StatusWithCondition(
-			ctx, cl, ent,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
-			metav1.ConditionTrue,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef,
-			fmt.Sprintf("KonnectAPIAuthConfiguration reference %s is resolved", client.ObjectKeyFromObject(&apiAuth)),
+		if res, _, err := patch.StatusWithConditions(
+			ctx,
+			cl,
+			ent,
+			resolvedRefCondition,
 		); err != nil || !res.IsZero() {
 			return true, res, err
 		}
 		return true, ctrl.Result{}, nil
+	}
+
+	apiAuthValidCondition := metav1.Condition{
+		Type:    konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
+		Status:  metav1.ConditionTrue,
+		Reason:  konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
+		Message: conditionMessageReferenceKonnectAPIAuthConfigurationValid(client.ObjectKeyFromObject(&apiAuth)),
 	}
 
 	// Check if the referenced APIAuthConfiguration is valid.
@@ -76,14 +95,16 @@ func handleAPIAuthStatusCondition[T interface {
 		cond.Status != metav1.ConditionTrue ||
 		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid {
 
+		apiAuthValidCondition.Status = metav1.ConditionFalse
+		apiAuthValidCondition.Reason = konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid
+		apiAuthValidCondition.Message = conditionMessageReferenceKonnectAPIAuthConfigurationInvalid(client.ObjectKeyFromObject(&apiAuth))
 		// If it's invalid then set the "APIAuthValid" status condition on
 		// the entity to False with "Invalid" reason.
-		if res, err := patch.StatusWithCondition(
-			ctx, cl, ent,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
-			metav1.ConditionFalse,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
-			conditionMessageReferenceKonnectAPIAuthConfigurationInvalid(client.ObjectKeyFromObject(&apiAuth)),
+		if res, _, err := patch.StatusWithConditions(
+			ctx,
+			cl,
+			ent,
+			append(dependingConditions, apiAuthValidCondition)...,
 		); err != nil || !res.IsZero() {
 			return true, res, err
 		}
@@ -100,12 +121,11 @@ func handleAPIAuthStatusCondition[T interface {
 		cond.ObservedGeneration != ent.GetGeneration() ||
 		cond.Message != conditionMessageReferenceKonnectAPIAuthConfigurationValid(client.ObjectKeyFromObject(&apiAuth)) {
 
-		if res, err := patch.StatusWithCondition(
-			ctx, cl, ent,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
-			metav1.ConditionTrue,
-			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
-			conditionMessageReferenceKonnectAPIAuthConfigurationValid(client.ObjectKeyFromObject(&apiAuth)),
+		if res, _, err := patch.StatusWithConditions(
+			ctx,
+			cl,
+			ent,
+			apiAuthValidCondition,
 		); err != nil || !res.IsZero() {
 			return true, res, err
 		}

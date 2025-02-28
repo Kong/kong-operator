@@ -11,4 +11,5 @@ import (
 type DataPlaneClientCertificatesSDK interface {
 	CreateDataplaneCertificate(ctx context.Context, cpID string, dpReq *sdkkonnectcomp.DataPlaneClientCertificateRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateDataplaneCertificateResponse, error)
 	DeleteDataplaneCertificate(ctx context.Context, controlPlaneID string, certificateID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteDataplaneCertificateResponse, error)
+	ListDpClientCertificates(ctx context.Context, controlPlaneID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListDpClientCertificatesResponse, error)
 }
