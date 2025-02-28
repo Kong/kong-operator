@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +25,7 @@ import (
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 	"github.com/kong/gateway-operator/test/helpers"
+	"github.com/kong/gateway-operator/test/helpers/eventually"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
@@ -386,16 +386,7 @@ func TestHelmUpgrade(t *testing.T) {
 					ctx, cancel := context.WithTimeout(ctx, waitTime)
 					defer cancel()
 					require.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, obj)))
-					require.EventuallyWithT(
-						t,
-						func(c *assert.CollectT) {
-							require.Truef(
-								c,
-								k8serrors.IsNotFound(cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)),
-								"object %q is not deleted successfully ", client.ObjectKeyFromObject(obj),
-							)
-						}, waitTime, 500*time.Millisecond,
-					)
+					eventually.WaitForObjectToNotExist(t, ctx, cl, obj, waitTime, 500*time.Millisecond)
 				})
 			}
 

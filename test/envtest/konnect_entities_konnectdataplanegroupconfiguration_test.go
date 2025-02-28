@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -17,6 +16,7 @@ import (
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
+	"github.com/kong/gateway-operator/test/helpers/eventually"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -102,12 +102,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 
 		t.Log("Deleting")
 		require.NoError(t, clientNamespaced.Delete(ctx, dpgconf))
-
-		t.Log("Waiting for object to disappear")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			err := clientNamespaced.Get(ctx, client.ObjectKeyFromObject(dpgconf), dpgconf)
-			assert.True(c, err != nil && k8serrors.IsNotFound(err))
-		}, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, cl, dpgconf, waitTime, tickTime)
 
 		t.Log("Waiting for object to be deleted in the SDK")
 		require.EventuallyWithT(t, func(c *assert.CollectT) {

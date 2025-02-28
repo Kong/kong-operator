@@ -22,6 +22,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
+	"github.com/kong/gateway-operator/test/helpers/eventually"
 
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -923,11 +924,7 @@ func TestDataPlanePodDisruptionBudget(t *testing.T) {
 	}), waitTime, tickTime)
 
 	t.Log("verifying the PodDisruptionBudget is deleted")
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		_, err := GetClients().K8sClient.PolicyV1().PodDisruptionBudgets(namespace.Name).Get(GetCtx(), pdb.Name, metav1.GetOptions{})
-		assert.Error(t, err)
-		assert.True(t, k8serrors.IsNotFound(err))
-	}, waitTime, tickTime)
+	eventually.WaitForObjectToNotExist(t, ctx, GetClients().MgrClient, &pdb, waitTime, tickTime)
 }
 
 func TestDataPlaneServiceExternalTrafficPolicy(t *testing.T) {
