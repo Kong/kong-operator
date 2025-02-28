@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/samber/lo"
@@ -104,12 +105,11 @@ func sanitizeEndpoint(endpoint string) string {
 }
 
 func clusterDataPlaneLabelStringFromLabels(labels map[string]konnectv1alpha1.DataPlaneLabelValue) string {
-	return strings.Join(
-		lo.MapToSlice(
-			labels, func(k string, v konnectv1alpha1.DataPlaneLabelValue) string {
-				return fmt.Sprintf("%s:%s", k, v)
-			},
-		),
-		",",
+	labelStrings := lo.MapToSlice(
+		labels, func(k string, v konnectv1alpha1.DataPlaneLabelValue) string {
+			return fmt.Sprintf("%s:%s", k, v)
+		},
 	)
+	sort.Strings(labelStrings)
+	return strings.Join(labelStrings, ",")
 }

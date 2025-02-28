@@ -33,7 +33,7 @@ func TestClusterDataPlaneLabelStringFromLabels(t *testing.T) {
 				"environment": "prod",
 				"app":         "gateway",
 			},
-			want: "region:us-west,environment:prod,app:gateway",
+			want: "app:gateway,environment:prod,region:us-west",
 		},
 	}
 
