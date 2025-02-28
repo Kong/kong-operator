@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,22 +39,12 @@ func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, obj cl
 
 }
 
-func secretUsedByKonnectExtension(cl client.Client) func(obj client.Object) bool {
-	return func(obj client.Object) bool {
-		konnectExtensions, err := listKonnectExtensionsBySecret(context.Background(), cl, obj)
-		if err != nil {
-			return false
-		}
-		return lo.ContainsBy(konnectExtensions, func(ke konnectv1alpha1.KonnectExtension) bool {
-			return ke.Spec.DataPlaneClientAuth != nil &&
-				ke.Spec.DataPlaneClientAuth.CertificateSecret.CertificateSecretRef != nil &&
-				ke.Spec.DataPlaneClientAuth.CertificateSecret.CertificateSecretRef.Name == obj.GetName()
-		})
-	}
-}
-
-func konnectExtensionReconcileRequestsForSecret(cl client.Client) func(context.Context, client.Object) []reconcile.Request {
+func enqueueKonnectExtensionsForSecret(cl client.Client) func(context.Context, client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		_, ok := obj.(*corev1.Secret)
+		if !ok {
+			return nil
+		}
 		konnectExtensions, err := listKonnectExtensionsBySecret(ctx, cl, obj)
 		if err != nil {
 			return nil
