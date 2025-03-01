@@ -30,9 +30,7 @@ func assertCollectObjectExistsAndHasKonnectID(
 
 	return func(c *assert.CollectT) {
 		nn := client.ObjectKeyFromObject(obj)
-		if !assert.NoError(c, clientNamespaced.Get(ctx, nn, obj)) {
-			return
-		}
+		require.NoError(c, clientNamespaced.Get(ctx, nn, obj))
 		assert.Equal(c, konnectID, obj.GetKonnectID())
 	}
 }

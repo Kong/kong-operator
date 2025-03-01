@@ -150,7 +150,7 @@ func TestGetTokenFromKonnectAPIAuthConfiguration(t *testing.T) {
 			// Call the function under test
 			token, err := getTokenFromKonnectAPIAuthConfiguration(t.Context(), cl, tt.apiAuth)
 			if tt.expectedError {
-				assert.NotNil(t, err)
+				assert.Error(t, err)
 				return
 			}
 

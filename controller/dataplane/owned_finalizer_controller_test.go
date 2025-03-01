@@ -70,18 +70,18 @@ func TestRequestsForDataPlaneOwnedObjects(t *testing.T) {
 		require.Empty(t, requestsForDataPlaneOwnedObjects[corev1.Service](cl)(ctx, nonOwnerDp))
 		requests := requestsForDataPlaneOwnedObjects[corev1.Service](cl)(ctx, ownerDp)
 		require.Len(t, requests, 1)
-		require.Equal(t, requests[0], expectedRequest("service"))
+		require.Equal(t, expectedRequest("service"), requests[0])
 	})
 	t.Run("secrets", func(t *testing.T) {
 		require.Empty(t, requestsForDataPlaneOwnedObjects[corev1.Service](cl)(ctx, nonOwnerDp))
 		requests := requestsForDataPlaneOwnedObjects[corev1.Secret](cl)(ctx, ownerDp)
 		require.Len(t, requests, 1)
-		require.Equal(t, requests[0], expectedRequest("secret"))
+		require.Equal(t, expectedRequest("secret"), requests[0])
 	})
 	t.Run("deployments", func(t *testing.T) {
 		require.Empty(t, requestsForDataPlaneOwnedObjects[appsv1.Deployment](cl)(ctx, nonOwnerDp))
 		requests := requestsForDataPlaneOwnedObjects[appsv1.Deployment](cl)(ctx, ownerDp)
 		require.Len(t, requests, 1)
-		require.Equal(t, requests[0], expectedRequest("deployment"))
+		require.Equal(t, expectedRequest("deployment"), requests[0])
 	})
 }

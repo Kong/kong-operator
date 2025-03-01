@@ -53,7 +53,7 @@ func TestCreatePrivateKey(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			priv, pemBlock, sigAlg, err := CreatePrivateKey(tt.keyConfig)
 			if tt.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Nil(t, priv)
 				assert.Nil(t, pemBlock)
 				assert.Equal(t, x509.UnknownSignatureAlgorithm, sigAlg)
