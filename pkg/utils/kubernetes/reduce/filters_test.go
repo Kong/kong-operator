@@ -6,19 +6,14 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
-	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 func TestFilterSecrets(t *testing.T) {
@@ -70,47 +65,6 @@ func TestFilterSecrets(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			filteredSecrets := filterSecrets(tc.secrets)
 			require.Equal(t, tc.filteredSecrets, filteredSecrets)
-		})
-	}
-}
-
-func TestFilterServiceAccounts(t *testing.T) {
-	testCases := []struct {
-		name                   string
-		serviceAccount         []corev1.ServiceAccount
-		filteredServiceAccount []corev1.ServiceAccount
-	}{
-		{
-			name: "the older serviceAccount must be filtered out",
-			serviceAccount: []corev1.ServiceAccount{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "6/30/1990",
-						CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "12/31/1995",
-						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-					},
-				},
-			},
-			filteredServiceAccount: []corev1.ServiceAccount{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "12/31/1995",
-						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-					},
-				},
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			filteredSecrets := filterServiceAccounts(tc.serviceAccount)
-			require.Equal(t, tc.filteredServiceAccount, filteredSecrets)
 		})
 	}
 }
@@ -369,154 +323,6 @@ func TestFilterServices(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			filteredServices := filterServices(tc.services, tc.endpointSlices)
 			require.Equal(t, tc.filteredServices, filteredServices)
-		})
-	}
-}
-
-func TestFilterValidatingWebhookConfigurations(t *testing.T) {
-	now := metav1.Now()
-	nowPlus := func(d time.Duration) metav1.Time {
-		return metav1.NewTime(now.Add(d))
-	}
-	testCases := []struct {
-		name                         string
-		webhooks                     []admregv1.ValidatingWebhookConfiguration
-		expectedFilteredWebhookNames []string
-	}{
-		{
-			name: "the older webhook must be filtered out",
-			webhooks: []admregv1.ValidatingWebhookConfiguration{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "older",
-						CreationTimestamp: nowPlus(-time.Second),
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newer",
-						CreationTimestamp: now,
-					},
-				},
-			},
-			expectedFilteredWebhookNames: []string{"older"},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			filteredWebhooks := filterValidatingWebhookConfigurations(tc.webhooks)
-			filteredWebhookNames := lo.Map(filteredWebhooks, func(w admregv1.ValidatingWebhookConfiguration, _ int) string {
-				return w.Name
-			})
-			require.ElementsMatch(t, filteredWebhookNames, tc.expectedFilteredWebhookNames)
-		})
-	}
-}
-
-func TestFilterClusterRoles(t *testing.T) {
-	now := metav1.Now()
-	nowPlus := func(d time.Duration) metav1.Time {
-		return metav1.NewTime(now.Add(d))
-	}
-	testCases := []struct {
-		name          string
-		clusterRoles  []rbacv1.ClusterRole
-		expectedNames []string
-	}{
-		{
-			name: "the newer must be filtered out",
-			clusterRoles: []rbacv1.ClusterRole{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "older",
-						CreationTimestamp: nowPlus(-time.Second),
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newer",
-						CreationTimestamp: now,
-					},
-				},
-			},
-			expectedNames: []string{"older"},
-		},
-		{
-			name: "the one with newer managed-by labels must be filtered out",
-			clusterRoles: []rbacv1.ClusterRole{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "with-new-labels",
-						CreationTimestamp: now,
-						Labels: k8sutils.GetManagedByLabelSet(
-							&operatorv1beta1.ControlPlane{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "test",
-									Namespace: "test-namespace",
-								},
-							},
-						),
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "older",
-						CreationTimestamp: nowPlus(-time.Hour),
-					},
-				},
-			},
-			expectedNames: []string{"older"},
-		},
-		{
-			name: "the one with older managed-by labels must be filtered out",
-			clusterRoles: []rbacv1.ClusterRole{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "with-new-labels",
-						CreationTimestamp: now,
-						Labels: k8sutils.GetManagedByLabelSet(
-							&operatorv1beta1.ControlPlane{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "test",
-									Namespace: "test-namespace",
-								},
-							},
-						),
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "with-new-labels-older",
-						CreationTimestamp: nowPlus(-time.Minute),
-						Labels: k8sutils.GetManagedByLabelSet(
-							&operatorv1beta1.ControlPlane{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "test",
-									Namespace: "test-namespace",
-								},
-							},
-						),
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "older",
-						CreationTimestamp: nowPlus(-time.Hour),
-					},
-				},
-			},
-			expectedNames: []string{"older", "with-new-labels-older"},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			filtered := filterClusterRoles(tc.clusterRoles)
-			filteredNames := lo.Map(filtered, func(w rbacv1.ClusterRole, _ int) string {
-				return w.Name
-			})
-			require.ElementsMatch(t, filteredNames, tc.expectedNames)
 		})
 	}
 }

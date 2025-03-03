@@ -27,6 +27,7 @@ import (
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test"
+	"github.com/kong/gateway-operator/test/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -111,6 +112,10 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: deploying CRDs to test cluster")
 	exitOnErr(testutils.DeployCRDs(ctx, path.Join(configPath, "/crd"), clients.OperatorClient, env.Cluster()))
+
+	cleanupTelepresence, err := helpers.SetupTelepresence(ctx)
+	exitOnErr(err)
+	defer cleanupTelepresence()
 
 	fmt.Println("INFO: starting the operator's controller manager")
 	// startControllerManager will spawn the controller manager in a separate

@@ -65,6 +65,7 @@ func TestHelmUpgrade(t *testing.T) {
 		upgradeToEffectiveSemver string
 		assertionsAfterInstall   []assertion
 		assertionsAfterUpgrade   []assertion
+		skip                     string
 	}{
 		{
 			name:        "upgrade from one before latest to latest minor",
@@ -140,6 +141,7 @@ func TestHelmUpgrade(t *testing.T) {
 		},
 		{
 			name:             "upgrade from latest minor to current",
+			skip:             "ControlPlane assertions have to be adjusted to KIC as a library approach (https://github.com/Kong/gateway-operator/issues/1188)",
 			fromVersion:      "1.4.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release. It's needed for the chart to properly render
@@ -302,6 +304,10 @@ func TestHelmUpgrade(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			if tc.skip != "" {
+				t.Skip(tc.skip)
+			}
+
 			// Repository is different for OSS and Enterprise images and it should be set accordingly.
 			kgoImageRepository := "docker.io/kong/gateway-operator-oss"
 			if helpers.GetDefaultDataPlaneBaseImage() == consts.DefaultDataPlaneBaseEnterpriseImage {
