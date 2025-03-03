@@ -17,6 +17,9 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
+// handleTypeSpecific handles type-specific logic for Konnect entities.
+// These include e.g.:
+// - checking KongConsumer's credential secret refs
 func handleTypeSpecific[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
