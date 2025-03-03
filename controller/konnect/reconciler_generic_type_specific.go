@@ -31,22 +31,20 @@ func handleTypeSpecific[
 	var (
 		updated   bool
 		isProblem bool
+		res       ctrl.Result
+		err       error
 	)
 	switch e := any(ent).(type) {
 	case *configurationv1.KongConsumer:
 		updated, isProblem = handleKongConsumerSpecific(ctx, cl, e)
-		var (
-			res ctrl.Result
-			err error
-		)
-		if updated {
-			res, err = setProgrammedStatusConditionBasedOnOtherConditions(ctx, cl, e)
-		}
-		return isProblem, res, err
 	default:
 	}
 
-	return false, ctrl.Result{}, nil
+	if updated {
+		res, err = setProgrammedStatusConditionBasedOnOtherConditions(ctx, cl, ent)
+	}
+
+	return isProblem, res, err
 }
 
 func handleKongConsumerSpecific(
