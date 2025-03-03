@@ -136,7 +136,7 @@ func TestOperatorLogs(t *testing.T) {
 				continue
 			}
 			// if not, assert that no error occurred
-			assert.NotEqualf(t, strings.ToLower(structuredLine.Level), "error", "an error has occurred in the operator: %s", message)
+			assert.NotEqualf(t, "error", strings.ToLower(structuredLine.Level), "an error has occurred in the operator: %s", message)
 		}
 		if !scanner.Scan() {
 			t.Log("log stream closed")

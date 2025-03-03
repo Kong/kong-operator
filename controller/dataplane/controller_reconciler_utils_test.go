@@ -434,7 +434,7 @@ func TestDeploymentBuilder(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, op.Updated, res, "the DataPlane deployment should be updated to get the affinity removed")
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
-				require.Equal(t, deployment.Spec.Template.Spec.Affinity, &corev1.Affinity{})
+				require.Equal(t, &corev1.Affinity{}, deployment.Spec.Template.Spec.Affinity)
 			},
 		},
 		{
@@ -500,7 +500,7 @@ func TestDeploymentBuilder(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, op.Updated, res, "the DataPlane deployment should be updated to get the affinity removed")
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
-				require.Equal(t, deployment.Spec.Template.Spec.Affinity, &corev1.Affinity{})
+				require.Equal(t, &corev1.Affinity{}, deployment.Spec.Template.Spec.Affinity)
 			},
 		},
 	}

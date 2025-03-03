@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -20,7 +19,7 @@ func MustCreateHTTPClient(t *testing.T, tlsSecret *corev1.Secret, host string) *
 	t.Helper()
 
 	httpClient, err := createHTTPClient(tlsSecret, host)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	return httpClient
 }
 

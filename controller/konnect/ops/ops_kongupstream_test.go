@@ -146,7 +146,7 @@ func TestCreateKongUpstream(t *testing.T) {
 				return
 			}
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		})
 	}
 }
@@ -275,7 +275,7 @@ func TestDeleteKongUpstream(t *testing.T) {
 				return
 			}
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		})
 	}
 }
@@ -399,7 +399,7 @@ func TestUpdateKongUpstream(t *testing.T) {
 				return
 			}
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		})
 	}
 }

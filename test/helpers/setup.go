@@ -50,7 +50,7 @@ func SetupTestEnv(t *testing.T, ctx context.Context, env environments.Environmen
 	t.Cleanup(func() {
 		if t.Failed() {
 			output, err := env.Cluster().DumpDiagnostics(context.Background(), t.Name()) //nolint:usetesting
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
 		}
 	})

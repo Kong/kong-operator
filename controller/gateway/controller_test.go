@@ -126,7 +126,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				ctx := t.Context()
 				res, err := r.Reconcile(ctx, gatewayReq)
 				require.NoError(t, err, "reconciliation should not return an error")
-				require.Equal(t, res, reconcile.Result{}, "reconciliation should not return a requeue")
+				require.Equal(t, reconcile.Result{}, res, "reconciliation should not return a requeue")
 
 				var gw gwtypes.Gateway
 				require.NoError(t, r.Client.Get(ctx, gatewayReq.NamespacedName, &gw))
@@ -277,9 +277,9 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.False(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found := k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
-				require.Equal(t, condition.Status, metav1.ConditionFalse)
-				require.Equal(t, consts.ConditionReason(condition.Reason), GatewayReasonServiceError)
-				require.Len(t, currentGateway.Status.Addresses, 0)
+				require.Equal(t, metav1.ConditionFalse, condition.Status)
+				require.Equal(t, GatewayReasonServiceError, consts.ConditionReason(condition.Reason))
+				require.Empty(t, currentGateway.Status.Addresses)
 
 				t.Log("adding a ClusterIP to the dataplane service")
 				dataplaneService := &corev1.Service{}
@@ -296,8 +296,8 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
-				require.Equal(t, condition.Status, metav1.ConditionTrue)
-				require.Equal(t, consts.ConditionReason(condition.Reason), consts.ResourceReadyReason)
+				require.Equal(t, metav1.ConditionTrue, condition.Status)
+				require.Equal(t, consts.ResourceReadyReason, consts.ConditionReason(condition.Reason))
 				require.Equal(t,
 					[]gwtypes.GatewayStatusAddress{
 						{
@@ -330,8 +330,8 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
-				require.Equal(t, condition.Status, metav1.ConditionTrue)
-				require.Equal(t, consts.ConditionReason(condition.Reason), consts.ResourceReadyReason)
+				require.Equal(t, metav1.ConditionTrue, condition.Status)
+				require.Equal(t, consts.ResourceReadyReason, consts.ConditionReason(condition.Reason))
 				require.Equal(t,
 					[]gwtypes.GatewayStatusAddress{
 						{
@@ -363,14 +363,14 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
-				require.Equal(t, condition.Status, metav1.ConditionTrue)
-				require.Equal(t, consts.ConditionReason(condition.Reason), consts.ResourceReadyReason)
-				require.Equal(t, currentGateway.Status.Addresses, []gwtypes.GatewayStatusAddress{
+				require.Equal(t, metav1.ConditionTrue, condition.Status)
+				require.Equal(t, consts.ResourceReadyReason, consts.ConditionReason(condition.Reason))
+				require.Equal(t, []gwtypes.GatewayStatusAddress{
 					{
 						Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
 						Value: exampleHostname,
 					},
-				})
+				}, currentGateway.Status.Addresses)
 
 				t.Log("removing the ClusterIP from the dataplane service")
 				dataplaneService.Spec = corev1.ServiceSpec{
@@ -385,9 +385,9 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.False(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
 				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
-				require.Equal(t, condition.Status, metav1.ConditionFalse)
-				require.Equal(t, consts.ConditionReason(condition.Reason), GatewayReasonServiceError)
-				require.Len(t, currentGateway.Status.Addresses, 0)
+				require.Equal(t, metav1.ConditionFalse, condition.Status)
+				require.Equal(t, GatewayReasonServiceError, consts.ConditionReason(condition.Reason))
+				require.Empty(t, currentGateway.Status.Addresses)
 			},
 		},
 	}

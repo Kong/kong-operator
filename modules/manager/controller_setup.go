@@ -388,7 +388,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		}
 	}
 
-	keyType, err := keyTypeToX509PublicKeyAlgorithm(c.ClusterCAKeyType)
+	keyType, err := KeyTypeToX509PublicKeyAlgorithm(c.ClusterCAKeyType)
 	if err != nil {
 		return nil, fmt.Errorf("unsupported cluster CA key type: %w", err)
 	}

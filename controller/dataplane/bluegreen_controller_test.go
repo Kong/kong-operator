@@ -312,11 +312,11 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 
 				t.Logf("DataPlane status should have the Ready status condition set to false")
 				require.Len(t, dp.Status.Conditions, 1)
-				require.EqualValues(t, dp.Status.Conditions[0].Type, consts.ReadyType)
-				require.Equal(t, dp.Status.Conditions[0].Status, metav1.ConditionFalse,
+				require.EqualValues(t, consts.ReadyType, dp.Status.Conditions[0].Type)
+				require.Equal(t, metav1.ConditionFalse, dp.Status.Conditions[0].Status,
 					"DataPlane's Ready status condition should be set to false when live Deployment has no Ready replicas",
 				)
-				require.EqualValues(t, dp.Status.Conditions[0].Reason, consts.WaitingToBecomeReadyReason)
+				require.EqualValues(t, consts.WaitingToBecomeReadyReason, dp.Status.Conditions[0].Reason)
 
 				t.Logf("DataPlane rollout status should have the Ready status condition set to true")
 				require.NotNil(t, dp.Status.RolloutStatus)

@@ -128,7 +128,7 @@ func Test_ensureContainerImageUpdated(t *testing.T) {
 				require.Error(t, err)
 				assert.Equal(t, tt.wantErr, err.Error())
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			assert.Equal(t, tt.updated, updated)
@@ -187,8 +187,8 @@ func TestLog(t *testing.T) {
 			Msg   string `json:"msg,omitempty"`
 		}{}
 		require.NoError(t, json.Unmarshal(buf.Bytes(), &entry))
-		assert.Equal(t, entry.Msg, "message about gw")
-		assert.Equal(t, entry.Level, "info")
+		assert.Equal(t, "message about gw", entry.Msg)
+		assert.Equal(t, "info", entry.Level)
 	})
 }
 
