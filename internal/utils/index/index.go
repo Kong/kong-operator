@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/gateway-operator/controller/pkg/extensions"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -77,28 +78,25 @@ func KongPluginInstallationsOnDataPlane(ctx context.Context, c cache.Cache) erro
 	)
 }
 
-// DataPlaneOnDataPlaneKonnecExtension indexes the DataPlane .spec.extensions field
+// ExtendableOnKonnectExtension indexes the Object .spec.extensions field
 // on the "KonnectExtension" key.
-func DataPlaneOnDataPlaneKonnecExtension(ctx context.Context, c cache.Cache) error {
+func ExtendableOnKonnectExtension[t extensions.ExtendableT](ctx context.Context, c cache.Cache) error {
 	if _, err := c.GetInformer(ctx, &operatorv1beta1.DataPlane{}); err != nil {
 		if meta.IsNoMatchError(err) {
 			return nil
 		}
 		return fmt.Errorf("failed to get informer for v1alpha1 KonnectExtension: %w, disabling indexing KonnectExtensions for DataPlanes' .spec.extensions", err)
 	}
+	var obj t
 	return c.IndexField(
 		ctx,
-		&operatorv1beta1.DataPlane{},
+		obj,
 		KonnectExtensionIndex,
 		func(o client.Object) []string {
-			dp, ok := o.(*operatorv1beta1.DataPlane)
-			if !ok {
-				return nil
-			}
 			result := []string{}
-			if len(dp.Spec.Extensions) > 0 {
-				for _, ext := range dp.Spec.Extensions {
-					namespace := dp.Namespace
+			if len(obj.GetExtensions()) > 0 {
+				for _, ext := range obj.GetExtensions() {
+					namespace := obj.GetNamespace()
 					if ext.Group != konnectv1alpha1.SchemeGroupVersion.Group ||
 						ext.Kind != konnectv1alpha1.KonnectExtensionKind {
 						continue
@@ -112,4 +110,5 @@ func DataPlaneOnDataPlaneKonnecExtension(ctx context.Context, c cache.Cache) err
 			return result
 		},
 	)
+
 }
