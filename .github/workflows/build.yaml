@@ -16,7 +16,7 @@ on:
     - 'main'
   pull_request:
     branches:
-      - '*'
+      - '**'
   workflow_dispatch: {}
 
 permissions:
