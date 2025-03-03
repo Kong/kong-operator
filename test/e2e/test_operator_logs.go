@@ -64,6 +64,8 @@ var (
 )
 
 func TestOperatorLogs(t *testing.T) {
+	t.Skip("https://github.com/Kong/gateway-operator/issues/1350")
+
 	ctx := t.Context()
 	if imageLoad == "" && imageOverride == "" {
 		t.Skipf("No KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE nor KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD" +

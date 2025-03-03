@@ -502,7 +502,7 @@ func Test_parsePrivateKey(t *testing.T) {
 				Bytes: privKeyBytes,
 			}
 
-			priv, alg, err := parsePrivateKey(pemBlock)
+			priv, alg, err := ParsePrivateKey(pemBlock)
 			if tt.expectedErrorMsg != "" {
 				require.Error(t, err)
 				assert.Equal(t, tt.expectedErrorMsg, err.Error())

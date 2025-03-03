@@ -14,4 +14,7 @@ const (
 	ControlPlaneFinalizerCleanupClusterRoleBinding ControlPlaneFinalizer = "gateway-operator.konghq.com/cleanup-clusterrolebinding"
 	// ControlPlaneFinalizerCleanupValidatingWebhookConfiguration is the finalizer to cleanup validatingwebhookconfigurations owned by controlplane on deleting.
 	ControlPlaneFinalizerCleanupValidatingWebhookConfiguration ControlPlaneFinalizer = "gateway-operator.konghq.com/cleanup-validatingwebhookconfiguration"
+
+	// ControlPlaneFinalizerCPInstanceTeardown is the finalizer to tear down a controlplane instance.
+	ControlPlaneFinalizerCPInstanceTeardown ControlPlaneFinalizer = "gateway-operator.konghq.com/teardown-cp-instance"
 )

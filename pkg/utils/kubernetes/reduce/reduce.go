@@ -5,14 +5,12 @@ import (
 	"fmt"
 
 	"github.com/samber/lo"
-	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
@@ -42,30 +40,6 @@ func ReduceSecrets(ctx context.Context, k8sClient client.Client, secrets []corev
 		}
 	}
 	return nil
-}
-
-// +kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=delete
-
-// ReduceServiceAccounts detects the best serviceAccount in the set and deletes all the others.
-func ReduceServiceAccounts(ctx context.Context, k8sClient client.Client, serviceAccounts []corev1.ServiceAccount) error {
-	filteredServiceAccounts := filterServiceAccounts(serviceAccounts)
-	return clientops.DeleteAll(ctx, k8sClient, filteredServiceAccounts)
-}
-
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=delete
-
-// ReduceClusterRoles detects the best ClusterRole in the set and deletes all the others.
-func ReduceClusterRoles(ctx context.Context, k8sClient client.Client, clusterRoles []rbacv1.ClusterRole) error {
-	filteredClusterRoles := filterClusterRoles(clusterRoles)
-	return clientops.DeleteAll(ctx, k8sClient, filteredClusterRoles)
-}
-
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=delete
-
-// ReduceClusterRoleBindings detects the best ClusterRoleBinding in the set and deletes all the others.
-func ReduceClusterRoleBindings(ctx context.Context, k8sClient client.Client, clusterRoleBindings []rbacv1.ClusterRoleBinding) error {
-	filteredCLusterRoleBindings := filterClusterRoleBindings(clusterRoleBindings)
-	return clientops.DeleteAll(ctx, k8sClient, filteredCLusterRoleBindings)
 }
 
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=delete
@@ -166,14 +140,6 @@ type PDBFilterFunc func([]policyv1.PodDisruptionBudget) []policyv1.PodDisruption
 // ReducePodDisruptionBudgets detects the best PodDisruptionBudget in the set and deletes all the others.
 func ReducePodDisruptionBudgets(ctx context.Context, k8sClient client.Client, pdbs []policyv1.PodDisruptionBudget, filter PDBFilterFunc) error {
 	return clientops.DeleteAll(ctx, k8sClient, pdbs)
-}
-
-// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=delete
-
-// ReduceValidatingWebhookConfigurations detects the best ValidatingWebhookConfiguration in the set and deletes all the others.
-func ReduceValidatingWebhookConfigurations(ctx context.Context, k8sClient client.Client, webhookConfigurations []admregv1.ValidatingWebhookConfiguration) error {
-	filteredWebhookConfigurations := filterValidatingWebhookConfigurations(webhookConfigurations)
-	return clientops.DeleteAll(ctx, k8sClient, filteredWebhookConfigurations)
 }
 
 // +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=dataplanes,verbs=delete

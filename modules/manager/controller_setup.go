@@ -7,6 +7,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/multiinstance"
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -125,8 +126,8 @@ const (
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
-func SetupControllersShim(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
-	controllers, err := SetupControllers(mgr, c)
+func SetupControllersShim(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Manager) ([]ControllerDef, error) {
+	controllers, err := SetupControllers(mgr, c, cpsMgr)
 	if err != nil {
 		return []ControllerDef{}, err
 	}
@@ -220,7 +221,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 }
 
 // SetupControllers returns a list of ControllerDefs based on config.
-func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef, error) {
+func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Manager) (map[string]ControllerDef, error) {
 	// metricRecorder is the recorder used to record custom metrics in the controller manager's metrics server.
 	metricRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
 
@@ -451,16 +452,17 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		ControlPlaneControllerName: {
 			Enabled: c.GatewayControllerEnabled || c.ControlPlaneControllerEnabled,
 			Controller: &controlplane.Reconciler{
-				Client:                    mgr.GetClient(),
-				Scheme:                    mgr.GetScheme(),
-				ClusterCASecretName:       c.ClusterCASecretName,
-				ClusterCASecretNamespace:  c.ClusterCASecretNamespace,
-				ClusterCAKeyConfig:        clusterCAKeyConfig,
-				KonnectEnabled:            c.KonnectControllersEnabled,
-				EnforceConfig:             c.EnforceConfig,
-				AnonymousReportsEnabled:   c.AnonymousReports,
-				LoggingMode:               c.LoggingMode,
-				ValidateControlPlaneImage: c.ValidateImages,
+				AnonymousReportsEnabled:  c.AnonymousReports,
+				LoggingMode:              c.LoggingMode,
+				Client:                   mgr.GetClient(),
+				Scheme:                   mgr.GetScheme(),
+				ClusterCASecretName:      c.ClusterCASecretName,
+				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				ClusterCAKeyConfig:       clusterCAKeyConfig,
+				KonnectEnabled:           c.KonnectControllersEnabled,
+				EnforceConfig:            c.EnforceConfig,
+				RestConfig:               mgr.GetConfig(),
+				InstancesManager:         cpsMgr,
 			},
 		},
 		// DataPlane controller
