@@ -259,13 +259,13 @@ func TestCreateControlPlane(t *testing.T) {
 			err := createControlPlane(ctx, sdk, sdkGroups, fakeClient, cp)
 			if tc.expectedErrContains != "" {
 				if tc.expectedErrType != nil {
-					assert.ErrorAs(t, err, &tc.expectedErrType)
+					require.ErrorAs(t, err, &tc.expectedErrType)
 				}
 				assert.ErrorContains(t, err, tc.expectedErrContains)
 				return
 			}
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			if tc.expectedID != "" {
 				assert.Equal(t, tc.expectedID, cp.Status.ID)
 			}
@@ -396,7 +396,7 @@ func TestDeleteControlPlane(t *testing.T) {
 				return
 			}
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		})
 	}
 }
@@ -568,7 +568,7 @@ func TestUpdateControlPlane(t *testing.T) {
 				return
 			}
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tc.expectedID, cp.Status.ID)
 		})
 	}
@@ -905,7 +905,7 @@ func TestSetGroupMembers(t *testing.T) {
 				assert.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.True(t, sdk.AssertExpectations(t))
 
 			membersRefResolvedCondition, conditionFound := lo.Find(tc.group.Status.Conditions, func(c metav1.Condition) bool {

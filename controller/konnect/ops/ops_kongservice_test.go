@@ -188,12 +188,12 @@ func TestCreateKongService(t *testing.T) {
 			if tc.expectedErrContains != "" {
 				assert.ErrorContains(t, err, tc.expectedErrContains)
 				if tc.expectedErrType != nil {
-					assert.ErrorAs(t, err, &tc.expectedErrType)
+					require.ErrorAs(t, err, &tc.expectedErrType)
 				}
 				return
 			}
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		})
 	}
 }
@@ -322,7 +322,7 @@ func TestDeleteKongService(t *testing.T) {
 				return
 			}
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		})
 	}
 }
@@ -444,7 +444,7 @@ func TestUpdateKongService(t *testing.T) {
 				return
 			}
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		})
 	}
 }

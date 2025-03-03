@@ -154,14 +154,14 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 
 				res, err := r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
 				require.NoError(t, err)
-				require.Equal(t, res, op.Created)
+				require.Equal(t, op.Created, res)
 
 				require.NoError(t, r.Client.List(ctx, &webhooks))
 				require.Len(t, webhooks.Items, 1, "webhook configuration should be created")
 
 				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
 				require.NoError(t, err)
-				require.Equal(t, res, op.Noop)
+				require.Equal(t, op.Noop, res)
 
 				t.Log("updating webhook configuration outside of the controller")
 				{
@@ -173,7 +173,7 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 				t.Log("running ensureValidatingWebhookConfiguration to enforce ObjectMeta")
 				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
 				require.NoError(t, err)
-				require.Equal(t, res, op.Updated)
+				require.Equal(t, op.Updated, res)
 
 				require.NoError(t, r.Client.List(ctx, &webhooks))
 				require.Len(t, webhooks.Items, 1)
