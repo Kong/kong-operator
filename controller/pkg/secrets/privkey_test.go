@@ -151,11 +151,13 @@ func TestParseKey(t *testing.T) {
 			require.NotNil(t, key)
 
 			// Verify the key type matches what we expect
-			switch tt.keyType { //nolint:exhaustive
+			switch tt.keyType {
 			case x509.ECDSA:
 				assert.IsType(t, &ecdsa.PrivateKey{}, key)
 			case x509.RSA:
 				assert.IsType(t, &rsa.PrivateKey{}, key)
+			default:
+				t.Fatal("it should never happen, fix the test case")
 			}
 		})
 	}
