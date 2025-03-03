@@ -506,3 +506,8 @@ func (d *DataPlane) GetConditions() []metav1.Condition {
 func (d *DataPlane) SetConditions(conditions []metav1.Condition) {
 	d.Status.Conditions = conditions
 }
+
+// GetExtensions retrieves the DataPlane Extensions
+func (d *DataPlane) GetExtensions() []commonv1alpha1.ExtensionRef {
+	return d.Spec.Extensions
+}
