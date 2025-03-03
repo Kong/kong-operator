@@ -150,7 +150,7 @@ func TestDataPlaneEssentials(t *testing.T) {
 		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	}), waitTime, tickTime)
 	t.Log("verifying annotations on the proxy service managed by the dataplane")
-	require.Equal(t, dataplaneIngressService.Annotations["foo"], "bar")
+	require.Equal(t, "bar", dataplaneIngressService.Annotations["foo"])
 
 	t.Log("verifying dataplane services receive IP addresses")
 	var dataplaneIP string
@@ -772,13 +772,13 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	t.Log("verifying Kong proxy container has mounted the default cluster-certificate volume")
 	defVolumeMounts := GetVolumeMountsByVolumeName(proxyContainer.VolumeMounts, consts.ClusterCertificateVolume)
 	require.Len(t, defVolumeMounts, 1, "proxy container should mount cluster-certificate volume")
-	require.Equal(t, defVolumeMounts[0].MountPath, consts.ClusterCertificateVolumeMountPath, "proxy container should mount cluster-certificate volume to path /var/cluster-certificate")
+	require.Equal(t, consts.ClusterCertificateVolumeMountPath, defVolumeMounts[0].MountPath, "proxy container should mount cluster-certificate volume to path /var/cluster-certificate")
 	require.True(t, defVolumeMounts[0].ReadOnly, "proxy container should mount cluster-certificate volume in read only mode")
 
 	t.Log("verifying Kong proxy container has mounted the custom test-volume volume")
 	volMounts := GetVolumeMountsByVolumeName(proxyContainer.VolumeMounts, "test-volume")
 	require.Len(t, volMounts, 1, "proxy container should mount test-volume volume")
-	require.Equal(t, volMounts[0].MountPath, "/var/test", "proxy container should mount test-volume volume to path /var/test")
+	require.Equal(t, "/var/test", volMounts[0].MountPath, "proxy container should mount test-volume volume to path /var/test")
 	require.True(t, volMounts[0].ReadOnly, "proxy container should mount test-volume volume in read only mode")
 
 	t.Log("verifying dataplane pod has custom secret volume")
@@ -790,7 +790,7 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	t.Log("verifying Kong proxy container has mounted custom secret volume")
 	volMounts = GetVolumeMountsByVolumeName(proxyContainer.VolumeMounts, "test-volume")
 	require.Len(t, volMounts, 1, "proxy container should mount custom secret volume 'test-volume'")
-	require.Equal(t, volMounts[0].MountPath, "/var/test", "proxy container should mount custom secret volume to path /var/test")
+	require.Equal(t, "/var/test", volMounts[0].MountPath, "proxy container should mount custom secret volume to path /var/test")
 	require.True(t, volMounts[0].ReadOnly, "proxy container should mount 'test-volume' in read only mode")
 
 	t.Log("updating volumes and volume mounts in dataplane spec to verify volumes could be reconciled")

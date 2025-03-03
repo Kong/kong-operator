@@ -197,7 +197,7 @@ func TestIngressEssentials(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -276,7 +276,7 @@ func TestIngressEssentials(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false

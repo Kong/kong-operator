@@ -1148,8 +1148,8 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 				tc.listener,
 			)
 
-			assert.NoError(t, err)
-			assert.Equal(t, supportedKinds, tc.expectedSupportedKinds)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedSupportedKinds, supportedKinds)
 			// force the transitionTimes to be equal to properly assert the conditions are equal
 			resolvedRefsCondition.LastTransitionTime = tc.expectedResolvedRefsCondition.LastTransitionTime
 			assert.Equal(t, tc.expectedResolvedRefsCondition, resolvedRefsCondition)

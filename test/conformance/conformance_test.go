@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -67,7 +66,7 @@ func TestGatewayConformance(t *testing.T) {
 	}
 
 	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(config.KongRouterFlavor)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Logf("using the following configuration for the conformance tests: %+v", config)
 

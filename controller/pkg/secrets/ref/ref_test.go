@@ -5,6 +5,7 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -200,7 +201,7 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 			cl := fake.NewFakeClient(lo.Map(tc.referenceGrants, func(rg gatewayv1beta1.ReferenceGrant, _ int) runtime.Object {
 				return &rg
 			})...)
-			assert.NoError(t, gatewayv1beta1.Install(cl.Scheme()))
+			require.NoError(t, gatewayv1beta1.Install(cl.Scheme()))
 			_, granted, err := CheckReferenceGrantForSecret(
 				t.Context(), cl,
 				tc.forObj,
@@ -209,7 +210,7 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 					Name:      "good-secret",
 				},
 			)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tc.isGranted, granted)
 		})
 	}

@@ -29,6 +29,7 @@ linters:
   - revive
   - staticcheck
   - typecheck
+  - testifylint
   - unconvert
   - unparam
   - unused
@@ -150,6 +151,12 @@ linters-settings:
         msg: "Please use camel case 'ControlPlane' instead of 'Controlplane'"
   usetesting:
     os-temp-dir: true
+  testifylint:
+    enable-all: true
+    disable:
+      # Incorrectly converts assert.CollectT's Errorf to ErrorIsf
+      # https://github.com/Antonboom/testifylint/issues/231
+      - error-is-as
 issues:
   max-same-issues: 0
   fix: true

@@ -637,7 +637,9 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 			t.Logf("changing the GatewayConfiguration to change dataplane deploymentOptions to %v", deploymentOptions)
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
 				_, err = GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name).Update(GetCtx(), gatewayConfiguration, metav1.UpdateOptions{})
-				assert.NoError(c, err)
+				if !assert.NoError(c, err) {
+					return
+				}
 			}, time.Minute, time.Second)
 
 			t.Log("verifying the deployment managed by the controlplane is ready")
