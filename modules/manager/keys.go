@@ -7,7 +7,8 @@ import (
 	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
 )
 
-func keyTypeToX509PublicKeyAlgorithm(keyType mgrconfig.KeyType) (x509.PublicKeyAlgorithm, error) {
+// KeyTypeToX509PublicKeyAlgorithm converts a KeyType to an x509.PublicKeyAlgorithm.
+func KeyTypeToX509PublicKeyAlgorithm(keyType mgrconfig.KeyType) (x509.PublicKeyAlgorithm, error) {
 	switch keyType {
 	case mgrconfig.RSA:
 		return x509.RSA, nil
