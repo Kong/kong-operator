@@ -191,7 +191,7 @@ func Run(
 		return err
 	}
 
-	keyType, err := keyTypeToX509PublicKeyAlgorithm(cfg.ClusterCAKeyType)
+	keyType, err := KeyTypeToX509PublicKeyAlgorithm(cfg.ClusterCAKeyType)
 	if err != nil {
 		return fmt.Errorf("unsupported cluster CA key type: %w", err)
 	}

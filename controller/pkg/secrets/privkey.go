@@ -21,6 +21,25 @@ type KeyConfig struct {
 	Size int
 }
 
+const (
+	// SignatureAlgorithmForECDSA is the default signature algorithm for ECDSA keys.
+	SignatureAlgorithmForECDSA x509.SignatureAlgorithm = x509.ECDSAWithSHA256
+	// SignatureAlgorithmForRSA is the default signature algorithm for RSA keys.
+	SignatureAlgorithmForRSA x509.SignatureAlgorithm = x509.SHA256WithRSA
+)
+
+// SignatureAlgorithmForKeyType returns the default signature algorithm for the provided key type.
+func SignatureAlgorithmForKeyType(keyType x509.PublicKeyAlgorithm) x509.SignatureAlgorithm {
+	switch keyType {
+	case x509.ECDSA:
+		return SignatureAlgorithmForECDSA
+	case x509.RSA:
+		return SignatureAlgorithmForRSA
+	default:
+		return x509.UnknownSignatureAlgorithm
+	}
+}
+
 // CreatePrivateKey generates a private key based on the provided keyConfig.
 func CreatePrivateKey(
 	keyConfig KeyConfig,
@@ -30,30 +49,45 @@ func CreatePrivateKey(
 	case x509.ECDSA:
 		ecdsa, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
-			return nil, nil, x509.ECDSAWithSHA256, err
+			return nil, nil, SignatureAlgorithmForECDSA, err
 		}
 		privDer, err := x509.MarshalECPrivateKey(ecdsa)
 		if err != nil {
-			return nil, nil, x509.ECDSAWithSHA256, err
+			return nil, nil, SignatureAlgorithmForECDSA, err
 		}
 		pemBlock := &pem.Block{
 			Type:  "EC PRIVATE KEY",
 			Bytes: privDer,
 		}
-		return ecdsa, pemBlock, x509.ECDSAWithSHA256, nil
+		return ecdsa, pemBlock, SignatureAlgorithmForECDSA, nil
 
 	case x509.RSA:
 		rsa, err := rsa.GenerateKey(rand.Reader, keyConfig.Size)
 		if err != nil {
-			return nil, nil, x509.SHA256WithRSA, err
+			return nil, nil, SignatureAlgorithmForRSA, err
 		}
 		pemBlock := &pem.Block{
 			Type:  "RSA PRIVATE KEY",
 			Bytes: x509.MarshalPKCS1PrivateKey(rsa),
 		}
-		return rsa, pemBlock, x509.SHA256WithRSA, nil
+		return rsa, pemBlock, SignatureAlgorithmForRSA, nil
 
 	default:
 		return nil, nil, x509.UnknownSignatureAlgorithm, fmt.Errorf("unsupported key type: %s", keyConfig.Type)
+	}
+}
+
+// ParseKey parses a private key from a PEM block based on the provided keyType.
+func ParseKey(
+	keyType x509.PublicKeyAlgorithm,
+	pemBlock *pem.Block,
+) (crypto.Signer, error) {
+	switch keyType {
+	case x509.ECDSA:
+		return x509.ParseECPrivateKey(pemBlock.Bytes)
+	case x509.RSA:
+		return x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
+	default:
+		return nil, fmt.Errorf("unsupported key type: %v", keyType)
 	}
 }
