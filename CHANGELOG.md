@@ -102,6 +102,9 @@
 - Added support for `KonnectDataPlaneGroupConfiguration` CRD which can manage Konnect
   Cloud Gateway DataPlane Group configurations entities.
   [#1186](https://github.com/Kong/gateway-operator/pull/1186)
+- Supported `KonnectExtension` to attach to Konnect control planes by setting
+  namespace and name of `KonnectGatewayControlPlane` in `spec.konnectControlPlane`.
+  [#1254](https://github.com/Kong/gateway-operator/pull/1254)
 
 ### Changed
 

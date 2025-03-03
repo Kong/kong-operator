@@ -43,6 +43,10 @@ func konnectExtensionAPIAuthConfigurationRef(object client.Object) []string {
 		return nil
 	}
 
+	if ext.Spec.KonnectConfiguration == nil {
+		return nil
+	}
+
 	return []string{ext.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
 }
 

@@ -1010,6 +1010,56 @@ func KongDataPlaneClientCertificateAttachedToCP(
 	return cert
 }
 
+// KonnectExtension deploys a KonnectExtension.
+func KonnectExtension(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	opts ...ObjOption,
+) *konnectv1alpha1.KonnectExtension {
+	t.Helper()
+
+	ke := &konnectv1alpha1.KonnectExtension{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "konnect-extension-",
+		},
+	}
+	for _, opt := range opts {
+		opt(ke)
+	}
+
+	require.NoError(t, cl.Create(ctx, ke))
+	logObjectCreate(t, ke)
+
+	return ke
+}
+
+// KonnectExtensionAttachedToCP deploys a KonnectExtension attached to a Konnect CP represented by the given KonnectGatewayControlPlane.
+func KonnectExtensionAttachedToCP(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+) *konnectv1alpha1.KonnectExtension {
+	return KonnectExtension(
+		t, ctx, cl,
+		func(obj client.Object) {
+			ke, ok := obj.(*konnectv1alpha1.KonnectExtension)
+			require.Truef(t, ok, "Expect object %s/%s to be a KonnectExtension, actual type %T",
+				obj.GetNamespace(), obj.GetName(), obj)
+			ke.Spec.KonnectControlPlane = konnectv1alpha1.KonnectExtensionControlPlane{
+				ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
+					Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+					KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+						Name:      cp.Name,
+						Namespace: cp.Namespace,
+					},
+				},
+			}
+		},
+	)
+}
+
 func logObjectCreate[
 	T interface {
 		client.Object
