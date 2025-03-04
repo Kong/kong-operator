@@ -103,6 +103,21 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	if ok, err := controllerutil.HasOwnerReference(consumer.OwnerReferences, ent, cl.Scheme()); err != nil {
+		ctrllog.FromContext(ctx).Info("failed to check if KongConsumer has owner reference", "error", err)
+	} else if ok {
+		old := ent.DeepCopyObject().(TEnt)
+		if err := controllerutil.RemoveOwnerReference(&consumer, ent, cl.Scheme()); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to delete owner reference: %w", err)
+		}
+		if err := cl.Patch(ctx, ent, client.MergeFrom(old)); err != nil {
+			if k8serrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
+		}
+	}
+
 	type EntityWithConsumerRef interface {
 		SetKonnectConsumerIDInStatus(string)
 	}
