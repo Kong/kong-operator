@@ -1060,6 +1060,29 @@ func KonnectExtensionRefencingKonnectGatewayControlPlane(
 	)
 }
 
+// ObjectSupportingKonnectConfiguration defines the interface of types supporting setting `KonnectConfiguration`.
+type ObjectSupportingKonnectConfiguration interface {
+	*konnectv1alpha1.KonnectGatewayControlPlane |
+		*konnectv1alpha1.KonnectExtension |
+		*konnectv1alpha1.KonnectCloudGatewayNetwork
+}
+
+// WithKonnectConfiguration returns an option function that sets the `KonnectConfiguration` in the object.
+func WithKonnectConfiguration[T ObjectSupportingKonnectConfiguration](
+	konnectConfiguration konnectv1alpha1.KonnectConfiguration,
+) ObjOption {
+	return func(obj client.Object) {
+		switch o := any(obj).(type) {
+		case *konnectv1alpha1.KonnectGatewayControlPlane:
+			o.Spec.KonnectConfiguration = konnectConfiguration
+		case *konnectv1alpha1.KonnectExtension:
+			o.Spec.KonnectConfiguration = lo.ToPtr(konnectConfiguration)
+		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
+			o.Spec.KonnectConfiguration = konnectConfiguration
+		}
+	}
+}
+
 // KonnectExtensionWithAPIAuthRefAndCPID deploys a KonnectExtension attaching to control plane
 // by the CP's ID and the API auth configuration to the Konnect server where the CP is in.
 func KonnectExtensionWithAPIAuthRefAndCPID(
