@@ -36,7 +36,7 @@ func createKongDataPlaneClientCertificate(
 		return errWrap
 	}
 
-	cert.SetKonnectID(*resp.DataPlaneClientCertificate.Item.ID)
+	cert.SetKonnectID(*resp.DataPlaneClientCertificateResponse.Item.ID)
 
 	return nil
 }
