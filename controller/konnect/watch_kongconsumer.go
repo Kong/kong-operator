@@ -2,7 +2,11 @@ package konnect
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +32,18 @@ import (
 func KongConsumerReconciliationWatchOptions(
 	cl client.Client,
 ) []func(*ctrl.Builder) *ctrl.Builder {
+	credentialSecretLabelSelector, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{
+				Key:      SecretCredentialLabel,
+				Operator: metav1.LabelSelectorOpExists,
+			},
+		},
+	})
+	if err != nil {
+		panic(fmt.Sprintf("failed to create label selector predicate: %v", err))
+	}
+
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.For(&configurationv1.KongConsumer{},
@@ -67,6 +83,17 @@ func KongConsumerReconciliationWatchOptions(
 				),
 			)
 		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&corev1.Secret{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKongConsumerForKongCredentialSecret(cl),
+				),
+				builder.WithPredicates(
+					credentialSecretLabelSelector,
+				),
+			)
+		},
 	}
 }
 
@@ -86,5 +113,34 @@ func enqueueKongConsumerForKongConsumerGroup(
 		}
 
 		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueKongConsumerForKongCredentialSecret(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		s, ok := obj.(*corev1.Secret)
+		if !ok {
+			return nil
+		}
+		// List consumers using this Secret as credential.
+		var l configurationv1.KongConsumerList
+		err := cl.List(
+			ctx,
+			&l,
+			client.MatchingFields{
+				IndexFieldKongConsumerReferencesSecrets: s.GetName(),
+			},
+		)
+		if err != nil {
+			return nil
+		}
+
+		return objectListToReconcileRequests(
+			lo.Filter(l.Items, func(c configurationv1.KongConsumer, _ int) bool {
+				return objHasControlPlaneRef(&c)
+			}),
+		)
 	}
 }

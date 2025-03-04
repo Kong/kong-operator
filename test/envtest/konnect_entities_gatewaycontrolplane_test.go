@@ -60,7 +60,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
-			if !assert.NoError(t,
+			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
 						Namespace: ns.Name,
@@ -68,9 +68,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 					cp,
 				),
-			) {
-				return
-			}
+			)
 
 			assert.Equal(t, "12345", cp.Status.ID)
 			assert.True(t, conditionsContainProgrammedTrue(cp.Status.Conditions),
@@ -176,7 +174,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
-			if !assert.NoError(t,
+			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
 						Namespace: ns.Name,
@@ -184,9 +182,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 					cp,
 				),
-			) {
-				return
-			}
+			)
 
 			assert.Equal(t, "12345", cp.Status.ID)
 			assert.True(t, conditionsContainProgrammedTrue(cp.Status.Conditions),
@@ -197,7 +193,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			cpGroup := &konnectv1alpha1.KonnectGatewayControlPlane{}
-			if !assert.NoError(t,
+			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
 						Namespace: ns.Name,
@@ -205,9 +201,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 					cpGroup,
 				),
-			) {
-				return
-			}
+			)
 
 			assert.Equal(t, "12346", cpGroup.Status.ID)
 			assert.True(t, conditionsContainProgrammedTrue(cpGroup.Status.Conditions),
@@ -320,7 +314,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
-			if !assert.NoError(t,
+			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
 						Namespace: ns.Name,
@@ -328,9 +322,8 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 					cp,
 				),
-			) {
-				return
-			}
+			)
+
 			assert.True(t, conditionsContainProgrammedTrue(cp.Status.Conditions),
 				"Programmed condition should be set and its status should be true",
 			)
@@ -339,7 +332,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			cpGroup := &konnectv1alpha1.KonnectGatewayControlPlane{}
-			if !assert.NoError(t,
+			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
 						Namespace: ns.Name,
@@ -347,9 +340,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 					cpGroup,
 				),
-			) {
-				return
-			}
+			)
 
 			assert.Equal(t, "123467", cpGroup.Status.ID)
 			assert.True(t, conditionsContainProgrammedFalse(cpGroup.Status.Conditions),
@@ -413,7 +404,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
-			if !assert.NoError(t,
+			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
 						Namespace: ns.Name,
@@ -421,9 +412,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 					cp,
 				),
-			) {
-				return
-			}
+			)
 
 			assert.Equal(t, "123456", cp.Status.ID, "ID should be set")
 			assert.True(t, conditionsContainProgrammedTrue(cp.Status.Conditions),
@@ -525,7 +514,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cpGroup := &konnectv1alpha1.KonnectGatewayControlPlane{}
-			if !assert.NoError(t,
+			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
 						Namespace: ns.Name,
@@ -533,9 +522,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 					cpGroup,
 				),
-			) {
-				return
-			}
+			)
 
 			assert.Equal(t, "group-123456", cpGroup.Status.ID, "ID should be set")
 			assert.True(t, conditionsContainProgrammedTrue(cpGroup.Status.Conditions),
@@ -588,7 +575,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cpGroup := &konnectv1alpha1.KonnectGatewayControlPlane{}
-			if !assert.NoError(t,
+			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
 						Namespace: ns.Name,
@@ -596,9 +583,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 					cpGroup,
 				),
-			) {
-				return
-			}
+			)
 
 			assert.Equal(t, "cpg-id", cpGroup.Status.ID, "ID should be set")
 			assert.True(t, conditionsContainProgrammedTrue(cpGroup.Status.Conditions),

@@ -634,7 +634,7 @@ func clusterWideResourcesAreProperlyManaged(gatewayLabelSelector string) func(ct
 			cl,
 			client.MatchingLabels(managedByLabelSet),
 		)
-		assert.NoError(c, err)
+		require.NoError(c, err)
 		assert.Len(c, clusterRoles, 1)
 
 		clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
@@ -642,7 +642,8 @@ func clusterWideResourcesAreProperlyManaged(gatewayLabelSelector string) func(ct
 			cl,
 			client.MatchingLabels(managedByLabelSet),
 		)
-		assert.NoError(c, err)
+		require.NoError(c, err)
+
 		assert.Len(c, clusterRoleBindings, 1)
 
 		validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
@@ -650,7 +651,8 @@ func clusterWideResourcesAreProperlyManaged(gatewayLabelSelector string) func(ct
 			cl,
 			client.MatchingLabels(managedByLabelSet),
 		)
-		assert.NoError(c, err)
+		require.NoError(c, err)
+
 		assert.Len(c, validatingWebhookConfigurations, 1)
 	}
 }

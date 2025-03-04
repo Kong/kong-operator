@@ -45,7 +45,6 @@ func TestGetAcceptedCondition(t *testing.T) {
 			name: "Invalid ParametersRef Group and kind",
 			gwc: &gatewayv1.GatewayClass{
 				Spec: gatewayv1.GatewayClassSpec{
-
 					ParametersRef: &gatewayv1.ParametersReference{
 						Group:     "invalid.group",
 						Kind:      "InvalidKind",
@@ -124,7 +123,7 @@ func TestGetAcceptedCondition(t *testing.T) {
 				Build()
 
 			condition, err := getAcceptedCondition(ctx, cl, tt.gwc)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.NotNil(t, condition)
 			assert.Equal(t, tt.expectedStatus, condition.Status)
 			assert.Equal(t, tt.expectedReason, condition.Reason)
@@ -132,6 +131,7 @@ func TestGetAcceptedCondition(t *testing.T) {
 		})
 	}
 }
+
 func TestGetRouterFlavor(t *testing.T) {
 	scheme := runtime.NewScheme()
 	assert.NoError(t, gatewayv1.Install(scheme))

@@ -74,8 +74,8 @@ func TestGetCondition(t *testing.T) {
 				Conditions: tt.conditions,
 			}
 			current, exists := GetCondition(consts.ConditionType(tt.condition), resource)
-			assert.Equal(t, current, tt.expected)
-			assert.Equal(t, exists, tt.expectedFound)
+			assert.Equal(t, tt.expected, current)
+			assert.Equal(t, tt.expectedFound, exists)
 		})
 	}
 }
@@ -333,7 +333,7 @@ func TestIsValidCondition(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			current := HasConditionTrue(consts.ConditionType(tt.input), resource)
-			assert.Equal(t, current, tt.expected)
+			assert.Equal(t, tt.expected, current)
 		})
 	}
 }
@@ -389,7 +389,7 @@ func TestIsReady(t *testing.T) {
 				Conditions: tt.conditions,
 			}
 			current := IsReady(resource)
-			assert.Equal(t, current, tt.expected)
+			assert.Equal(t, tt.expected, current)
 		})
 	}
 }
@@ -494,7 +494,7 @@ func TestSetReady(t *testing.T) {
 			}
 			SetReady(resource)
 			current := IsReady(resource)
-			assert.Equal(t, current, tt.expected)
+			assert.Equal(t, tt.expected, current)
 		})
 	}
 }
@@ -503,7 +503,7 @@ func TestInitReady(t *testing.T) {
 	resource := &TestResource{}
 	InitReady(resource)
 	conditions := resource.GetConditions()
-	assert.Equal(t, 1, len(conditions))
+	assert.Len(t, conditions, 1)
 	assert.Equal(t, string(consts.ReadyType), conditions[0].Type)
 	assert.Equal(t, string(consts.DependenciesNotReadyReason), conditions[0].Reason)
 	assert.Equal(t, consts.DependenciesNotReadyMessage, conditions[0].Message)
