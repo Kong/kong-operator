@@ -39,7 +39,7 @@ type withExtensions interface {
 // In case any extension is referenced, it adds a resolvedRefs condition to the dataplane, indicating the status of the
 // extension reference. it returns 3 values:
 //   - stop: a boolean indicating if the caller must return. It's true when the dataplane status has been patched.
-//   - requeue: a boolean indicating if the dataplane should be requeued. If the error was unexpected (e.g., because of API server error), the dataplane should be requeued.
+//   - res: a ctrl.Result indicating if the dataplane should be requeued. If the error was unexpected (e.g., because of API server error), the dataplane should be requeued.
 //     In case the error is related to a misconfiguration, the dataplane does not need to be requeued, and feedback is provided into the dataplane status.
 //   - err: an error in case of failure.
 func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, logger logr.Logger, o t, konnectEnabled bool) (stop bool, res ctrl.Result, err error) {

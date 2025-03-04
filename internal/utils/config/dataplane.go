@@ -43,7 +43,7 @@ var KongDefaults = map[string]string{
 
 // KongInKonnectDefaults are the baseline Kong proxy configuration options needed for
 // the proxy to function when configured in Konnect.
-var kongInKonnectClusterTypeControlPlaneDefaults = map[string]string{
+var kongInKonnectClusterTypeControlPlane = map[string]string{
 	"KONG_ROLE":                          "data_plane",
 	"KONG_CLUSTER_MTLS":                  "pki",
 	"KONG_CLUSTER_CONTROL_PLANE":         "<CONTROL-PLANE-ENDPOINT>:443",
@@ -74,12 +74,12 @@ func KongInKonnectDefaults(
 	dpLabels map[string]konnectv1alpha1.DataPlaneLabelValue,
 	konnectExtensionStatus konnectv1alpha1.KonnectExtensionStatus,
 ) map[string]string {
-	newEnvSet := make(map[string]string, len(kongInKonnectClusterTypeControlPlaneDefaults))
+	newEnvSet := make(map[string]string, len(kongInKonnectClusterTypeControlPlane))
 	var template map[string]string
 
 	switch konnectExtensionStatus.Konnect.ClusterType {
 	case konnectv1alpha1.ClusterTypeControlPlane:
-		template = kongInKonnectClusterTypeControlPlaneDefaults
+		template = kongInKonnectClusterTypeControlPlane
 	case konnectv1alpha1.ClusterTypeK8sIngressController:
 		template = kongInKonnectClusterTypeIngressController
 	default:
