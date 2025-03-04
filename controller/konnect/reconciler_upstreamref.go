@@ -108,7 +108,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 
 	res, err := RemoveOwnerRefIfSet(ctx, cl, ent, kongUpstream)
 	if err != nil || !res.IsZero() {
-		return ctrl.Result{}, err
+		return res, err
 	}
 
 	// TODO: make this more generic.
