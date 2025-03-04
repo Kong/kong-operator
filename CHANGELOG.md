@@ -171,6 +171,10 @@
   `400`, we consider the error as a validation error and do not try to requeue
   the Konnect entity.
   [#1226](https://github.com/Kong/gateway-operator/pull/1226)
+- Credential resources used as Konnect entities that are attached to a `KongConsumer`
+  resource do not get an owner relationship set to the `KongConsumer` anymore hence
+  they are not deleted when the `KongConsumer` is deleted.
+  [#1259](https://github.com/Kong/gateway-operator/pull/1259)
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 
