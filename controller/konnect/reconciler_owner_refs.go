@@ -15,6 +15,9 @@ import (
 
 // RemoveOwnerRefIfSet removes the owner reference from the given entity if it is set.
 // It returns a requeue result if there was a conflict during the patch operation.
+//
+// Such references may have been added by older versions of KGO (< 1.5).
+// TODO: remove this after a couple of minor versions.
 func RemoveOwnerRefIfSet[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -41,10 +44,6 @@ func RemoveOwnerRefIfSet[
 		return ctrl.Result{}, nil
 	}
 
-	// Make sure there is no ownership between the consumer and the entity by removing
-	// a reference if found.
-	// Such references may have been added by older versions of KGO (< 1.5).
-	// TODO: remove this after a couple of minor versions.
 	old := ent.DeepCopyObject().(TEnt)
 	if err := controllerutil.RemoveOwnerReference(owner, ent, cl.Scheme()); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to delete owner reference: %w", err)
