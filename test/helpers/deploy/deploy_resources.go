@@ -1034,8 +1034,8 @@ func KonnectExtension(
 	return ke
 }
 
-// KonnectExtensionAttachedToCP deploys a KonnectExtension attached to a Konnect CP represented by the given KonnectGatewayControlPlane.
-func KonnectExtensionAttachedToCP(
+// KonnectExtensionRefencingKonnectGatewayControlPlane deploys a KonnectExtension attached to a Konnect CP represented by the given KonnectGatewayControlPlane.
+func KonnectExtensionRefencingKonnectGatewayControlPlane(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,

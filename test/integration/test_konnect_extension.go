@@ -19,7 +19,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-func TestKonnectExtensionControlPlaneNamespacedRef(t *testing.T) {
+func TestKonnectExtensionKonnectGatewayControlPlaneNamespacedRef(t *testing.T) {
 	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	// Let's generate a unique test ID that we can refer to in Konnect entities.
@@ -54,7 +54,7 @@ func TestKonnectExtensionControlPlaneNamespacedRef(t *testing.T) {
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	t.Logf("Creating a KonnectExtension")
-	ke := deploy.KonnectExtensionAttachedToCP(
+	ke := deploy.KonnectExtensionRefencingKonnectGatewayControlPlane(
 		t, ctx,
 		clientNamespaced,
 		cp,

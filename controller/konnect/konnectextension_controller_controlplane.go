@@ -11,7 +11,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-func listKonnectExtesionsByControlPlane(
+func listKonnectExtensionsByKonnectGatewayControlPlane(
 	ctx context.Context, cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) ([]konnectv1alpha1.KonnectExtension, error) {
@@ -20,21 +20,21 @@ func listKonnectExtesionsByControlPlane(
 		ctx, &l,
 		client.InNamespace(cp.Namespace),
 		client.MatchingFields{
-			IndexFiekdKonnectExtensionOnControlPlane: cp.Name,
+			IndexFieldKonnectExtensionOnKonnectGatewayControlPlane: cp.Name,
 		},
 	)
 
 	return l.Items, err
 }
 
-func enqueueKonnectExtensionsForControlPlane(cl client.Client) func(context.Context, client.Object) []reconcile.Request {
+func enqueueKonnectExtensionsForKonnectGatewayControlPlane(cl client.Client) func(context.Context, client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
 		if !ok {
 			return nil
 		}
 
-		konnectExtensions, err := listKonnectExtesionsByControlPlane(ctx, cl, cp)
+		konnectExtensions, err := listKonnectExtensionsByKonnectGatewayControlPlane(ctx, cl, cp)
 		if err != nil {
 			return nil
 		}

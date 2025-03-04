@@ -101,7 +101,7 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 		Watches(
 			&konnectv1alpha1.KonnectGatewayControlPlane{},
 			handler.EnqueueRequestsFromMapFunc(
-				enqueueKonnectExtensionsForControlPlane(mgr.GetClient()),
+				enqueueKonnectExtensionsForKonnectGatewayControlPlane(mgr.GetClient()),
 			),
 		).
 		Complete(r)

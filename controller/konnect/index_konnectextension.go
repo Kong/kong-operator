@@ -12,8 +12,8 @@ const (
 	IndexFieldKonnectExtensionOnAPIAuthConfiguration = "konnectExtensionAPIAuthConfigurationRef"
 	// IndexFieldKonnectExtensionOnSecrets is the index field for KonnectExtension -> Secret.
 	IndexFieldKonnectExtensionOnSecrets = "konnectExtensionSecretRef"
-	// IndexFiekdKonnectExtensionOnControlPlane is the index field for KonnectExtension -> KonnectGatewayControlPlane.
-	IndexFiekdKonnectExtensionOnControlPlane = "konnectExtensionControlPlaneRef"
+	// IndexFieldKonnectExtensionOnKonnectGatewayControlPlane is the index field for KonnectExtension -> KonnectGatewayControlPlane.
+	IndexFieldKonnectExtensionOnKonnectGatewayControlPlane = "konnectExtensionKonnectGatewayControlPlaneRef"
 )
 
 // IndexOptionsForKonnectExtension returns required Index options for KonnectExtension reconciler.
@@ -31,7 +31,7 @@ func IndexOptionsForKonnectExtension() []ReconciliationIndexOption {
 		},
 		{
 			IndexObject:  &konnectv1alpha1.KonnectExtension{},
-			IndexField:   IndexFiekdKonnectExtensionOnControlPlane,
+			IndexField:   IndexFieldKonnectExtensionOnKonnectGatewayControlPlane,
 			ExtractValue: konnectExtensionControlPlaneRef,
 		},
 	}
