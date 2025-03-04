@@ -352,6 +352,18 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			})
 		}
 	}
+	{
+		obj := obj.DeepCopy()
+		obj.SetControlPlaneRef(&commonv1alpha1.ControlPlaneRef{
+			Type:      commonv1alpha1.ControlPlaneRefKonnectID,
+			KonnectID: lo.ToPtr("123456"),
+		})
+		ret = append(ret, crdsvalidation.TestCase[T]{
+			Name:                 "cpRef (type=konnectID) is not allowed",
+			TestObject:           obj,
+			ExpectedErrorMessage: lo.ToPtr("'konnectID' type is not supported"),
+		})
+	}
 
 	return ret
 }

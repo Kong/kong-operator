@@ -62,6 +62,7 @@ type KongRouteSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this KongRoute is associated with.
 	// Route can either specify a ControlPlaneRef and be 'serviceless' route or
 	// specify a ServiceRef and be associated with a Service.
+	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
 	// +optional
 	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
 	// ServiceRef is a reference to a Service this KongRoute is associated with.
