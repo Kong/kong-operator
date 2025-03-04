@@ -166,6 +166,8 @@
   [#1099](https://github.com/Kong/gateway-operator/pull/1099)
 - Remove the owner relationship between `KongService` and `KongRoute`.
   [#1178](https://github.com/Kong/gateway-operator/pull/1178)
+- Remove the owner relationship between `KongTarget` and `KongUpstream`.
+  [#1279](https://github.com/Kong/gateway-operator/pull/1279)
 - Check whether an error from calling Konnect API is a validation error by
   HTTP status code in Konnect entity controller. If the HTTP status code is
   `400`, we consider the error as a validation error and do not try to requeue
