@@ -58,7 +58,7 @@ func ApplyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, dataP
 	// KonnectID is the only supported type for now, and its presence is guaranteed by a proper CEL rule.
 	envSet := config.KongInKonnectDefaults(konnectExtension.Spec.DataPlaneLabels, konnectExtension.Status)
 
-	config.FillContainerEnvMap(nil, &d.Spec.Template, consts.DataPlaneProxyContainerName, envSet)
+	config.FillContainerEnvs(nil, &d.Spec.Template, consts.DataPlaneProxyContainerName, config.EnvVarMapToSlice(envSet))
 	dataPlane.Spec.Deployment.PodTemplateSpec = &d.Spec.Template
 
 	return true, nil

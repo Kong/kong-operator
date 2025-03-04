@@ -16,7 +16,7 @@ type kicInKonnectParams struct {
 	tlsClientSecretName string
 }
 
-var kicInKonnectDefaults = func(params kicInKonnectParams) []corev1.EnvVar {
+func kicInKonnectDefaults(params kicInKonnectParams) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
 			Name:  "CONTROLLER_KONNECT_ADDRESS",

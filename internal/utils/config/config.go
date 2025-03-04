@@ -7,6 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	"github.com/samber/lo"
 )
 
 const (
@@ -46,33 +47,16 @@ func FillContainerEnvs(existing []corev1.EnvVar, podTemplateSpec *corev1.PodTemp
 	sort.Sort(k8sutils.SortableEnvVars(container.Env))
 }
 
-// FillContainerEnvMap updates the environment variables by taking a map of env vars as an input.
-func FillContainerEnvMap(existing []corev1.EnvVar, podTemplateSpec *corev1.PodTemplateSpec, containerName string, envMap map[string]string) {
-	if podTemplateSpec == nil {
-		return
-	}
-
-	podSpec := &podTemplateSpec.Spec
-	container := k8sutils.GetPodContainerByName(podSpec, containerName)
-	if container == nil {
-		return
-	}
-
-	for _, envVar := range existing {
-		if !k8sutils.IsEnvVarPresent(envVar, container.Env) {
-			container.Env = append(container.Env, envVar)
-		}
-	}
-	for k, v := range envMap {
-		envVar := corev1.EnvVar{
+// EnvVarMapToSlice converts a map of environment variables to a slice of environment variables.
+// Note: this function should be used only when the env var slice is made of simple key-value pairs.
+// in case of more complex env vars, don't rely on maps.
+func EnvVarMapToSlice(envMap map[string]string) []corev1.EnvVar {
+	return lo.MapToSlice(envMap, func(k, v string) corev1.EnvVar {
+		return corev1.EnvVar{
 			Name:  k,
 			Value: v,
 		}
-		if !k8sutils.IsEnvVarPresent(envVar, container.Env) {
-			container.Env = append(container.Env, envVar)
-		}
-	}
-	sort.Sort(k8sutils.SortableEnvVars(container.Env))
+	})
 }
 
 // ConfigureKongPluginRelatedEnvVars returns the environment variables

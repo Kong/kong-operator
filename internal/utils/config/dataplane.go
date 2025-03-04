@@ -41,8 +41,8 @@ var KongDefaults = map[string]string{
 	"KONG_NGINX_ADMIN_SSL_VERIFY_DEPTH":       "3",
 }
 
-// KongInKonnectDefaults are the baseline Kong proxy configuration options needed for
-// the proxy to function when configured in Konnect.
+// kongInKonnectClusterTypeControlPlane are the baseline Kong proxy configuration options needed for
+// the proxy to function when configured in Konnect Hybrid ControlPlanes.
 var kongInKonnectClusterTypeControlPlane = map[string]string{
 	"KONG_ROLE":                          "data_plane",
 	"KONG_CLUSTER_MTLS":                  "pki",
@@ -57,6 +57,8 @@ var kongInKonnectClusterTypeControlPlane = map[string]string{
 	"KONG_VITALS":                        "off",
 }
 
+// kongInKonnectClusterTypeIngressController are the baseline Kong proxy configuration options needed for
+// the proxy to function when configured in Konnect K8s Ingress Controllers ControlPlanes.
 var kongInKonnectClusterTypeIngressController = map[string]string{
 	"KONG_ROLE":                          "traditional",
 	"KONG_CLUSTER_MTLS":                  "pki",

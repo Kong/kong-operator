@@ -202,7 +202,7 @@ func applyEnvForDataPlane(
 	deployment *k8sresources.Deployment,
 	envSet map[string]string,
 ) *k8sresources.Deployment {
-	config.FillContainerEnvMap(existing, &deployment.Spec.Template, consts.DataPlaneProxyContainerName, envSet)
+	config.FillContainerEnvs(existing, &deployment.Spec.Template, consts.DataPlaneProxyContainerName, config.EnvVarMapToSlice(envSet))
 	return deployment
 }
 
