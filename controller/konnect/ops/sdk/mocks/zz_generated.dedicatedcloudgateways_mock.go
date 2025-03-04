@@ -544,7 +544,7 @@ func (_c *MockCloudGatewaysSDK_ListNetworks_Call) RunAndReturn(run func(context.
 }
 
 // UpdateNetwork provides a mock function with given fields: ctx, networkID, patchNetworkRequest, opts
-func (_m *MockCloudGatewaysSDK) UpdateNetwork(ctx context.Context, networkID string, patchNetworkRequest components.PatchNetworkRequest, opts ...operations.Option) (*operations.UpdateNetworkResponse, error) {
+func (_m *MockCloudGatewaysSDK) UpdateNetwork(ctx context.Context, networkID string, patchNetworkRequest *components.PatchNetworkRequest, opts ...operations.Option) (*operations.UpdateNetworkResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -560,10 +560,10 @@ func (_m *MockCloudGatewaysSDK) UpdateNetwork(ctx context.Context, networkID str
 
 	var r0 *operations.UpdateNetworkResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.PatchNetworkRequest, ...operations.Option) (*operations.UpdateNetworkResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, *components.PatchNetworkRequest, ...operations.Option) (*operations.UpdateNetworkResponse, error)); ok {
 		return rf(ctx, networkID, patchNetworkRequest, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.PatchNetworkRequest, ...operations.Option) *operations.UpdateNetworkResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, *components.PatchNetworkRequest, ...operations.Option) *operations.UpdateNetworkResponse); ok {
 		r0 = rf(ctx, networkID, patchNetworkRequest, opts...)
 	} else {
 		if ret.Get(0) != nil {
@@ -571,7 +571,7 @@ func (_m *MockCloudGatewaysSDK) UpdateNetwork(ctx context.Context, networkID str
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, components.PatchNetworkRequest, ...operations.Option) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, *components.PatchNetworkRequest, ...operations.Option) error); ok {
 		r1 = rf(ctx, networkID, patchNetworkRequest, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -588,14 +588,14 @@ type MockCloudGatewaysSDK_UpdateNetwork_Call struct {
 // UpdateNetwork is a helper method to define mock.On call
 //   - ctx context.Context
 //   - networkID string
-//   - patchNetworkRequest components.PatchNetworkRequest
+//   - patchNetworkRequest *components.PatchNetworkRequest
 //   - opts ...operations.Option
 func (_e *MockCloudGatewaysSDK_Expecter) UpdateNetwork(ctx interface{}, networkID interface{}, patchNetworkRequest interface{}, opts ...interface{}) *MockCloudGatewaysSDK_UpdateNetwork_Call {
 	return &MockCloudGatewaysSDK_UpdateNetwork_Call{Call: _e.mock.On("UpdateNetwork",
 		append([]interface{}{ctx, networkID, patchNetworkRequest}, opts...)...)}
 }
 
-func (_c *MockCloudGatewaysSDK_UpdateNetwork_Call) Run(run func(ctx context.Context, networkID string, patchNetworkRequest components.PatchNetworkRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_UpdateNetwork_Call {
+func (_c *MockCloudGatewaysSDK_UpdateNetwork_Call) Run(run func(ctx context.Context, networkID string, patchNetworkRequest *components.PatchNetworkRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_UpdateNetwork_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		variadicArgs := make([]operations.Option, len(args)-3)
 		for i, a := range args[3:] {
@@ -603,7 +603,7 @@ func (_c *MockCloudGatewaysSDK_UpdateNetwork_Call) Run(run func(ctx context.Cont
 				variadicArgs[i] = a.(operations.Option)
 			}
 		}
-		run(args[0].(context.Context), args[1].(string), args[2].(components.PatchNetworkRequest), variadicArgs...)
+		run(args[0].(context.Context), args[1].(string), args[2].(*components.PatchNetworkRequest), variadicArgs...)
 	})
 	return _c
 }
@@ -613,7 +613,7 @@ func (_c *MockCloudGatewaysSDK_UpdateNetwork_Call) Return(_a0 *operations.Update
 	return _c
 }
 
-func (_c *MockCloudGatewaysSDK_UpdateNetwork_Call) RunAndReturn(run func(context.Context, string, components.PatchNetworkRequest, ...operations.Option) (*operations.UpdateNetworkResponse, error)) *MockCloudGatewaysSDK_UpdateNetwork_Call {
+func (_c *MockCloudGatewaysSDK_UpdateNetwork_Call) RunAndReturn(run func(context.Context, string, *components.PatchNetworkRequest, ...operations.Option) (*operations.UpdateNetworkResponse, error)) *MockCloudGatewaysSDK_UpdateNetwork_Call {
 	_c.Call.Return(run)
 	return _c
 }
