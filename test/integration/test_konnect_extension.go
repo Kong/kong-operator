@@ -1,12 +1,15 @@
 package integration
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,8 +29,9 @@ func TestKonnectExtensionKonnectGatewayControlPlaneNamespacedRef(t *testing.T) {
 	// Using only the first 8 characters of the UUID to keep the ID short enough for Konnect to accept it as a part
 	// of an entity name.
 	testID := uuid.NewString()[:8]
-	t.Logf("Running Konnect extension test with ID: %s", testID)
+	t.Logf("Running Konnect extensions test with ID: %s", testID)
 
+	// Create an APIAuth for test.
 	clientNamespaced := client.NewNamespacedClient(GetClients().MgrClient, ns.Name)
 
 	authCfg := deploy.KonnectAPIAuthConfiguration(t, GetCtx(), clientNamespaced,
@@ -40,6 +44,7 @@ func TestKonnectExtensionKonnectGatewayControlPlaneNamespacedRef(t *testing.T) {
 		},
 	)
 
+	// Create a Konnect control plane for the KonnectExtension to attach to.
 	cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
 		deploy.WithTestIDLabel(testID),
 	)
@@ -75,4 +80,90 @@ func TestKonnectExtensionKonnectGatewayControlPlaneNamespacedRef(t *testing.T) {
 
 	// TODO: Create a DataPlane using this KonnectExtension:
 	// https://github.com/Kong/gateway-operator/issues/726
+	// Create a secret used as dataplane certificate for the KonnectExtension.
+	s := deploy.Secret(
+		t, ctx, clientNamespaced,
+		// TODO: Fill real certificate data here after DP certifcates provisioning is done:
+		// https://github.com/Kong/gateway-operator/issues/874
+		map[string][]byte{},
+	)
+	// Create a KonnectExtension attaching to the CP by its ID.
+	t.Logf("Creating a KonnectExtension and waiting for Konnect control plane ref resolved")
+	ke := deploy.KonnectExtensionWithAPIAuthRefAndCPID(
+		t, ctx, clientNamespaced,
+		konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+			Name: authCfg.Name,
+		},
+		cp.GetKonnectID(),
+		setKonnectExtensionDPCertSecretRef(t, s),
+	)
+
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, ke.DeepCopy()))
+
+	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", ke.Namespace, ke.Name)
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		ok, msg := checkKonnectExtensionConditions(t, ke)
+		assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, ke.Status.Conditions)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+
+	t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s/%s", ke.Namespace, ke.Name)
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: ke.Name, Namespace: ke.Namespace}, ke)
+		require.NoError(t, err)
+		// Check Konnect control plane ID
+		assert.NotNil(t, ke.Status.Konnect, "status.konnect should be present")
+		assert.Equal(t, cp.GetKonnectID(), ke.Status.Konnect.ControlPlaneID, "Konnect control plane ID should be set in status")
+		// Check dataplane client auth
+		assert.NotNil(t, ke.Status.DataPlaneClientAuth, "status.dataPlaneClientAuth should be present")
+		assert.NotNil(t, ke.Status.DataPlaneClientAuth.CertificateSecretRef, "status.dataPlaneClientAuth.certiifcateSecretRef should be present")
+		assert.Equal(t, s.Name, ke.Status.DataPlaneClientAuth.CertificateSecretRef.Name,
+			"status.dataPlaneClientAuth.certiifcateSecretRef should have the expected secret name")
+
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+
+	// TODO: Create DataPlanes using the KonnectExtension after DP certifcates provisioning is done:
+	// https://github.com/Kong/gateway-operator/issues/874
+
+}
+
+func setKonnectExtensionDPCertSecretRef(t *testing.T, s *corev1.Secret) func(client.Object) {
+	return func(obj client.Object) {
+		ke, ok := obj.(*konnectv1alpha1.KonnectExtension)
+		require.True(t, ok)
+		ke.Spec.DataPlaneClientAuth = &konnectv1alpha1.DataPlaneClientAuth{
+			CertificateSecret: konnectv1alpha1.CertificateSecret{
+				Provisioning: lo.ToPtr(konnectv1alpha1.ManualSecretProvisioning),
+				CertificateSecretRef: &konnectv1alpha1.SecretRef{
+					Name: s.Name,
+				},
+			},
+		}
+	}
+}
+
+func checkKonnectExtensionConditions(t *assert.CollectT, ke *konnectv1alpha1.KonnectExtension) (bool, string) {
+	err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: ke.Name, Namespace: ke.Namespace}, ke)
+	require.NoError(t, err)
+
+	checkConditionTypes := []string{
+		konnectv1alpha1.ControlPlaneRefValidConditionType,
+		konnectv1alpha1.DataPlaneCertificateProvisionedConditionType,
+		konnectv1alpha1.KonnectExtensionReadyConditionType,
+	}
+	failedConditionTypes := make([]string, 0, len(checkConditionTypes))
+	conditionMap := lo.SliceToMap(ke.Status.Conditions, func(condition metav1.Condition) (string, metav1.ConditionStatus) {
+		return condition.Type, condition.Status
+	})
+
+	for _, conditionType := range checkConditionTypes {
+		status, ok := conditionMap[conditionType]
+		if !ok || status != metav1.ConditionTrue {
+			failedConditionTypes = append(failedConditionTypes, conditionType)
+		}
+	}
+
+	if len(failedConditionTypes) > 0 {
+		return false, fmt.Sprintf("condition(s) %s not set to True", strings.Join(failedConditionTypes, ", "))
+	}
+	return true, ""
 }
