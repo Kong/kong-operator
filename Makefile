@@ -164,9 +164,12 @@ download.govulncheck: mise yq ## Download govulncheck locally if necessary.
 	@$(MISE) plugin install --yes -q govulncheck https://github.com/wizzardich/asdf-govulncheck.git
 	@$(MISE) install -q govulncheck@$(GOVULNCHECK_VERSION)
 
+TELEPRESENCE_VERSION = $(shell $(YQ) -r '.telepresence' < $(TOOLS_VERSIONS_FILE))
+TELEPRESENCE= $(PROJECT_DIR)/bin/installs/telepresence/$(TELEPRESENCE_VERSION)/bin/telepresence
 .PHONY: download.telepresence
-download.telepresence:  ## Download telepresence locally if necessary.
-	./hack/install-telepresence.sh
+download.telepresence: mise yq ## Download telepresence locally if necessary.
+	@$(MISE) plugin install --yes -q telepresence
+	@$(MISE) install -q telepresence@$(TELEPRESENCE_VERSION)
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
@@ -414,15 +417,15 @@ test.crds-validation.pretty:
 
 .PHONY: _test.integration
 _test.integration: gotestsum download.telepresence
-	PATH=$(PROJECT_DIR)/bin:$(PATH) \
+	TELEPRESENCE_BIN=$(TELEPRESENCE) \
 	GOFLAGS=$(GOFLAGS) \
-		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-		$(GOTESTSUM) -- $(GOTESTFLAGS) \
-		-timeout $(INTEGRATION_TEST_TIMEOUT) \
-		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
-		-race \
-		-coverprofile=$(COVERPROFILE) \
-		./test/integration/...
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+	$(GOTESTSUM) -- $(GOTESTFLAGS) \
+	-timeout $(INTEGRATION_TEST_TIMEOUT) \
+	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
+	-race \
+	-coverprofile=$(COVERPROFILE) \
+	./test/integration/...
 
 .PHONY: test.integration
 test.integration:
@@ -456,7 +459,7 @@ PARALLEL := $(if $(PARALLEL),$(PARALLEL),$(NCPU))
 
 .PHONY: _test.conformance
 _test.conformance: gotestsum download.telepresence
-		PATH=$(PROJECT_DIR)/bin:$(PATH) \
+		TELEPRESENCE_BIN=$(TELEPRESENCE) \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-timeout $(CONFORMANCE_TEST_TIMEOUT) \
