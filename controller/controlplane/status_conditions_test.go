@@ -7,9 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
+	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -30,8 +31,8 @@ func TestMarkAsProvisioned(t *testing.T) {
 					return createControlPlane()
 				},
 				expectedCondition: metav1.Condition{
-					Type:    string(ConditionTypeProvisioned),
-					Reason:  string(ConditionReasonPodsReady),
+					Type:    string(kcfgcontrolplane.ConditionTypeProvisioned),
+					Reason:  string(kcfgcontrolplane.ConditionReasonPodsReady),
 					Message: "pods for all Deployments are ready",
 					Status:  metav1.ConditionTrue,
 				},
@@ -44,8 +45,8 @@ func TestMarkAsProvisioned(t *testing.T) {
 					return cp
 				},
 				expectedCondition: metav1.Condition{
-					Type:               string(ConditionTypeProvisioned),
-					Reason:             string(ConditionReasonPodsReady),
+					Type:               string(kcfgcontrolplane.ConditionTypeProvisioned),
+					Reason:             string(kcfgcontrolplane.ConditionReasonPodsReady),
 					Message:            "pods for all Deployments are ready",
 					Status:             metav1.ConditionTrue,
 					ObservedGeneration: 3,
@@ -57,7 +58,7 @@ func TestMarkAsProvisioned(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				dp := tc.controlplane()
 				markAsProvisioned(dp)
-				cond, ok := k8sutils.GetCondition(consts.ConditionType(tc.expectedCondition.Type), dp)
+				cond, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(tc.expectedCondition.Type), dp)
 				require.True(t, ok)
 				assert.Equal(t, cond.Reason, tc.expectedCondition.Reason)
 				assert.Equal(t, cond.Status, tc.expectedCondition.Status)

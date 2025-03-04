@@ -24,6 +24,7 @@ import (
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
 )
 
 // -----------------------------------------------------------------------------
@@ -184,7 +185,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// if the dataplane is configured with Konnect, the status/ready endpoint should be set as the readiness probe.
-	if _, konnectApplied := k8sutils.GetCondition(consts.KonnectExtensionAppliedType, dataplane); konnectApplied {
+	if _, konnectApplied := k8sutils.GetCondition(kcfgkonnect.KonnectExtensionAppliedType, dataplane); konnectApplied {
 		deploymentOpts = append(deploymentOpts, statusReadyEndpointDeploymentOpt(dataplane))
 	}
 

@@ -4,9 +4,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/vars"
+
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 )
 
 // -----------------------------------------------------------------------------
@@ -44,7 +45,7 @@ func DecorateGatewayClass(gwc *gatewayv1.GatewayClass) *Decorator {
 
 // IsAccepted returns true if the GatewayClass has been accepted by the operator.
 func (gwc *Decorator) IsAccepted() bool {
-	if cond, ok := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayClassConditionStatusAccepted), gwc); ok {
+	if cond, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.GatewayClassConditionStatusAccepted), gwc); ok {
 		return cond.Reason == string(gatewayv1.GatewayClassReasonAccepted) &&
 			cond.ObservedGeneration == gwc.Generation && cond.Status == metav1.ConditionTrue
 	}

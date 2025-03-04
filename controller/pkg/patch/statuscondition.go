@@ -9,8 +9,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 )
 
 // SetStatusWithConditionIfDifferent sets the status of the provided object with the
@@ -21,9 +22,9 @@ func SetStatusWithConditionIfDifferent[T interface {
 	k8sutils.ConditionsAware
 }](
 	ent T,
-	conditionType consts.ConditionType,
+	conditionType kcfgconsts.ConditionType,
 	conditionStatus metav1.ConditionStatus,
-	conditionReason consts.ConditionReason,
+	conditionReason kcfgconsts.ConditionReason,
 	conditionMessage string,
 ) bool {
 	cond, ok := k8sutils.GetCondition(conditionType, ent)
@@ -61,9 +62,9 @@ func StatusWithCondition[T interface {
 	ctx context.Context,
 	cl client.Client,
 	ent T,
-	conditionType consts.ConditionType,
+	conditionType kcfgconsts.ConditionType,
 	conditionStatus metav1.ConditionStatus,
-	conditionReason consts.ConditionReason,
+	conditionReason kcfgconsts.ConditionReason,
 	conditionMessage string,
 ) (ctrl.Result, error) {
 	old := ent.DeepCopyObject().(T)

@@ -27,6 +27,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers"
 
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
@@ -680,7 +681,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				nn := types.NamespacedName{Namespace: "default", Name: "dataplane-kong"}
 				err = reconciler.Client.Get(ctx, nn, dp)
 				require.NoError(t, err)
-				c, ok := k8sutils.GetCondition(consts.ReadyType, dp)
+				c, ok := k8sutils.GetCondition(kcfgdataplane.ReadyType, dp)
 				require.True(t, ok, "DataPlane should have a Ready condition set")
 				assert.Equal(t, metav1.ConditionFalse, c.Status, "DataPlane shouldn't be ready just yet")
 				assert.EqualValues(t, 0, dp.Status.ReadyReplicas)
@@ -697,7 +698,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 
 				err = reconciler.Client.Get(ctx, nn, dp)
 				require.NoError(t, err)
-				c, ok = k8sutils.GetCondition(consts.ReadyType, dp)
+				c, ok = k8sutils.GetCondition(kcfgdataplane.ReadyType, dp)
 				require.True(t, ok, "DataPlane should have a Ready condition set")
 				assert.Equal(t, metav1.ConditionTrue, c.Status, "DataPlane should be ready at this point")
 				assert.EqualValues(t, 1, dp.Status.ReadyReplicas)
@@ -842,7 +843,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				nn := types.NamespacedName{Namespace: "default", Name: "dataplane-kong"}
 				err = reconciler.Client.Get(ctx, nn, dp)
 				require.NoError(t, err)
-				c, ok := k8sutils.GetCondition(consts.ReadyType, dp)
+				c, ok := k8sutils.GetCondition(kcfgdataplane.ReadyType, dp)
 				require.True(t, ok, "DataPlane should have a Ready condition set")
 				assert.Equal(t, metav1.ConditionFalse, c.Status, "DataPlane shouldn't be ready just yet")
 				assert.EqualValues(t, 0, dp.Status.ReadyReplicas)
@@ -859,7 +860,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 
 				err = reconciler.Client.Get(ctx, nn, dp)
 				require.NoError(t, err)
-				c, ok = k8sutils.GetCondition(consts.ReadyType, dp)
+				c, ok = k8sutils.GetCondition(kcfgdataplane.ReadyType, dp)
 				require.True(t, ok, "DataPlane should have a Ready condition set")
 				assert.Equal(t, metav1.ConditionTrue, c.Status, "DataPlane should be ready at this point")
 				assert.Equal(t, c.ObservedGeneration, dp.Generation, "DataPlane Ready condition should have the same generation as the DataPlane")
@@ -882,7 +883,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NoError(t, reconciler.Client.Get(ctx, nn, dp))
-				c, ok = k8sutils.GetCondition(consts.ReadyType, dp)
+				c, ok = k8sutils.GetCondition(kcfgdataplane.ReadyType, dp)
 				require.True(t, ok, "DataPlane should have a Ready condition set")
 				assert.Equal(t, metav1.ConditionTrue, c.Status, "DataPlane should be ready at this point")
 				assert.Equal(t, c.ObservedGeneration, dp.Generation, "DataPlane Ready condition should have the same generation as the DataPlane")

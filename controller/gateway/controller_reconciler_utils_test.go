@@ -21,6 +21,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -499,7 +500,7 @@ func TestSetAcceptedOnGateway(t *testing.T) {
 			}
 
 			k8sutils.SetAcceptedConditionOnGateway(gateway)
-			acceptedCondition, found := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayConditionAccepted), gateway)
+			acceptedCondition, found := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionAccepted), gateway)
 			require.True(t, found)
 			// force the lastTransitionTime to be equal to properly compare the two conditions
 			tc.expectedAcceptedCondition.LastTransitionTime = acceptedCondition.LastTransitionTime

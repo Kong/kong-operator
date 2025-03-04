@@ -18,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -144,9 +145,9 @@ func ensureDataPlaneReadyStatus(
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				consts.ReadyType,
+				kcfgdataplane.ReadyType,
 				metav1.ConditionFalse,
-				consts.WaitingToBecomeReadyReason,
+				kcfgdataplane.WaitingToBecomeReadyReason,
 				consts.WaitingToBecomeReadyMessage,
 				generation,
 			),
@@ -178,9 +179,9 @@ func ensureDataPlaneReadyStatus(
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				consts.ReadyType,
+				kcfgdataplane.ReadyType,
 				metav1.ConditionFalse,
-				consts.WaitingToBecomeReadyReason,
+				kcfgdataplane.WaitingToBecomeReadyReason,
 				fmt.Sprintf("%s: Deployment %s is not ready yet", consts.WaitingToBecomeReadyMessage, deployment.Name),
 				generation,
 			),
@@ -205,9 +206,9 @@ func ensureDataPlaneReadyStatus(
 		// Set Ready to false for dataplane as the Service is not ready yet.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				consts.ReadyType,
+				kcfgdataplane.ReadyType,
 				metav1.ConditionFalse,
-				consts.WaitingToBecomeReadyReason,
+				kcfgdataplane.WaitingToBecomeReadyReason,
 				consts.WaitingToBecomeReadyMessage,
 				generation,
 			),
@@ -234,9 +235,9 @@ func ensureDataPlaneReadyStatus(
 		// Set Ready to false for dataplane as the Service is not ready yet.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				consts.ReadyType,
+				kcfgdataplane.ReadyType,
 				metav1.ConditionFalse,
-				consts.WaitingToBecomeReadyReason,
+				kcfgdataplane.WaitingToBecomeReadyReason,
 				fmt.Sprintf("%s: ingress Service %s is not ready yet", consts.WaitingToBecomeReadyMessage, ingressService.Name),
 				generation,
 			),

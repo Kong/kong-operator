@@ -32,6 +32,7 @@ import (
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -541,15 +542,15 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus() {
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			consts.ConditionType(gatewayv1.GatewayConditionProgrammed),
+			kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed),
 			metav1.ConditionFalse,
-			consts.ConditionReason(gatewayv1.GatewayReasonPending),
+			kcfgconsts.ConditionReason(gatewayv1.GatewayReasonPending),
 			consts.DependenciesNotReadyMessage,
 			g.Generation),
 		g)
 	for i := range g.Spec.Listeners {
 		lStatus := listenerConditionsAware(&g.Status.Listeners[i])
-		cond, ok := k8sutils.GetCondition(consts.ConditionType(gatewayv1.ListenerConditionProgrammed), lStatus)
+		cond, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.ListenerConditionProgrammed), lStatus)
 		if !ok || cond.ObservedGeneration != g.Generation {
 			k8sutils.SetCondition(metav1.Condition{
 				Type:               string(gatewayv1.ListenerConditionProgrammed),
@@ -800,7 +801,7 @@ func (g *gatewayConditionsAndListenersAwareT) setProgrammed() {
 			LastTransitionTime: metav1.Now(),
 		}
 		listenerStatus := listenerConditionsAware(listener)
-		rCond, ok := k8sutils.GetCondition(consts.ConditionType(gatewayv1.ListenerConditionResolvedRefs), listenerStatus)
+		rCond, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.ListenerConditionResolvedRefs), listenerStatus)
 		if ok && rCond.Status == metav1.ConditionFalse {
 			programmedCondition.Status = metav1.ConditionFalse
 			programmedCondition.Reason = string(gatewayv1.ListenerReasonPending)
@@ -1032,8 +1033,8 @@ func parseKongListenEnv(str string) (kongListenConfig, error) {
 }
 
 func gatewayStatusNeedsUpdate(oldGateway, newGateway gatewayConditionsAndListenersAwareT) bool {
-	oldCondAccepted, okOld := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayConditionAccepted), oldGateway)
-	newCondAccepted, _ := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayConditionAccepted), newGateway)
+	oldCondAccepted, okOld := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionAccepted), oldGateway)
+	newCondAccepted, _ := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionAccepted), newGateway)
 
 	if !okOld || !areConditionsEqual(oldCondAccepted, newCondAccepted) {
 		return true

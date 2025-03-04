@@ -12,8 +12,8 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
-	"github.com/kong/gateway-operator/pkg/consts"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
@@ -72,7 +72,7 @@ func handleKongConsumerSpecific(
 			c,
 			configurationv1.ConditionKongConsumerCredentialSecretRefsValid,
 			metav1.ConditionTrue,
-			consts.ConditionReason(configurationv1.ReasonKongConsumerCredentialSecretRefsValid),
+			kcfgconsts.ConditionReason(configurationv1.ReasonKongConsumerCredentialSecretRefsValid),
 			"",
 		)
 
@@ -83,7 +83,7 @@ func handleKongConsumerSpecific(
 		c,
 		configurationv1.ConditionKongConsumerCredentialSecretRefsValid,
 		metav1.ConditionFalse,
-		consts.ConditionReason(configurationv1.ReasonKongConsumerCredentialSecretRefInvalid),
+		kcfgconsts.ConditionReason(configurationv1.ReasonKongConsumerCredentialSecretRefInvalid),
 		errors.Join(errs...).Error(),
 	)
 

@@ -17,12 +17,12 @@ import (
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/internal/metrics"
-	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -183,17 +183,17 @@ func Create[
 			if errGet != nil {
 				err = fmt.Errorf("trying to find a matching Konnect entity matching the ID failed: %w, %w", errGet, err)
 			}
-			SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
+			SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, err.Error())
 		}
 
 	case errors.As(err, &errSDK):
 		statusCode = errSDK.StatusCode
-		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, errSDK.Error())
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, errSDK.Error())
 	case errors.As(err, &errRelationsFailed):
 		e.SetKonnectID(errRelationsFailed.KonnectID)
 		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, errRelationsFailed.Err.Error())
 	case err != nil:
-		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToCreateReason, err.Error())
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, err.Error())
 	default:
 		SetKonnectEntityProgrammedCondition(e)
 	}
@@ -448,12 +448,12 @@ func Update[
 	switch {
 	case errors.As(err, &errSDK):
 		statusCode = errSDK.StatusCode
-		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToUpdateReason, errSDK.Body)
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToUpdateReason, errSDK.Body)
 	case errors.As(err, &errRelationsFailed):
 		e.SetKonnectID(errRelationsFailed.KonnectID)
 		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, err.Error())
 	case err != nil:
-		SetKonnectEntityProgrammedConditionFalse(e, consts.KonnectEntitiesFailedToUpdateReason, err.Error())
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToUpdateReason, err.Error())
 	default:
 		SetKonnectEntityProgrammedCondition(e)
 	}

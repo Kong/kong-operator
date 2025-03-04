@@ -13,11 +13,12 @@ import (
 	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
 	"github.com/kong/gateway-operator/controller/pkg/extensions/konnect"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
-	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
 )
 
 // ExtendableT is the interface implemented by the objects which implementation
@@ -53,9 +54,9 @@ func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, logge
 		ctx,
 		cl,
 		o,
-		consts.ConditionType(extensionsCondition.Type),
+		kcfgconsts.ConditionType(extensionsCondition.Type),
 		extensionsCondition.Status,
-		consts.ConditionReason(extensionsCondition.Reason),
+		kcfgconsts.ConditionReason(extensionsCondition.Reason),
 		extensionsCondition.Message,
 	); err != nil || !res.IsZero() {
 		return true, res, err
@@ -70,7 +71,7 @@ func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, logge
 	}
 
 	// in case the extensionsCondition is true, let's apply the extensions.
-	konnectExtensionApplied := k8sutils.NewConditionWithGeneration(consts.KonnectExtensionAppliedType, metav1.ConditionTrue, consts.KonnectExtensionAppliedReason, "The Konnect extension has been successsfully applied", o.GetGeneration())
+	konnectExtensionApplied := k8sutils.NewConditionWithGeneration(kcfgkonnect.KonnectExtensionAppliedType, metav1.ConditionTrue, kcfgkonnect.KonnectExtensionAppliedReason, "The Konnect extension has been successsfully applied", o.GetGeneration())
 	if extensionsCondition.Status == metav1.ConditionTrue {
 		var (
 			extensionRefFound bool
@@ -89,19 +90,19 @@ func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, logge
 			switch {
 			case errors.Is(err, extensionserrors.ErrCrossNamespaceReference):
 				konnectExtensionApplied.Status = metav1.ConditionFalse
-				konnectExtensionApplied.Reason = string(consts.RefNotPermittedReason)
+				konnectExtensionApplied.Reason = string(kcfgkonnect.RefNotPermittedReason)
 				konnectExtensionApplied.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
 			case errors.Is(err, extensionserrors.ErrKonnectExtensionNotFound):
 				konnectExtensionApplied.Status = metav1.ConditionFalse
-				konnectExtensionApplied.Reason = string(consts.InvalidExtensionRefReason)
+				konnectExtensionApplied.Reason = string(kcfgkonnect.InvalidExtensionRefReason)
 				konnectExtensionApplied.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
 			case errors.Is(err, extensionserrors.ErrClusterCertificateNotFound):
 				konnectExtensionApplied.Status = metav1.ConditionFalse
-				konnectExtensionApplied.Reason = string(consts.InvalidSecretRefReason)
+				konnectExtensionApplied.Reason = string(kcfgkonnect.InvalidSecretRefReason)
 				konnectExtensionApplied.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
 			case errors.Is(err, extensionserrors.ErrKonnectExtensionNotReady):
 				konnectExtensionApplied.Status = metav1.ConditionFalse
-				konnectExtensionApplied.Reason = string(consts.KonnectExtensionNotReadyReason)
+				konnectExtensionApplied.Reason = string(kcfgkonnect.KonnectExtensionNotReadyReason)
 				konnectExtensionApplied.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
 			default:
 				return true, ctrl.Result{}, err
@@ -116,9 +117,9 @@ func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, logge
 		ctx,
 		cl,
 		o,
-		consts.ConditionType(konnectExtensionApplied.Type),
+		kcfgconsts.ConditionType(konnectExtensionApplied.Type),
 		konnectExtensionApplied.Status,
-		consts.ConditionReason(konnectExtensionApplied.Reason),
+		kcfgconsts.ConditionReason(konnectExtensionApplied.Reason),
 		konnectExtensionApplied.Message,
 	); err != nil || !res.IsZero() {
 		return true, res, err
