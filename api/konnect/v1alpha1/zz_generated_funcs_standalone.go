@@ -78,18 +78,3 @@ func (obj *KonnectCloudGatewayNetwork) GetConditions() []metav1.Condition {
 func (obj *KonnectCloudGatewayNetwork) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
-
-// GetTypeName returns the KonnectExtension Kind name
-func (obj KonnectExtension) GetTypeName() string {
-	return "KonnectExtension"
-}
-
-// GetConditions returns the Status Conditions
-func (obj *KonnectExtension) GetConditions() []metav1.Condition {
-	return obj.Status.Conditions
-}
-
-// SetConditions sets the Status Conditions
-func (obj *KonnectExtension) SetConditions(conditions []metav1.Condition) {
-	obj.Status.Conditions = conditions
-}

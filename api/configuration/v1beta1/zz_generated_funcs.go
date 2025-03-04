@@ -68,10 +68,12 @@ func (obj *KongConsumerGroup) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
 
+// SetControlPlaneRef sets the ControlPlaneRef.
 func (obj *KongConsumerGroup) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
 	obj.Spec.ControlPlaneRef = ref
 }
 
+// GetControlPlaneRef returns the ControlPlaneRef.
 func (obj *KongConsumerGroup) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
 }

@@ -17,12 +17,12 @@ func (obj KonnectCloudGatewayNetworkList) GetItems() []KonnectCloudGatewayNetwor
 	return obj.Items
 }
 
-// GetItems returns the list of KonnectExtension items.
-func (obj KonnectExtensionList) GetItems() []KonnectExtension {
+// GetItems returns the list of KonnectCloudGatewayDataPlaneGroupConfiguration items.
+func (obj KonnectCloudGatewayDataPlaneGroupConfigurationList) GetItems() []KonnectCloudGatewayDataPlaneGroupConfiguration {
 	return obj.Items
 }
 
-// GetItems returns the list of KonnectCloudGatewayDataPlaneGroupConfiguration items.
-func (obj KonnectCloudGatewayDataPlaneGroupConfigurationList) GetItems() []KonnectCloudGatewayDataPlaneGroupConfiguration {
+// GetItems returns the list of KonnectExtension items.
+func (obj KonnectExtensionList) GetItems() []KonnectExtension {
 	return obj.Items
 }

@@ -49,6 +49,7 @@ func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) SetConditions(conditi
 	obj.Status.Conditions = conditions
 }
 
+// SetControlPlaneRef sets the ControlPlaneRef.
 func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
 	if ref == nil {
 		obj.Spec.ControlPlaneRef = commonv1alpha1.ControlPlaneRef{}
@@ -57,6 +58,37 @@ func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) SetControlPlaneRef(re
 	obj.Spec.ControlPlaneRef = *ref
 }
 
+// GetControlPlaneRef returns the ControlPlaneRef.
 func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return &obj.Spec.ControlPlaneRef
+}
+
+
+// GetTypeName returns the KonnectExtension Kind name
+func (obj KonnectExtension) GetTypeName() string {
+	return "KonnectExtension"
+}
+
+// GetConditions returns the Status Conditions
+func (obj *KonnectExtension) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions
+func (obj *KonnectExtension) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
+}
+
+// SetControlPlaneRef sets the ControlPlaneRef.
+func (obj *KonnectExtension) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
+	if ref == nil {
+		obj.Spec.KonnectControlPlane.ControlPlaneRef = commonv1alpha1.ControlPlaneRef{}
+		return
+	}
+	obj.Spec.KonnectControlPlane.ControlPlaneRef = *ref
+}
+
+// GetControlPlaneRef returns the ControlPlaneRef.
+func (obj *KonnectExtension) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
+	return &obj.Spec.KonnectControlPlane.ControlPlaneRef
 }

@@ -68,10 +68,12 @@ func (obj *KongKey) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
 
+// SetControlPlaneRef sets the ControlPlaneRef.
 func (obj *KongKey) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
 	obj.Spec.ControlPlaneRef = ref
 }
 
+// GetControlPlaneRef returns the ControlPlaneRef.
 func (obj *KongKey) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
 }
@@ -136,10 +138,12 @@ func (obj *KongKeySet) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
 
+// SetControlPlaneRef sets the ControlPlaneRef.
 func (obj *KongKeySet) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
 	obj.Spec.ControlPlaneRef = ref
 }
 
+// GetControlPlaneRef returns the ControlPlaneRef.
 func (obj *KongKeySet) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
 }
@@ -559,10 +563,12 @@ func (obj *KongCACertificate) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
 
+// SetControlPlaneRef sets the ControlPlaneRef.
 func (obj *KongCACertificate) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
 	obj.Spec.ControlPlaneRef = ref
 }
 
+// GetControlPlaneRef returns the ControlPlaneRef.
 func (obj *KongCACertificate) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
 }
@@ -627,10 +633,12 @@ func (obj *KongCertificate) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
 
+// SetControlPlaneRef sets the ControlPlaneRef.
 func (obj *KongCertificate) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
 	obj.Spec.ControlPlaneRef = ref
 }
 
+// GetControlPlaneRef returns the ControlPlaneRef.
 func (obj *KongCertificate) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
 }
@@ -695,6 +703,7 @@ func (obj *KongPluginBinding) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
 
+// SetControlPlaneRef sets the ControlPlaneRef.
 func (obj *KongPluginBinding) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
 	if ref == nil {
 		obj.Spec.ControlPlaneRef = commonv1alpha1.ControlPlaneRef{}
@@ -703,6 +712,7 @@ func (obj *KongPluginBinding) SetControlPlaneRef(ref *commonv1alpha1.ControlPlan
 	obj.Spec.ControlPlaneRef = *ref
 }
 
+// GetControlPlaneRef returns the ControlPlaneRef.
 func (obj *KongPluginBinding) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return &obj.Spec.ControlPlaneRef
 }
@@ -767,10 +777,12 @@ func (obj *KongService) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
 
+// SetControlPlaneRef sets the ControlPlaneRef.
 func (obj *KongService) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
 	obj.Spec.ControlPlaneRef = ref
 }
 
+// GetControlPlaneRef returns the ControlPlaneRef.
 func (obj *KongService) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
 }
@@ -835,10 +847,12 @@ func (obj *KongRoute) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
 
+// SetControlPlaneRef sets the ControlPlaneRef.
 func (obj *KongRoute) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
 	obj.Spec.ControlPlaneRef = ref
 }
 
+// GetControlPlaneRef returns the ControlPlaneRef.
 func (obj *KongRoute) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
 }
@@ -903,10 +917,12 @@ func (obj *KongUpstream) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
 
+// SetControlPlaneRef sets the ControlPlaneRef.
 func (obj *KongUpstream) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
 	obj.Spec.ControlPlaneRef = ref
 }
 
+// GetControlPlaneRef returns the ControlPlaneRef.
 func (obj *KongUpstream) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
 }
@@ -1031,10 +1047,12 @@ func (obj *KongVault) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
 
+// SetControlPlaneRef sets the ControlPlaneRef.
 func (obj *KongVault) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
 	obj.Spec.ControlPlaneRef = ref
 }
 
+// GetControlPlaneRef returns the ControlPlaneRef.
 func (obj *KongVault) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
 }
@@ -1159,10 +1177,12 @@ func (obj *KongDataPlaneClientCertificate) SetConditions(conditions []metav1.Con
 	obj.Status.Conditions = conditions
 }
 
+// SetControlPlaneRef sets the ControlPlaneRef.
 func (obj *KongDataPlaneClientCertificate) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
 	obj.Spec.ControlPlaneRef = ref
 }
 
+// GetControlPlaneRef returns the ControlPlaneRef.
 func (obj *KongDataPlaneClientCertificate) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
 }
