@@ -24,7 +24,7 @@ require (
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
-	github.com/opencontainers/image-spec v1.1.0
+	github.com/opencontainers/image-spec v1.1.1
 	github.com/prometheus/client_golang v1.21.0
 	github.com/samber/lo v1.49.1
 	github.com/samber/mo v1.13.0
